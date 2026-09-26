@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LM. — Site CMS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="../assets/projects/site/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- ============================================================
+     CONNECT SCREEN
+     ============================================================ -->
+<div id="connectScreen">
+  <div class="connect-card">
+    <div class="connect-brand"><span class="dot"></span><span>LM. CMS</span></div>
+    <h1>Connect your repository</h1>
+    <p class="sub">This editor writes directly to your GitHub repo as normal commits — no server, no database.</p>
+
+    <div id="connectError"></div>
+
+    <div class="field">
+      <label class="field-label">GitHub username / org</label>
+      <input id="inOwner" placeholder="lemuelmagbitang" autocomplete="off">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label class="field-label">Repository</label>
+        <input id="inRepo" placeholder="lemuelmagbitang.github.io" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label">Branch</label>
+        <input id="inBranch" placeholder="main" value="main" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Personal access token</label>
+      <input id="inToken" type="password" placeholder="github_pat_••••••••" autocomplete="off">
+    </div>
+    <div class="remember-row">
+      <input type="checkbox" id="inRemember" checked>
+      <label for="inRemember">Remember on this device (stored only in this browser)</label>
+    </div>
+
+    <button class="primary" id="btnConnect">Connect</button>
+
+    <div class="token-help">
+      <strong>Need a token?</strong> On GitHub: Settings → Developer settings →
+      Fine-grained tokens → Generate new token. Scope it to <em>this one repository</em>,
+      and under Permissions give <strong>Contents: Read and write</strong> — nothing else is needed.
+      The token stays in this browser and talks to GitHub directly; it never passes through
+      any third-party server. Treat it like a password — anyone with it can edit your site.
+      <br><br>
+      Full guide: <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens" target="_blank">docs.github.com — personal access tokens</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div id="topbar">
+  <div class="topbar-left">
+    <button class="icon-btn" id="mobileMenuBtn" type="button" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+    <span class="dot"></span>
+    <span class="brand">LM. CMS</span>
+    <span class="sep">/</span>
+    <span class="section-label" id="topbarSection">Hero Messages</span>
+  </div>
+  <div class="topbar-right">
+    <span class="save-status" id="saveStatus" title="All changes saved"><span class="dot"></span><span id="saveStatusText">All changes saved</span></span>
+    <button class="primary" id="btnSaveTop"><i class="fa-solid fa-cloud-arrow-up"></i>&nbsp; <span>Save to GitHub</span></button>
+  </div>
+</div>
+
+<!-- Mobile only: dims and closes the sidebar drawer when tapped.
+     Sits between the topbar and #app in the DOM only for source
+     readability — it's position:fixed, so its DOM position doesn't
+     affect where it renders. -->
+<div id="sidebarBackdrop"></div>
+
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="dot"></span><span>LM. CMS</span></div>
+    <div class="sidebar-repo" id="repoLabel"></div>
+
+    <div class="nav-group-label">Content</div>
+    <div class="nav-item" data-section="hero"><i class="fa-solid fa-quote-left"></i>Hero Messages<span class="dirty-dot" id="dirty-hero" style="display:none"></span></div>
+    <div class="nav-item" data-section="heroLoop"><i class="fa-solid fa-images"></i>Hero Loop Animation<span class="dirty-dot" id="dirty-heroLoop" style="display:none"></span></div>
+    <div class="nav-item" data-section="filters"><i class="fa-solid fa-tags"></i>Filters &amp; Badges<span class="dirty-dot" id="dirty-filters" style="display:none"></span></div>
+    <div class="nav-item" data-section="projects"><i class="fa-solid fa-images"></i>Projects<span class="dirty-dot" id="dirty-projects" style="display:none"></span></div>
+    <div class="nav-item" data-section="about"><i class="fa-solid fa-user"></i>About Page<span class="dirty-dot" id="dirty-about" style="display:none"></span></div>
+    <div class="nav-item" data-section="reviews"><i class="fa-solid fa-star"></i>Reviews<span class="dirty-dot" id="dirty-reviews" style="display:none"></span></div>
+
+    <div class="nav-group-label">Site</div>
+    <div class="nav-item" data-section="settings"><i class="fa-solid fa-sliders"></i>Settings &amp; Toggles<span class="dirty-dot" id="dirty-settings" style="display:none"></span></div>
+    <div class="nav-item" data-section="media"><i class="fa-solid fa-folder-open"></i>Media Library</div>
+    <div class="nav-item" data-section="guide"><i class="fa-solid fa-circle-info"></i>Setup Guide</div>
+
+    <div class="sidebar-foot">
+      <button class="ghost" style="width:100%" id="btnDisconnect"><i class="fa-solid fa-arrow-right-from-bracket"></i> Disconnect</button>
+    </div>
+  </aside>
+
+  <main class="content" id="content">
+    <!-- injected per section -->
+  </main>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

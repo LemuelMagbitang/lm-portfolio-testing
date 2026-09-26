@@ -1,0 +1,23 @@
+{
+  "filters": [
+    {
+      "id": "3d-motion",
+      "label": "3D & MOTION"
+    },
+    {
+      "id": "illustration",
+      "label": "ILLUSTRATION"
+    },
+    {
+      "id": "archive",
+      "label": "UI/UX & BRAND"
+    }
+  ],
+  "badges": [
+    "UI/UX Design",
+    "3D Design",
+    "2D Illustration",
+    "Motion Graphics",
+    "Brand Design"
+  ]
+}

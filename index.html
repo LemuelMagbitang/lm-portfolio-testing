@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lemuel Magbitang | Works</title>
+  <meta name="title" content="Lemuel Magbitang | Works">
+  <meta name="description" content="2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.">
+  <link rel="canonical" href="https://lemuelmagbitang.github.io/">
+
+  <!-- SOCIAL PREVIEW (Open Graph + Twitter) — this is what shows up
+       when the site is linked in Messenger, Discord, X, LinkedIn, etc.
+       All three URLs below assume the repo has been renamed to
+       lemuelmagbitang.github.io (see the "one more step" note) — if
+       you're testing before that, swap the /Portfolio/ path back in
+       or these preview cards just won't resolve yet. -->
+  <!-- Primary Search Engine & Canonical Tags -->
+
+<!-- Open Graph / Meta Apps (Facebook, Messenger, WhatsApp, LinkedIn, Discord) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lemuel Magbitang">
+<meta property="og:url" content="https://lemuelmagbitang.github.io/">
+<meta property="og:title" content="Lemuel Magbitang | Works">
+<meta property="og:description" content="2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.">
+<meta property="og:image" content="https://lemuelmagbitang.github.io/assets/projects/site/og-image.jpg?v=2">
+<meta property="og:image:secure_url" content="https://lemuelmagbitang.github.io/assets/projects/site/og-image.jpg?v=2">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Lemuel Magbitang — 3D & Motion Illustrator portfolio">
+<meta property="og:locale" content="en_US">
+
+<!-- X (Twitter) Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lemuel Magbitang | Works">
+<meta name="twitter:description" content="2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.">
+<meta name="twitter:image" content="https://lemuelmagbitang.github.io/assets/projects/site/og-image.jpg?v=2">
+
+  <link rel="icon" type="image/svg+xml" href="assets/projects/site/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Site typeface: loaded directly instead of relying on whatever
+       system font a visitor's OS/browser happens to substitute (this is
+       what previously showed up wrong on Android/Windows). Preconnect
+       first for a faster first paint. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js"></script>
+</head>
+<body>
+
+  <!-- PAGE TRANSITION — brief branded flourish on real page navigation
+       (Works <-> About), handled by script.js. Deliberately just a
+       logo, deliberately fast — see script.js section 8 for exactly
+       when this does and doesn't fire. -->
+  <div class="page-transition" id="pageTransition">
+    <img src="assets/projects/site/portfolio-logo.png" alt="" class="page-transition-logo">
+  </div>
+
+  <!-- NAVIGATION -->
+  <nav class="navbar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">
+      <img src="/assets/projects/site/portfolio-logo.png" alt="Lemuel Magbitang Logo" class="site-logo">
+    </a>
+    
+    <div class="hamburger" id="hamburger">
+      <i class="fa-solid fa-bars"></i>
+    </div>
+    
+    <ul class="nav-links" id="navLinks">
+      <li class="nav-item-dropdown">
+        <a href="/" class="active-link nav-dropdown-toggle">Works <i class="fa-solid fa-chevron-down nav-caret"></i></a>
+        <ul class="nav-dropdown-menu">
+          <li><a href="/#3d-motion">3D &amp; Motion</a></li>
+          <li><a href="/#illustration">Illustration</a></li>
+          <li><a href="/#archive">UI/UX &amp; Brand</a></li>
+        </ul>
+      </li>
+      <li><a href="/about/">About Me</a></li>
+      <li><a href="/#contact-section">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+  <!-- HERO SECTION -->
+  <header class="hero-section hero-section--message">
+  <!-- Rotating artwork backdrop — unchanged, still auto-filled by script.js -->
+  <div class="hero-banner" id="heroBanner"></div>
+ 
+  <div class="hero-overlay quote-overlay">
+    <!-- Intentionally empty. script.js builds the label, statement
+         and credit line inside here on page load, then fades the
+         block in. Don't type text in here — edit HERO_MESSAGES in
+         js/script.js instead, or you'll end up with two versions
+         of the same line that disagree with each other. -->
+    <div class="hero-quote" id="heroQuote"></div>
+  </div>
+</header>
+
+  <!-- MAIN WORKS SECTION -->
+  <main class="container page-spacing">
+    
+    <!-- FILTER TABS -->
+    <div class="filter-tabs">
+      <!-- Rebuilt from data/filters.json by script.js on every load.
+           This ALL button is the only permanent one — everything else
+           here is a fallback shown only if that fetch fails. Edit
+           filter tabs through admin/, not here. -->
+      <button class="tab-btn active" data-filter="all">ALL</button>
+    </div>
+
+    <!-- Project cards now live in data/projects.json and are edited
+         through admin/ — see /README-CMS-SETUP.md. Everything
+         inside #portfolioGrid below is rebuilt on every page load by
+         script.js's loadProjectsFromCMS(). The single card kept here
+         is a fallback only: it's what a visitor sees if that fetch
+         ever fails (e.g. data/projects.json is offline or malformed),
+         so the grid is never completely empty. Don't add real
+         projects here — they'll be replaced the instant the fetch
+         succeeds, which is effectively always. -->
+
+    <div class="portfolio-wrapper">
+
+      <div class="seamless-grid" id="portfolioGrid">
+        <div class="project-card archive">
+          <div class="glass-info">
+            <h3>Content is loading…</h3>
+            <p>If this doesn't change, data/projects.json may be unreachable — check the CMS.</p>
+          </div>
+          <div class="card-thumbnail"></div>
+        </div>
+      </div> <!-- End seamless-grid -->
+
+
+      <!-- This gradient/blur layer creates the "there's more below" peek
+           effect. It's purely visual — JS just shows/hides it and never
+           needs to be edited. -->
+      <div class="grid-fade-overlay" id="gridFadeOverlay"></div>
+
+      <!-- SHOW MORE / SHOW LESS BUTTON CONTAINER -->
+      <div class="show-more-wrapper" id="showMoreWrapper">
+        <button id="showMoreBtn" class="btn-show-more">
+          <span class="btn-text">SHOW MORE</span>
+          <i class="fa-solid fa-chevron-down btn-icon"></i>
+        </button>
+      </div>
+      
+    </div> <!-- End portfolio-wrapper -->
+  </main>
+
+  <!-- CONTACT & REVIEWS -->
+  <section id="contact-section" class="container page-spacing" style="border-top: 1px solid #222;">
+    <div id="web3-forms-container" class="contact-grid">
+
+      <!-- PRIMARY: Start a Project (the main call-to-action) -->
+      <div class="contact-block contact-primary">
+        <h2 class="section-title start-project-title hello-heading">START A PROJECT WITH LM.</h2>
+        <!-- To pause the project form (e.g. you're near your Web3Forms
+             monthly limit), open js/script.js and set
+             FORMS_ENABLED.project to false. It'll automatically show an
+             "Email Me" button here instead — no HTML editing needed. -->
+        <div class="form-container" id="projectFormContainer">
+          <form class="simple-form" id="projectForm" action="https://api.web3forms.com/submit" method="POST">
+            <input type="hidden" name="apikey" value="15822b98-f9a5-42fe-86f0-149ed102f521">
+            <input type="hidden" name="subject" value="New Project Inquiry">
+            <input type="hidden" name="redirect" value="https://lemuelmagbitang.github.io/success/">
+            <input type="text" name="name" placeholder="Name" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <textarea name="message" rows="4" placeholder="Tell me about your project..." required></textarea>
+            <button type="submit" class="submit-btn">SEND MESSAGE</button>
+          </form>
+          <a href="mailto:lemuelmagbitangt@gmail.com?subject=New%20Project%20Inquiry" class="email-me-btn" id="projectEmailBtn" style="display:none;">
+            <i class="fa-solid fa-envelope"></i> EMAIL ME DIRECTLY
+          </a>
+        </div>
+      </div>
+
+      <!-- SECONDARY: Leave a Review (lighter visual weight) -->
+      <div class="contact-block contact-secondary">
+        <h2 class="section-title">LEAVE A REVIEW</h2>
+        <!-- Same idea here: set FORMS_ENABLED.review to false in
+             js/script.js to swap this form for an Email Me button. -->
+        <div class="form-container" id="reviewFormContainer">
+          <form class="simple-form" id="reviewForm" action="https://api.web3forms.com/submit" method="POST">
+            <input type="hidden" name="apikey" value="b0a32379-4abd-4770-a9eb-c9f39b45e7d3">
+            <input type="hidden" name="subject" value="New Portfolio Review Received!">
+            <input type="hidden" name="redirect" value="https://lemuelmagbitang.github.io/success/">
+            <input type="text" name="name" placeholder="Your Name / Handle" required>
+            
+            <div class="star-rating" style="display: flex; flex-direction: row-reverse; justify-content: center; gap: 10px; margin: 10px 0;">
+              <input type="radio" id="star5" name="rating" value="5" required/><label for="star5" title="5 stars">★</label>
+              <input type="radio" id="star4" name="rating" value="4"/><label for="star4" title="4 stars">★</label>
+              <input type="radio" id="star3" name="rating" value="3"/><label for="star3" title="3 stars">★</label>
+              <input type="radio" id="star2" name="rating" value="2"/><label for="star2" title="2 stars">★</label>
+              <input type="radio" id="star1" name="rating" value="1"/><label for="star1" title="1 star">★</label>
+            </div>
+
+            <textarea name="review" rows="3" placeholder="Write your review here..." required></textarea>
+            <button type="submit" class="submit-btn" style="background: transparent; border: 1px solid #fff; color: #fff;">SUBMIT REVIEW</button>
+          </form>
+          <a href="mailto:lemuelmagbitangt@gmail.com?subject=Portfolio%20Review" class="email-me-btn" id="reviewEmailBtn" style="display:none;">
+            <i class="fa-solid fa-envelope"></i> EMAIL ME YOUR REVIEW
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CLIENT REVIEWS CAROUSEL -->
+  <section class="container page-spacing reviews-section" style="border-top: 1px solid #222;">
+    <!-- Reviews now live in data/reviews.json and are edited through
+         admin/ — see /README-CMS-SETUP.md. script.js rebuilds
+         #reviewsTrack from that file (and duplicates it to build the
+         seamless scroll loop) before this section ever becomes
+         visible. The one card kept here is a fallback only, shown if
+         that fetch ever fails — don't add real reviews here. -->
+    <div class="reviews-marquee">
+      <div class="reviews-track" id="reviewsTrack">
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-quote">"Content is loading…"</p>
+          <span class="review-author">— check the CMS if this doesn't change</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIGHTBOX MODAL -->
+  <!-- The close/prev/next controls live in their own sibling wrapper
+       below, NOT inside .lightbox-modal. Nesting position:fixed
+       controls inside an element that itself scrolls internally
+       (.lightbox-modal has overflow-y:auto) is what made them visibly
+       drift/jump on mobile while scrolling artwork — some mobile
+       browsers anchor a "fixed" descendant to its scrolling ancestor
+       instead of the real viewport. Being outside it entirely removes
+       the problem instead of working around it. script.js toggles
+       both this wrapper and the modal together. -->
+  <div class="lightbox-controls" id="lightboxControls">
+    <i class="fa-solid fa-xmark lightbox-close" id="lightboxClose"></i>
+    <i class="fa-solid fa-chevron-left lightbox-nav lightbox-prev"></i>
+    <i class="fa-solid fa-chevron-right lightbox-nav lightbox-next"></i>
+  </div>
+
+  <div class="lightbox-modal" id="lightbox">
+    <div class="modal-interior">
+      <div class="modal-header">
+        <h2 id="modalTitle">Project Title</h2>
+        <p id="modalDesc">Project description goes here.</p>
+        <div id="modalFullDesc" class="modal-full-desc"></div>
+      </div>
+      <div class="modal-gallery" id="lightboxMediaContainer"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-content" style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+      <div class="social-icons">
+        <a href="https://www.instagram.com/llem_09" target="_blank" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.tiktok.com/@artsoflem" target="_blank" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="https://youtube.com/@aol_lem" target="_blank" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+        <a href="mailto:lemuelmagbitangt@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      </div>
+      <p>&copy; 2026 Lemuel Magbitang. All Rights Reserved.</p>
+      <a href="#" style="color: #888; text-decoration: none; font-size: 0.9rem; margin-top: 10px;">↑ Back to Top</a>
+    </div>
+  </footer>
+
+  <!-- CMS HOOK — points the hero at data/hero.json, site-wide
+       toggles/forms/socials/contact-email at data/settings.json, the
+       whole project grid at data/projects.json, the client reviews
+       strip at data/reviews.json, and the filter tabs + nav dropdown
+       at data/filters.json (all edited via admin/). script.js
+       keeps its hardcoded values/cards as an offline fallback, so
+       nothing on the page is ever blank if these files are missing or
+       you're previewing from file://. -->
+  <script>
+    window.HERO_MESSAGES_URL = 'data/hero.json';
+    window.SETTINGS_URL = 'data/settings.json';
+    window.PROJECTS_URL = 'data/projects.json';
+    window.REVIEWS_URL = 'data/reviews.json';
+    window.FILTERS_URL = 'data/filters.json';
+    window.HERO_LOOP_URL = 'data/hero-loop.json';
+  </script>
+  <script src="js/script.js"></script>
+</body>
+</html>

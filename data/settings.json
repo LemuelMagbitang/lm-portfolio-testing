@@ -1,0 +1,33 @@
+{
+  "protectionEnabled": true,
+  "formsEnabled": {
+    "project": true,
+    "review": true
+  },
+  "showCardBadges": false,
+  "showReviews": false,
+  "showSoftwareLogos": false,
+  "web3forms": {
+    "projectKey": "15822b98-f9a5-42fe-86f0-149ed102f521",
+    "reviewKey": "b0a32379-4abd-4770-a9eb-c9f39b45e7d3"
+  },
+  "redirectUrl": "https://lemuelmagbitang.github.io/success/",
+  "contactEmail": "lemuelmagbitangt@gmail.com",
+  "socials": {
+    "instagram": "https://www.instagram.com/llem_09",
+    "tiktok": "https://www.tiktok.com/@artsoflem",
+    "youtube": "https://youtube.com/@aol_lem"
+  },
+  "siteTitle": "Lemuel Magbitang | Works",
+  "siteDescription": "2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang \u2014 freelance multimedia artist open for work.",
+  "heroTiming": {
+    "fadeMs": 600,
+    "autoRotateMs": 0,
+    "crossfadeMs": 3500,
+    "kenBurnsFromScale": 1,
+    "kenBurnsToScale": 1.15,
+    "kenBurnsDurationS": 14,
+    "loopMode": "latest",
+    "transitionStyle": "kenburns"
+  }
+}

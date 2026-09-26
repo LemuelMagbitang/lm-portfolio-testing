@@ -1,0 +1,544 @@
+[
+  {
+    "id": "haeru",
+    "title": "Haeru",
+    "subtitle": "Co-Founder & Chief Creative Officer",
+    "badge": "UI/UX Design",
+    "filters": [
+      "archive"
+    ],
+    "description": "Leading the visual design and UI/UX architecture for Haeru, an AI personal companion. Collaborated directly with engineering to bridge technical agentic capabilities into intuitive user experiences designing signature features like 'Lore' character profiles, proactive nudges, real-time voice interfaces, and narrative postcards to transform raw personal data into qualitative life storytelling.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 50%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/haeru-logo-design.jpg",
+        "caption": "Haeru Logo & Brandmark Design",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/haeru-logo-construct.jpg",
+        "caption": "App Icon Vector Grid Architecture",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/appstore-listing-visuals.jpg",
+        "caption": "App Store listing visuals",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/00app-design.jpg",
+        "caption": "Screen flow and its components",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/01app-design.jpg",
+        "caption": "High-fidelity screen gallery mockup",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/app-lowfi-sketch.jpg",
+        "caption": "Low-fidelity screen sketch",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/sticker-ullustration.jpg",
+        "caption": "Haeru sticker illustration",
+        "orientation": ""
+      },
+      {
+        "type": "video",
+        "src": "assets/projects/haeru/app-onboarding-animation.mp4",
+        "caption": "App onboarding animation",
+        "orientation": ""
+      },
+      {
+        "type": "video",
+        "src": "assets/projects/haeru/bts-idle-animation.mp4",
+        "caption": "Behind the scene idle animation made in Rive",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/web-design.jpg",
+        "caption": "Marketing Landing Page Design",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/haeru/web-og-image.jpg",
+        "caption": "Open graph Social Preview Image",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "retail-spatial-layouts",
+    "title": "Retail & Spatial Layouts",
+    "subtitle": "Retail Environment & Pop-Up Kiosk Design",
+    "badge": "3D Design",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "A collection of commercial 3D spatial layouts and pop-up retail environments, including concept stores, kiosk Store, and a commercial block layout. Built in Blender, with a focus on translating brand identity into believable, walkable retail space.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 30%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/h20h00.jpeg",
+        "caption": "H2OH Concept Store",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/h20h01.jpeg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/h20h02.jpeg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/h20h03.jpeg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/h20h05.jpeg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/h20h04.jpeg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/lss00.jpg",
+        "caption": "Little Sprinkle and Sparkle. Pop-Up Retail Kiosk Design",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/lss01.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/lss02.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/lss03.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/repeluxe00.png",
+        "caption": "Commercial Block Layout Design",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/repeluxe01.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/repeluxe02.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/repeluxe03.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/retail-spatial-layouts/repeluxe04.jpg",
+        "caption": "",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "product-packaging",
+    "title": "3D Product & Packaging",
+    "subtitle": "Commercial Product Rendering & Structural Packaging",
+    "badge": "3D Design",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "High-fidelity product and packaging visualizations, form a conceptual shampoo line to a structural wine box concept. Built in Blender, with an emphasis on material realism — glass, liquid, foil, and cardboard rendered to commercial print/advertising standard.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 30%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/product-packaging/aureus00.jpg",
+        "caption": "3D Product & Packaging Visualization",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/product-packaging/shampoo00.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/product-packaging/wine-box.jpg",
+        "caption": "3D Structural Packaging Concept",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "epiphany",
+    "title": "Epiphany",
+    "subtitle": "3D Conceptual Artwork Collection",
+    "badge": "3D Design",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "Epiphany is a conceptual solo exhibition idea around the complexities of the human mind, emotion, and existence. Built entirely in 3D Blender using procedural texturing, geometry nodes, modifiers and digital painting, each piece is a symbolic imagery to construct immersive surrealist narratives.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 50%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/florilegium.jpg",
+        "caption": "Florilegium",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/the-half-of-us.jpg",
+        "caption": "The Half of Us",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/tender-reverence.jpg",
+        "caption": "Tender Reverence",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg",
+        "caption": "Temporal Constraints",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/melodies-of-innerself.jpg",
+        "caption": "Melodies of the Inner Self",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/aqua-vitae.jpg",
+        "caption": "Aqua Vitae",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/ephiphany-3d-illustration/the-dead-king-midas.jpg",
+        "caption": "The Dead King Midas",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "2024shell-nsac",
+    "title": "5th Place — Walang Hanggang Dambana ng Sining (Eternal Shrine of Art)",
+    "subtitle": "57th Shell National Student Art Competition (NSAC)",
+    "badge": "2D Illustration",
+    "filters": [
+      "illustration"
+    ],
+    "description": "A national award-winning submission for the 57th Shell National Student Art Competition, securing 5th place overall. Walang Hanggang Dambana ng Sining (Eternal Shrine of Art) aligns directly with the 57th Shell NSAC theme \"Lika na, Likha pa ng Obra\" (\"Come on, let's create more art\") by celebrating art as a continuous, generational torch pass. Highlighting varied Philippine art forms, the composition depicts an expanding, infinite canvas: the artists who came before filled their frames and built the canvas with colors. Now, a new generation emerges to take up the mantle and create anew.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 30%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/2024shell-nsac/full.jpg",
+        "caption": "Walang Hanggang Dambana ng Sining (Eternal Shrine of Art)",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/2024shell-nsac/sketch.jpg",
+        "caption": "Sketch and Process Images",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "friends-gacha",
+    "title": "Friends Gacha",
+    "subtitle": "Character Design & Animation",
+    "badge": "Motion Graphics",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "A collaborative character design and motion project centered on a dynamic roster of stylized personas. The primary focus was translating distinct individual personalities into memorable visual silhouettes, expressive color palettes, and fluid 3D character animation.",
+    "thumbnail": {
+      "src": "assets/projects/friends-gacha/thumbnail.jpg",
+      "focus": "50% 50%",
+      "zoom": 1.3
+    },
+    "media": [
+      {
+        "type": "youtube",
+        "src": "https://www.youtube.com/shorts/0jtvsBLRV7o",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/friends-gacha/square-layout.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/friends-gacha/landscape-layout.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "youtube",
+        "src": "https://www.youtube.com/shorts/L8Wi_eQl8V4",
+        "caption": "Character design process",
+        "orientation": ""
+      },
+      {
+        "type": "youtube",
+        "src": "https://www.youtube.com/shorts/fkiNDj_1gO4",
+        "caption": "3D and animation design process",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "gog-render-challenge",
+    "title": "Baku: The Moon Eater",
+    "subtitle": "3D Character Concept for Gauntlet of Gods Challenge",
+    "badge": "3D Design",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "An entry for the Gauntlet of Gods Render Challenge, bringing a long standing original character concept into full 3D execution. The design draws directly from Bakunawa, the iconic sea serpent of Visayan mythology in the Philippines — a primordial force responsible for eclipses, seismic storms, and swallowing the moon.",
+    "thumbnail": {
+      "src": "assets/projects/gog-render-challenge/thumbnail.png",
+      "focus": "50% 20%",
+      "zoom": 1.05
+    },
+    "media": [
+      {
+        "type": "youtube",
+        "src": "https://www.youtube.com/shorts/9VeBW7Nd1Hc",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/gog-render-challenge/card-layout.png",
+        "caption": "Card Layout for the Gauntlet of Gods Physical Game Print",
+        "orientation": ""
+      },
+      {
+        "type": "youtube",
+        "src": "https://www.youtube.com/shorts/svl9hdfumAo",
+        "caption": "GOG Entry Breakdown",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/gog-render-challenge/original-character-design.jpg",
+        "caption": "Original Character Design from 2022",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "aol-design-case-study",
+    "title": "Arts of Lem (AOL) Gestalt Design Study",
+    "subtitle": "Re-engineering a personal logo through the Gestalt laws of visual perception",
+    "badge": "3D Design",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "A visual and theoretical breakdown of my old logo refinement process. By utilizing Gestalt principles, restructured through the Gestalt laws of visual perception",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 50%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/aol/figureground.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/aol/continuity.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/aol/combination.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/aol/proximity.jpg",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/aol/similarity.jpg",
+        "caption": "",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "graphic-design",
+    "title": "Commercial & Graphic Design",
+    "subtitle": "Key Visuals & Editorial Layouts",
+    "badge": "Brand Design",
+    "filters": [
+      "archive"
+    ],
+    "description": "A collection of commercial design and promotional print assets created for various brand campaigns, conceptual projects, and marketing initiatives. Demonstrates visual storytelling, product layout design, and targeted advertising graphics.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 30%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/bakeries-poster.jpg",
+        "caption": "Local Bakery Commercial Poster",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/commercial-renders.jpg",
+        "caption": "Social Media Promotional Assets",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/concept-magazine.jpg",
+        "caption": "Haute Couture Editorial Layout",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/hyundai-stargazer.jpg",
+        "caption": "Hyundai Stargazer Campaign Key Visuals",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/tarpaulin-design.jpg",
+        "caption": "WHIB Asia Tour in Manila — Key Visual & Event Signage",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/watch-poster.jpg",
+        "caption": "Casio Commercial Product Poster",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/wine-poster.jpg",
+        "caption": "Premium Wine Brand Advertisement",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "personal-illustrations",
+    "title": "Personal Illustrations",
+    "subtitle": "A Collection of 2D Artworks & Studies",
+    "badge": "2D Illustration",
+    "filters": [
+      "illustration"
+    ],
+    "description": "This collection features a mix of personal artwork, visual style studies, and commission pieces, serving as a space to document my ongoing creative exploration.",
+    "thumbnail": {
+      "src": "",
+      "focus": "50% 30%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/personal-illustrations/gf-2d-illustrations/august2026-gf-illustration.jpg",
+        "caption": "Illustration of my Girlfriend",
+        "orientation": ""
+      },
+      {
+        "type": "youtube",
+        "src": "https://www.youtube.com/shorts/p1SZo1EydHA",
+        "caption": "",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/personal-illustrations/genshin-2d-illustrations/columbina-illustration.jpg",
+        "caption": "Style Study of Genshin Impact Character \"Columbina\"",
+        "orientation": ""
+      }
+    ]
+  }
+]
