@@ -31,11 +31,16 @@
 
   <link rel="icon" type="image/svg+xml" href="../assets/projects/site/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Lottie player — see the matching comment in the root index.html
+       for what this is. The About page only ever needs it for the
+       hero banner (no project artwork lives here), but loading it is
+       harmless either way. -->
+  <script src="https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.4/dist/lottie-player.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js"></script>
 </head>
 <body class="about-page">
 
@@ -189,7 +194,6 @@
     window.SETTINGS_URL = '../data/settings.json';
     window.ABOUT_URL = '../data/about.json';
     window.FILTERS_URL = '../data/filters.json';
-    window.HERO_LOOP_URL = '../data/hero-loop.json';
   </script>
   <script src="../js/script.js"></script>
 </body>
