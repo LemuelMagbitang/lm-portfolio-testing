@@ -39,6 +39,14 @@
   <link rel="icon" type="image/svg+xml" href="assets/projects/site/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <!-- Lottie player — plays back a Lottie/JSON animation exactly like
+       an <img> plays back a picture, via the <lottie-player> custom
+       element this script defines. Used by the hero banner and by
+       project artwork wherever either one is set to a .json Lottie
+       file instead of an image or video. Loads once, does nothing at
+       all on a page with no Lottie content to play. -->
+  <script src="https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.4/dist/lottie-player.js"></script>
+
   <!-- Site typeface: loaded directly instead of relying on whatever
        system font a visitor's OS/browser happens to substitute (this is
        what previously showed up wrong on Android/Windows). Preconnect
@@ -48,7 +56,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/style.css">
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js"></script>
 </head>
 <body>
 
@@ -285,7 +292,6 @@
     window.PROJECTS_URL = 'data/projects.json';
     window.REVIEWS_URL = 'data/reviews.json';
     window.FILTERS_URL = 'data/filters.json';
-    window.HERO_LOOP_URL = 'data/hero-loop.json';
   </script>
   <script src="js/script.js"></script>
 </body>
