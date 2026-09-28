@@ -561,8 +561,8 @@
     ],
     "description": "",
     "thumbnail": {
-      "type": "lottie",
-      "src": "assets/projects/price-cuts.json",
+      "type": "image",
+      "src": "",
       "focus": "50% 50%",
       "zoom": 1.3
     },
