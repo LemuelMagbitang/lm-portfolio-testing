@@ -2074,24 +2074,6 @@ body.center-page {
 
 
 /* =====================================================
-   INTERACTIVE 3D MODEL MEDIA
-   ===================================================== */
-.model-viewer-shell{
-  position:relative;
-  width:100%;
-  min-height:320px;
-  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.01) 55%,transparent 78%);
-  border-radius:12px;
-  overflow:hidden;
-  touch-action:none;
-}
-.model-viewer-shell canvas{width:100%!important;height:100%!important;display:block;}
-.model-viewer-hint{position:absolute;left:14px;bottom:12px;color:rgba(255,255,255,.52);background:rgba(0,0,0,.38);padding:5px 8px;border-radius:5px;font-size:10px;letter-spacing:.04em;pointer-events:none;}
-.model-viewer-error{padding:20px;text-align:center;color:#999;font-size:12px;line-height:1.5;}
-.lightbox-model-viewer{width:min(94vw,1100px);height:min(74vh,720px);min-height:340px;margin:0 auto;}
-.card-thumbnail lottie-player{background:transparent;}
-
-/* =====================================================
    MEDIA BACKGROUNDS — transparent Lottie / 3D artwork
    ===================================================== */
 .lm-media-background-host{isolation:isolate;}
@@ -2127,7 +2109,8 @@ body.center-page {
 /* Lightweight card fallback when a project uses a 3D model as its first
    media item but does not provide a raster thumbnail. The full interactive
    viewer remains reserved for the opened artwork/lightbox, so the grid does
-   not create one WebGL renderer per card. */
+   not create one WebGL renderer per card. The actual background comes from
+   the CMS media.background object and is applied to .card-thumbnail. */
 .project-thumb-model{
   position:absolute;
   inset:0;
@@ -2135,8 +2118,155 @@ body.center-page {
   align-items:center;
   justify-content:center;
   background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.09),rgba(255,255,255,.02) 58%,rgba(0,0,0,.12));
-  color:rgba(255,255,255,.72);
+  color:rgba(255,255,255,.78);
   font-size:11px;
   font-weight:800;
   letter-spacing:.12em;
+  text-align:center;
+}
+.project-thumb-model-content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:20px;
+  text-shadow:0 1px 10px rgba(0,0,0,.25);
+}
+.project-thumb-model-content i{font-size:22px;}
+.project-thumb-model-content span{font-size:11px;letter-spacing:.16em;}
+.project-thumb-model-content small{font-size:9px;font-weight:600;letter-spacing:.08em;color:rgba(255,255,255,.52);text-transform:none;}
+.card-3d-indicator{
+  position:absolute;
+  left:14px;
+  bottom:14px;
+  z-index:6;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:rgba(8,8,8,.48);
+  color:rgba(255,255,255,.82);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.11em;
+  pointer-events:none;
+}
+.card-3d-indicator i{font-size:10px;}
+
+/* =====================================================
+   INTERACTIVE 3D VIEWER — two-step touch/scroll interaction
+   ===================================================== */
+.model-viewer-shell{
+  position:relative;
+  width:100%;
+  min-height:320px;
+  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.01) 55%,transparent 78%);
+  border-radius:12px;
+  overflow:hidden;
+  touch-action:auto;
+  overscroll-behavior:contain;
+}
+.model-viewer-shell canvas{width:100%!important;height:100%!important;display:block;touch-action:auto;outline:none;}
+.model-viewer-shell.is-interactive,
+.model-viewer-shell.is-interactive canvas{touch-action:none;}
+.model-viewer-activate{
+  position:absolute;
+  inset:0;
+  z-index:8;
+  width:100%;
+  height:100%;
+  border:0;
+  padding:24px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.04),rgba(0,0,0,.22));
+  color:#fff;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font:inherit;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.model-viewer-activate:hover{background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.27));}
+.model-viewer-activate:focus{outline:none;}
+.model-viewer-activate:focus-visible{outline:2px solid #fff;outline-offset:-6px;border-radius:12px;}
+.model-viewer-activate-content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:9px;
+  padding:16px 20px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:14px;
+  background:rgba(9,9,9,.42);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 18px 40px rgba(0,0,0,.2);
+}
+.model-viewer-activate-content i{font-size:24px;}
+.model-viewer-activate-content strong{font-size:11px;letter-spacing:.16em;}
+.model-viewer-activate-content span{font-size:10px;letter-spacing:.04em;color:rgba(255,255,255,.58);}
+.model-viewer-ui{
+  position:absolute;
+  left:50%;
+  bottom:14px;
+  z-index:9;
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  width:min(100% - 28px,640px);
+  pointer-events:none;
+}
+.model-viewer-hint{
+  color:rgba(255,255,255,.62);
+  background:rgba(0,0,0,.42);
+  padding:6px 9px;
+  border-radius:6px;
+  font-size:10px;
+  letter-spacing:.04em;
+  line-height:1.35;
+  text-align:center;
+  pointer-events:none;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.model-viewer-back{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(8,8,8,.62);
+  color:rgba(255,255,255,.8);
+  padding:7px 12px;
+  font:700 9px/1.1 inherit;
+  letter-spacing:.12em;
+  cursor:pointer;
+  pointer-events:auto;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.model-viewer-back:hover{background:rgba(255,255,255,.92);color:#111;}
+.model-viewer-back:focus{outline:none;}
+.model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.model-viewer-error{padding:20px;text-align:center;color:#999;font-size:12px;line-height:1.5;}
+.lightbox-model-viewer{width:min(94vw,1100px);height:min(74vh,720px);min-height:340px;margin:0 auto;}
+.card-thumbnail lottie-player{background:transparent;}
+
+@media (max-width:768px){
+  .card-3d-indicator{left:10px;bottom:10px;font-size:8px;padding:6px 8px;}
+  .model-viewer-hint{font-size:9px;}
+  .model-viewer-activate{padding:18px;}
+  .model-viewer-activate-content{padding:14px 16px;}
 }

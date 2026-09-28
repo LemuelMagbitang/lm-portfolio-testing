@@ -146,6 +146,10 @@ export async function mountModelViewer(container, src, options = {}) {
   controls.target.set(0, 0, 0);
   controls.touches.ONE = THREE.TOUCH.ROTATE;
   controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+  // The viewer starts in a passive state so a finger drag or mouse-wheel
+  // gesture never hijacks the project's normal page/lightbox scrolling.
+  // The user explicitly enters the interactive 3D state first.
+  controls.enabled = false;
 
   let root;
   let mixers = [];
@@ -185,12 +189,68 @@ export async function mountModelViewer(container, src, options = {}) {
       mixers.push(mixer);
     }
 
+    // Two-step interaction model:
+    // 1) the viewer advertises that it is interactive and waits for an
+    //    explicit tap/click, keeping page scrolling intact;
+    // 2) after activation OrbitControls takes over until the user presses
+    //    the small back button below the gesture instructions.
+    const activate = document.createElement('button');
+    activate.type = 'button';
+    activate.className = 'model-viewer-activate';
+    activate.setAttribute('aria-label', 'Activate interactive 3D view');
+    activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>INTERACTIVE 3D</strong><span>Tap to explore this artwork</span></span>';
+    container.appendChild(activate);
+
+    const ui = document.createElement('div');
+    ui.className = 'model-viewer-ui';
+
     if (options.hint !== false) {
       const hint = document.createElement('div');
       hint.className = 'model-viewer-hint';
       hint.textContent = 'Drag to orbit · pinch / wheel to zoom · two-finger / right-drag to pan';
-      container.appendChild(hint);
+      ui.appendChild(hint);
     }
+
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'model-viewer-back';
+    back.setAttribute('aria-label', 'Exit interactive 3D view');
+    back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i> BACK TO MEDIA';
+    back.hidden = true;
+    ui.appendChild(back);
+    container.appendChild(ui);
+
+    const setInteractive = (active) => {
+      if (disposed) return;
+      controls.enabled = active;
+      container.classList.toggle('is-interactive', active);
+      activate.hidden = active;
+      back.hidden = !active;
+      renderer.domElement.style.touchAction = active ? 'none' : 'auto';
+      if (!active) {
+        // Clear any stuck pointer state before returning gesture ownership
+        // to the lightbox/page.
+        controls.reset();
+      }
+    };
+
+    activate.addEventListener('click', (event) => {
+      event.preventDefault();
+      setInteractive(true);
+      // Focus the canvas for keyboard users without forcing a page jump.
+      try { renderer.domElement.focus({ preventScroll: true }); } catch (_) { renderer.domElement.focus(); }
+    });
+
+    back.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setInteractive(false);
+      activate.focus({ preventScroll: true });
+    });
+
+    renderer.domElement.setAttribute('tabindex', '0');
+    renderer.domElement.setAttribute('aria-label', 'Interactive 3D model. Activate the viewer before rotating or panning.');
+    renderer.domElement.style.touchAction = 'auto';
   } catch (err) {
     renderer.dispose();
     throw err;

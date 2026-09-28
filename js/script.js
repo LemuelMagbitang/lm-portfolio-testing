@@ -306,6 +306,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     return el;
   }
 
+  function findMediaBackgroundFromProject(p, src) {
+    if (!p || !src || !Array.isArray(p.media)) return null;
+    const match = p.media.find(m => m && m.src === src && m.background && typeof m.background === 'object');
+    return match ? match.background : null;
+  }
+
+  function projectHas3D(p) {
+    return !!(p && Array.isArray(p.media) && p.media.some(m => m && m.type === 'model' && m.src));
+  }
+
+  function add3DAvailabilityIndicator(thumb, p) {
+    if (!thumb || !projectHas3D(p) || thumb.querySelector('.card-3d-indicator')) return;
+    thumb.classList.add('has-3d-view');
+    const indicator = document.createElement('div');
+    indicator.className = 'card-3d-indicator';
+    indicator.innerHTML = '<i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D VIEW AVAILABLE</span>';
+    thumb.appendChild(indicator);
+  }
+
   function buildProjectCardEl(p) {
     const card = document.createElement('div');
     const filters = Array.isArray(p.filters) ? p.filters.filter(Boolean) : [];
@@ -324,20 +343,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const thumb = document.createElement('div');
     thumb.className = 'card-thumbnail';
     const t = p.thumbnail || {};
+    const inheritedThumbBackground = t.src ? findMediaBackgroundFromProject(p, t.src) : null;
+    const thumbBackground = (t.background && typeof t.background === 'object') ? t.background : inheritedThumbBackground;
     if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
     if (t.src) {
-      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src,background:t.background}, p.title || 'Project artwork');
+      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src,background:thumbBackground}, p.title || 'Project artwork');
       if (media) {
         if (t.focus) media.setAttribute('data-focus', t.focus);
         if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
         if (t.rotate) media.setAttribute('data-rotate', t.rotate);
-        if (t.background && typeof t.background === 'object') thumb.setAttribute('data-background', JSON.stringify(t.background));
+        if (thumbBackground && typeof thumbBackground === 'object') thumb.setAttribute('data-background', JSON.stringify(thumbBackground));
         thumb.appendChild(media);
       }
     } else {
       if (t.focus) thumb.setAttribute('data-focus', t.focus);
       if (t.zoom && Number(t.zoom)!==1) thumb.setAttribute('data-zoom', t.zoom);
+      if (t.rotate) thumb.setAttribute('data-rotate', t.rotate);
     }
+    add3DAvailabilityIndicator(thumb, p);
     card.appendChild(thumb);
 
     const info = document.createElement('div');
@@ -973,9 +996,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // If a project card's <div class="card-thumbnail"> was left empty
   // (no <img> inside, or an <img> with no src) this fills it in using
-  // the card's own first media-list item instead — an image if the
-  // first item is data-image, or a YouTube thumbnail if it's
-  // data-youtube. Runs once, before anything else reads the grid.
+  // the card's own first media-list item. Lottie keeps its transparent
+  // animation while inheriting the exact CMS background. A model uses a
+  // lightweight preview tile rather than creating a WebGL renderer for
+  // every card, but it also inherits the model's CMS background.
   function buildThumbnailMedia(source, altText){
     if (!source || !source.src) return null;
     let media;
@@ -983,10 +1007,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       media=document.createElement('video'); media.src=siteAssetUrl(source.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
     } else if (source.type === 'lottie') {
       media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent'); media.setAttribute('preserveAspectRatio','xMidYMid slice');
+    } else if (source.type === 'model') {
+      media=document.createElement('div');
+      media.className='project-thumb-model';
+      media.setAttribute('role','img');
+      media.setAttribute('aria-label',(altText||'Project artwork')+' — interactive 3D view available');
+      media.innerHTML='<div class="project-thumb-model-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>INTERACTIVE 3D</span><small>Open artwork to explore</small></div>';
     } else {
       media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
     }
     media.classList.add('project-thumb-media');
+    if (source.type === 'model') media.setAttribute('data-model-thumb', source.src);
     if (source.background && typeof source.background === 'object') media.setAttribute('data-background', JSON.stringify(source.background));
     return media;
   }
@@ -1027,9 +1058,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(source.background && typeof source.background === 'object') wrap.setAttribute('data-background', JSON.stringify(source.background));
         if(source.type==='video') media.setAttribute('data-video-thumb','');
         if(source.type==='lottie') media.setAttribute('data-lottie-thumb','');
+        if(source.type==='model') media.setAttribute('data-model-thumb','');
+      }
+      const has3DMedia = !!card.querySelector('.project-media-list .media-item[data-model]');
+      if (has3DMedia) {
+        wrap.classList.add('has-3d-view');
+        if (!wrap.querySelector('.card-3d-indicator')) {
+          const indicator = document.createElement('div');
+          indicator.className = 'card-3d-indicator';
+          indicator.innerHTML = '<i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D VIEW AVAILABLE</span>';
+          wrap.appendChild(indicator);
+        }
       }
     });
   }
+  // The background helper is defined later in this file, but function
+  // declarations are hoisted. Loading it before thumbnail adjustments is
+  // important: CMS Lottie / 3D thumbnails need their custom background
+  // rendered at the same time as the media, not only when the hero loads.
+  await ensureMediaBackgroundHelper();
   fillMissingThumbnails();
 
   // Lets you manually fine-tune where a thumbnail crops/zooms — for
@@ -1215,9 +1262,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       let explicitBackground = null;
       try { explicitBackground = thumbWrap?.getAttribute('data-background') ? JSON.parse(thumbWrap.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
       const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
-      if (!rawSrc && thumbMedia) {
+      if (!rawSrc && thumbMedia && !thumbMedia.hasAttribute('data-model-thumb')) {
         rawSrc = thumbMedia.getAttribute('src');
         explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : thumbMedia.tagName === 'LOTTIE-PLAYER' ? 'lottie' : 'image');
+        if (!explicitBackground) {
+          try { explicitBackground = thumbMedia.getAttribute('data-background') ? JSON.parse(thumbMedia.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
+        }
       }
       if (!rawSrc) {
         const mediaItems = card.querySelectorAll('.project-media-list .media-item');
