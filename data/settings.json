@@ -6,7 +6,7 @@
   },
   "showCardBadges": false,
   "showReviews": false,
-  "showSoftwareLogos": false,
+  "showSoftwareLogos": true,
   "web3forms": {
     "projectKey": "15822b98-f9a5-42fe-86f0-149ed102f521",
     "reviewKey": "b0a32379-4abd-4770-a9eb-c9f39b45e7d3"
