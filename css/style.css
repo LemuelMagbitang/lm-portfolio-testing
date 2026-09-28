@@ -2170,8 +2170,8 @@ body.center-page {
   background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.012) 58%,transparent 82%);
   border-radius:12px;
   overflow:hidden;
-  touch-action:auto;
-  overscroll-behavior:auto;
+  touch-action:pan-y;
+  overscroll-behavior:contain;
   isolation:isolate;
 }
 .model-viewer-shell canvas{
@@ -2188,9 +2188,8 @@ body.center-page {
 }
 .model-viewer-shell.is-interactive canvas{pointer-events:auto;}
 
-/* In the normal media list the 3D item behaves like a thumbnail. The button
-   is deliberately scroll-friendly: vertical/horizontal page gestures remain
-   native, while a simple tap/click can still enter the focused viewer. */
+/* In the normal media list the model is deliberately treated like a rich
+   thumbnail. It never owns the scroll gesture until it has been opened. */
 .model-viewer-activate{
   position:absolute;
   inset:0;
@@ -2199,7 +2198,7 @@ body.center-page {
   height:100%;
   border:0;
   padding:18px;
-  background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.14));
+  background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.12));
   color:#fff;
   cursor:pointer;
   display:flex;
@@ -2207,109 +2206,128 @@ body.center-page {
   justify-content:center;
   text-align:center;
   font:inherit;
-  touch-action:pan-x pan-y;
+  touch-action:pan-y;
   -webkit-user-select:none;
   user-select:none;
+  -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
 }
 @media (hover:hover) and (pointer:fine){
-  .model-viewer-activate:hover{background:linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.2));}
+  .model-viewer-activate:hover{background:linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.18));}
 }
 .model-viewer-activate:focus{outline:none;}
-.model-viewer-activate:focus-visible{outline:2px solid #fff;outline-offset:-6px;border-radius:12px;}
+.model-viewer-activate:focus-visible{outline:2px solid #fff;outline-offset:-5px;border-radius:12px;}
 .model-viewer-activate-content{
   display:inline-flex;
   align-items:center;
-  gap:9px;
-  padding:9px 12px;
+  gap:clamp(8px,1vw,10px);
+  padding:clamp(10px,1.5vw,12px) clamp(13px,1.8vw,16px);
+  min-height:44px;
+  box-sizing:border-box;
   border:1px solid rgba(255,255,255,.16);
   border-radius:999px;
-  background:rgba(8,8,8,.38);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  background:rgba(8,8,8,.42);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
   box-shadow:0 12px 28px rgba(0,0,0,.18);
-  opacity:.92;
+  opacity:.94;
 }
-.model-viewer-activate-content i{font-size:12px;}
-.model-viewer-activate-content strong{font-size:9px;letter-spacing:.16em;font-weight:800;}
+.model-viewer-activate-content i{font-size:clamp(11px,1.7vw,14px);}
+.model-viewer-activate-content strong{font-size:clamp(10px,1.6vw,12px);letter-spacing:.14em;font-weight:800;}
 
 .model-viewer-ui{
   position:absolute;
   left:50%;
-  bottom:14px;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + clamp(14px, 2.8vw, 28px));
   z-index:9;
   transform:translateX(-50%);
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:8px;
-  width:min(100% - 28px,640px);
+  gap:clamp(8px,1.5vw,12px);
+  width:min(calc(100% - 32px),760px);
   pointer-events:none;
 }
 .model-viewer-hint[hidden],
 .model-viewer-back[hidden],
 .model-viewer-activate[hidden]{display:none!important;}
 .model-viewer-hint{
-  color:rgba(255,255,255,.66);
-  background:rgba(0,0,0,.44);
-  padding:6px 9px;
-  border-radius:6px;
-  font-size:10px;
-  letter-spacing:.035em;
+  width:fit-content;
+  max-width:min(100%, 720px);
+  box-sizing:border-box;
+  color:rgba(255,255,255,.76);
+  background:rgba(8,8,8,.48);
+  border:1px solid rgba(255,255,255,.10);
+  padding:clamp(8px,1.5vw,11px) clamp(11px,2vw,16px);
+  border-radius:999px;
+  font-size:clamp(10px,2.2vw,13px);
+  letter-spacing:.02em;
   line-height:1.35;
   text-align:center;
   pointer-events:none;
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 10px 28px rgba(0,0,0,.22);
 }
 .model-viewer-back{
   appearance:none;
   border:1px solid rgba(255,255,255,.18);
   border-radius:999px;
-  background:rgba(8,8,8,.72);
-  color:rgba(255,255,255,.86);
-  padding:8px 13px;
-  font:700 9px/1.1 inherit;
-  letter-spacing:.12em;
+  background:rgba(8,8,8,.78);
+  color:rgba(255,255,255,.92);
+  min-height:46px;
+  padding:0 clamp(16px,2.8vw,22px);
+  font:700 clamp(10px,2.1vw,12px)/1 inherit;
+  letter-spacing:.11em;
   cursor:pointer;
   pointer-events:auto;
   -webkit-user-select:none;
   user-select:none;
+  -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  box-shadow:0 10px 24px rgba(0,0,0,.22);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 12px 30px rgba(0,0,0,.26);
+  transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease;
 }
-.model-viewer-back:hover{background:rgba(255,255,255,.92);color:#111;}
+@media (hover:hover) and (pointer:fine){
+  .model-viewer-back:hover{background:rgba(255,255,255,.94);color:#111;border-color:rgba(255,255,255,.82);transform:translateY(-1px);}
+}
 .model-viewer-back:focus{outline:none;}
-.model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:2px;}
-.model-viewer-error{padding:20px;text-align:center;color:#999;font-size:12px;line-height:1.5;}
+.model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:3px;}
+.model-viewer-error{padding:20px;text-align:center;color:#999;font-size:clamp(12px,2.4vw,14px);line-height:1.5;}
 
-/* 3D entries are intentionally compact in the media list, like a rich
-   thumbnail rather than a full-screen viewer. */
+/* Compact 3D media-list thumbnail. The CMS selects one of these shapes and
+   the live viewer mirrors it exactly before the model is intentionally opened. */
 .lightbox-model-viewer{
   width:min(100%,860px);
-  height:clamp(250px, 42vw, 390px);
-  min-height:250px;
+  min-width:0;
+  height:auto;
+  min-height:0;
   margin:0 auto;
   border:1px solid rgba(255,255,255,.07);
   box-shadow:0 16px 40px rgba(0,0,0,.18);
 }
+.lightbox-model-viewer[data-thumbnail-ratio="1:1"]{aspect-ratio:1 / 1;}
+.lightbox-model-viewer[data-thumbnail-ratio="16:9"]{aspect-ratio:16 / 9; width:min(100%,860px);}
+.lightbox-model-viewer[data-thumbnail-ratio="9:16"]{aspect-ratio:9 / 16; width:auto; height:min(68svh,660px); max-width:100%;}
 .lightbox-media-item.is-3d-media-item{width:100%;}
 
-/* Focus mode: once 3D is deliberately opened, the rest of the project is
-   visually pushed back while the model becomes the single focal surface. */
+/* Focus mode: the model becomes a viewport-sized presentation surface.
+   There is intentionally no decorative frame on the device edges. */
 .lightbox-modal.is-3d-focused{
   overflow:hidden;
+  padding:0;
+  touch-action:none;
 }
 .lightbox-modal.is-3d-focused::before{
   content:"";
   position:fixed;
   inset:0;
-  z-index:0;
-  background:rgba(0,0,0,.5);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
+  z-index:10000;
+  background:rgba(0,0,0,.58);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
   pointer-events:none;
 }
 .lightbox-modal.is-3d-focused .modal-interior{
@@ -2319,44 +2337,83 @@ body.center-page {
 .lightbox-modal.is-3d-focused .modal-header,
 .lightbox-modal.is-3d-focused .modal-full-desc,
 .lightbox-modal.is-3d-focused #lightboxMediaContainer > .lightbox-media-item:not(.is-3d-focus-target){
-  opacity:.12;
-  filter:blur(9px);
+  opacity:.08;
+  filter:blur(10px);
   pointer-events:none;
   transition:opacity .25s ease,filter .25s ease;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target{
   position:fixed;
-  left:50%;
-  top:50%;
+  inset:0;
   z-index:10001;
-  width:min(92vw,1100px);
-  height:min(80svh,760px);
-  max-width:1100px;
-  transform:translate3d(-50%,-50%,0);
+  width:100dvw;
+  height:100dvh;
+  min-width:0;
+  max-width:none;
   margin:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  padding:0;
+  transform:none;
+  display:block;
   filter:none;
   opacity:1;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
+  position:absolute;
+  inset:0;
   width:100%;
   height:100%;
   min-height:0;
-  border-color:rgba(255,255,255,.11);
-  box-shadow:0 26px 80px rgba(0,0,0,.42);
+  max-width:none;
+  aspect-ratio:auto;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{display:none;}
 .lightbox-modal.is-3d-focused .lightbox-nav{opacity:0;pointer-events:none;}
+.lightbox-modal.is-3d-focused .lightbox-close{
+  z-index:10004;
+  top:calc(env(safe-area-inset-top, 0px) + clamp(16px, 3vw, 28px));
+  right:calc(env(safe-area-inset-right, 0px) + clamp(16px, 3vw, 28px));
+  width:clamp(44px, 10vw, 52px);
+  height:clamp(44px, 10vw, 52px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:rgba(8,8,8,.44);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  font-size:clamp(1.1rem,4vw,1.45rem);
+}
+
+/* The normal site UI uses the same fluid scale language on smaller devices,
+   so a 3D focus transition does not suddenly make everything microscopic. */
+.modal-header h2{font-size:clamp(1.5rem,4.5vw,2rem);}
+.modal-full-desc{font-size:clamp(.95rem,2.7vw,1rem);}
+.media-caption{font-size:clamp(.78rem,2.4vw,.9rem);}
+.lightbox-close{font-size:clamp(1.5rem,4vw,2rem);}
+.lightbox-nav{width:clamp(42px,8vw,46px);height:clamp(42px,8vw,46px);font-size:clamp(.85rem,2.2vw,1rem);}
+
+html.lm-3d-focus-open,
+body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width:768px){
-  .model-viewer-shell{min-height:220px;height:58vw;max-height:320px;border-radius:10px;}
-  .model-viewer-hint{font-size:9px;padding:6px 8px;}
-  .model-viewer-back{padding:8px 12px;font-size:8px;}
-  .lightbox-model-viewer{height:58vw;min-height:220px;max-height:320px;}
+  .model-viewer-shell{min-height:220px;height:56vw;max-height:320px;border-radius:10px;}
+  .model-viewer-activate-content{min-height:46px;}
+  .model-viewer-hint{max-width:calc(100vw - 32px);font-size:clamp(10px,2.8vw,13px);}
+  .model-viewer-back{min-height:48px;font-size:clamp(10px,2.6vw,12px);}
+  .lightbox-model-viewer[data-thumbnail-ratio="1:1"]{width:100%;}
+  .lightbox-model-viewer[data-thumbnail-ratio="16:9"]{width:100%;}
+  .lightbox-model-viewer[data-thumbnail-ratio="9:16"]{height:min(68svh,640px);}
   .lightbox-modal.is-3d-focused .is-3d-focus-target{
-    width:94vw;
-    height:78svh;
+    width:100dvw;
+    height:100dvh;
   }
 }
+
+@media (prefers-reduced-motion:reduce){
+  .model-viewer-back{transition:none;}
+}
+

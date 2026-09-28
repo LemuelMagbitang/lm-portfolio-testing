@@ -232,6 +232,7 @@ export async function mountModelViewer(container, src, options = {}) {
       if (hint) hint.hidden = !active;
       renderer.domElement.style.pointerEvents = active ? 'auto' : 'none';
       renderer.domElement.style.touchAction = active ? 'none' : 'auto';
+      container.dataset.interactive = active ? 'true' : 'false';
       if (!active) {
         // Clear any stuck pointer state before returning gesture ownership
         // to the lightbox/page.
@@ -256,6 +257,7 @@ export async function mountModelViewer(container, src, options = {}) {
     activate.addEventListener('pointermove', (event) => {
       if (Math.hypot(event.clientX - activationStartX, event.clientY - activationStartY) > 10) activationMoved = true;
     });
+    activate.addEventListener('pointercancel', () => { activationMoved = true; });
     activate.addEventListener('click', (event) => {
       if (activationMoved) {
         event.preventDefault();
@@ -276,6 +278,13 @@ export async function mountModelViewer(container, src, options = {}) {
 
     renderer.domElement.setAttribute('tabindex', '0');
     renderer.domElement.setAttribute('aria-label', 'Interactive 3D model.');
+    renderer.domElement.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setInteractive(false);
+        activate.focus({ preventScroll: true });
+      }
+    });
     renderer.domElement.style.pointerEvents = 'none';
     renderer.domElement.style.touchAction = 'auto';
   } catch (err) {
