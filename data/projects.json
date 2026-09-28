@@ -9,6 +9,7 @@
     ],
     "description": "Leading the visual design and UI/UX architecture for Haeru, an AI personal companion. Collaborated directly with engineering to bridge technical agentic capabilities into intuitive user experiences designing signature features like 'Lore' character profiles, proactive nudges, real-time voice interfaces, and narrative postcards to transform raw personal data into qualitative life storytelling.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 50%",
       "zoom": 1
@@ -92,6 +93,7 @@
     ],
     "description": "A collection of commercial 3D spatial layouts and pop-up retail environments, including concept stores, kiosk Store, and a commercial block layout. Built in Blender, with a focus on translating brand identity into believable, walkable retail space.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 30%",
       "zoom": 1
@@ -199,6 +201,7 @@
     ],
     "description": "High-fidelity product and packaging visualizations, form a conceptual shampoo line to a structural wine box concept. Built in Blender, with an emphasis on material realism — glass, liquid, foil, and cardboard rendered to commercial print/advertising standard.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 30%",
       "zoom": 1
@@ -234,6 +237,7 @@
     ],
     "description": "Epiphany is a conceptual solo exhibition idea around the complexities of the human mind, emotion, and existence. Built entirely in 3D Blender using procedural texturing, geometry nodes, modifiers and digital painting, each piece is a symbolic imagery to construct immersive surrealist narratives.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 50%",
       "zoom": 1
@@ -293,6 +297,7 @@
     ],
     "description": "A national award-winning submission for the 57th Shell National Student Art Competition, securing 5th place overall. Walang Hanggang Dambana ng Sining (Eternal Shrine of Art) aligns directly with the 57th Shell NSAC theme \"Lika na, Likha pa ng Obra\" (\"Come on, let's create more art\") by celebrating art as a continuous, generational torch pass. Highlighting varied Philippine art forms, the composition depicts an expanding, infinite canvas: the artists who came before filled their frames and built the canvas with colors. Now, a new generation emerges to take up the mantle and create anew.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 30%",
       "zoom": 1
@@ -322,6 +327,7 @@
     ],
     "description": "A collaborative character design and motion project centered on a dynamic roster of stylized personas. The primary focus was translating distinct individual personalities into memorable visual silhouettes, expressive color palettes, and fluid 3D character animation.",
     "thumbnail": {
+      "type": "image",
       "src": "assets/projects/friends-gacha/thumbnail.jpg",
       "focus": "50% 50%",
       "zoom": 1.3
@@ -369,6 +375,7 @@
     ],
     "description": "An entry for the Gauntlet of Gods Render Challenge, bringing a long standing original character concept into full 3D execution. The design draws directly from Bakunawa, the iconic sea serpent of Visayan mythology in the Philippines — a primordial force responsible for eclipses, seismic storms, and swallowing the moon.",
     "thumbnail": {
+      "type": "image",
       "src": "assets/projects/gog-render-challenge/thumbnail.png",
       "focus": "50% 20%",
       "zoom": 1.05
@@ -410,6 +417,7 @@
     ],
     "description": "A visual and theoretical breakdown of my old logo refinement process. By utilizing Gestalt principles, restructured through the Gestalt laws of visual perception",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 50%",
       "zoom": 1
@@ -457,6 +465,7 @@
     ],
     "description": "A collection of commercial design and promotional print assets created for various brand campaigns, conceptual projects, and marketing initiatives. Demonstrates visual storytelling, product layout design, and targeted advertising graphics.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 30%",
       "zoom": 1
@@ -516,6 +525,7 @@
     ],
     "description": "This collection features a mix of personal artwork, visual style studies, and commission pieces, serving as a space to document my ongoing creative exploration.",
     "thumbnail": {
+      "type": "image",
       "src": "",
       "focus": "50% 30%",
       "zoom": 1
@@ -537,6 +547,30 @@
         "type": "image",
         "src": "assets/projects/personal-illustrations/genshin-2d-illustrations/columbina-illustration.jpg",
         "caption": "Style Study of Genshin Impact Character \"Columbina\"",
+        "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "test-lottie",
+    "title": "test lottie",
+    "subtitle": "lottie animation test",
+    "badge": "2D Illustration",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "",
+    "thumbnail": {
+      "type": "lottie",
+      "src": "assets/projects/price-cuts.json",
+      "focus": "50% 50%",
+      "zoom": 1.3
+    },
+    "media": [
+      {
+        "type": "lottie",
+        "src": "assets/projects/price-cuts.json",
+        "caption": "",
         "orientation": ""
       }
     ]
