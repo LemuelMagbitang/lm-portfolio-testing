@@ -121,11 +121,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   // work on the deployed root site but 404 on the testing site. Resolve
   // the site root from one of the CMS data URLs instead.
   function getSiteRootUrl() {
-    const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
+    // Resolve the real repository/site root from the script URL first.
+    // GitHub Pages project sites live under a path such as /lm-portfolio-testing/,
+    // while /about/ is a child route. Resolving "data/..." from location.href
+    // alone can therefore point at /about/data/... or the domain root.
+    const scriptEl = Array.from(document.scripts).find(s => /(?:^|\/)js\/script\.js(?:[?#]|$)/i.test(s.src || ''));
+    if (scriptEl?.src) {
+      try { return new URL('../', scriptEl.src).href; } catch (e) {}
+    }
+
+    // A configured ../data/... URL (used by /about/) is the next best source.
+    const markers = [window.PROJECTS_URL, window.SETTINGS_URL, window.HERO_LOOP_URL, window.ABOUT_URL].filter(Boolean);
+    for (const marker of markers) {
+      try {
+        const resolved = new URL(marker, window.location.href);
+        const path = resolved.pathname;
+        const dataIndex = path.toLowerCase().lastIndexOf('/data/');
+        if (dataIndex >= 0) return resolved.origin + path.slice(0, dataIndex + 1);
+      } catch (e) {}
+    }
+
+    // Last-resort fallback for the known /about/ and /admin/ pages.
     try {
-      return new URL('./', new URL(marker, window.location.href)).href;
+      const here = new URL('./', window.location.href);
+      const path = here.pathname.replace(/\/+$/, '');
+      if (/\/(?:about|admin)$/i.test(path)) return here.origin + path.replace(/\/(?:about|admin)$/i, '/') ;
+      return here.href;
     } catch (e) {
-      return new URL('./', window.location.href).href;
+      return window.location.href;
+    }
+  }
+
+  function modelViewerModuleUrl() {
+    const scriptEl = Array.from(document.scripts).find(s => /(?:^|\/)js\/script\.js(?:[?#]|$)/i.test(s.src || ''));
+    try {
+      if (scriptEl?.src) return new URL('model-viewer.js', scriptEl.src).href;
+      return new URL('js/model-viewer.js', getSiteRootUrl()).href;
+    } catch (e) {
+      return 'js/model-viewer.js';
     }
   }
 
@@ -311,8 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(window.PROJECTS_URL);
       if (!res.ok) return;
-      const raw = await res.json();
-      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
+      const list = await res.json();
       if (!list.length) return;
 
       const frag = document.createDocumentFragment();
@@ -884,11 +916,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Hides every badge pill if you've switched them off above.
   applyCardBadgesVisibility();
 
-  // If a project card's <div class="card-thumbnail"> was left empty
-  // (no <img> inside, or an <img> with no src) this fills it in using
-  // the card's own first media-list item instead — an image if the
-  // first item is data-image, or a YouTube thumbnail if it's
-  // data-youtube. Runs once, before anything else reads the grid.
+  // If a project card has no explicit thumbnail, this uses the first
+  // playable local media item in the project's actual media order — image,
+  // video, or Lottie. YouTube stays the final fallback because it is a remote
+  // thumbnail rather than a locally playable media element.
   function buildThumbnailMedia(source, altText){
     if (!source || !source.src) return null;
     let media;
@@ -1810,7 +1841,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
           modelWrap.setAttribute('aria-label', 'Interactive 3D model');
           modalMediaContainer.appendChild(buildMediaEntry(modelWrap, caption));
-          import('./model-viewer.js').then(({ mountModelViewer }) => {
+          import(modelViewerModuleUrl()).then(({ mountModelViewer }) => {
             mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
               autoRotate: false,
               background: 'transparent'
