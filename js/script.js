@@ -1873,7 +1873,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return wrap;
   }
 
-  function openLightbox(index) {
+  function openLightbox(index, initialMediaIndex = -1) {
     lightbox.classList.remove('is-3d-focused');
     document.documentElement.classList.remove('lm-3d-focus-open');
     document.body.classList.remove('lm-3d-focus-open');
@@ -2004,16 +2004,27 @@ document.addEventListener('DOMContentLoaded', async () => {
               orientation: modelOrientation,
               resolveUrl: siteAssetUrl,
               onActivate: () => {
+                // Freeze the current media-list position before promoting this
+                // item into the device-focused layer. The target becomes fixed
+                // visually, but the list itself never jumps back to the top.
+                const currentScroll = lightbox.scrollTop;
+                lightbox.dataset.pre3dScrollTop = String(currentScroll);
                 lightbox.classList.add('is-3d-focused');
                 modelEntry.classList.add('is-3d-focus-target');
                 document.documentElement.classList.add('lm-3d-focus-open');
                 document.body.classList.add('lm-3d-focus-open');
+                requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
               },
               onDeactivate: () => {
                 lightbox.classList.remove('is-3d-focused');
                 modelEntry.classList.remove('is-3d-focus-target');
                 document.documentElement.classList.remove('lm-3d-focus-open');
                 document.body.classList.remove('lm-3d-focus-open');
+                const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
+                if (Number.isFinite(previousScroll)) {
+                  requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
+                }
+                delete lightbox.dataset.pre3dScrollTop;
               }
             });
           }).catch(err => {
@@ -2065,18 +2076,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4. Show Lightbox and lock body scroll
     lightbox.classList.add('active');
     if (lightboxControls) lightboxControls.classList.add('active');
-    lightbox.scrollTop = 0;
     document.body.style.overflow = 'hidden';
+
+    // When a project was opened by clicking its 3D thumbnail, keep the
+    // visitor at that artwork instead of resetting the project overlay to
+    // the first media item. The target is centered because it remains easy
+    // to understand on both desktop and small touch screens.
+    requestAnimationFrame(() => {
+      const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
+      if (initialMediaIndex >= 0 && items[initialMediaIndex]) {
+        items[initialMediaIndex].scrollIntoView({
+          behavior: 'auto',
+          block: 'center',
+          inline: 'nearest'
+        });
+      } else {
+        lightbox.scrollTop = 0;
+      }
+    });
   }
 
   // Attach click events to all cards
   allCards.forEach(card => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (event) => {
       activeLightboxCards = allCards.filter(c =>
         currentFilter === 'all' || c.classList.contains(currentFilter)
       );
       const index = activeLightboxCards.indexOf(card);
-      openLightbox(index);
+
+      // The project card uses its first media item as the visual thumbnail
+      // fallback. When that fallback is a 3D model, clicking the thumbnail
+      // should open the project at that same 3D artwork instead of jumping
+      // to the top of the media stack.
+      let initialMediaIndex = -1;
+      if (event.target.closest('.card-thumbnail [data-model-thumb]')) {
+        const mediaItems = Array.from(card.querySelectorAll('.project-media-list .media-item'));
+        initialMediaIndex = mediaItems.findIndex(item => item.hasAttribute('data-model'));
+      }
+
+      openLightbox(index, initialMediaIndex);
     });
   });
 
@@ -2086,6 +2124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.documentElement.classList.remove('lm-3d-focus-open');
     document.body.classList.remove('lm-3d-focus-open');
     if (lightboxControls) lightboxControls.classList.remove('active');
+    delete lightbox.dataset.pre3dScrollTop;
     document.body.style.overflow = ''; // Restore body scroll
     modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background
   }

@@ -227,6 +227,7 @@ export async function mountModelViewer(container, src, options = {}) {
     const activate = document.createElement('div');
     activate.className = 'model-viewer-activate';
     activate.setAttribute('aria-hidden', 'true');
+    activate.setAttribute('role', 'presentation');
     activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>VIEW 3D</strong></span>';
     container.appendChild(activate);
 
@@ -255,6 +256,7 @@ export async function mountModelViewer(container, src, options = {}) {
       if (disposed) return;
       controls.enabled = active;
       container.classList.toggle('is-interactive', active);
+      activate.hidden = active;
       back.hidden = !active;
       if (hint) hint.hidden = !active;
       renderer.domElement.style.pointerEvents = active ? 'auto' : 'none';

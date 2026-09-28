@@ -1059,11 +1059,14 @@ textarea { resize: vertical; }
    video into 16:9, which is why Shorts looked squished — removed.) */
 
 .lightbox-controls {
+  position: relative;
+  z-index: 10000;
   display: none;
+  pointer-events: none;
 }
 
 .lightbox-controls.active {
-  display: contents;
+  display: block;
 }
 
 .lightbox-close {
@@ -1074,6 +1077,7 @@ textarea { resize: vertical; }
   color: #fff;
   cursor: pointer;
   z-index: 10000;
+  pointer-events:auto;
   transition: opacity 0.2s;
 }
 
@@ -1095,12 +1099,8 @@ textarea { resize: vertical; }
      understand `svh` simply ignore this line and keep the `50%`
      above, so this is a safe, no-downside upgrade either way. */
   top: 50svh;
-  /* translate3d instead of translateY promotes each arrow onto its own
-     GPU layer, so the browser composites it independently of whatever
-     is scrolling. Paired with the sibling-outside-the-scroller markup
-     these controls already use (see the HTML comment above
-     #lightboxControls), this keeps the arrow from lagging behind a
-     fast flick. */
+  /* translate3d keeps the control composited independently while the
+     lightbox itself is scrolling. */
   transform: translate3d(0, -50%, 0);
   backface-visibility: hidden;
   width: 46px;
@@ -1115,6 +1115,7 @@ textarea { resize: vertical; }
   color: #fff;
   cursor: pointer;
   z-index: 10000;
+  pointer-events:auto;
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -2236,6 +2237,11 @@ body.center-page {
   .model-viewer-shell:hover .model-viewer-activate-content{background:rgba(8,8,8,.54);transform:translateY(-1px);}
 }
 
+.model-viewer-shell.is-interactive .model-viewer-activate{
+  opacity:0;
+  visibility:hidden;
+}
+
 .model-viewer-ui{
   position:absolute;
   left:50%;
@@ -2252,23 +2258,22 @@ body.center-page {
 .model-viewer-hint[hidden],
 .model-viewer-back[hidden]{display:none!important;}
 .model-viewer-hint{
-  width:fit-content;
+  width:auto;
   max-width:min(100%,820px);
   box-sizing:border-box;
-  color:rgba(255,255,255,.82);
-  background:rgba(8,8,8,.58);
-  border:1px solid rgba(255,255,255,.12);
-  padding:clamp(9px,1.5vh,13px) clamp(12px,2vw,18px);
-  border-radius:999px;
-  font-size:clamp(11px,1.75vw,14px);
-  font-weight:600;
-  letter-spacing:.01em;
-  line-height:1.35;
+  color:rgba(255,255,255,.56);
+  background:transparent;
+  border:0;
+  padding:0;
+  border-radius:0;
+  font-size:clamp(10px,1.65vw,13px);
+  font-weight:500;
+  letter-spacing:.015em;
+  line-height:1.45;
   text-align:center;
   pointer-events:none;
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  box-shadow:0 10px 28px rgba(0,0,0,.24);
+  box-shadow:none;
+  text-shadow:0 1px 8px rgba(0,0,0,.35);
 }
 .model-viewer-back{
   appearance:none;
@@ -2317,15 +2322,19 @@ body.center-page {
 .lightbox-model-viewer[data-orientation="auto"]{aspect-ratio:1 / 1; width:min(100%,760px);}
 .lightbox-media-item.is-3d-media-item{width:100%;}
 
-/* Focus mode keeps every layer in one stacking context:
-   underlying project = z1, blur/darken veil = z2, 3D = z3, close = above all.
-   This avoids the veil accidentally sitting above the model or controls. */
+/* Focus mode keeps the 3D stack intentional:
+   project content -> blur/darken veil -> focused 3D model.
+   Global X / project navigation remain visually subordinate to the model,
+   so they read as lightbox controls rather than OrbitControls. */
 .lightbox-modal.is-3d-focused{
-  overflow:hidden;
+  overflow-y:auto;
+  overflow-x:hidden;
   padding:0;
   touch-action:none;
   background:rgba(5,5,5,.92);
+  scrollbar-width:none;
 }
+.lightbox-modal.is-3d-focused::-webkit-scrollbar{display:none;}
 .lightbox-modal.is-3d-focused .modal-interior{
   position:relative;
   z-index:1;
@@ -2340,7 +2349,7 @@ body.center-page {
   content:"";
   position:fixed;
   inset:0;
-  z-index:2;
+  z-index:10;
   background:rgba(0,0,0,.56);
   backdrop-filter:blur(18px) saturate(.72);
   -webkit-backdrop-filter:blur(18px) saturate(.72);
@@ -2359,7 +2368,7 @@ body.center-page {
 .lightbox-modal.is-3d-focused .is-3d-focus-target{
   position:fixed;
   inset:0;
-  z-index:3;
+  z-index:20;
   width:100dvw;
   height:100dvh;
   min-width:0;
@@ -2367,13 +2376,16 @@ body.center-page {
   margin:0;
   padding:0;
   transform:none;
+  will-change:transform,opacity;
   display:block;
   filter:none;
   opacity:1;
+  background:transparent;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
   position:absolute;
   inset:0;
+  z-index:20;
   width:100dvw;
   height:100dvh;
   min-height:0;
@@ -2384,9 +2396,32 @@ body.center-page {
   box-shadow:none;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{display:none;}
-.lightbox-modal.is-3d-focused .lightbox-nav{opacity:0;pointer-events:none;}
+/* Global project controls sit beneath the 3D veil so they are visibly
+   separate from OrbitControls. They remain clickable because the veil uses
+   pointer-events:none. */
+.lightbox-modal.is-3d-focused .lightbox-controls{
+  position:fixed;
+  inset:0;
+  z-index:30;
+  pointer-events:none;
+}
+.lightbox-modal.is-3d-focused .lightbox-nav,
+.lightbox-modal.is-3d-focused .lightbox-nav:hover,
+.lightbox-modal.is-3d-focused .lightbox-close:hover{
+  opacity:.46;
+}
 .lightbox-modal.is-3d-focused .lightbox-close{
-  z-index:10004;
+  z-index:30;
+  opacity:.28;
+  filter:saturate(.5);
+  pointer-events:auto;
+}
+.lightbox-modal.is-3d-focused .lightbox-nav{
+  background:rgba(8,8,8,.22);
+  border-color:rgba(255,255,255,.06);
+}
+
+.lightbox-modal.is-3d-focused .lightbox-close{
   top:calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.5vw, 28px));
   right:calc(env(safe-area-inset-right, 0px) + clamp(14px, 2.5vw, 28px));
   width:clamp(46px, 10vw, 54px);
@@ -2415,9 +2450,16 @@ body.lm-3d-focus-open{overscroll-behavior:none;overflow:hidden;}
 
 @media (max-width:768px){
   .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}
+  .lightbox-modal.is-3d-focused .lightbox-controls{
+    inset:0;
+  }
+  .lightbox-modal.is-3d-focused .lightbox-close,
+  .lightbox-modal.is-3d-focused .lightbox-nav{
+    opacity:.25;
+  }
   .model-viewer-activate{padding:14px;}
   .model-viewer-activate-content{min-height:48px;padding:0 17px;}
-  .model-viewer-hint{width:min(92vw,720px);max-width:92vw;font-size:clamp(11px,3.2vw,14px);padding:10px 13px;}
+  .model-viewer-hint{max-width:92vw;font-size:clamp(10px,3.1vw,13px);padding:0;}
   .model-viewer-back{min-height:50px;padding:0 19px;font-size:clamp(11px,3.2vw,14px);}
   .model-viewer-ui{width:min(calc(100vw - 24px),820px);bottom:max(calc(env(safe-area-inset-bottom, 0px) + 12px), 18px);gap:9px;}
   .lightbox-modal.is-3d-focused .modal-interior{width:100dvw;height:100dvh;min-height:100dvh;}

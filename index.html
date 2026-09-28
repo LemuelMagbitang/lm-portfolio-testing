@@ -239,23 +239,17 @@
   </section>
 
   <!-- LIGHTBOX MODAL -->
-  <!-- The close/prev/next controls live in their own sibling wrapper
-       below, NOT inside .lightbox-modal. Nesting position:fixed
-       controls inside an element that itself scrolls internally
-       (.lightbox-modal has overflow-y:auto) is what made them visibly
-       drift/jump on mobile while scrolling artwork — some mobile
-       browsers anchor a "fixed" descendant to its scrolling ancestor
-       instead of the real viewport. Being outside it entirely removes
-       the problem instead of working around it. script.js toggles
-       both this wrapper and the modal together. -->
-  <div class="lightbox-controls" id="lightboxControls">
-    <i class="fa-solid fa-xmark lightbox-close" id="lightboxClose"></i>
-    <i class="fa-solid fa-chevron-left lightbox-nav lightbox-prev"></i>
-    <i class="fa-solid fa-chevron-right lightbox-nav lightbox-next"></i>
-  </div>
-
+  <!-- Close / previous / next controls live inside the modal so the 3D
+       focus layer can deliberately place them beneath the dark/blur veil.
+       In normal media mode they remain above the gallery; in focused 3D
+       mode they read as global lightbox navigation instead of model tools. -->
   <div class="lightbox-modal" id="lightbox">
     <div class="modal-interior">
+      <div class="lightbox-controls" id="lightboxControls">
+        <i class="fa-solid fa-xmark lightbox-close" id="lightboxClose"></i>
+        <i class="fa-solid fa-chevron-left lightbox-nav lightbox-prev"></i>
+        <i class="fa-solid fa-chevron-right lightbox-nav lightbox-next"></i>
+      </div>
       <div class="modal-header">
         <h2 id="modalTitle">Project Title</h2>
         <p id="modalDesc">Project description goes here.</p>
