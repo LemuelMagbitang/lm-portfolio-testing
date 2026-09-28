@@ -1,6 +1,6 @@
 [
   {
-    "type": "image",
+    "type": "lottie",
     "src": "assets/projects/price-cuts.json",
     "alt": "",
     "focus": "50% 50%",
