@@ -132,6 +132,7 @@ function ghRawUrl(path){
 
 const SECTIONS = {
   hero:     { file: 'data/hero.json',     label: 'Hero Messages' },
+  heroLoop: { file: 'data/hero-loop.json', label: 'Hero Loop Animation' },
   filters:  { file: 'data/filters.json',  label: 'Filters & Badges' },
   projects: { file: 'data/projects.json', label: 'Projects' },
   about:    { file: 'data/about.json',    label: 'About Page' },
@@ -537,10 +538,19 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   const orig = btn.innerHTML;
   btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>&nbsp; <span>Saving…</span>';
   try{
-    const commitSha = await saveSection(name, obj, `CMS: update ${filePath}`);
-    toast(`Saved — ${filePath} committed to ${conn.branch}.`);
-    btn.disabled = false; btn.innerHTML = orig;
-    trackDeployStatus(commitSha); // don't await — runs in the background, save button is usable again immediately
+    let commitSha;
+    if(currentSave && currentSave.combined && name==='heroLoop'){
+      commitSha=await saveSection('heroLoop',obj.items||[],'CMS: update data/hero-loop.json');
+      const sr=await loadSection('settings');
+      const next={...(sr.json||{}),heroTiming:{...(sr.json?.heroTiming||{}),loopMode:obj.mode,transitionStyle:obj.transition,crossfadeMs:obj.interval}};
+      const settingsSha=await saveSection('settings',next,'CMS: update hero loop settings');
+      commitSha=settingsSha||commitSha;
+      toast(`Saved — hero loop and transition settings committed to ${conn.branch}.`);
+    }else{
+      commitSha=await saveSection(name,obj,`CMS: update ${filePath}`);
+      toast(`Saved — ${filePath} committed to ${conn.branch}.`);
+    }
+    btn.disabled=false;btn.innerHTML=orig;trackDeployStatus(commitSha);
   }catch(err){
     toast(err.message, true);
     btn.disabled = false; btn.innerHTML = orig;
@@ -692,10 +702,67 @@ RENDERERS.hero = function(data){
 };
 
 /* =====================================================================
+   8. SECTION: HERO LOOP ANIMATION
+   ===================================================================== */
+RENDERERS.heroLoop=async function(data){
+  let settingsResult; try{ settingsResult=await loadSection('settings'); }catch(e){ settingsResult={json:{}}; }
+  const timing=(settingsResult.json||{}).heroTiming||{};
+  let mode=timing.loopMode==='manual'?'manual':'latest';
+  let transition=['kenburns','fade','none'].includes(timing.transitionStyle)?timing.transitionStyle:'kenburns';
+  let interval=Number(timing.crossfadeMs)||3500;
+  let items=withUids((Array.isArray(data.json)?data.json:[]).map(x=>({type:x.type||'image',src:x.src||'',alt:x.alt||'',focus:x.focus||'50% 50%',zoom:x.zoom||1,rotate:x.rotate||0})));
+  let openUid=items[0]?items[0]._uid:null;
+  function paint(){
+    content.innerHTML=sectionHead('Hero Loop Animation','Choose automatic latest-project looping or a manual list. Manual entries support image, video, Lottie JSON, zoom, focus and rotation.')+`<div class="panel"><div class="row"><div class="field"><label class="field-label">Loop source</label><select id="hl_mode"><option value="latest" ${mode==='latest'?'selected':''}>Latest projects (up to 5)</option><option value="manual" ${mode==='manual'?'selected':''}>Only what I add</option></select></div><div class="field"><label class="field-label">Transition</label><select id="hl_transition"><option value="kenburns" ${transition==='kenburns'?'selected':''}>Zoom + fade</option><option value="fade" ${transition==='fade'?'selected':''}>Fade only</option><option value="none" ${transition==='none'?'selected':''}>None</option></select></div><div class="field"><label class="field-label">Slide interval (ms)</label><input id="hl_interval" type="number" min="500" step="100" value="${interval}"></div></div><div class="banner info"><i class="fa-solid fa-circle-info"></i><div><strong>Latest mode</strong> keeps explicit project thumbnails unchanged. Projects without a thumbnail contribute their first usable image, video or Lottie media. The loop uses up to five projects, so 1–4 projects simply loop that many.</div></div></div><div id="heroLoopItems"></div><button class="add-btn" id="hl_add"><i class="fa-solid fa-plus"></i> Add hero artwork</button>`;
+    const list=document.getElementById('heroLoopItems');
+    if(mode==='latest') list.innerHTML='<div class="banner muted">Manual entries are stored but ignored while Latest projects is selected.</div>';
+    items.forEach(item=>{
+      const open=item._uid===openUid,row=document.createElement('div');row.className='card-item';row.dataset.uid=item._uid;
+      row.innerHTML=`<div class="card-item-head collapsible-head" data-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(item.alt||item.src||'(empty)')}</span><div class="card-item-actions"><button class="icon-btn" data-a="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-a="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-a="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-a="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px" data-body></div>`;
+      if(open){
+        const body=row.querySelector('[data-body]');
+        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-f="type"><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option></select></div><div class="field"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div>`;
+        const picker=body.querySelector('[data-picker]'),cross=body.querySelector('[data-crosshair]'),preview=body.querySelector('[data-preview]');
+        const setCross=()=>{const q=(item.focus||'50% 50%').split(' ').map(v=>parseFloat(v)||50);cross.style.left=q[0]+'%';cross.style.top=q[1]+'%';};
+        function refreshHeroPreview(){
+          preview.innerHTML=''; if(!item.src) return;
+          let media;
+          if(item.type==='video'){media=document.createElement('video');media.src=ghRawUrl(item.src);media.muted=true;media.loop=true;media.autoplay=true;media.playsInline=true;}
+          else if(item.type==='lottie'){media=document.createElement('lottie-player');media.setAttribute('src',ghRawUrl(item.src));media.setAttribute('autoplay','');media.setAttribute('loop','');media.setAttribute('background','transparent');}
+          else {media=document.createElement('img');media.src=ghRawUrl(item.src);}
+          media.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:.55;';
+          const focus=item.focus||'50% 50%';media.style.objectPosition=focus;media.style.transformOrigin=focus;media.style.transform=`scale(${item.zoom||1}) rotate(${item.rotate||0}deg)`;preview.appendChild(media);
+        }
+        setCross();refreshHeroPreview();
+        let dragging=false;const pointer=e=>{const r=picker.getBoundingClientRect(),x=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientX:e.clientX)-r.left)/r.width*100)),y=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientY:e.clientY)-r.top)/r.height*100));item.focus=`${x.toFixed(0)}% ${y.toFixed(0)}%`;body.querySelector('[data-f="focus"]').value=item.focus;setCross();refreshHeroPreview();flagUnsaved();};picker.addEventListener('mousedown',e=>{dragging=true;pointer(e)});window.addEventListener('mousemove',e=>{if(dragging)pointer(e)});window.addEventListener('mouseup',()=>dragging=false);picker.addEventListener('touchstart',pointer,{passive:true});picker.addEventListener('touchmove',pointer,{passive:true});
+        body.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{const f=inp.dataset.f;item[f]=(f==='zoom'||f==='rotate')?(parseFloat(inp.value)||0):inp.value;row.querySelector('.preview-line').textContent=item.alt||item.src||'(empty)';if(f==='focus')setCross();refreshHeroPreview();flagUnsaved();}));
+      }
+      row.querySelector('[data-open]').addEventListener('click',e=>{if(e.target.closest('[data-a]')&&e.target.closest('[data-a]').dataset.a!=='toggle')return;openUid=open?null:item._uid;paint();});
+      row.querySelector('[data-a=del]').addEventListener('click',e=>{e.stopPropagation();items=items.filter(x=>x._uid!==item._uid);flagUnsaved();paint();});
+      row.querySelector('[data-a=up]').addEventListener('click',e=>{e.stopPropagation();const i=items.indexOf(item);if(i>0){[items[i-1],items[i]]=[items[i],items[i-1]];flagUnsaved();paint();}});
+      row.querySelector('[data-a=down]').addEventListener('click',e=>{e.stopPropagation();const i=items.indexOf(item);if(i<items.length-1){[items[i+1],items[i]]=[items[i],items[i+1]];flagUnsaved();paint();}});
+      list.appendChild(row);
+    });
+    document.getElementById('hl_mode').addEventListener('change',e=>{mode=e.target.value;flagUnsaved();paint();});
+    document.getElementById('hl_transition').addEventListener('change',e=>{transition=e.target.value;flagUnsaved();});
+    document.getElementById('hl_interval').addEventListener('input',e=>{interval=Math.max(500,parseInt(e.target.value,10)||3500);flagUnsaved();});
+    document.getElementById('hl_add').addEventListener('click',()=>{const x={type:'image',src:'',alt:'',focus:'50% 50%',zoom:1,rotate:0,_uid:uid()};items.push(x);openUid=x._uid;mode='manual';flagUnsaved();paint();});
+    enableDragReorder(()=>document.getElementById('heroLoopItems'),items,flagUnsaved,paint);
+    wireSave(()=>({items:items.map(x=>({type:x.type,src:x.src,alt:x.alt,focus:x.focus,zoom:x.zoom,rotate:x.rotate})),mode,transition,interval}), 'heroLoop', SECTIONS.heroLoop.file);
+    currentSave.combined=true;
+  }
+  paint();
+};
+
+/* =====================================================================
    8. SECTION: FILTERS & BADGES
    ===================================================================== */
 RENDERERS.filters = function(data){
-  let items = withUids((data.json || []).map(x=>({id:x.id||'', label:x.label||''})));
+  const raw=data.json||[];
+  const filterItems=Array.isArray(raw)?raw:(raw.filters||[]);
+  let badgeItems=Array.isArray(raw)?[]:(raw.badges||[]);
+  let items=withUids(filterItems.map(x=>({id:x.id||'',label:x.label||''})));
+  badgeItems=badgeItems.map(x=>typeof x==='string'?x:(x&&x.label)||'').filter(Boolean);
 
   function paint(){
     content.innerHTML = sectionHead(
@@ -709,6 +776,7 @@ RENDERERS.filters = function(data){
       </div></div>
       <div id="filterList"></div>
       <button class="add-btn" id="addFilter"><i class="fa-solid fa-plus"></i> Add filter tab</button>
+      <div class="panel" style="margin-top:18px;background:#141414;"><h3>Project badges</h3><p class="panel-sub">One final-output badge per project. These are separate from filter tabs.</p><div class="tagbox" id="badgeList"></div><button class="add-btn" id="addBadge"><i class="fa-solid fa-plus"></i> Add badge</button></div>
     `;
     const list = document.getElementById('filterList');
     items.forEach((item)=>{
@@ -751,11 +819,14 @@ RENDERERS.filters = function(data){
       });
       list.appendChild(row);
     });
+    const badgeBox=document.getElementById('badgeList');
+    if(badgeBox){ badgeBox.innerHTML=''; badgeItems.forEach((badge,i)=>{ const r=document.createElement('div'); r.className='tag-pill'; r.innerHTML=`<input value="${attr(badge)}" style="flex:1;min-width:120px;padding:4px 0;border:0;background:transparent;"><button type="button">&times;</button>`; const inp=r.querySelector('input'); inp.addEventListener('input',()=>{badgeItems[i]=inp.value;flagUnsaved();}); r.querySelector('button').addEventListener('click',()=>{badgeItems.splice(i,1);flagUnsaved();paint();}); badgeBox.appendChild(r); }); }
     document.getElementById('addFilter').addEventListener('click', ()=>{ items.push({id:'',label:'',_uid:uid()}); flagUnsaved(); paint(); });
+    document.getElementById('addBadge').addEventListener('click', ()=>{ badgeItems.push('New Badge'); flagUnsaved(); paint(); });
     enableDragReorder(() => document.getElementById('filterList'), items, flagUnsaved, paint);
     wireSave(()=>{
       for(const it of items){ if(!it.id.trim()||!it.label.trim()) throw new Error('Every filter needs both an ID and a label.'); }
-      return items.map(x=>({id:x.id,label:x.label}));
+      return {filters:items.map(x=>({id:x.id,label:x.label})),badges:badgeItems.map(x=>x.trim()).filter(Boolean)};
     }, 'filters', SECTIONS.filters.file);
   }
   paint();
@@ -810,20 +881,6 @@ RENDERERS.settings = function(data){
       <div class="field"><label class="field-label">Meta description</label><textarea id="s_desc" rows="2">${esc(s.siteDescription||'')}</textarea></div>
     </div>
 
-    <div class="panel">
-      <h3>Homepage Hero — Timing</h3>
-      <p class="panel-sub">The motion behind the hero text and the rotating artwork banner.</p>
-      <div class="row">
-        <div class="field"><label class="field-label">Text fade duration (ms)</label><input id="ht_fade" type="number" value="${s.heroTiming.fadeMs}"></div>
-        <div class="field"><label class="field-label">Auto-rotate (ms, 0 = off)</label><input id="ht_rotate" type="number" value="${s.heroTiming.autoRotateMs}"></div>
-        <div class="field"><label class="field-label">Banner crossfade interval (ms)</label><input id="ht_cross" type="number" value="${s.heroTiming.crossfadeMs}"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label class="field-label">Ken Burns — from scale</label><input id="ht_kbfrom" type="number" step="0.01" value="${s.heroTiming.kenBurnsFromScale}"></div>
-        <div class="field"><label class="field-label">Ken Burns — to scale</label><input id="ht_kbto" type="number" step="0.01" value="${s.heroTiming.kenBurnsToScale}"></div>
-        <div class="field"><label class="field-label">Ken Burns — loop duration (s)</label><input id="ht_kbdur" type="number" value="${s.heroTiming.kenBurnsDurationS}"></div>
-      </div>
-    </div>
   `;
 
   content.querySelectorAll('input[data-toggle]').forEach(t=>{
@@ -851,10 +908,7 @@ RENDERERS.settings = function(data){
     socials: { instagram: val('s_ig'), tiktok: val('s_tt'), youtube: val('s_yt') },
     siteTitle: val('s_title'),
     siteDescription: val('s_desc'),
-    heroTiming: {
-      fadeMs: numVal('ht_fade'), autoRotateMs: numVal('ht_rotate'), crossfadeMs: numVal('ht_cross'),
-      kenBurnsFromScale: numVal('ht_kbfrom'), kenBurnsToScale: numVal('ht_kbto'), kenBurnsDurationS: numVal('ht_kbdur')
-    }
+    heroTiming: s.heroTiming
   }), 'settings', SECTIONS.settings.file);
 
   function toggleRow(key, label, desc, checked){
@@ -988,10 +1042,7 @@ function buildMediaPreviewHtml(m){
     return `<div class="media-preview"><img src="https://img.youtube.com/vi/${id}/hqdefault.jpg" alt="YouTube thumbnail"><span class="yt-badge">YOUTUBE</span></div>`;
   }
   if (m.type === 'lottie') {
-    // <lottie-player> plays a Lottie/JSON animation file directly —
-    // same custom element the public site uses, loaded from the same
-    // CDN script tag in this page's own <head>.
-    return `<div class="media-preview"><lottie-player src="${attr(ghRawUrl(m.src))}" autoplay loop background="transparent" style="width:100%;height:100%" onerror="handleMissingFile(this,'Lottie file')"></lottie-player></div>`;
+    return `<div class="media-preview"><lottie-player src="${attr(ghRawUrl(m.src))}" autoplay loop background="transparent" style="width:100%;height:100%;"></lottie-player></div>`;
   }
   // image
   return `<div class="media-preview"><img src="${attr(ghRawUrl(m.src))}" alt="" onerror="handleMissingFile(this,'image')"></div>`;
@@ -1001,11 +1052,11 @@ RENDERERS.projects = async function(data){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
-    thumbnail:{ src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1 },
+    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1 },
     media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||''})):[])
   })));
   let filterDefs = [];
-  try{ const f = await loadSection('filters'); filterDefs = f.json||[]; }catch(e){}
+  try{ const f = await loadSection('filters'); const raw=f.json||[]; filterDefs=Array.isArray(raw)?raw:(raw.filters||[]); }catch(e){}
   let openUid = items.length ? items[0]._uid : null;
 
   function paint(){
@@ -1059,7 +1110,7 @@ RENDERERS.projects = async function(data){
     });
 
     document.getElementById('addProj').addEventListener('click', ()=>{
-      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
+      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
       items.push(p);
       openUid = p._uid; flagUnsaved(); paint();
     });
@@ -1074,7 +1125,7 @@ RENDERERS.projects = async function(data){
       }
       return items.map(p=>({
         id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge, filters:p.filters, description:p.description,
-        thumbnail:{src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom},
+        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom},
         media:p.media.map(m=>({type:m.type,src:m.src,caption:m.caption,orientation:m.orientation}))
       }));
     }, 'projects', SECTIONS.projects.file);
@@ -1115,7 +1166,10 @@ RENDERERS.projects = async function(data){
         <p class="panel-sub">Leave the image blank and the site uses the first media item instead.</p>
         <div class="two-col">
           <div>
-            <div class="field"><label class="field-label">Image path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg"></div>
+            <div class="row">
+              <div class="field" style="max-width:180px"><label class="field-label">Thumbnail type</label><select data-f="thumb-type"><option value="image" ${p.thumbnail.type==='image'?'selected':''}>Image</option><option value="video" ${p.thumbnail.type==='video'?'selected':''}>Video</option><option value="lottie" ${p.thumbnail.type==='lottie'?'selected':''}>Lottie (JSON animation)</option></select></div>
+              <div class="field"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
+            </div>
             <div class="row">
               <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
               <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
@@ -1146,28 +1200,26 @@ RENDERERS.projects = async function(data){
     // what you see while dragging the focus point is what visitors see,
     // not a blank box that only appears once you type a path by hand.
     function refreshThumbPreview(){
-      const img = el.querySelector('[data-thumb-img]');
+      const picker = el.querySelector('[data-focuspicker]');
       const note = el.querySelector('[data-thumb-fallback-note]');
-      if (!img) return;
+      if(!picker) return;
+      const old = picker.querySelector('[data-thumb-media]'); if(old) old.remove();
       const explicit = p.thumbnail.src;
-      const fallback = explicit ? '' : computeFallbackThumbSrc(p.media);
-      const src = explicit || fallback;
-      img.style.display = src ? '' : 'none';
-      if (src) img.src = ghRawUrl(src);
-      // Zoom and focus weren't actually reflected here before — this
-      // showed the raw image behind the crosshair with no crop or
-      // magnification at all, so there was nothing to confirm zoom
-      // was even doing anything until you saved and checked the live
-      // site. object-position AND transform-origin need to match —
-      // object-position decides what's visible, transform-origin
-      // decides what point the zoom scales from; set only the first
-      // and the zoom drifts away from wherever the crosshair is
-      // instead of magnifying it.
-      const focus = p.thumbnail.focus || '50% 50%';
-      img.style.objectPosition = focus;
-      img.style.transformOrigin = focus;
-      img.style.transform = `scale(${p.thumbnail.zoom || 1})`;
-      if (note) note.style.display = fallback ? '' : 'none';
+      const fallback = explicit ? null : computeFallbackThumb(p.media);
+      const src = explicit ? {type:p.thumbnail.type||'image',src:explicit} : fallback;
+      if(!src || !src.src){ if(note) note.style.display='none'; return; }
+      let media;
+      if(src.type==='video'){
+        media=document.createElement('video'); media.src=ghRawUrl(src.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true;
+      }else if(src.type==='lottie'){
+        media=document.createElement('lottie-player'); media.setAttribute('src',ghRawUrl(src.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent');
+      }else{
+        media=document.createElement('img'); media.src=ghRawUrl(src.src); media.alt=p.title||'Project thumbnail';
+      }
+      media.setAttribute('data-thumb-media',''); media.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
+      const focus=p.thumbnail.focus||'50% 50%'; media.style.objectPosition=focus; media.style.transformOrigin=focus; media.style.transform=`scale(${p.thumbnail.zoom||1})`;
+      picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
+      if(note) note.style.display=fallback?'':'none';
     }
     attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview());
 
@@ -1177,6 +1229,9 @@ RENDERERS.projects = async function(data){
         const f = inp.dataset.f;
         if(f==='thumb-src'){
           p.thumbnail.src = inp.value;
+          refreshThumbPreview();
+        } else if(f==='thumb-type'){
+          p.thumbnail.type = inp.value;
           refreshThumbPreview();
         }
         // THE FIX: typing a new zoom or focus value used to update
@@ -1359,10 +1414,9 @@ RENDERERS.projects = async function(data){
   }
 
   function badgeOptions(current){
-    // badges are typically named for final output; offer filter labels as a starting set plus free text via current value
-    const suggested = ['2D Illustration','3D Design','Motion Graphics','UI/UX Design','Brand Design'];
-    const set = new Set(suggested);
-    if(current) set.add(current);
+    const suggested=['2D Illustration','3D Design','Motion Graphics','UI/UX Design','Brand Design'];
+    let configured=[]; const raw=cache.filters?.json; if(raw && !Array.isArray(raw)) configured=raw.badges||[];
+    const set=new Set([...suggested,...configured].filter(Boolean)); if(current)set.add(current);
     return [...set].map(b=>`<option value="${attr(b)}" ${b===current?'selected':''}>${esc(b)}</option>`).join('');
   }
 
@@ -1396,8 +1450,8 @@ RENDERERS.about = function(data){
   // enableDragReorder tracks a card through a drag — the same
   // mechanism Hero Messages, Filters & Badges, and Projects already
   // use, so dragging one of these feels identical to dragging those.
-  a.experience = withUids(a.experience || []);
-  a.education = withUids(a.education || []);
+  a.experience = withUids((a.experience || []).map(x=>({...x,startDate:x.startDate||'',endDate:x.endDate||''})));
+  a.education = withUids((a.education || []).map(x=>({...x,school:x.school||x.title||'',degree:x.degree||'',graduationDate:x.graduationDate||''})));
   a.awards = withUids(a.awards || []);
 
   function paint(){
@@ -1530,7 +1584,7 @@ RENDERERS.about = function(data){
     buildSoftwareSkills('tags_software', a.softwareSkills);
     buildTagBox('tags_multimedia', a.multimediaSkills, 'e.g. 3D Modeling');
     buildExperience();
-    buildSimpleRepeater('eduList', a.education, 'addEdu', [{f:'title',ph:'Title / degree'},{f:'detail',ph:'School, year, etc.'}]);
+    buildEducation();
     buildSimpleRepeater('awList', a.awards, 'addAward', [{f:'title',ph:'Award title'},{f:'detail',ph:'Where / when'}]);
 
     wireSave(()=>({
@@ -1545,8 +1599,8 @@ RENDERERS.about = function(data){
       // in this editor — mapping to explicit fields here strips it
       // before it reaches about.json, same as every other draggable
       // list in this CMS (Hero Messages, Filters, Projects) already does.
-      experience: a.experience.map(x=>({role:x.role,company:x.company,bullets:x.bullets})),
-      education: a.education.map(x=>({title:x.title,detail:x.detail})),
+      experience: a.experience.map(x=>({role:x.role,company:x.company,startDate:x.startDate||'',endDate:x.endDate||'',bullets:x.bullets})),
+      education: a.education.map(x=>({school:x.school||'',degree:x.degree||'',graduationDate:x.graduationDate||'',title:x.title||'',detail:x.detail||''})),
       awards: a.awards.map(x=>({title:x.title,detail:x.detail}))
     }), 'about', SECTIONS.about.file);
   }
@@ -1624,7 +1678,7 @@ RENDERERS.about = function(data){
         const attempts = skillLogoAttempts(skill);
         const hasManualIcon = !!skill.icon;
         const pill = document.createElement('span');
-        pill.className = 'tag-pill skill-pill';
+        pill.className = 'skill-editor-row';
         pill.innerHTML = `
           <span class="skill-pill-icon" data-iconbtn title="${hasManualIcon ? 'Change logo' : 'Click to set a specific logo by hand'}">
             <img data-attempt="0" src="${attr(attempts[0] || '')}">
@@ -1708,6 +1762,26 @@ RENDERERS.about = function(data){
     enableDragReorder(() => document.getElementById(listId), arr, flagUnsaved, repaint);
   }
 
+  function buildEducation(){
+    const list=document.getElementById('eduList'); const openUids=new Set();
+    function repaint(){
+      list.innerHTML='';
+      a.education.forEach((edu,i)=>{
+        const open=openUids.has(edu._uid), row=document.createElement('div'); row.className='card-item'; row.dataset.uid=edu._uid;
+        row.innerHTML=`<div class="card-item-head collapsible-head" data-toggle-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(edu.school||edu.title||'New education entry')}${edu.degree?' — '+esc(edu.degree):''}${edu.graduationDate?' · '+esc(edu.graduationDate):''}</span><div class="card-item-actions"><button class="icon-btn" data-act="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-act="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-act="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-act="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px;"><div class="row"><div class="field"><label class="field-label">School name</label><input data-f="school" value="${attr(edu.school||'')}" placeholder="University, college, school, or training provider"></div><div class="field"><label class="field-label">Degree or other <span style="opacity:.5">(optional)</span></label><input data-f="degree" value="${attr(edu.degree||'')}" placeholder="Degree, certificate, diploma, course, etc."></div></div><div class="field"><label class="field-label">Graduation / completion date <span style="opacity:.5">(optional)</span></label><div class="row"><input data-date-for="graduationDate" type="month" value="${/^\d{4}-\d{2}$/.test(edu.graduationDate||'')?edu.graduationDate:''}" style="max-width:150px"><input data-f="graduationDate" type="text" value="${attr(edu.graduationDate||'')}" placeholder="YYYY-MM or text such as Mid-2025"></div></div></div>`;
+        row.querySelector('[data-toggle-open]').addEventListener('click',e=>{if(e.target.closest('[data-act]')&&e.target.closest('[data-act]').dataset.act!=='toggle')return;open?openUids.delete(edu._uid):openUids.add(edu._uid);repaint();});
+        row.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{edu[inp.dataset.f]=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');flagUnsaved();}));
+        row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{const f=inp.dataset.dateFor;edu[f]=inp.value;const text=row.querySelector('[data-f="'+f+'"]');if(text)text.value=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');flagUnsaved();}));
+        row.querySelector('[data-act=del]').addEventListener('click',e=>{e.stopPropagation();a.education.splice(i,1);flagUnsaved();repaint();});
+        row.querySelector('[data-act=up]').addEventListener('click',e=>{e.stopPropagation();if(i===0)return;animateReorder(()=>document.getElementById('eduList'),()=>{[a.education[i-1],a.education[i]]=[a.education[i],a.education[i-1]];flagUnsaved();repaint();});});
+        row.querySelector('[data-act=down]').addEventListener('click',e=>{e.stopPropagation();if(i===a.education.length-1)return;animateReorder(()=>document.getElementById('eduList'),()=>{[a.education[i+1],a.education[i]]=[a.education[i],a.education[i+1]];flagUnsaved();repaint();});});
+        list.appendChild(row);
+      });
+    }
+    document.getElementById('addEdu').addEventListener('click',()=>{const fresh={school:'',degree:'',graduationDate:'',_uid:uid()};a.education.push(fresh);openUids.add(fresh._uid);flagUnsaved();repaint();});
+    repaint(); enableDragReorder(()=>document.getElementById('eduList'),a.education,flagUnsaved,repaint);
+  }
+
   function buildExperience(){
     const list = document.getElementById('expList');
     // Collapsed by default, same reasoning as the project artwork
@@ -1741,6 +1815,10 @@ RENDERERS.about = function(data){
               <div class="field"><label class="field-label">Role</label><input data-f="role" value="${attr(exp.role)}"></div>
               <div class="field"><label class="field-label">Company</label><input data-f="company" value="${attr(exp.company)}"></div>
             </div>
+            <div class="row">
+              <div class="field"><label class="field-label">Start date <span style="opacity:.5">(optional)</span></label><div class="row"><input data-date-for="startDate" type="month" value="${/^\d{4}-\d{2}$/.test(exp.startDate)?exp.startDate:''}" style="max-width:150px"><input data-f="startDate" type="text" value="${attr(exp.startDate)}" placeholder="YYYY-MM or Present"></div></div>
+              <div class="field"><label class="field-label">End date <span style="opacity:.5">(optional)</span></label><div class="row"><input data-date-for="endDate" type="month" value="${/^\d{4}-\d{2}$/.test(exp.endDate)?exp.endDate:''}" style="max-width:150px"><input data-f="endDate" type="text" value="${attr(exp.endDate)}" placeholder="YYYY-MM or Present"></div></div>
+            </div>
             <div class="subrepeater" data-bullets></div>
             <button class="add-btn" data-addbullet type="button" style="margin-top:10px"><i class="fa-solid fa-plus"></i> Add bullet</button>
           </div>
@@ -1755,6 +1833,7 @@ RENDERERS.about = function(data){
           row.querySelector('.preview-line').textContent = (exp.role||'New role') + (exp.company?' — '+exp.company:'');
           flagUnsaved();
         }));
+        row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{ const f=inp.dataset.dateFor; exp[f]=inp.value; const text=row.querySelector('[data-f="'+f+'"]'); if(text) text.value=inp.value; row.querySelector('.preview-line').textContent=(exp.role||'New role')+(exp.company?' — '+exp.company:'')+((exp.startDate||exp.endDate)?' · '+(exp.startDate||'')+'–'+(exp.endDate||''):''); flagUnsaved(); }));
         row.querySelector('[data-act="del"]').addEventListener('click', (e)=>{ e.stopPropagation(); a.experience.splice(i,1); flagUnsaved(); repaint(); });
         row.querySelector('[data-act="up"]').addEventListener('click', (e)=>{ e.stopPropagation(); if(i===0)return; animateReorder(() => document.getElementById('expList'), () => { [a.experience[i-1],a.experience[i]]=[a.experience[i],a.experience[i-1]]; flagUnsaved(); repaint(); }); });
         row.querySelector('[data-act="down"]').addEventListener('click', (e)=>{ e.stopPropagation(); if(i===a.experience.length-1)return; animateReorder(() => document.getElementById('expList'), () => { [a.experience[i+1],a.experience[i]]=[a.experience[i],a.experience[i+1]]; flagUnsaved(); repaint(); }); });
@@ -1777,7 +1856,7 @@ RENDERERS.about = function(data){
       });
     }
     document.getElementById('addExp').addEventListener('click', ()=>{
-      const fresh = {role:'',company:'',bullets:[''],_uid:uid()};
+      const fresh = {role:'',company:'',startDate:'',endDate:'',bullets:[''],_uid:uid()};
       a.experience.push(fresh);
       openUids.add(fresh._uid);
       flagUnsaved(); repaint();
@@ -1869,13 +1948,13 @@ function fileTileHtml(item){
     : kind === 'video'
     ? `<video src="${attr(ghRawUrl(item.path))}" muted preload="metadata"></video>`
     : kind === 'lottie'
-    ? `<lottie-player src="${attr(ghRawUrl(item.path))}" autoplay loop background="transparent" style="width:100%;height:100%"></lottie-player>`
+    ? `<lottie-player src="${attr(ghRawUrl(item.path))}" autoplay loop background="transparent" style="width:100%;height:100%;"></lottie-player>`
     : FILE_ICON_SVG;
   // A video's tile shows its first frame — often indistinguishable
   // from a still photo at this size. The play-icon badge is the same
   // cue the public site's own lightbox thumbnails already use for
   // this, so it reads consistently for you across both.
-  const badge = kind === 'video' ? `<span class="tile-badge" title="Video"><i class="fa-solid fa-play"></i></span>` : '';
+  const badge = kind === 'video' ? `<span class="tile-badge" title="Video"><i class="fa-solid fa-play"></i></span>` : kind === 'lottie' ? `<span class="tile-badge" title="Lottie JSON"><i class="fa-solid fa-wand-magic-sparkles"></i></span>` : '';
   return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div>`;
 }
 
@@ -2109,16 +2188,14 @@ function wirePreviewAspect(boxEl, m){
    Used here purely to preview what the live site will show — it never
    writes anything into thumbnail.src itself, same as the live site
    only ever fills in the rendered <img>, never the underlying data. */
-function computeFallbackThumbSrc(media){
-  const firstImage = (media || []).find(m => m.type === 'image' && m.src);
-  if (firstImage) return firstImage.src;
-  const firstYoutube = (media || []).find(m => m.type === 'youtube' && m.src);
-  if (firstYoutube) {
-    const id = extractYouTubeId(firstYoutube.src);
-    if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-  }
-  return '';
+function computeFallbackThumb(media){
+  const firstUsable=(media||[]).find(m=>m&&m.src&&['image','video','lottie'].includes(m.type));
+  if(firstUsable) return {type:firstUsable.type,src:firstUsable.src};
+  const yt=(media||[]).find(m=>m&&m.type==='youtube'&&m.src);
+  if(yt){ const id=extractYouTubeId(yt.src); if(id) return {type:'image',src:`https://img.youtube.com/vi/${id}/hqdefault.jpg`}; }
+  return null;
 }
+function computeFallbackThumbSrc(media){ const x=computeFallbackThumb(media); return x?x.src:''; }
 
 RENDERERS.media = async function(){
   content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading your files…</div>`;
