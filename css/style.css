@@ -207,7 +207,7 @@ body {
   transform-origin: center 18%;
   --thumb-zoom: 1;
   --thumb-rotate: 0deg;
-  will-change: opacity, transform;
+  will-change: auto;
 }
 
 /* THREE TRANSITION STYLES, chosen from Settings & Toggles
@@ -232,10 +232,16 @@ body {
 .hero-banner.transition-kenburns .slide lottie-player {
   animation: hero-kenburns 14s ease-in-out infinite;
 }
+.hero-banner.transition-kenburns .slide.active img,
+.hero-banner.transition-kenburns .slide.active video,
+.hero-banner.transition-kenburns .slide.active lottie-player,
+.hero-banner.transition-kenburns .slide.active .hero-lottie-host{
+  will-change: transform;
+}
 .hero-banner.transition-fade .slide img,
 .hero-banner.transition-fade .slide video,
 .hero-banner.transition-fade .slide lottie-player {
-  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  transform: scale(var(--hero-zoom, 1)) rotate(var(--hero-rotate, 0deg));
 }
 .hero-banner.transition-none .slide {
   transition: none;
@@ -243,13 +249,13 @@ body {
 .hero-banner.transition-none .slide img,
 .hero-banner.transition-none .slide video,
 .hero-banner.transition-none .slide lottie-player {
-  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  transform: scale(var(--hero-zoom, 1)) rotate(var(--hero-rotate, 0deg));
 }
 
 @keyframes hero-kenburns {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0%   { transform: scale(var(--hero-zoom, 1)) rotate(var(--hero-rotate, 0deg)); }
+  50%  { transform: scale(calc(var(--hero-zoom, 1) * 1.15)) rotate(var(--hero-rotate, 0deg)); }
+  100% { transform: scale(var(--hero-zoom, 1)) rotate(var(--hero-rotate, 0deg)); }
 }
 
 .hero-overlay { position: relative; z-index: 3; text-align: center; padding: 0 20px; }
@@ -2083,3 +2089,17 @@ body.center-page {
 @media (prefers-reduced-motion: reduce){
   .lm-media-background-shader{animation:none;}
 }
+
+
+/* =====================================================
+   RESILIENT MEDIA LOADING
+   ===================================================== */
+.media-loading{position:relative;}
+.media-loading::before{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.055),transparent 58%);}
+.media-loading::after{content:'';position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border:2px solid rgba(255,255,255,.18);border-top-color:rgba(255,255,255,.72);border-radius:50%;animation:lm-media-spin .8s linear infinite;z-index:4;pointer-events:none;}
+.media-error-placeholder{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;min-height:80px;padding:18px;box-sizing:border-box;color:rgba(255,255,255,.52);font-size:11px;line-height:1.35;text-align:center;background:rgba(255,255,255,.025);}
+.media-error-placeholder i{color:rgba(255,255,255,.4);}
+.hero-lottie-host,.lottie-host{position:relative;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;}
+.hero-banner .hero-lottie-host lottie-player,.card-thumbnail .lottie-host lottie-player,.lightbox-lottie-host lottie-player{display:block!important;width:100%!important;height:100%!important;}
+@keyframes lm-media-spin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion: reduce){.media-loading::after{animation:none;}}

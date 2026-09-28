@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getSiteRootUrl() {
     const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
     try {
-      return new URL('./', new URL(marker, window.location.href)).href;
+      return new URL('../', new URL(marker, window.location.href)).href;
     } catch (e) {
       return new URL('./', window.location.href).href;
     }
@@ -134,6 +134,99 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(src) || src.startsWith('data:') || src.startsWith('blob:')) return src;
     try { return new URL(String(src).replace(/^\/+/, ''), getSiteRootUrl()).href; }
     catch (e) { return src; }
+  }
+
+  /* ---------------------------------------------------------
+     MEDIA LOADING — lazy Lottie + graceful asset failures
+     --------------------------------------------------------- */
+  let lottiePlayerReadyPromise = null;
+  const LOTTIE_PLAYER_URLS = [
+    'https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js',
+    'https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js'
+  ];
+
+  function ensureLottiePlayer(){
+    if (window.customElements?.get('lottie-player')) return Promise.resolve(true);
+    if (lottiePlayerReadyPromise) return lottiePlayerReadyPromise;
+    lottiePlayerReadyPromise = (async () => {
+      for (const src of LOTTIE_PLAYER_URLS) {
+        try {
+          const ok = await new Promise(resolve => {
+            const existing = document.querySelector(`script[data-lottie-player-src=\"${src}\"]`);
+            if (existing) {
+              if (window.customElements?.get('lottie-player')) return resolve(true);
+              existing.addEventListener('load', () => resolve(!!window.customElements?.get('lottie-player')), {once:true});
+              existing.addEventListener('error', () => resolve(false), {once:true});
+              return;
+            }
+            const el = document.createElement('script');
+            el.src = src; el.async = true; el.dataset.lottiePlayerSrc = src;
+            el.onload = () => resolve(!!window.customElements?.get('lottie-player'));
+            el.onerror = () => resolve(false);
+            document.head.appendChild(el);
+          });
+          if (ok) return true;
+        } catch (_) {}
+      }
+      return false;
+    })();
+    return lottiePlayerReadyPromise;
+  }
+
+  function mediaErrorPlaceholder(kind){
+    const el=document.createElement('div');
+    el.className='media-error-placeholder';
+    const icon=document.createElement('i'); icon.className='fa-solid fa-triangle-exclamation'; el.appendChild(icon);
+    el.appendChild(document.createTextNode((kind || 'Media') + ' could not load.'));
+    return el;
+  }
+
+  function bindImageError(img, kind='Image'){
+    img.addEventListener('error', () => {
+      const host=img.closest('.card-thumbnail, .hero-banner .slide, .lightbox-media-item') || img.parentElement;
+      if(!host || host.dataset.mediaError) return;
+      host.dataset.mediaError='1';
+      img.replaceWith(mediaErrorPlaceholder(kind));
+    }, {once:true});
+  }
+
+  async function hydrateLottieHost(host, src, options={}){
+    if(!host || !src || host.dataset.lottieState==='ready') return false;
+    if(host.dataset.lottieState==='loading') return true;
+    host.dataset.lottieState='loading';
+    host.classList.add('media-loading');
+    try {
+      const ready=await ensureLottiePlayer();
+      if(!ready) throw new Error('Lottie player could not be loaded.');
+      if(!document.contains(host)) return false;
+      const player=document.createElement('lottie-player');
+      player.setAttribute('src', siteAssetUrl(src));
+      player.setAttribute('autoplay',''); player.setAttribute('loop',''); player.setAttribute('background','transparent');
+      player.setAttribute('preserveAspectRatio', options.preserveAspectRatio || 'xMidYMid slice');
+      player.preserveAspectRatio=options.preserveAspectRatio || 'xMidYMid slice';
+      player.addEventListener('error', () => {
+        if(host.dataset.mediaError) return;
+        host.dataset.mediaError='1'; host.innerHTML=''; host.appendChild(mediaErrorPlaceholder('Lottie animation'));
+      }, {once:true});
+      host.innerHTML=''; host.appendChild(player);
+      host.dataset.lottieState='ready'; host.classList.remove('media-loading');
+      return true;
+    } catch(err) {
+      host.dataset.lottieState='error'; host.classList.remove('media-loading'); host.innerHTML='';
+      host.appendChild(mediaErrorPlaceholder('Lottie animation'));
+      console.warn('Lottie:', siteAssetUrl(src), err);
+      return false;
+    }
+  }
+
+  function lazyHydrateLottie(host, src, options={}){
+    if(!host) return;
+    if('IntersectionObserver' in window){
+      const io=new IntersectionObserver(entries=>{
+        if(entries.some(e=>e.isIntersecting)){ io.disconnect(); hydrateLottieHost(host,src,options); }
+      }, {rootMargin:'160px'});
+      io.observe(host);
+    } else hydrateLottieHost(host,src,options);
   }
 
   function applyOgMeta(remote){
@@ -895,11 +988,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!source || !source.src) return null;
     let media;
     if (source.type === 'video') {
-      media=document.createElement('video'); media.src=siteAssetUrl(source.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
+      media=document.createElement('video');
+      media.dataset.lazySrc=siteAssetUrl(source.src);
+      media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
+      media.addEventListener('error',()=>{ const host=media.parentElement; if(!host || host.dataset.mediaError)return; host.dataset.mediaError='1'; media.replaceWith(mediaErrorPlaceholder('Video')); }, {once:true});
+      requestAnimationFrame(()=>{ if(media.isConnected && !media.src){ media.src=media.dataset.lazySrc; media.load(); } });
     } else if (source.type === 'lottie') {
-      media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent'); media.setAttribute('preserveAspectRatio','xMidYMid slice'); media.preserveAspectRatio='xMidYMid slice';
+      media=document.createElement('div');
+      media.className='project-thumb-media lottie-host media-loading';
+      media.dataset.lottieSrc=source.src;
+      lazyHydrateLottie(media,source.src,{preserveAspectRatio:'xMidYMid slice'});
+    } else if (source.type === 'model') {
+      return null;
     } else {
-      media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
+      media=document.createElement('img');
+      media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
+      media.loading='lazy'; media.decoding='async'; media.draggable=false;
+      bindImageError(media,'Image');
     }
     media.classList.add('project-thumb-media');
     if (source.background && typeof source.background === 'object') media.setAttribute('data-background', JSON.stringify(source.background));
@@ -980,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
   applyThumbnailAdjustments();
+  if(document.querySelector('[data-background]')) ensureMediaBackgroundHelper().then(()=>applyThumbnailAdjustments());
 
 
   /* =========================================
@@ -1131,8 +1237,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       try { explicitBackground = thumbWrap?.getAttribute('data-background') ? JSON.parse(thumbWrap.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
       const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
       if (!rawSrc && thumbMedia) {
-        rawSrc = thumbMedia.getAttribute('src');
-        explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : thumbMedia.tagName === 'LOTTIE-PLAYER' ? 'lottie' : 'image');
+        rawSrc = thumbMedia.getAttribute('src') || thumbMedia.getAttribute('data-lazy-src') || thumbMedia.getAttribute('data-lottie-src') || '';
+        explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : (thumbMedia.tagName === 'LOTTIE-PLAYER' || thumbMedia.classList.contains('lottie-host')) ? 'lottie' : 'image');
       }
       if (!rawSrc) {
         const mediaItems = card.querySelectorAll('.project-media-list .media-item');
@@ -1315,6 +1421,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
     heroContainer.classList.add('transition-' + HERO_TRANSITION);
 
+    if (sources.some(source => source.background)) await ensureMediaBackgroundHelper();
+
     sources.forEach((source, i) => {
       const wrap = document.createElement('div');
       wrap.className = 'slide' + (i === 0 ? ' active' : '');
@@ -1322,35 +1430,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       let media;
       if (source.type === 'video') {
         media = document.createElement('video');
-        media.src = siteAssetUrl(source.src);
+        media.dataset.lazySrc = siteAssetUrl(source.src);
         media.autoplay = true; media.muted = true; media.loop = true; media.playsInline = true;
+        media.preload = i === 0 ? 'auto' : 'none';
+        media.addEventListener('error',()=>{
+          if(wrap.dataset.mediaError) return;
+          wrap.dataset.mediaError='1'; media.replaceWith(mediaErrorPlaceholder('Hero video'));
+        }, {once:true});
+        if(i===0){ media.src=media.dataset.lazySrc; media.load(); }
       } else if (source.type === 'lottie') {
-        // <lottie-player> is a custom element from the lottie-player
-        // library (loaded in this page's <head>) — it takes a JSON
-        // animation file the same way an <img> takes a picture file.
-        media = document.createElement('lottie-player');
-        media.setAttribute('src', siteAssetUrl(source.src));
-        media.setAttribute('autoplay', '');
-        media.setAttribute('loop', '');
-        media.setAttribute('background', 'transparent');
-        media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        media = document.createElement('div');
+        media.className='hero-lottie-host media-loading';
+        media.dataset.lottieSrc=source.src;
       } else {
         media = document.createElement('img');
-        media.src = siteAssetUrl(source.src);
-        media.alt = source.alt;
+        media.src = siteAssetUrl(source.src); media.alt = source.alt;
+        media.loading = i === 0 ? 'eager' : 'lazy'; media.decoding='async';
+        if(i===0) media.fetchPriority='high';
+        bindImageError(media,'Hero image');
       }
       wrap.appendChild(media);
       heroContainer.appendChild(wrap);
       if (window.LMMediaBackground && source.background) window.LMMediaBackground.apply(wrap, source.background, siteAssetUrl);
-
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
       media.style.setProperty('--hero-zoom', source.zoom || 1);
       media.style.setProperty('--hero-rotate', (source.rotate || 0) + 'deg');
-
-      // Auto face-detection fallback only ever made sense for still
-      // images with no focus point already set by hand — video and
-      // Lottie slides skip it entirely, and an image with an explicit
-      // focus already has what it needs.
       if (source.type === 'image' && !source.focus) {
         if (media.complete) applyFocalPoint(media, null);
         else media.addEventListener('load', () => applyFocalPoint(media, null), { once: true });
@@ -1360,16 +1464,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     startHeroCrossfade(heroContainer);
   }
 
-  function startHeroCrossfade(heroContainer) {
-    const slides = heroContainer.querySelectorAll('.slide');
-    if (slides.length <= 1) return;
+  function hydrateHeroSlide(slide){
+    if(!slide) return;
+    const host=slide.querySelector('.hero-lottie-host[data-lottie-src]');
+    if(host) hydrateLottieHost(host,host.dataset.lottieSrc,{preserveAspectRatio:'xMidYMid slice'});
+    const video=slide.querySelector('video[data-lazy-src]');
+    if(video && !video.src){ video.src=video.dataset.lazySrc; video.load(); }
+    video?.play?.().catch(()=>{});
+    slide.querySelector('lottie-player')?.play?.();
+  }
 
+  function pauseHeroSlide(slide){
+    slide?.querySelector('video')?.pause?.();
+    slide?.querySelector('lottie-player')?.pause?.();
+  }
+
+  function startHeroCrossfade(heroContainer) {
+    const slides = Array.from(heroContainer.querySelectorAll('.slide'));
+    if (!slides.length) return;
     let currentSlide = 0;
+    hydrateHeroSlide(slides[0]);
+    if (slides.length <= 1) return;
     setInterval(() => {
+      pauseHeroSlide(slides[currentSlide]);
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
-    }, HERO_CROSSFADE_MS); // configured in Hero Loop Animation
+      hydrateHeroSlide(slides[currentSlide]);
+      const next=slides[(currentSlide+1)%slides.length];
+      const nextVideo=next.querySelector('video[data-lazy-src]');
+      if(nextVideo && !nextVideo.src){ nextVideo.src=nextVideo.dataset.lazySrc; nextVideo.preload='metadata'; nextVideo.load(); }
+      const nextLottie=next.querySelector('.hero-lottie-host[data-lottie-src]');
+      if(nextLottie && nextLottie.dataset.lottieState!=='ready') hydrateLottieHost(nextLottie,nextLottie.dataset.lottieSrc,{preserveAspectRatio:'xMidYMid slice'});
+    }, HERO_CROSSFADE_MS);
   }
 
   async function ensureMediaBackgroundHelper(){
@@ -1385,7 +1512,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await settingsReady;
-  await ensureMediaBackgroundHelper();
   initHeroBanner();
 
 
@@ -1850,7 +1976,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
           modelWrap.setAttribute('aria-label', 'Interactive 3D model');
           modalMediaContainer.appendChild(buildMediaEntry(modelWrap, caption));
-          import('./model-viewer.js').then(({ mountModelViewer }) => {
+          const modelModuleUrl = new URL('model-viewer.js', new URL('js/script.js', getSiteRootUrl())).href;
+          import(modelModuleUrl).then(({ mountModelViewer }) => {
             mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
               autoRotate: false,
               background: itemBackground || null,
@@ -1868,19 +1995,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           // video above (manual override, else a landscape default),
           // since there's no equivalent of videoWidth/videoHeight to
           // read the real proportions from up front.
-          const player = document.createElement('lottie-player');
-          player.setAttribute('src', siteAssetUrl(lottieUrl));
-          player.setAttribute('autoplay', '');
-          player.setAttribute('loop', '');
-          player.setAttribute('background', 'transparent');
-
+          const host = document.createElement('div');
+          host.className = 'lottie-host lightbox-lottie-host media-loading';
           const manualLottieOrientation = item.getAttribute('data-orientation');
-          if (manualLottieOrientation === 'portrait') player.classList.add('yt-portrait');
-          else if (manualLottieOrientation === 'square') player.classList.add('yt-square');
-          else player.classList.add('yt-landscape');
-
-          player.setAttribute('preserveAspectRatio', 'xMidYMid slice'); player.preserveAspectRatio='xMidYMid slice';
-          modalMediaContainer.appendChild(buildMediaEntry(player, caption, itemBackground));
+          if (manualLottieOrientation === 'portrait') host.classList.add('yt-portrait');
+          else if (manualLottieOrientation === 'square') host.classList.add('yt-square');
+          else host.classList.add('yt-landscape');
+          modalMediaContainer.appendChild(buildMediaEntry(host, caption, itemBackground));
+          hydrateLottieHost(host, lottieUrl, {preserveAspectRatio:'xMidYMid slice'});
         }
       });
     } else {

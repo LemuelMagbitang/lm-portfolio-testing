@@ -1,9 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 const SUPPORTED = new Set(['obj','gltf','glb','fbx']);
 
@@ -38,35 +34,41 @@ function findMtlUrl(objUrl){
   return `${dir}${base}.mtl`;
 }
 
-function loadObj(url){
+async function loadObj(url){
+  const [{ OBJLoader }, { MTLLoader }] = await Promise.all([
+    import('three/addons/loaders/OBJLoader.js'),
+    import('three/addons/loaders/MTLLoader.js')
+  ]);
   return new Promise(resolve => {
     const obj = new OBJLoader();
     const finishWithoutMtl = () => obj.load(url, resolve, undefined, () => resolve(null));
     const mtlUrl = findMtlUrl(url);
     new MTLLoader().load(mtlUrl, materials => {
-      materials.preload();
-      obj.setMaterials(materials);
+      materials.preload(); obj.setMaterials(materials);
       obj.load(url, resolve, undefined, () => resolve(null));
     }, undefined, finishWithoutMtl);
   });
 }
 
-function loadModel(url, ext){
-  return new Promise((resolve, reject) => {
-    if (ext === 'gltf' || ext === 'glb') {
-      new GLTFLoader().load(url, gltf => resolve({ root: gltf.scene, animations: gltf.animations || [] }), undefined, reject);
-      return;
-    }
-    if (ext === 'obj') {
-      loadObj(url).then(root => root ? resolve({root, animations:[]}) : reject(new Error('OBJ could not be loaded.')));
-      return;
-    }
-    if (ext === 'fbx') {
-      new FBXLoader().load(url, object => resolve({ root: object, animations: object.animations || [] }), undefined, reject);
-      return;
-    }
-    reject(new Error(`Unsupported 3D model format: .${ext || 'unknown'}`));
-  });
+async function loadModel(url, ext){
+  if (ext === 'gltf' || ext === 'glb') {
+    const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+    return new Promise((resolve, reject) => {
+      new GLTFLoader().load(url, gltf => resolve({root:gltf.scene,animations:gltf.animations||[]}), undefined, reject);
+    });
+  }
+  if (ext === 'obj') {
+    const root = await loadObj(url);
+    if(!root) throw new Error('OBJ could not be loaded.');
+    return {root,animations:[]};
+  }
+  if (ext === 'fbx') {
+    const { FBXLoader } = await import('three/addons/loaders/FBXLoader.js');
+    return new Promise((resolve, reject) => {
+      new FBXLoader().load(url, object => resolve({root:object,animations:object.animations||[]}), undefined, reject);
+    });
+  }
+  throw new Error(`Unsupported 3D model format: .${ext || 'unknown'}`);
 }
 
 export async function mountModelViewer(container, src, options = {}) {
@@ -101,7 +103,7 @@ export async function mountModelViewer(container, src, options = {}) {
   camera.position.set(0, 0.8, 3.2);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
