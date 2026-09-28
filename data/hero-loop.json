@@ -5,6 +5,43 @@
     "alt": "",
     "focus": "50% 50%",
     "zoom": 1.3,
-    "rotate": 0
+    "rotate": 0,
+    "background": {
+      "type": "shader",
+      "color": "#121212",
+      "color2": "#2a2a2a",
+      "angle": 135,
+      "opacity": 1,
+      "blur": 0,
+      "image": {
+        "src": "",
+        "position": "50% 50%",
+        "fit": "cover"
+      },
+      "video": {
+        "src": "",
+        "position": "50% 50%",
+        "fit": "cover"
+      },
+      "pattern": {
+        "kind": "grid",
+        "size": 48,
+        "thickness": 1,
+        "opacity": 0.12,
+        "color": "#ffffff"
+      },
+      "shader": {
+        "preset": "aurora",
+        "speed": 0.45,
+        "intensity": 0.65,
+        "color1": "#5b5cff",
+        "color2": "#ff4fd8",
+        "color3": "#22d3ee"
+      },
+      "overlay": {
+        "color": "#000000",
+        "opacity": 0
+      }
+    }
   }
 ]
