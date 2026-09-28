@@ -1870,6 +1870,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openLightbox(index) {
+    lightbox.classList.remove('is-3d-focused');
     currentLightboxIndex = index;
     const card = activeLightboxCards[currentLightboxIndex];
 
@@ -1984,13 +1985,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (modelUrl) {
           const modelWrap = document.createElement('div');
           modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
-          modelWrap.setAttribute('aria-label', 'Interactive 3D model');
-          modalMediaContainer.appendChild(buildMediaEntry(modelWrap, caption));
+          modelWrap.setAttribute('aria-label', '3D artwork preview');
+          const modelEntry = buildMediaEntry(modelWrap, caption);
+          modelEntry.classList.add('is-3d-media-item');
+          modalMediaContainer.appendChild(modelEntry);
           import(new URL('model-viewer.js', new URL('js/', getSiteRootUrl())).href).then(({ mountModelViewer }) => {
             mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
               autoRotate: false,
               background: itemBackground || null,
-              resolveUrl: siteAssetUrl
+              resolveUrl: siteAssetUrl,
+              onActivate: () => {
+                lightbox.classList.add('is-3d-focused');
+                modelEntry.classList.add('is-3d-focus-target');
+              },
+              onDeactivate: () => {
+                lightbox.classList.remove('is-3d-focused');
+                modelEntry.classList.remove('is-3d-focus-target');
+              }
             });
           }).catch(err => {
             modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
@@ -2058,7 +2069,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Close Lightbox function
   function closeLightbox() {
-    lightbox.classList.remove('active');
+    lightbox.classList.remove('active', 'is-3d-focused');
     if (lightboxControls) lightboxControls.classList.remove('active');
     document.body.style.overflow = ''; // Restore body scroll
     modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background

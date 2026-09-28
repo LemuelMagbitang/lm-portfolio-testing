@@ -146,9 +146,9 @@ export async function mountModelViewer(container, src, options = {}) {
   controls.target.set(0, 0, 0);
   controls.touches.ONE = THREE.TOUCH.ROTATE;
   controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
-  // The viewer starts in a passive state so a finger drag or mouse-wheel
-  // gesture never hijacks the project's normal page/lightbox scrolling.
-  // The user explicitly enters the interactive 3D state first.
+  // Passive preview state: OrbitControls is off and the canvas itself does
+  // not receive pointer input. The surrounding lightbox therefore owns the
+  // mouse wheel and mobile swipe until the user intentionally opens 3D.
   controls.enabled = false;
 
   let root;
@@ -190,24 +190,27 @@ export async function mountModelViewer(container, src, options = {}) {
     }
 
     // Two-step interaction model:
-    // 1) the viewer advertises that it is interactive and waits for an
-    //    explicit tap/click, keeping page scrolling intact;
-    // 2) after activation OrbitControls takes over until the user presses
-    //    the small back button below the gesture instructions.
+    // 1) the model behaves like a media thumbnail: the WebGL canvas is not
+    //    allowed to capture gestures, so wheel/finger movement keeps scrolling
+    //    the surrounding project media list;
+    // 2) a deliberate click/tap opens the focused 3D state, where OrbitControls
+    //    takes over until the visitor presses the back button.
     const activate = document.createElement('button');
     activate.type = 'button';
     activate.className = 'model-viewer-activate';
-    activate.setAttribute('aria-label', 'Activate interactive 3D view');
-    activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>INTERACTIVE 3D</strong><span>Tap to explore this artwork</span></span>';
+    activate.setAttribute('aria-label', 'Open interactive 3D view');
+    activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>VIEW 3D</strong></span>';
     container.appendChild(activate);
 
     const ui = document.createElement('div');
     ui.className = 'model-viewer-ui';
 
+    let hint = null;
     if (options.hint !== false) {
-      const hint = document.createElement('div');
+      hint = document.createElement('div');
       hint.className = 'model-viewer-hint';
       hint.textContent = 'Drag to orbit · pinch / wheel to zoom · two-finger / right-drag to pan';
+      hint.hidden = true;
       ui.appendChild(hint);
     }
 
@@ -226,15 +229,38 @@ export async function mountModelViewer(container, src, options = {}) {
       container.classList.toggle('is-interactive', active);
       activate.hidden = active;
       back.hidden = !active;
+      if (hint) hint.hidden = !active;
+      renderer.domElement.style.pointerEvents = active ? 'auto' : 'none';
       renderer.domElement.style.touchAction = active ? 'none' : 'auto';
       if (!active) {
         // Clear any stuck pointer state before returning gesture ownership
         // to the lightbox/page.
         controls.reset();
+        if (typeof options.onDeactivate === 'function') options.onDeactivate();
+      } else if (typeof options.onActivate === 'function') {
+        options.onActivate();
       }
     };
 
+    // Guard against a mobile swipe being interpreted as a click. The
+    // activation affordance should fire only on a deliberate tap/click, not
+    // when the visitor is scrolling through the project media list.
+    let activationStartX = 0;
+    let activationStartY = 0;
+    let activationMoved = false;
+    activate.addEventListener('pointerdown', (event) => {
+      activationStartX = event.clientX;
+      activationStartY = event.clientY;
+      activationMoved = false;
+    });
+    activate.addEventListener('pointermove', (event) => {
+      if (Math.hypot(event.clientX - activationStartX, event.clientY - activationStartY) > 10) activationMoved = true;
+    });
     activate.addEventListener('click', (event) => {
+      if (activationMoved) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       setInteractive(true);
       // Focus the canvas for keyboard users without forcing a page jump.
@@ -249,7 +275,8 @@ export async function mountModelViewer(container, src, options = {}) {
     });
 
     renderer.domElement.setAttribute('tabindex', '0');
-    renderer.domElement.setAttribute('aria-label', 'Interactive 3D model. Activate the viewer before rotating or panning.');
+    renderer.domElement.setAttribute('aria-label', 'Interactive 3D model.');
+    renderer.domElement.style.pointerEvents = 'none';
     renderer.domElement.style.touchAction = 'auto';
   } catch (err) {
     renderer.dispose();

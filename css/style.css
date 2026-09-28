@@ -2160,21 +2160,37 @@ body.center-page {
 .card-3d-indicator i{font-size:10px;}
 
 /* =====================================================
-   INTERACTIVE 3D VIEWER — two-step touch/scroll interaction
+   INTERACTIVE 3D VIEWER — passive media thumbnail → focused viewer
    ===================================================== */
 .model-viewer-shell{
   position:relative;
   width:100%;
-  min-height:320px;
-  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.01) 55%,transparent 78%);
+  min-height:250px;
+  height:clamp(240px, 34vw, 360px);
+  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.012) 58%,transparent 82%);
   border-radius:12px;
   overflow:hidden;
   touch-action:auto;
-  overscroll-behavior:contain;
+  overscroll-behavior:auto;
+  isolation:isolate;
 }
-.model-viewer-shell canvas{width:100%!important;height:100%!important;display:block;touch-action:auto;outline:none;}
+.model-viewer-shell canvas{
+  width:100%!important;
+  height:100%!important;
+  display:block;
+  touch-action:auto;
+  pointer-events:none;
+  outline:none;
+}
 .model-viewer-shell.is-interactive,
-.model-viewer-shell.is-interactive canvas{touch-action:none;}
+.model-viewer-shell.is-interactive canvas{
+  touch-action:none;
+}
+.model-viewer-shell.is-interactive canvas{pointer-events:auto;}
+
+/* In the normal media list the 3D item behaves like a thumbnail. The button
+   is deliberately scroll-friendly: vertical/horizontal page gestures remain
+   native, while a simple tap/click can still enter the focused viewer. */
 .model-viewer-activate{
   position:absolute;
   inset:0;
@@ -2182,8 +2198,8 @@ body.center-page {
   width:100%;
   height:100%;
   border:0;
-  padding:24px;
-  background:linear-gradient(to bottom,rgba(0,0,0,.04),rgba(0,0,0,.22));
+  padding:18px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.14));
   color:#fff;
   cursor:pointer;
   display:flex;
@@ -2191,29 +2207,32 @@ body.center-page {
   justify-content:center;
   text-align:center;
   font:inherit;
+  touch-action:pan-x pan-y;
   -webkit-user-select:none;
   user-select:none;
   -webkit-tap-highlight-color:transparent;
 }
-.model-viewer-activate:hover{background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.27));}
+@media (hover:hover) and (pointer:fine){
+  .model-viewer-activate:hover{background:linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.2));}
+}
 .model-viewer-activate:focus{outline:none;}
 .model-viewer-activate:focus-visible{outline:2px solid #fff;outline-offset:-6px;border-radius:12px;}
 .model-viewer-activate-content{
-  display:flex;
-  flex-direction:column;
+  display:inline-flex;
   align-items:center;
   gap:9px;
-  padding:16px 20px;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:14px;
-  background:rgba(9,9,9,.42);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  box-shadow:0 18px 40px rgba(0,0,0,.2);
+  padding:9px 12px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(8,8,8,.38);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 12px 28px rgba(0,0,0,.18);
+  opacity:.92;
 }
-.model-viewer-activate-content i{font-size:24px;}
-.model-viewer-activate-content strong{font-size:11px;letter-spacing:.16em;}
-.model-viewer-activate-content span{font-size:10px;letter-spacing:.04em;color:rgba(255,255,255,.58);}
+.model-viewer-activate-content i{font-size:12px;}
+.model-viewer-activate-content strong{font-size:9px;letter-spacing:.16em;font-weight:800;}
+
 .model-viewer-ui{
   position:absolute;
   left:50%;
@@ -2227,13 +2246,16 @@ body.center-page {
   width:min(100% - 28px,640px);
   pointer-events:none;
 }
+.model-viewer-hint[hidden],
+.model-viewer-back[hidden],
+.model-viewer-activate[hidden]{display:none!important;}
 .model-viewer-hint{
-  color:rgba(255,255,255,.62);
-  background:rgba(0,0,0,.42);
+  color:rgba(255,255,255,.66);
+  background:rgba(0,0,0,.44);
   padding:6px 9px;
   border-radius:6px;
   font-size:10px;
-  letter-spacing:.04em;
+  letter-spacing:.035em;
   line-height:1.35;
   text-align:center;
   pointer-events:none;
@@ -2242,11 +2264,11 @@ body.center-page {
 }
 .model-viewer-back{
   appearance:none;
-  border:1px solid rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.18);
   border-radius:999px;
-  background:rgba(8,8,8,.62);
-  color:rgba(255,255,255,.8);
-  padding:7px 12px;
+  background:rgba(8,8,8,.72);
+  color:rgba(255,255,255,.86);
+  padding:8px 13px;
   font:700 9px/1.1 inherit;
   letter-spacing:.12em;
   cursor:pointer;
@@ -2254,19 +2276,87 @@ body.center-page {
   -webkit-user-select:none;
   user-select:none;
   -webkit-tap-highlight-color:transparent;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 10px 24px rgba(0,0,0,.22);
 }
 .model-viewer-back:hover{background:rgba(255,255,255,.92);color:#111;}
 .model-viewer-back:focus{outline:none;}
 .model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 .model-viewer-error{padding:20px;text-align:center;color:#999;font-size:12px;line-height:1.5;}
-.lightbox-model-viewer{width:min(94vw,1100px);height:min(74vh,720px);min-height:340px;margin:0 auto;}
-.card-thumbnail lottie-player{background:transparent;}
+
+/* 3D entries are intentionally compact in the media list, like a rich
+   thumbnail rather than a full-screen viewer. */
+.lightbox-model-viewer{
+  width:min(100%,860px);
+  height:clamp(250px, 42vw, 390px);
+  min-height:250px;
+  margin:0 auto;
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 16px 40px rgba(0,0,0,.18);
+}
+.lightbox-media-item.is-3d-media-item{width:100%;}
+
+/* Focus mode: once 3D is deliberately opened, the rest of the project is
+   visually pushed back while the model becomes the single focal surface. */
+.lightbox-modal.is-3d-focused{
+  overflow:hidden;
+}
+.lightbox-modal.is-3d-focused::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background:rgba(0,0,0,.5);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  pointer-events:none;
+}
+.lightbox-modal.is-3d-focused .modal-interior{
+  position:relative;
+  z-index:1;
+}
+.lightbox-modal.is-3d-focused .modal-header,
+.lightbox-modal.is-3d-focused .modal-full-desc,
+.lightbox-modal.is-3d-focused #lightboxMediaContainer > .lightbox-media-item:not(.is-3d-focus-target){
+  opacity:.12;
+  filter:blur(9px);
+  pointer-events:none;
+  transition:opacity .25s ease,filter .25s ease;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target{
+  position:fixed;
+  left:50%;
+  top:50%;
+  z-index:10001;
+  width:min(92vw,1100px);
+  height:min(80svh,760px);
+  max-width:1100px;
+  transform:translate3d(-50%,-50%,0);
+  margin:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  filter:none;
+  opacity:1;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
+  width:100%;
+  height:100%;
+  min-height:0;
+  border-color:rgba(255,255,255,.11);
+  box-shadow:0 26px 80px rgba(0,0,0,.42);
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{display:none;}
+.lightbox-modal.is-3d-focused .lightbox-nav{opacity:0;pointer-events:none;}
 
 @media (max-width:768px){
-  .card-3d-indicator{left:10px;bottom:10px;font-size:8px;padding:6px 8px;}
-  .model-viewer-hint{font-size:9px;}
-  .model-viewer-activate{padding:18px;}
-  .model-viewer-activate-content{padding:14px 16px;}
+  .model-viewer-shell{min-height:220px;height:58vw;max-height:320px;border-radius:10px;}
+  .model-viewer-hint{font-size:9px;padding:6px 8px;}
+  .model-viewer-back{padding:8px 12px;font-size:8px;}
+  .lightbox-model-viewer{height:58vw;min-height:220px;max-height:320px;}
+  .lightbox-modal.is-3d-focused .is-3d-focus-target{
+    width:94vw;
+    height:78svh;
+  }
 }
