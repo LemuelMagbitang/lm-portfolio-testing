@@ -802,6 +802,74 @@ RENDERERS.hero = function(data){
 };
 
 /* =====================================================================
+   MEDIA BACKGROUND EDITOR — transparent Lottie + 3D artwork fills
+   ===================================================================== */
+function normalizeCmsBackground(input){
+  if(window.LMMediaBackground?.normalize) return window.LMMediaBackground.normalize(input);
+  return {
+    type:'none', color:'#121212', color2:'#2a2a2a', angle:135, opacity:1, blur:0,
+    image:{src:'',position:'50% 50%',fit:'cover'},
+    video:{src:'',position:'50% 50%',fit:'cover'},
+    pattern:{kind:'grid',size:48,thickness:1,opacity:.12,color:'#fff'},
+    shader:{preset:'aurora',speed:.45,intensity:.65,color1:'#5b5cff',color2:'#ff4fd8',color3:'#22d3ee'},
+    overlay:{color:'#000000',opacity:0},
+    ...(input||{})
+  };
+}
+
+function mediaBackgroundEditor(root, initial, onChange){
+  if(!root) return null;
+  let bg=normalizeCmsBackground(initial);
+
+  const paintFields=()=>{
+    const type=bg.type;
+    root.innerHTML=`
+      <div class="row media-bg-common">
+        <div class="field" style="max-width:220px"><label class="field-label">Background fill</label>
+          <select data-bg="type">
+            <option value="none" ${type==='none'?'selected':''}>None / transparent</option>
+            <option value="solid" ${type==='solid'?'selected':''}>Solid color</option>
+            <option value="gradient" ${type==='gradient'?'selected':''}>Gradient</option>
+            <option value="pattern" ${type==='pattern'?'selected':''}>Pattern</option>
+            <option value="image" ${type==='image'?'selected':''}>Image</option>
+            <option value="video" ${type==='video'?'selected':''}>Video</option>
+            <option value="shader" ${type==='shader'?'selected':''}>Procedural / shader-style</option>
+          </select>
+        </div>
+        ${type==='solid'?`<div class="field color-field"><label class="field-label">Color</label><input data-bg="color" type="color" value="${attr(bg.color||'#121212')}"></div>`:''}
+        ${type==='gradient'?`<div class="field color-field"><label class="field-label">Color 1</label><input data-bg="color" type="color" value="${attr(bg.color||'#121212')}"></div><div class="field color-field"><label class="field-label">Color 2</label><input data-bg="color2" type="color" value="${attr(bg.color2||'#2a2a2a')}"></div><div class="field" style="max-width:150px"><label class="field-label">Angle</label><input data-bg="angle" type="number" min="0" max="360" step="1" value="${Number(bg.angle)||135}"></div>`:''}
+        ${type==='pattern'?`<div class="field" style="max-width:160px"><label class="field-label">Pattern</label><select data-bg="pattern.kind"><option value="grid" ${bg.pattern.kind==='grid'?'selected':''}>Grid</option><option value="dots" ${bg.pattern.kind==='dots'?'selected':''}>Dots</option><option value="diagonal" ${bg.pattern.kind==='diagonal'?'selected':''}>Diagonal</option><option value="checker" ${bg.pattern.kind==='checker'?'selected':''}>Checker</option></select></div><div class="field color-field"><label class="field-label">Base</label><input data-bg="color" type="color" value="${attr(bg.color||'#121212')}"></div><div class="field color-field"><label class="field-label">Pattern color</label><input data-bg="pattern.color" type="color" value="${attr(bg.pattern.color||'#ffffff')}"></div><div class="field" style="max-width:120px"><label class="field-label">Size</label><input data-bg="pattern.size" type="number" min="8" max="180" value="${Number(bg.pattern.size)||48}"></div><div class="field" style="max-width:120px"><label class="field-label">Opacity</label><input data-bg="pattern.opacity" type="number" min="0" max="1" step="0.05" value="${Number(bg.pattern.opacity)}"></div>`:''}
+        ${type==='image'?`<div class="field"><label class="field-label">Image source</label><input data-bg="image.src" value="${attr(bg.image.src||'')}" placeholder="assets/projects/.../background.jpg"></div><div class="field" style="max-width:130px"><label class="field-label">Blur (px)</label><input data-bg="blur" type="number" min="0" max="48" step="1" value="${Number(bg.blur)||0}"></div>`:''}
+        ${type==='video'?`<div class="field"><label class="field-label">Video source</label><input data-bg="video.src" value="${attr(bg.video.src||'')}" placeholder="assets/projects/.../background.mp4"></div><div class="field" style="max-width:130px"><label class="field-label">Blur (px)</label><input data-bg="blur" type="number" min="0" max="48" step="1" value="${Number(bg.blur)||0}"></div>`:''}
+        ${type==='shader'?`<div class="field" style="max-width:150px"><label class="field-label">Preset</label><select data-bg="shader.preset"><option value="aurora" ${bg.shader.preset==='aurora'?'selected':''}>Aurora</option><option value="mesh" ${bg.shader.preset==='mesh'?'selected':''}>Mesh</option></select></div><div class="field" style="max-width:120px"><label class="field-label">Speed</label><input data-bg="shader.speed" type="number" min="0.05" max="2" step="0.05" value="${Number(bg.shader.speed)||.45}"></div><div class="field" style="max-width:120px"><label class="field-label">Intensity</label><input data-bg="shader.intensity" type="number" min="0" max="1" step="0.05" value="${Number(bg.shader.intensity)}"></div><div class="field color-field"><label class="field-label">Color 1</label><input data-bg="shader.color1" type="color" value="${attr(bg.shader.color1||'#5b5cff')}"></div><div class="field color-field"><label class="field-label">Color 2</label><input data-bg="shader.color2" type="color" value="${attr(bg.shader.color2||'#ff4fd8')}"></div><div class="field color-field"><label class="field-label">Color 3</label><input data-bg="shader.color3" type="color" value="${attr(bg.shader.color3||'#22d3ee')}"></div>`:''}
+      </div>
+      ${type==='image'||type==='video'?`<div class="row media-bg-position"><div class="field"><label class="field-label">Position (x% y%)</label><input data-bg="${type}.position" value="${attr(bg[type].position||'50% 50%')}" placeholder="50% 50%"></div><div class="field" style="max-width:150px"><label class="field-label">Fit</label><select data-bg="${type}.fit"><option value="cover" ${bg[type].fit==='cover'?'selected':''}>Cover</option><option value="contain" ${bg[type].fit==='contain'?'selected':''}>Contain</option><option value="fill" ${bg[type].fit==='fill'?'selected':''}>Fill</option></select></div></div>`:''}
+      ${type!=='none'?`<div class="row media-bg-common"><div class="field"><label class="field-label">Tint / overlay color</label><input data-bg="overlay.color" type="color" value="${attr(bg.overlay?.color||'#000000')}"></div><div class="field" style="max-width:150px"><label class="field-label">Tint opacity</label><input data-bg="overlay.opacity" type="number" min="0" max="1" step="0.05" value="${Number(bg.overlay?.opacity)||0}"></div><div class="field" style="max-width:160px"><label class="field-label">Overall opacity</label><input data-bg="opacity" type="number" min="0" max="1" step="0.05" value="${Number(bg.opacity)}"></div></div>`:''}
+      <p class="hint media-bg-hint">Background sits behind transparent artwork. Images and videos can be blurred; color inputs use the browser color picker. Procedural backgrounds are lightweight shader-style fills for broad browser compatibility.</p>
+    `;
+
+    root.querySelector('[data-bg="type"]')?.addEventListener('change',e=>{bg.type=e.target.value; onChange?.(bg); paintFields();});
+    root.querySelectorAll('[data-bg]:not([data-bg="type"])').forEach(inp=>{
+      inp.addEventListener('input',()=>{
+        const path=inp.dataset.bg.split('.'); let obj=bg;
+        for(let i=0;i<path.length-1;i++){ if(!obj[path[i]]||typeof obj[path[i]]!=='object') obj[path[i]]={}; obj=obj[path[i]]; }
+        const key=path[path.length-1];
+        obj[key]=inp.type==='number'?Number(inp.value)||0:inp.value;
+        onChange?.(bg);
+      });
+    });
+
+    const sourceInput=root.querySelector(`[data-bg="${type==='image'?'image.src':type==='video'?'video.src':''}"]`);
+    if(sourceInput){
+      attachMediaBrowseButton(sourceInput,()=>onChange?.(bg),()=>({kind:type,title:type==='image'?'Choose a background image':'Choose a background video'}));
+    }
+  };
+
+  paintFields();
+  return { get:()=>bg, refresh:paintFields };
+}
+
+/* =====================================================================
    8. SECTION: HERO LOOP ANIMATION
    ===================================================================== */
 RENDERERS.heroLoop=async function(data){
@@ -810,7 +878,7 @@ RENDERERS.heroLoop=async function(data){
   let mode=['latest','manual','mixed'].includes(timing.loopMode)?timing.loopMode:'latest';
   let transition=['kenburns','fade','none'].includes(timing.transitionStyle)?timing.transitionStyle:'kenburns';
   let interval=Number(timing.crossfadeMs)||3500;
-  let items=withUids((Array.isArray(data.json)?data.json:[]).map(x=>({type:x.type||'image',src:x.src||'',alt:x.alt||'',focus:x.focus||'50% 50%',zoom:x.zoom||1,rotate:x.rotate||0})));
+  let items=withUids((Array.isArray(data.json)?data.json:[]).map(x=>({type:x.type||'image',src:x.src||'',alt:x.alt||'',focus:x.focus||'50% 50%',zoom:x.zoom||1,rotate:x.rotate||0,background:x.background||null})));
   let openUid=items[0]?items[0]._uid:null;
   function paint(){
     content.innerHTML=sectionHead('Hero Loop Animation','Choose automatic latest-project looping or a manual list. Manual entries support image, video, Lottie JSON, zoom, focus and rotation.')+`<div class="panel"><div class="row"><div class="field"><label class="field-label">Loop source</label><select id="hl_mode"><option value="latest" ${mode==='latest'?'selected':''}>Latest projects (up to 5)</option><option value="manual" ${mode==='manual'?'selected':''}>Only what I add</option><option value="mixed" ${mode==='mixed'?'selected':''}>My additions + latest fill (up to 5)</option></select></div><div class="field"><label class="field-label">Transition</label><select id="hl_transition"><option value="kenburns" ${transition==='kenburns'?'selected':''}>Zoom + fade</option><option value="fade" ${transition==='fade'?'selected':''}>Fade only</option><option value="none" ${transition==='none'?'selected':''}>None</option></select></div><div class="field"><label class="field-label">Slide interval (ms)</label><input id="hl_interval" type="number" min="500" step="100" value="${interval}"></div></div><div class="banner info"><i class="fa-solid fa-circle-info"></i><div><strong>Loop source</strong> controls what supplies the hero: <strong>Latest projects</strong> uses the newest project order (up to 5); <strong>Only what I add</strong> uses only this list; <strong>My additions + latest fill</strong> puts your manual entries first, then fills the remaining slots with newest projects until there are 5.</div></div></div><div id="heroLoopItems"></div><button class="add-btn" id="hl_add"><i class="fa-solid fa-plus"></i> Add hero artwork</button>`;
@@ -821,17 +889,18 @@ RENDERERS.heroLoop=async function(data){
       row.innerHTML=`<div class="card-item-head collapsible-head" data-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(item.alt||item.src||'(empty)')}</span><div class="card-item-actions"><button class="icon-btn" data-a="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-a="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-a="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-a="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px" data-body></div>`;
       if(open){
         const body=row.querySelector('[data-body]');
-        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-f="type"><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option></select></div><div class="field"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div>`;
+        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-f="type"><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option></select></div><div class="field"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div><div class="panel media-bg-panel"><h3 style="font-size:.85rem">Background fill</h3><p class="panel-sub">Useful for transparent Lottie art. The same background can be used behind supported 3D media.</p><div data-bg-editor></div></div>`;
         const picker=body.querySelector('[data-picker]'),cross=body.querySelector('[data-crosshair]'),preview=body.querySelector('[data-preview]');
         const setCross=()=>{const q=(item.focus||'50% 50%').split(' ').map(v=>parseFloat(v)||50);cross.style.left=q[0]+'%';cross.style.top=q[1]+'%';};
         function refreshHeroPreview(){
           preview.innerHTML=''; if(!item.src) return;
           let media;
           if(item.type==='video'){media=document.createElement('video');media.src=ghRawUrl(item.src);media.muted=true;media.loop=true;media.autoplay=true;media.playsInline=true;}
-          else if(item.type==='lottie'){media=document.createElement('lottie-player');media.setAttribute('src',ghRawUrl(item.src));media.setAttribute('autoplay','');media.setAttribute('loop','');media.setAttribute('background','transparent');}
+          else if(item.type==='lottie'){media=document.createElement('lottie-player');media.setAttribute('src',ghRawUrl(item.src));media.setAttribute('autoplay','');media.setAttribute('loop','');media.setAttribute('background','transparent');media.setAttribute('preserveAspectRatio','xMidYMid slice'); media.preserveAspectRatio='xMidYMid slice';}
           else {media=document.createElement('img');media.src=ghRawUrl(item.src);}
           media.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:.55;';
           const focus=item.focus||'50% 50%';media.style.objectPosition=focus;media.style.transformOrigin=focus;media.style.transform=`scale(${item.zoom||1}) rotate(${item.rotate||0}deg)`;preview.appendChild(media);
+          if(window.LMMediaBackground && item.background) window.LMMediaBackground.apply(preview,item.background,ghRawUrl);
         }
         setCross();refreshHeroPreview();
         attachMediaBrowseButton(body.querySelector('[data-f="src"]'), () => refreshHeroPreview(), () => ({
@@ -840,6 +909,7 @@ RENDERERS.heroLoop=async function(data){
         }));
         let dragging=false;const pointer=e=>{const r=picker.getBoundingClientRect(),x=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientX:e.clientX)-r.left)/r.width*100)),y=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientY:e.clientY)-r.top)/r.height*100));item.focus=`${x.toFixed(0)}% ${y.toFixed(0)}%`;body.querySelector('[data-f="focus"]').value=item.focus;setCross();refreshHeroPreview();flagUnsaved();};picker.addEventListener('mousedown',e=>{dragging=true;pointer(e)});window.addEventListener('mousemove',e=>{if(dragging)pointer(e)});window.addEventListener('mouseup',()=>dragging=false);picker.addEventListener('touchstart',pointer,{passive:true});picker.addEventListener('touchmove',pointer,{passive:true});
         body.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{const f=inp.dataset.f;item[f]=(f==='zoom'||f==='rotate')?(parseFloat(inp.value)||0):inp.value;row.querySelector('.preview-line').textContent=item.alt||item.src||'(empty)';if(f==='focus')setCross();refreshHeroPreview();flagUnsaved();}));
+        mediaBackgroundEditor(body.querySelector('[data-bg-editor]'), item.background, next=>{ item.background = next.type==='none' ? null : next; refreshHeroPreview(); flagUnsaved(); });
       }
       row.querySelector('[data-open]').addEventListener('click',e=>{if(e.target.closest('[data-a]')&&e.target.closest('[data-a]').dataset.a!=='toggle')return;openUid=open?null:item._uid;paint();});
       row.querySelector('[data-a=del]').addEventListener('click',e=>{e.stopPropagation();items=items.filter(x=>x._uid!==item._uid);flagUnsaved();paint();});
@@ -850,9 +920,9 @@ RENDERERS.heroLoop=async function(data){
     document.getElementById('hl_mode').addEventListener('change',e=>{mode=e.target.value;flagUnsaved();paint();});
     document.getElementById('hl_transition').addEventListener('change',e=>{transition=e.target.value;flagUnsaved();});
     document.getElementById('hl_interval').addEventListener('input',e=>{interval=Math.max(500,parseInt(e.target.value,10)||3500);flagUnsaved();});
-    document.getElementById('hl_add').addEventListener('click',()=>{const x={type:'image',src:'',alt:'',focus:'50% 50%',zoom:1,rotate:0,_uid:uid()};items.push(x);openUid=x._uid;mode='manual';flagUnsaved();paint();});
+    document.getElementById('hl_add').addEventListener('click',()=>{const x={type:'image',src:'',alt:'',focus:'50% 50%',zoom:1,rotate:0,background:null,_uid:uid()};items.push(x);openUid=x._uid;mode='manual';flagUnsaved();paint();});
     enableDragReorder(()=>document.getElementById('heroLoopItems'),items,flagUnsaved,paint);
-    wireSave(()=>({items:items.map(x=>({type:x.type,src:x.src,alt:x.alt,focus:x.focus,zoom:x.zoom,rotate:x.rotate})),mode,transition,interval}), 'heroLoop', SECTIONS.heroLoop.file);
+    wireSave(()=>({items:items.map(x=>({type:x.type,src:x.src,alt:x.alt,focus:x.focus,zoom:x.zoom,rotate:x.rotate,background:x.background||null})),mode,transition,interval}), 'heroLoop', SECTIONS.heroLoop.file);
     currentSave.combined=true;
   }
   paint();
@@ -1333,8 +1403,8 @@ RENDERERS.projects = async function(data){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
-    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1 },
-    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:['image','video','youtube','lottie','model'].includes(m.type)?m.type:'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||''})):[])
+    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
+    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
   })));
   let filterDefs = [];
   try{ const f = await loadSection('filters'); const raw=f.json||[]; filterDefs=Array.isArray(raw)?raw:(raw.filters||[]); }catch(e){}
@@ -1391,7 +1461,7 @@ RENDERERS.projects = async function(data){
     });
 
     document.getElementById('addProj').addEventListener('click', ()=>{
-      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
+      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1,background:null},media:[],_uid:uid()};
       items.push(p);
       openUid = p._uid; flagUnsaved(); paint();
     });
@@ -1406,8 +1476,8 @@ RENDERERS.projects = async function(data){
       }
       return items.map(p=>({
         id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge, filters:p.filters, description:p.description,
-        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom},
-        media:p.media.map(m=>({type:m.type,src:m.src,caption:m.caption,orientation:m.orientation}))
+        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,background:p.thumbnail.background||null},
+        media:p.media.map(m=>({type:m.type,src:m.src,caption:m.caption,orientation:m.orientation,background:m.background||null}))
       }));
     }, 'projects', SECTIONS.projects.file);
   }
@@ -1465,6 +1535,11 @@ RENDERERS.projects = async function(data){
             <p class="hint" data-thumb-fallback-note style="display:none">Preview is the project's first media item — no thumbnail file is set, same as the live site.</p>
           </div>
         </div>
+        <div class="media-bg-panel" style="margin-top:14px;${p.thumbnail.type==='lottie'?'':'display:none;'}" data-thumb-bg-panel>
+          <h4 style="font-size:.82rem;margin:0 0 6px;">Lottie background</h4>
+          <p class="panel-sub">Only needed for transparent Lottie thumbnails; it sits behind the animation.</p>
+          <div data-thumb-bg-editor></div>
+        </div>
       </div>
 
       <div class="panel" style="background:#141414;">
@@ -1500,12 +1575,14 @@ RENDERERS.projects = async function(data){
       media.setAttribute('data-thumb-media',''); media.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
       const focus=p.thumbnail.focus||'50% 50%'; media.style.objectPosition=focus; media.style.transformOrigin=focus; media.style.transform=`scale(${p.thumbnail.zoom||1})`;
       picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
+      if(window.LMMediaBackground && src.background) window.LMMediaBackground.apply(picker,src.background,ghRawUrl);
       if(note) note.style.display=fallback?'':'none';
     }
     attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview(), () => ({
       kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : 'image',
       title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : 'Choose an image file'
     }));
+    mediaBackgroundEditor(el.querySelector('[data-thumb-bg-editor]'), p.thumbnail.background, next=>{ p.thumbnail.background = next.type==='none'?null:next; refreshThumbPreview(); flagUnsaved(); });
 
     // simple fields
     el.querySelectorAll('[data-f]').forEach(inp=>{
@@ -1516,6 +1593,8 @@ RENDERERS.projects = async function(data){
           refreshThumbPreview();
         } else if(f==='thumb-type'){
           p.thumbnail.type = inp.value;
+          const bgPanel=el.querySelector('[data-thumb-bg-panel]');
+          if(bgPanel) bgPanel.style.display = inp.value==='lottie' ? '' : 'none';
           refreshThumbPreview();
         }
         // THE FIX: typing a new zoom or focus value used to update
@@ -1603,11 +1682,10 @@ RENDERERS.projects = async function(data){
         row.className = 'card-item';
         row.style.background = '#191919';
         row.dataset.uid = m._uid;
-        const mediaTypeLabel = {image:'Image',video:'Video',youtube:'YouTube link',lottie:'Lottie',model:'3D model'}[m.type] || m.type;
         row.innerHTML = `
           <div class="card-item-head collapsible-head" data-toggle-open>
             <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-            <span class="item-title">${m.caption ? esc(m.caption) : '(' + mediaTypeLabel + ')'}</span>
+            <span class="item-title">${m.caption ? esc(m.caption) : '(' + ({model:'3D model',youtube:'YouTube',lottie:'Lottie',video:'Video',image:'Image'}[m.type]||m.type) + ')'}</span>
             <div class="card-item-actions">
               <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
               <button class="icon-btn" data-mact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
@@ -1621,12 +1699,12 @@ RENDERERS.projects = async function(data){
                 <select data-mf="type">
                   <option value="image" ${m.type==='image'?'selected':''}>Image</option>
                   <option value="video" ${m.type==='video'?'selected':''}>Video</option>
-                  <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube link</option>
+                  <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube</option>
                   <option value="lottie" ${m.type==='lottie'?'selected':''}>Lottie (JSON animation)</option>
                   <option value="model" ${m.type==='model'?'selected':''}>3D model (OBJ / glTF / GLB / FBX)</option>
                 </select>
               </div>
-              <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg / .mp4 / .json / .glb"></div>
+              <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
             </div>
             <div class="row">
               <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
@@ -1638,6 +1716,11 @@ RENDERERS.projects = async function(data){
                   <option value="square" ${m.orientation==='square'?'selected':''}>Square</option>
                 </select>
               </div>
+            </div>
+            <div class="media-bg-panel">
+              <h4 style="font-size:.82rem;margin:0 0 6px;">Artwork background</h4>
+              <p class="panel-sub">Useful for transparent Lottie or 3D models. Keep it None for artwork with its own background.</p>
+              <div data-media-bg-editor></div>
             </div>
             <div data-mediapreview></div>
           </div>
@@ -1657,32 +1740,36 @@ RENDERERS.projects = async function(data){
             try {
               const { mountModelViewer } = await import('../js/model-viewer.js');
               const host = previewEl.querySelector('[data-model-preview]');
-              if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), { background: 'transparent' });
+              if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), { background: m.background || null, resolveUrl: ghRawUrl });
             } catch (err) {
               const host = previewEl.querySelector('[data-model-preview]');
               if (host) host.innerHTML = '<div class="model-viewer-error">3D preview unavailable.</div>';
               console.warn('CMS 3D preview:', err);
             }
           }
+          if (window.LMMediaBackground && m.background && previewEl.firstElementChild) {
+            window.LMMediaBackground.apply(previewEl.firstElementChild, m.background, ghRawUrl);
+          }
           // If this is (or might become) the project's fallback
           // thumbnail — first image/YouTube item, thumbnail.src left
           // blank — the focus-picker preview needs to follow along too.
           if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
         }
+        mediaBackgroundEditor(row.querySelector('[data-media-bg-editor]'), m.background, next=>{ m.background = next.type==='none'?null:next; refreshPreview(); flagUnsaved(); });
         refreshPreview();
         attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
           kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
-          title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : m.type === 'video' ? 'Choose a video file' : m.type === 'youtube' ? 'Choose a YouTube link' : 'Choose an image file'
+          title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : 'Choose media'
         }));
 
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
           m[inp.dataset.mf]=inp.value;
-          if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + ({image:'Image',video:'Video',youtube:'YouTube link',lottie:'Lottie',model:'3D model'}[m.type] || m.type) + ')';
+          if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + ({model:'3D model',youtube:'YouTube',lottie:'Lottie',video:'Video',image:'Image'}[m.type]||m.type) + ')';
           if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') refreshPreview();
           flagUnsaved();
         }));
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
-          if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + ({image:'Image',video:'Video',youtube:'YouTube link',lottie:'Lottie',model:'3D model'}[m.type] || m.type) + ')'; refreshPreview(); }
+          if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + ({model:'3D model',youtube:'YouTube',lottie:'Lottie',video:'Video',image:'Image'}[m.type]||m.type) + ')'; refreshPreview(); }
         }));
         row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
           const idx = p.media.findIndex(x=>x._uid===m._uid);
@@ -1708,7 +1795,7 @@ RENDERERS.projects = async function(data){
     }
     paintMedia();
     el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
-      const fresh = {type:'image',src:'',caption:'',orientation:'',_uid:uid()};
+      const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,_uid:uid()};
       p.media.push(fresh);
       openMediaUids.add(fresh._uid); // new artwork opens straight into edit mode
       flagUnsaved(); paintMedia();

@@ -401,3 +401,13 @@
   .media-toolbar-actions{width:100%;flex-wrap:wrap;}
   .media-toolbar-actions button{flex:1;}
 }
+
+/* ---------- Media background editor ---------- */
+.media-bg-panel{margin-top:14px;padding:12px;border:1px solid var(--line-soft);border-radius:10px;background:#101010;}
+.media-bg-panel h4{color:#fff;}
+.media-bg-common{align-items:flex-end;}
+.media-bg-common .field{min-width:90px;}
+.color-field input[type=color]{width:52px;min-width:52px;height:38px;padding:3px;border-radius:7px;cursor:pointer;background:#101010;}
+.media-bg-position{margin-top:8px;}
+.media-bg-hint{margin:9px 0 0;color:var(--text-dim);font-size:11px;line-height:1.55;}
+[data-bg-editor] .browse-row{width:100%;}

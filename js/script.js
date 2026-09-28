@@ -121,44 +121,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // work on the deployed root site but 404 on the testing site. Resolve
   // the site root from one of the CMS data URLs instead.
   function getSiteRootUrl() {
-    // Resolve the real repository/site root from the script URL first.
-    // GitHub Pages project sites live under a path such as /lm-portfolio-testing/,
-    // while /about/ is a child route. Resolving "data/..." from location.href
-    // alone can therefore point at /about/data/... or the domain root.
-    const scriptEl = Array.from(document.scripts).find(s => /(?:^|\/)js\/script\.js(?:[?#]|$)/i.test(s.src || ''));
-    if (scriptEl?.src) {
-      try { return new URL('../', scriptEl.src).href; } catch (e) {}
-    }
-
-    // A configured ../data/... URL (used by /about/) is the next best source.
-    const markers = [window.PROJECTS_URL, window.SETTINGS_URL, window.HERO_LOOP_URL, window.ABOUT_URL].filter(Boolean);
-    for (const marker of markers) {
-      try {
-        const resolved = new URL(marker, window.location.href);
-        const path = resolved.pathname;
-        const dataIndex = path.toLowerCase().lastIndexOf('/data/');
-        if (dataIndex >= 0) return resolved.origin + path.slice(0, dataIndex + 1);
-      } catch (e) {}
-    }
-
-    // Last-resort fallback for the known /about/ and /admin/ pages.
+    const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
     try {
-      const here = new URL('./', window.location.href);
-      const path = here.pathname.replace(/\/+$/, '');
-      if (/\/(?:about|admin)$/i.test(path)) return here.origin + path.replace(/\/(?:about|admin)$/i, '/') ;
-      return here.href;
+      return new URL('./', new URL(marker, window.location.href)).href;
     } catch (e) {
-      return window.location.href;
-    }
-  }
-
-  function modelViewerModuleUrl() {
-    const scriptEl = Array.from(document.scripts).find(s => /(?:^|\/)js\/script\.js(?:[?#]|$)/i.test(s.src || ''));
-    try {
-      if (scriptEl?.src) return new URL('model-viewer.js', scriptEl.src).href;
-      return new URL('js/model-viewer.js', getSiteRootUrl()).href;
-    } catch (e) {
-      return 'js/model-viewer.js';
+      return new URL('./', window.location.href).href;
     }
   }
 
@@ -268,6 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     else el.setAttribute('data-image', m.src || '');
     if (m.caption) el.setAttribute('data-description', m.caption);
     if (m.orientation) el.setAttribute('data-orientation', m.orientation);
+    if (m.background && typeof m.background === 'object') el.setAttribute('data-background', JSON.stringify(m.background));
     return el;
   }
 
@@ -291,11 +259,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const t = p.thumbnail || {};
     if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
     if (t.src) {
-      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src}, p.title || 'Project artwork');
+      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src,background:t.background}, p.title || 'Project artwork');
       if (media) {
         if (t.focus) media.setAttribute('data-focus', t.focus);
         if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
         if (t.rotate) media.setAttribute('data-rotate', t.rotate);
+        if (t.background && typeof t.background === 'object') thumb.setAttribute('data-background', JSON.stringify(t.background));
         thumb.appendChild(media);
       }
     } else {
@@ -344,7 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(window.PROJECTS_URL);
       if (!res.ok) return;
-      const list = await res.json();
+      const raw = await res.json();
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
       if (!list.length) return;
 
       const frag = document.createDocumentFragment();
@@ -916,33 +886,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Hides every badge pill if you've switched them off above.
   applyCardBadgesVisibility();
 
-  // If a project card has no explicit thumbnail, this uses the first
-  // playable local media item in the project's actual media order — image,
-  // video, or Lottie. YouTube stays the final fallback because it is a remote
-  // thumbnail rather than a locally playable media element.
+  // If a project card's <div class="card-thumbnail"> was left empty
+  // (no <img> inside, or an <img> with no src) this fills it in using
+  // the card's own first media-list item instead — an image if the
+  // first item is data-image, or a YouTube thumbnail if it's
+  // data-youtube. Runs once, before anything else reads the grid.
   function buildThumbnailMedia(source, altText){
     if (!source || !source.src) return null;
     let media;
     if (source.type === 'video') {
       media=document.createElement('video'); media.src=siteAssetUrl(source.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
     } else if (source.type === 'lottie') {
-      media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent');
+      media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent'); media.setAttribute('preserveAspectRatio','xMidYMid slice'); media.preserveAspectRatio='xMidYMid slice';
     } else {
       media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
     }
     media.classList.add('project-thumb-media');
+    if (source.background && typeof source.background === 'object') media.setAttribute('data-background', JSON.stringify(source.background));
     return media;
   }
 
   function projectFallbackSource(card){
     const mediaItems = card.querySelectorAll('.project-media-list .media-item');
     for (const item of mediaItems) {
+      let background=null;
+      const rawBg=item.getAttribute('data-background');
+      if(rawBg){try{background=JSON.parse(rawBg);}catch(e){background=null;}}
       const image = item.getAttribute('data-image');
-      if (image) return {type:'image',src:image};
+      if (image) return {type:'image',src:image,background};
       const video = item.getAttribute('data-video');
-      if (video) return {type:'video',src:video};
+      if (video) return {type:'video',src:video,background};
       const lottie = item.getAttribute('data-lottie');
-      if (lottie) return {type:'lottie',src:lottie};
+      if (lottie) return {type:'lottie',src:lottie,background};
+      const model = item.getAttribute('data-model');
+      if (model) return {type:'model',src:model,background};
       // YouTube stays a last-resort fallback because it requires a
       // thumbnail request rather than being a locally playable asset.
     }
@@ -960,9 +937,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const source=projectFallbackSource(card); if(!source) return;
       const titleEl=card.querySelector('.glass-info h3');
       const media=buildThumbnailMedia(source,titleEl?titleEl.textContent:'Project artwork');
-      if(media) wrap.appendChild(media);
-      if(source.type==='video') media.setAttribute('data-video-thumb','');
-      if(source.type==='lottie') media.setAttribute('data-lottie-thumb','');
+      if(media) {
+        wrap.appendChild(media);
+        if(source.background && typeof source.background === 'object') wrap.setAttribute('data-background', JSON.stringify(source.background));
+        if(source.type==='video') media.setAttribute('data-video-thumb','');
+        if(source.type==='lottie') media.setAttribute('data-lottie-thumb','');
+      }
     });
   }
   fillMissingThumbnails();
@@ -993,6 +973,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(focus){media.style.objectPosition=focus;media.style.transformOrigin=focus;}
       if(zoom)media.style.setProperty('--thumb-zoom',zoom);
       if(rotate)media.style.setProperty('--thumb-rotate',rotate+'deg');
+      if(window.LMMediaBackground){
+        let bg=null; try{ const raw=media.getAttribute('data-background')||wrap.getAttribute('data-background'); bg=raw?JSON.parse(raw):null; }catch(e){}
+        if(bg) window.LMMediaBackground.apply(wrap,bg,siteAssetUrl);
+      }
     });
   }
   applyThumbnailAdjustments();
@@ -1143,6 +1127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       // data-image, else its first YouTube thumbnail.
       let rawSrc = thumbImg ? thumbImg.getAttribute('src') : null;
       let explicitType = thumbWrap ? thumbWrap.getAttribute('data-thumbnail-type') : null;
+      let explicitBackground = null;
+      try { explicitBackground = thumbWrap?.getAttribute('data-background') ? JSON.parse(thumbWrap.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
       const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
       if (!rawSrc && thumbMedia) {
         rawSrc = thumbMedia.getAttribute('src');
@@ -1154,9 +1140,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           const image = mediaItem.getAttribute('data-image');
           const video = mediaItem.getAttribute('data-video');
           const lottie = mediaItem.getAttribute('data-lottie');
-          if (image) { rawSrc = image; explicitType = explicitType || 'image'; break; }
-          if (video) { rawSrc = video; explicitType = explicitType || 'video'; break; }
-          if (lottie) { rawSrc = lottie; explicitType = explicitType || 'lottie'; break; }
+          const rawBg = mediaItem.getAttribute('data-background');
+          let mediaBackground=null; try { mediaBackground = rawBg ? JSON.parse(rawBg) : null; } catch(e) {}
+          if (image) { rawSrc = image; explicitType = explicitType || 'image'; explicitBackground = mediaBackground; break; }
+          if (video) { rawSrc = video; explicitType = explicitType || 'video'; explicitBackground = mediaBackground; break; }
+          if (lottie) { rawSrc = lottie; explicitType = explicitType || 'lottie'; explicitBackground = mediaBackground; break; }
         }
         if (!rawSrc) {
           const firstYouTubeItem = card.querySelector('.project-media-list .media-item[data-youtube]');
@@ -1179,7 +1167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         alt: (thumbImg && thumbImg.getAttribute('alt')) || (titleEl ? titleEl.textContent : 'Featured artwork'),
         focus: (thumbImg && thumbImg.getAttribute('data-focus')) || (thumbWrap && thumbWrap.getAttribute('data-focus')) || null,
         zoom: (thumbImg && thumbImg.getAttribute('data-zoom')) || null,
-        rotate: (thumbImg && thumbImg.getAttribute('data-rotate')) || null
+        rotate: (thumbImg && thumbImg.getAttribute('data-rotate')) || null,
+        background: explicitBackground
       };
     }).filter(Boolean);
   }
@@ -1207,12 +1196,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const thumb = p.thumbnail || {};
     let rawSrc = thumb.src || null;
     let type = rawSrc ? (thumb.type || heroMediaTypeFromSrc(rawSrc)) : null;
+    let background = thumb.background || null;
 
     if (!rawSrc && Array.isArray(p.media)) {
       const firstUsable = p.media.find(m => m && m.src && (m.type === 'image' || m.type === 'video' || m.type === 'lottie'));
       if (firstUsable) {
         rawSrc = firstUsable.src;
         type = firstUsable.type;
+        background = firstUsable.background || null;
       } else {
         const firstYouTube = p.media.find(m => m && m.type === 'youtube' && m.src);
         if (firstYouTube) {
@@ -1229,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       try { src = new URL(rawSrc, baseUrl).href; } catch (e) { /* keep raw */ }
     }
 
-    return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null };
+    return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background };
   }
 
   // Same shape again, this time for a hand-curated entry in
@@ -1246,7 +1237,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       alt: item.alt || 'Featured artwork',
       focus: item.focus || null,
       zoom: item.zoom || null,
-      rotate: item.rotate || null
+      rotate: item.rotate || null,
+      background: item.background || null
     };
   }
 
@@ -1341,6 +1333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         media.setAttribute('autoplay', '');
         media.setAttribute('loop', '');
         media.setAttribute('background', 'transparent');
+        media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       } else {
         media = document.createElement('img');
         media.src = siteAssetUrl(source.src);
@@ -1348,6 +1341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       wrap.appendChild(media);
       heroContainer.appendChild(wrap);
+      if (window.LMMediaBackground && source.background) window.LMMediaBackground.apply(wrap, source.background, siteAssetUrl);
 
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
       media.style.setProperty('--hero-zoom', source.zoom || 1);
@@ -1378,7 +1372,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, HERO_CROSSFADE_MS); // configured in Hero Loop Animation
   }
 
+  async function ensureMediaBackgroundHelper(){
+    if(window.LMMediaBackground) return true;
+    return await new Promise(resolve=>{
+      const src=siteAssetUrl('js/media-background.js');
+      const s=document.createElement('script');
+      s.src=src;
+      s.onload=()=>resolve(!!window.LMMediaBackground);
+      s.onerror=()=>{ console.warn('Media backgrounds: helper could not load',src); resolve(false); };
+      document.head.appendChild(s);
+    });
+  }
+
   await settingsReady;
+  await ensureMediaBackgroundHelper();
   initHeroBanner();
 
 
@@ -1714,10 +1721,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Wraps one media element (image or video iframe) together with its
   // optional caption so they stay grouped as a single unit.
-  function buildMediaEntry(mediaEl, captionText) {
+  function buildMediaEntry(mediaEl, captionText, background) {
     const wrap = document.createElement('div');
     wrap.className = 'lightbox-media-item';
     wrap.appendChild(mediaEl);
+    if (window.LMMediaBackground && background) window.LMMediaBackground.apply(wrap, background, siteAssetUrl);
 
     const caption = buildMediaCaption(captionText);
     if (caption) wrap.appendChild(caption);
@@ -1750,9 +1758,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const lottieUrl = item.getAttribute('data-lottie');
         const modelUrl = item.getAttribute('data-model');
         const caption = item.getAttribute('data-description');
+        let itemBackground=null; try { const raw=item.getAttribute('data-background'); itemBackground=raw?JSON.parse(raw):null; } catch(e){}
 
         if (imgUrl) {
-          modalMediaContainer.appendChild(buildMediaEntry(buildImageMedia(imgUrl), caption));
+          modalMediaContainer.appendChild(buildMediaEntry(buildImageMedia(imgUrl), caption, itemBackground));
         }
 
         if (ytUrl) {
@@ -1782,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
 
           iframe.classList.add(orientationClass);
-          modalMediaContainer.appendChild(buildMediaEntry(iframe, caption));
+          modalMediaContainer.appendChild(buildMediaEntry(iframe, caption, itemBackground));
         }
 
         if (videoUrl) {
@@ -1833,7 +1842,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
 
-          modalMediaContainer.appendChild(buildMediaEntry(video, caption));
+          modalMediaContainer.appendChild(buildMediaEntry(video, caption, itemBackground));
         }
 
         if (modelUrl) {
@@ -1841,10 +1850,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
           modelWrap.setAttribute('aria-label', 'Interactive 3D model');
           modalMediaContainer.appendChild(buildMediaEntry(modelWrap, caption));
-          import(modelViewerModuleUrl()).then(({ mountModelViewer }) => {
+          import('./model-viewer.js').then(({ mountModelViewer }) => {
             mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
               autoRotate: false,
-              background: 'transparent'
+              background: itemBackground || null,
+              resolveUrl: siteAssetUrl
             });
           }).catch(err => {
             modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
@@ -1869,7 +1879,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           else if (manualLottieOrientation === 'square') player.classList.add('yt-square');
           else player.classList.add('yt-landscape');
 
-          modalMediaContainer.appendChild(buildMediaEntry(player, caption));
+          player.setAttribute('preserveAspectRatio', 'xMidYMid slice'); player.preserveAspectRatio='xMidYMid slice';
+          modalMediaContainer.appendChild(buildMediaEntry(player, caption, itemBackground));
         }
       });
     } else {

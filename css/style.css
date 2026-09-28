@@ -2050,3 +2050,36 @@ body.center-page {
 .model-viewer-error{padding:20px;text-align:center;color:#999;font-size:12px;line-height:1.5;}
 .lightbox-model-viewer{width:min(94vw,1100px);height:min(74vh,720px);min-height:340px;margin:0 auto;}
 .card-thumbnail lottie-player{background:transparent;}
+
+/* =====================================================
+   MEDIA BACKGROUNDS — transparent Lottie / 3D artwork
+   ===================================================== */
+.lm-media-background-host{isolation:isolate;}
+.lm-media-background-host > .lm-media-background-layer{z-index:0!important;}
+.lm-media-background-host > .lm-media-background-overlay{z-index:1!important;}
+.lm-media-background-host > :not(.lm-media-background-layer):not(.lm-media-background-overlay){position:relative;z-index:2;}
+.lm-media-background-shader{background-size:160% 160%;animation:lm-bg-shader-drift 14s ease-in-out infinite alternate;}
+.lm-media-background-shader.shader-mesh{animation-duration:18s;}
+@keyframes lm-bg-shader-drift{
+  0%{background-position:0% 48%;transform:scale(1.06) rotate(0deg);}
+  50%{background-position:100% 52%;transform:scale(1.1) rotate(1deg);}
+  100%{background-position:18% 100%;transform:scale(1.06) rotate(-1deg);}
+}
+
+/* Lottie is an SVG-based custom element rather than a native <img>, so
+   object-fit alone does not guarantee a cover crop. preserveAspectRatio is
+   set by script.js and this host rule keeps the player itself full-bleed. */
+.hero-banner .slide lottie-player,
+.card-thumbnail .project-thumb-media.lottie-player,
+.lightbox-media-item > lottie-player{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0;
+  min-height:0;
+}
+.card-thumbnail .project-thumb-media.lottie-player{position:absolute;inset:0;}
+
+@media (prefers-reduced-motion: reduce){
+  .lm-media-background-shader{animation:none;}
+}

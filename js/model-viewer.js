@@ -81,6 +81,21 @@ export async function mountModelViewer(container, src, options = {}) {
   container.innerHTML = '';
   container.style.position = 'relative';
 
+  // Transparent renderer + shared media-background system lets the same
+  // Lottie/3D presentation use a solid, gradient, pattern, image, video,
+  // or procedural background. The helper is loaded by script.js on the
+  // public site and by admin/index.html for CMS previews.
+  const backgroundConfig = options.background && typeof options.background === 'object' ? options.background : null;
+  if (globalThis.LMMediaBackground && backgroundConfig) {
+    const resolveBackgroundUrl = typeof options.resolveUrl === 'function'
+      ? options.resolveUrl
+      : (value => {
+          if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(value) || String(value).startsWith('data:') || String(value).startsWith('blob:')) return value;
+          try { return new URL(String(value).replace(/^\/+/, ''), document.baseURI).href; } catch (e) { return value; }
+        });
+    globalThis.LMMediaBackground.apply(container, backgroundConfig, resolveBackgroundUrl);
+  }
+
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
   camera.position.set(0, 0.8, 3.2);
@@ -195,6 +210,8 @@ export async function mountModelViewer(container, src, options = {}) {
     scene.clear();
     renderer.dispose();
     if (renderer.domElement.parentNode === container) renderer.domElement.remove();
+    const bgLayer=container.querySelector(':scope > .lm-media-background-layer'); if(bgLayer) bgLayer.remove();
+    const bgOverlay=container.querySelector(':scope > .lm-media-background-overlay'); if(bgOverlay) bgOverlay.remove();
     delete container.__modelViewerCleanup;
   };
   container.__modelViewerCleanup = cleanup;
