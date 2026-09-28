@@ -121,20 +121,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   // remain correct on every page.
   const SCRIPT_URL = (() => {
     try {
-      const current = document.currentScript;
-      return current?.src ? new URL(current.src, window.location.href).href : '';
+      // This file runs inside DOMContentLoaded, so document.currentScript is
+      // already null by the time this code executes. Find the actual script
+      // element instead, then resolve the repository/site root from /js/.
+      const scripts = Array.from(document.scripts || []);
+      const script = scripts.find(el => {
+        const raw = el.getAttribute('src') || '';
+        const abs = el.src || '';
+        return /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(raw) ||
+               /\/js\/script\.js(?:[?#].*)?$/i.test(abs);
+      });
+      const src = script?.src || '';
+      return src ? new URL(src, document.baseURI || window.location.href).href : '';
     } catch (_) { return ''; }
   })();
 
   function getSiteRootUrl() {
     try {
+      // Normal case: script is /<site>/js/script.js, so one level up is the
+      // GitHub Pages repository root. This works identically on / and /about/.
       if (SCRIPT_URL) return new URL('../', SCRIPT_URL).href;
-      const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
-      const markerUrl = new URL(marker, window.location.href);
-      const path = markerUrl.pathname.replace(/\/data\/.*$/, '/');
-      return new URL(markerUrl.origin + path).href;
+
+      // Defensive fallback when the script tag cannot be found. Prefer an
+      // explicitly configured absolute URL, otherwise strip known page/data
+      // directories from the current page URL.
+      const configured = window.SITE_ROOT_URL;
+      if (configured) return new URL(configured, document.baseURI || window.location.href).href.replace(/\/$/, '') + '/';
+
+      const pageUrl = new URL(document.baseURI || window.location.href);
+      const path = pageUrl.pathname
+        .replace(/\/about(?:\/.*)?$/i, '/')
+        .replace(/\/admin(?:\/.*)?$/i, '/')
+        .replace(/\/success(?:\/.*)?$/i, '/');
+      return new URL(pageUrl.origin + path).href;
     } catch (_) {
-      return new URL('./', window.location.href).href;
+      return new URL('./', document.baseURI || window.location.href).href;
     }
   }
 
