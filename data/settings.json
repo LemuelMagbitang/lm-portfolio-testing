@@ -19,7 +19,7 @@
     "youtube": "https://youtube.com/@aol_lem"
   },
   "siteTitle": "Lemuel Magbitang | Works",
-  "siteDescription": "2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang \u2014 freelance multimedia artist open for work.",
+  "siteDescription": "2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.",
   "heroTiming": {
     "fadeMs": 600,
     "autoRotateMs": 0,
@@ -29,5 +29,10 @@
     "kenBurnsDurationS": 14,
     "loopMode": "latest",
     "transitionStyle": "kenburns"
-  }
+  },
+  "ogImage": "assets/projects/site/og-image.jpg",
+  "ogImageVersion": 2,
+  "ogImageAlt": "Lemuel Magbitang — 3D & Motion Illustrator portfolio",
+  "ogImageWidth": 1200,
+  "ogImageHeight": 630
 }

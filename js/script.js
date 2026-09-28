@@ -112,6 +112,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('a[aria-label="' + label + '"]').forEach(a => { a.href = url; });
   }
 
+  function applyOgMeta(remote){
+    if (!remote || !remote.ogImage) return;
+    try {
+      const root = new URL('/', window.location.href).href;
+      const imageUrl = new URL(remote.ogImage + (remote.ogImageVersion ? `?v=${encodeURIComponent(remote.ogImageVersion)}` : ''), root).href;
+      document.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"]').forEach(meta => { meta.setAttribute('content', imageUrl); });
+      if (remote.ogImageAlt) document.querySelectorAll('meta[property="og:image:alt"]').forEach(meta => meta.setAttribute('content', remote.ogImageAlt));
+    } catch (e) { /* keep the static HTML fallback */ }
+  }
+
   function applyCardBadgesVisibility() {
     document.querySelectorAll('.card-badges').forEach(el => {
       el.style.display = SHOW_CARD_BADGES ? '' : 'none';
@@ -167,6 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (remote.siteTitle) document.title = remote.siteTitle;
+    applyOgMeta(remote);
   }
 
   const settingsReady = window.SETTINGS_URL

@@ -230,6 +230,100 @@ const GH = {
     const data = await res.json();
     return data.tree || [];
   },
+  async getTextFile(path){
+    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if(res.status === 404) throw new Error(`${path} was not found in the repository.`);
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${res.status}`);
+    }
+    const data = await res.json();
+    if(Array.isArray(data)) throw new Error(`${path} is a directory, not a text file.`);
+    return { text:b64DecodeUtf8(data.content || ''), sha:data.sha };
+  },
+  async getBranchHead(){
+    const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/ref/heads/${branchPath}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${res.status}`);
+    }
+    return (await res.json()).object?.sha;
+  },
+  async createBlob(content, encoding='utf-8'){
+    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/blobs`;
+    const res = await fetch(url, {
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({content,encoding})
+    });
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${res.status}`);
+    }
+    return (await res.json()).sha;
+  },
+  async createTree(baseTreeSha, treeEntries){
+    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees`;
+    const res = await fetch(url, {
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({base_tree:baseTreeSha,tree:treeEntries})
+    });
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${res.status}`);
+    }
+    return (await res.json()).sha;
+  },
+  async createCommit(message, treeSha, parentSha){
+    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits`;
+    const res = await fetch(url, {
+      method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({message,tree:treeSha,parents:[parentSha]})
+    });
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${res.status}`);
+    }
+    return await res.json();
+  },
+  async updateBranch(commitSha){
+    const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/refs/heads/${branchPath}`;
+    const res = await fetch(url, {
+      method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
+      body:JSON.stringify({sha:commitSha,force:false})
+    });
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${res.status}`);
+    }
+    return await res.json();
+  },
+  async commitFiles(files, message){
+    if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
+    const parentSha = await GH.getBranchHead();
+    if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
+    const commitUrl = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
+    const commitRes = await fetch(commitUrl, { headers: authHeaders() });
+    if(!commitRes.ok){
+      const e=await commitRes.json().catch(()=>({}));
+      throw new Error(e.message || `GitHub error ${commitRes.status}`);
+    }
+    const commitData = await commitRes.json();
+    const entries=[];
+    for(const file of files){
+      if(!file?.path) continue;
+      const sha = await GH.createBlob(file.content ?? '', file.encoding || 'utf-8');
+      entries.push({path:file.path,mode:file.mode || '100644',type:'blob',sha});
+    }
+    if(!entries.length) throw new Error('Nothing to commit.');
+    const newTreeSha = await GH.createTree(commitData.tree.sha, entries);
+    const newCommit = await GH.createCommit(message, newTreeSha, parentSha);
+    await GH.updateBranch(newCommit.sha);
+    return newCommit;
+  },
   async uploadBinary(path, dataUrl, message, existingSha){
     const base64 = dataUrl.split(',')[1]; // strip the "data:*/*;base64," prefix
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
@@ -833,6 +927,108 @@ RENDERERS.filters = function(data){
 };
 
 /* =====================================================================
+   OPEN GRAPH IMAGE — local 1200×630 normalization + versioned publish
+   ===================================================================== */
+const OG_CANVAS_W = 1200;
+const OG_CANVAS_H = 630;
+
+function readFileAsDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(reader.error || new Error('Couldn\'t read the selected file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function normalizeOgImage(file){
+  if(!file || !String(file.type||'').startsWith('image/')){
+    return Promise.reject(new Error('Open Graph images must be an image file.'));
+  }
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const canvas=document.createElement('canvas');
+        canvas.width=OG_CANVAS_W; canvas.height=OG_CANVAS_H;
+        const ctx=canvas.getContext('2d');
+        ctx.fillStyle='#121212'; ctx.fillRect(0,0,OG_CANVAS_W,OG_CANVAS_H);
+        const scale=Math.max(OG_CANVAS_W/img.naturalWidth, OG_CANVAS_H/img.naturalHeight);
+        const drawW=img.naturalWidth*scale, drawH=img.naturalHeight*scale;
+        const dx=(OG_CANVAS_W-drawW)/2, dy=(OG_CANVAS_H-drawH)/2;
+        ctx.drawImage(img,dx,dy,drawW,drawH);
+        canvas.toBlob(blob=>{
+          if(!blob) return reject(new Error('The browser could not create the normalized JPEG.'));
+          const reader=new FileReader();
+          reader.onload=()=>resolve({blob,dataUrl:reader.result});
+          reader.onerror=()=>reject(reader.error || new Error('Couldn\'t encode the normalized JPEG.'));
+          reader.readAsDataURL(blob);
+        },'image/jpeg',0.9);
+      }catch(err){ reject(err); }
+      finally{ URL.revokeObjectURL(url); }
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('Couldn\'t decode the selected image.')); };
+    img.src=url;
+  });
+}
+
+function metaAttr(value){
+  return String(value ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function replaceMetaContent(html, attrName, value, attrKey='property'){
+  const re=new RegExp(`(<meta\\s+${attrKey}=["']${attrName}["'][^>]*content=["'])[^"']*(["'][^>]*>)`,'i');
+  return html.replace(re,`$1${metaAttr(value)}$2`);
+}
+function replaceOgMetaTags(html, imageUrl, altText){
+  let out=html;
+  out=replaceMetaContent(out,'og:image',imageUrl,'property');
+  out=replaceMetaContent(out,'og:image:secure_url',imageUrl,'property');
+  out=replaceMetaContent(out,'og:image:alt',altText || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio','property');
+  out=replaceMetaContent(out,'twitter:image',imageUrl,'name');
+  return out;
+}
+
+async function publishOgImage(file, localSettings){
+  const normalized=await normalizeOgImage(file);
+  const rawB64=String(normalized.dataUrl).split(',')[1];
+  const serverSettingsResult=await GH.getFile('data/settings.json');
+  const serverSettings=serverSettingsResult.json || {};
+  let version=Math.max(2,Number(serverSettings.ogImageVersion)||2)+1;
+  const tree=await GH.getTree();
+  let path=`assets/projects/site/og-image-v${version}.jpg`;
+  while(tree.some(item=>item.type==='blob' && item.path===path)){
+    version+=1; path=`assets/projects/site/og-image-v${version}.jpg`;
+  }
+
+  const alt=String(serverSettings.ogImageAlt || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio');
+  const nextSettings={...serverSettings,ogImage:path,ogImageVersion:version,ogImageAlt:alt,ogImageWidth:OG_CANVAS_W,ogImageHeight:OG_CANVAS_H};
+  const indexText=await GH.getTextFile('index.html');
+  const aboutText=await GH.getTextFile('about/index.html');
+  const baseMatch=indexText.text.match(/<meta\s+property=["']og:url["']\s+content=["']([^"']+)["']/i);
+  const siteRoot=baseMatch ? new URL('/',baseMatch[1]).href : (window.location.origin + '/');
+  const imageUrl=new URL(path + `?v=${version}`,siteRoot).href;
+  const nextIndex=replaceOgMetaTags(indexText.text,imageUrl,alt);
+  const nextAbout=replaceOgMetaTags(aboutText.text,imageUrl,alt);
+  const commit=await GH.commitFiles([
+    {path,content:rawB64,encoding:'base64'},
+    {path:'data/settings.json',content:JSON.stringify(nextSettings,null,2)+'\n',encoding:'utf-8'},
+    {path:'index.html',content:nextIndex,encoding:'utf-8'},
+    {path:'about/index.html',content:nextAbout,encoding:'utf-8'}
+  ],`CMS: update Open Graph image to v${version}`);
+  const fresh=await GH.getFile('data/settings.json');
+  cache.settings=fresh;
+  if(localSettings){
+    localSettings.ogImage=path;
+    localSettings.ogImageVersion=version;
+    localSettings.ogImageAlt=alt;
+    localSettings.ogImageWidth=OG_CANVAS_W;
+    localSettings.ogImageHeight=OG_CANVAS_H;
+  }
+  return {path,version,imageUrl,commitSha:commit.sha};
+}
+
+/* =====================================================================
    9. SECTION: SETTINGS & TOGGLES
    ===================================================================== */
 RENDERERS.settings = function(data){
@@ -840,7 +1036,10 @@ RENDERERS.settings = function(data){
   s.formsEnabled = s.formsEnabled || {project:true, review:true};
   s.web3forms = s.web3forms || {projectKey:'', reviewKey:''};
   s.socials = s.socials || {instagram:'',tiktok:'',youtube:''};
-  s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14};
+  s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
+  s.ogImage = s.ogImage || 'assets/projects/site/og-image.jpg';
+  s.ogImageVersion = Math.max(1, Number(s.ogImageVersion) || 2);
+  s.ogImageAlt = s.ogImageAlt || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio';
 
   content.innerHTML = sectionHead('Settings & Toggles', 'Site-wide switches and the values behind them. Nothing here needs the HTML touched again.') + `
 
@@ -881,6 +1080,25 @@ RENDERERS.settings = function(data){
       <div class="field"><label class="field-label">Meta description</label><textarea id="s_desc" rows="2">${esc(s.siteDescription||'')}</textarea></div>
     </div>
 
+    <div class="panel og-panel">
+      <div class="panel-heading-row">
+        <div><h3>Open Graph Image</h3><p class="panel-sub">Current social/share image. New uploads are automatically center-cropped and encoded to <strong>1200 × 630 px JPEG</strong>, then published as the next version. The CMS updates both page templates automatically.</p></div>
+        <span class="og-version" id="ogVersionLabel">v${s.ogImageVersion}</span>
+      </div>
+      <div class="og-editor">
+        <div class="og-preview-wrap"><img id="ogPreview" src="${attr(ghRawUrl(s.ogImage))}" alt="Open Graph image preview" onerror="handleMissingFile(this,'Open Graph image')"></div>
+        <div class="og-controls">
+          <div class="field"><label class="field-label">Current file</label><input id="ogPath" value="${attr(s.ogImage)}" readonly></div>
+          <div class="field"><label class="field-label">Output size</label><div class="og-spec"><span>1200 × 630 px</span><span>JPEG</span></div></div>
+          <div class="og-actions">
+            <label class="ghost file-btn"><i class="fa-solid fa-image"></i> Choose new image<input id="ogFile" type="file" accept="image/*" hidden></label>
+            <button class="primary" id="ogPublish" type="button" disabled><i class="fa-solid fa-cloud-arrow-up"></i> Upload &amp; publish</button>
+          </div>
+          <div class="hint" id="ogStatus">Upload a replacement image. The original file is kept in git history; the new version gets its own v# filename so social caches can refresh cleanly.</div>
+        </div>
+      </div>
+    </div>
+
   `;
 
   content.querySelectorAll('input[data-toggle]').forEach(t=>{
@@ -892,9 +1110,54 @@ RENDERERS.settings = function(data){
     });
   });
   content.querySelectorAll('.panel input, .panel textarea').forEach(el=>{
-    if(el.hasAttribute('data-toggle')) return;
+    if(el.hasAttribute('data-toggle') || el.readOnly) return;
     el.addEventListener('input', flagUnsaved);
   });
+
+  const ogFileInput=content.querySelector('#ogFile');
+  const ogPublishBtn=content.querySelector('#ogPublish');
+  const ogPreview=content.querySelector('#ogPreview');
+  const ogStatus=content.querySelector('#ogStatus');
+  let pendingOgFile=null;
+  if(ogFileInput){
+    ogFileInput.addEventListener('change',()=>{
+      const file=ogFileInput.files?.[0] || null;
+      pendingOgFile=file;
+      if(!file){ ogPublishBtn.disabled=true; return; }
+      const local=URL.createObjectURL(file);
+      ogPreview.src=local;
+      ogPreview.onload=()=>URL.revokeObjectURL(local);
+      ogPublishBtn.disabled=false;
+      ogStatus.textContent=`Ready: ${file.name}. It will be normalized to 1200 × 630 px before publishing.`;
+    });
+  }
+  if(ogPublishBtn){
+    ogPublishBtn.addEventListener('click',async()=>{
+      if(!pendingOgFile) return;
+      const hadOtherChanges=!!dirty.settings;
+      ogPublishBtn.disabled=true;
+      if(ogFileInput) ogFileInput.disabled=true;
+      ogStatus.textContent='Normalizing, uploading, and updating the page templates…';
+      try{
+        const result=await publishOgImage(pendingOgFile,s);
+        if(content.querySelector('#ogPath')) content.querySelector('#ogPath').value=result.path;
+        if(content.querySelector('#ogVersionLabel')) content.querySelector('#ogVersionLabel').textContent='v'+result.version;
+        ogPreview.src=result.imageUrl;
+        pendingOgFile=null;
+        if(ogFileInput){ogFileInput.value='';ogFileInput.disabled=false;}
+        dirty.settings=hadOtherChanges;
+        updateDirtyDots();
+        ogStatus.textContent=`Published v${result.version}. The public index, About page, and settings now point to ${result.path}.`;
+        toast(`Open Graph image v${result.version} published.`);
+        trackDeployStatus(result.commitSha);
+      }catch(err){
+        ogStatus.textContent='Upload failed — '+err.message;
+        toast('Open Graph image: '+err.message,true);
+        ogPublishBtn.disabled=false;
+        if(ogFileInput) ogFileInput.disabled=false;
+      }
+    });
+  }
 
   wireSave(()=>({
     protectionEnabled: s.protectionEnabled,
@@ -908,7 +1171,12 @@ RENDERERS.settings = function(data){
     socials: { instagram: val('s_ig'), tiktok: val('s_tt'), youtube: val('s_yt') },
     siteTitle: val('s_title'),
     siteDescription: val('s_desc'),
-    heroTiming: s.heroTiming
+    heroTiming: s.heroTiming,
+    ogImage: s.ogImage,
+    ogImageVersion: s.ogImageVersion,
+    ogImageAlt: s.ogImageAlt,
+    ogImageWidth: OG_CANVAS_W,
+    ogImageHeight: OG_CANVAS_H
   }), 'settings', SECTIONS.settings.file);
 
   function toggleRow(key, label, desc, checked){
@@ -1919,27 +2187,13 @@ const BROKEN_IMAGE_SVG_ESCAPED = FILE_ICON_SVG.replace(/"/g, '&quot;');
 // one and not the other went unnoticed for a couple of rounds. Now
 // there's exactly one place that decides what a tile looks like.
 function folderTileHtml(name, previewPath){
-  // A folder's tile shows whatever's actually inside it — the same
-  // idea as a project card falling back to its first media item when
-  // no thumbnail is set — rather than a generic folder icon standing
-  // in for every folder regardless of what it holds. previewPath
-  // comes from findFolderPreviewImage() below; no image found (an
-  // empty folder, or one with only videos/other files) still falls
-  // back to the folder icon.
-  //
-  // THE FOLDER/FILE BADGE: once a folder shows a real photo instead of
-  // a generic icon, it looks exactly like a selectable image tile —
-  // there's nothing left to tell them apart at a glance except
-  // clicking one and finding out. The small folder-icon chip in the
-  // corner is that missing cue: every folder gets it, image and video
-  // files never do, so "this opens into more things" vs "this is the
-  // thing itself" is visible without a click.
   const thumbHtml = previewPath
     ? `<img src="${attr(ghRawUrl(previewPath))}" loading="lazy" onerror="this.parentElement.innerHTML='${FOLDER_ICON_SVG.replace(/"/g, '&quot;')}'">`
     : FOLDER_ICON_SVG;
-  const badge = previewPath ? `<span class="tile-badge" title="Folder"><i class="fa-solid fa-folder"></i></span>` : '';
-  return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div>`;
+  const badge = `<span class="tile-badge" title="Folder"><i class="fa-solid fa-folder"></i></span>`;
+  return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div><div class="tile-actions folder-actions"><button class="ghost" data-folder-rename type="button" title="Rename folder"><i class="fa-solid fa-pen"></i><span>Rename</span></button></div>`;
 }
+
 function fileTileHtml(item){
   const kind = fileKind(item.path);
   const name = item.path.split('/').pop();
@@ -1975,6 +2229,67 @@ function findFolderPreviewImage(tree, folderPath){
   return images.length ? images[0].path : null;
 }
 
+function safeFolderName(name){
+  const trimmed=String(name||'').trim();
+  if(!trimmed || trimmed==='.' || trimmed==='..' || /[\\/]/.test(trimmed) || /[\u0000-\u001f]/.test(trimmed)) return null;
+  if(trimmed.length>80) return null;
+  return trimmed;
+}
+function joinRepoPath(parent,name){ return [String(parent||'').replace(/^\/+|\/+$/g,''),name].filter(Boolean).join('/'); }
+function remapNestedPath(current,oldPath,newPath){
+  return current===oldPath ? newPath : current.startsWith(oldPath+'/') ? newPath+current.slice(oldPath.length) : current;
+}
+async function createMediaFolder(parentPath,onDone){
+  const name=safeFolderName(prompt('New folder name:','New Folder'));
+  if(!name) return;
+  const folderPath=joinRepoPath(parentPath||'assets',name);
+  const tree=await loadMediaTree(true);
+  if(tree.some(item=>item.path===folderPath || item.path.startsWith(folderPath+'/'))){ toast('A folder or file with that name already exists here.',true); return; }
+  await GH.commitFiles([{path:folderPath+'/.gitkeep',content:'',encoding:'utf-8'}],`CMS: create folder ${folderPath}`);
+  await loadMediaTree(true);
+  toast(`Created folder ${folderPath}.`);
+  if(onDone) onDone(folderPath);
+}
+async function renameMediaFolder(oldPath,onDone){
+  if(!oldPath || oldPath==='assets'){ toast('The Media Library root cannot be renamed.',true); return; }
+  const oldName=oldPath.split('/').pop();
+  const name=safeFolderName(prompt('Rename folder:',oldName));
+  if(!name || name===oldName) return;
+  const parent=oldPath.includes('/') ? oldPath.slice(0,oldPath.lastIndexOf('/')) : '';
+  const newPath=joinRepoPath(parent,name);
+  if(newPath===oldPath) return;
+  const tree=await loadMediaTree(true);
+  if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){ toast('That destination already exists.',true); return; }
+  const prefix=oldPath+'/';
+  const moving=tree.filter(item=>item.type==='blob' && item.path.startsWith(prefix));
+  if(!moving.length){ toast('That folder has no tracked files to move.',true); return; }
+  const entries=[];
+  moving.forEach(item=>{
+    const suffix=item.path.slice(prefix.length);
+    entries.push({path:newPath+'/'+suffix,mode:item.mode==='100755'?'100755':'100644',type:'blob',sha:item.sha});
+    entries.push({path:item.path,mode:'100644',type:'blob',sha:null});
+  });
+  if(!confirm(`Rename “${oldPath}” to “${newPath}”? Existing references to files inside this folder may need updating in project/about data.`)) return;
+  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath}`);
+  mediaTreeCache=null;
+  mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
+  mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
+  toast(`Renamed ${oldName} to ${name}.`);
+  if(onDone) onDone(newPath);
+}
+
+async function ghCommitTreeEntries(entries,message){
+  if(!entries.length) throw new Error('Nothing to commit.');
+  const parentSha=await GH.getBranchHead();
+  const commitUrl=`https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
+  const res=await fetch(commitUrl,{headers:authHeaders()});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||`GitHub error ${res.status}`);}
+  const base=(await res.json()).tree.sha;
+  const treeSha=await GH.createTree(base,entries);
+  const commit=await GH.createCommit(message,treeSha,parentSha);
+  await GH.updateBranch(commit.sha);
+  return commit;
+}
 /* =====================================================================
    13a. MEDIA PICKER MODAL — "Browse…" popup usable from any field
    =====================================================================
@@ -1995,122 +2310,73 @@ function childrenOfPath(tree, path){
     const rest = item.path.slice(prefix.length);
     if (!rest) return;
     const slash = rest.indexOf('/');
-    if (slash === -1) { if (item.type === 'blob') files.push(item); }
+    if (slash === -1) { if (item.type === 'blob' && rest !== '.gitkeep') files.push(item); }
     else folders.add(rest.slice(0, slash));
   });
   return { folders: [...folders].sort(), files: files.sort((a,b)=>a.path.localeCompare(b.path)) };
 }
 
 function openMediaPicker(onPick){
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;';
-  overlay.innerHTML = `
-    <div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;width:100%;max-width:640px;height:min(82vh,640px);max-height:82vh;display:flex;flex-direction:column;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);flex-shrink:0;">
-        <strong style="color:#fff;font-size:.95rem">Choose a file</strong>
-        <button class="icon-btn" data-close-picker type="button"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div style="padding:14px 20px 0;flex-shrink:0;">
-        <div class="media-folder-crumb" id="pickerCrumbs"></div>
-      </div>
-      <!-- Same dropzone as Media Library, so you don't have to close
-           this, go find that screen, upload, then come back and
-           re-navigate to where you were — drop or pick a file and it
-           uploads straight into whichever folder is open right now. -->
-      <div style="padding:10px 20px 0;flex-shrink:0;">
-        <div class="dropzone dropzone-compact" id="pickerDropzone">
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-          Drag a file here, or click to upload it into this folder
-          <input type="file" id="pickerFileInput" multiple style="display:none">
-        </div>
-      </div>
-      <!-- height:min(82vh,640px) above turns this into a fixed-size
-           window instead of one that only happens to be tall enough
-           for however many folders/files are in view right now — so
-           a folder with 60 files scrolls internally here exactly the
-           same way a folder with 3 files does, rather than the whole
-           modal trying (and on some phones, failing) to grow past the
-           viewport. overscroll-behavior:contain keeps a fast scroll to
-           the end of a long folder from bleeding into the page behind
-           the modal, the same fix already used on the lightbox. -->
-      <div class="media-grid" id="pickerGrid" style="padding:14px 20px 20px;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto;min-height:0;"></div>
-    </div>
-  `;
+  const overlay=document.createElement('div');
+  overlay.className='media-picker-overlay';
+  overlay.innerHTML=`
+    <div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Choose a file">
+      <div class="media-picker-head"><div><strong>Choose a file</strong><span class="media-picker-sub">Media Library</span></div><button class="icon-btn" data-close-picker type="button" title="Close"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="media-picker-toolbar"><div class="media-folder-crumb" id="pickerCrumbs"></div><div class="media-picker-actions"><button class="ghost" id="pickerNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="pickerRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="pickerRefresh" type="button" title="Refresh"><i class="fa-solid fa-rotate"></i></button></div></div>
+      <div class="dropzone dropzone-compact" id="pickerDropzone"><i class="fa-solid fa-cloud-arrow-up"></i>Drag a file here, or click to upload into this folder<input type="file" id="pickerFileInput" multiple style="display:none"></div>
+      <div class="media-picker-scroll"><div class="media-grid" id="pickerGrid"></div></div>
+    </div>`;
   document.body.appendChild(overlay);
 
-  function close(){ overlay.remove(); }
-  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
-  overlay.querySelector('[data-close-picker]').addEventListener('click', close);
-  document.addEventListener('keydown', function escHandler(e){
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); }
-  });
+  let closed=false;
+  let pickerTree=null;
+  const close=()=>{ if(closed)return; closed=true; overlay.remove(); document.removeEventListener('keydown',escHandler); };
+  function escHandler(e){ if(e.key==='Escape') close(); }
+  overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
+  overlay.querySelector('[data-close-picker]').addEventListener('click',close);
+  document.addEventListener('keydown',escHandler);
 
-  const pickerDropzone = overlay.querySelector('#pickerDropzone');
-  const pickerFileInput = overlay.querySelector('#pickerFileInput');
-  pickerDropzone.addEventListener('click', () => pickerFileInput.click());
-  pickerFileInput.addEventListener('change', () => handlePickerUpload(pickerFileInput.files));
-  ['dragenter','dragover'].forEach(evt => pickerDropzone.addEventListener(evt, e => { e.preventDefault(); pickerDropzone.classList.add('hover'); }));
-  ['dragleave','drop'].forEach(evt => pickerDropzone.addEventListener(evt, e => { e.preventDefault(); pickerDropzone.classList.remove('hover'); }));
-  pickerDropzone.addEventListener('drop', e => { if (e.dataTransfer.files.length) handlePickerUpload(e.dataTransfer.files); });
-
-  let pickerTree = null; // set by paintPicker below, read here for sha lookups on overwrite
   async function handlePickerUpload(fileList){
-    const grid = overlay.querySelector('#pickerGrid');
-    await uploadFilesToFolder(fileList, mediaPickerPath || 'assets', grid, pickerTree || []);
+    if(!fileList?.length)return;
+    const grid=overlay.querySelector('#pickerGrid');
+    await uploadFilesToFolder(fileList,mediaPickerPath||'assets',grid,pickerTree||[]);
     await loadMediaTree(true);
-    paintPicker();
+    await paintPicker();
   }
+  overlay.querySelector('#pickerDropzone').addEventListener('click',()=>overlay.querySelector('#pickerFileInput').click());
+  overlay.querySelector('#pickerFileInput').addEventListener('change',e=>handlePickerUpload(e.target.files));
+  ['dragenter','dragover'].forEach(evt=>overlay.querySelector('#pickerDropzone').addEventListener(evt,e=>{e.preventDefault();e.currentTarget.classList.add('hover');}));
+  ['dragleave','drop'].forEach(evt=>overlay.querySelector('#pickerDropzone').addEventListener(evt,e=>{e.preventDefault();e.currentTarget.classList.remove('hover');}));
+  overlay.querySelector('#pickerDropzone').addEventListener('drop',e=>{if(e.dataTransfer.files.length)handlePickerUpload(e.dataTransfer.files);});
+  overlay.querySelector('#pickerNewFolder').addEventListener('click',async()=>{ try{await createMediaFolder(mediaPickerPath||'assets',async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);} });
+  overlay.querySelector('#pickerRenameFolder').addEventListener('click',async()=>{ try{await renameMediaFolder(mediaPickerPath,async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);} });
+  overlay.querySelector('#pickerRefresh').addEventListener('click',async()=>{try{await loadMediaTree(true);await paintPicker();toast('Refreshed.');}catch(err){toast(err.message,true);}});
 
   async function paintPicker(){
-    const grid = overlay.querySelector('#pickerGrid');
+    const grid=overlay.querySelector('#pickerGrid');
     let tree;
-    try { tree = await loadMediaTree(false); }
-    catch(err){
-      grid.innerHTML = `<div class="banner info" style="grid-column:1/-1;border-color:rgba(224,88,79,.4)">Couldn't load your files — ${esc(err.message)}</div>`;
-      return;
-    }
-    pickerTree = tree; // read by handlePickerUpload above for overwrite sha lookups
-
-    const { folders, files } = childrenOfPath(tree, mediaPickerPath);
-    const crumbs = mediaPickerPath.split('/');
-    const crumbWrap = overlay.querySelector('#pickerCrumbs');
-    crumbWrap.innerHTML = '';
-    crumbs.forEach((seg, i) => {
-      const pathHere = crumbs.slice(0, i+1).join('/');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = seg;
-      btn.addEventListener('click', () => { mediaPickerPath = pathHere; paintPicker(); });
-      crumbWrap.appendChild(btn);
-      if (i < crumbs.length - 1) {
-        const sep = document.createElement('span'); sep.textContent = '/'; sep.style.color = '#444';
-        crumbWrap.appendChild(sep);
-      }
+    try{tree=await loadMediaTree(false);}catch(err){grid.innerHTML=`<div class="banner info" style="grid-column:1/-1;border-color:rgba(224,88,79,.4)">Couldn’t load your files — ${esc(err.message)}</div>`;return;}
+    pickerTree=tree;
+    const {folders,files}=childrenOfPath(tree,mediaPickerPath);
+    const parts=mediaPickerPath.split('/').filter(Boolean);
+    const crumbWrap=overlay.querySelector('#pickerCrumbs');
+    crumbWrap.innerHTML='';
+    parts.forEach((seg,i)=>{
+      const pathHere=parts.slice(0,i+1).join('/');
+      const btn=document.createElement('button');btn.type='button';btn.textContent=seg;btn.addEventListener('click',()=>{mediaPickerPath=pathHere;paintPicker();});crumbWrap.appendChild(btn);
+      if(i<parts.length-1){const sep=document.createElement('span');sep.textContent='/';crumbWrap.appendChild(sep);}
     });
-
-    grid.innerHTML = '';
-    if (!folders.length && !files.length) {
-      // Actionable, not just descriptive — clicking through to Media
-      // Library and picking up right where you left off (a fresh
-      // Now that this popup can upload directly (see the dropzone
-      // above), an empty folder is just a plain heads-up rather than
-      // a dead end pointing you somewhere else.
-      grid.innerHTML = `<div class="banner muted" style="grid-column:1/-1">Nothing here yet — drag a file into the box above, or click it to choose one.</div>`;
-    }
-    folders.forEach(f => {
-      const tile = document.createElement('div');
-      tile.className = 'media-tile folder-tile';
-      tile.innerHTML = folderTileHtml(f, findFolderPreviewImage(tree, mediaPickerPath + '/' + f));
-      tile.addEventListener('click', () => { mediaPickerPath = mediaPickerPath + '/' + f; paintPicker(); });
+    overlay.querySelector('#pickerRenameFolder').disabled=mediaPickerPath==='assets';
+    grid.innerHTML='';
+    if(!folders.length&&!files.length) grid.innerHTML=`<div class="banner muted" style="grid-column:1/-1">Nothing here yet — use New folder or upload a file above.</div>`;
+    folders.forEach(f=>{
+      const path=mediaPickerPath+'/'+f; const tile=document.createElement('div'); tile.className='media-tile folder-tile'; tile.innerHTML=folderTileHtml(f,findFolderPreviewImage(tree,path));
+      tile.addEventListener('click',()=>{mediaPickerPath=path;paintPicker();});
+      tile.querySelector('[data-folder-rename]')?.addEventListener('click',async e=>{e.stopPropagation();try{await renameMediaFolder(path,async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);}});
       grid.appendChild(tile);
     });
-    files.forEach(item => {
-      const tile = document.createElement('div');
-      tile.className = 'media-tile';
-      tile.style.cursor = 'pointer';
-      tile.innerHTML = fileTileHtml(item);
-      tile.addEventListener('click', () => { onPick(item.path); close(); });
-      grid.appendChild(tile);
+    files.forEach(item=>{
+      const tile=document.createElement('div'); tile.className='media-tile media-select-tile'; tile.style.cursor='pointer'; tile.innerHTML=fileTileHtml(item); tile.addEventListener('click',()=>{onPick(item.path);close();}); grid.appendChild(tile);
     });
   }
   paintPicker();
@@ -2235,7 +2501,7 @@ RENDERERS.media = async function(){
           <label class="field-label">Upload to folder</label>
           <input id="uploadPath" value="${attr(mediaCurrentPath)}">
         </div>
-        <button class="ghost" id="btnRefresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        <div class="media-toolbar-actions"><button class="ghost" id="btnNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="btnRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="btnRefresh" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
       </div>
 
       <div class="dropzone" id="dropzone">
@@ -2272,8 +2538,10 @@ RENDERERS.media = async function(){
     folders.forEach(f => {
       const tile = document.createElement('div');
       tile.className = 'media-tile folder-tile';
-      tile.innerHTML = folderTileHtml(f, findFolderPreviewImage(tree, mediaCurrentPath + '/' + f));
-      tile.addEventListener('click', () => { mediaCurrentPath = mediaCurrentPath + '/' + f; paint(); });
+      const folderPath = mediaCurrentPath + '/' + f;
+      tile.innerHTML = folderTileHtml(f, findFolderPreviewImage(tree, folderPath));
+      tile.addEventListener('click', () => { mediaCurrentPath = folderPath; paint(); });
+      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => { e.stopPropagation(); try { await renameMediaFolder(folderPath, async p => { mediaCurrentPath=p; await paint(); }); } catch(err){ toast(err.message,true); } });
       grid.appendChild(tile);
     });
     files.forEach(item => {
@@ -2299,6 +2567,14 @@ RENDERERS.media = async function(){
         } catch(err){ toast(err.message, true); }
       });
       grid.appendChild(tile);
+    });
+
+    document.getElementById('btnNewFolder').addEventListener('click', async () => {
+      try { await createMediaFolder(mediaCurrentPath || 'assets', async p => { mediaCurrentPath=p; await paint(); }); } catch(err){ toast(err.message,true); }
+    });
+    document.getElementById('btnRenameFolder').disabled = mediaCurrentPath==='assets';
+    document.getElementById('btnRenameFolder').addEventListener('click', async () => {
+      try { await renameMediaFolder(mediaCurrentPath, async p => { mediaCurrentPath=p; await paint(); }); } catch(err){ toast(err.message,true); }
     });
 
     document.getElementById('btnRefresh').addEventListener('click', async () => {
