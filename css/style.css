@@ -159,30 +159,97 @@ body {
 }
 
 .hero-banner {
-  position:absolute; inset:0; overflow:hidden; background-color:#121212; z-index:1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  background-color: #121212;
+  z-index: 1;
 }
+
 .hero-banner::after {
-  content:''; position:absolute; inset:0; background:linear-gradient(to bottom,rgba(18,18,18,.4) 0%,#121212 100%); z-index:2; pointer-events:none;
+  content: ''; 
+  position: absolute; 
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(18,18,18,0.4) 0%, #121212 100%);
+  z-index: 2;
 }
+
+/* Each slide is now a wrapper, not the media itself — the same
+   .slide governs opacity/active-state regardless of whether what's
+   inside it is an <img>, a <video>, or a <lottie-player> (a Lottie/
+   JSON animation), so startHeroCrossfade() in script.js never needs
+   to know or care which one it's looking at. */
 .hero-banner .slide {
-  position:absolute; inset:0; opacity:0; z-index:0; transition:opacity 1.5s ease-in-out; overflow:hidden;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
 }
-.hero-banner .slide.active { opacity:.4; z-index:1; }
+.hero-banner .slide.active { opacity: 0.4; }
+
 .hero-banner .slide img,
 .hero-banner .slide video,
 .hero-banner .slide lottie-player {
-  position:absolute; inset:0; width:100%; height:100%; display:block; object-fit:cover; object-position:center 18%; transform-origin:center 18%; --hero-zoom:1; --hero-rotate:0deg; transform:scale(var(--hero-zoom)) rotate(var(--hero-rotate)); will-change:transform,opacity;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Biases the crop toward the top ~1/5 of the image by default,
+     which is where faces/heads usually sit in character art and
+     portraits — overridden per-slide from data/hero-loop.json's (or a
+     project's thumbnail) own focus value, the same --thumb-zoom /
+     object-position mechanism used everywhere else on the site. */
+  object-position: center 18%;
+  transform-origin: center 18%;
+  --thumb-zoom: 1;
+  --thumb-rotate: 0deg;
+  will-change: opacity, transform;
 }
-.hero-banner .slide lottie-player { background:transparent; }
-.hero-banner.transition-kenburns .slide.active img,
-.hero-banner.transition-kenburns .slide.active video,
-.hero-banner.transition-kenburns .slide.active lottie-player { animation:hero-kenburns 3.5s ease-out both; }
-.hero-banner.transition-fade .slide,
-.hero-banner.transition-none .slide { transition-property:opacity; }
-.hero-banner.transition-none .slide { transition-duration:0s; }
+
+/* THREE TRANSITION STYLES, chosen from Settings & Toggles
+   (data/settings.json's heroTiming.transitionStyle), applied as a
+   class on .hero-banner itself by script.js:
+
+   - kenburns (default): the continuous ambient zoom below, running on
+     every slide at once, in sync, forever — never tied to .active.
+     That's deliberate: if the zoom were only applied while a slide is
+     active, removing that class the instant it fades out would snap
+     the transform back to nothing instantly (a jump cut). With one
+     shared loop, whichever slide is visible just gets caught wherever
+     that loop currently is — no start/stop, so nothing ever snaps.
+     A slide's own zoom/rotate value is sat out while this is active,
+     since the animation already owns `transform` continuously.
+   - fade: a plain crossfade, no zoom motion at all — a slide's own
+     zoom/rotate/focus still fully applies, just held static.
+   - none: an instant cut, no fade duration either — set by removing
+     the .slide transition, below. */
+.hero-banner.transition-kenburns .slide img,
+.hero-banner.transition-kenburns .slide video,
+.hero-banner.transition-kenburns .slide lottie-player {
+  animation: hero-kenburns 14s ease-in-out infinite;
+}
+.hero-banner.transition-fade .slide img,
+.hero-banner.transition-fade .slide video,
+.hero-banner.transition-fade .slide lottie-player {
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+}
+.hero-banner.transition-none .slide {
+  transition: none;
+}
+.hero-banner.transition-none .slide img,
+.hero-banner.transition-none .slide video,
+.hero-banner.transition-none .slide lottie-player {
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+}
+
 @keyframes hero-kenburns {
-  0% { transform:scale(var(--hero-zoom)) rotate(var(--hero-rotate)); }
-  100% { transform:scale(calc(var(--hero-zoom) * 1.08)) rotate(var(--hero-rotate)); }
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
 .hero-overlay { position: relative; z-index: 3; text-align: center; padding: 0 20px; }
@@ -437,9 +504,7 @@ body {
   position: relative;
 }
 
-.card-thumbnail img,
-.card-thumbnail video,
-.card-thumbnail lottie-player {
+.card-thumbnail img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -452,9 +517,7 @@ body {
   transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.project-card:hover .card-thumbnail img,
-.project-card:hover .card-thumbnail video,
-.project-card:hover .card-thumbnail lottie-player {
+.project-card:hover .card-thumbnail img {
   /* Multiplies on top of any manual zoom rather than overriding it,
      so the hover effect still works even on an already-zoomed thumbnail. */
   transform: scale(calc(var(--thumb-zoom) * 1.05)) rotate(var(--thumb-rotate));
@@ -528,164 +591,6 @@ body {
   overflow: hidden;
 }
 
-/* =========================================
-   HERO SECTION
-   ========================================= */
-.hero-section {
-  position: relative;
-  width: 100%;
-  height: 60vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  margin-top: 60px;
-}
-
-.hero-banner {
-  position:absolute; inset:0; overflow:hidden; background-color:#121212; z-index:1;
-}
-.hero-banner::after {
-  content:''; position:absolute; inset:0; background:linear-gradient(to bottom,rgba(18,18,18,.4) 0%,#121212 100%); z-index:2; pointer-events:none;
-}
-.hero-banner .slide {
-  position:absolute; inset:0; opacity:0; z-index:0; transition:opacity 1.5s ease-in-out; overflow:hidden;
-}
-.hero-banner .slide.active { opacity:.4; z-index:1; }
-.hero-banner .slide img,
-.hero-banner .slide video,
-.hero-banner .slide lottie-player {
-  position:absolute; inset:0; width:100%; height:100%; display:block; object-fit:cover; object-position:center 18%; transform-origin:center 18%; --hero-zoom:1; --hero-rotate:0deg; transform:scale(var(--hero-zoom)) rotate(var(--hero-rotate)); will-change:transform,opacity;
-}
-.hero-banner .slide lottie-player { background:transparent; }
-.hero-banner.transition-kenburns .slide.active img,
-.hero-banner.transition-kenburns .slide.active video,
-.hero-banner.transition-kenburns .slide.active lottie-player { animation:hero-kenburns 3.5s ease-out both; }
-.hero-banner.transition-fade .slide,
-.hero-banner.transition-none .slide { transition-property:opacity; }
-.hero-banner.transition-none .slide { transition-duration:0s; }
-@keyframes hero-kenburns {
-  0% { transform:scale(var(--hero-zoom)) rotate(var(--hero-rotate)); }
-  100% { transform:scale(calc(var(--hero-zoom) * 1.08)) rotate(var(--hero-rotate)); }
-}
-
-.hero-overlay { position: relative; z-index: 3; text-align: center; padding: 0 20px; }
-.subtext-header { font-size: 0.85rem; letter-spacing: 3px; color: #aaa; display: block; margin-bottom: 10px; }
-.name { font-size: 3.5rem; font-weight: 800; color: #fff; letter-spacing: 2px; margin-bottom: 10px; }
-.tagline { font-size: 1rem; color: #ccc; margin-bottom: 25px; display: flex; align-items: center; justify-content: center; }
-.status-dot { display: inline-block; width: 8px; height: 8px; background-color: #2ecc71; border-radius: 50%; box-shadow: 0 0 8px #2ecc71; margin: 0 10px; }
-
-/* =========================================
-   HERO MESSAGE (homepage)
-   =========================================
-   Set flush-left and locked to the same 1400px / 24px gutter as the
-   project grid below it, so the first letter of the statement sits on
-   exactly the same vertical line as the left edge of the first card.
-   That single shared margin is what makes the page read as one
-   deliberate layout rather than a centred block floating above a grid
-   — the same trick an architectural plan uses with a datum line.
-   script.js writes the label/text/author into this block (see
-   HERO_MESSAGES) and picks one at random on each page load. */
-.hero-quote {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px;
-  text-align: left;            /* overrides .hero-overlay's centring */
-  opacity: 0;
-  transition: opacity 0.6s ease;
-}
-
-/* Fades in only once script.js has chosen and written a message, so
-   you never see a flash of the placeholder markup on load. */
-.hero-quote.is-ready { opacity: 1; }
-
-/* Small tracked label above the statement, with a short hairline rule
-   leading into it — the drawing-sheet annotation look. */
-.hero-quote-label {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: #8a8a8a;
-  margin-bottom: 22px;
-}
-
-.hero-quote-label::before {
-  content: '';
-  width: 42px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.28);
-  flex-shrink: 0;
-}
-
-/* The statement itself: large, tight, flush-left, ragged right.
-   Deliberately NOT justified — justifying display type at this size
-   opens white rivers between words and softens the left edge, which
-   is the one thing holding the whole layout together. The measure is
-   capped in ch so it always breaks into a solid multi-line block
-   regardless of how long the entry is. */
-.hero-quote-text {
-  font-size: clamp(1.75rem, 5.4vw, 3.6rem);
-  font-weight: 600;
-  color: #fff;
-  line-height: 1.12;
-  letter-spacing: -0.022em;
-  max-width: 24ch;
-  margin-bottom: 30px;
-  text-wrap: pretty;
-  /* Pulls the opening “ into the left margin so the first real letter
-     stays on the datum line instead of being pushed off it. */
-  hanging-punctuation: first last;
-  transition: opacity 0.6s ease;
-}
-
-/* Credit line, aligned to the same left edge as the statement, set
-   small and tracked so it reads as a caption rather than a sentence.
-   Plain text only — no link. */
-.hero-quote-author {
-  display: block;
-  font-style: normal;
-  font-size: 0.74rem;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #909090;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  max-width: 24ch;             /* rule stops under the text block, not the full page */
-  transition: opacity 0.6s ease;
-}
-
-@media (max-width: 768px) {
-  .hero-quote { padding: 0 24px; }
-  .hero-quote-label {
-    font-size: 0.6rem;
-    letter-spacing: 0.22em;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  .hero-quote-label::before { width: 26px; }
-  .hero-quote-text {
-    /* Bigger relative to the screen than desktop on purpose — on a
-       phone this block is the whole first impression, so it should
-       fill the viewport edge to edge like a poster. */
-    font-size: clamp(1.75rem, 8.2vw, 2.6rem);
-    line-height: 1.14;
-    max-width: 18ch;
-    margin-bottom: 24px;
-  }
-  .hero-quote-author {
-    font-size: 0.66rem;
-    letter-spacing: 0.14em;
-    max-width: 22ch;
-    padding-top: 14px;
-  }
-}
-
 .social-icons {display: flex; gap: 15px; justify-content: center; }
 
 .social-icons a {
@@ -821,9 +726,7 @@ body {
   position: relative;
 }
 
-.card-thumbnail img,
-.card-thumbnail video,
-.card-thumbnail lottie-player {
+.card-thumbnail img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -836,9 +739,7 @@ body {
   transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.project-card:hover .card-thumbnail img,
-.project-card:hover .card-thumbnail video,
-.project-card:hover .card-thumbnail lottie-player {
+.project-card:hover .card-thumbnail img {
   /* Multiplies on top of any manual zoom rather than overriding it,
      so the hover effect still works even on an already-zoomed thumbnail. */
   transform: scale(calc(var(--thumb-zoom) * 1.05)) rotate(var(--thumb-rotate));
@@ -984,10 +885,21 @@ body {
 .resume-block.borderless h3 { color: #fff; font-size: 1.3rem; padding-bottom: 15px; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
 .skill-list.minimal-list { list-style: none; display: flex; flex-wrap: wrap; gap: 12px; }
-.skill-list.minimal-list { list-style: none; display: flex; flex-wrap: wrap; gap: 12px; }
 .skill-list.minimal-list li { background: rgba(255, 255, 255, 0.05); padding: 8px 18px; border-radius: 30px; font-size: 0.9rem; color: #ddd; letter-spacing: 0.5px; }
-.skill-list.minimal-list li.has-logo { background: transparent; padding: 4px 6px; border-radius: 0; display: flex; align-items: center; min-height: 42px; }
-.skill-list.minimal-list li .skill-logo { height: 34px; width: auto; max-width: 120px; object-fit: contain; display: block; filter: brightness(0) invert(1); opacity: 0.9; }
+/* A skill shown as a logo instead of its name keeps the same pill
+   shape and height as a text one — just tighter padding, since a
+   logo doesn't need the breathing room text does, and a fixed image
+   height so a wide logo and a tall one still sit at the same size
+   next to each other. */
+.skill-list.minimal-list li.has-logo { padding: 6px 16px; display: flex; align-items: center; }
+/* filter: brightness(0) invert(1) turns whatever colors a logo comes
+   in — Simple Icons' and Clearbit's are often full brand color — into
+   a flat white mark, so every skill's logo reads as one consistent
+   monochrome style matching the site's own light-on-dark look,
+   instead of a row of mismatched brand colors sitting next to each
+   other. opacity brings it down slightly to match the dimmer white
+   the surrounding pill text already uses. */
+.skill-list.minimal-list li .skill-logo { height: 20px; width: auto; max-width: 100px; object-fit: contain; display: block; filter: brightness(0) invert(1); opacity: 0.82; }
 
 .clean-timeline {
   margin-bottom: 30px;
@@ -1331,8 +1243,8 @@ body.center-page {
   .resume-main { gap: 40px; }
   
   .skill-list.minimal-list li { padding: 6px 14px; font-size: 0.8rem; }
-  .skill-list.minimal-list li.has-logo { padding: 4px 5px; }
-  .skill-list.minimal-list li .skill-logo { height: 28px; max-width:100px; }
+  .skill-list.minimal-list li.has-logo { padding: 5px 12px; }
+  .skill-list.minimal-list li .skill-logo { height: 17px; }
   
   .lightbox-nav { width: 36px; height: 36px; font-size: 0.8rem; }
   .lightbox-prev { left: 8px; }
