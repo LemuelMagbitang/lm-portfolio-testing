@@ -2160,21 +2160,26 @@ body.center-page {
 .card-3d-indicator i{font-size:10px;}
 
 /* =====================================================
-   INTERACTIVE 3D VIEWER — passive media thumbnail → focused viewer
+   INTERACTIVE 3D VIEWER — passive media preview → device-focused 3D
    ===================================================== */
 .model-viewer-shell{
   position:relative;
   width:100%;
-  min-height:250px;
-  height:clamp(240px, 34vw, 360px);
+  min-width:0;
+  min-height:0;
+  height:clamp(260px, 34vw, 420px);
   background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.012) 58%,transparent 82%);
   border-radius:12px;
   overflow:hidden;
   touch-action:pan-y;
-  overscroll-behavior:contain;
+  overscroll-behavior:auto;
   isolation:isolate;
+  -webkit-tap-highlight-color:transparent;
+  cursor:zoom-in;
 }
 .model-viewer-shell canvas{
+  position:absolute;
+  inset:0;
   width:100%!important;
   height:100%!important;
   display:block;
@@ -2182,162 +2187,171 @@ body.center-page {
   pointer-events:none;
   outline:none;
 }
-.model-viewer-shell.is-interactive,
+.model-viewer-shell.is-interactive{
+  touch-action:none;
+  cursor:grab;
+}
 .model-viewer-shell.is-interactive canvas{
   touch-action:none;
+  pointer-events:auto;
+  cursor:grab;
 }
-.model-viewer-shell.is-interactive canvas{pointer-events:auto;}
+.model-viewer-shell.is-interactive canvas:active{cursor:grabbing;}
 
-/* In the normal media list the model is deliberately treated like a rich
-   thumbnail. It never owns the scroll gesture until it has been opened. */
+/* The shell, not the visual label, is the interaction target. This is what
+   lets wheel and vertical touch movement continue through a 3D preview. */
 .model-viewer-activate{
   position:absolute;
   inset:0;
-  z-index:8;
-  width:100%;
-  height:100%;
-  border:0;
-  padding:18px;
-  background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.12));
-  color:#fff;
-  cursor:pointer;
+  z-index:5;
   display:flex;
   align-items:center;
   justify-content:center;
-  text-align:center;
-  font:inherit;
-  touch-action:pan-y;
-  -webkit-user-select:none;
+  padding:clamp(16px,3vw,28px);
+  background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.14));
+  color:#fff;
+  pointer-events:none;
   user-select:none;
-  -webkit-touch-callout:none;
-  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;
 }
-@media (hover:hover) and (pointer:fine){
-  .model-viewer-activate:hover{background:linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.18));}
-}
-.model-viewer-activate:focus{outline:none;}
-.model-viewer-activate:focus-visible{outline:2px solid #fff;outline-offset:-5px;border-radius:12px;}
 .model-viewer-activate-content{
   display:inline-flex;
   align-items:center;
-  gap:clamp(8px,1vw,10px);
-  padding:clamp(10px,1.5vw,12px) clamp(13px,1.8vw,16px);
-  min-height:44px;
+  gap:clamp(8px,1.2vw,11px);
+  min-height:clamp(44px,6vw,52px);
+  padding:0 clamp(15px,2.4vw,20px);
   box-sizing:border-box;
   border:1px solid rgba(255,255,255,.16);
   border-radius:999px;
-  background:rgba(8,8,8,.42);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  box-shadow:0 12px 28px rgba(0,0,0,.18);
-  opacity:.94;
+  background:rgba(8,8,8,.46);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  opacity:.96;
+  transition:background .2s ease,transform .2s ease;
 }
-.model-viewer-activate-content i{font-size:clamp(11px,1.7vw,14px);}
-.model-viewer-activate-content strong{font-size:clamp(10px,1.6vw,12px);letter-spacing:.14em;font-weight:800;}
+.model-viewer-activate-content i{font-size:clamp(12px,2vw,15px);}
+.model-viewer-activate-content strong{font-size:clamp(10px,1.8vw,13px);letter-spacing:.14em;font-weight:800;}
+@media (hover:hover) and (pointer:fine){
+  .model-viewer-shell:hover .model-viewer-activate-content{background:rgba(8,8,8,.54);transform:translateY(-1px);}
+}
 
 .model-viewer-ui{
   position:absolute;
   left:50%;
-  bottom:calc(env(safe-area-inset-bottom, 0px) + clamp(14px, 2.8vw, 28px));
-  z-index:9;
+  bottom:max(calc(env(safe-area-inset-bottom, 0px) + 14px), clamp(14px,2.8vh,30px));
+  z-index:20;
   transform:translateX(-50%);
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:clamp(8px,1.5vw,12px);
-  width:min(calc(100% - 32px),760px);
+  gap:clamp(8px,1.5vh,12px);
+  width:min(calc(100% - 32px),820px);
   pointer-events:none;
 }
 .model-viewer-hint[hidden],
-.model-viewer-back[hidden],
-.model-viewer-activate[hidden]{display:none!important;}
+.model-viewer-back[hidden]{display:none!important;}
 .model-viewer-hint{
   width:fit-content;
-  max-width:min(100%, 720px);
+  max-width:min(100%,820px);
   box-sizing:border-box;
-  color:rgba(255,255,255,.76);
-  background:rgba(8,8,8,.48);
-  border:1px solid rgba(255,255,255,.10);
-  padding:clamp(8px,1.5vw,11px) clamp(11px,2vw,16px);
+  color:rgba(255,255,255,.82);
+  background:rgba(8,8,8,.58);
+  border:1px solid rgba(255,255,255,.12);
+  padding:clamp(9px,1.5vh,13px) clamp(12px,2vw,18px);
   border-radius:999px;
-  font-size:clamp(10px,2.2vw,13px);
-  letter-spacing:.02em;
+  font-size:clamp(11px,1.75vw,14px);
+  font-weight:600;
+  letter-spacing:.01em;
   line-height:1.35;
   text-align:center;
   pointer-events:none;
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  box-shadow:0 10px 28px rgba(0,0,0,.22);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  box-shadow:0 10px 28px rgba(0,0,0,.24);
 }
 .model-viewer-back{
   appearance:none;
-  border:1px solid rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.19);
   border-radius:999px;
-  background:rgba(8,8,8,.78);
-  color:rgba(255,255,255,.92);
-  min-height:46px;
-  padding:0 clamp(16px,2.8vw,22px);
-  font:700 clamp(10px,2.1vw,12px)/1 inherit;
-  letter-spacing:.11em;
+  background:rgba(10,10,10,.84);
+  color:rgba(255,255,255,.96);
+  min-height:clamp(48px,6.4vh,58px);
+  padding:0 clamp(18px,2.8vw,24px);
+  font:700 clamp(11px,1.8vw,14px)/1 inherit;
+  letter-spacing:.1em;
   cursor:pointer;
   pointer-events:auto;
-  -webkit-user-select:none;
   user-select:none;
+  -webkit-user-select:none;
   -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
-  box-shadow:0 12px 30px rgba(0,0,0,.26);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  box-shadow:0 12px 32px rgba(0,0,0,.3);
   transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease;
 }
+.model-viewer-back i{font-size:.9em;margin-right:8px;}
+.model-viewer-back span{font-size:inherit;}
 @media (hover:hover) and (pointer:fine){
-  .model-viewer-back:hover{background:rgba(255,255,255,.94);color:#111;border-color:rgba(255,255,255,.82);transform:translateY(-1px);}
+  .model-viewer-back:hover{background:rgba(255,255,255,.96);color:#111;border-color:rgba(255,255,255,.84);transform:translateY(-1px);}
 }
 .model-viewer-back:focus{outline:none;}
 .model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:3px;}
-.model-viewer-error{padding:20px;text-align:center;color:#999;font-size:clamp(12px,2.4vw,14px);line-height:1.5;}
+.model-viewer-error{padding:20px;text-align:center;color:#aaa;font-size:clamp(12px,2.1vw,14px);line-height:1.5;}
 
-/* Compact 3D media-list thumbnail. The CMS selects one of these shapes and
-   the live viewer mirrors it exactly before the model is intentionally opened. */
+/* Orientation drives the normal media-list presentation. Auto is square
+   until the model viewer inspects the model bounds and refines it. */
 .lightbox-model-viewer{
   width:min(100%,860px);
   min-width:0;
-  height:auto;
   min-height:0;
   margin:0 auto;
   border:1px solid rgba(255,255,255,.07);
   box-shadow:0 16px 40px rgba(0,0,0,.18);
 }
-.lightbox-model-viewer[data-thumbnail-ratio="1:1"]{aspect-ratio:1 / 1;}
-.lightbox-model-viewer[data-thumbnail-ratio="16:9"]{aspect-ratio:16 / 9; width:min(100%,860px);}
-.lightbox-model-viewer[data-thumbnail-ratio="9:16"]{aspect-ratio:9 / 16; width:auto; height:min(68svh,660px); max-width:100%;}
+.lightbox-model-viewer[data-orientation="portrait"]{aspect-ratio:9 / 16; width:min(100%,540px);}
+.lightbox-model-viewer[data-orientation="landscape"]{aspect-ratio:16 / 9; width:min(100%,900px);}
+.lightbox-model-viewer[data-orientation="square"],
+.lightbox-model-viewer:not([data-orientation]),
+.lightbox-model-viewer[data-orientation="auto"]{aspect-ratio:1 / 1; width:min(100%,760px);}
 .lightbox-media-item.is-3d-media-item{width:100%;}
 
-/* Focus mode: the model becomes a viewport-sized presentation surface.
-   There is intentionally no decorative frame on the device edges. */
+/* Focus mode keeps every layer in one stacking context:
+   underlying project = z1, blur/darken veil = z2, 3D = z3, close = above all.
+   This avoids the veil accidentally sitting above the model or controls. */
 .lightbox-modal.is-3d-focused{
   overflow:hidden;
   padding:0;
   touch-action:none;
-}
-.lightbox-modal.is-3d-focused::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:10000;
-  background:rgba(0,0,0,.58);
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-  pointer-events:none;
+  background:rgba(5,5,5,.92);
 }
 .lightbox-modal.is-3d-focused .modal-interior{
   position:relative;
   z-index:1;
+  width:100%;
+  max-width:none;
+  min-height:100dvh;
+  height:100dvh;
+  margin:0;
+  gap:0;
+}
+.lightbox-modal.is-3d-focused .modal-interior::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2;
+  background:rgba(0,0,0,.56);
+  backdrop-filter:blur(18px) saturate(.72);
+  -webkit-backdrop-filter:blur(18px) saturate(.72);
+  pointer-events:none;
 }
 .lightbox-modal.is-3d-focused .modal-header,
 .lightbox-modal.is-3d-focused .modal-full-desc,
 .lightbox-modal.is-3d-focused #lightboxMediaContainer > .lightbox-media-item:not(.is-3d-focus-target){
-  opacity:.08;
+  position:relative;
+  z-index:1;
+  opacity:.1;
   filter:blur(10px);
   pointer-events:none;
   transition:opacity .25s ease,filter .25s ease;
@@ -2345,7 +2359,7 @@ body.center-page {
 .lightbox-modal.is-3d-focused .is-3d-focus-target{
   position:fixed;
   inset:0;
-  z-index:10001;
+  z-index:3;
   width:100dvw;
   height:100dvh;
   min-width:0;
@@ -2360,8 +2374,8 @@ body.center-page {
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
   position:absolute;
   inset:0;
-  width:100%;
-  height:100%;
+  width:100dvw;
+  height:100dvh;
   min-height:0;
   max-width:none;
   aspect-ratio:auto;
@@ -2373,47 +2387,45 @@ body.center-page {
 .lightbox-modal.is-3d-focused .lightbox-nav{opacity:0;pointer-events:none;}
 .lightbox-modal.is-3d-focused .lightbox-close{
   z-index:10004;
-  top:calc(env(safe-area-inset-top, 0px) + clamp(16px, 3vw, 28px));
-  right:calc(env(safe-area-inset-right, 0px) + clamp(16px, 3vw, 28px));
-  width:clamp(44px, 10vw, 52px);
-  height:clamp(44px, 10vw, 52px);
+  top:calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.5vw, 28px));
+  right:calc(env(safe-area-inset-right, 0px) + clamp(14px, 2.5vw, 28px));
+  width:clamp(46px, 10vw, 54px);
+  height:clamp(46px, 10vw, 54px);
   display:flex;
   align-items:center;
   justify-content:center;
   border-radius:50%;
-  background:rgba(8,8,8,.44);
+  background:rgba(8,8,8,.5);
   border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  font-size:clamp(1.1rem,4vw,1.45rem);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  font-size:clamp(1.15rem,4.5vw,1.5rem);
 }
 
-/* The normal site UI uses the same fluid scale language on smaller devices,
-   so a 3D focus transition does not suddenly make everything microscopic. */
-.modal-header h2{font-size:clamp(1.5rem,4.5vw,2rem);}
-.modal-full-desc{font-size:clamp(.95rem,2.7vw,1rem);}
-.media-caption{font-size:clamp(.78rem,2.4vw,.9rem);}
+/* Keep the rest of the lightbox legible on phones/tablets instead of using
+   desktop-scale controls inside a narrow viewport. */
+.modal-header h2{font-size:clamp(1.55rem,5vw,2rem);}
+.modal-full-desc{font-size:clamp(.95rem,2.8vw,1rem);}
+.media-caption{font-size:clamp(.8rem,2.5vw,.9rem);}
 .lightbox-close{font-size:clamp(1.5rem,4vw,2rem);}
-.lightbox-nav{width:clamp(42px,8vw,46px);height:clamp(42px,8vw,46px);font-size:clamp(.85rem,2.2vw,1rem);}
+.lightbox-nav{width:clamp(44px,8vw,48px);height:clamp(44px,8vw,48px);font-size:clamp(.86rem,2.2vw,1rem);}
 
 html.lm-3d-focus-open,
-body.lm-3d-focus-open{overscroll-behavior:none;}
+body.lm-3d-focus-open{overscroll-behavior:none;overflow:hidden;}
 
 @media (max-width:768px){
-  .model-viewer-shell{min-height:220px;height:56vw;max-height:320px;border-radius:10px;}
-  .model-viewer-activate-content{min-height:46px;}
-  .model-viewer-hint{max-width:calc(100vw - 32px);font-size:clamp(10px,2.8vw,13px);}
-  .model-viewer-back{min-height:48px;font-size:clamp(10px,2.6vw,12px);}
-  .lightbox-model-viewer[data-thumbnail-ratio="1:1"]{width:100%;}
-  .lightbox-model-viewer[data-thumbnail-ratio="16:9"]{width:100%;}
-  .lightbox-model-viewer[data-thumbnail-ratio="9:16"]{height:min(68svh,640px);}
-  .lightbox-modal.is-3d-focused .is-3d-focus-target{
-    width:100dvw;
-    height:100dvh;
-  }
+  .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}
+  .model-viewer-activate{padding:14px;}
+  .model-viewer-activate-content{min-height:48px;padding:0 17px;}
+  .model-viewer-hint{width:min(92vw,720px);max-width:92vw;font-size:clamp(11px,3.2vw,14px);padding:10px 13px;}
+  .model-viewer-back{min-height:50px;padding:0 19px;font-size:clamp(11px,3.2vw,14px);}
+  .model-viewer-ui{width:min(calc(100vw - 24px),820px);bottom:max(calc(env(safe-area-inset-bottom, 0px) + 12px), 18px);gap:9px;}
+  .lightbox-modal.is-3d-focused .modal-interior{width:100dvw;height:100dvh;min-height:100dvh;}
+  .lightbox-modal.is-3d-focused .is-3d-focus-target,
+  .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{width:100dvw;height:100dvh;}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .model-viewer-back{transition:none;}
+  .model-viewer-back,
+  .model-viewer-activate-content{transition:none;}
 }
-

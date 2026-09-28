@@ -302,7 +302,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     else el.setAttribute('data-image', m.src || '');
     if (m.caption) el.setAttribute('data-description', m.caption);
     if (m.orientation) el.setAttribute('data-orientation', m.orientation);
-    if (m.type === 'model') el.setAttribute('data-thumbnail-ratio', normalizeModelThumbnailRatio(m.thumbnailRatio));
     if (m.background && typeof m.background === 'object') el.setAttribute('data-background', JSON.stringify(m.background));
     return el;
   }
@@ -317,13 +316,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return !!(p && Array.isArray(p.media) && p.media.some(m => m && m.type === 'model' && m.src));
   }
 
-  // The compact 3D preview uses one of three deliberate device-friendly
-  // shapes. Keep this whitelist shared by the CMS and live site so malformed
-  // or legacy values always fall back to the intended default: square.
-  function normalizeModelThumbnailRatio(value) {
-    return value === '16:9' || value === '9:16' || value === '1:1' ? value : '1:1';
-  }
-
+  // 3D media presentation shape comes from the same Orientation field used
+  // by every other artwork. Auto is handled by the model viewer itself.
   function add3DAvailabilityIndicator(thumb, p) {
     if (!thumb || !projectHas3D(p) || thumb.querySelector('.card-3d-indicator')) return;
     thumb.classList.add('has-3d-view');
@@ -355,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const thumbBackground = (t.background && typeof t.background === 'object') ? t.background : inheritedThumbBackground;
     if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
     if (t.src) {
-      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src,background:thumbBackground,thumbnailRatio:normalizeModelThumbnailRatio(t.thumbnailRatio)}, p.title || 'Project artwork');
+      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src,background:thumbBackground}, p.title || 'Project artwork');
       if (media) {
         if (t.focus) media.setAttribute('data-focus', t.focus);
         if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
@@ -1027,7 +1021,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     media.classList.add('project-thumb-media');
     if (source.type === 'model') {
       media.setAttribute('data-model-thumb', source.src);
-      media.setAttribute('data-thumbnail-ratio', normalizeModelThumbnailRatio(source.thumbnailRatio));
     }
     if (source.background && typeof source.background === 'object') media.setAttribute('data-background', JSON.stringify(source.background));
     return media;
@@ -1046,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lottie = item.getAttribute('data-lottie');
       if (lottie) return {type:'lottie',src:lottie,background};
       const model = item.getAttribute('data-model');
-      if (model) return {type:'model',src:model,background,thumbnailRatio:normalizeModelThumbnailRatio(item.getAttribute('data-thumbnail-ratio'))};
+      if (model) return {type:'model',src:model,background,orientation:item.getAttribute('data-orientation') || ''};
       // YouTube stays a last-resort fallback because it requires a
       // thumbnail request rather than being a locally playable asset.
     }
@@ -1998,8 +1991,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (modelUrl) {
           const modelWrap = document.createElement('div');
           modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
-          const modelRatio = normalizeModelThumbnailRatio(item.getAttribute('data-thumbnail-ratio'));
-          modelWrap.setAttribute('data-thumbnail-ratio', modelRatio);
+          const modelOrientation = item.getAttribute('data-orientation') || 'auto';
+          modelWrap.setAttribute('data-orientation', modelOrientation);
           modelWrap.setAttribute('aria-label', '3D artwork preview');
           const modelEntry = buildMediaEntry(modelWrap, caption, itemBackground);
           modelEntry.classList.add('is-3d-media-item');
@@ -2008,6 +2001,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
               autoRotate: false,
               background: itemBackground || null,
+              orientation: modelOrientation,
               resolveUrl: siteAssetUrl,
               onActivate: () => {
                 lightbox.classList.add('is-3d-focused');

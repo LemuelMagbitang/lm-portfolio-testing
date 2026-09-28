@@ -1292,14 +1292,6 @@ RENDERERS.reviews = async function(data){
   paint();
 };
 
-function normalizeModelThumbnailRatio(value){
-  return value === '16:9' || value === '9:16' || value === '1:1' ? value : '1:1';
-}
-
-function modelThumbnailRatioCss(value){
-  const ratio=normalizeModelThumbnailRatio(value);
-  return ratio==='16:9' ? 16/9 : ratio==='9:16' ? 9/16 : 1;
-}
 
 function extractYouTubeId(url){
   if (!url) return null;
@@ -1316,7 +1308,42 @@ function extractYouTubeId(url){
   return null;
 }
 
+const SOURCE_TYPE_RULES = {
+  image: { label:'image', extensions:['jpg','jpeg','png','gif','webp','svg','avif'] },
+  video: { label:'video', extensions:['mp4','webm','mov','m4v'] },
+  lottie: { label:'Lottie animation', extensions:['json'] },
+  model: { label:'3D model', extensions:['obj','gltf','glb','fbx'] },
+  youtube: { label:'YouTube video', extensions:[] }
+};
+
+function sourceExtension(src){
+  const value=String(src||'').trim().split('#')[0].split('?')[0];
+  const match=value.match(/\.([a-z0-9]+)$/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
+function validateMediaSource(type, src){
+  const value=String(src||'').trim();
+  if(!value) return null;
+  if(type==='youtube') return extractYouTubeId(value) ? null : 'This source is not a recognized YouTube link. Choose a YouTube URL or change the media type.';
+  const rule=SOURCE_TYPE_RULES[type];
+  if(!rule) return null;
+  const ext=sourceExtension(value);
+  if(!ext) return null;
+  if(rule.extensions.includes(ext)) return null;
+  const actualKind=fileKind(value);
+  const actualLabel = actualKind==='other' ? `a .${ext} file` : (SOURCE_TYPE_RULES[actualKind]?.label || `a .${ext} file`);
+  const expected = rule.extensions.map(x=>'.'+x.toUpperCase()).join(', ');
+  return `Source type mismatch: this is ${actualLabel}, but the media type is set to ${rule.label}. Use ${expected}, or change the selected type.`;
+}
+
+function sourceTypeErrorHtml(message){
+  return `<div class="source-type-error" role="alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>Source type error</strong><p>${esc(message)}</p></div></div>`;
+}
+
 function buildMediaPreviewHtml(m){
+  const sourceError = validateMediaSource(m.type, m.src);
+  if (sourceError) return `<div class="media-preview media-preview-error">${sourceTypeErrorHtml(sourceError)}</div>`;
   if (!m.src) {
     return `<div class="media-preview"><span class="empty-note">Enter a source above to see a preview</span></div>`;
   }
@@ -1342,8 +1369,8 @@ RENDERERS.projects = async function(data){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
-    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null, thumbnailRatio:normalizeModelThumbnailRatio(p.thumbnail&&p.thumbnail.thumbnailRatio) },
-    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null,thumbnailRatio:normalizeModelThumbnailRatio(m.thumbnailRatio)})):[])
+    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
+    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
   })));
   let filterDefs = [];
   try{ const f = await loadSection('filters'); const raw=f.json||[]; filterDefs=Array.isArray(raw)?raw:(raw.filters||[]); }catch(e){}
@@ -1415,8 +1442,8 @@ RENDERERS.projects = async function(data){
       }
       return items.map(p=>({
         id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge, filters:p.filters, description:p.description,
-        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,...(p.thumbnail.background && typeof p.thumbnail.background==='object' ? {background:p.thumbnail.background} : {}),...(p.thumbnail.type==='model' ? {thumbnailRatio:normalizeModelThumbnailRatio(p.thumbnail.thumbnailRatio)} : {})},
-        media:p.media.map(m=>({type:m.type,src:m.src,caption:m.caption,orientation:m.orientation,...(m.background && typeof m.background==='object' ? {background:m.background} : {}),...(m.type==='model' ? {thumbnailRatio:normalizeModelThumbnailRatio(m.thumbnailRatio)} : {})}))
+        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,...(p.thumbnail.background && typeof p.thumbnail.background==='object' ? {background:p.thumbnail.background} : {})},
+        media:p.media.map(m => ({ type:m.type, src:m.src, caption:m.caption, orientation:m.orientation, ...(m.background && typeof m.background==='object' ? {background:m.background} : {}) }))
       }));
     }, 'projects', SECTIONS.projects.file);
   }
@@ -1464,7 +1491,6 @@ RENDERERS.projects = async function(data){
               <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
               <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
             </div>
-            <div class="model-thumbnail-ratio-field" data-explicit-model-thumb style="display:${p.thumbnail.type==='model'?'block':'none'}"><div class="field" style="max-width:220px"><label class="field-label">3D thumbnail ratio</label><select data-f="thumb-ratio"><option value="1:1" ${normalizeModelThumbnailRatio(p.thumbnail.thumbnailRatio)==='1:1'?'selected':''}>1:1 · Square</option><option value="16:9" ${normalizeModelThumbnailRatio(p.thumbnail.thumbnailRatio)==='16:9'?'selected':''}>16:9 · Landscape</option><option value="9:16" ${normalizeModelThumbnailRatio(p.thumbnail.thumbnailRatio)==='9:16'?'selected':''}>9:16 · Portrait</option></select></div></div>
           </div>
           <div>
             <label class="field-label">Drag to set focus point</label>
@@ -1495,10 +1521,23 @@ RENDERERS.projects = async function(data){
       const note = el.querySelector('[data-thumb-fallback-note]');
       if(!picker) return;
       const old = picker.querySelector('[data-thumb-media]'); if(old) old.remove();
+      const oldSourceError = picker.querySelector('[data-thumb-source-error]');
+      if (oldSourceError) oldSourceError.remove();
       const explicit = p.thumbnail.src;
       const fallback = explicit ? null : computeFallbackThumb(p.media);
-      const src = explicit ? {type:p.thumbnail.type||'image',src:explicit,background:p.thumbnail.background||null,thumbnailRatio:p.thumbnail.thumbnailRatio} : fallback;
+      const src = explicit ? {type:p.thumbnail.type||'image',src:explicit,background:p.thumbnail.background||null} : fallback;
       if(!src || !src.src){ if(note) note.style.display='none'; return; }
+      const sourceError = validateMediaSource(src.type, src.src);
+      if (sourceError) {
+        const error = document.createElement('div');
+        error.className = 'source-type-error source-type-error-inline';
+        error.dataset.thumbSourceError = '';
+        error.setAttribute('role','alert');
+        error.innerHTML = '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>Source type error</strong><p>' + esc(sourceError) + '</p></div>';
+        picker.appendChild(error);
+        if(note) note.style.display='none';
+        return;
+      }
       let media;
       if(src.type==='video'){
         media=document.createElement('video'); media.src=ghRawUrl(src.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true;
@@ -1513,7 +1552,6 @@ RENDERERS.projects = async function(data){
       const focus=p.thumbnail.focus||'50% 50%'; media.style.objectPosition=focus; media.style.transformOrigin=focus; media.style.transform=`scale(${p.thumbnail.zoom||1})`;
       const sourceBackground = src.background && typeof src.background === 'object' ? src.background : null;
       if (sourceBackground) picker.setAttribute('data-background', JSON.stringify(sourceBackground)); else picker.removeAttribute('data-background');
-      picker.setAttribute('data-model-ratio', normalizeModelThumbnailRatio(src.thumbnailRatio));
       picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
       if(note) note.style.display=fallback?'':'none';
     }
@@ -1531,8 +1569,6 @@ RENDERERS.projects = async function(data){
           refreshThumbPreview();
         } else if(f==='thumb-type'){
           p.thumbnail.type = inp.value;
-          const ratioField = el.querySelector('[data-explicit-model-thumb]');
-          if (ratioField) ratioField.style.display = inp.value === 'model' ? 'block' : 'none';
           refreshThumbPreview();
         }
         // THE FIX: typing a new zoom or focus value used to update
@@ -1546,7 +1582,6 @@ RENDERERS.projects = async function(data){
         // Profile Photo's equivalent fields already did.
         else if(f==='thumb-zoom') { p.thumbnail.zoom = parseFloat(inp.value)||1; refreshThumbPreview(); }
         else if(f==='thumb-focus'){ p.thumbnail.focus = inp.value; setFromFocusStr(); refreshThumbPreview(); }
-        else if(f==='thumb-ratio'){ p.thumbnail.thumbnailRatio = normalizeModelThumbnailRatio(inp.value); refreshThumbPreview(); }
         else {
           p[f] = inp.value;
           if (f==='title' || f==='badge') {
@@ -1656,7 +1691,6 @@ RENDERERS.projects = async function(data){
                 </select>
               </div>
             </div>
-            ${m.type==='model' ? `<div class="row model-artwork-settings"><div class="field" style="max-width:220px"><label class="field-label">3D preview ratio</label><select data-mf="thumbnailRatio"><option value="1:1" ${normalizeModelThumbnailRatio(m.thumbnailRatio)==='1:1'?'selected':''}>1:1 · Square</option><option value="16:9" ${normalizeModelThumbnailRatio(m.thumbnailRatio)==='16:9'?'selected':''}>16:9 · Landscape</option><option value="9:16" ${normalizeModelThumbnailRatio(m.thumbnailRatio)==='9:16'?'selected':''}>9:16 · Portrait</option></select></div><div class="field model-artwork-settings-copy"><label class="field-label">Project list preview</label><p class="hint">This controls the compact 3D artwork window before it is opened. Default: 1:1.</p></div></div>` : ''}
             <div data-mediapreview></div>
           </div>
         `;
@@ -1675,11 +1709,21 @@ RENDERERS.projects = async function(data){
             try {
               const { mountModelViewer } = await import('../js/model-viewer.js');
               const host = previewEl.querySelector('[data-model-preview]');
-              if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), { background: m.background || null, resolveUrl: ghRawUrl });
+              if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), {
+                background: m.background || null,
+                orientation: m.orientation || 'auto',
+                onOrientationDetected: (detected) => {
+                  const box = previewEl.firstElementChild;
+                  if (box) {
+                    box.dataset.orientation = detected;
+                    fitPreviewAspect(box, detected === 'landscape' ? 16/9 : detected === 'portrait' ? 9/16 : 1);
+                  }
+                },
+                resolveUrl: ghRawUrl
+              });
             } catch (err) {
               const host = previewEl.querySelector('[data-model-preview]');
-              if (host) host.innerHTML = '<div class="model-viewer-error">3D preview unavailable.</div>';
-              console.warn('CMS 3D preview:', err);
+              if (host) host.innerHTML = `<div class="model-viewer-error"><strong>Couldn't load this 3D source.</strong><br><span>Check that the file exists and is a supported OBJ, GLTF, GLB, or FBX file.</span></div>`;
             }
           }
           // If this is (or might become) the project's fallback
@@ -1696,8 +1740,7 @@ RENDERERS.projects = async function(data){
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
           m[inp.dataset.mf]=inp.value;
           if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
-          if (inp.dataset.mf === 'thumbnailRatio') m.thumbnailRatio = normalizeModelThumbnailRatio(m.thumbnailRatio);
-          if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src' || inp.dataset.mf === 'thumbnailRatio') refreshPreview();
+          if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') refreshPreview();
           flagUnsaved();
         }));
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
@@ -1727,7 +1770,7 @@ RENDERERS.projects = async function(data){
     }
     paintMedia();
     el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
-      const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,thumbnailRatio:'1:1',_uid:uid()};
+      const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,_uid:uid()};
       p.media.push(fresh);
       openMediaUids.add(fresh._uid); // new artwork opens straight into edit mode
       flagUnsaved(); paintMedia();
@@ -2515,7 +2558,8 @@ function fitPreviewAspect(boxEl, ratio){
 function wirePreviewAspect(boxEl, m){
   if (!boxEl) return;
   if (m.type === 'model') {
-    fitPreviewAspect(boxEl, modelThumbnailRatioCss(m.thumbnailRatio));
+    const orientation = m.orientation || 'auto';
+    fitPreviewAspect(boxEl, orientation === 'landscape' ? 16/9 : orientation === 'portrait' ? 9/16 : 1);
     return;
   }
   if (m.type === 'video') {
@@ -2553,7 +2597,7 @@ function computeFallbackThumb(media){
     type:firstUsable.type,
     src:firstUsable.src,
     background:firstUsable.background||null,
-    thumbnailRatio:normalizeModelThumbnailRatio(firstUsable.thumbnailRatio)
+    orientation:firstUsable.orientation||''
   };
   const yt=(media||[]).find(m=>m&&m.type==='youtube'&&m.src);
   if(yt){ const id=extractYouTubeId(yt.src); if(id) return {type:'image',src:`https://img.youtube.com/vi/${id}/hqdefault.jpg`}; }

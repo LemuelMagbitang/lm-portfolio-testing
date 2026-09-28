@@ -146,9 +146,6 @@ export async function mountModelViewer(container, src, options = {}) {
   controls.target.set(0, 0, 0);
   controls.touches.ONE = THREE.TOUCH.ROTATE;
   controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
-  // Passive preview state: OrbitControls is off and the canvas itself does
-  // not receive pointer input. The surrounding lightbox therefore owns the
-  // mouse wheel and mobile swipe until the user intentionally opens 3D.
   controls.enabled = false;
 
   let root;
@@ -156,6 +153,9 @@ export async function mountModelViewer(container, src, options = {}) {
   let frameHandle = 0;
   let resizeObserver = null;
   let disposed = false;
+  let fitToViewport = null;
+  let fitRequested = false;
+  let lastSize = { width: 0, height: 0 };
 
   try {
     const loaded = await loadModel(url, ext);
@@ -163,25 +163,52 @@ export async function mountModelViewer(container, src, options = {}) {
     root = loaded.root;
     scene.add(root);
 
-    // Center and frame the entire asset without permanently changing its
-    // imported proportions. This keeps OBJ/FBX/glTF models at a sensible
-    // starting distance while OrbitControls remains free to zoom further in.
+    // Center the asset once. Its camera framing is recalculated whenever the
+    // shell changes between thumbnail and full-device focus mode.
     const box = new THREE.Box3().setFromObject(root);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const modelRadius = Math.max(sphere.radius, 0.001);
     root.position.sub(center);
 
-    const maxSize = Math.max(size.x, size.y, size.z, 0.001);
-    const fov = THREE.MathUtils.degToRad(camera.fov);
-    let distance = (maxSize * 0.68) / Math.tan(fov / 2);
-    distance = Math.max(distance, 0.1);
-    camera.near = Math.max(distance / 100, 0.001);
-    camera.far = Math.max(distance * 100, 100);
-    camera.position.set(distance * 0.95, distance * 0.45, distance * 1.15);
-    camera.updateProjectionMatrix();
-    controls.maxDistance = Math.max(distance * 20, 10);
-    controls.minDistance = Math.max(distance / 1000, 0.01);
-    controls.target.set(0, 0, 0);
+    // Orientation is controlled by the CMS media item. Auto derives a useful
+    // 2D presentation shape from the model's width/height; square is the
+    // stable fallback for unusual or essentially flat bounds.
+    const requestedOrientation = String(options.orientation || 'auto').toLowerCase();
+    let detectedOrientation = requestedOrientation;
+    if (!['landscape', 'portrait', 'square'].includes(detectedOrientation)) {
+      const ratio = size.y > 0.0001 ? size.x / size.y : 1;
+      detectedOrientation = ratio > 1.15 ? 'landscape' : ratio < 0.85 ? 'portrait' : 'square';
+    }
+    container.dataset.orientation = detectedOrientation;
+    if (typeof options.onOrientationDetected === 'function') options.onOrientationDetected(detectedOrientation);
+
+    fitToViewport = () => {
+      if (!root) return;
+      const width = Math.max(1, container.clientWidth);
+      const height = Math.max(1, container.clientHeight);
+      const aspect = width / height;
+      const vFov = THREE.MathUtils.degToRad(camera.fov);
+      const hFov = 2 * Math.atan(Math.tan(vFov / 2) * Math.max(aspect, 0.01));
+      const limitingHalfFov = Math.min(vFov, hFov) / 2;
+      const padding = 0.84;
+      const distance = Math.max(
+        modelRadius / Math.sin(Math.max(limitingHalfFov, 0.01)) / padding,
+        modelRadius * 1.5
+      );
+      const direction = camera.position.clone().sub(controls.target);
+      if (direction.lengthSq() < 0.000001) direction.set(0.85, 0.42, 1.05);
+      direction.normalize();
+      camera.position.copy(controls.target).add(direction.multiplyScalar(distance));
+      camera.near = Math.max(distance / 100, 0.001);
+      camera.far = Math.max(distance * 100, 100);
+      camera.updateProjectionMatrix();
+      controls.maxDistance = Math.max(distance * 20, 10);
+      controls.minDistance = Math.max(distance / 1000, 0.01);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    };
 
     for (const clip of loaded.animations || []) {
       const mixer = new THREE.AnimationMixer(root);
@@ -189,16 +216,17 @@ export async function mountModelViewer(container, src, options = {}) {
       mixers.push(mixer);
     }
 
-    // Two-step interaction model:
-    // 1) the model behaves like a media thumbnail: the WebGL canvas is not
-    //    allowed to capture gestures, so wheel/finger movement keeps scrolling
-    //    the surrounding project media list;
-    // 2) a deliberate click/tap opens the focused 3D state, where OrbitControls
-    //    takes over until the visitor presses the back button.
-    const activate = document.createElement('button');
-    activate.type = 'button';
+    // Passive media state: the shell is the tap target, while its WebGL
+    // canvas is completely inert. We intentionally do not intercept pointer
+    // movement or touch scrolling here, so the lightbox retains normal media
+    // navigation until a deliberate click/tap is made.
+    container.setAttribute('role', 'button');
+    container.setAttribute('tabindex', '0');
+    container.setAttribute('aria-label', 'Open interactive 3D view');
+
+    const activate = document.createElement('div');
     activate.className = 'model-viewer-activate';
-    activate.setAttribute('aria-label', 'Open interactive 3D view');
+    activate.setAttribute('aria-hidden', 'true');
     activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>VIEW 3D</strong></span>';
     container.appendChild(activate);
 
@@ -218,7 +246,7 @@ export async function mountModelViewer(container, src, options = {}) {
     back.type = 'button';
     back.className = 'model-viewer-back';
     back.setAttribute('aria-label', 'Exit interactive 3D view');
-    back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i> BACK TO MEDIA';
+    back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>BACK TO MEDIA</span>';
     back.hidden = true;
     ui.appendChild(back);
     container.appendChild(ui);
@@ -227,64 +255,83 @@ export async function mountModelViewer(container, src, options = {}) {
       if (disposed) return;
       controls.enabled = active;
       container.classList.toggle('is-interactive', active);
-      activate.hidden = active;
       back.hidden = !active;
       if (hint) hint.hidden = !active;
       renderer.domElement.style.pointerEvents = active ? 'auto' : 'none';
       renderer.domElement.style.touchAction = active ? 'none' : 'auto';
       container.dataset.interactive = active ? 'true' : 'false';
-      if (!active) {
-        // Clear any stuck pointer state before returning gesture ownership
-        // to the lightbox/page.
+      container.setAttribute('aria-label', active ? 'Interactive 3D model. Press Escape to return to media.' : 'Open interactive 3D view');
+      container.setAttribute('tabindex', active ? '-1' : '0');
+      fitRequested = true;
+      if (active) {
+        if (typeof options.onActivate === 'function') options.onActivate();
+      } else {
         controls.reset();
         if (typeof options.onDeactivate === 'function') options.onDeactivate();
-      } else if (typeof options.onActivate === 'function') {
-        options.onActivate();
       }
+      requestAnimationFrame(() => { if (typeof resizeViewer === 'function') resizeViewer(); });
     };
 
-    // Guard against a mobile swipe being interpreted as a click. The
-    // activation affordance should fire only on a deliberate tap/click, not
-    // when the visitor is scrolling through the project media list.
-    let activationStartX = 0;
-    let activationStartY = 0;
-    let activationMoved = false;
-    activate.addEventListener('pointerdown', (event) => {
-      activationStartX = event.clientX;
-      activationStartY = event.clientY;
-      activationMoved = false;
-    });
-    activate.addEventListener('pointermove', (event) => {
-      if (Math.hypot(event.clientX - activationStartX, event.clientY - activationStartY) > 10) activationMoved = true;
-    });
-    activate.addEventListener('pointercancel', () => { activationMoved = true; });
-    activate.addEventListener('click', (event) => {
-      if (activationMoved) {
-        event.preventDefault();
+    let gestureStartX = 0;
+    let gestureStartY = 0;
+    let gestureMoved = false;
+    container.addEventListener('pointerdown', (event) => {
+      if (controls.enabled || event.button > 0) return;
+      gestureStartX = event.clientX;
+      gestureStartY = event.clientY;
+      gestureMoved = false;
+    }, { passive: true });
+    container.addEventListener('pointermove', (event) => {
+      if (controls.enabled) return;
+      if (Math.hypot(event.clientX - gestureStartX, event.clientY - gestureStartY) > 10) gestureMoved = true;
+    }, { passive: true });
+    container.addEventListener('pointercancel', () => { gestureMoved = true; }, { passive: true });
+    container.addEventListener('click', (event) => {
+      if (controls.enabled || event.target.closest('.model-viewer-ui')) return;
+      if (gestureMoved) {
+        gestureMoved = false;
         return;
       }
       event.preventDefault();
       setInteractive(true);
-      // Focus the canvas for keyboard users without forcing a page jump.
-      try { renderer.domElement.focus({ preventScroll: true }); } catch (_) { renderer.domElement.focus(); }
     });
+    container.addEventListener('keydown', (event) => {
+      if (!controls.enabled && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        setInteractive(true);
+      } else if (controls.enabled && event.key === 'Escape') {
+        event.preventDefault();
+        setInteractive(false);
+        requestAnimationFrame(() => { try { container.focus({ preventScroll: true }); } catch (_) { container.focus(); } });
+      }
+    });
+
+    // Explicitly pass wheel movement to the lightbox scroller while passive.
+    // This makes scrolling dependable even in browsers that treat a WebGL
+    // region as a wheel/gesture boundary. The 3D canvas remains uninvolved.
+    container.addEventListener('wheel', (event) => {
+      if (controls.enabled) return;
+      const scroller = container.closest('.lightbox-modal');
+      if (!scroller) return;
+      const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+      if (max <= 0) return;
+      const current = scroller.scrollTop;
+      const next = Math.max(0, Math.min(max, current + event.deltaY));
+      if (next !== current) {
+        scroller.scrollTop = next;
+        event.preventDefault();
+      }
+    }, { passive: false });
 
     back.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       setInteractive(false);
-      activate.focus({ preventScroll: true });
+      requestAnimationFrame(() => { try { container.focus({ preventScroll: true }); } catch (_) { container.focus(); } });
     });
 
-    renderer.domElement.setAttribute('tabindex', '0');
-    renderer.domElement.setAttribute('aria-label', 'Interactive 3D model.');
-    renderer.domElement.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setInteractive(false);
-        activate.focus({ preventScroll: true });
-      }
-    });
+    renderer.domElement.setAttribute('tabindex', '-1');
+    renderer.domElement.setAttribute('aria-hidden', 'true');
     renderer.domElement.style.pointerEvents = 'none';
     renderer.domElement.style.touchAction = 'auto';
   } catch (err) {
@@ -292,17 +339,23 @@ export async function mountModelViewer(container, src, options = {}) {
     throw err;
   }
 
-  const resize = () => {
+  const resizeViewer = () => {
     if (disposed) return;
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    if (fitToViewport && (fitRequested || lastSize.width === 0)) {
+      fitToViewport();
+      fitRequested = false;
+    }
+    lastSize = { width, height };
   };
-  resizeObserver = new ResizeObserver(resize);
+
+  resizeObserver = new ResizeObserver(() => resizeViewer());
   resizeObserver.observe(container);
-  resize();
+  resizeViewer();
 
   const clock = new THREE.Clock();
   const render = () => {

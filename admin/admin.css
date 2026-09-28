@@ -403,24 +403,29 @@
 }
 
 
-/* 3D artwork CMS controls — shaped like a compact device setting rather than
-   an implementation detail, with the same three ratios as the public viewer. */
-.model-artwork-settings{align-items:end;}
-.model-artwork-settings-copy .hint{margin:0;padding-bottom:2px;line-height:1.5;}
-.model-thumbnail-ratio-field{margin-top:4px;}
+/* 3D artwork CMS controls */
 .admin-model-thumb-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#cfcfcf;background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.07),rgba(255,255,255,.02) 58%,transparent 84%);}
 .admin-model-thumb-placeholder i{font-size:26px;opacity:.82;}
 .admin-model-thumb-placeholder strong{font-size:10px;letter-spacing:.14em;}
 .admin-model-thumb-placeholder small{font-size:10px;color:#777;letter-spacing:.02em;}
-.focus-picker[data-model-ratio="9:16"]{aspect-ratio:9/16;max-width:180px;}
-.focus-picker[data-model-ratio="16:9"]{aspect-ratio:16/9;max-width:260px;}
-.focus-picker[data-model-ratio="1:1"]{aspect-ratio:1/1;}
-.media-preview.model-preview[data-model-ratio="9:16"]{aspect-ratio:9/16;}
-.media-preview.model-preview[data-model-ratio="16:9"]{aspect-ratio:16/9;}
-.media-preview.model-preview[data-model-ratio="1:1"]{aspect-ratio:1/1;}
+
+/* Visible, inline source/type validation. The CMS should explain a bad
+   selection beside the field instead of making the user inspect DevTools. */
+.source-type-error{width:min(100%,760px);box-sizing:border-box;display:flex;align-items:flex-start;gap:10px;margin:10px 0 0;padding:12px 13px;border:1px solid rgba(224,88,79,.42);border-radius:9px;background:rgba(224,88,79,.08);color:#e8c8c4;line-height:1.45;}
+.source-type-error i{color:#e0584f;font-size:14px;margin-top:2px;flex:0 0 auto;}
+.source-type-error strong{display:block;color:#fff;font-size:12px;margin-bottom:2px;}
+.source-type-error p{margin:0;font-size:12px;color:#d4c1bf;}
+.source-type-error-inline{position:absolute;left:12px;right:12px;bottom:12px;z-index:20;margin:0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+
+/* Model preview follows the same orientation control used by the media
+   item. Auto remains square until the live model viewer derives its bounds. */
+.media-preview.model-preview{aspect-ratio:1/1;max-width:320px;}
+.media-preview.model-preview[data-orientation="landscape"]{aspect-ratio:16/9;}
+.media-preview.model-preview[data-orientation="portrait"]{aspect-ratio:9/16;}
+.media-preview.model-preview[data-orientation="square"],
+.media-preview.model-preview[data-orientation="auto"]{aspect-ratio:1/1;}
 
 @media (max-width:700px){
-  .model-artwork-settings{flex-direction:column;align-items:stretch;}
-  .model-artwork-settings .field{max-width:none!important;}
-  .model-thumbnail-ratio-field .field{max-width:100%!important;}
+  .source-type-error{font-size:11px;}
+  .source-type-error p{font-size:11px;}
 }
