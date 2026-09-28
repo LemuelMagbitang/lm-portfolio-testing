@@ -156,6 +156,7 @@ export async function mountModelViewer(container, src, options = {}) {
   let fitToViewport = null;
   let fitRequested = false;
   let lastSize = { width: 0, height: 0 };
+  let renderLoopActive = false;
 
   try {
     const loaded = await loadModel(url, ext);
@@ -256,6 +257,7 @@ export async function mountModelViewer(container, src, options = {}) {
     const setInteractive = (active) => {
       if (disposed) return;
       controls.enabled = active;
+      renderLoopActive = active;
       container.classList.toggle('is-interactive', active);
       activate.hidden = active;
       back.hidden = !active;
@@ -283,6 +285,7 @@ export async function mountModelViewer(container, src, options = {}) {
         if (typeof options.onDeactivate === 'function') options.onDeactivate();
       }
       requestAnimationFrame(() => { if (typeof resizeViewer === 'function') resizeViewer(); });
+      setRenderLoop(active);
     };
 
     let gestureStartX = 0;
@@ -379,6 +382,7 @@ export async function mountModelViewer(container, src, options = {}) {
       fitRequested = false;
     }
     lastSize = { width, height };
+    if (!renderLoopActive) renderer.render(scene, camera);
   };
 
   resizeObserver = new ResizeObserver(() => resizeViewer());
@@ -386,19 +390,44 @@ export async function mountModelViewer(container, src, options = {}) {
   resizeViewer();
 
   const clock = new THREE.Clock();
-  const render = () => {
+  const renderOnce = () => {
     if (disposed) return;
+    controls.update();
+    renderer.render(scene, camera);
+  };
+  const render = () => {
+    if (disposed || !renderLoopActive) {
+      frameHandle = 0;
+      return;
+    }
     frameHandle = requestAnimationFrame(render);
     const delta = clock.getDelta();
     mixers.forEach(mixer => mixer.update(delta));
     controls.update();
     renderer.render(scene, camera);
   };
-  render();
+  function setRenderLoop(active) {
+    renderLoopActive = !!active;
+    if (renderLoopActive && !frameHandle) {
+      clock.start();
+      frameHandle = requestAnimationFrame(render);
+    } else if (!renderLoopActive) {
+      if (frameHandle) cancelAnimationFrame(frameHandle);
+      frameHandle = 0;
+      renderOnce();
+    }
+  }
+
+  // The model is a static thumbnail until explicitly activated. This is a
+  // major battery/GPU saving on mobile and also avoids hidden WebGL work in
+  // the project media list.
+  resizeViewer();
+  renderOnce();
 
   const cleanup = () => {
     if (disposed) return;
     disposed = true;
+    renderLoopActive = false;
     cancelAnimationFrame(frameHandle);
     resizeObserver?.disconnect();
     controls.dispose();

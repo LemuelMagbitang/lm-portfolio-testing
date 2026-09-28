@@ -498,6 +498,9 @@ body {
   transition: opacity 0.3s ease;
 }
 
+.project-card:focus { outline: none; }
+.project-card:focus-visible { outline: 2px solid rgba(255,255,255,.78); outline-offset: -2px; }
+
 .card-thumbnail {
   width: 100%;
   height: 100%;
@@ -1067,6 +1070,26 @@ textarea { resize: vertical; }
 
 .lightbox-controls.active {
   display: block;
+}
+
+button.lightbox-close,
+button.lightbox-nav,
+button.hamburger {
+  appearance:none;
+  -webkit-appearance:none;
+  font:inherit;
+}
+
+button.lightbox-close,
+button.lightbox-nav {
+  margin:0;
+  padding:0;
+}
+
+button.hamburger {
+  border:0;
+  background:transparent;
+  padding:0;
 }
 
 .lightbox-close {
@@ -2475,6 +2498,18 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 }
 
 @media (prefers-reduced-motion:reduce){
+  .page-transition,
+  .hero-quote,
+  .hero-quote-text,
+  .hero-quote-author,
+  .lightbox-close,
+  .lightbox-nav,
+  .project-card,
   .model-viewer-back,
-  .model-viewer-activate-content{transition:none;}
+  .model-viewer-activate-content{transition:none !important;}
+  .hero-banner .slide{transition:none;}
+  .hero-banner.transition-kenburns .slide img,
+  .hero-banner.transition-kenburns .slide video,
+  .hero-banner.transition-kenburns .slide lottie-player{animation:none;}
+  .reviews-row{animation:none;}
 }

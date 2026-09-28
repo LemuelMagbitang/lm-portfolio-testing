@@ -1,5 +1,13 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
+  /* Shared runtime foundation. Heavy feature code stays in its own modules;
+     this import supplies site-root/path resolution, conditional library
+     loading, and reduced-motion state without changing the existing CMS data
+     format. */
+  const runtimeScript = Array.from(document.scripts || []).find(el => /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(el.src || el.getAttribute('src') || ''));
+  const runtimeUrl = runtimeScript ? new URL('site-runtime.js', runtimeScript.src).href : new URL('js/site-runtime.js', document.baseURI).href;
+  const { getSiteRootUrl, siteAssetUrl, ensureLottiePlayer, ensureMediaBackgroundHelper, prefersReducedMotion } = await import(runtimeUrl);
+
   /* =========================================
      0. YOUR SWITCHES — edit these two, nothing else
      ========================================= */
@@ -113,94 +121,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!url) return;
     const label = socialLabels[key];
     document.querySelectorAll('a[aria-label="' + label + '"]').forEach(a => { a.href = url; });
-  }
-
-  // All CMS/media paths are stored relative to the repository root, not
-  // relative to /data/, /about/, or /admin/. Resolve the root from the
-  // loaded script URL so project-site paths like /lm-portfolio-testing/
-  // remain correct on every page.
-  const SCRIPT_URL = (() => {
-    try {
-      // This file runs inside DOMContentLoaded, so document.currentScript is
-      // already null by the time this code executes. Find the actual script
-      // element instead, then resolve the repository/site root from /js/.
-      const scripts = Array.from(document.scripts || []);
-      const script = scripts.find(el => {
-        const raw = el.getAttribute('src') || '';
-        const abs = el.src || '';
-        return /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(raw) ||
-               /\/js\/script\.js(?:[?#].*)?$/i.test(abs);
-      });
-      const src = script?.src || '';
-      return src ? new URL(src, document.baseURI || window.location.href).href : '';
-    } catch (_) { return ''; }
-  })();
-
-  function getSiteRootUrl() {
-    try {
-      // Normal case: script is /<site>/js/script.js, so one level up is the
-      // GitHub Pages repository root. This works identically on / and /about/.
-      if (SCRIPT_URL) return new URL('../', SCRIPT_URL).href;
-
-      // Defensive fallback when the script tag cannot be found. Prefer an
-      // explicitly configured absolute URL, otherwise strip known page/data
-      // directories from the current page URL.
-      const configured = window.SITE_ROOT_URL;
-      if (configured) return new URL(configured, document.baseURI || window.location.href).href.replace(/\/$/, '') + '/';
-
-      const pageUrl = new URL(document.baseURI || window.location.href);
-      const path = pageUrl.pathname
-        .replace(/\/about(?:\/.*)?$/i, '/')
-        .replace(/\/admin(?:\/.*)?$/i, '/')
-        .replace(/\/success(?:\/.*)?$/i, '/');
-      return new URL(pageUrl.origin + path).href;
-    } catch (_) {
-      return new URL('./', document.baseURI || window.location.href).href;
-    }
-  }
-
-  function siteAssetUrl(src) {
-    if (!src) return '';
-    const value = String(src).trim();
-    if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(value) || /^(?:data|blob):/i.test(value)) return value;
-    try { return new URL(value.replace(/^\/+/, ''), getSiteRootUrl()).href; }
-    catch (_) { return value; }
-  }
-
-  // Lottie is loaded on demand so the homepage cannot render a custom
-  // <lottie-player> element before the custom element is registered.
-  // The About page already loads it in HTML; this also covers the homepage
-  // and remains safe when the CDN is temporarily unavailable.
-  let lottiePlayerReadyPromise = null;
-  const LOTTIE_PLAYER_URLS = [
-    'https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js',
-    'https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js'
-  ];
-
-  function ensureLottiePlayer(){
-    if (window.customElements?.get('lottie-player')) return Promise.resolve(true);
-    if (lottiePlayerReadyPromise) return lottiePlayerReadyPromise;
-    lottiePlayerReadyPromise = (async () => {
-      for (const src of LOTTIE_PLAYER_URLS) {
-        const ok = await new Promise(resolve => {
-          const existing = document.querySelector(`script[data-lottie-player-src="${src}"]`);
-          if (existing) {
-            if (window.customElements?.get('lottie-player')) return resolve(true);
-            existing.addEventListener('load', () => resolve(!!window.customElements?.get('lottie-player')), {once:true});
-            existing.addEventListener('error', () => resolve(false), {once:true});
-            return;
-          }
-          const el = document.createElement('script');
-          el.src = src; el.async = true; el.dataset.lottiePlayerSrc = src;
-          el.onload = () => resolve(!!window.customElements?.get('lottie-player'));
-          el.onerror = () => resolve(false);
-          document.head.appendChild(el);
-        });
-        if (ok) return true;
-      }
-      return false;
-    })();
-    return lottiePlayerReadyPromise;
   }
 
   function applyOgMeta(remote){
@@ -418,8 +338,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static cards in place.
     }
   }
-  await ensureLottiePlayer();
   await loadProjectsFromCMS();
+  if (document.querySelector('.project-media-list .media-item[data-lottie], .project-thumb-media[lottie-player]')) await ensureLottiePlayer();
 
 
   /* =========================================
@@ -1016,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       media.setAttribute('aria-label',(altText||'Project artwork')+' — interactive 3D view available');
       media.innerHTML='<div class="project-thumb-model-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>INTERACTIVE 3D</span><small>Open artwork to explore</small></div>';
     } else {
-      media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
+      media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork'; media.loading='lazy'; media.decoding='async';
     }
     media.classList.add('project-thumb-media');
     if (source.type === 'model') {
@@ -1080,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // declarations are hoisted. Loading it before thumbnail adjustments is
   // important: CMS Lottie / 3D thumbnails need their custom background
   // rendered at the same time as the media, not only when the hero loads.
-  await ensureMediaBackgroundHelper();
+  if (document.querySelector('[data-background]')) await ensureMediaBackgroundHelper();
   fillMissingThumbnails();
 
   // Lets you manually fine-tune where a thumbnail crops/zooms — for
@@ -1128,6 +1048,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     hamburger.addEventListener('click', () => {
       const isOpen = navLinks.classList.toggle('active');
       document.body.classList.toggle('menu-open', isOpen);
+      hamburger.setAttribute('aria-expanded', String(isOpen));
     });
 
     // Tapping anywhere outside the open menu (the dimmed backdrop, a
@@ -1137,6 +1058,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (navLinks.contains(e.target) || hamburger.contains(e.target)) return;
       navLinks.classList.remove('active');
       document.body.classList.remove('menu-open');
+      hamburger.setAttribute('aria-expanded', 'false');
     });
 
     // Clicking any link inside the menu also closes it — matters most
@@ -1146,6 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       link.addEventListener('click', () => {
         navLinks.classList.remove('active');
         document.body.classList.remove('menu-open');
+        hamburger.setAttribute('aria-expanded', 'false');
       });
     });
   }
@@ -1451,6 +1374,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!sources.length) return;
 
+    if (sources.some(source => source.type === 'lottie')) await ensureLottiePlayer();
+    if (sources.some(source => source.background)) await ensureMediaBackgroundHelper();
+
     heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
     heroContainer.classList.add('transition-' + HERO_TRANSITION);
 
@@ -1504,6 +1430,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (slides.length <= 1) return;
 
     let currentSlide = 0;
+    if (prefersReducedMotion()) return;
     setInterval(() => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
@@ -1511,21 +1438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, HERO_CROSSFADE_MS); // configured in Hero Loop Animation
   }
 
-  async function ensureMediaBackgroundHelper(){
-    if(window.LMMediaBackground) return true;
-    return await new Promise(resolve=>{
-      const src=new URL('js/media-background.js', getSiteRootUrl()).href;
-      const s=document.createElement('script');
-      s.src=src;
-      s.onload=()=>resolve(!!window.LMMediaBackground);
-      s.onerror=()=>{ console.warn('Media backgrounds: helper could not load',src); resolve(false); };
-      document.head.appendChild(s);
-    });
-  }
-
   await settingsReady;
-  await ensureMediaBackgroundHelper();
-  await ensureLottiePlayer();
   initHeroBanner();
 
 
@@ -1833,6 +1746,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const img = document.createElement('img');
     img.src = imgUrl;
     img.draggable = false;
+    img.loading = 'lazy';
+    img.decoding = 'async';
 
     if (PROTECTION_ENABLED) {
       img.classList.add('no-save');
@@ -1924,6 +1839,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           const iframe = document.createElement('iframe');
           iframe.src = embedUrl;
           iframe.frameBorder = '0';
+          iframe.loading = 'lazy';
+          iframe.title = caption || 'Project video';
           iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
           iframe.allowFullscreen = true;
 
@@ -2118,9 +2035,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Attach click events to all cards
+  // Project cards are keyboard-operable as well as pointer-operable.
   allCards.forEach(card => {
-    card.addEventListener('click', (event) => {
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    const titleText = card.querySelector('.glass-info h3')?.textContent?.trim();
+    card.setAttribute('aria-label', titleText ? `Open project: ${titleText}` : 'Open project');
+
+    const openFromCard = (event) => {
       activeLightboxCards = allCards.filter(c =>
         currentFilter === 'all' || c.classList.contains(currentFilter)
       );
@@ -2137,6 +2059,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       openLightbox(index, initialMediaIndex);
+    };
+
+    card.addEventListener('click', openFromCard);
+    card.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      openFromCard(event);
     });
   });
 
