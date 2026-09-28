@@ -646,9 +646,9 @@
         "caption": "",
         "orientation": "",
         "background": {
-          "type": "solid",
-          "color": "#ffffff",
-          "color2": "#2a2a2a",
+          "type": "gradient",
+          "color": "#fdbff5",
+          "color2": "#ff4000",
           "angle": 135,
           "opacity": 1,
           "blur": 0,
@@ -670,12 +670,12 @@
             "color": "#ffffff"
           },
           "shader": {
-            "preset": "aurora",
+            "preset": "mesh",
             "speed": 0.45,
             "intensity": 0.65,
-            "color1": "#5b5cff",
-            "color2": "#ff4fd8",
-            "color3": "#22d3ee"
+            "color1": "#e60050",
+            "color2": "#ffd84d",
+            "color3": "#202eee"
           },
           "overlay": {
             "color": "#000000",
