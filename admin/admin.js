@@ -1334,7 +1334,7 @@ RENDERERS.projects = async function(data){
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1 },
-    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||''})):[])
+    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:['image','video','youtube','lottie','model'].includes(m.type)?m.type:'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||''})):[])
   })));
   let filterDefs = [];
   try{ const f = await loadSection('filters'); const raw=f.json||[]; filterDefs=Array.isArray(raw)?raw:(raw.filters||[]); }catch(e){}
@@ -1603,10 +1603,11 @@ RENDERERS.projects = async function(data){
         row.className = 'card-item';
         row.style.background = '#191919';
         row.dataset.uid = m._uid;
+        const mediaTypeLabel = {image:'Image',video:'Video',youtube:'YouTube link',lottie:'Lottie',model:'3D model'}[m.type] || m.type;
         row.innerHTML = `
           <div class="card-item-head collapsible-head" data-toggle-open>
             <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-            <span class="item-title">${m.caption ? esc(m.caption) : '(' + m.type + ')'}</span>
+            <span class="item-title">${m.caption ? esc(m.caption) : '(' + mediaTypeLabel + ')'}</span>
             <div class="card-item-actions">
               <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
               <button class="icon-btn" data-mact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
@@ -1620,11 +1621,12 @@ RENDERERS.projects = async function(data){
                 <select data-mf="type">
                   <option value="image" ${m.type==='image'?'selected':''}>Image</option>
                   <option value="video" ${m.type==='video'?'selected':''}>Video</option>
-                  <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube</option>
+                  <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube link</option>
                   <option value="lottie" ${m.type==='lottie'?'selected':''}>Lottie (JSON animation)</option>
+                  <option value="model" ${m.type==='model'?'selected':''}>3D model (OBJ / glTF / GLB / FBX)</option>
                 </select>
               </div>
-              <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
+              <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg / .mp4 / .json / .glb"></div>
             </div>
             <div class="row">
               <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
@@ -1670,17 +1672,17 @@ RENDERERS.projects = async function(data){
         refreshPreview();
         attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
           kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
-          title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : 'Choose media'
+          title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : m.type === 'video' ? 'Choose a video file' : m.type === 'youtube' ? 'Choose a YouTube link' : 'Choose an image file'
         }));
 
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
           m[inp.dataset.mf]=inp.value;
-          if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
+          if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + ({image:'Image',video:'Video',youtube:'YouTube link',lottie:'Lottie',model:'3D model'}[m.type] || m.type) + ')';
           if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') refreshPreview();
           flagUnsaved();
         }));
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
-          if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')'; refreshPreview(); }
+          if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + ({image:'Image',video:'Video',youtube:'YouTube link',lottie:'Lottie',model:'3D model'}[m.type] || m.type) + ')'; refreshPreview(); }
         }));
         row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
           const idx = p.media.findIndex(x=>x._uid===m._uid);
