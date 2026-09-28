@@ -904,17 +904,21 @@ body {
   min-height: 38px;
 }
 
-/* True monochrome treatment: remove the source brand colour first, then
-   force the remaining artwork to the site's actual white (#fff). This is
-   deliberately grayscale + brightness + invert rather than a tint, so a
-   blue/red/green logo and a black SVG resolve to the same white mark. */
+/* Monochrome without flattening the artwork. Avoid brightness(0) + invert(1):
+   that turns every opaque pixel into the same white value, so a logo such as
+   After Effects becomes a solid white rounded square and its "Ae" detail
+   disappears. Grayscale keeps the logo's internal luminance/contrast, while
+   contrast + brightness lifts the lighter artwork toward the site's white.
+   screen blending keeps dark source backgrounds from visibly stamping a
+   dark rectangle onto the dark About page. */
 .skill-list.minimal-list li .skill-logo {
   height: 28px;
   width: auto;
   max-width: 128px;
   object-fit: contain;
   display: block;
-  filter: grayscale(1) brightness(0) invert(1);
+  filter: grayscale(1) contrast(1.35) brightness(1.22);
+  mix-blend-mode: screen;
   opacity: 1;
 }
 
