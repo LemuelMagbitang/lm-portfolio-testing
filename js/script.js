@@ -115,25 +115,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('a[aria-label="' + label + '"]').forEach(a => { a.href = url; });
   }
 
-  // GitHub Pages project sites are served below a repository path (for
-  // example /lm-portfolio-testing/). new URL('/', location.href) jumps to
-  // the domain root, which is why repo-relative Lottie/hero assets could
-  // work on the deployed root site but 404 on the testing site. Resolve
-  // the site root from one of the CMS data URLs instead.
-  function getSiteRootUrl() {
-    const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
+  // All CMS/media paths are stored relative to the repository root, not
+  // relative to /data/, /about/, or /admin/. Resolve the root from the
+  // loaded script URL so project-site paths like /lm-portfolio-testing/
+  // remain correct on every page.
+  const SCRIPT_URL = (() => {
     try {
-      return new URL('./', new URL(marker, window.location.href)).href;
-    } catch (e) {
+      const current = document.currentScript;
+      return current?.src ? new URL(current.src, window.location.href).href : '';
+    } catch (_) { return ''; }
+  })();
+
+  function getSiteRootUrl() {
+    try {
+      if (SCRIPT_URL) return new URL('../', SCRIPT_URL).href;
+      const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
+      const markerUrl = new URL(marker, window.location.href);
+      const path = markerUrl.pathname.replace(/\/data\/.*$/, '/');
+      return new URL(markerUrl.origin + path).href;
+    } catch (_) {
       return new URL('./', window.location.href).href;
     }
   }
 
   function siteAssetUrl(src) {
     if (!src) return '';
-    if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(src) || src.startsWith('data:') || src.startsWith('blob:')) return src;
-    try { return new URL(String(src).replace(/^\/+/, ''), getSiteRootUrl()).href; }
-    catch (e) { return src; }
+    const value = String(src).trim();
+    if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(value) || /^(?:data|blob):/i.test(value)) return value;
+    try { return new URL(value.replace(/^\/+/, ''), getSiteRootUrl()).href; }
+    catch (_) { return value; }
+  }
+
+  // Lottie is loaded on demand so the homepage cannot render a custom
+  // <lottie-player> element before the custom element is registered.
+  // The About page already loads it in HTML; this also covers the homepage
+  // and remains safe when the CDN is temporarily unavailable.
+  let lottiePlayerReadyPromise = null;
+  const LOTTIE_PLAYER_URLS = [
+    'https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js',
+    'https://cdn.jsdelivr.net/npm/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js'
+  ];
+
+  function ensureLottiePlayer(){
+    if (window.customElements?.get('lottie-player')) return Promise.resolve(true);
+    if (lottiePlayerReadyPromise) return lottiePlayerReadyPromise;
+    lottiePlayerReadyPromise = (async () => {
+      for (const src of LOTTIE_PLAYER_URLS) {
+        const ok = await new Promise(resolve => {
+          const existing = document.querySelector(`script[data-lottie-player-src="${src}"]`);
+          if (existing) {
+            if (window.customElements?.get('lottie-player')) return resolve(true);
+            existing.addEventListener('load', () => resolve(!!window.customElements?.get('lottie-player')), {once:true});
+            existing.addEventListener('error', () => resolve(false), {once:true});
+            return;
+          }
+          const el = document.createElement('script');
+          el.src = src; el.async = true; el.dataset.lottiePlayerSrc = src;
+          el.onload = () => resolve(!!window.customElements?.get('lottie-player'));
+          el.onerror = () => resolve(false);
+          document.head.appendChild(el);
+        });
+        if (ok) return true;
+      }
+      return false;
+    })();
+    return lottiePlayerReadyPromise;
   }
 
   function applyOgMeta(remote){
@@ -205,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const settingsReady = window.SETTINGS_URL
-    ? fetch(window.SETTINGS_URL).then(r => r.json()).then(applySettings).catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err))
+    ? fetch(siteAssetUrl(window.SETTINGS_URL)).then(r => r.json()).then(applySettings).catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err))
     : Promise.resolve();
 
 
@@ -311,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!grid) return;
 
     try {
-      const res = await fetch(window.PROJECTS_URL);
+      const res = await fetch(siteAssetUrl(window.PROJECTS_URL));
       if (!res.ok) return;
       const raw = await res.json();
       const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
@@ -326,6 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static cards in place.
     }
   }
+  await ensureLottiePlayer();
   await loadProjectsFromCMS();
 
 
@@ -369,7 +416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!track) return;
 
     try {
-      const res = await fetch(window.REVIEWS_URL);
+      const res = await fetch(siteAssetUrl(window.REVIEWS_URL));
       if (!res.ok) return;
       const list = await res.json();
       if (!Array.isArray(list) || !list.length) return;
@@ -465,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (older data) or {name, icon}; whether they show as a logo at
     // all is the one global SHOW_SOFTWARE_LOGOS switch, not a
     // per-skill choice — see the switches at the top of this file.
-    const siteRoot = new URL('../', window.location.href);
+    const siteRoot = getSiteRootUrl();
     list.forEach(s => {
       const li = document.createElement('li');
       const name = typeof s === 'string' ? s : (s && s.name) || '';
@@ -545,7 +592,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!headlineEl) return; // not the about page — nothing to do
 
     try {
-      const res = await fetch(window.ABOUT_URL);
+      const res = await fetch(siteAssetUrl(window.ABOUT_URL));
       if (!res.ok) return;
       const a = await res.json();
       if (!a || typeof a !== 'object') return;
@@ -575,7 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 404. Resolving it against the site root instead fixes that;
         // an already-absolute URL (https://...) passes through new URL()
         // completely unchanged, so pasting a full image URL still works.
-        const siteRoot = new URL('../', window.location.href);
+        const siteRoot = getSiteRootUrl();
         photoEl.src = new URL(photo.src, siteRoot).href;
         // Same three adjustments a project thumbnail supports (see
         // applyThumbnailAdjustments below), applied directly here
@@ -640,7 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!window.FILTERS_URL) return;
 
     try {
-      const res = await fetch(window.FILTERS_URL);
+      const res = await fetch(siteAssetUrl(window.FILTERS_URL));
       if (!res.ok) return;
       const raw = await res.json();
       const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.filters) ? raw.filters : []);
@@ -884,7 +931,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // If the CMS points at a JSON file, load it and re-pick from the
     // fresh list once it lands.
     if (window.HERO_MESSAGES_URL) {
-      fetch(window.HERO_MESSAGES_URL)
+      fetch(siteAssetUrl(window.HERO_MESSAGES_URL))
         .then(r => r.json())
         .then(list => {
           if (!Array.isArray(list) || !list.length) return;
@@ -914,7 +961,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (source.type === 'video') {
       media=document.createElement('video'); media.src=siteAssetUrl(source.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
     } else if (source.type === 'lottie') {
-      media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent'); media.setAttribute('preserveAspectRatio','xMidYMid slice'); media.preserveAspectRatio='xMidYMid slice';
+      media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent'); media.setAttribute('preserveAspectRatio','xMidYMid slice');
     } else {
       media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
     }
@@ -1272,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // is preferred over pasted JSON because it stays version-controlled,
     // cacheable, and easy to replace from the Media Library.
     try {
-      const heroLoopUrl = new URL(window.HERO_LOOP_URL || 'data/hero-loop.json', siteRootUrl).href;
+      const heroLoopUrl = siteAssetUrl(window.HERO_LOOP_URL || 'data/hero-loop.json');
       const res = await fetch(heroLoopUrl);
       const list = await res.json();
       manualSources = (Array.isArray(list) ? list : [])
@@ -1288,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       latestSources = collectHeroSources(document, null);
       if (latestSources.length === 0) {
-        const projectsUrl = new URL(window.PROJECTS_URL || 'data/projects.json', siteRootUrl).href;
+        const projectsUrl = siteAssetUrl(window.PROJECTS_URL || 'data/projects.json');
         const response = await fetch(projectsUrl);
         const list = await response.json();
         latestSources = (Array.isArray(list) ? list : [])
@@ -1392,7 +1439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function ensureMediaBackgroundHelper(){
     if(window.LMMediaBackground) return true;
     return await new Promise(resolve=>{
-      const src=siteAssetUrl('js/media-background.js');
+      const src=new URL('js/media-background.js', getSiteRootUrl()).href;
       const s=document.createElement('script');
       s.src=src;
       s.onload=()=>resolve(!!window.LMMediaBackground);
@@ -1403,6 +1450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await settingsReady;
   await ensureMediaBackgroundHelper();
+  await ensureLottiePlayer();
   initHeroBanner();
 
 
@@ -1813,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (videoUrl) {
           const video = document.createElement('video');
-          video.src = videoUrl;
+          video.src = siteAssetUrl(videoUrl);
           video.controls = true;
           video.playsInline = true;
           video.controlsList = 'nodownload';
@@ -1867,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
           modelWrap.setAttribute('aria-label', 'Interactive 3D model');
           modalMediaContainer.appendChild(buildMediaEntry(modelWrap, caption));
-          import('./model-viewer.js').then(({ mountModelViewer }) => {
+          import(new URL('model-viewer.js', new URL('js/', getSiteRootUrl())).href).then(({ mountModelViewer }) => {
             mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
               autoRotate: false,
               background: itemBackground || null,

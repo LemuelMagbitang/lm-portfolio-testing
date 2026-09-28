@@ -2123,3 +2123,20 @@ body.center-page {
 @media (prefers-reduced-motion: reduce){
   .lm-media-background-shader{animation:none;}
 }
+
+/* Lightweight card fallback when a project uses a 3D model as its first
+   media item but does not provide a raster thumbnail. The full interactive
+   viewer remains reserved for the opened artwork/lightbox, so the grid does
+   not create one WebGL renderer per card. */
+.project-thumb-model{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.09),rgba(255,255,255,.02) 58%,rgba(0,0,0,.12));
+  color:rgba(255,255,255,.72);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+}

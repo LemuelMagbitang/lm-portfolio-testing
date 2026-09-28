@@ -39,14 +39,31 @@ async function loadObj(url){
     import('three/addons/loaders/OBJLoader.js'),
     import('three/addons/loaders/MTLLoader.js')
   ]);
+
+  const loadPlainObj = () => new Promise(resolve => {
+    new OBJLoader().load(url, resolve, undefined, () => resolve(null));
+  });
+
+  // Most simple OBJ exports work without an MTL file. Try the geometry first
+  // so an absent optional sidecar does not create a noisy 404 before the real
+  // model even gets a chance to render. If the OBJ itself cannot be decoded,
+  // make one final attempt with a conventional same-name .mtl sidecar.
+  const plain = await loadPlainObj();
+  if (plain) return plain;
+
   return new Promise(resolve => {
     const obj = new OBJLoader();
-    const finishWithoutMtl = () => obj.load(url, resolve, undefined, () => resolve(null));
-    const mtlUrl = findMtlUrl(url);
+    const clean = url.split('?')[0].split('#')[0];
+    const slash = clean.lastIndexOf('/');
+    const file = clean.slice(slash + 1);
+    const base = file.replace(/\.[^.]+$/, '');
+    const dir = clean.slice(0, slash + 1);
+    const mtlUrl = `${dir}${base}.mtl`;
     new MTLLoader().load(mtlUrl, materials => {
-      materials.preload(); obj.setMaterials(materials);
+      materials.preload();
+      obj.setMaterials(materials);
       obj.load(url, resolve, undefined, () => resolve(null));
-    }, undefined, finishWithoutMtl);
+    }, undefined, () => resolve(null));
   });
 }
 
