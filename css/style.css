@@ -886,41 +886,42 @@ body {
 
 .skill-list.minimal-list { list-style: none; display: flex; flex-wrap: wrap; gap: 12px; }
 .skill-list.minimal-list li { background: rgba(255, 255, 255, 0.05); padding: 8px 18px; border-radius: 30px; font-size: 0.9rem; color: #ddd; letter-spacing: 0.5px; }
-
-/* Software Skills logo mode is deliberately NOT a pill layout. The logo
-   itself is the visual object, with the same white/neutral language as
-   the About page instead of a row of little colored brand chips. */
+/* Software logo mode is intentionally NOT a pill. The text-chip treatment
+   above is for normal skills; a logo should read as a standalone mark with
+   the same visual language as the white marks used elsewhere on the About
+   page. */
 .skill-list.minimal-list.logo-mode {
   align-items: center;
-  column-gap: 22px;
-  row-gap: 18px;
+  gap: 22px 24px;
 }
-.skill-list.minimal-list.logo-mode li,
-.skill-list.minimal-list.logo-mode li.has-logo {
+.skill-list.minimal-list li.has-logo {
   background: transparent;
   padding: 0;
   border-radius: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 38px;
-  color: #fff;
-  letter-spacing: 0;
 }
 
-/* Every source — hand-picked asset, Simple Icons, or Clearbit — passes
-   through the same filter pipeline. grayscale() removes hue, then
-   brightness(0) creates a neutral black source and invert(1) maps that
-   neutral value to the site's white. This makes the result deterministic
-   instead of merely depending on whether a provider happens to be
-   monochrome already. */
-.skill-list.minimal-list.logo-mode li .skill-logo {
-  height: 34px;
+/* True monochrome treatment: remove the source brand colour first, then
+   force the remaining artwork to the site's actual white (#fff). This is
+   deliberately grayscale + brightness + invert rather than a tint, so a
+   blue/red/green logo and a black SVG resolve to the same white mark. */
+.skill-list.minimal-list li .skill-logo {
+  height: 28px;
   width: auto;
-  max-width: 140px;
+  max-width: 128px;
   object-fit: contain;
   display: block;
   filter: grayscale(1) brightness(0) invert(1);
-  opacity: 0.92;
+  opacity: 1;
+}
+
+/* A wider mark (for example a wordmark) can grow horizontally without
+   making the logo row vertically inconsistent. */
+.skill-list.minimal-list li.has-logo .skill-logo {
+  max-height: 30px;
 }
 
 .clean-timeline {
@@ -1265,11 +1266,9 @@ body.center-page {
   .resume-main { gap: 40px; }
   
   .skill-list.minimal-list li { padding: 6px 14px; font-size: 0.8rem; }
-  .skill-list.minimal-list li.has-logo { padding: 5px 12px; }
-  .skill-list.minimal-list.logo-mode { column-gap: 16px; row-gap: 14px; }
-  .skill-list.minimal-list.logo-mode li,
-  .skill-list.minimal-list.logo-mode li.has-logo { padding: 0; min-height: 32px; }
-  .skill-list.minimal-list.logo-mode li .skill-logo { height: 28px; max-width: 112px; }
+  .skill-list.minimal-list.logo-mode { gap: 16px 18px; }
+  .skill-list.minimal-list li.has-logo { padding: 0; min-height: 32px; }
+  .skill-list.minimal-list li .skill-logo { height: 24px; max-width: 110px; }
   
   .lightbox-nav { width: 36px; height: 36px; font-size: 0.8rem; }
   .lightbox-prev { left: 8px; }

@@ -423,16 +423,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function fillSkillList(id, list) {
     const ul = document.getElementById(id);
-    if (!ul) return;
-
-    // Logo mode is a layout mode, not just an image swap: when the
-    // Software Skills switch is on, the whole list loses the text-pill
-    // treatment so logos (and any initials fallback) stand on their own.
+    if (!ul || !Array.isArray(list) || !list.length) return;
     ul.classList.toggle('logo-mode', id === 'softwareSkillsList' && SHOW_SOFTWARE_LOGOS);
-    if (!Array.isArray(list) || !list.length) {
-      ul.innerHTML = '';
-      return;
-    }
     ul.innerHTML = '';
     // Multimedia skills are always plain strings, and never show a
     // logo — a category like "3D Modeling" has no brand mark to show
@@ -601,11 +593,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch(window.FILTERS_URL);
       if (!res.ok) return;
       const raw = await res.json();
-      // Filters & Badges are stored together as an object by the CMS:
-      // { filters:[...], badges:[...] }. Older deployments stored the
-      // filters as the array itself. Normalize both shapes here so a
-      // data/filters.json schema change never reduces the homepage to
-      // the permanent ALL button only.
+
+      // The CMS writes the current format as { filters: [...], badges: [...] },
+      // while the original public site used a plain filter array. Accept both
+      // so the live/test repositories can share the same renderer without
+      // duplicating or hardcoding the categories in index.html.
       const list = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.filters) ? raw.filters : []);
       if (!list.length) return;
 
