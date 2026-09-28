@@ -11,7 +11,7 @@
   "softwareSkills": [
     {
       "name": "Blender",
-      "icon": ""
+      "icon": "assets/projects/site/logos/blender_icon_512x512.png"
     },
     {
       "name": "Krita",
@@ -19,23 +19,23 @@
     },
     {
       "name": "After Effects",
-      "icon": ""
+      "icon": "assets/projects/site/logos/adobe-after-effects-cc.png"
     },
     {
       "name": "Illustrator",
-      "icon": ""
+      "icon": "assets/projects/site/logos/adobe-illustrator-cc.png"
     },
     {
       "name": "Premier Pro",
-      "icon": ""
+      "icon": "assets/projects/site/logos/adobe-premiew-pro-cc.png"
     },
     {
       "name": "Photoshop",
-      "icon": ""
+      "icon": "assets/projects/site/logos/adobe-photoshop-cc.png"
     },
     {
       "name": "Figma",
-      "icon": ""
+      "icon": "assets/projects/site/logos/figma.png"
     }
   ],
   "multimediaSkills": [
@@ -50,58 +50,58 @@
     {
       "role": "Design Co-Founder & Chief Creative Officer (CCO)",
       "company": "Haeru, Inc.",
+      "startDate": "",
+      "endDate": "",
       "bullets": [
         "Built the complete Figma design system defining color palettes, visual components, and UI architecture while collaborating with the Lead Engineer to map out end to end UX flows.",
         "Created the brand's visual identity from scratch, including logo design, mascots, and motion animations built in After Effects.",
         "Designed and built the official web platform (haeru.app) with original motion graphics and UI designs.",
         "Produced and edited video marketing campaigns across TikTok, Instagram, X and other platforms to drive brand awareness and community engagement."
-      ],
-      "startDate": "",
-      "endDate": ""
+      ]
     },
     {
       "role": "Multimedia Artist & Animator",
       "company": "Freelance",
+      "startDate": "",
+      "endDate": "",
       "bullets": [
         "Produced high-quality packaging and visual designs for multiple clients to increase product visual appeal and market recognition.",
         "Delivered advanced 2D and 3D animations, motion graphics, and visual content for advertising and storytelling projects.",
         "Developed and executed compelling digital campaigns (social media graphics, banners) that consistently drove user engagement."
-      ],
-      "startDate": "",
-      "endDate": ""
+      ]
     },
     {
       "role": "Production Assistant (OJT Intern)",
       "company": "iME Entertainment",
+      "startDate": "",
+      "endDate": "",
       "bullets": [
         "Managed live technical booth operations for K-pop group WHIB's Manila Mall Tour, synchronizing lighting, video, and audio assets.",
         "Edited event audio files and led technical runs to ensure seamless live performances.",
         "Organized event logistics, including itinerary management and stage safety inspections.",
         "Produced advertising and marketing materials to support the tour's promotional campaigns."
-      ],
-      "startDate": "",
-      "endDate": ""
+      ]
     },
     {
       "role": "Graphics and Content Editor (OJT Intern)",
       "company": "DYLN Corporation",
+      "startDate": "",
+      "endDate": "",
       "bullets": [
         "Produced visual assets and graphic designs for DYLN Corporation's soap brand advertising campaigns.",
         "Created daily thematic video content to drive engagement on corporate platforms.",
         "Collaborated directly with affiliated artists to direct, shoot, and edit engaging TikTok content.",
         "Sourced and procured technical camera equipment to support professional production shoots for artists and affiliates."
-      ],
-      "startDate": "",
-      "endDate": ""
+      ]
     }
   ],
   "education": [
     {
-      "title": "Bachelor of Fine Arts Major in Visual Communication",
-      "detail": "Graduated Bulacan State University mid-2025",
-      "school": "",
+      "school": "Bachelor of Fine Arts Major in Visual Communication",
       "degree": "",
-      "graduationDate": ""
+      "graduationDate": "",
+      "title": "Bachelor of Fine Arts Major in Visual Communication",
+      "detail": "Graduated Bulacan State University mid-2025"
     }
   ],
   "awards": [
@@ -111,7 +111,7 @@
     },
     {
       "title": "7th Place - Graphic Design",
-      "detail": "University of the Philippines Los Ba\u00f1os (UPLB) Envision Workshop."
+      "detail": "University of the Philippines Los Baños (UPLB) Envision Workshop."
     },
     {
       "title": "Certified Attendee",
