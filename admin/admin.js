@@ -475,9 +475,13 @@ function goToSection(name){
   const label = SECTIONS[name]?.label || (name === 'guide' ? 'Setup Guide' : name === 'media' ? 'Media Library' : name);
   document.getElementById('topbarSection').textContent = label;
   const saveBtn = document.getElementById('btnSaveTop');
+  const statusEl = document.getElementById('saveStatus');
   const savable = !!SECTIONS[name];
-  saveBtn.style.display = savable ? '' : 'none';
-  document.getElementById('saveStatus').style.display = savable ? '' : 'none';
+  // Keep the navbar/save bar permanently visible while the CMS is open.
+  // Non-savable views (Media Library / Guide) simply disable the save action.
+  saveBtn.style.display = '';
+  saveBtn.disabled = !savable;
+  statusEl.style.display = '';
   currentSave = null;
 
   render();
@@ -550,6 +554,8 @@ let currentSave = null; // { onCollect, name, filePath }
 
 function wireSave(onCollect, name, filePath){
   currentSave = { onCollect, name, filePath };
+  const saveBtn = document.getElementById('btnSaveTop');
+  if (saveBtn) saveBtn.disabled = false;
   const status = document.getElementById('saveStatus');
   const statusText = document.getElementById('saveStatusText');
   if (dirty[name]) {
@@ -801,13 +807,13 @@ RENDERERS.hero = function(data){
 RENDERERS.heroLoop=async function(data){
   let settingsResult; try{ settingsResult=await loadSection('settings'); }catch(e){ settingsResult={json:{}}; }
   const timing=(settingsResult.json||{}).heroTiming||{};
-  let mode=timing.loopMode==='manual'?'manual':'latest';
+  let mode=['latest','manual','mixed'].includes(timing.loopMode)?timing.loopMode:'latest';
   let transition=['kenburns','fade','none'].includes(timing.transitionStyle)?timing.transitionStyle:'kenburns';
   let interval=Number(timing.crossfadeMs)||3500;
   let items=withUids((Array.isArray(data.json)?data.json:[]).map(x=>({type:x.type||'image',src:x.src||'',alt:x.alt||'',focus:x.focus||'50% 50%',zoom:x.zoom||1,rotate:x.rotate||0})));
   let openUid=items[0]?items[0]._uid:null;
   function paint(){
-    content.innerHTML=sectionHead('Hero Loop Animation','Choose automatic latest-project looping or a manual list. Manual entries support image, video, Lottie JSON, zoom, focus and rotation.')+`<div class="panel"><div class="row"><div class="field"><label class="field-label">Loop source</label><select id="hl_mode"><option value="latest" ${mode==='latest'?'selected':''}>Latest projects (up to 5)</option><option value="manual" ${mode==='manual'?'selected':''}>Only what I add</option></select></div><div class="field"><label class="field-label">Transition</label><select id="hl_transition"><option value="kenburns" ${transition==='kenburns'?'selected':''}>Zoom + fade</option><option value="fade" ${transition==='fade'?'selected':''}>Fade only</option><option value="none" ${transition==='none'?'selected':''}>None</option></select></div><div class="field"><label class="field-label">Slide interval (ms)</label><input id="hl_interval" type="number" min="500" step="100" value="${interval}"></div></div><div class="banner info"><i class="fa-solid fa-circle-info"></i><div><strong>Latest mode</strong> keeps explicit project thumbnails unchanged. Projects without a thumbnail contribute their first usable image, video or Lottie media. The loop uses up to five projects, so 1–4 projects simply loop that many.</div></div></div><div id="heroLoopItems"></div><button class="add-btn" id="hl_add"><i class="fa-solid fa-plus"></i> Add hero artwork</button>`;
+    content.innerHTML=sectionHead('Hero Loop Animation','Choose automatic latest-project looping or a manual list. Manual entries support image, video, Lottie JSON, zoom, focus and rotation.')+`<div class="panel"><div class="row"><div class="field"><label class="field-label">Loop source</label><select id="hl_mode"><option value="latest" ${mode==='latest'?'selected':''}>Latest projects (up to 5)</option><option value="manual" ${mode==='manual'?'selected':''}>Only what I add</option><option value="mixed" ${mode==='mixed'?'selected':''}>My additions + latest fill (up to 5)</option></select></div><div class="field"><label class="field-label">Transition</label><select id="hl_transition"><option value="kenburns" ${transition==='kenburns'?'selected':''}>Zoom + fade</option><option value="fade" ${transition==='fade'?'selected':''}>Fade only</option><option value="none" ${transition==='none'?'selected':''}>None</option></select></div><div class="field"><label class="field-label">Slide interval (ms)</label><input id="hl_interval" type="number" min="500" step="100" value="${interval}"></div></div><div class="banner info"><i class="fa-solid fa-circle-info"></i><div><strong>Loop source</strong> controls what supplies the hero: <strong>Latest projects</strong> uses the newest project order (up to 5); <strong>Only what I add</strong> uses only this list; <strong>My additions + latest fill</strong> puts your manual entries first, then fills the remaining slots with newest projects until there are 5.</div></div></div><div id="heroLoopItems"></div><button class="add-btn" id="hl_add"><i class="fa-solid fa-plus"></i> Add hero artwork</button>`;
     const list=document.getElementById('heroLoopItems');
     if(mode==='latest') list.innerHTML='<div class="banner muted">Manual entries are stored but ignored while Latest projects is selected.</div>';
     items.forEach(item=>{
@@ -828,6 +834,10 @@ RENDERERS.heroLoop=async function(data){
           const focus=item.focus||'50% 50%';media.style.objectPosition=focus;media.style.transformOrigin=focus;media.style.transform=`scale(${item.zoom||1}) rotate(${item.rotate||0}deg)`;preview.appendChild(media);
         }
         setCross();refreshHeroPreview();
+        attachMediaBrowseButton(body.querySelector('[data-f="src"]'), () => refreshHeroPreview(), () => ({
+          kind: item.type === 'lottie' ? 'lottie' : item.type === 'video' ? 'video' : 'image',
+          title: item.type === 'lottie' ? 'Choose a Lottie JSON file' : item.type === 'video' ? 'Choose a video file' : 'Choose an image file'
+        }));
         let dragging=false;const pointer=e=>{const r=picker.getBoundingClientRect(),x=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientX:e.clientX)-r.left)/r.width*100)),y=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientY:e.clientY)-r.top)/r.height*100));item.focus=`${x.toFixed(0)}% ${y.toFixed(0)}%`;body.querySelector('[data-f="focus"]').value=item.focus;setCross();refreshHeroPreview();flagUnsaved();};picker.addEventListener('mousedown',e=>{dragging=true;pointer(e)});window.addEventListener('mousemove',e=>{if(dragging)pointer(e)});window.addEventListener('mouseup',()=>dragging=false);picker.addEventListener('touchstart',pointer,{passive:true});picker.addEventListener('touchmove',pointer,{passive:true});
         body.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{const f=inp.dataset.f;item[f]=(f==='zoom'||f==='rotate')?(parseFloat(inp.value)||0):inp.value;row.querySelector('.preview-line').textContent=item.alt||item.src||'(empty)';if(f==='focus')setCross();refreshHeroPreview();flagUnsaved();}));
       }
@@ -1312,6 +1322,9 @@ function buildMediaPreviewHtml(m){
   if (m.type === 'lottie') {
     return `<div class="media-preview"><lottie-player src="${attr(ghRawUrl(m.src))}" autoplay loop background="transparent" style="width:100%;height:100%;"></lottie-player></div>`;
   }
+  if (m.type === 'model') {
+    return `<div class="media-preview model-preview"><div class="model-viewer-shell admin-model-viewer" data-model-preview aria-label="Interactive 3D model"><span class="empty-note">Loading 3D preview…</span></div></div>`;
+  }
   // image
   return `<div class="media-preview"><img src="${attr(ghRawUrl(m.src))}" alt="" onerror="handleMissingFile(this,'image')"></div>`;
 }
@@ -1489,7 +1502,10 @@ RENDERERS.projects = async function(data){
       picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
       if(note) note.style.display=fallback?'':'none';
     }
-    attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview());
+    attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview(), () => ({
+      kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : 'image',
+      title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : 'Choose an image file'
+    }));
 
     // simple fields
     el.querySelectorAll('[data-f]').forEach(inp=>{
@@ -1630,16 +1646,32 @@ RENDERERS.projects = async function(data){
           paintMedia();
         });
         const previewEl = row.querySelector('[data-mediapreview]');
-        function refreshPreview(){
+        let modelViewerCleanup = null;
+        async function refreshPreview(){
+          if (modelViewerCleanup) { modelViewerCleanup(); modelViewerCleanup = null; }
           previewEl.innerHTML = buildMediaPreviewHtml(m);
           wirePreviewAspect(previewEl.firstElementChild, m);
+          if (m.type === 'model' && m.src) {
+            try {
+              const { mountModelViewer } = await import('../js/model-viewer.js');
+              const host = previewEl.querySelector('[data-model-preview]');
+              if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), { background: 'transparent' });
+            } catch (err) {
+              const host = previewEl.querySelector('[data-model-preview]');
+              if (host) host.innerHTML = '<div class="model-viewer-error">3D preview unavailable.</div>';
+              console.warn('CMS 3D preview:', err);
+            }
+          }
           // If this is (or might become) the project's fallback
           // thumbnail — first image/YouTube item, thumbnail.src left
           // blank — the focus-picker preview needs to follow along too.
           if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
         }
         refreshPreview();
-        attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview());
+        attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
+          kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
+          title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : 'Choose media'
+        }));
 
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
           m[inp.dataset.mf]=inp.value;
@@ -2156,6 +2188,7 @@ function fileKind(path){
   if (['jpg','jpeg','png','gif','webp','svg','avif'].includes(ext)) return 'image';
   if (['mp4','webm','mov','m4v'].includes(ext)) return 'video';
   if (ext === 'json') return 'lottie';
+  if (['obj','gltf','glb','fbx'].includes(ext)) return 'model';
   return 'other';
 }
 
@@ -2180,6 +2213,7 @@ function fileKind(path){
 const FOLDER_ICON_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.7c0-.94.76-1.7 1.7-1.7h4.46c.4 0 .78.15 1.08.42l1.3 1.18c.3.27.68.42 1.08.42h6.68c.94 0 1.7.76 1.7 1.7v9.08c0 .94-.76 1.7-1.7 1.7H4.7c-.94 0-1.7-.76-1.7-1.7V6.7z"/></svg>';
 const FILE_ICON_SVG = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/><path d="M14 3.5v4h4" stroke-linecap="round"/></svg>';
 const BROKEN_IMAGE_SVG_ESCAPED = FILE_ICON_SVG.replace(/"/g, '&quot;');
+const MODEL_ICON_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round"><path d="M12 3l7.5 4.25v9.5L12 21l-7.5-4.25v-9.5L12 3z"/><path d="M4.5 7.25L12 11.5l7.5-4.25M12 11.5V21"/></svg>';
 
 // One shared builder for both the Media Library screen's own grid and
 // the "Choose a file" picker popup — previously each had its own
@@ -2203,12 +2237,14 @@ function fileTileHtml(item){
     ? `<video src="${attr(ghRawUrl(item.path))}" muted preload="metadata"></video>`
     : kind === 'lottie'
     ? `<lottie-player src="${attr(ghRawUrl(item.path))}" autoplay loop background="transparent" style="width:100%;height:100%;"></lottie-player>`
+    : kind === 'model'
+    ? MODEL_ICON_SVG
     : FILE_ICON_SVG;
   // A video's tile shows its first frame — often indistinguishable
   // from a still photo at this size. The play-icon badge is the same
   // cue the public site's own lightbox thumbnails already use for
   // this, so it reads consistently for you across both.
-  const badge = kind === 'video' ? `<span class="tile-badge" title="Video"><i class="fa-solid fa-play"></i></span>` : kind === 'lottie' ? `<span class="tile-badge" title="Lottie JSON"><i class="fa-solid fa-wand-magic-sparkles"></i></span>` : '';
+  const badge = kind === 'video' ? `<span class="tile-badge" title="Video"><i class="fa-solid fa-play"></i></span>` : kind === 'lottie' ? `<span class="tile-badge" title="Lottie JSON"><i class="fa-solid fa-wand-magic-sparkles"></i></span>` : kind === 'model' ? `<span class="tile-badge" title="3D Model"><i class="fa-solid fa-cube"></i></span>` : '';
   return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div>`;
 }
 
@@ -2316,13 +2352,27 @@ function childrenOfPath(tree, path){
   return { folders: [...folders].sort(), files: files.sort((a,b)=>a.path.localeCompare(b.path)) };
 }
 
-function openMediaPicker(onPick){
+function openMediaPicker(onPick, options={}){
   const overlay=document.createElement('div');
   overlay.className='media-picker-overlay';
   overlay.innerHTML=`
     <div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Choose a file">
-      <div class="media-picker-head"><div><strong>Choose a file</strong><span class="media-picker-sub">Media Library</span></div><button class="icon-btn" data-close-picker type="button" title="Close"><i class="fa-solid fa-xmark"></i></button></div>
-      <div class="media-picker-toolbar"><div class="media-folder-crumb" id="pickerCrumbs"></div><div class="media-picker-actions"><button class="ghost" id="pickerNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="pickerRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="pickerRefresh" type="button" title="Refresh"><i class="fa-solid fa-rotate"></i></button></div></div>
+      <div class="media-picker-head"><div><strong>Choose a file</strong><span class="media-picker-sub" data-picker-title>Media Library</span></div><button class="icon-btn" data-close-picker type="button" title="Close"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="media-picker-toolbar">
+        <div class="media-picker-toolbar-main">
+          <div class="media-folder-crumb" id="pickerCrumbs"></div>
+          <input class="picker-search" id="pickerSearch" type="search" placeholder="Search files…" autocomplete="off">
+          <select class="picker-kind" id="pickerKind" title="Filter file type">
+            <option value="">All files</option>
+            <option value="image">Images</option>
+            <option value="video">Videos</option>
+            <option value="lottie">Lottie JSON</option>
+            <option value="model">3D Models</option>
+            <option value="other">Other files</option>
+          </select>
+        </div>
+        <div class="media-picker-actions"><button class="ghost" id="pickerNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="pickerRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="pickerRefresh" type="button" title="Refresh"><i class="fa-solid fa-rotate"></i></button></div>
+      </div>
       <div class="dropzone dropzone-compact" id="pickerDropzone"><i class="fa-solid fa-cloud-arrow-up"></i>Drag a file here, or click to upload into this folder<input type="file" id="pickerFileInput" multiple style="display:none"></div>
       <div class="media-picker-scroll"><div class="media-grid" id="pickerGrid"></div></div>
     </div>`;
@@ -2330,6 +2380,13 @@ function openMediaPicker(onPick){
 
   let closed=false;
   let pickerTree=null;
+  let pickerSearch='';
+  let pickerKind=options.kind||'';
+  const titleEl=overlay.querySelector('[data-picker-title]');
+  if(titleEl && options.title) titleEl.textContent=options.title;
+  const kindSelect=overlay.querySelector('#pickerKind');
+  if(kindSelect) kindSelect.value=pickerKind;
+  const searchInput=overlay.querySelector('#pickerSearch');
   const close=()=>{ if(closed)return; closed=true; overlay.remove(); document.removeEventListener('keydown',escHandler); };
   function escHandler(e){ if(e.key==='Escape') close(); }
   overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
@@ -2351,6 +2408,8 @@ function openMediaPicker(onPick){
   overlay.querySelector('#pickerNewFolder').addEventListener('click',async()=>{ try{await createMediaFolder(mediaPickerPath||'assets',async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);} });
   overlay.querySelector('#pickerRenameFolder').addEventListener('click',async()=>{ try{await renameMediaFolder(mediaPickerPath,async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);} });
   overlay.querySelector('#pickerRefresh').addEventListener('click',async()=>{try{await loadMediaTree(true);await paintPicker();toast('Refreshed.');}catch(err){toast(err.message,true);}});
+  kindSelect?.addEventListener('change',()=>{pickerKind=kindSelect.value;paintPicker();});
+  searchInput?.addEventListener('input',()=>{pickerSearch=searchInput.value.trim().toLowerCase();paintPicker();});
 
   async function paintPicker(){
     const grid=overlay.querySelector('#pickerGrid');
@@ -2358,6 +2417,12 @@ function openMediaPicker(onPick){
     try{tree=await loadMediaTree(false);}catch(err){grid.innerHTML=`<div class="banner info" style="grid-column:1/-1;border-color:rgba(224,88,79,.4)">Couldn’t load your files — ${esc(err.message)}</div>`;return;}
     pickerTree=tree;
     const {folders,files}=childrenOfPath(tree,mediaPickerPath);
+    const visibleFiles=files.filter(item=>{
+      const kind=fileKind(item.path);
+      const kindOk=!pickerKind||kind===pickerKind;
+      const searchOk=!pickerSearch||item.path.toLowerCase().includes(pickerSearch);
+      return kindOk&&searchOk;
+    });
     const parts=mediaPickerPath.split('/').filter(Boolean);
     const crumbWrap=overlay.querySelector('#pickerCrumbs');
     crumbWrap.innerHTML='';
@@ -2368,14 +2433,14 @@ function openMediaPicker(onPick){
     });
     overlay.querySelector('#pickerRenameFolder').disabled=mediaPickerPath==='assets';
     grid.innerHTML='';
-    if(!folders.length&&!files.length) grid.innerHTML=`<div class="banner muted" style="grid-column:1/-1">Nothing here yet — use New folder or upload a file above.</div>`;
+    if(!folders.length&&!visibleFiles.length) grid.innerHTML=`<div class="banner muted" style="grid-column:1/-1">${pickerSearch||pickerKind?'No matching files in this folder.':'Nothing here yet — use New folder or upload a file above.'}</div>`;
     folders.forEach(f=>{
       const path=mediaPickerPath+'/'+f; const tile=document.createElement('div'); tile.className='media-tile folder-tile'; tile.innerHTML=folderTileHtml(f,findFolderPreviewImage(tree,path));
       tile.addEventListener('click',()=>{mediaPickerPath=path;paintPicker();});
       tile.querySelector('[data-folder-rename]')?.addEventListener('click',async e=>{e.stopPropagation();try{await renameMediaFolder(path,async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);}});
       grid.appendChild(tile);
     });
-    files.forEach(item=>{
+    visibleFiles.forEach(item=>{
       const tile=document.createElement('div'); tile.className='media-tile media-select-tile'; tile.style.cursor='pointer'; tile.innerHTML=fileTileHtml(item); tile.addEventListener('click',()=>{onPick(item.path);close();}); grid.appendChild(tile);
     });
   }
@@ -2388,7 +2453,8 @@ function openMediaPicker(onPick){
 // whatever this field was already wired to do on typing still runs), and
 // calls onPicked with the chosen path for anything that needs to react
 // beyond that — a live preview, most often.
-function attachMediaBrowseButton(inputEl, onPicked){
+function attachMediaBrowseButton(inputEl, onPicked, optionsOrProvider){
+  if(!inputEl || inputEl.closest('.browse-row')) return null;
   const row = document.createElement('div');
   row.className = 'browse-row';
   inputEl.parentNode.insertBefore(row, inputEl);
@@ -2400,11 +2466,12 @@ function attachMediaBrowseButton(inputEl, onPicked){
   btn.innerHTML = '<i class="fa-solid fa-folder-open"></i>';
   row.appendChild(btn);
   btn.addEventListener('click', () => {
+    const options = typeof optionsOrProvider === 'function' ? (optionsOrProvider() || {}) : (optionsOrProvider || {});
     openMediaPicker(path => {
       inputEl.value = path;
       inputEl.dispatchEvent(new Event('input', { bubbles: true }));
       if (onPicked) onPicked(path);
-    });
+    }, options);
   });
   return btn;
 }

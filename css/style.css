@@ -2031,3 +2031,22 @@ body.center-page {
 @media (max-width: 768px) {
   .footer-content p { font-size: 0.85rem; padding: 0 10px; }
 }
+
+
+/* =====================================================
+   INTERACTIVE 3D MODEL MEDIA
+   ===================================================== */
+.model-viewer-shell{
+  position:relative;
+  width:100%;
+  min-height:320px;
+  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.01) 55%,transparent 78%);
+  border-radius:12px;
+  overflow:hidden;
+  touch-action:none;
+}
+.model-viewer-shell canvas{width:100%!important;height:100%!important;display:block;}
+.model-viewer-hint{position:absolute;left:14px;bottom:12px;color:rgba(255,255,255,.52);background:rgba(0,0,0,.38);padding:5px 8px;border-radius:5px;font-size:10px;letter-spacing:.04em;pointer-events:none;}
+.model-viewer-error{padding:20px;text-align:center;color:#999;font-size:12px;line-height:1.5;}
+.lightbox-model-viewer{width:min(94vw,1100px);height:min(74vh,720px);min-height:340px;margin:0 auto;}
+.card-thumbnail lottie-player{background:transparent;}

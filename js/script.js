@@ -46,11 +46,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   //     behavior), capped at 5.
   //   'manual' — uses exactly what's in data/hero-loop.json, however
   //     many entries that is: 1 in, 1 loops; 3 in, 3 loop.
+  //   'mixed' — uses manual entries first, then newest projects until the
+  //     hero reaches five slides. This gives 3 manual + 2 latest, 1 manual +
+  //     4 latest, etc.
   let HERO_LOOP_MODE = 'latest';
   //   'kenburns' — the slow continuous zoom this site has always had.
   //   'fade' — a plain crossfade, no zoom.
   //   'none' — an instant cut, no fade either.
   let HERO_TRANSITION = 'kenburns';
+  let HERO_CROSSFADE_MS = 3500;
 
   // Holds About's software-skills list once it loads, purely so
   // applySettings (right below) can re-render that list if
@@ -111,6 +115,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('a[aria-label="' + label + '"]').forEach(a => { a.href = url; });
   }
 
+  // GitHub Pages project sites are served below a repository path (for
+  // example /lm-portfolio-testing/). new URL('/', location.href) jumps to
+  // the domain root, which is why repo-relative Lottie/hero assets could
+  // work on the deployed root site but 404 on the testing site. Resolve
+  // the site root from one of the CMS data URLs instead.
+  function getSiteRootUrl() {
+    const marker = window.PROJECTS_URL || window.SETTINGS_URL || window.HERO_LOOP_URL || 'data/projects.json';
+    try {
+      return new URL('./', new URL(marker, window.location.href)).href;
+    } catch (e) {
+      return new URL('./', window.location.href).href;
+    }
+  }
+
+  function siteAssetUrl(src) {
+    if (!src) return '';
+    if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(src) || src.startsWith('data:') || src.startsWith('blob:')) return src;
+    try { return new URL(String(src).replace(/^\/+/, ''), getSiteRootUrl()).href; }
+    catch (e) { return src; }
+  }
+
+  function applyOgMeta(remote){
+    if (!remote || !remote.ogImage) return;
+    try {
+      const root = getSiteRootUrl();
+      const imageUrl = new URL(remote.ogImage + (remote.ogImageVersion ? `?v=${encodeURIComponent(remote.ogImageVersion)}` : ''), root).href;
+      document.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"]').forEach(meta => { meta.setAttribute('content', imageUrl); });
+      if (remote.ogImageAlt) document.querySelectorAll('meta[property="og:image:alt"]').forEach(meta => meta.setAttribute('content', remote.ogImageAlt));
+    } catch (e) { /* keep the static HTML fallback */ }
+  }
+
   function applyCardBadgesVisibility() {
     document.querySelectorAll('.card-badges').forEach(el => {
       el.style.display = SHOW_CARD_BADGES ? '' : 'none';
@@ -129,8 +164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof remote.showReviews === 'boolean') SHOW_REVIEWS = remote.showReviews;
     if (typeof remote.showSoftwareLogos === 'boolean') SHOW_SOFTWARE_LOGOS = remote.showSoftwareLogos;
     if (remote.heroTiming) {
-      if (remote.heroTiming.loopMode === 'latest' || remote.heroTiming.loopMode === 'manual') HERO_LOOP_MODE = remote.heroTiming.loopMode;
+      if (['latest','manual','mixed'].includes(remote.heroTiming.loopMode)) HERO_LOOP_MODE = remote.heroTiming.loopMode;
       if (['kenburns','fade','none'].includes(remote.heroTiming.transitionStyle)) HERO_TRANSITION = remote.heroTiming.transitionStyle;
+      if (Number.isFinite(Number(remote.heroTiming.crossfadeMs)) && Number(remote.heroTiming.crossfadeMs) >= 500) HERO_CROSSFADE_MS = Number(remote.heroTiming.crossfadeMs);
     }
 
     // Re-apply every toggle-dependent bit of DOM now that the values
@@ -165,14 +201,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (remote.siteTitle) document.title = remote.siteTitle;
+    applyOgMeta(remote);
   }
 
-  if (window.SETTINGS_URL) {
-    fetch(window.SETTINGS_URL)
-      .then(r => r.json())
-      .then(applySettings)
-      .catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err));
-  }
+  const settingsReady = window.SETTINGS_URL
+    ? fetch(window.SETTINGS_URL).then(r => r.json()).then(applySettings).catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err))
+    : Promise.resolve();
 
 
   /* =========================================
@@ -197,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (m.type === 'video') el.setAttribute('data-video', m.src || '');
     else if (m.type === 'youtube') el.setAttribute('data-youtube', m.src || '');
     else if (m.type === 'lottie') el.setAttribute('data-lottie', m.src || '');
+    else if (m.type === 'model') el.setAttribute('data-model', m.src || '');
     else el.setAttribute('data-image', m.src || '');
     if (m.caption) el.setAttribute('data-description', m.caption);
     if (m.orientation) el.setAttribute('data-orientation', m.orientation);
@@ -221,22 +256,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const thumb = document.createElement('div');
     thumb.className = 'card-thumbnail';
     const t = p.thumbnail || {};
+    if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
     if (t.src) {
-      // A real thumbnail image: focus/zoom go on the <img> itself,
-      // matching the convention already used in the static markup.
-      const img = document.createElement('img');
-      img.src = t.src;
-      img.alt = p.title || 'Project artwork';
-      if (t.focus) img.setAttribute('data-focus', t.focus);
-      if (t.zoom && Number(t.zoom) !== 1) img.setAttribute('data-zoom', t.zoom);
-      thumb.appendChild(img);
+      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src}, p.title || 'Project artwork');
+      if (media) {
+        if (t.focus) media.setAttribute('data-focus', t.focus);
+        if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
+        if (t.rotate) media.setAttribute('data-rotate', t.rotate);
+        thumb.appendChild(media);
+      }
     } else {
-      // No thumbnail set — leave it empty so fillMissingThumbnails()
-      // (section 1, right after this) fills it from the first media
-      // item, same as the static markup does. Focus/zoom go on the
-      // wrapper itself since there's no <img> yet to put them on.
       if (t.focus) thumb.setAttribute('data-focus', t.focus);
-      if (t.zoom && Number(t.zoom) !== 1) thumb.setAttribute('data-zoom', t.zoom);
+      if (t.zoom && Number(t.zoom)!==1) thumb.setAttribute('data-zoom', t.zoom);
     }
     card.appendChild(thumb);
 
@@ -280,8 +311,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(window.PROJECTS_URL);
       if (!res.ok) return;
-      const list = await res.json();
-      if (!Array.isArray(list) || !list.length) return;
+      const raw = await res.json();
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
+      if (!list.length) return;
 
       const frag = document.createDocumentFragment();
       list.forEach(p => frag.appendChild(buildProjectCardEl(p)));
@@ -424,7 +456,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   function fillSkillList(id, list) {
     const ul = document.getElementById(id);
     if (!ul || !Array.isArray(list) || !list.length) return;
-    ul.classList.toggle('logo-mode', id === 'softwareSkillsList' && SHOW_SOFTWARE_LOGOS);
     ul.innerHTML = '';
     // Multimedia skills are always plain strings, and never show a
     // logo — a category like "3D Modeling" has no brand mark to show
@@ -546,7 +577,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (expList && Array.isArray(a.experience) && a.experience.length) {
         expList.innerHTML = '';
         a.experience.forEach(exp => {
-          expList.appendChild(buildTimelineBlock({ title: exp.role, dateLine: exp.company, bullets: exp.bullets }));
+          expList.appendChild(buildTimelineBlock({ title: exp.role, dateLine: [exp.company, exp.startDate || exp.endDate ? `${exp.startDate || ''}${exp.startDate || exp.endDate ? ' – ' : ''}${exp.endDate || ''}` : ''].filter(Boolean).join(' · '), bullets: exp.bullets }));
         });
       }
 
@@ -554,7 +585,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (eduList && Array.isArray(a.education) && a.education.length) {
         eduList.innerHTML = '';
         a.education.forEach(e => {
-          eduList.appendChild(buildTimelineBlock({ title: e.title, dateLine: e.detail, bullets: [] }));
+          eduList.appendChild(buildTimelineBlock({ title: e.school || e.title, dateLine: [e.degree, e.graduationDate].filter(Boolean).join(' · ') || e.detail, bullets: [] }));
         });
       }
 
@@ -593,12 +624,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch(window.FILTERS_URL);
       if (!res.ok) return;
       const raw = await res.json();
-
-      // The CMS writes the current format as { filters: [...], badges: [...] },
-      // while the original public site used a plain filter array. Accept both
-      // so the live/test repositories can share the same renderer without
-      // duplicating or hardcoding the categories in index.html.
-      const list = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.filters) ? raw.filters : []);
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.filters) ? raw.filters : []);
       if (!list.length) return;
 
       // Filter tabs — only exist on the homepage; harmless no-op elsewhere.
@@ -863,39 +889,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   // the card's own first media-list item instead — an image if the
   // first item is data-image, or a YouTube thumbnail if it's
   // data-youtube. Runs once, before anything else reads the grid.
+  function buildThumbnailMedia(source, altText){
+    if (!source || !source.src) return null;
+    let media;
+    if (source.type === 'video') {
+      media=document.createElement('video'); media.src=siteAssetUrl(source.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
+    } else if (source.type === 'lottie') {
+      media=document.createElement('lottie-player'); media.setAttribute('src',siteAssetUrl(source.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent');
+    } else {
+      media=document.createElement('img'); media.src=siteAssetUrl(source.src); media.alt=altText||'Project artwork';
+    }
+    media.classList.add('project-thumb-media');
+    return media;
+  }
+
+  function projectFallbackSource(card){
+    const mediaItems = card.querySelectorAll('.project-media-list .media-item');
+    for (const item of mediaItems) {
+      const image = item.getAttribute('data-image');
+      if (image) return {type:'image',src:image};
+      const video = item.getAttribute('data-video');
+      if (video) return {type:'video',src:video};
+      const lottie = item.getAttribute('data-lottie');
+      if (lottie) return {type:'lottie',src:lottie};
+      // YouTube stays a last-resort fallback because it requires a
+      // thumbnail request rather than being a locally playable asset.
+    }
+    const yt=card.querySelector('.project-media-list .media-item[data-youtube]');
+    if(yt){ const {id}=parseYouTubeUrl(yt.getAttribute('data-youtube')); if(id)return {type:'image',src:`https://img.youtube.com/vi/${id}/hqdefault.jpg`}; }
+    return null;
+  }
+
   function fillMissingThumbnails() {
     document.querySelectorAll('.project-card').forEach(card => {
-      const thumbWrap = card.querySelector('.card-thumbnail');
-      if (!thumbWrap) return;
-
-      const existingImg = thumbWrap.querySelector('img');
-      if (existingImg && existingImg.getAttribute('src')) return; // already has one
-
-      const firstImageItem = card.querySelector('.project-media-list .media-item[data-image]');
-      const firstVideoItem = card.querySelector('.project-media-list .media-item[data-youtube]');
-
-      let fallbackSrc = null;
-
-      if (firstImageItem) {
-        fallbackSrc = firstImageItem.getAttribute('data-image');
-      } else if (firstVideoItem) {
-        const { id } = parseYouTubeUrl(firstVideoItem.getAttribute('data-youtube'));
-        if (id) fallbackSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-      }
-
-      if (!fallbackSrc) return; // this card has nothing to fall back to
-
-      const titleEl = card.querySelector('.glass-info h3');
-      const altText = titleEl ? titleEl.textContent : 'Project artwork';
-
-      if (existingImg) {
-        existingImg.src = fallbackSrc;
-      } else {
-        const img = document.createElement('img');
-        img.src = fallbackSrc;
-        img.alt = altText;
-        thumbWrap.appendChild(img);
-      }
+      const wrap=card.querySelector('.card-thumbnail'); if(!wrap) return;
+      if(wrap.querySelector('.project-thumb-media')) return;
+      const existing=wrap.querySelector('img');
+      if(existing && existing.getAttribute('src')) { existing.classList.add('project-thumb-media'); return; }
+      const source=projectFallbackSource(card); if(!source) return;
+      const titleEl=card.querySelector('.glass-info h3');
+      const media=buildThumbnailMedia(source,titleEl?titleEl.textContent:'Project artwork');
+      if(media) wrap.appendChild(media);
+      if(source.type==='video') media.setAttribute('data-video-thumb','');
+      if(source.type==='lottie') media.setAttribute('data-lottie-thumb','');
     });
   }
   fillMissingThumbnails();
@@ -919,25 +955,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // there's no <img> yet for you to add them to directly.
   function applyThumbnailAdjustments() {
     document.querySelectorAll('.project-card .card-thumbnail').forEach(wrap => {
-      const img = wrap.querySelector('img');
-      if (!img) return;
-
-      const focus = img.getAttribute('data-focus') || wrap.getAttribute('data-focus');
-      const zoom = img.getAttribute('data-zoom') || wrap.getAttribute('data-zoom');
-      const rotate = img.getAttribute('data-rotate') || wrap.getAttribute('data-rotate');
-
-      // transformOrigin has to match objectPosition, not just default
-      // to center — object-position decides which part of the image
-      // is visible at all; transform-origin decides which point the
-      // zoom scales FROM. Set focus without also moving the zoom's
-      // anchor to match, and zooming in visibly pulls away from
-      // wherever you dragged the focus point instead of magnifying
-      // it — exactly the bug this fixes. The hero banner's own
-      // focus/zoom (applyFocalPoint, above) already gets this right;
-      // this brings project thumbnails in line with it.
-      if (focus) { img.style.objectPosition = focus; img.style.transformOrigin = focus; }
-      if (zoom) img.style.setProperty('--thumb-zoom', zoom);
-      if (rotate) img.style.setProperty('--thumb-rotate', rotate + 'deg');
+      const media=wrap.querySelector('.project-thumb-media, img'); if(!media) return;
+      const focus=media.getAttribute('data-focus')||wrap.getAttribute('data-focus');
+      const zoom=media.getAttribute('data-zoom')||wrap.getAttribute('data-zoom');
+      const rotate=media.getAttribute('data-rotate')||wrap.getAttribute('data-rotate');
+      if(focus){media.style.objectPosition=focus;media.style.transformOrigin=focus;}
+      if(zoom)media.style.setProperty('--thumb-zoom',zoom);
+      if(rotate)media.style.setProperty('--thumb-rotate',rotate+'deg');
     });
   }
   applyThumbnailAdjustments();
@@ -1087,17 +1111,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       // <img src> if one was written by hand, else the card's first
       // data-image, else its first YouTube thumbnail.
       let rawSrc = thumbImg ? thumbImg.getAttribute('src') : null;
-
+      let explicitType = thumbWrap ? thumbWrap.getAttribute('data-thumbnail-type') : null;
+      const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
+      if (!rawSrc && thumbMedia) {
+        rawSrc = thumbMedia.getAttribute('src');
+        explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : thumbMedia.tagName === 'LOTTIE-PLAYER' ? 'lottie' : 'image');
+      }
       if (!rawSrc) {
-        const firstImageItem = card.querySelector('.project-media-list .media-item[data-image]');
-        if (firstImageItem) {
-          rawSrc = firstImageItem.getAttribute('data-image');
-        } else {
-          const firstVideoItem = card.querySelector('.project-media-list .media-item[data-youtube]');
-          if (firstVideoItem) {
-            const { id } = parseYouTubeUrl(firstVideoItem.getAttribute('data-youtube'));
-            if (id) rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-          }
+        const mediaItems = card.querySelectorAll('.project-media-list .media-item');
+        for (const mediaItem of mediaItems) {
+          const image = mediaItem.getAttribute('data-image');
+          const video = mediaItem.getAttribute('data-video');
+          const lottie = mediaItem.getAttribute('data-lottie');
+          if (image) { rawSrc = image; explicitType = explicitType || 'image'; break; }
+          if (video) { rawSrc = video; explicitType = explicitType || 'video'; break; }
+          if (lottie) { rawSrc = lottie; explicitType = explicitType || 'lottie'; break; }
+        }
+        if (!rawSrc) {
+          const firstYouTubeItem = card.querySelector('.project-media-list .media-item[data-youtube]');
+          if (firstYouTubeItem) { const { id } = parseYouTubeUrl(firstYouTubeItem.getAttribute('data-youtube')); if (id) rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; }
         }
       }
 
@@ -1111,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const titleEl = card.querySelector('.glass-info h3');
 
       return {
-        type: heroMediaTypeFromSrc(rawSrc),
+        type: explicitType || heroMediaTypeFromSrc(rawSrc),
         src,
         alt: (thumbImg && thumbImg.getAttribute('alt')) || (titleEl ? titleEl.textContent : 'Featured artwork'),
         focus: (thumbImg && thumbImg.getAttribute('data-focus')) || (thumbWrap && thumbWrap.getAttribute('data-focus')) || null,
@@ -1143,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!p) return null;
     const thumb = p.thumbnail || {};
     let rawSrc = thumb.src || null;
-    let type = rawSrc ? heroMediaTypeFromSrc(rawSrc) : null;
+    let type = rawSrc ? (thumb.type || heroMediaTypeFromSrc(rawSrc)) : null;
 
     if (!rawSrc && Array.isArray(p.media)) {
       const firstUsable = p.media.find(m => m && m.src && (m.type === 'image' || m.type === 'video' || m.type === 'lottie'));
@@ -1189,49 +1221,73 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function initHeroBanner() {
     const heroContainer = document.getElementById('heroBanner') || document.getElementById('heroBannerAbout');
-    if (!heroContainer) return; // this page has no hero banner at all
+    if (!heroContainer) return;
 
-    const siteRootUrl = new URL('/', window.location.href).href;
+    const siteRootUrl = getSiteRootUrl();
+    let latestSources = [];
+    let manualSources = [];
     let sources = [];
 
-    if (HERO_LOOP_MODE === 'manual') {
-      // Hand-curated list from the "Hero Loop Animation" screen in the
-      // CMS — used exactly as given, however many entries that is (1
-      // in, 1 loops; 3 in, 3 loop), never padded or trimmed to 5.
-      try {
-        const url = new URL('data/hero-loop.json', siteRootUrl).href;
-        const res = await fetch(url);
-        const list = await res.json();
-        sources = (Array.isArray(list) ? list : [])
-          .map(item => heroSourceFromManualEntry(item, siteRootUrl))
-          .filter(Boolean);
-      } catch (err) {
-        console.warn('Hero banner: could not load data/hero-loop.json.', err);
+    // Load the CMS-curated manual list from the configured URL. A file path
+    // is preferred over pasted JSON because it stays version-controlled,
+    // cacheable, and easy to replace from the Media Library.
+    try {
+      const heroLoopUrl = new URL(window.HERO_LOOP_URL || 'data/hero-loop.json', siteRootUrl).href;
+      const res = await fetch(heroLoopUrl);
+      const list = await res.json();
+      manualSources = (Array.isArray(list) ? list : [])
+        .map(item => heroSourceFromManualEntry(item, siteRootUrl))
+        .filter(Boolean);
+    } catch (err) {
+      if (HERO_LOOP_MODE === 'manual' || HERO_LOOP_MODE === 'mixed') {
+        console.warn('Hero banner: could not load manual hero loop data.', err);
       }
-    } else {
-      // 'latest' — auto-pulls from the site's own projects, same as
-      // this always worked: read straight off the page's own rendered
-      // cards where they already exist (the homepage), else go to
-      // data/projects.json directly (the About page, which has no
-      // project cards of its own to read from).
-      sources = collectHeroSources(document, null);
-      if (sources.length === 0) {
-        try {
-          const projectsUrl = new URL('data/projects.json', siteRootUrl).href;
-          const response = await fetch(projectsUrl);
-          const list = await response.json();
-          sources = (Array.isArray(list) ? list : [])
-            .map(p => heroSourceFromProjectData(p, siteRootUrl))
-            .filter(Boolean);
-        } catch (err) {
-          console.warn('Hero banner: could not load artwork from data/projects.json.', err);
-          return;
-        }
-      }
-      sources = sources.slice(0, 5); // 'latest' mode's own cap, unrelated to manual mode's dynamic count
     }
 
-    if (sources.length === 0) return;
+    // Load the same project ordering the portfolio uses.
+    try {
+      latestSources = collectHeroSources(document, null);
+      if (latestSources.length === 0) {
+        const projectsUrl = new URL(window.PROJECTS_URL || 'data/projects.json', siteRootUrl).href;
+        const response = await fetch(projectsUrl);
+        const list = await response.json();
+        latestSources = (Array.isArray(list) ? list : [])
+          .map(p => heroSourceFromProjectData(p, siteRootUrl))
+          .filter(Boolean);
+      }
+    } catch (err) {
+      console.warn('Hero banner: could not load artwork from data/projects.json.', err);
+    }
+
+    function sourceKey(source) {
+      return `${source.type}|${source.src}`;
+    }
+
+    if (HERO_LOOP_MODE === 'manual') {
+      sources = manualSources;
+    } else if (HERO_LOOP_MODE === 'mixed') {
+      // Manual additions take priority; newest projects fill the remaining
+      // slots until the five-slide hero is full. Dedupe prevents adding the
+      // same file twice when a manual entry points at a project thumbnail.
+      const seen = new Set();
+      sources = [];
+      for (const source of manualSources) {
+        if (sources.length >= 5) break;
+        const key = sourceKey(source);
+        if (seen.has(key)) continue;
+        seen.add(key); sources.push(source);
+      }
+      for (const source of latestSources) {
+        if (sources.length >= 5) break;
+        const key = sourceKey(source);
+        if (seen.has(key)) continue;
+        seen.add(key); sources.push(source);
+      }
+    } else {
+      sources = latestSources.slice(0, 5);
+    }
+
+    if (!sources.length) return;
 
     heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
     heroContainer.classList.add('transition-' + HERO_TRANSITION);
@@ -1243,28 +1299,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       let media;
       if (source.type === 'video') {
         media = document.createElement('video');
-        media.src = source.src;
+        media.src = siteAssetUrl(source.src);
         media.autoplay = true; media.muted = true; media.loop = true; media.playsInline = true;
       } else if (source.type === 'lottie') {
         // <lottie-player> is a custom element from the lottie-player
         // library (loaded in this page's <head>) — it takes a JSON
         // animation file the same way an <img> takes a picture file.
         media = document.createElement('lottie-player');
-        media.setAttribute('src', source.src);
+        media.setAttribute('src', siteAssetUrl(source.src));
         media.setAttribute('autoplay', '');
         media.setAttribute('loop', '');
         media.setAttribute('background', 'transparent');
       } else {
         media = document.createElement('img');
-        media.src = source.src;
+        media.src = siteAssetUrl(source.src);
         media.alt = source.alt;
       }
       wrap.appendChild(media);
       heroContainer.appendChild(wrap);
 
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
-      if (source.zoom) media.style.setProperty('--thumb-zoom', source.zoom);
-      if (source.rotate) media.style.setProperty('--thumb-rotate', source.rotate + 'deg');
+      media.style.setProperty('--hero-zoom', source.zoom || 1);
+      media.style.setProperty('--hero-rotate', (source.rotate || 0) + 'deg');
 
       // Auto face-detection fallback only ever made sense for still
       // images with no focus point already set by hand — video and
@@ -1288,9 +1344,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
-    }, 3500); // changes every 3.5 seconds
+    }, HERO_CROSSFADE_MS); // configured in Hero Loop Animation
   }
 
+  await settingsReady;
   initHeroBanner();
 
 
@@ -1660,6 +1717,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const ytUrl = item.getAttribute('data-youtube');
         const videoUrl = item.getAttribute('data-video');
         const lottieUrl = item.getAttribute('data-lottie');
+        const modelUrl = item.getAttribute('data-model');
         const caption = item.getAttribute('data-description');
 
         if (imgUrl) {
@@ -1747,6 +1805,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           modalMediaContainer.appendChild(buildMediaEntry(video, caption));
         }
 
+        if (modelUrl) {
+          const modelWrap = document.createElement('div');
+          modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
+          modelWrap.setAttribute('aria-label', 'Interactive 3D model');
+          modalMediaContainer.appendChild(buildMediaEntry(modelWrap, caption));
+          import('./model-viewer.js').then(({ mountModelViewer }) => {
+            mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
+              autoRotate: false,
+              background: 'transparent'
+            });
+          }).catch(err => {
+            modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
+            console.warn('3D model viewer:', err);
+          });
+        }
+
         if (lottieUrl) {
           // <lottie-player> plays a Lottie/JSON animation the same way
           // <video> plays a video file — same orientation handling as
@@ -1754,7 +1828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           // since there's no equivalent of videoWidth/videoHeight to
           // read the real proportions from up front.
           const player = document.createElement('lottie-player');
-          player.setAttribute('src', lottieUrl);
+          player.setAttribute('src', siteAssetUrl(lottieUrl));
           player.setAttribute('autoplay', '');
           player.setAttribute('loop', '');
           player.setAttribute('background', 'transparent');
@@ -1768,9 +1842,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     } else {
-      // Fallback: If no media list exists, just use the thumbnail
-      const fallbackSrc = card.querySelector('.card-thumbnail img').src;
-      modalMediaContainer.appendChild(buildImageMedia(fallbackSrc));
+      // Fallback: use whichever thumbnail media the card actually renders.
+      const thumbMedia = card.querySelector('.card-thumbnail .project-thumb-media, .card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player');
+      if (thumbMedia) {
+        if (thumbMedia.tagName === 'LOTTIE-PLAYER') {
+          const player = document.createElement('lottie-player');
+          player.setAttribute('src', siteAssetUrl(thumbMedia.getAttribute('src') || ''));
+          player.setAttribute('autoplay',''); player.setAttribute('loop',''); player.setAttribute('background','transparent');
+          modalMediaContainer.appendChild(buildMediaEntry(player, ''));
+        } else if (thumbMedia.tagName === 'VIDEO') {
+          const video = document.createElement('video');
+          video.src = thumbMedia.src; video.controls = true; video.playsInline = true;
+          modalMediaContainer.appendChild(buildMediaEntry(video, ''));
+        } else if (thumbMedia.src) {
+          modalMediaContainer.appendChild(buildImageMedia(thumbMedia.src));
+        }
+      }
     }
 
     // 4. Show Lightbox and lock body scroll

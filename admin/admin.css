@@ -59,8 +59,8 @@
 
   /* ---------- App shell ---------- */
   #app{display:none;min-height:100vh;grid-template-columns:230px 1fr;}
-  #app.active{display:grid;}
-  aside.sidebar{background:var(--panel);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  #app.active{display:grid;padding-top:58px;}
+  aside.sidebar{background:var(--panel);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;}
   .sidebar-brand{display:flex;align-items:center;gap:9px;padding:0 10px 20px;}
   .sidebar-brand .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 6px var(--good);}
   .sidebar-brand span{font-weight:800;color:#fff;letter-spacing:.5px;font-size:.92rem;}
@@ -178,6 +178,7 @@
   @media (max-width:720px){
     #app.active{display:block;}
     main.content{padding:24px 18px 60px;}
+    #app.active{padding-top:56px;}
     .two-col{grid-template-columns:1fr;}
 
     /* The sidebar no longer sits in normal document flow next to the
@@ -187,8 +188,8 @@
        slid fully into view over the content when opened, the same
        pattern Claude's own mobile app uses for its side menu. */
     aside.sidebar{
-      position:fixed; top:0; left:0; z-index:500;
-      width:82%; max-width:300px; height:100%;
+      position:fixed; top:56px; left:0; z-index:500;
+      width:82%; max-width:300px; height:calc(100% - 56px);
       transform:translateX(-100%);
       transition:transform .25s ease;
       box-shadow:2px 0 24px rgba(0,0,0,.4);
@@ -206,7 +207,7 @@
        stays off while transparent so it can never silently eat a tap
        on the page underneath before the drawer has actually opened. */
     #sidebarBackdrop{
-      display:block; position:fixed; inset:0; z-index:499;
+      display:block; position:fixed; inset:56px 0 0; z-index:499;
       background:rgba(0,0,0,.55); opacity:0; pointer-events:none;
       transition:opacity .2s ease;
     }
@@ -234,7 +235,7 @@
   code.k{background:#0f0f0f;border:1px solid var(--line);padding:1px 6px;border-radius:4px;font-size:12px;color:#ddd;}
 
   /* ---------- Top bar (always-visible save) ---------- */
-  #topbar{display:none;align-items:center;justify-content:space-between;gap:16px;padding:11px 20px;background:rgba(18,18,18,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100;}
+  #topbar{display:none;align-items:center;justify-content:space-between;gap:16px;padding:11px 20px;background:rgba(18,18,18,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);position:fixed;left:0;right:0;top:0;height:58px;box-sizing:border-box;z-index:1000;}
   #topbar.active{display:flex;}
   .topbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
   .topbar-left .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 6px var(--good);flex-shrink:0;}
@@ -244,7 +245,21 @@
   .topbar-right{display:flex;align-items:center;gap:14px;flex-shrink:0;}
   #topbar button.primary{width:auto;padding:9px 18px;}
 
-  /* ---------- Collapsible cards (hero / reviews) ---------- */
+  
+/* Picker search/type controls */
+.media-picker-toolbar-main{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.media-picker-toolbar-main .media-folder-crumb{flex:1;min-width:180px;}
+.picker-search{width:min(240px,28vw);min-width:120px;padding:9px 11px!important;border-radius:8px!important;}
+.picker-kind{width:auto;min-width:125px;padding:9px 34px 9px 11px!important;}
+
+/* Interactive 3D model previews */
+.model-viewer-shell{position:relative;width:100%;height:100%;min-height:260px;background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.055),rgba(255,255,255,.012) 52%,transparent 75%);overflow:hidden;border-radius:inherit;touch-action:none;}
+.model-viewer-shell canvas{display:block;width:100%!important;height:100%!important;}
+.model-viewer-hint{position:absolute;left:12px;bottom:10px;color:rgba(255,255,255,.52);font-size:10px;letter-spacing:.04em;pointer-events:none;background:rgba(0,0,0,.35);padding:4px 7px;border-radius:5px;}
+.model-viewer-error{padding:16px;color:#9a9a9a;text-align:center;font-size:12px;line-height:1.5;}
+.media-preview.model-preview{aspect-ratio:16/10;}
+.media-preview .admin-model-viewer{min-height:100%;height:100%;}
+/* ---------- Collapsible cards (hero / reviews) ---------- */
   .collapsible-head{display:flex;align-items:center;gap:10px;cursor:pointer;}
   .collapsible-head .preview-line{flex:1;font-size:13px;color:#bbb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
   .collapsible-body{overflow:hidden;transition:max-height .25s ease, opacity .2s ease;}
@@ -373,6 +388,10 @@
   .media-picker-overlay{padding:10px;align-items:stretch;}
   .media-picker-dialog{height:100%;max-height:none;border-radius:12px;}
   .media-picker-toolbar{align-items:flex-start;flex-direction:column;}
+    .media-picker-toolbar-main{width:100%;flex-wrap:wrap;}
+    .media-picker-toolbar-main .media-folder-crumb{width:100%;flex-basis:100%;}
+    .picker-search{flex:1;width:auto;min-width:0;}
+    .picker-kind{min-width:125px;}
   .media-picker-actions{width:100%;}
   .media-picker-actions button{flex:1;}
   .media-picker-dialog>.dropzone{margin-left:12px;margin-right:12px;}
