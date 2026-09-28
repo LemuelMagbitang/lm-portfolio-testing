@@ -51,7 +51,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   //   'fade' — a plain crossfade, no zoom.
   //   'none' — an instant cut, no fade either.
   let HERO_TRANSITION = 'kenburns';
-  let HERO_CROSSFADE_MS = 3500;
 
   // Holds About's software-skills list once it loads, purely so
   // applySettings (right below) can re-render that list if
@@ -112,16 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('a[aria-label="' + label + '"]').forEach(a => { a.href = url; });
   }
 
-  function applyOgMeta(remote){
-    if (!remote || !remote.ogImage) return;
-    try {
-      const root = new URL('/', window.location.href).href;
-      const imageUrl = new URL(remote.ogImage + (remote.ogImageVersion ? `?v=${encodeURIComponent(remote.ogImageVersion)}` : ''), root).href;
-      document.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"]').forEach(meta => { meta.setAttribute('content', imageUrl); });
-      if (remote.ogImageAlt) document.querySelectorAll('meta[property="og:image:alt"]').forEach(meta => meta.setAttribute('content', remote.ogImageAlt));
-    } catch (e) { /* keep the static HTML fallback */ }
-  }
-
   function applyCardBadgesVisibility() {
     document.querySelectorAll('.card-badges').forEach(el => {
       el.style.display = SHOW_CARD_BADGES ? '' : 'none';
@@ -142,7 +131,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (remote.heroTiming) {
       if (remote.heroTiming.loopMode === 'latest' || remote.heroTiming.loopMode === 'manual') HERO_LOOP_MODE = remote.heroTiming.loopMode;
       if (['kenburns','fade','none'].includes(remote.heroTiming.transitionStyle)) HERO_TRANSITION = remote.heroTiming.transitionStyle;
-      if (Number.isFinite(Number(remote.heroTiming.crossfadeMs)) && Number(remote.heroTiming.crossfadeMs) >= 500) HERO_CROSSFADE_MS = Number(remote.heroTiming.crossfadeMs);
     }
 
     // Re-apply every toggle-dependent bit of DOM now that the values
@@ -177,12 +165,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (remote.siteTitle) document.title = remote.siteTitle;
-    applyOgMeta(remote);
   }
 
-  const settingsReady = window.SETTINGS_URL
-    ? fetch(window.SETTINGS_URL).then(r => r.json()).then(applySettings).catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err))
-    : Promise.resolve();
+  if (window.SETTINGS_URL) {
+    fetch(window.SETTINGS_URL)
+      .then(r => r.json())
+      .then(applySettings)
+      .catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err));
+  }
 
 
   /* =========================================
@@ -231,18 +221,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const thumb = document.createElement('div');
     thumb.className = 'card-thumbnail';
     const t = p.thumbnail || {};
-    if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
     if (t.src) {
-      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src}, p.title || 'Project artwork');
-      if (media) {
-        if (t.focus) media.setAttribute('data-focus', t.focus);
-        if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
-        if (t.rotate) media.setAttribute('data-rotate', t.rotate);
-        thumb.appendChild(media);
-      }
+      // A real thumbnail image: focus/zoom go on the <img> itself,
+      // matching the convention already used in the static markup.
+      const img = document.createElement('img');
+      img.src = t.src;
+      img.alt = p.title || 'Project artwork';
+      if (t.focus) img.setAttribute('data-focus', t.focus);
+      if (t.zoom && Number(t.zoom) !== 1) img.setAttribute('data-zoom', t.zoom);
+      thumb.appendChild(img);
     } else {
+      // No thumbnail set — leave it empty so fillMissingThumbnails()
+      // (section 1, right after this) fills it from the first media
+      // item, same as the static markup does. Focus/zoom go on the
+      // wrapper itself since there's no <img> yet to put them on.
       if (t.focus) thumb.setAttribute('data-focus', t.focus);
-      if (t.zoom && Number(t.zoom)!==1) thumb.setAttribute('data-zoom', t.zoom);
+      if (t.zoom && Number(t.zoom) !== 1) thumb.setAttribute('data-zoom', t.zoom);
     }
     card.appendChild(thumb);
 
@@ -286,9 +280,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(window.PROJECTS_URL);
       if (!res.ok) return;
-      const raw = await res.json();
-      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
-      if (!list.length) return;
+      const list = await res.json();
+      if (!Array.isArray(list) || !list.length) return;
 
       const frag = document.createDocumentFragment();
       list.forEach(p => frag.appendChild(buildProjectCardEl(p)));
@@ -430,7 +423,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function fillSkillList(id, list) {
     const ul = document.getElementById(id);
-    if (!ul || !Array.isArray(list) || !list.length) return;
+    if (!ul) return;
+
+    // Logo mode is a layout mode, not just an image swap: when the
+    // Software Skills switch is on, the whole list loses the text-pill
+    // treatment so logos (and any initials fallback) stand on their own.
+    ul.classList.toggle('logo-mode', id === 'softwareSkillsList' && SHOW_SOFTWARE_LOGOS);
+    if (!Array.isArray(list) || !list.length) {
+      ul.innerHTML = '';
+      return;
+    }
     ul.innerHTML = '';
     // Multimedia skills are always plain strings, and never show a
     // logo — a category like "3D Modeling" has no brand mark to show
@@ -552,7 +554,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (expList && Array.isArray(a.experience) && a.experience.length) {
         expList.innerHTML = '';
         a.experience.forEach(exp => {
-          expList.appendChild(buildTimelineBlock({ title: exp.role, dateLine: [exp.company, exp.startDate || exp.endDate ? `${exp.startDate || ''}${exp.startDate || exp.endDate ? ' – ' : ''}${exp.endDate || ''}` : ''].filter(Boolean).join(' · '), bullets: exp.bullets }));
+          expList.appendChild(buildTimelineBlock({ title: exp.role, dateLine: exp.company, bullets: exp.bullets }));
         });
       }
 
@@ -560,7 +562,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (eduList && Array.isArray(a.education) && a.education.length) {
         eduList.innerHTML = '';
         a.education.forEach(e => {
-          eduList.appendChild(buildTimelineBlock({ title: e.school || e.title, dateLine: [e.degree, e.graduationDate].filter(Boolean).join(' · ') || e.detail, bullets: [] }));
+          eduList.appendChild(buildTimelineBlock({ title: e.title, dateLine: e.detail, bullets: [] }));
         });
       }
 
@@ -598,8 +600,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(window.FILTERS_URL);
       if (!res.ok) return;
-      const list = await res.json();
-      if (!Array.isArray(list) || !list.length) return;
+      const raw = await res.json();
+      // Filters & Badges are stored together as an object by the CMS:
+      // { filters:[...], badges:[...] }. Older deployments stored the
+      // filters as the array itself. Normalize both shapes here so a
+      // data/filters.json schema change never reduces the homepage to
+      // the permanent ALL button only.
+      const list = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.filters) ? raw.filters : []);
+      if (!list.length) return;
 
       // Filter tabs — only exist on the homepage; harmless no-op elsewhere.
       const tabs = document.querySelector('.filter-tabs');
@@ -863,44 +871,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   // the card's own first media-list item instead — an image if the
   // first item is data-image, or a YouTube thumbnail if it's
   // data-youtube. Runs once, before anything else reads the grid.
-  function buildThumbnailMedia(source, altText){
-    if (!source || !source.src) return null;
-    let media;
-    if (source.type === 'video') {
-      media=document.createElement('video'); media.src=source.src; media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true; media.preload='metadata';
-    } else if (source.type === 'lottie') {
-      media=document.createElement('lottie-player'); media.setAttribute('src',source.src); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent');
-    } else {
-      media=document.createElement('img'); media.src=source.src; media.alt=altText||'Project artwork';
-    }
-    media.classList.add('project-thumb-media');
-    return media;
-  }
-
-  function projectFallbackSource(card){
-    const image=card.querySelector('.project-media-list .media-item[data-image]');
-    if(image) return {type:'image',src:image.getAttribute('data-image')};
-    const video=card.querySelector('.project-media-list .media-item[data-video]');
-    if(video) return {type:'video',src:video.getAttribute('data-video')};
-    const lottie=card.querySelector('.project-media-list .media-item[data-lottie]');
-    if(lottie) return {type:'lottie',src:lottie.getAttribute('data-lottie')};
-    const yt=card.querySelector('.project-media-list .media-item[data-youtube]');
-    if(yt){ const {id}=parseYouTubeUrl(yt.getAttribute('data-youtube')); if(id)return {type:'image',src:`https://img.youtube.com/vi/${id}/hqdefault.jpg`}; }
-    return null;
-  }
-
   function fillMissingThumbnails() {
     document.querySelectorAll('.project-card').forEach(card => {
-      const wrap=card.querySelector('.card-thumbnail'); if(!wrap) return;
-      if(wrap.querySelector('.project-thumb-media')) return;
-      const existing=wrap.querySelector('img');
-      if(existing && existing.getAttribute('src')) { existing.classList.add('project-thumb-media'); return; }
-      const source=projectFallbackSource(card); if(!source) return;
-      const titleEl=card.querySelector('.glass-info h3');
-      const media=buildThumbnailMedia(source,titleEl?titleEl.textContent:'Project artwork');
-      if(media) wrap.appendChild(media);
-      if(source.type==='video') media.setAttribute('data-video-thumb','');
-      if(source.type==='lottie') media.setAttribute('data-lottie-thumb','');
+      const thumbWrap = card.querySelector('.card-thumbnail');
+      if (!thumbWrap) return;
+
+      const existingImg = thumbWrap.querySelector('img');
+      if (existingImg && existingImg.getAttribute('src')) return; // already has one
+
+      const firstImageItem = card.querySelector('.project-media-list .media-item[data-image]');
+      const firstVideoItem = card.querySelector('.project-media-list .media-item[data-youtube]');
+
+      let fallbackSrc = null;
+
+      if (firstImageItem) {
+        fallbackSrc = firstImageItem.getAttribute('data-image');
+      } else if (firstVideoItem) {
+        const { id } = parseYouTubeUrl(firstVideoItem.getAttribute('data-youtube'));
+        if (id) fallbackSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+      }
+
+      if (!fallbackSrc) return; // this card has nothing to fall back to
+
+      const titleEl = card.querySelector('.glass-info h3');
+      const altText = titleEl ? titleEl.textContent : 'Project artwork';
+
+      if (existingImg) {
+        existingImg.src = fallbackSrc;
+      } else {
+        const img = document.createElement('img');
+        img.src = fallbackSrc;
+        img.alt = altText;
+        thumbWrap.appendChild(img);
+      }
     });
   }
   fillMissingThumbnails();
@@ -924,13 +927,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   // there's no <img> yet for you to add them to directly.
   function applyThumbnailAdjustments() {
     document.querySelectorAll('.project-card .card-thumbnail').forEach(wrap => {
-      const media=wrap.querySelector('.project-thumb-media, img'); if(!media) return;
-      const focus=media.getAttribute('data-focus')||wrap.getAttribute('data-focus');
-      const zoom=media.getAttribute('data-zoom')||wrap.getAttribute('data-zoom');
-      const rotate=media.getAttribute('data-rotate')||wrap.getAttribute('data-rotate');
-      if(focus){media.style.objectPosition=focus;media.style.transformOrigin=focus;}
-      if(zoom)media.style.setProperty('--thumb-zoom',zoom);
-      if(rotate)media.style.setProperty('--thumb-rotate',rotate+'deg');
+      const img = wrap.querySelector('img');
+      if (!img) return;
+
+      const focus = img.getAttribute('data-focus') || wrap.getAttribute('data-focus');
+      const zoom = img.getAttribute('data-zoom') || wrap.getAttribute('data-zoom');
+      const rotate = img.getAttribute('data-rotate') || wrap.getAttribute('data-rotate');
+
+      // transformOrigin has to match objectPosition, not just default
+      // to center — object-position decides which part of the image
+      // is visible at all; transform-origin decides which point the
+      // zoom scales FROM. Set focus without also moving the zoom's
+      // anchor to match, and zooming in visibly pulls away from
+      // wherever you dragged the focus point instead of magnifying
+      // it — exactly the bug this fixes. The hero banner's own
+      // focus/zoom (applyFocalPoint, above) already gets this right;
+      // this brings project thumbnails in line with it.
+      if (focus) { img.style.objectPosition = focus; img.style.transformOrigin = focus; }
+      if (zoom) img.style.setProperty('--thumb-zoom', zoom);
+      if (rotate) img.style.setProperty('--thumb-rotate', rotate + 'deg');
     });
   }
   applyThumbnailAdjustments();
@@ -1080,22 +1095,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       // <img src> if one was written by hand, else the card's first
       // data-image, else its first YouTube thumbnail.
       let rawSrc = thumbImg ? thumbImg.getAttribute('src') : null;
-      let explicitType = thumbWrap ? thumbWrap.getAttribute('data-thumbnail-type') : null;
-      const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
-      if (!rawSrc && thumbMedia) {
-        rawSrc = thumbMedia.getAttribute('src');
-        explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : thumbMedia.tagName === 'LOTTIE-PLAYER' ? 'lottie' : 'image');
-      }
+
       if (!rawSrc) {
         const firstImageItem = card.querySelector('.project-media-list .media-item[data-image]');
-        const firstVideoItem = card.querySelector('.project-media-list .media-item[data-video]');
-        const firstLottieItem = card.querySelector('.project-media-list .media-item[data-lottie]');
-        if (firstImageItem) rawSrc = firstImageItem.getAttribute('data-image');
-        else if (firstVideoItem) rawSrc = firstVideoItem.getAttribute('data-video');
-        else if (firstLottieItem) rawSrc = firstLottieItem.getAttribute('data-lottie');
-        else {
-          const firstYouTubeItem = card.querySelector('.project-media-list .media-item[data-youtube]');
-          if (firstYouTubeItem) { const { id } = parseYouTubeUrl(firstYouTubeItem.getAttribute('data-youtube')); if (id) rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; }
+        if (firstImageItem) {
+          rawSrc = firstImageItem.getAttribute('data-image');
+        } else {
+          const firstVideoItem = card.querySelector('.project-media-list .media-item[data-youtube]');
+          if (firstVideoItem) {
+            const { id } = parseYouTubeUrl(firstVideoItem.getAttribute('data-youtube'));
+            if (id) rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+          }
         }
       }
 
@@ -1109,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const titleEl = card.querySelector('.glass-info h3');
 
       return {
-        type: explicitType || heroMediaTypeFromSrc(rawSrc),
+        type: heroMediaTypeFromSrc(rawSrc),
         src,
         alt: (thumbImg && thumbImg.getAttribute('alt')) || (titleEl ? titleEl.textContent : 'Featured artwork'),
         focus: (thumbImg && thumbImg.getAttribute('data-focus')) || (thumbWrap && thumbWrap.getAttribute('data-focus')) || null,
@@ -1141,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!p) return null;
     const thumb = p.thumbnail || {};
     let rawSrc = thumb.src || null;
-    let type = rawSrc ? (thumb.type || heroMediaTypeFromSrc(rawSrc)) : null;
+    let type = rawSrc ? heroMediaTypeFromSrc(rawSrc) : null;
 
     if (!rawSrc && Array.isArray(p.media)) {
       const firstUsable = p.media.find(m => m && m.src && (m.type === 'image' || m.type === 'video' || m.type === 'lottie'));
@@ -1261,8 +1271,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       heroContainer.appendChild(wrap);
 
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
-      media.style.setProperty('--hero-zoom', source.zoom || 1);
-      media.style.setProperty('--hero-rotate', (source.rotate || 0) + 'deg');
+      if (source.zoom) media.style.setProperty('--thumb-zoom', source.zoom);
+      if (source.rotate) media.style.setProperty('--thumb-rotate', source.rotate + 'deg');
 
       // Auto face-detection fallback only ever made sense for still
       // images with no focus point already set by hand — video and
@@ -1286,10 +1296,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
-    }, HERO_CROSSFADE_MS); // configured in Hero Loop Animation
+    }, 3500); // changes every 3.5 seconds
   }
 
-  await settingsReady;
   initHeroBanner();
 
 
