@@ -2246,7 +2246,7 @@ body.center-page {
   position:absolute;
   left:50%;
   bottom:max(calc(env(safe-area-inset-bottom, 0px) + 14px), clamp(14px,2.8vh,30px));
-  z-index:20;
+  z-index:40;
   transform:translateX(-50%);
   display:flex;
   flex-direction:column;
@@ -2261,7 +2261,7 @@ body.center-page {
   width:auto;
   max-width:min(100%,820px);
   box-sizing:border-box;
-  color:rgba(255,255,255,.56);
+  color:rgba(255,255,255,.48);
   background:transparent;
   border:0;
   padding:0;
@@ -2396,29 +2396,36 @@ body.center-page {
   box-shadow:none;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{display:none;}
-/* Global project controls sit beneath the 3D veil so they are visibly
-   separate from OrbitControls. They remain clickable because the veil uses
-   pointer-events:none. */
+
+/* Explicit 3D focus stacking: modal media list < backdrop veil < focused
+   3D stage < model UI. This preserves the clicked model as the visual focus. */
+.lightbox-modal.is-3d-focused .modal-interior::before{z-index:10;}
+.lightbox-modal.is-3d-focused .is-3d-focus-target{z-index:20;}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{z-index:20;}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .model-viewer-ui{z-index:40;}
+/* Global lightbox chrome (X / previous / next) belongs below the 3D
+   backdrop veil while the interactive model is active. It is deliberately
+   inert and non-hit-testable so it cannot be mistaken for OrbitControls or
+   accidentally triggered while the visitor is orbiting the model. */
 .lightbox-modal.is-3d-focused .lightbox-controls{
   position:fixed;
   inset:0;
-  z-index:30;
+  z-index:5;
   pointer-events:none;
+  opacity:.24;
+  filter:blur(2px) saturate(.55);
+  transition:opacity .25s ease, filter .25s ease;
 }
 .lightbox-modal.is-3d-focused .lightbox-nav,
 .lightbox-modal.is-3d-focused .lightbox-nav:hover,
+.lightbox-modal.is-3d-focused .lightbox-close,
 .lightbox-modal.is-3d-focused .lightbox-close:hover{
-  opacity:.46;
-}
-.lightbox-modal.is-3d-focused .lightbox-close{
-  z-index:30;
-  opacity:.28;
-  filter:saturate(.5);
-  pointer-events:auto;
+  opacity:.9;
+  pointer-events:none;
 }
 .lightbox-modal.is-3d-focused .lightbox-nav{
-  background:rgba(8,8,8,.22);
-  border-color:rgba(255,255,255,.06);
+  background:rgba(8,8,8,.18);
+  border-color:rgba(255,255,255,.05);
 }
 
 .lightbox-modal.is-3d-focused .lightbox-close{
@@ -2446,7 +2453,7 @@ body.center-page {
 .lightbox-nav{width:clamp(44px,8vw,48px);height:clamp(44px,8vw,48px);font-size:clamp(.86rem,2.2vw,1rem);}
 
 html.lm-3d-focus-open,
-body.lm-3d-focus-open{overscroll-behavior:none;overflow:hidden;}
+body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width:768px){
   .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}

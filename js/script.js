@@ -1875,6 +1875,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openLightbox(index, initialMediaIndex = -1) {
     lightbox.classList.remove('is-3d-focused');
+    if (lightboxControls) {
+      lightboxControls.classList.remove('is-3d-controls-disabled');
+      lightboxControls.inert = false;
+    }
     document.documentElement.classList.remove('lm-3d-focus-open');
     document.body.classList.remove('lm-3d-focus-open');
     currentLightboxIndex = index;
@@ -1887,7 +1891,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const descEl = card.querySelector('.project-description');
     modalFullDesc.innerHTML = descEl ? descEl.innerHTML : '';
 
-    // 2. Clear previous media to stop playing videos (and reset any zoom)
+    // 2. Clear previous media. Give mounted 3D viewers a chance to dispose
+    // their OrbitControls, WebGL renderer, ResizeObserver and document-level
+    // key listener before their DOM nodes are removed. This prevents stale
+    // render loops and interaction handlers when moving between projects.
+    modalMediaContainer.querySelectorAll('.model-viewer-shell').forEach(shell => {
+      try { shell.__modelViewerCleanup?.(); } catch (_) {}
+    });
     modalMediaContainer.innerHTML = '';
 
     // 3. Populate Media (Images & YouTube)
@@ -2011,6 +2021,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 lightbox.dataset.pre3dScrollTop = String(currentScroll);
                 lightbox.classList.add('is-3d-focused');
                 modelEntry.classList.add('is-3d-focus-target');
+                if (lightboxControls) {
+                  // Project navigation (X / previous / next) is intentionally
+                  // non-interactive while the 3D stage is active. It sits
+                  // visually beneath the backdrop veil as part of the
+                  // lightbox chrome, never as part of the model controls.
+                  lightboxControls.classList.add('is-3d-controls-disabled');
+                  lightboxControls.inert = true;
+                }
                 document.documentElement.classList.add('lm-3d-focus-open');
                 document.body.classList.add('lm-3d-focus-open');
                 requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
@@ -2018,6 +2036,10 @@ document.addEventListener('DOMContentLoaded', async () => {
               onDeactivate: () => {
                 lightbox.classList.remove('is-3d-focused');
                 modelEntry.classList.remove('is-3d-focus-target');
+                if (lightboxControls) {
+                  lightboxControls.classList.remove('is-3d-controls-disabled');
+                  lightboxControls.inert = false;
+                }
                 document.documentElement.classList.remove('lm-3d-focus-open');
                 document.body.classList.remove('lm-3d-focus-open');
                 const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
@@ -2121,6 +2143,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Close Lightbox function
   function closeLightbox() {
     lightbox.classList.remove('active', 'is-3d-focused');
+    if (lightboxControls) {
+      lightboxControls.classList.remove('is-3d-controls-disabled');
+      lightboxControls.inert = false;
+    }
     document.documentElement.classList.remove('lm-3d-focus-open');
     document.body.classList.remove('lm-3d-focus-open');
     if (lightboxControls) lightboxControls.classList.remove('active');

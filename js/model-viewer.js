@@ -223,6 +223,7 @@ export async function mountModelViewer(container, src, options = {}) {
     container.setAttribute('role', 'button');
     container.setAttribute('tabindex', '0');
     container.setAttribute('aria-label', 'Open interactive 3D view');
+    container.setAttribute('aria-expanded', 'false');
 
     const activate = document.createElement('div');
     activate.className = 'model-viewer-activate';
@@ -262,7 +263,17 @@ export async function mountModelViewer(container, src, options = {}) {
       renderer.domElement.style.pointerEvents = active ? 'auto' : 'none';
       renderer.domElement.style.touchAction = active ? 'none' : 'auto';
       container.dataset.interactive = active ? 'true' : 'false';
+      container.setAttribute('aria-expanded', active ? 'true' : 'false');
       container.setAttribute('aria-label', active ? 'Interactive 3D model. Press Escape to return to media.' : 'Open interactive 3D view');
+      // The passive shell acts like a button. Once active it becomes a region
+      // containing a real Back button; this avoids nesting interactive controls
+      // inside an ARIA button.
+      if (active) {
+        container.removeAttribute('role');
+        container.setAttribute('role', 'region');
+      } else {
+        container.setAttribute('role', 'button');
+      }
       container.setAttribute('tabindex', active ? '-1' : '0');
       fitRequested = true;
       if (active) {
@@ -301,12 +312,23 @@ export async function mountModelViewer(container, src, options = {}) {
       if (!controls.enabled && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
         setInteractive(true);
-      } else if (controls.enabled && event.key === 'Escape') {
-        event.preventDefault();
-        setInteractive(false);
-        requestAnimationFrame(() => { try { container.focus({ preventScroll: true }); } catch (_) { container.focus(); } });
       }
     });
+
+    // Keep Escape available while the model itself is actively being
+    // manipulated without making the WebGL canvas focusable. The canvas is
+    // purely visual; the outer shell owns the accessible interaction state.
+    const onDocumentKeydown = (event) => {
+      if (!controls.enabled || event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setInteractive(false);
+      requestAnimationFrame(() => {
+        try { container.focus({ preventScroll: true }); } catch (_) { container.focus(); }
+      });
+    };
+    document.addEventListener('keydown', onDocumentKeydown, true);
+    container.__modelViewerKeydownCleanup = () => document.removeEventListener('keydown', onDocumentKeydown, true);
 
     // Explicitly pass wheel movement to the lightbox scroller while passive.
     // This makes scrolling dependable even in browsers that treat a WebGL
@@ -332,8 +354,12 @@ export async function mountModelViewer(container, src, options = {}) {
       requestAnimationFrame(() => { try { container.focus({ preventScroll: true }); } catch (_) { container.focus(); } });
     });
 
-    renderer.domElement.setAttribute('tabindex', '-1');
-    renderer.domElement.setAttribute('aria-hidden', 'true');
+    // Do not make the renderer canvas focusable while marking it decorative.
+    // A focused aria-hidden canvas causes an accessibility warning in Chromium
+    // when the 3D focus layer changes. Keyboard semantics belong to the
+    // outer model-viewer shell instead.
+    renderer.domElement.removeAttribute('tabindex');
+    renderer.domElement.removeAttribute('aria-hidden');
     renderer.domElement.style.pointerEvents = 'none';
     renderer.domElement.style.touchAction = 'auto';
   } catch (err) {
@@ -376,6 +402,8 @@ export async function mountModelViewer(container, src, options = {}) {
     cancelAnimationFrame(frameHandle);
     resizeObserver?.disconnect();
     controls.dispose();
+    container.__modelViewerKeydownCleanup?.();
+    delete container.__modelViewerKeydownCleanup;
     disposeObject(root);
     scene.clear();
     renderer.dispose();
