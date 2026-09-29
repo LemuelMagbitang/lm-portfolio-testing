@@ -397,45 +397,46 @@ body {
 .section-title { font-size: 1.1rem; letter-spacing: 2px; color: #888; margin-bottom: 40px; text-align: center; }
 
 .filter-tabs {
-  position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 10px;
   width: 100%;
   margin: 28px auto 10px;
   padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
 }
 
-.filter-page {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  min-height: 42px;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity .18s ease, transform .22s ease;
-}
-
-.filter-page[hidden] {
+.filter-tabs::-webkit-scrollbar {
   display: none;
 }
 
-.filter-tabs.is-page-changing .filter-page.is-active {
-  animation: filter-page-settle .22s ease;
-}
-
-@keyframes filter-page-settle {
-  from { opacity: .35; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Target the individual buttons/tabs inside the container. */
-.filter-tabs button {
-  white-space: nowrap;
+.filter-tabs .filter-edge-spacer {
+  display: block;
   flex: 0 0 auto;
+  height: 1px;
+  pointer-events: none;
 }
+
+.filter-tabs .tab-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+/* The currently selected filter is deliberately centered by JavaScript.
+   Keeping the snap position at the center makes that relationship feel
+   stable while swiping or using a trackpad on narrow screens. */
+
 /* Lead-in line used on the targeted landing pages (3d-motion.html,
    illustration.html) in place of the filter tabs — sits in the same
    spot so the layout below doesn't shift. */
@@ -468,8 +469,9 @@ body {
 .tab-btn:focus { outline: none; }
 .tab-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-/* Apple/Figma-style page control for filter pages. Dots are the
-   navigation itself, not a description of a horizontally scrolling strip. */
+/* Apple/Figma-style page control. There is one dot per actual
+   filter, including ALL. The active dot tracks the filter nearest the
+   horizontal center of the strip. */
 .filter-page-controls{
   display:flex;
   align-items:center;
@@ -491,16 +493,16 @@ body {
   border-radius:50%;
   background:rgba(255,255,255,.30);
   cursor:pointer;
-  opacity:.82;
+  opacity:.72;
   transition:transform .22s ease, background .22s ease, opacity .22s ease;
 }
 .filter-page-dot.active{
-  transform:scale(1.55);
+  transform:scale(1.5);
   background:rgba(255,255,255,.95);
   opacity:1;
 }
 @media (hover:hover) and (pointer:fine){
-  .filter-page-dot:hover{opacity:1;transform:scale(1.3);}
+  .filter-page-dot:hover{opacity:1;transform:scale(1.28);}
 }
 .filter-page-dot:focus{outline:none;}
 .filter-page-dot:focus-visible{outline:2px solid #fff;outline-offset:4px;}
@@ -2526,14 +2528,11 @@ html.lm-3d-focus-open,
 body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width:767px){
-  /* Slightly more presence than the previous compact strip, while each
-     page stays contained so the artwork remains the visual priority. */
+  /* Mobile keeps the same one-row carousel, with slightly larger tabs
+     and enough edge space for the selected tab to sit in the center. */
   .filter-tabs{
+    gap:8px;
     margin:14px 0 10px;
-  }
-  .filter-page{
-    gap:8px 10px;
-    min-height:42px;
   }
   .filter-tabs .tab-btn{
     flex:0 0 auto;
