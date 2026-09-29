@@ -15,6 +15,26 @@
     {
       "id": "anime",
       "label": "ANIME"
+    },
+    {
+      "id": "test 1",
+      "label": "test 1"
+    },
+    {
+      "id": "test 2",
+      "label": "test 2"
+    },
+    {
+      "id": "test 3",
+      "label": "test 3"
+    },
+    {
+      "id": "test 4",
+      "label": "test 4"
+    },
+    {
+      "id": "test 5",
+      "label": "test 5"
     }
   ],
   "badges": [
