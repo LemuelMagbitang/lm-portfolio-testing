@@ -81,6 +81,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // already exist by then, not just be defined somewhere further down.
   let cachedSoftwareSkills = null;
 
+  // A short list of well-known creative/dev software whose company
+  // isn't reliably found by Simple Icons alone (below) — used as a
+  // second lookup source, keyed by the product's *domain* instead of
+  // a brand slug. Only needs entries for products actually worth
+  // covering; anything missing here just falls through to the next
+  // step instead of erroring.
+  const SOFTWARE_DOMAINS = {
+    krita: 'krita.org', blender: 'blender.org', figma: 'figma.com',
+    'davinci resolve': 'blackmagicdesign.com', 'cinema 4d': 'maxon.net',
+    zbrush: 'maxon.net', maya: 'autodesk.com', '3ds max': 'autodesk.com',
+    'autodesk maya': 'autodesk.com', unity: 'unity.com',
+    'unreal engine': 'unrealengine.com', procreate: 'procreate.com',
+    sketch: 'sketch.com', sketchup: 'sketchup.com',
+    'substance painter': 'substance3d.com', 'substance designer': 'substance3d.com',
+    'affinity photo': 'affinity.serif.com', 'affinity designer': 'affinity.serif.com',
+    'houdini': 'sidefx.com', 'clip studio paint': 'clipstudio.net'
+  };
+
+
+
   /* Looked up here, right at the top, instead of down in section 6
      where the reviews marquee is actually built.
 
@@ -441,24 +461,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     return item;
   }
-
-  // A short list of well-known creative/dev software whose company
-  // isn't reliably found by Simple Icons alone (below) — used as a
-  // second lookup source, keyed by the product's *domain* instead of
-  // a brand slug. Only needs entries for products actually worth
-  // covering; anything missing here just falls through to the next
-  // step instead of erroring.
-  const SOFTWARE_DOMAINS = {
-    krita: 'krita.org', blender: 'blender.org', figma: 'figma.com',
-    'davinci resolve': 'blackmagicdesign.com', 'cinema 4d': 'maxon.net',
-    zbrush: 'maxon.net', maya: 'autodesk.com', '3ds max': 'autodesk.com',
-    'autodesk maya': 'autodesk.com', unity: 'unity.com',
-    'unreal engine': 'unrealengine.com', procreate: 'procreate.com',
-    sketch: 'sketch.com', sketchup: 'sketchup.com',
-    'substance painter': 'substance3d.com', 'substance designer': 'substance3d.com',
-    'affinity photo': 'affinity.serif.com', 'affinity designer': 'affinity.serif.com',
-    'houdini': 'sidefx.com', 'clip studio paint': 'clipstudio.net'
-  };
 
   // The fallback when no logo of any kind can be found and one is
   // still wanted: initials, not the full name, so a skill that
