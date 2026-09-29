@@ -399,42 +399,27 @@ body {
 .filter-tabs {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  flex-wrap: nowrap;
-  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
   width: 100%;
   margin: 28px auto 10px;
   padding: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
-  touch-action: pan-x;
-}
-
-.filter-tabs::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .filter-tabs .filter-edge-spacer {
-  display: block;
-  flex: 0 0 auto;
-  height: 1px;
-  pointer-events: none;
+  display: none;
 }
 
 .filter-tabs .tab-btn {
   flex: 0 0 auto;
   white-space: nowrap;
-  scroll-snap-align: center;
 }
 
-/* The currently selected filter is deliberately centered by JavaScript.
-   Keeping the snap position at the center makes that relationship feel
-   stable while swiping or using a trackpad on narrow screens. */
+/* Desktop keeps the established wrapped filter layout. The horizontal
+   carousel and centered snapping are intentionally enabled only for
+   small screens below. */
 
 /* Lead-in line used on the targeted landing pages (3d-motion.html,
    illustration.html) in place of the filter tabs — sits in the same
@@ -2527,25 +2512,45 @@ html.lm-3d-focus-open,
 body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width:767px){
-  /* Mobile keeps the same one-row carousel, with slightly larger tabs
-     and enough edge space for the selected tab to sit in the center. */
+  /* Small screens use the centered horizontal filter carousel. */
   .filter-tabs{
+    justify-content:flex-start;
+    flex-wrap:nowrap;
     gap:8px;
+    width:100%;
     margin:14px 0 10px;
+    padding:0;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+    scroll-snap-type:x mandatory;
+    overscroll-behavior-x:contain;
+    touch-action:pan-x;
+  }
+  .filter-tabs::-webkit-scrollbar{display:none;}
+  .filter-tabs .filter-edge-spacer{
+    display:block;
+    flex:0 0 auto;
+    height:1px;
+    pointer-events:none;
   }
   .filter-tabs .tab-btn{
     flex:0 0 auto;
     font-size:.8rem;
     letter-spacing:1.1px;
     padding:8px 12px;
+    scroll-snap-align:center;
   }
   .filter-page-controls{
     gap:7px;
     margin-bottom:24px;
   }
-}
-
-@media (max-width:768px){
+  .filter-page-controls:not([hidden]){
+    display:flex;
+  }
+}@media (max-width:768px){
   .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}
   .lightbox-modal.is-3d-focused .lightbox-controls{
     inset:0;
