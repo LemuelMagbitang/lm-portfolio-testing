@@ -397,36 +397,45 @@ body {
 .section-title { font-size: 1.1rem; letter-spacing: 2px; color: #888; margin-bottom: 40px; text-align: center; }
 
 .filter-tabs {
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: nowrap;
-  gap: 16px;
-  width: fit-content;
-  max-width: 100%;
+  position: relative;
+  display: block;
+  width: 100%;
   margin: 28px auto 10px;
-  padding: 0 4px 6px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scroll-snap-type: x proximity;
+  padding: 0;
+  overflow: hidden;
 }
 
-.filter-tabs::-webkit-scrollbar {
+.filter-page {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  min-height: 42px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity .18s ease, transform .22s ease;
+}
+
+.filter-page[hidden] {
   display: none;
 }
 
-.filter-tabs .tab-btn {
-  scroll-snap-align: center;
+.filter-tabs.is-page-changing .filter-page.is-active {
+  animation: filter-page-settle .22s ease;
 }
 
-  /* Target the individual buttons/tabs inside the container */
-  .filter-tabs button { /* Change 'button' if you use a class like '.filter-item' */
-    white-space: nowrap; /* Keeps the text inside the tab from breaking to a new line */
-    flex: 0 0 auto; /* Prevents the browser from squishing the tabs */
-  }
+@keyframes filter-page-settle {
+  from { opacity: .35; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
+/* Target the individual buttons/tabs inside the container. */
+.filter-tabs button {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
 /* Lead-in line used on the targeted landing pages (3d-motion.html,
    illustration.html) in place of the filter tabs — sits in the same
    spot so the layout below doesn't shift. */
@@ -459,42 +468,42 @@ body {
 .tab-btn:focus { outline: none; }
 .tab-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-/* Quiet Apple-style pagination cue for horizontally paged filter tabs.
-   It is created by gallery.js only when the filter strip overflows, so
-   there is no extra decoration when every filter already fits on screen. */
+/* Apple/Figma-style page control for filter pages. Dots are the
+   navigation itself, not a description of a horizontally scrolling strip. */
 .filter-page-controls{
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:6px;
-  min-height:10px;
+  gap:7px;
+  min-height:12px;
   margin:0 auto 28px;
 }
 .filter-page-controls[hidden]{display:none !important;}
 .filter-page-dot{
   appearance:none;
   -webkit-appearance:none;
-  width:6px;
-  height:6px;
-  flex:0 0 6px;
+  width:7px;
+  height:7px;
+  flex:0 0 7px;
   padding:0;
   margin:0;
   border:0;
-  border-radius:999px;
-  background:rgba(255,255,255,.28);
+  border-radius:50%;
+  background:rgba(255,255,255,.30);
   cursor:pointer;
-  transition:width .22s ease, background .22s ease, opacity .22s ease;
-  opacity:.72;
+  opacity:.82;
+  transition:transform .22s ease, background .22s ease, opacity .22s ease;
 }
 .filter-page-dot.active{
-  width:18px;
-  flex-basis:18px;
-  background:rgba(255,255,255,.92);
+  transform:scale(1.55);
+  background:rgba(255,255,255,.95);
   opacity:1;
 }
 @media (hover:hover) and (pointer:fine){
-  .filter-page-dot:hover{opacity:1;}
+  .filter-page-dot:hover{opacity:1;transform:scale(1.3);}
 }
+.filter-page-dot:focus{outline:none;}
+.filter-page-dot:focus-visible{outline:2px solid #fff;outline-offset:4px;}
 
 /* Hover-only visual state, scoped to devices with a real hover-capable
    pointer (a mouse). Touchscreens have no real "mouse leave," so a plain
@@ -2542,21 +2551,24 @@ html.lm-3d-focus-open,
 body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width:767px){
-  /* Keep the filters compact enough for artwork to stay near the first screen,
-     while giving the tabs a little more presence and preserving one-line
-     horizontal paging. The page-control dots below the strip appear only
-     when the CMS list actually overflows. */
+  /* Slightly more presence than the previous compact strip, while each
+     page stays contained so the artwork remains the visual priority. */
   .filter-tabs{
-    width:100%;
-    gap:10px;
     margin:14px 0 10px;
-    padding:0 4px 6px;
+  }
+  .filter-page{
+    gap:8px 10px;
+    min-height:42px;
   }
   .filter-tabs .tab-btn{
     flex:0 0 auto;
     font-size:.8rem;
     letter-spacing:1.1px;
     padding:8px 12px;
+  }
+  .filter-page-controls{
+    gap:7px;
+    margin-bottom:24px;
   }
 }
 
