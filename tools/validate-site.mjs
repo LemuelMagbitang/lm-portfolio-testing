@@ -246,6 +246,16 @@ function validateTargetBlankRel(file) {
   }
 }
 
+function validateGalleryContract() {
+  const source = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  if (/getActiveCards:\s*\(\)\s*=>\s*getActiveCards\(\)/.test(source)) {
+    err('Gallery: getActiveCards() recursively calls itself.');
+  }
+  if (!/getActiveCards:\s*\(\)\s*=>\s*allCards\.filter\(/.test(source)) {
+    err('Gallery: getActiveCards() contract is missing its active-card filter.');
+  }
+}
+
 function validateBootstrapHardening() {
   const source = exists('js/script.js') ? readText('js/script.js') : '';
 
@@ -293,6 +303,7 @@ validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
+validateGalleryContract();
 checkLargeAssets();
 
 for (const js of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js']) {

@@ -90,6 +90,6 @@ export function initGallery(options = {}) {
     render,
     getFilter: () => currentFilter,
     getAllCards: () => allCards.slice(),
-    getActiveCards: () => getActiveCards().slice()
+    getActiveCards: () => allCards.filter(card => currentFilter === 'all' || card.classList.contains(currentFilter)).slice()
   };
 }
