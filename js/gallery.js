@@ -21,6 +21,7 @@ export function initGallery(options = {}) {
   let filterPager = null;
   let filterPageDots = [];
   let filterScrollFrame = null;
+  let filterScrollTimer = null;
 
   function getBaseCount() {
     return window.innerWidth < 768 ? mobileCount : desktopCount;
@@ -90,7 +91,7 @@ export function initGallery(options = {}) {
       filterPager.hidden = true;
       return;
     }
-    filterPager.hidden = dots.length <= 1;
+    filterPager.hidden = dots.length <= 1 || !isFilterCarousel();
     dots.forEach((dot, index) => {
       const active = index === activeIndex;
       dot.classList.toggle('active', active);
@@ -99,13 +100,28 @@ export function initGallery(options = {}) {
     });
   }
 
+  function isFilterCarousel() {
+    return window.innerWidth < 768;
+  }
+
   function centerFilterButton(button, behavior = 'smooth') {
-    if (!filterTabs || !button) return;
+    if (!filterTabs || !button || !isFilterCarousel()) return;
     button.scrollIntoView({
       behavior,
       block: 'nearest',
       inline: 'center'
     });
+  }
+
+  function scheduleCenteredFilter() {
+    if (!filterTabs || !isFilterCarousel()) return;
+    window.clearTimeout(filterScrollTimer);
+    filterScrollTimer = window.setTimeout(() => {
+      const buttons = getFilterButtons();
+      if (!buttons.length || !isFilterCarousel()) return;
+      const nearest = buttons[getNearestCenteredFilterIndex()];
+      if (nearest) centerFilterButton(nearest, 'smooth');
+    }, 90);
   }
 
   function buildFilterPager() {
@@ -128,7 +144,7 @@ export function initGallery(options = {}) {
 
     ensureFilterEdges();
     const activeIndex = Math.max(0, buttons.findIndex(button => (button.getAttribute('data-filter') || 'all') === currentFilter));
-    if (buttons[activeIndex]) centerFilterButton(buttons[activeIndex], 'auto');
+    if (buttons[activeIndex] && isFilterCarousel()) centerFilterButton(buttons[activeIndex], 'auto');
     updateFilterPager(activeIndex >= 0 ? activeIndex : 0);
   }
   function cardMatchesFilter(card, filter) {
@@ -198,7 +214,7 @@ export function initGallery(options = {}) {
     currentFilter = btn.getAttribute('data-filter') || 'all';
     isExpanded = false;
     render();
-    centerFilterButton(btn);
+    if (isFilterCarousel()) centerFilterButton(btn);
     const index = filterBtns.indexOf(btn);
     updateFilterPager(index);
     history.replaceState(null, '', window.location.pathname + window.location.search + (currentFilter === 'all' ? '' : `#${currentFilter}`));
@@ -217,18 +233,25 @@ export function initGallery(options = {}) {
       baseCount = getBaseCount();
       ensureFilterEdges();
       const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
-      if (activeBtn) centerFilterButton(activeBtn, 'auto');
+      if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
       updateFilterPager(filterBtns.indexOf(activeBtn));
       if (!isExpanded) render();
     }, 120);
   });
 
   filterTabs?.addEventListener('scroll', () => {
+    if (!isFilterCarousel()) return;
     if (filterScrollFrame) return;
     filterScrollFrame = window.requestAnimationFrame(() => {
       filterScrollFrame = null;
       updateFilterPager();
+      scheduleCenteredFilter();
     });
+  }, { passive: true });
+
+  filterTabs?.addEventListener('scrollend', () => {
+    if (!isFilterCarousel()) return;
+    scheduleCenteredFilter();
   }, { passive: true });
 
   function applyHash() {
@@ -241,7 +264,7 @@ export function initGallery(options = {}) {
     currentFilter = hash;
     isExpanded = false;
     render();
-    centerFilterButton(btn, 'auto');
+    if (isFilterCarousel()) centerFilterButton(btn, 'auto');
     updateFilterPager(filterBtns.indexOf(btn));
   }
 
@@ -251,7 +274,7 @@ export function initGallery(options = {}) {
   ensureFilterEdges();
   window.requestAnimationFrame(() => {
     const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
-    if (activeBtn) centerFilterButton(activeBtn, 'auto');
+    if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
     updateFilterPager(filterBtns.indexOf(activeBtn));
   });
   window.addEventListener('hashchange', applyHash);
