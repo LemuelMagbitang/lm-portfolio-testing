@@ -1101,15 +1101,17 @@ button.hamburger {
 
 .lightbox-close {
   position: fixed;
-  top: 25px;
-  right: 30px;
-  width:44px;
-  height:44px;
+  top: 18px;
+  right: 22px;
+  width:52px;
+  height:52px;
   display:flex;
   align-items:center;
   justify-content:center;
-  border-radius:50%;
-  font-size:1.85rem;
+  border-radius:0;
+  background:transparent;
+  border:0;
+  font-size:2.15rem;
   line-height:1;
   color:#fff;
   cursor:pointer;
@@ -1144,8 +1146,8 @@ button.hamburger {
      lightbox itself is scrolling. */
   transform: translate3d(0, -50%, 0);
   backface-visibility: hidden;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2550,4 +2552,11 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   .hero-banner.transition-kenburns .slide video,
   .hero-banner.transition-kenburns .slide lottie-player{animation:none;}
   .reviews-row{animation:none;}
+}
+
+@media (max-width:768px){
+  .lightbox-close{top:8px;right:17px;width:52px;height:52px;font-size:2.15rem;}
+  .lightbox-nav{width:50px;height:50px;font-size:1.05rem;}
+  .lightbox-prev{left:8px;}
+  .lightbox-next{right:8px;}
 }

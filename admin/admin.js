@@ -7,6 +7,15 @@ let currentSection = 'hero';
 let dirty = {};           // { hero: bool, ... }
 let cache = {};           // { hero: { json, sha } }
 
+function formatTimedValue(ms, unit){
+  const n = Number(ms) || 0;
+  return unit === 's' ? Number((n / 1000).toFixed(3)).toString() : Math.round(n).toString();
+}
+function toMs(value, unit){
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n * (unit === 's' ? 1000 : 1)) : 0;
+}
+
 /* THE FIX FOR "everything 404s with the CMS's own folder stuck in the
    URL" — every preview image in this tool (project thumbnails, media
    items, the profile photo, skill logos, folder previews) is built
@@ -551,7 +560,7 @@ async function render(){
   content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading ${SECTIONS[currentSection].label.toLowerCase()}…</div>`;
   try{
     const data = await loadSection(currentSection);
-    if(RENDERERS[currentSection]) RENDERERS[currentSection](data);
+    if(RENDERERS[currentSection]) await RENDERERS[currentSection](data);
   }catch(err){
     content.innerHTML = `<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn't load this file.</strong><br>${err.message}</div></div>`;
   }
@@ -657,7 +666,13 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>&nbsp; <span>Saving…</span>';
   try{
     let commitSha;
-    if(currentSave && currentSave.combined && name==='heroLoop'){
+    if(currentSave && currentSave.combined==='filtersWithProjects' && name==='filters'){
+      commitSha=await saveSectionsAtomic([
+        {name:'filters',path:SECTIONS.filters.file,content:JSON.stringify(obj,null,2)+'\n',encoding:'utf-8'},
+        {name:'projects',path:SECTIONS.projects.file,content:JSON.stringify(currentSave.extraData(),null,2)+'\n',encoding:'utf-8'}
+      ],'CMS: delete filter and clear project tags');
+      toast(`Saved — filter changes and project tag cleanup committed to ${conn.branch}.`);
+    }else if(currentSave && currentSave.combined && name==='heroLoop'){
       const sr=await loadSection('settings');
       const next={...(sr.json||{}),heroTiming:{...(sr.json?.heroTiming||{}),loopMode:obj.mode,transitionStyle:obj.transition,crossfadeMs:obj.interval}};
       commitSha=await saveSectionsAtomic([
@@ -693,9 +708,6 @@ RENDERERS.hero = function(data){
   let items = withUids((data.json || []).map(x => ({ label:x.label||'', text:x.text||'', author:x.author||'', source:x.source||'', weight: (x.weight===undefined||x.weight===null)?1:x.weight })));
   const MAX = 180;
   let openUid = null;
-
-  function formatTimedValue(ms,unit){ const n=Number(ms)||0; return unit==='s' ? Number((n/1000).toFixed(3)).toString() : Math.round(n).toString(); }
-  function toMs(value,unit){ const n=Number(value); return Number.isFinite(n) ? Math.round(n*(unit==='s'?1000:1)) : 0; }
 
   function paint(){
     content.innerHTML = sectionHead(
@@ -888,11 +900,25 @@ RENDERERS.heroLoop=async function(data){
 /* =====================================================================
    8. SECTION: FILTERS & BADGES
    ===================================================================== */
-RENDERERS.filters = function(data){
+RENDERERS.filters = async function(data){
   const raw=data.json||[];
   const filterItems=Array.isArray(raw)?raw:(raw.filters||[]);
   let badgeItems=Array.isArray(raw)?[]:(raw.badges||[]);
   let items=withUids(filterItems.map(x=>({id:x.id||'',label:x.label||''})));
+  let cleanedProjects=null;
+  async function cleanProjectFilter(filterId){
+    const result=await loadSection('projects');
+    const projects=Array.isArray(result.json)?result.json:[];
+    let changed=0;
+    const next=projects.map(project=>{
+      const filters=Array.isArray(project.filters)?project.filters:[];
+      if(!filters.includes(filterId)) return project;
+      changed++;
+      return {...project,filters:filters.filter(id=>id!==filterId)};
+    });
+    cleanedProjects={projects:next,changed,filterId};
+    return cleanedProjects;
+  }
   badgeItems=badgeItems.map(x=>typeof x==='string'?x:(x&&x.label)||'').filter(Boolean);
 
   function paint(){
@@ -902,8 +928,7 @@ RENDERERS.filters = function(data){
     ) + `
       <div class="banner info"><i class="fa-solid fa-circle-info"></i><div>
         The <strong>ALL</strong> tab always exists automatically and isn't listed here — every project belongs to it.
-        Whatever you type as the <strong>ID</strong> is what a project's <code class="k">filters</code> array will match, so
-        renaming an ID after projects are already tagged to it will need those projects re-tagged too.
+        Filter IDs are matched exactly. Deleting a filter automatically removes that ID from every project that uses it.
       </div></div>
       <div id="filterList"></div>
       <button class="add-btn" id="addFilter"><i class="fa-solid fa-plus"></i> Add filter tab</button>
@@ -936,9 +961,16 @@ RENDERERS.filters = function(data){
           flagUnsaved();
         });
       });
-      row.querySelector('[data-act="del"]').addEventListener('click', ()=>{
-        if(!confirm('Delete this filter tab? Projects tagged with it will need re-tagging.')) return;
-        items = items.filter(x=>x._uid!==item._uid); flagUnsaved(); paint();
+      row.querySelector('[data-act="del"]').addEventListener('click',async ()=>{
+        try{
+          const cleanup=await cleanProjectFilter(item.id);
+          items=items.filter(x=>x._uid!==item._uid);
+          flagUnsaved();
+          paint();
+          toast(cleanup.changed
+            ? `Deleted “${item.label || item.id}” and cleared it from ${cleanup.changed} project${cleanup.changed===1?'':'s'}.`
+            : `Deleted “${item.label || item.id}”. No projects were using it.`);
+        }catch(err){toast('Could not delete filter: '+err.message,true);}
       });
       row.querySelector('[data-act="up"]').addEventListener('click', ()=>{
         const i = items.indexOf(item); if(i===0) return;
@@ -959,6 +991,10 @@ RENDERERS.filters = function(data){
       for(const it of items){ if(!it.id.trim()||!it.label.trim()) throw new Error('Every filter needs both an ID and a label.'); }
       return {filters:items.map(x=>({id:x.id,label:x.label})),badges:badgeItems.map(x=>x.trim()).filter(Boolean)};
     }, 'filters', SECTIONS.filters.file);
+    if(cleanedProjects){
+      currentSave.combined='filtersWithProjects';
+      currentSave.extraData=()=>cleanedProjects.projects;
+    }
   }
   paint();
 };
@@ -2450,8 +2486,10 @@ function openMediaPicker(onPick, options={}){
     <div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Choose a file">
       <div class="media-picker-head"><div><strong>Choose a file</strong><span class="media-picker-sub" data-picker-title>Media Library</span></div><button class="icon-btn" data-close-picker type="button" title="Close"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="media-picker-toolbar">
-        <div class="media-picker-toolbar-main">
+        <div class="media-picker-pathbar">
           <div class="media-folder-crumb" id="pickerCrumbs"></div>
+        </div>
+        <div class="media-picker-control-row">
           <input class="picker-search" id="pickerSearch" type="search" placeholder="Search files…" autocomplete="off">
           <select class="picker-kind" id="pickerKind" title="Filter file type">
             <option value="">All files</option>
@@ -2461,8 +2499,8 @@ function openMediaPicker(onPick, options={}){
             <option value="model">3D Models</option>
             <option value="other">Other files</option>
           </select>
+          <div class="media-picker-actions"><button class="ghost" id="pickerNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="pickerRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="pickerRefresh" type="button" title="Refresh"><i class="fa-solid fa-rotate"></i></button></div>
         </div>
-        <div class="media-picker-actions"><button class="ghost" id="pickerNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="pickerRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="pickerRefresh" type="button" title="Refresh"><i class="fa-solid fa-rotate"></i></button></div>
       </div>
       <div class="dropzone dropzone-compact" id="pickerDropzone"><i class="fa-solid fa-cloud-arrow-up"></i>Drag a file here, or click to upload into this folder<input type="file" id="pickerFileInput" multiple style="display:none"></div>
       <div class="media-picker-scroll"><div class="media-grid" id="pickerGrid"></div></div>
