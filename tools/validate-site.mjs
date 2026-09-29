@@ -102,6 +102,62 @@ function validateMedia(media, where) {
   checkBackground(media.background, where);
 }
 
+function validateFilters(filters) {
+  if (!filters || typeof filters !== 'object' || !Array.isArray(filters.filters)) return;
+  const ids = new Set();
+  filters.filters.forEach((filter, i) => {
+    const where = `data/filters.json filter ${i + 1}`;
+    if (!filter || typeof filter !== 'object') {
+      err(`${where}: filter must be an object.`);
+      return;
+    }
+    const id = String(filter.id || '').trim();
+    const label = String(filter.label || '').trim();
+    if (!id) err(`${where}: missing id.`);
+    else {
+      if (ids.has(id)) err(`${where}: duplicate filter id "${id}".`);
+      ids.add(id);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
+        err(`${where}: id "${id}" must use lowercase letters, numbers, and hyphens only.`);
+      }
+    }
+    if (!label) err(`${where}: missing label.`);
+  });
+
+  const badges = Array.isArray(filters.badges) ? filters.badges : [];
+  const badgeNames = new Set();
+  badges.forEach((badge, i) => {
+    const value = String(badge || '').trim();
+    if (!value) err(`data/filters.json badge ${i + 1}: badge cannot be empty.`);
+    else if (badgeNames.has(value)) err(`data/filters.json: duplicate badge "${value}".`);
+    else badgeNames.add(value);
+  });
+}
+
+function validateReviews(reviews) {
+  if (!Array.isArray(reviews)) return;
+  reviews.forEach((review, i) => {
+    const where = `data/reviews.json review ${i + 1}`;
+    if (!review || typeof review !== 'object') return err(`${where}: review must be an object.`);
+    const stars = Number(review.stars);
+    if (!Number.isFinite(stars) || stars < 0 || stars > 5) err(`${where}: stars must be between 0 and 5.`);
+    if (!String(review.quote || '').trim()) err(`${where}: quote is required.`);
+    if (!String(review.author || '').trim()) warn(`${where}: author is empty.`);
+  });
+}
+
+function validateHeroMessages(heroMessages) {
+  if (!Array.isArray(heroMessages)) return;
+  heroMessages.forEach((message, i) => {
+    const where = `data/hero.json message ${i + 1}`;
+    if (!message || typeof message !== 'object') return err(`${where}: message must be an object.`);
+    if (!String(message.text || '').trim()) err(`${where}: text is required.`);
+    const weight = Number(message.weight);
+    if (!Number.isFinite(weight) || weight < 0) err(`${where}: weight must be non-negative.`);
+    if (String(message.text || '').length > 180) warn(`${where}: text exceeds the 180-character public display cap and will be trimmed.`);
+  });
+}
+
 function validateProjects(projects, filters) {
   if (!Array.isArray(projects)) return;
   const ids = new Set();
@@ -222,15 +278,31 @@ const heroLoop = parseJson('data/hero-loop.json', []);
 parseJson('data/hero.json', []);
 parseJson('data/reviews.json', []);
 
+validateFilters(filters);
 validateProjects(projects, filters);
 validateHeroLoop(heroLoop);
 validateAbout(about);
+
+const reviews = parseJson('data/reviews.json', []);
+const heroMessages = parseJson('data/hero.json', []);
+validateReviews(reviews);
+validateHeroMessages(heroMessages);
 
 if (settings?.heroTiming) {
   const timing = settings.heroTiming;
   if (!['latest', 'manual', 'mixed'].includes(timing.loopMode)) err(`data/settings.json: invalid heroTiming.loopMode "${timing.loopMode}".`);
   if (!['kenburns', 'fade', 'none'].includes(timing.transitionStyle)) err(`data/settings.json: invalid heroTiming.transitionStyle "${timing.transitionStyle}".`);
   if (!Number.isFinite(Number(timing.crossfadeMs)) || Number(timing.crossfadeMs) < 500) err(`data/settings.json: heroTiming.crossfadeMs must be >= 500.`);
+  ['fadeMs','autoRotateMs'].forEach(key => {
+    if (timing[key] !== undefined && (!Number.isFinite(Number(timing[key])) || Number(timing[key]) < 0)) {
+      err(`data/settings.json: heroTiming.${key} must be non-negative.`);
+    }
+  });
+  ['kenBurnsFromScale','kenBurnsToScale','kenBurnsDurationS'].forEach(key => {
+    if (timing[key] !== undefined && (!Number.isFinite(Number(timing[key])) || Number(timing[key]) <= 0)) {
+      err(`data/settings.json: heroTiming.${key} must be greater than 0.`);
+    }
+  });
 }
 
 validateHtml('index.html');
@@ -265,11 +337,32 @@ function validateLightboxLifecycle() {
 
 function validateGalleryContract() {
   const source = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
   if (/getActiveCards:\s*\(\)\s*=>\s*getActiveCards\(\)/.test(source)) {
     err('Gallery: getActiveCards() recursively calls itself.');
   }
   if (!/getActiveCards:\s*\(\)\s*=>\s*allCards\.filter\(/.test(source)) {
     err('Gallery: getActiveCards() contract is missing its active-card filter.');
+  }
+  if (!/function\s+getBaseCount\s*\(\)/.test(source)) {
+    err('Gallery: responsive base-count contract is missing.');
+  }
+  if (!/function\s+isFilterCarousel\s*\(\)/.test(source) ||
+      !/function\s+getNearestCenteredFilterIndex\s*\(\)/.test(source)) {
+    err('Gallery: centered small-screen filter carousel contract is missing.');
+  }
+  if (!/filterPageDots\s*=\s*buttons\.map/.test(source)) {
+    err('Gallery: filter page controls must be generated one-to-one from actual filter buttons.');
+  }
+  if (!/filterTabs\?\.addEventListener\('scroll'/.test(source) ||
+      !/settleCenteredFilter/.test(source)) {
+    err('Gallery: horizontal scrolling must update and settle on the centered filter.');
+  }
+  if (!/overflow-x:\s*auto/.test(css) || !/scroll-snap-align:\s*center/.test(css)) {
+    err('Gallery: small-screen filter carousel CSS contract is missing.');
+  }
+  if (!/\.filter-page-controls\{\s*display:none;/.test(css)) {
+    err('Gallery: filter page controls must be hidden by default on desktop.');
   }
 }
 
@@ -327,8 +420,15 @@ function validateCmsRegressionContracts() {
   const script = exists('js/script.js') ? readText('js/script.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
   if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
+  if (!admin.includes('await onCollect()')) err('CMS save: save collectors must support asynchronous cross-file validation/migrations.');
+  if (!admin.includes('filtersWithProjects')) err('CMS filters: filter/project relationship saves must be atomic.');
+  if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
   if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) err('Gallery: row-aware Show More contract is missing.');
   if (!script.includes('card.dataset.filterIds')) err('Gallery filters: exact CMS filter IDs must be preserved.');
+  if (!script.includes('await cmsReady;') || script.indexOf('await cmsReady;') > script.indexOf('initGallery()')) {
+    err('Gallery filters: CMS data must finish loading before gallery initialization.');
+  }
+  if (!script.includes('const allBtn = tabs.querySelector')) err('Gallery filters: ALL fallback/structural button contract is missing.');
   if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) err('Hero: per-slide fade timing CSS variables are missing.');
 }
 validateCmsRegressionContracts();
@@ -336,7 +436,7 @@ validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
 
-for (const js of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js']) {
+for (const js of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js', 'admin/admin.js']) {
   if (!exists(js)) continue;
   try {
     execFileSync(process.execPath, ['--check', js], { stdio: 'pipe' });
