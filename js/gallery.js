@@ -232,7 +232,7 @@ export function initGallery(options = {}) {
     const hidden = allCards.filter(card => !filtered.includes(card));
     hidden.forEach(card => { card.style.opacity = '0'; });
     window.setTimeout(() => hidden.forEach(card => {
-      if (currentFilter !== 'all' && !card.classList.contains(currentFilter)) card.style.display = 'none';
+      if (currentFilter !== 'all' && !cardMatchesFilter(card, currentFilter)) card.style.display = 'none';
     }), fadeMs);
     filtered.forEach(card => { card.style.display = 'block'; });
     window.requestAnimationFrame(() => filtered.forEach(card => { card.style.opacity = '1'; }));
