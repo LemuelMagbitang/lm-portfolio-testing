@@ -657,7 +657,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   if (!currentSave) return;
   const { onCollect, name, filePath } = currentSave;
   let obj;
-  try{ obj = onCollect(); }
+  try{ obj = await onCollect(); }
   catch(err){ toast(err.message, true); return; }
 
   const btn = document.getElementById('btnSaveTop');
