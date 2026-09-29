@@ -1185,6 +1185,18 @@ button.hamburger {
   }
 }
 
+/* Keep the desktop chevrons on the same visual centerline while reducing
+   the circular hover/hit area so it cannot be clipped by a narrow browser
+   viewport or tab edge. Mobile keeps its existing touch-sized controls. */
+@media (min-width: 769px) {
+  .lightbox-nav {
+    width: 44px;
+    height: 44px;
+  }
+  .lightbox-prev { left: 14px; }
+  .lightbox-next { right: 14px; }
+}
+
 .lightbox-prev { left: 10px; }
 .lightbox-next { right: 10px; }
 

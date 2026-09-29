@@ -322,14 +322,16 @@ export function initGallery(options = {}) {
       startScrollLeft: filterTabs.scrollLeft,
       moved: false
     };
-    filterTabs.classList.add('is-dragging');
-    filterTabs.setPointerCapture?.(event.pointerId);
   });
 
   filterTabs?.addEventListener('pointermove', event => {
     if (!filterDrag || event.pointerId !== filterDrag.pointerId) return;
     const distance = event.clientX - filterDrag.startX;
-    if (Math.abs(distance) > 4) filterDrag.moved = true;
+    if (Math.abs(distance) > 4) {
+      filterDrag.moved = true;
+      filterTabs.classList.add('is-dragging');
+      filterTabs.setPointerCapture?.(event.pointerId);
+    }
     if (!filterDrag.moved) return;
 
     event.preventDefault();
