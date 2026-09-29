@@ -22,6 +22,8 @@ export function initGallery(options = {}) {
   let filterPageDots = [];
   let filterScrollFrame = null;
   let filterScrollTimer = null;
+  let filterDrag = null;
+  let suppressFilterClick = false;
 
   function getBaseCount() {
     return window.innerWidth < 768 ? mobileCount : desktopCount;
@@ -113,15 +115,48 @@ export function initGallery(options = {}) {
     });
   }
 
+  function activateFilterButton(button, { center = false, updateUrl = true } = {}) {
+    if (!button) return;
+    const nextFilter = button.getAttribute('data-filter') || 'all';
+    const changed = currentFilter !== nextFilter;
+
+    filterBtns.forEach(item => item.classList.toggle('active', item === button));
+    currentFilter = nextFilter;
+    isExpanded = false;
+
+    if (changed) render();
+    if (center && isFilterCarousel()) centerFilterButton(button);
+    updateFilterPager(filterBtns.indexOf(button));
+
+    if (updateUrl && changed) {
+      history.replaceState(
+        null,
+        '',
+        window.location.pathname +
+          window.location.search +
+          (currentFilter === 'all' ? '' : `#${currentFilter}`)
+      );
+    }
+  }
+
+  function settleCenteredFilter({ center = true } = {}) {
+    if (!filterTabs || !isFilterCarousel()) return;
+    const buttons = getFilterButtons();
+    if (!buttons.length) return;
+
+    const nearest = buttons[getNearestCenteredFilterIndex()];
+    if (!nearest) return;
+
+    updateFilterPager(filterBtns.indexOf(nearest));
+
+    if (center) centerFilterButton(nearest, 'smooth');
+    activateFilterButton(nearest, { center: false, updateUrl: true });
+  }
+
   function scheduleCenteredFilter() {
     if (!filterTabs || !isFilterCarousel()) return;
     window.clearTimeout(filterScrollTimer);
-    filterScrollTimer = window.setTimeout(() => {
-      const buttons = getFilterButtons();
-      if (!buttons.length || !isFilterCarousel()) return;
-      const nearest = buttons[getNearestCenteredFilterIndex()];
-      if (nearest) centerFilterButton(nearest, 'smooth');
-    }, 90);
+    filterScrollTimer = window.setTimeout(() => settleCenteredFilter(), 90);
   }
 
   function buildFilterPager() {
@@ -208,16 +243,13 @@ export function initGallery(options = {}) {
     }
   }
 
-  filterBtns.forEach(btn => btn.addEventListener('click', () => {
-    filterBtns.forEach(item => item.classList.remove('active'));
-    btn.classList.add('active');
-    currentFilter = btn.getAttribute('data-filter') || 'all';
-    isExpanded = false;
-    render();
-    if (isFilterCarousel()) centerFilterButton(btn);
-    const index = filterBtns.indexOf(btn);
-    updateFilterPager(index);
-    history.replaceState(null, '', window.location.pathname + window.location.search + (currentFilter === 'all' ? '' : `#${currentFilter}`));
+  filterBtns.forEach(btn => btn.addEventListener('click', event => {
+    if (suppressFilterClick) {
+      event.preventDefault();
+      suppressFilterClick = false;
+      return;
+    }
+    activateFilterButton(btn, { center: true, updateUrl: true });
   }));
 
   showMoreBtn?.addEventListener('click', () => {
@@ -251,8 +283,52 @@ export function initGallery(options = {}) {
 
   filterTabs?.addEventListener('scrollend', () => {
     if (!isFilterCarousel()) return;
-    scheduleCenteredFilter();
+    settleCenteredFilter();
   }, { passive: true });
+
+  /* Small-window mouse dragging mirrors a touch swipe. It only activates
+     for a primary-button mouse drag, so ordinary click-to-select remains
+     unchanged and touch devices keep native momentum scrolling. */
+  filterTabs?.addEventListener('pointerdown', event => {
+    if (!isFilterCarousel() || event.pointerType !== 'mouse' || event.button !== 0) return;
+    filterDrag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: filterTabs.scrollLeft,
+      moved: false
+    };
+    filterTabs.classList.add('is-dragging');
+    filterTabs.setPointerCapture?.(event.pointerId);
+  });
+
+  filterTabs?.addEventListener('pointermove', event => {
+    if (!filterDrag || event.pointerId !== filterDrag.pointerId) return;
+    const distance = event.clientX - filterDrag.startX;
+    if (Math.abs(distance) > 4) filterDrag.moved = true;
+    if (!filterDrag.moved) return;
+
+    event.preventDefault();
+    filterTabs.scrollLeft = filterDrag.startScrollLeft - distance;
+  });
+
+  function finishFilterDrag(event) {
+    if (!filterDrag || (event && event.pointerId !== filterDrag.pointerId)) return;
+    const dragged = filterDrag.moved;
+    const pointerId = filterDrag.pointerId;
+    filterDrag = null;
+    filterTabs.classList.remove('is-dragging');
+
+    try { filterTabs.releasePointerCapture?.(pointerId); } catch (e) {}
+
+    if (dragged) {
+      suppressFilterClick = true;
+      window.setTimeout(() => { suppressFilterClick = false; }, 0);
+      settleCenteredFilter();
+    }
+  }
+
+  filterTabs?.addEventListener('pointerup', finishFilterDrag);
+  filterTabs?.addEventListener('pointercancel', finishFilterDrag);
 
   function applyHash() {
     const hash = decodeURIComponent(window.location.hash.replace('#', ''));
