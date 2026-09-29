@@ -86,5 +86,10 @@ export function initGallery(options = {}) {
   applyHash();
   window.addEventListener('hashchange', applyHash);
   window.addEventListener('load', () => { baseCount = getBaseCount(); if (!isExpanded) render(); });
-  return { render, getFilter: () => currentFilter };
+  return {
+    render,
+    getFilter: () => currentFilter,
+    getAllCards: () => allCards.slice(),
+    getActiveCards: () => getActiveCards().slice()
+  };
 }
