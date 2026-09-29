@@ -457,7 +457,7 @@ body {
    filter, including ALL. The active dot tracks the filter nearest the
    horizontal center of the strip. */
 .filter-page-controls{
-  display:flex;
+  display:none;
   align-items:center;
   justify-content:center;
   gap:7px;
