@@ -250,6 +250,11 @@ function openLightbox(index, initialMediaIndex = -1) {
         modelEntry.classList.add('is-3d-media-item');
         modalMediaContainer.appendChild(modelEntry);
         import(new URL('model-viewer.js', import.meta.url).href).then(({ mountModelViewer }) => {
+          // The project may have been closed or replaced while the lazy
+          // Three.js module was loading. Never mount a WebGL viewer into a
+          // detached DOM node; doing so would leak a renderer until garbage
+          // collection and could keep document-level listeners alive.
+          if (!modelWrap.isConnected || !lightbox.classList.contains('active')) return;
           mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
             autoRotate: false,
             background: itemBackground || null,
@@ -406,6 +411,12 @@ function closeLightbox() {
   lightboxA11y.close();
   delete lightbox.dataset.pre3dScrollTop;
   document.body.style.overflow = ''; // Restore body scroll
+  // Dispose any mounted 3D viewers before removing their DOM nodes. The
+  // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
+  // keydown listener, none of which are cleaned up by innerHTML alone.
+  modalMediaContainer.querySelectorAll('.model-viewer-shell').forEach(shell => {
+    try { shell.__modelViewerCleanup?.(); } catch (_) {}
+  });
   modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background
 }
 

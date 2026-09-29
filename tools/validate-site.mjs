@@ -246,6 +246,18 @@ function validateTargetBlankRel(file) {
   }
 }
 
+function validateLightboxLifecycle() {
+  const source = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
+
+  if (!/if \(!modelWrap\.isConnected \|\| !lightbox\.classList\.contains\('active'\)\) return;/.test(source)) {
+    err('Lightbox: lazy 3D viewer mount is missing its detached-node/closed-lightbox guard.');
+  }
+
+  if (!/modalMediaContainer\.querySelectorAll\('\.model-viewer-shell'\)\.forEach\(shell => \{\s*try \{ shell\.__modelViewerCleanup\?\.\(\); \} catch \(_\) \{\}/s.test(source)) {
+    err('Lightbox: closing the modal must dispose mounted 3D viewers before clearing their DOM.');
+  }
+}
+
 function validateGalleryContract() {
   const source = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   if (/getActiveCards:\s*\(\)\s*=>\s*getActiveCards\(\)/.test(source)) {
@@ -303,6 +315,7 @@ validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
+validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
 
