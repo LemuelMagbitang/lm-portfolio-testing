@@ -3,6 +3,7 @@
  * Owns filtering, reveal/collapse behavior, deep links and responsive sizing.
  */
 export function initGallery(options = {}) {
+  const filterTabs = document.querySelector('.filter-tabs');
   const filterBtns = document.querySelectorAll('.tab-btn');
   const allCards = Array.from(document.querySelectorAll('.project-card'));
   const showMoreBtn = document.getElementById('showMoreBtn');
@@ -17,8 +18,60 @@ export function initGallery(options = {}) {
   let currentFilter = 'all';
   let isExpanded = false;
   let baseCount = getBaseCount();
+  let filterPager = null;
+  let filterPageDots = [];
 
   function getBaseCount() { return window.innerWidth < 768 ? mobileCount : desktopCount; }
+
+  function ensureFilterPager() {
+    if (!filterTabs || filterPager) return;
+    filterPager = document.createElement('div');
+    filterPager.className = 'filter-page-controls';
+    filterPager.setAttribute('aria-label', 'Filter pages');
+    filterPager.hidden = true;
+    filterTabs.insertAdjacentElement('afterend', filterPager);
+  }
+
+  function updateFilterPager() {
+    if (!filterTabs || !filterPager) return;
+    const overflow = filterTabs.scrollWidth > filterTabs.clientWidth + 4;
+    if (!overflow) {
+      filterPager.hidden = true;
+      filterPageDots = [];
+      filterPager.innerHTML = '';
+      return;
+    }
+
+    const pages = Math.max(2, Math.ceil(filterTabs.scrollWidth / filterTabs.clientWidth));
+    if (filterPageDots.length !== pages) {
+      filterPager.innerHTML = '';
+      filterPageDots = Array.from({ length: pages }, (_, index) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'filter-page-dot';
+        dot.setAttribute('aria-label', `Show filter page ${index + 1}`);
+        dot.addEventListener('click', () => {
+          const maxScroll = Math.max(0, filterTabs.scrollWidth - filterTabs.clientWidth);
+          const left = Math.min(maxScroll, index * filterTabs.clientWidth);
+          filterTabs.scrollTo({ left, behavior: 'smooth' });
+        });
+        filterPager.appendChild(dot);
+        return dot;
+      });
+    }
+
+    const maxScroll = Math.max(1, filterTabs.scrollWidth - filterTabs.clientWidth);
+    const page = Math.min(pages - 1, Math.round(filterTabs.scrollLeft / Math.max(1, filterTabs.clientWidth)));
+    const normalizedPage = Math.min(pages - 1, Math.round((filterTabs.scrollLeft / maxScroll) * (pages - 1)));
+    const activePage = filterTabs.scrollLeft <= 1 ? page : normalizedPage;
+
+    filterPager.hidden = false;
+    filterPageDots.forEach((dot, index) => {
+      const active = index === activePage;
+      dot.classList.toggle('active', active);
+      dot.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+  }
 
   function cardMatchesFilter(card, filter) {
     if (filter === 'all') return true;
@@ -87,7 +140,9 @@ export function initGallery(options = {}) {
     currentFilter = btn.getAttribute('data-filter') || 'all';
     isExpanded = false;
     render();
+    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     history.replaceState(null, '', window.location.pathname + window.location.search + (currentFilter === 'all' ? '' : `#${currentFilter}`));
+    window.requestAnimationFrame(updateFilterPager);
   }));
 
   showMoreBtn?.addEventListener('click', () => {
@@ -99,8 +154,16 @@ export function initGallery(options = {}) {
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => { baseCount = getBaseCount(); if (!isExpanded) render(); }, 120);
+    resizeTimer = window.setTimeout(() => {
+      baseCount = getBaseCount();
+      if (!isExpanded) render();
+      updateFilterPager();
+    }, 120);
   });
+
+  filterTabs?.addEventListener('scroll', () => {
+    window.requestAnimationFrame(updateFilterPager);
+  }, { passive: true });
 
   function applyHash() {
     const hash = decodeURIComponent(window.location.hash.replace('#', ''));
@@ -112,10 +175,14 @@ export function initGallery(options = {}) {
     currentFilter = hash;
     isExpanded = false;
     render();
+    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    window.requestAnimationFrame(updateFilterPager);
   }
 
+  ensureFilterPager();
   render();
   applyHash();
+  window.requestAnimationFrame(updateFilterPager);
   window.addEventListener('hashchange', applyHash);
   window.addEventListener('load', () => { baseCount = getBaseCount(); if (!isExpanded) render(); });
   return {
