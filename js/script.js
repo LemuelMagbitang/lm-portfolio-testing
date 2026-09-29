@@ -6,7 +6,13 @@ document.addEventListener('DOMContentLoaded', async () => {
      format. */
   const runtimeScript = Array.from(document.scripts || []).find(el => /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(el.src || el.getAttribute('src') || ''));
   const runtimeUrl = runtimeScript ? new URL('site-runtime.js', runtimeScript.src).href : new URL('js/site-runtime.js', document.baseURI).href;
-  const { getSiteRootUrl, siteAssetUrl, ensureLottiePlayer, ensureMediaBackgroundHelper, prefersReducedMotion } = await import(runtimeUrl);
+  const { getSiteRootUrl, siteAssetUrl, ensureLottiePlayer, ensureMediaBackgroundHelper } = await import(runtimeUrl);
+  const [{ loadCmsJson, parseYouTubeUrl }, { initGallery }, { initHeroBannerV2 }, { initLightbox }] = await Promise.all([
+    import(new URL('cms-data.js', runtimeUrl).href),
+    import(new URL('gallery.js', runtimeUrl).href),
+    import(new URL('hero.js', runtimeUrl).href),
+    import(new URL('lightbox.js', runtimeUrl).href)
+  ]);
 
   /* =========================================
      0. YOUR SWITCHES — edit these two, nothing else
@@ -192,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const settingsReady = window.SETTINGS_URL
-    ? fetch(siteAssetUrl(window.SETTINGS_URL)).then(r => r.json()).then(applySettings).catch(err => console.warn('Settings: could not load', window.SETTINGS_URL, err))
+    ? loadCmsJson(window.SETTINGS_URL, null, { resolveUrl: siteAssetUrl }).then(applySettings)
     : Promise.resolve();
 
 
@@ -323,9 +329,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!grid) return;
 
     try {
-      const res = await fetch(siteAssetUrl(window.PROJECTS_URL));
-      if (!res.ok) return;
-      const raw = await res.json();
+      const raw = await loadCmsJson(window.PROJECTS_URL, null, { resolveUrl: siteAssetUrl });
+      if (!raw) return;
       const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
       if (!list.length) return;
 
@@ -338,7 +343,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static cards in place.
     }
   }
-  await loadProjectsFromCMS();
+  const cmsReady = Promise.all([
+    loadProjectsFromCMS(),
+    loadReviewsFromCMS(),
+    loadAboutFromCMS(),
+    loadFiltersFromCMS()
+  ]);
+  await cmsReady;
   if (document.querySelector('.project-media-list .media-item[data-lottie], .project-thumb-media[lottie-player]')) await ensureLottiePlayer();
 
 
@@ -382,9 +393,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!track) return;
 
     try {
-      const res = await fetch(siteAssetUrl(window.REVIEWS_URL));
-      if (!res.ok) return;
-      const list = await res.json();
+      const list = await loadCmsJson(window.REVIEWS_URL, null, { resolveUrl: siteAssetUrl });
+      if (!list) return;
       if (!Array.isArray(list) || !list.length) return;
 
       const frag = document.createDocumentFragment();
@@ -396,10 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static cards in place.
     }
   }
-  await loadReviewsFromCMS();
-
-
-  /* =========================================
+/* =========================================
      0d. CMS OVERRIDE — ABOUT PAGE
      ========================================= */
   /* This one only ever does anything on about/index.html — it bails
@@ -558,9 +565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!headlineEl) return; // not the about page — nothing to do
 
     try {
-      const res = await fetch(siteAssetUrl(window.ABOUT_URL));
-      if (!res.ok) return;
-      const a = await res.json();
+      const a = await loadCmsJson(window.ABOUT_URL, null, { resolveUrl: siteAssetUrl });
+      if (!a) return;
       if (!a || typeof a !== 'object') return;
 
       if (a.headline) headlineEl.textContent = a.headline;
@@ -633,10 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static content in place.
     }
   }
-  await loadAboutFromCMS();
-
-
-  /* =========================================
+/* =========================================
      0e. CMS OVERRIDE — FILTERS & BADGES
      ========================================= */
   /* Rebuilds the filter-tab buttons (homepage only) and the nav-bar
@@ -653,9 +656,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!window.FILTERS_URL) return;
 
     try {
-      const res = await fetch(siteAssetUrl(window.FILTERS_URL));
-      if (!res.ok) return;
-      const raw = await res.json();
+      const raw = await loadCmsJson(window.FILTERS_URL, null, { resolveUrl: siteAssetUrl });
+      if (!raw) return;
       const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.filters) ? raw.filters : []);
       if (!list.length) return;
 
@@ -703,10 +705,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static tabs/dropdown in place.
     }
   }
-  await loadFiltersFromCMS();
-
-
-  /* =========================================
+/* =========================================
      0f. HOMEPAGE HERO — MESSAGES (fallback only)
      ========================================= */
   /* Hero messages now live in data/hero.json and are edited through
@@ -897,8 +896,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // If the CMS points at a JSON file, load it and re-pick from the
     // fresh list once it lands.
     if (window.HERO_MESSAGES_URL) {
-      fetch(siteAssetUrl(window.HERO_MESSAGES_URL))
-        .then(r => r.json())
+      loadCmsJson(window.HERO_MESSAGES_URL, null, { resolveUrl: siteAssetUrl })
         .then(list => {
           if (!Array.isArray(list) || !list.length) return;
           messages = list;
@@ -1096,535 +1094,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   );
 
 
-  /* =========================================
-     4. HERO BANNER — AUTO-FILLED WITH THE
-        5 LATEST ARTWORKS + FACE-AWARE FOCUS
-     ========================================= */
-  // "Latest" = whichever 5 project cards are FIRST in index.html's grid.
-  // To change what shows in the hero, reorder your project cards there.
-  //
-  // On the Works page, we read the cards straight from this same page.
-  // On any other page (like About), there's no grid to read from, so we
-  // fetch index.html in the background and pull the same 5 thumbnails
-  // from it — meaning both pages always stay in sync automatically.
-  //
-  // NOTE: the fetch only works when the site is actually being served
-  // (e.g. on GitHub Pages, or a local dev server). If you open about.html
-  // by double-clicking the file, browsers block this for local files,
-  // and the About hero will just stay empty until viewed on a real server.
-  //
-  // FOCUS POINT — how each slide decides where to "look":
-  //   1. Manual override always wins. Add data-focus="50% 10%" to a
-  //      project's thumbnail <img> in index.html and the hero (and About
-  //      hero) will crop/zoom around that exact point for that artwork.
-  //   2. Otherwise, if the visitor's browser supports native face
-  //      detection, we quietly detect the face and center the crop and
-  //      zoom on it — no library, no download, just a browser API.
-  //   3. Otherwise, it falls back to the top-biased crop already set in
-  //      style.css (object-position: center 18%), which is a safe default
-  //      for character art and portraits.
-
-  async function applyFocalPoint(slideImg, manualFocus) {
-    if (manualFocus) {
-      slideImg.style.objectPosition = manualFocus;
-      slideImg.style.transformOrigin = manualFocus;
-      return;
-    }
-
-    // Progressive enhancement only — most browsers don't support this
-    // yet, so this silently does nothing and the CSS default (top-biased
-    // crop) is what visitors see. Nothing breaks either way.
-    if (!('FaceDetector' in window)) return;
-
-    try {
-      const detector = new window.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
-      const faces = await detector.detect(slideImg);
-      if (!faces.length) return;
-
-      const box = faces[0].boundingBox;
-      const naturalW = slideImg.naturalWidth || slideImg.width;
-      const naturalH = slideImg.naturalHeight || slideImg.height;
-      if (!naturalW || !naturalH) return;
-
-      const focusX = ((box.x + box.width / 2) / naturalW) * 100;
-      const focusY = ((box.y + box.height / 2) / naturalH) * 100;
-      const focusPoint = `${focusX.toFixed(1)}% ${focusY.toFixed(1)}%`;
-
-      // Smoothly re-center onto the detected face rather than snapping.
-      slideImg.style.transition = 'object-position 1.2s ease, transform-origin 1.2s ease, opacity 1.5s ease-in-out';
-      slideImg.style.objectPosition = focusPoint;
-      slideImg.style.transformOrigin = focusPoint;
-    } catch (err) {
-      // Detection unsupported/failed on this device — keep the default crop.
-    }
-  }
-
-  // Reads the first 5 project cards out of a document and returns a plain
-  // list of {src, alt, focus} for the hero to use.
-  //
-  // Why it reads data-image and not <img src>: in index.html most
-  // .card-thumbnail divs are left EMPTY on purpose, and script.js fills
-  // them in at runtime from each card's own first media-item. That works
-  // fine on the Works page (the script has already run by then), but a
-  // document pulled in with fetch() is raw HTML that never executed any
-  // JavaScript — so its thumbnails are still empty divs and looking for
-  // an <img> inside them finds nothing. Reading the same data-image
-  // attribute the runtime filler reads makes both paths agree.
-  //
-  // baseUrl matters for the same reason: paths in index.html like
-  // "assets/projects/..." are relative to the site root, so when the
-  // About page (at /about/) reuses them they must be resolved against
-  // the root rather than against /about/, or every slide 404s.
-  function collectHeroSources(doc, baseUrl) {
-    const cards = doc.querySelectorAll('.project-card');
-    return Array.from(cards).map(card => {
-      const thumbWrap = card.querySelector('.card-thumbnail');
-      const thumbImg = thumbWrap ? thumbWrap.querySelector('img') : null;
-
-      // Same order of preference as fillMissingThumbnails(): a real
-      // <img src> if one was written by hand, else the card's first
-      // data-image, else its first YouTube thumbnail.
-      let rawSrc = thumbImg ? thumbImg.getAttribute('src') : null;
-      let explicitType = thumbWrap ? thumbWrap.getAttribute('data-thumbnail-type') : null;
-      let explicitBackground = null;
-      try { explicitBackground = thumbWrap?.getAttribute('data-background') ? JSON.parse(thumbWrap.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
-      const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
-      if (!rawSrc && thumbMedia && !thumbMedia.hasAttribute('data-model-thumb')) {
-        rawSrc = thumbMedia.getAttribute('src');
-        explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : thumbMedia.tagName === 'LOTTIE-PLAYER' ? 'lottie' : 'image');
-        if (!explicitBackground) {
-          try { explicitBackground = thumbMedia.getAttribute('data-background') ? JSON.parse(thumbMedia.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
-        }
-      }
-      if (!rawSrc) {
-        const mediaItems = card.querySelectorAll('.project-media-list .media-item');
-        for (const mediaItem of mediaItems) {
-          const image = mediaItem.getAttribute('data-image');
-          const video = mediaItem.getAttribute('data-video');
-          const lottie = mediaItem.getAttribute('data-lottie');
-          const rawBg = mediaItem.getAttribute('data-background');
-          let mediaBackground=null; try { mediaBackground = rawBg ? JSON.parse(rawBg) : null; } catch(e) {}
-          if (image) { rawSrc = image; explicitType = explicitType || 'image'; explicitBackground = mediaBackground; break; }
-          if (video) { rawSrc = video; explicitType = explicitType || 'video'; explicitBackground = mediaBackground; break; }
-          if (lottie) { rawSrc = lottie; explicitType = explicitType || 'lottie'; explicitBackground = mediaBackground; break; }
-        }
-        if (!rawSrc) {
-          const firstYouTubeItem = card.querySelector('.project-media-list .media-item[data-youtube]');
-          if (firstYouTubeItem) { const { id } = parseYouTubeUrl(firstYouTubeItem.getAttribute('data-youtube')); if (id) rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; }
-        }
-      }
-
-      if (!rawSrc) return null; // this card has no usable artwork
-
-      let src = rawSrc;
-      if (baseUrl) {
-        try { src = new URL(rawSrc, baseUrl).href; } catch (e) { /* keep raw */ }
-      }
-
-      const titleEl = card.querySelector('.glass-info h3');
-
-      return {
-        type: explicitType || heroMediaTypeFromSrc(rawSrc),
-        src,
-        alt: (thumbImg && thumbImg.getAttribute('alt')) || (titleEl ? titleEl.textContent : 'Featured artwork'),
-        focus: (thumbImg && thumbImg.getAttribute('data-focus')) || (thumbWrap && thumbWrap.getAttribute('data-focus')) || null,
-        zoom: (thumbImg && thumbImg.getAttribute('data-zoom')) || null,
-        rotate: (thumbImg && thumbImg.getAttribute('data-rotate')) || null,
-        background: explicitBackground
-      };
-    }).filter(Boolean);
-  }
-
-  // Guesses a hero slide's media type from its file extension — used
-  // wherever the source doesn't already carry an explicit type field
-  // (the DOM-scraping path above has no such attribute to read).
-  // data/hero-loop.json and data/projects.json entries carry their own
-  // real `type`, read directly instead of guessed, in the two
-  // functions below.
-  function heroMediaTypeFromSrc(src) {
-    const clean = (src || '').split('?')[0].split('#')[0].toLowerCase();
-    if (/\.(mp4|webm|mov|m4v)$/.test(clean)) return 'video';
-    if (/\.json$/.test(clean)) return 'lottie';
-    return 'image';
-  }
-
-  // The data/projects.json equivalent of collectHeroSources's per-card
-  // mapping above — same order of preference (explicit thumbnail, then
-  // first media item, then first YouTube item's thumbnail), just
-  // reading JSON fields instead of DOM attributes since there's no
-  // rendered markup to read them from here.
-  function heroSourceFromProjectData(p, baseUrl) {
-    if (!p) return null;
-    const thumb = p.thumbnail || {};
-    let rawSrc = thumb.src || null;
-    let type = rawSrc ? (thumb.type || heroMediaTypeFromSrc(rawSrc)) : null;
-    let background = thumb.background || null;
-
-    if (!rawSrc && Array.isArray(p.media)) {
-      const firstUsable = p.media.find(m => m && m.src && (m.type === 'image' || m.type === 'video' || m.type === 'lottie'));
-      if (firstUsable) {
-        rawSrc = firstUsable.src;
-        type = firstUsable.type;
-        background = firstUsable.background || null;
-      } else {
-        const firstYouTube = p.media.find(m => m && m.type === 'youtube' && m.src);
-        if (firstYouTube) {
-          const { id } = parseYouTubeUrl(firstYouTube.src);
-          if (id) { rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; type = 'image'; }
-        }
-      }
-    }
-
-    if (!rawSrc) return null;
-
-    let src = rawSrc;
-    if (baseUrl) {
-      try { src = new URL(rawSrc, baseUrl).href; } catch (e) { /* keep raw */ }
-    }
-
-    return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background };
-  }
-
-  // Same shape again, this time for a hand-curated entry in
-  // data/hero-loop.json — used only in 'manual' loop mode. Every field
-  // already exists on the entry itself; this just resolves its path
-  // against the site root, same as every other data-driven path here.
-  function heroSourceFromManualEntry(item, baseUrl) {
-    if (!item || !item.src) return null;
-    let src = item.src;
-    try { src = new URL(item.src, baseUrl).href; } catch (e) { /* keep raw */ }
-    return {
-      type: item.type || heroMediaTypeFromSrc(item.src),
-      src,
-      alt: item.alt || 'Featured artwork',
-      focus: item.focus || null,
-      zoom: item.zoom || null,
-      rotate: item.rotate || null,
-      background: item.background || null
-    };
-  }
-
-  async function initHeroBanner() {
-    const heroContainer = document.getElementById('heroBanner') || document.getElementById('heroBannerAbout');
-    if (!heroContainer) return;
-
-    const siteRootUrl = getSiteRootUrl();
-    let latestSources = [];
-    let manualSources = [];
-    let sources = [];
-
-    // Load the CMS-curated manual list from the configured URL. A file path
-    // is preferred over pasted JSON because it stays version-controlled,
-    // cacheable, and easy to replace from the Media Library.
-    try {
-      const heroLoopUrl = siteAssetUrl(window.HERO_LOOP_URL || 'data/hero-loop.json');
-      const res = await fetch(heroLoopUrl);
-      const list = await res.json();
-      manualSources = (Array.isArray(list) ? list : [])
-        .map(item => heroSourceFromManualEntry(item, siteRootUrl))
-        .filter(Boolean);
-    } catch (err) {
-      if (HERO_LOOP_MODE === 'manual' || HERO_LOOP_MODE === 'mixed') {
-        console.warn('Hero banner: could not load manual hero loop data.', err);
-      }
-    }
-
-    // Load the same project ordering the portfolio uses.
-    try {
-      latestSources = collectHeroSources(document, null);
-      if (latestSources.length === 0) {
-        const projectsUrl = siteAssetUrl(window.PROJECTS_URL || 'data/projects.json');
-        const response = await fetch(projectsUrl);
-        const list = await response.json();
-        latestSources = (Array.isArray(list) ? list : [])
-          .map(p => heroSourceFromProjectData(p, siteRootUrl))
-          .filter(Boolean);
-      }
-    } catch (err) {
-      console.warn('Hero banner: could not load artwork from data/projects.json.', err);
-    }
-
-    function sourceKey(source) {
-      return `${source.type}|${source.src}`;
-    }
-
-    if (HERO_LOOP_MODE === 'manual') {
-      sources = manualSources;
-    } else if (HERO_LOOP_MODE === 'mixed') {
-      // Manual additions take priority; newest projects fill the remaining
-      // slots until the five-slide hero is full. Dedupe prevents adding the
-      // same file twice when a manual entry points at a project thumbnail.
-      const seen = new Set();
-      sources = [];
-      for (const source of manualSources) {
-        if (sources.length >= 5) break;
-        const key = sourceKey(source);
-        if (seen.has(key)) continue;
-        seen.add(key); sources.push(source);
-      }
-      for (const source of latestSources) {
-        if (sources.length >= 5) break;
-        const key = sourceKey(source);
-        if (seen.has(key)) continue;
-        seen.add(key); sources.push(source);
-      }
-    } else {
-      sources = latestSources.slice(0, 5);
-    }
-
-    if (!sources.length) return;
-
-    if (sources.some(source => source.type === 'lottie')) await ensureLottiePlayer();
-    if (sources.some(source => source.background)) await ensureMediaBackgroundHelper();
-
-    heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
-    heroContainer.classList.add('transition-' + HERO_TRANSITION);
-
-    sources.forEach((source, i) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'slide' + (i === 0 ? ' active' : '');
-
-      let media;
-      if (source.type === 'video') {
-        media = document.createElement('video');
-        media.src = siteAssetUrl(source.src);
-        media.autoplay = true; media.muted = true; media.loop = true; media.playsInline = true;
-      } else if (source.type === 'lottie') {
-        // <lottie-player> is a custom element from the lottie-player
-        // library (loaded in this page's <head>) — it takes a JSON
-        // animation file the same way an <img> takes a picture file.
-        media = document.createElement('lottie-player');
-        media.setAttribute('src', siteAssetUrl(source.src));
-        media.setAttribute('autoplay', '');
-        media.setAttribute('loop', '');
-        media.setAttribute('background', 'transparent');
-        media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-      } else {
-        media = document.createElement('img');
-        media.src = siteAssetUrl(source.src);
-        media.alt = source.alt;
-      }
-      wrap.appendChild(media);
-      heroContainer.appendChild(wrap);
-      if (window.LMMediaBackground && source.background) window.LMMediaBackground.apply(wrap, source.background, siteAssetUrl);
-
-      if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
-      media.style.setProperty('--hero-zoom', source.zoom || 1);
-      media.style.setProperty('--hero-rotate', (source.rotate || 0) + 'deg');
-
-      // Auto face-detection fallback only ever made sense for still
-      // images with no focus point already set by hand — video and
-      // Lottie slides skip it entirely, and an image with an explicit
-      // focus already has what it needs.
-      if (source.type === 'image' && !source.focus) {
-        if (media.complete) applyFocalPoint(media, null);
-        else media.addEventListener('load', () => applyFocalPoint(media, null), { once: true });
-      }
-    });
-
-    startHeroCrossfade(heroContainer);
-  }
-
-  function startHeroCrossfade(heroContainer) {
-    const slides = heroContainer.querySelectorAll('.slide');
-    if (slides.length <= 1) return;
-
-    let currentSlide = 0;
-    if (prefersReducedMotion()) return;
-    setInterval(() => {
-      slides[currentSlide].classList.remove('active');
-      currentSlide = (currentSlide + 1) % slides.length;
-      slides[currentSlide].classList.add('active');
-    }, HERO_CROSSFADE_MS); // configured in Hero Loop Animation
-  }
-
-  await settingsReady;
-  initHeroBanner();
 
 
   /* =========================================
-     5. FILTERING & SHOW MORE/LESS (with the
-        blurred "peek" effect)
+     4/5. PUBLIC FEATURE MODULES — ARCHITECTURE V2
      ========================================= */
-  const filterBtns = document.querySelectorAll('.tab-btn');
-  const allCards = Array.from(document.querySelectorAll('.project-card'));
-  const showMoreBtn = document.getElementById('showMoreBtn');
-  const showMoreWrapper = document.getElementById('showMoreWrapper');
-  const portfolioGrid = document.getElementById('portfolioGrid');
-  const gridFadeOverlay = document.getElementById('gridFadeOverlay');
-
-  let currentFilter = 'all';
-  let isExpanded = false;
-
-  // How many cards to reveal before "Show More" kicks in.
-  // 5 on mobile, 9 on desktop/wide screens — change these two numbers
-  // if you ever want different amounts.
-  function getBaseCount() {
-    return window.innerWidth < 768 ? 5 : 9;
-  }
-  let baseCount = getBaseCount();
-
-  // Measures exactly how tall the grid needs to be to show `limit` cards
-  // in full, plus a small "peek" of the next row so people can tell
-  // there's more underneath the fade.
-  function computeCollapsedHeight(filteredCards, limit) {
-    if (filteredCards.length <= limit) return null; // everything already fits
-
-    const gridRect = portfolioGrid.getBoundingClientRect();
-    const lastVisibleCard = filteredCards[limit - 1];
-    const cardRect = lastVisibleCard.getBoundingClientRect();
-    const peekAmount = window.innerWidth < 768 ? 40 : 70;
-
-    return Math.round((cardRect.bottom - gridRect.top) + peekAmount);
-  }
-
-  function renderGallery() {
-    if (allCards.length === 0) return;
-
-    const filteredCards = allCards.filter(card =>
-      currentFilter === 'all' || card.classList.contains(currentFilter)
-    );
-    const nonMatchingCards = allCards.filter(card => !filteredCards.includes(card));
-
-    // Cards leaving the filter fade out first, then actually leave the
-    // grid once that fade finishes — a soft cut instead of an instant
-    // snap. (Opacity only, never a transform: that keeps every card's
-    // real layout box exact while it's mid-fade, which the "peek"
-    // height math just below depends on.)
-    nonMatchingCards.forEach(card => { card.style.opacity = '0'; });
-    setTimeout(() => {
-      nonMatchingCards.forEach(card => {
-        // Guards against rapid tab-clicking: only actually hide it if
-        // it's still meant to be hidden by now.
-        const stillHidden = currentFilter !== 'all' && !card.classList.contains(currentFilter);
-        if (stillHidden) card.style.display = 'none';
-      });
-    }, 300);
-
-    // Cards entering the filter need to actually be laid out before
-    // their opacity can transition (an element can't fade in from
-    // display:none — there's nothing to animate from), so lay them out
-    // this frame and fade them in on the next.
-    filteredCards.forEach(card => { card.style.display = 'block'; });
-    requestAnimationFrame(() => {
-      filteredCards.forEach(card => { card.style.opacity = '1'; });
-    });
-
-    const needsCollapsing = !isExpanded && filteredCards.length > baseCount;
-
-    if (needsCollapsing) {
-      const collapsedHeight = computeCollapsedHeight(filteredCards, baseCount);
-      portfolioGrid.style.maxHeight = collapsedHeight + 'px';
-      if (gridFadeOverlay) gridFadeOverlay.classList.remove('is-hidden');
-    } else {
-      portfolioGrid.style.maxHeight = 'none';
-      if (gridFadeOverlay) gridFadeOverlay.classList.add('is-hidden');
-    }
-
-    // Show More / Show Less button + label. The wrapper switches between
-    // "floating over the grid" and "sitting in normal flow" via the
-    // .expanded class already defined in style.css — this is the other
-    // half of what keeps it from drifting underneath cards on mobile.
-    if (showMoreBtn && showMoreWrapper) {
-      const btnText = showMoreBtn.querySelector('.btn-text');
-
-      if (filteredCards.length > baseCount) {
-        showMoreWrapper.style.display = 'flex';
-        showMoreWrapper.classList.toggle('expanded', isExpanded);
-        showMoreBtn.classList.toggle('expanded', isExpanded);
-        if (btnText) btnText.textContent = isExpanded ? 'SHOW LESS' : 'SHOW MORE';
-      } else {
-        showMoreWrapper.style.display = 'none';
-      }
-    }
-  }
-
-  // Handle Filter Clicks
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      currentFilter = btn.getAttribute('data-filter');
-      isExpanded = false; // start collapsed again on category change
-      renderGallery();
-
-      // Keep the address bar in sync with whichever tab is active, so
-      // copying the URL after clicking a tab always gives the right
-      // shareable link — no need to go through the Works dropdown.
-      // replaceState (not pushState) so tab-clicking doesn't spam
-      // "back" history with every filter change.
-      const newHash = currentFilter === 'all' ? '' : '#' + currentFilter;
-      history.replaceState(null, '', window.location.pathname + window.location.search + newHash);
-    });
+  await Promise.all([settingsReady, cmsReady]);
+  await initHeroBannerV2({
+    loopMode: HERO_LOOP_MODE,
+    transitionStyle: HERO_TRANSITION,
+    crossfadeMs: HERO_CROSSFADE_MS
   });
 
-  // Handle Show More / Show Less Click
-  if (showMoreBtn) {
-    showMoreBtn.addEventListener('click', () => {
-      isExpanded = !isExpanded;
-      renderGallery();
-
-      if (!isExpanded) {
-        const filterTabs = document.querySelector('.filter-tabs');
-        if (filterTabs) filterTabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  }
-
-  // Recalculate on resize — this is what makes the reveal count
-  // smoothly shift between 5 (mobile) and 9 (desktop), and keeps the
-  // "peek" cutoff accurate as columns reflow at any width. It only
-  // touches anything if Show More hasn't been clicked yet.
-  let resizeTimeout;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-      baseCount = getBaseCount();
-      if (!isExpanded) renderGallery();
-    }, 120);
+  const galleryController = initGallery();
+  initLightbox({
+    getActiveCards: () => galleryController?.getActiveCards?.() || [],
+    protectionEnabled: () => PROTECTION_ENABLED
   });
-
-  // Initial gallery render — measured again once everything (fonts,
-  // thumbnails) has actually finished loading. This is what fixes the
-  // "Show More sits underneath a card" bug: the very first render can
-  // measure card positions a moment before web fonts/images settle into
-  // their final size, especially on a slower mobile connection. Re-running
-  // it after window 'load' guarantees the measurement matches what the
-  // visitor actually sees.
-  renderGallery();
-  window.addEventListener('load', () => {
-    baseCount = getBaseCount();
-    if (!isExpanded) renderGallery();
-  });
-
-  // DEEP-LINKING VIA URL HASH — lets the Works dropdown (and anyone you
-  // send a link like index.html#3d-motion) jump straight to a specific
-  // tab instead of landing on "All" and having to click it manually.
-  // The hash value must match a tab's data-filter exactly.
-  function applyFilterFromHash() {
-    const hash = decodeURIComponent(window.location.hash.replace('#', ''));
-    const matchingBtn = Array.from(filterBtns).find(b => b.getAttribute('data-filter') === hash);
-    if (!matchingBtn) return; // not a tab hash (e.g. "#contact-section") — ignore
-
-    filterBtns.forEach(b => b.classList.remove('active'));
-    matchingBtn.classList.add('active');
-    currentFilter = hash;
-    isExpanded = false;
-    renderGallery();
-
-    // Scroll to the tabs once layout has settled, so the visitor lands
-    // right on the filtered grid instead of the very top of the hero.
-    window.requestAnimationFrame(() => {
-      const filterTabsEl = document.querySelector('.filter-tabs');
-      if (filterTabsEl) filterTabsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-  applyFilterFromHash();
-  // Same-page hash changes (clicking another Works sub-link while
-  // already on index.html) don't reload the page, only fire this event.
-  window.addEventListener('hashchange', applyFilterFromHash);
-
 
   /* =========================================
      6. CLIENT REVIEWS — TWO-ROW BRICK LOOP
@@ -1701,431 +1187,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     reviewsResizeTimeout = setTimeout(buildReviewsMarquee, 200);
   });
 
-
-  /* =========================================
-     7. LIGHTBOX MODAL
-     ========================================= */
-  const lightbox = document.getElementById('lightbox');
-  const lightboxControls = document.getElementById('lightboxControls');
-  const lightboxClose = document.getElementById('lightboxClose');
-  const lightboxPrev = document.querySelector('.lightbox-prev');
-  const lightboxNext = document.querySelector('.lightbox-next');
-  const modalTitle = document.getElementById('modalTitle');
-  const modalDesc = document.getElementById('modalDesc');
-  const modalFullDesc = document.getElementById('modalFullDesc');
-  const modalMediaContainer = document.getElementById('lightboxMediaContainer');
-
-  let currentLightboxIndex = 0;
-  let activeLightboxCards = []; // Only navigate through currently filtered items
-
-  // Reads a YouTube URL and returns the video ID plus whether it's a Short.
-  // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
-  function parseYouTubeUrl(url) {
-    let id = null;
-    let isShort = false;
-
-    if (url.includes('/shorts/')) {
-      id = url.split('/shorts/')[1].split(/[?&]/)[0];
-      isShort = true;
-    } else if (url.includes('youtu.be/')) {
-      id = url.split('youtu.be/')[1].split(/[?&]/)[0];
-    } else if (url.includes('watch?v=')) {
-      id = url.split('watch?v=')[1].split('&')[0];
-    } else if (url.includes('/embed/')) {
-      id = url.split('/embed/')[1].split(/[?&]/)[0];
-    }
-
-    return { id, isShort };
-  }
-
-  // Builds one artwork image with save-protection applied only when
-  // switched on at the top of this file (right-click + drag disabled,
-  // so there's no "Save Image As" path — no watermark, no zoom, just a
-  // clean image that can't be casually saved).
-  function buildImageMedia(imgUrl) {
-    const img = document.createElement('img');
-    img.src = imgUrl;
-    img.draggable = false;
-    img.loading = 'lazy';
-    img.decoding = 'async';
-
-    if (PROTECTION_ENABLED) {
-      img.classList.add('no-save');
-      // Worth being upfront: no front-end trick can block a screenshot
-      // outright. This blocks the right-click "Save Image As" menu and
-      // drag-to-save, which covers casual reuse — a determined person
-      // with a screenshot tool can't be stopped client-side.
-      img.addEventListener('contextmenu', (e) => e.preventDefault());
-      img.addEventListener('dragstart', (e) => e.preventDefault());
-    }
-
-    return img;
-  }
-
-  // Builds a small caption under a media item — but only if there's
-  // actual text. Add one by putting data-description="..." on that
-  // <div class="media-item">; leave it off (or empty) and nothing
-  // renders, no empty box.
-  function buildMediaCaption(text) {
-    if (!text || !text.trim()) return null;
-    const p = document.createElement('p');
-    p.className = 'media-caption';
-    p.textContent = text.trim();
-    return p;
-  }
-
-  // Wraps one media element (image or video iframe) together with its
-  // optional caption so they stay grouped as a single unit.
-  function buildMediaEntry(mediaEl, captionText, background) {
-    const wrap = document.createElement('div');
-    wrap.className = 'lightbox-media-item';
-    wrap.appendChild(mediaEl);
-    if (window.LMMediaBackground && background) window.LMMediaBackground.apply(wrap, background, siteAssetUrl);
-
-    const caption = buildMediaCaption(captionText);
-    if (caption) wrap.appendChild(caption);
-
-    return wrap;
-  }
-
-  function openLightbox(index, initialMediaIndex = -1) {
-    lightbox.classList.remove('is-3d-focused');
-    if (lightboxControls) {
-      lightboxControls.classList.remove('is-3d-controls-disabled');
-      lightboxControls.inert = false;
-    }
-    document.documentElement.classList.remove('lm-3d-focus-open');
-    document.body.classList.remove('lm-3d-focus-open');
-    currentLightboxIndex = index;
-    const card = activeLightboxCards[currentLightboxIndex];
-
-    // 1. Populate Text
-    modalTitle.textContent = card.querySelector('.glass-info h3').textContent;
-    modalDesc.textContent = card.querySelector('.glass-info p').textContent;
-
-    const descEl = card.querySelector('.project-description');
-    modalFullDesc.innerHTML = descEl ? descEl.innerHTML : '';
-
-    // 2. Clear previous media. Give mounted 3D viewers a chance to dispose
-    // their OrbitControls, WebGL renderer, ResizeObserver and document-level
-    // key listener before their DOM nodes are removed. This prevents stale
-    // render loops and interaction handlers when moving between projects.
-    modalMediaContainer.querySelectorAll('.model-viewer-shell').forEach(shell => {
-      try { shell.__modelViewerCleanup?.(); } catch (_) {}
-    });
-    modalMediaContainer.innerHTML = '';
-
-    // 3. Populate Media (Images & YouTube)
-    const mediaList = card.querySelectorAll('.project-media-list .media-item');
-
-    if (mediaList.length > 0) {
-      mediaList.forEach(item => {
-        const imgUrl = item.getAttribute('data-image');
-        const ytUrl = item.getAttribute('data-youtube');
-        const videoUrl = item.getAttribute('data-video');
-        const lottieUrl = item.getAttribute('data-lottie');
-        const modelUrl = item.getAttribute('data-model');
-        const caption = item.getAttribute('data-description');
-        let itemBackground=null; try { const raw=item.getAttribute('data-background'); itemBackground=raw?JSON.parse(raw):null; } catch(e){}
-
-        if (imgUrl) {
-          modalMediaContainer.appendChild(buildMediaEntry(buildImageMedia(imgUrl), caption, itemBackground));
-        }
-
-        if (ytUrl) {
-          const { id, isShort } = parseYouTubeUrl(ytUrl);
-          const embedUrl = id ? `https://www.youtube.com/embed/${id}` : ytUrl;
-
-          const iframe = document.createElement('iframe');
-          iframe.src = embedUrl;
-          iframe.frameBorder = '0';
-          iframe.loading = 'lazy';
-          iframe.title = caption || 'Project video';
-          iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-          iframe.allowFullscreen = true;
-
-          // Orientation: a manual "data-orientation" attribute always wins.
-          // Otherwise, Shorts links default to portrait and everything
-          // else defaults to landscape.
-          const manualOrientation = item.getAttribute('data-orientation');
-          let orientationClass = 'yt-landscape';
-
-          if (manualOrientation === 'portrait') {
-            orientationClass = 'yt-portrait';
-          } else if (manualOrientation === 'square') {
-            orientationClass = 'yt-square';
-          } else if (manualOrientation === 'landscape') {
-            orientationClass = 'yt-landscape';
-          } else if (isShort) {
-            orientationClass = 'yt-portrait';
-          }
-
-          iframe.classList.add(orientationClass);
-          modalMediaContainer.appendChild(buildMediaEntry(iframe, caption, itemBackground));
-        }
-
-        if (videoUrl) {
-          const video = document.createElement('video');
-          video.src = siteAssetUrl(videoUrl);
-          video.controls = true;
-          video.playsInline = true;
-          video.controlsList = 'nodownload';
-          video.disablePictureInPicture = true;
-
-          if (PROTECTION_ENABLED) {
-            video.classList.add('no-save');
-            video.addEventListener('contextmenu', (e) => e.preventDefault());
-          }
-
-          const manualVideoOrientation = item.getAttribute('data-orientation');
-
-          if (manualVideoOrientation === 'portrait') {
-            video.classList.add('yt-portrait');
-          } else if (manualVideoOrientation === 'square') {
-            video.classList.add('yt-square');
-          } else if (manualVideoOrientation === 'landscape') {
-            video.classList.add('yt-landscape');
-          } else {
-            // No manual override — start with a landscape placeholder
-            // (avoids a layout jump before the file loads), then read
-            // the video's own real width/height as soon as we know
-            // them and size it exactly to that, same spirit as how
-            // YouTube Shorts links get auto-detected as portrait.
-            video.classList.add('yt-landscape');
-
-            video.addEventListener('loadedmetadata', () => {
-              const ratio = video.videoWidth / video.videoHeight;
-
-              video.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
-              if (ratio > 1.15) {
-                video.classList.add('yt-landscape');
-              } else if (ratio < 0.85) {
-                video.classList.add('yt-portrait');
-              } else {
-                video.classList.add('yt-square');
-              }
-
-              // Exact proportions rather than a fixed 16:9 / 9:16 / 1:1
-              // template — the class above just sets a sensible max-size
-              // envelope for that general shape.
-              video.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
-            });
-          }
-
-          modalMediaContainer.appendChild(buildMediaEntry(video, caption, itemBackground));
-        }
-
-        if (modelUrl) {
-          const modelWrap = document.createElement('div');
-          modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
-          const modelOrientation = item.getAttribute('data-orientation') || 'auto';
-          modelWrap.setAttribute('data-orientation', modelOrientation);
-          modelWrap.setAttribute('aria-label', '3D artwork preview');
-          const modelEntry = buildMediaEntry(modelWrap, caption, itemBackground);
-          modelEntry.classList.add('is-3d-media-item');
-          modalMediaContainer.appendChild(modelEntry);
-          import(new URL('model-viewer.js', new URL('js/', getSiteRootUrl())).href).then(({ mountModelViewer }) => {
-            mountModelViewer(modelWrap, siteAssetUrl(modelUrl), {
-              autoRotate: false,
-              background: itemBackground || null,
-              orientation: modelOrientation,
-              resolveUrl: siteAssetUrl,
-              onActivate: () => {
-                // Freeze the current media-list position before promoting this
-                // item into the device-focused layer. The target becomes fixed
-                // visually, but the list itself never jumps back to the top.
-                const currentScroll = lightbox.scrollTop;
-                lightbox.dataset.pre3dScrollTop = String(currentScroll);
-                lightbox.classList.add('is-3d-focused');
-                modelEntry.classList.add('is-3d-focus-target');
-                if (lightboxControls) {
-                  // Project navigation (X / previous / next) is intentionally
-                  // non-interactive while the 3D stage is active. It sits
-                  // visually beneath the backdrop veil as part of the
-                  // lightbox chrome, never as part of the model controls.
-                  lightboxControls.classList.add('is-3d-controls-disabled');
-                  lightboxControls.inert = true;
-                }
-                document.documentElement.classList.add('lm-3d-focus-open');
-                document.body.classList.add('lm-3d-focus-open');
-                requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
-              },
-              onDeactivate: () => {
-                lightbox.classList.remove('is-3d-focused');
-                modelEntry.classList.remove('is-3d-focus-target');
-                if (lightboxControls) {
-                  lightboxControls.classList.remove('is-3d-controls-disabled');
-                  lightboxControls.inert = false;
-                }
-                document.documentElement.classList.remove('lm-3d-focus-open');
-                document.body.classList.remove('lm-3d-focus-open');
-                const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
-                if (Number.isFinite(previousScroll)) {
-                  requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
-                }
-                delete lightbox.dataset.pre3dScrollTop;
-              }
-            });
-          }).catch(err => {
-            modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-            console.warn('3D model viewer:', err);
-          });
-        }
-
-        if (lottieUrl) {
-          // <lottie-player> plays a Lottie/JSON animation the same way
-          // <video> plays a video file — same orientation handling as
-          // video above (manual override, else a landscape default),
-          // since there's no equivalent of videoWidth/videoHeight to
-          // read the real proportions from up front.
-          const player = document.createElement('lottie-player');
-          player.setAttribute('src', siteAssetUrl(lottieUrl));
-          player.setAttribute('autoplay', '');
-          player.setAttribute('loop', '');
-          player.setAttribute('background', 'transparent');
-
-          const manualLottieOrientation = item.getAttribute('data-orientation');
-          if (manualLottieOrientation === 'portrait') player.classList.add('yt-portrait');
-          else if (manualLottieOrientation === 'square') player.classList.add('yt-square');
-          else player.classList.add('yt-landscape');
-
-          player.setAttribute('preserveAspectRatio', 'xMidYMid slice'); player.preserveAspectRatio='xMidYMid slice';
-          modalMediaContainer.appendChild(buildMediaEntry(player, caption, itemBackground));
-        }
-      });
-    } else {
-      // Fallback: use whichever thumbnail media the card actually renders.
-      const thumbMedia = card.querySelector('.card-thumbnail .project-thumb-media, .card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player');
-      if (thumbMedia) {
-        if (thumbMedia.tagName === 'LOTTIE-PLAYER') {
-          const player = document.createElement('lottie-player');
-          player.setAttribute('src', siteAssetUrl(thumbMedia.getAttribute('src') || ''));
-          player.setAttribute('autoplay',''); player.setAttribute('loop',''); player.setAttribute('background','transparent');
-          modalMediaContainer.appendChild(buildMediaEntry(player, ''));
-        } else if (thumbMedia.tagName === 'VIDEO') {
-          const video = document.createElement('video');
-          video.src = thumbMedia.src; video.controls = true; video.playsInline = true;
-          modalMediaContainer.appendChild(buildMediaEntry(video, ''));
-        } else if (thumbMedia.src) {
-          modalMediaContainer.appendChild(buildImageMedia(thumbMedia.src));
-        }
-      }
-    }
-
-    // 4. Show Lightbox and lock body scroll
-    lightbox.classList.add('active');
-    if (lightboxControls) lightboxControls.classList.add('active');
-    document.body.style.overflow = 'hidden';
-
-    // When a project was opened by clicking its 3D thumbnail, keep the
-    // visitor at that artwork instead of resetting the project overlay to
-    // the first media item. The target is centered because it remains easy
-    // to understand on both desktop and small touch screens.
-    requestAnimationFrame(() => {
-      const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
-      if (initialMediaIndex >= 0 && items[initialMediaIndex]) {
-        items[initialMediaIndex].scrollIntoView({
-          behavior: 'auto',
-          block: 'center',
-          inline: 'nearest'
-        });
-      } else {
-        lightbox.scrollTop = 0;
-      }
-    });
-  }
-
-  // Project cards are keyboard-operable as well as pointer-operable.
-  allCards.forEach(card => {
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
-    const titleText = card.querySelector('.glass-info h3')?.textContent?.trim();
-    card.setAttribute('aria-label', titleText ? `Open project: ${titleText}` : 'Open project');
-
-    const openFromCard = (event) => {
-      activeLightboxCards = allCards.filter(c =>
-        currentFilter === 'all' || c.classList.contains(currentFilter)
-      );
-      const index = activeLightboxCards.indexOf(card);
-
-      // The project card uses its first media item as the visual thumbnail
-      // fallback. When that fallback is a 3D model, clicking the thumbnail
-      // should open the project at that same 3D artwork instead of jumping
-      // to the top of the media stack.
-      let initialMediaIndex = -1;
-      if (event.target.closest('.card-thumbnail [data-model-thumb]')) {
-        const mediaItems = Array.from(card.querySelectorAll('.project-media-list .media-item'));
-        initialMediaIndex = mediaItems.findIndex(item => item.hasAttribute('data-model'));
-      }
-
-      openLightbox(index, initialMediaIndex);
-    };
-
-    card.addEventListener('click', openFromCard);
-    card.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      openFromCard(event);
-    });
-  });
-
-  // Close Lightbox function
-  function closeLightbox() {
-    lightbox.classList.remove('active', 'is-3d-focused');
-    if (lightboxControls) {
-      lightboxControls.classList.remove('is-3d-controls-disabled');
-      lightboxControls.inert = false;
-    }
-    document.documentElement.classList.remove('lm-3d-focus-open');
-    document.body.classList.remove('lm-3d-focus-open');
-    if (lightboxControls) lightboxControls.classList.remove('active');
-    delete lightbox.dataset.pre3dScrollTop;
-    document.body.style.overflow = ''; // Restore body scroll
-    modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background
-  }
-
-  // Event Listeners for Lightbox Controls
-  if (lightboxClose) {
-    lightboxClose.addEventListener('click', closeLightbox);
-  }
-
-  if (lightboxPrev) {
-    lightboxPrev.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (currentLightboxIndex > 0) {
-        openLightbox(currentLightboxIndex - 1);
-      } else {
-        openLightbox(activeLightboxCards.length - 1); // Loop to end
-      }
-    });
-  }
-
-  if (lightboxNext) {
-    lightboxNext.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (currentLightboxIndex < activeLightboxCards.length - 1) {
-        openLightbox(currentLightboxIndex + 1);
-      } else {
-        openLightbox(0); // Loop to start
-      }
-    });
-  }
-
-  // Close when clicking the dark background outside the modal interior
-  if (lightbox) {
-    lightbox.addEventListener('click', (e) => {
-      if (e.target === lightbox) {
-        closeLightbox();
-      }
-    });
-  }
-
-  // Close on 'Esc' key
-  document.addEventListener('keydown', (e) => {
-    if (lightbox && e.key === 'Escape' && lightbox.classList.contains('active')) {
-      closeLightbox();
-    }
-  });
 
 
   /* =========================================

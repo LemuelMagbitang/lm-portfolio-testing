@@ -232,10 +232,47 @@ validateHtml('index.html');
 validateHtml('about/index.html');
 validateHtml('404.html');
 validateHtml('success/index.html');
+function validateTargetBlankRel(file) {
+  if (!exists(file)) return;
+  const html = readText(file);
+  const linkRe = /<a\b[^>]*target=['"]_blank['"][^>]*>/gi;
+  let match;
+  while ((match = linkRe.exec(html))) {
+    const tag = match[0];
+    const rel = (tag.match(/\brel=['"]([^'"]*)['"]/i)?.[1] || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!rel.includes('noopener') || !rel.includes('noreferrer')) {
+      err(file + ': target="_blank" link is missing rel="noopener noreferrer".');
+    }
+  }
+}
+
+function validateArchitecture() {
+  const source = exists('js/script.js') ? readText('js/script.js') : '';
+  const required = [
+    ['js/cms-data.js', /export (?:async )?function loadCmsJson/],
+    ['js/gallery.js', /export function initGallery/],
+    ['js/hero.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
+    ['js/lightbox.js', /export function initLightbox/]
+  ];
+  required.forEach(([file, pattern]) => {
+    if (!exists(file) || !pattern.test(readText(file))) {
+      err('Architecture V2: expected module contract missing from ' + file + '.');
+    }
+  });
+  if (/function\s+initGallery\s*\(/.test(source)) err('Architecture V2: gallery implementation remains in script.js.');
+  if (/function\s+initHeroBanner\s*\(/.test(source)) err('Architecture V2: hero implementation remains in script.js.');
+  if (/function\s+openLightbox\s*\(/.test(source)) err('Architecture V2: lightbox implementation remains in script.js.');
+  if (/fetch\(siteAssetUrl\(window\.(SETTINGS|PROJECTS|REVIEWS|ABOUT|FILTERS|HERO_MESSAGES)_URL/.test(source)) err('Architecture V2: direct CMS fetch remains in script.js.');
+}
+
 scanSourceForBadPatterns();
+validateTargetBlankRel('index.html');
+validateTargetBlankRel('about/index.html');
+validateTargetBlankRel('admin/index.html');
+validateArchitecture();
 checkLargeAssets();
 
-for (const js of ['js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js']) {
+for (const js of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js']) {
   if (!exists(js)) continue;
   try {
     execFileSync(process.execPath, ['--check', js], { stdio: 'pipe' });

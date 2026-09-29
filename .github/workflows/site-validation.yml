@@ -22,3 +22,6 @@ jobs:
 
       - name: Validate site data, paths, and JavaScript
         run: node tools/validate-site.mjs
+
+      - name: Syntax-check Architecture V2 modules
+        run: node --check js/cms-data.js && node --check js/gallery.js && node --check js/hero.js && node --check js/lightbox.js
