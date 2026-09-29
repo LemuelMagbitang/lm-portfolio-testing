@@ -4,7 +4,7 @@
  */
 export function initGallery(options = {}) {
   const filterTabs = document.querySelector('.filter-tabs');
-  const filterBtns = Array.from(document.querySelectorAll('.tab-btn'));
+  const filterBtns = Array.from(document.querySelectorAll('.filter-tabs .tab-btn'));
   const allCards = Array.from(document.querySelectorAll('.project-card'));
   const showMoreBtn = document.getElementById('showMoreBtn');
   const showMoreWrapper = document.getElementById('showMoreWrapper');
@@ -20,94 +20,112 @@ export function initGallery(options = {}) {
   let baseCount = getBaseCount();
   let filterPager = null;
   let filterPageDots = [];
-
-  function getBaseCount() { return window.innerWidth < 768 ? mobileCount : desktopCount; }
-
-  function getFilterPageSize() {
-    return window.innerWidth < 768 ? 3 : 4;
-  }
-
-  function findFilterPageForButton(button) {
-    if (!filterTabs || !button) return 0;
-    const page = button.closest('.filter-page');
-    return page ? Number(page.dataset.page || 0) : 0;
-  }
+  let filterScrollFrame = null;
 
   function ensureFilterPager() {
     if (!filterTabs || filterPager) return;
     filterPager = document.createElement('div');
     filterPager.className = 'filter-page-controls';
-    filterPager.setAttribute('aria-label', 'Filter pages');
+    filterPager.setAttribute('aria-label', 'Filter navigation');
     filterTabs.insertAdjacentElement('afterend', filterPager);
   }
 
-  function goToFilterPage(index, animate = true) {
+  function ensureFilterEdges() {
     if (!filterTabs) return;
-    const pages = Array.from(filterTabs.querySelectorAll('.filter-page'));
-    if (!pages.length) return;
+    const current = Array.from(filterTabs.querySelectorAll('.filter-edge-spacer'));
+    current.forEach(el => el.remove());
 
-    const next = Math.max(0, Math.min(index, pages.length - 1));
-    pages.forEach((page, pageIndex) => {
-      const active = pageIndex === next;
-      page.classList.toggle('is-active', active);
-      page.hidden = !active;
-      page.setAttribute('aria-hidden', String(!active));
+    const buttons = Array.from(filterTabs.querySelectorAll('.tab-btn'));
+    if (!buttons.length) return;
+
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+    const firstSpace = Math.max(0, (filterTabs.clientWidth - first.getBoundingClientRect().width) / 2);
+    const lastSpace = Math.max(0, (filterTabs.clientWidth - last.getBoundingClientRect().width) / 2);
+
+    const leading = document.createElement('span');
+    leading.className = 'filter-edge-spacer';
+    leading.setAttribute('aria-hidden', 'true');
+    leading.style.width = `${firstSpace}px`;
+
+    const trailing = document.createElement('span');
+    trailing.className = 'filter-edge-spacer';
+    trailing.setAttribute('aria-hidden', 'true');
+    trailing.style.width = `${lastSpace}px`;
+
+    filterTabs.prepend(leading);
+    filterTabs.append(trailing);
+  }
+
+  function getFilterButtons() {
+    return filterTabs ? Array.from(filterTabs.querySelectorAll('.tab-btn')) : [];
+  }
+
+  function getNearestCenteredFilterIndex() {
+    const buttons = getFilterButtons();
+    if (!buttons.length || !filterTabs) return 0;
+    const center = filterTabs.getBoundingClientRect().left + filterTabs.clientWidth / 2;
+    let nearestIndex = 0;
+    let nearestDistance = Infinity;
+
+    buttons.forEach((button, index) => {
+      const rect = button.getBoundingClientRect();
+      const distance = Math.abs((rect.left + rect.width / 2) - center);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
     });
+    return nearestIndex;
+  }
 
-    filterPageDots.forEach((dot, dotIndex) => {
-      const active = dotIndex === next;
+  function updateFilterPager(activeIndex = getNearestCenteredFilterIndex()) {
+    if (!filterPager) return;
+    const dots = filterPageDots;
+    if (!dots.length) {
+      filterPager.hidden = true;
+      return;
+    }
+    filterPager.hidden = dots.length <= 1;
+    dots.forEach((dot, index) => {
+      const active = index === activeIndex;
       dot.classList.toggle('active', active);
       if (active) dot.setAttribute('aria-current', 'true');
       else dot.removeAttribute('aria-current');
     });
-
-    filterTabs.dataset.filterPage = String(next);
-    if (animate) filterTabs.classList.add('is-page-changing');
-    if (animate) window.setTimeout(() => filterTabs.classList.remove('is-page-changing'), 220);
   }
 
-  function rebuildFilterPages(preferredFilter = currentFilter) {
+  function centerFilterButton(button, behavior = 'smooth') {
+    if (!filterTabs || !button) return;
+    button.scrollIntoView({
+      behavior,
+      block: 'nearest',
+      inline: 'center'
+    });
+  }
+
+  function buildFilterPager() {
     if (!filterTabs) return;
     ensureFilterPager();
 
-    const buttons = Array.from(filterTabs.querySelectorAll(':scope > .tab-btn, :scope > button.tab-btn'));
-    const nestedButtons = Array.from(filterTabs.querySelectorAll('.filter-page .tab-btn'));
-    const sourceButtons = buttons.length ? buttons : nestedButtons;
-    if (!sourceButtons.length) return;
-
-    filterTabs.innerHTML = '';
-    const pageSize = getFilterPageSize();
-    const pages = [];
-
-    for (let start = 0; start < sourceButtons.length; start += pageSize) {
-      const page = document.createElement('div');
-      page.className = 'filter-page';
-      page.dataset.page = String(pages.length);
-      page.setAttribute('role', 'group');
-      page.hidden = true;
-      page.setAttribute('aria-hidden', 'true');
-      sourceButtons.slice(start, start + pageSize).forEach(button => page.appendChild(button));
-      filterTabs.appendChild(page);
-      pages.push(page);
-    }
-
+    const buttons = getFilterButtons();
     filterPager.innerHTML = '';
-    filterPageDots = pages.map((_, pageIndex) => {
+    filterPageDots = buttons.map((button, index) => {
       const dot = document.createElement('button');
       dot.type = 'button';
       dot.className = 'filter-page-dot';
-      dot.setAttribute('aria-label', `Show filter page ${pageIndex + 1}`);
-      dot.addEventListener('click', () => goToFilterPage(pageIndex));
+      dot.setAttribute('aria-label', `Show filter ${button.textContent.trim() || index + 1}`);
+      dot.addEventListener('click', () => {
+        button.click();
+      });
       filterPager.appendChild(dot);
       return dot;
     });
 
-    filterPager.hidden = pages.length <= 1;
-    const preferredButton = sourceButtons.find(button => (button.getAttribute('data-filter') || 'all') === preferredFilter);
-    const preferredPage = preferredButton
-      ? Math.floor(sourceButtons.indexOf(preferredButton) / pageSize)
-      : 0;
-    goToFilterPage(preferredPage, false);
+    ensureFilterEdges();
+    const activeIndex = Math.max(0, buttons.findIndex(button => (button.getAttribute('data-filter') || 'all') === currentFilter));
+    if (buttons[activeIndex]) centerFilterButton(buttons[activeIndex], 'auto');
+    updateFilterPager(activeIndex >= 0 ? activeIndex : 0);
   }
   function cardMatchesFilter(card, filter) {
     if (filter === 'all') return true;
@@ -176,7 +194,9 @@ export function initGallery(options = {}) {
     currentFilter = btn.getAttribute('data-filter') || 'all';
     isExpanded = false;
     render();
-    goToFilterPage(findFilterPageForButton(btn));
+    centerFilterButton(btn);
+    const index = filterBtns.indexOf(btn);
+    updateFilterPager(index);
     history.replaceState(null, '', window.location.pathname + window.location.search + (currentFilter === 'all' ? '' : `#${currentFilter}`));
   }));
 
@@ -191,10 +211,21 @@ export function initGallery(options = {}) {
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       baseCount = getBaseCount();
-      rebuildFilterPages(currentFilter);
+      ensureFilterEdges();
+      const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
+      if (activeBtn) centerFilterButton(activeBtn, 'auto');
+      updateFilterPager(filterBtns.indexOf(activeBtn));
       if (!isExpanded) render();
     }, 120);
   });
+
+  filterTabs?.addEventListener('scroll', () => {
+    if (filterScrollFrame) return;
+    filterScrollFrame = window.requestAnimationFrame(() => {
+      filterScrollFrame = null;
+      updateFilterPager();
+    });
+  }, { passive: true });
 
   function applyHash() {
     const hash = decodeURIComponent(window.location.hash.replace('#', ''));
@@ -205,17 +236,22 @@ export function initGallery(options = {}) {
     btn.classList.add('active');
     currentFilter = hash;
     isExpanded = false;
-    rebuildFilterPages(currentFilter);
     render();
-    goToFilterPage(findFilterPageForButton(btn), false);
+    centerFilterButton(btn, 'auto');
+    updateFilterPager(filterBtns.indexOf(btn));
   }
 
-  ensureFilterPager();
-  rebuildFilterPages(currentFilter);
+  buildFilterPager();
   render();
   applyHash();
+  ensureFilterEdges();
+  window.requestAnimationFrame(() => {
+    const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
+    if (activeBtn) centerFilterButton(activeBtn, 'auto');
+    updateFilterPager(filterBtns.indexOf(activeBtn));
+  });
   window.addEventListener('hashchange', applyHash);
-  window.addEventListener('load', () => { baseCount = getBaseCount(); rebuildFilterPages(currentFilter); if (!isExpanded) render(); });
+  window.addEventListener('load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
   return {
     render,
     getFilter: () => currentFilter,
