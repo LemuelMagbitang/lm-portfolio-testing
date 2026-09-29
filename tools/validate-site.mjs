@@ -249,7 +249,7 @@ function validateTargetBlankRel(file) {
 function validateArchitecture() {
   const source = exists('js/script.js') ? readText('js/script.js') : '';
   const required = [
-    ['js/cms-data.js', /export function loadCmsJson/],
+    ['js/cms-data.js', /export (?:async )?function loadCmsJson/],
     ['js/gallery.js', /export function initGallery/],
     ['js/hero.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
     ['js/lightbox.js', /export function initLightbox/]
