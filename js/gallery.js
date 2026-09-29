@@ -20,10 +20,13 @@ export function initGallery(options = {}) {
   let baseCount = getBaseCount();
   let filterPager = null;
   let filterPageDots = [];
-  let filterScrollFrame = null;
   let filterScrollTimer = null;
+  let filterSettleTimer = null;
+  let filterScrollFrame = null;
   let filterDrag = null;
-  let suppressFilterClick = false;
+  let filterPointerActive = false;
+  let filterSettling = false;
+  let suppressFilterClickUntil = 0;
 
   function getBaseCount() {
     return window.innerWidth < 768 ? mobileCount : desktopCount;
@@ -108,10 +111,14 @@ export function initGallery(options = {}) {
 
   function centerFilterButton(button, behavior = 'smooth') {
     if (!filterTabs || !button || !isFilterCarousel()) return;
-    button.scrollIntoView({
-      behavior,
-      block: 'nearest',
-      inline: 'center'
+    const tabsRect = filterTabs.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    const delta = (buttonRect.left + buttonRect.width / 2) -
+      (tabsRect.left + tabsRect.width / 2);
+    if (Math.abs(delta) < 1) return;
+    filterTabs.scrollTo({
+      left: filterTabs.scrollLeft + delta,
+      behavior
     });
   }
 
@@ -140,23 +147,32 @@ export function initGallery(options = {}) {
   }
 
   function settleCenteredFilter({ center = true } = {}) {
-    if (!filterTabs || !isFilterCarousel()) return;
+    if (!filterTabs || !isFilterCarousel() || filterSettling) return;
     const buttons = getFilterButtons();
     if (!buttons.length) return;
 
     const nearest = buttons[getNearestCenteredFilterIndex()];
     if (!nearest) return;
 
+    filterSettling = true;
+    window.clearTimeout(filterSettleTimer);
+    activateFilterButton(nearest, { center: false, updateUrl: true });
     updateFilterPager(filterBtns.indexOf(nearest));
 
-    if (center) centerFilterButton(nearest, 'smooth');
-    activateFilterButton(nearest, { center: false, updateUrl: true });
+    if (center) {
+      centerFilterButton(nearest, 'smooth');
+      filterSettleTimer = window.setTimeout(() => {
+        filterSettling = false;
+      }, 450);
+    } else {
+      filterSettling = false;
+    }
   }
 
   function scheduleCenteredFilter() {
-    if (!filterTabs || !isFilterCarousel()) return;
+    if (!filterTabs || !isFilterCarousel() || filterPointerActive || filterSettling) return;
     window.clearTimeout(filterScrollTimer);
-    filterScrollTimer = window.setTimeout(() => settleCenteredFilter(), 90);
+    filterScrollTimer = window.setTimeout(() => settleCenteredFilter(), 140);
   }
 
   function buildFilterPager() {
@@ -244,9 +260,8 @@ export function initGallery(options = {}) {
   }
 
   filterBtns.forEach(btn => btn.addEventListener('click', event => {
-    if (suppressFilterClick) {
+    if (Date.now() < suppressFilterClickUntil) {
       event.preventDefault();
-      suppressFilterClick = false;
       return;
     }
     activateFilterButton(btn, { center: true, updateUrl: true });
@@ -283,14 +298,24 @@ export function initGallery(options = {}) {
 
   filterTabs?.addEventListener('scrollend', () => {
     if (!isFilterCarousel()) return;
+    if (filterPointerActive) return;
+    if (filterSettling) {
+      filterSettling = false;
+      window.clearTimeout(filterSettleTimer);
+      return;
+    }
     settleCenteredFilter();
   }, { passive: true });
 
-  /* Small-window mouse dragging mirrors a touch swipe. It only activates
-     for a primary-button mouse drag, so ordinary click-to-select remains
-     unchanged and touch devices keep native momentum scrolling. */
+  /* Small-screen touch, wheel/trackpad and primary-button mouse dragging
+     all share the same settling rule. The centered filter is selected only
+     after the user's movement ends, so the interface never fights an
+     in-progress swipe or drag. */
   filterTabs?.addEventListener('pointerdown', event => {
-    if (!isFilterCarousel() || event.pointerType !== 'mouse' || event.button !== 0) return;
+    if (!isFilterCarousel()) return;
+    filterPointerActive = true;
+
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
     filterDrag = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -311,24 +336,30 @@ export function initGallery(options = {}) {
     filterTabs.scrollLeft = filterDrag.startScrollLeft - distance;
   });
 
-  function finishFilterDrag(event) {
-    if (!filterDrag || (event && event.pointerId !== filterDrag.pointerId)) return;
-    const dragged = filterDrag.moved;
-    const pointerId = filterDrag.pointerId;
-    filterDrag = null;
-    filterTabs.classList.remove('is-dragging');
+  function finishFilterPointer(event) {
+    if (event && filterDrag && event.pointerId !== filterDrag.pointerId) return;
 
-    try { filterTabs.releasePointerCapture?.(pointerId); } catch (e) {}
+    const dragged = !!filterDrag?.moved;
+    const pointerId = filterDrag?.pointerId;
+
+    if (filterDrag) {
+      filterDrag = null;
+      filterTabs.classList.remove('is-dragging');
+      try { filterTabs.releasePointerCapture?.(pointerId); } catch (e) {}
+    }
+
+    filterPointerActive = false;
 
     if (dragged) {
-      suppressFilterClick = true;
-      window.setTimeout(() => { suppressFilterClick = false; }, 0);
+      suppressFilterClickUntil = Date.now() + 250;
       settleCenteredFilter();
+    } else if (event?.pointerType !== 'mouse') {
+      scheduleCenteredFilter();
     }
   }
 
-  filterTabs?.addEventListener('pointerup', finishFilterDrag);
-  filterTabs?.addEventListener('pointercancel', finishFilterDrag);
+  filterTabs?.addEventListener('pointerup', finishFilterPointer);
+  filterTabs?.addEventListener('pointercancel', finishFilterPointer);
 
   function applyHash() {
     const hash = decodeURIComponent(window.location.hash.replace('#', ''));
