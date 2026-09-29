@@ -1,5 +1,29 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
+  /* Boot UI must start before any dynamic import or CMS request. A failed
+     feature module must never leave the visitor behind a full-screen dark
+     overlay with no logo or way out. */
+  const pageTransition = document.getElementById('pageTransition');
+  let initialTransitionTimer = null;
+
+  function showInitialPageTransition() {
+    if (!pageTransition) return;
+    pageTransition.classList.remove('is-hidden');
+    requestAnimationFrame(() => pageTransition.classList.add('is-entering'));
+    initialTransitionTimer = window.setTimeout(() => {
+      pageTransition.classList.add('is-hidden');
+    }, 900);
+  }
+
+  function hideInitialPageTransition() {
+    if (!pageTransition) return;
+    pageTransition.classList.add('is-hidden');
+  }
+
+  showInitialPageTransition();
+
+  try {
+
   /* Shared runtime foundation. Heavy feature code stays in its own modules;
      this import supplies site-root/path resolution, conditional library
      loading, and reduced-motion state without changing the existing CMS data
@@ -122,6 +146,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const reviewsMarquee = document.querySelector('.reviews-marquee');
   const reviewsTrack = document.getElementById('reviewsTrack');
   const reviewsSection = document.querySelector('.reviews-section');
+  let pristineTopCards = null;
+  let pristineBottomCards = null;
 
 
   /* =========================================
@@ -1102,11 +1128,15 @@ document.addEventListener('DOMContentLoaded', async () => {
      4/5. PUBLIC FEATURE MODULES — ARCHITECTURE V2
      ========================================= */
   await Promise.all([settingsReady, cmsReady]);
-  await initHeroBannerV2({
-    loopMode: HERO_LOOP_MODE,
-    transitionStyle: HERO_TRANSITION,
-    crossfadeMs: HERO_CROSSFADE_MS
-  });
+  try {
+    await initHeroBannerV2({
+      loopMode: HERO_LOOP_MODE,
+      transitionStyle: HERO_TRANSITION,
+      crossfadeMs: HERO_CROSSFADE_MS
+    });
+  } catch (err) {
+    console.error('Hero: could not initialize hero banner.', err);
+  }
 
   const galleryController = initGallery();
   initLightbox({
@@ -1127,9 +1157,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // re-measures whenever the window is resized.
   // reviewsMarquee / reviewsTrack / reviewsSection now declared at the
   // very top of the file (section 0) — see the comment there for why.
-  let pristineTopCards = null;
-  let pristineBottomCards = null;
-
   // Visibility (and the initial marquee build, if on) is handled by
   // applyReviewsVisibility() below, once buildReviewsMarquee exists.
 
@@ -1202,26 +1229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   //  - Never fires for filter tabs, the Works dropdown's same-page hash
   //    links while already on that page, the lightbox, "Back to Top",
   //    mailto/external links, or anything opening in a new tab.
-  const pageTransition = document.getElementById('pageTransition');
-
   if (pageTransition) {
-    // Entrance: fade the logo in, hold briefly, then fade the whole
-    // overlay away to reveal the page. Runs on every load.
-    requestAnimationFrame(() => {
-      pageTransition.classList.add('is-entering');
-    });
-    setTimeout(() => {
-      pageTransition.classList.add('is-hidden');
-    }, 550);
-
-    // If the browser restores this page from its back/forward cache,
-    // the DOM can come back in whatever state it was in right as we
-    // navigated away — make sure that's never a dark screen stuck mid-
-    // transition.
-    window.addEventListener('pageshow', (e) => {
-      if (e.persisted) pageTransition.classList.add('is-hidden');
-    });
-
     // Compares two pages by their real resolved path, treating
     // "/about/", "/about/index.html" and "/about" as the same page.
     // (The site now uses clean folder URLs — e.g. about/ instead of
@@ -1293,6 +1301,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     correctAnchorScrollOnceLoaded();
   } else {
     window.addEventListener('load', correctAnchorScrollOnceLoaded, { once: true });
+  }
+
+  } catch (err) {
+    console.error('LM bootstrap: public frontend failed to initialize.', err);
+  } finally {
+    if (initialTransitionTimer !== null) window.clearTimeout(initialTransitionTimer);
+    hideInitialPageTransition();
   }
 
 });

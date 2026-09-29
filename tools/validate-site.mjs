@@ -246,6 +246,28 @@ function validateTargetBlankRel(file) {
   }
 }
 
+function validateBootstrapHardening() {
+  const source = exists('js/script.js') ? readText('js/script.js') : '';
+
+  const transitionPos = source.indexOf("const pageTransition = document.getElementById('pageTransition');");
+  const importPos = source.indexOf("await import(runtimeUrl)");
+  if (transitionPos < 0 || importPos < 0 || transitionPos > importPos) {
+    err('Bootstrap: page transition must initialize before dynamic module imports.');
+  }
+
+  if (!/initialTransitionTimer\s*=\s*window\.setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?\},\s*900\)/.test(source)) {
+    err('Bootstrap: initial page transition is missing its fail-safe timeout.');
+  }
+
+  if (!/try\s*\{\s*await initHeroBannerV2\(/.test(source)) {
+    err('Bootstrap: hero initialization must be isolated so a hero failure cannot abort the rest of the public UI.');
+  }
+
+  if (!/catch \(err\) \{\s*console\.error\('LM bootstrap: public frontend failed to initialize\.'/.test(source)) {
+    err('Bootstrap: top-level initialization error boundary is missing.');
+  }
+}
+
 function validateArchitecture() {
   const source = exists('js/script.js') ? readText('js/script.js') : '';
   const required = [
@@ -270,6 +292,7 @@ validateTargetBlankRel('index.html');
 validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
 validateArchitecture();
+validateBootstrapHardening();
 checkLargeAssets();
 
 for (const js of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js']) {
