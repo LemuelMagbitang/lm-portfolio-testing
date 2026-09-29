@@ -429,3 +429,10 @@
   .source-type-error{font-size:11px;}
   .source-type-error p{font-size:11px;}
 }
+
+
+/* Compact timing controls used by Hero Loop Animation. Values are stored as
+   milliseconds in JSON while the editor can display seconds or milliseconds. */
+.time-field{display:flex;align-items:stretch;width:100%;}
+.time-field input{flex:1 1 auto;min-width:0;width:auto;border-radius:8px 0 0 8px;}
+.time-field select{flex:0 0 auto;width:auto;min-width:104px;border-left:0;border-radius:0 8px 8px 0;padding-left:10px;padding-right:28px;}

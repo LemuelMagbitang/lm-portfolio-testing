@@ -2514,7 +2514,9 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     letter-spacing:1px;
     padding:6px 10px;
   }
+}
 
+@media (max-width:768px){
   .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}
   .lightbox-modal.is-3d-focused .lightbox-controls{
     inset:0;
