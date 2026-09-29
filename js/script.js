@@ -694,9 +694,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const raw = await loadCmsJson(window.FILTERS_URL, null, { resolveUrl: siteAssetUrl });
-      if (!raw) return;
-      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.filters) ? raw.filters : []);
-      if (!list.length) return;
+      if (raw === null || raw === undefined) return;
+      const list = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.filters) ? raw.filters : null);
+      // A valid empty CMS list is still meaningful: it means ALL is the
+      // only filter. Do not fall back to the hardcoded HTML filters just
+      // because the CMS currently has zero custom filters.
+      if (!Array.isArray(list)) return;
 
       // Filter tabs — only exist on the homepage; harmless no-op elsewhere.
       const tabs = document.querySelector('.filter-tabs');
