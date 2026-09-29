@@ -22,6 +22,10 @@ export function initGallery(options = {}) {
   let filterPageDots = [];
   let filterScrollFrame = null;
 
+  function getBaseCount() {
+    return window.innerWidth < 768 ? mobileCount : desktopCount;
+  }
+
   function ensureFilterPager() {
     if (!filterTabs || filterPager) return;
     filterPager = document.createElement('div');
