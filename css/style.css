@@ -2512,7 +2512,9 @@ html.lm-3d-focus-open,
 body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width:767px){
-  /* Small screens use the centered horizontal filter carousel. */
+  /* Small screens use the centered horizontal filter carousel. Touch
+     keeps native horizontal momentum; a mouse on a narrow window can
+     drag the same strip with a primary-button hold. */
   .filter-tabs{
     justify-content:flex-start;
     flex-wrap:nowrap;
@@ -2528,6 +2530,12 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     scroll-snap-type:x mandatory;
     overscroll-behavior-x:contain;
     touch-action:pan-x;
+    cursor:grab;
+  }
+  .filter-tabs.is-dragging{
+    cursor:grabbing;
+    user-select:none;
+    -webkit-user-select:none;
   }
   .filter-tabs::-webkit-scrollbar{display:none;}
   .filter-tabs .filter-edge-spacer{
@@ -2550,40 +2558,6 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   .filter-page-controls:not([hidden]){
     display:flex;
   }
-}@media (max-width:768px){
-  .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}
-  .lightbox-modal.is-3d-focused .lightbox-controls{
-    inset:0;
-  }
-  .lightbox-modal.is-3d-focused .lightbox-close,
-  .lightbox-modal.is-3d-focused .lightbox-nav{
-    opacity:.25;
-  }
-  .model-viewer-activate{padding:14px;}
-  .model-viewer-activate-content{min-height:48px;padding:0 17px;}
-  .model-viewer-hint{max-width:92vw;font-size:clamp(10px,3.1vw,13px);padding:0;}
-  .model-viewer-back{min-height:50px;padding:0 19px;font-size:clamp(11px,3.2vw,14px);}
-  .model-viewer-ui{width:min(calc(100vw - 24px),820px);bottom:max(calc(env(safe-area-inset-bottom, 0px) + 12px), 18px);gap:9px;}
-  .lightbox-modal.is-3d-focused .modal-interior{width:100dvw;height:100dvh;min-height:100dvh;}
-  .lightbox-modal.is-3d-focused .is-3d-focus-target,
-  .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{width:100dvw;height:100dvh;}
-}
-
-@media (prefers-reduced-motion:reduce){
-  .page-transition,
-  .hero-quote,
-  .hero-quote-text,
-  .hero-quote-author,
-  .lightbox-close,
-  .lightbox-nav,
-  .project-card,
-  .model-viewer-back,
-  .model-viewer-activate-content{transition:none !important;}
-  .hero-banner .slide{transition:none;}
-  .hero-banner.transition-kenburns .slide img,
-  .hero-banner.transition-kenburns .slide video,
-  .hero-banner.transition-kenburns .slide lottie-player{animation:none;}
-  .reviews-row{animation:none;}
 }
 
 @media (max-width:768px){
