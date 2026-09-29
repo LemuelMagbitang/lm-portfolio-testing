@@ -430,7 +430,6 @@ body {
   flex: 0 0 auto;
   white-space: nowrap;
   scroll-snap-align: center;
-  scroll-snap-stop: always;
 }
 
 /* The currently selected filter is deliberately centered by JavaScript.
