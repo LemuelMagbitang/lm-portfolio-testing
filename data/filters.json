@@ -11,6 +11,10 @@
     {
       "id": "archive",
       "label": "UI/UX & BRAND"
+    },
+    {
+      "id": "anime",
+      "label": "ANIME"
     }
   ],
   "badges": [
@@ -18,6 +22,7 @@
     "3D Design",
     "2D Illustration",
     "Motion Graphics",
-    "Brand Design"
+    "Brand Design",
+    "Anime"
   ]
 }
