@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "type": "image",
+    "src": "assets/projects/aol/figureground.jpg",
+    "alt": "",
+    "focus": "50% 50%",
+    "zoom": 1,
+    "rotate": 0
+  }
+]
