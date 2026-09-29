@@ -332,16 +332,19 @@ import { loadCmsJson, parseYouTubeUrl } from './cms-data.js';
     startHeroCrossfade(heroContainer, config.crossfadeMs);
   }
 
-  function startHeroCrossfade(heroContainer) {
+  function startHeroCrossfade(heroContainer, crossfadeMs) {
     const slides = heroContainer.querySelectorAll('.slide');
     if (slides.length <= 1) return;
 
     let currentSlide = 0;
     if (prefersReducedMotion()) return;
+    const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
+      ? Number(crossfadeMs)
+      : 3500;
     setInterval(() => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
-    }, config.crossfadeMs); // configured in Hero Loop Animation
+    }, intervalMs); // configured in Hero Loop Animation
   }
 export { initHeroBanner as initHeroBannerV2 };
