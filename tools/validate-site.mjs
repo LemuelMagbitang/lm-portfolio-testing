@@ -147,7 +147,6 @@ function validateHeroLoop(heroLoop) {
     if (item?.fadeOutMs !== undefined && (!Number.isFinite(Number(item.fadeOutMs)) || Number(item.fadeOutMs) < 0)) err(`${where}: fadeOutMs must be non-negative.`);
   });
 }
-}
 
 function validateAbout(about) {
   if (!about || typeof about !== 'object') return;
