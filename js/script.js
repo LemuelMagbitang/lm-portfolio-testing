@@ -447,6 +447,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       list.forEach(r => frag.appendChild(buildReviewCardEl(r)));
       track.innerHTML = '';
       track.appendChild(frag);
+
+      // Settings can resolve before the Reviews CMS request. In that case
+      // applyReviewsVisibility() may have already built a marquee from the
+      // static fallback cards. Reset the pristine copies so the CMS set is
+      // what the marquee uses once it arrives.
+      pristineTopCards = null;
+      pristineBottomCards = null;
+      if (SHOW_REVIEWS) applyReviewsVisibility();
     } catch (err) {
       console.warn('Reviews: could not load', window.REVIEWS_URL, err);
       // Leave the existing static cards in place.
