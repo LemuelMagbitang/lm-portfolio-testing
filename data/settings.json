@@ -27,7 +27,7 @@
     "kenBurnsFromScale": 1,
     "kenBurnsToScale": 1.15,
     "kenBurnsDurationS": 14,
-    "loopMode": "mixed",
+    "loopMode": "latest",
     "transitionStyle": "kenburns"
   },
   "ogImage": "assets/projects/site/og-image.jpg",
