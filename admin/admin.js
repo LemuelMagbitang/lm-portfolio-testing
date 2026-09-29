@@ -905,21 +905,70 @@ RENDERERS.filters = async function(data){
   const filterItems=Array.isArray(raw)?raw:(raw.filters||[]);
   let badgeItems=Array.isArray(raw)?[]:(raw.badges||[]);
   let items=withUids(filterItems.map(x=>({id:x.id||'',label:x.label||''})));
-  let cleanedProjects=null;
-  async function cleanProjectFilter(filterId){
-    const result=await loadSection('projects');
-    const projects=Array.isArray(result.json)?result.json:[];
-    let changed=0;
-    const next=projects.map(project=>{
-      const filters=Array.isArray(project.filters)?project.filters:[];
-      if(!filters.includes(filterId)) return project;
-      changed++;
-      return {...project,filters:filters.filter(id=>id!==filterId)};
-    });
-    cleanedProjects={projects:next,changed,filterId};
-    return cleanedProjects;
-  }
+  const originalIds=new Map(items.map(item=>[item._uid,item.id]));
+  const deletedFilterIds=new Set();
+
   badgeItems=badgeItems.map(x=>typeof x==='string'?x:(x&&x.label)||'').filter(Boolean);
+
+  function getFilterRenameMap(){
+    const renames=new Map();
+    items.forEach(item=>{
+      const original=originalIds.get(item._uid);
+      if(original && item.id && original!==item.id) renames.set(original,item.id);
+    });
+    return renames;
+  }
+
+  function hasProjectFilterImpact(){
+    if(deletedFilterIds.size) return true;
+    return getFilterRenameMap().size > 0;
+  }
+
+  function cloneProjects(projects){
+    try{return structuredClone(projects);}catch(e){return JSON.parse(JSON.stringify(projects));}
+  }
+
+  async function buildProjectsAfterFilterChanges(){
+    if(!hasProjectFilterImpact()){
+      delete currentSave.combined;
+      delete currentSave.extraData;
+      return null;
+    }
+
+    const result=await loadSection('projects');
+    const source=Array.isArray(result.json)?result.json:[];
+    const projects=cloneProjects(source);
+    const renames=getFilterRenameMap();
+    let changed=0;
+
+    projects.forEach(project=>{
+      const filters=Array.isArray(project.filters)?project.filters:[];
+      const next=[];
+      filters.forEach(id=>{
+        if(deletedFilterIds.has(id)){
+          changed++;
+          return;
+        }
+        const mapped=renames.get(id);
+        if(mapped && mapped!==id) {
+          next.push(mapped);
+          changed++;
+          return;
+        }
+        next.push(id);
+      });
+      project.filters=next;
+    });
+
+    currentSave.combined='filtersWithProjects';
+    currentSave.extraData=()=>projects;
+    currentSave.projectFilterChangeCount=changed;
+    return {projects,changed};
+  }
+
+  function isValidFilterId(id){
+    return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id);
+  }
 
   function paint(){
     content.innerHTML = sectionHead(
@@ -927,8 +976,8 @@ RENDERERS.filters = async function(data){
       'These become the tabs above the project grid, the matching nav-bar dropdown items, and the badge options for each project. Drag the handle to reorder.'
     ) + `
       <div class="banner info"><i class="fa-solid fa-circle-info"></i><div>
-        The <strong>ALL</strong> tab always exists automatically and isn't listed here — every project belongs to it.
-        Filter IDs are matched exactly. Deleting a filter automatically removes that ID from every project that uses it.
+        The <strong>ALL</strong> tab always exists automatically and isn't listed here.
+        IDs use lowercase letters, numbers, and hyphens. Renaming an existing filter automatically migrates matching project tags when you save; deleting a filter removes its tag from every affected project.
       </div></div>
       <div id="filterList"></div>
       <button class="add-btn" id="addFilter"><i class="fa-solid fa-plus"></i> Add filter tab</button>
@@ -963,13 +1012,24 @@ RENDERERS.filters = async function(data){
       });
       row.querySelector('[data-act="del"]').addEventListener('click',async ()=>{
         try{
-          const cleanup=await cleanProjectFilter(item.id);
-          items=items.filter(x=>x._uid!==item._uid);
-          flagUnsaved();
-          paint();
-          toast(cleanup.changed
-            ? `Deleted “${item.label || item.id}” and cleared it from ${cleanup.changed} project${cleanup.changed===1?'':'s'}.`
-            : `Deleted “${item.label || item.id}”. No projects were using it.`);
+          const filterId=item.id;
+          if(filterId){
+            const result=await loadSection('projects');
+            const projects=Array.isArray(result.json)?result.json:[];
+            const affected=projects.filter(project=>Array.isArray(project.filters)&&project.filters.includes(filterId)).length;
+            deletedFilterIds.add(filterId);
+            items=items.filter(x=>x._uid!==item._uid);
+            flagUnsaved();
+            paint();
+            toast(affected
+              ? `Deleted “${item.label || item.id}”; its tag will be cleared from ${affected} project${affected===1?'':'s'} when saved.`
+              : `Deleted “${item.label || item.id}”. No projects were using it.`);
+          }else{
+            items=items.filter(x=>x._uid!==item._uid);
+            flagUnsaved();
+            paint();
+            toast('Deleted the empty filter.');
+          }
         }catch(err){toast('Could not delete filter: '+err.message,true);}
       });
       row.querySelector('[data-act="up"]').addEventListener('click', ()=>{
@@ -987,14 +1047,20 @@ RENDERERS.filters = async function(data){
     document.getElementById('addFilter').addEventListener('click', ()=>{ items.push({id:'',label:'',_uid:uid()}); flagUnsaved(); paint(); });
     document.getElementById('addBadge').addEventListener('click', ()=>{ badgeItems.push('New Badge'); flagUnsaved(); paint(); });
     enableDragReorder(() => document.getElementById('filterList'), items, flagUnsaved, paint);
-    wireSave(()=>{
-      for(const it of items){ if(!it.id.trim()||!it.label.trim()) throw new Error('Every filter needs both an ID and a label.'); }
-      return {filters:items.map(x=>({id:x.id,label:x.label})),badges:badgeItems.map(x=>x.trim()).filter(Boolean)};
+    wireSave(async()=>{
+      const seen=new Set();
+      for(const it of items){
+        const id=it.id.trim();
+        const label=it.label.trim();
+        if(!id||!label) throw new Error('Every filter needs both an ID and a label.');
+        if(!isValidFilterId(id)) throw new Error(`Filter ID “${id}” is invalid. Use lowercase letters, numbers, and hyphens only (e.g. 3d-motion).`);
+        if(seen.has(id)) throw new Error(`Duplicate filter ID “${id}”. Every filter must have a unique ID.`);
+        seen.add(id);
+      }
+      const payload={filters:items.map(x=>({id:x.id.trim(),label:x.label.trim()})),badges:badgeItems.map(x=>x.trim()).filter(Boolean)};
+      await buildProjectsAfterFilterChanges();
+      return payload;
     }, 'filters', SECTIONS.filters.file);
-    if(cleanedProjects){
-      currentSave.combined='filtersWithProjects';
-      currentSave.extraData=()=>cleanedProjects.projects;
-    }
   }
   paint();
 };
