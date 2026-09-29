@@ -187,9 +187,14 @@ body {
   top: 0; left: 0;
   width: 100%; height: 100%;
   opacity: 0;
-  transition: opacity 1.5s ease-in-out;
+  --hero-fade-in-ms: 1500ms;
+  --hero-fade-out-ms: 1500ms;
+  transition: opacity var(--hero-fade-out-ms) ease-in-out;
 }
-.hero-banner .slide.active { opacity: 0.4; }
+.hero-banner .slide.active {
+  opacity: 0.4;
+  transition-duration: var(--hero-fade-in-ms);
+}
 
 .hero-banner .slide img,
 .hero-banner .slide video,
@@ -1084,6 +1089,8 @@ button.lightbox-close,
 button.lightbox-nav {
   margin:0;
   padding:0;
+  border:0;
+  background:transparent;
 }
 
 button.hamburger {
@@ -1096,15 +1103,26 @@ button.hamburger {
   position: fixed;
   top: 25px;
   right: 30px;
-  font-size: 2rem;
-  color: #fff;
-  cursor: pointer;
-  z-index: 10000;
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  font-size:1.85rem;
+  line-height:1;
+  color:#fff;
+  cursor:pointer;
+  z-index:10000;
   pointer-events:auto;
-  transition: opacity 0.2s;
+  transition:opacity .2s,transform .2s ease;
 }
 
-.lightbox-close:hover { opacity: 0.7; }
+@media (hover:hover) and (pointer:fine){
+  .lightbox-close:hover { opacity:.7; transform:scale(1.04); }
+}
+.lightbox-close:focus{outline:none;}
+.lightbox-close:focus-visible{outline:2px solid #fff;outline-offset:3px;}
 
 .lightbox-nav {
   position: fixed;
@@ -2478,7 +2496,25 @@ body.center-page {
 html.lm-3d-focus-open,
 body.lm-3d-focus-open{overscroll-behavior:none;}
 
-@media (max-width:768px){
+@media (max-width:767px){
+  /* Keep a long CMS filter list compact and keep artwork near the top of the page. */
+  .filter-tabs{
+    justify-content:flex-start;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    overflow-y:hidden;
+    width:100%;
+    gap:8px;
+    margin:14px 0 18px;
+    padding:0 2px 4px;
+  }
+  .filter-tabs .tab-btn{
+    flex:0 0 auto;
+    font-size:.72rem;
+    letter-spacing:1px;
+    padding:6px 10px;
+  }
+
   .model-viewer-shell{height:clamp(260px,72vw,420px);border-radius:10px;}
   .lightbox-modal.is-3d-focused .lightbox-controls{
     inset:0;

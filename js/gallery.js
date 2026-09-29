@@ -19,8 +19,38 @@ export function initGallery(options = {}) {
   let baseCount = getBaseCount();
 
   function getBaseCount() { return window.innerWidth < 768 ? mobileCount : desktopCount; }
+
+  function cardMatchesFilter(card, filter) {
+    if (filter === 'all') return true;
+    const raw = card.dataset.filterIds;
+    if (raw) {
+      try {
+        const ids = JSON.parse(raw);
+        if (Array.isArray(ids)) return ids.includes(filter);
+      } catch (e) {}
+    }
+    return card.classList.contains(filter);
+  }
+
+  function getEffectiveBaseCount(filtered) {
+    const requested = getBaseCount();
+    if (filtered.length <= requested || window.innerWidth < 768) return Math.min(requested, filtered.length);
+    const firstTop = filtered[0]?.getBoundingClientRect().top;
+    let columns = 1;
+    if (Number.isFinite(firstTop)) {
+      let count = 0;
+      for (const card of filtered) {
+        if (Math.abs(card.getBoundingClientRect().top - firstTop) <= 2) count++;
+        else break;
+      }
+      columns = Math.max(1, count);
+    }
+    const rowAlignedCount = Math.ceil(requested / columns) * columns;
+    return Math.min(rowAlignedCount, filtered.length);
+  }
+
   function render() {
-    const filtered = allCards.filter(card => currentFilter === 'all' || card.classList.contains(currentFilter));
+    const filtered = allCards.filter(card => cardMatchesFilter(card, currentFilter));
     const hidden = allCards.filter(card => !filtered.includes(card));
     hidden.forEach(card => { card.style.opacity = '0'; });
     window.setTimeout(() => hidden.forEach(card => {
@@ -28,9 +58,11 @@ export function initGallery(options = {}) {
     }), fadeMs);
     filtered.forEach(card => { card.style.display = 'block'; });
     window.requestAnimationFrame(() => filtered.forEach(card => { card.style.opacity = '1'; }));
-    if (!isExpanded && filtered.length > baseCount) {
+    const effectiveBaseCount = getEffectiveBaseCount(filtered);
+
+    if (!isExpanded && filtered.length > effectiveBaseCount) {
       const gridRect = portfolioGrid.getBoundingClientRect();
-      const cardRect = filtered[baseCount - 1].getBoundingClientRect();
+      const cardRect = filtered[effectiveBaseCount - 1].getBoundingClientRect();
       const peek = window.innerWidth < 768 ? 40 : 70;
       portfolioGrid.style.maxHeight = `${Math.round(cardRect.bottom - gridRect.top + peek)}px`;
       gridFadeOverlay?.classList.remove('is-hidden');
@@ -40,7 +72,7 @@ export function initGallery(options = {}) {
     }
     if (showMoreBtn && showMoreWrapper) {
       const label = showMoreBtn.querySelector('.btn-text');
-      if (filtered.length > baseCount) {
+      if (filtered.length > effectiveBaseCount) {
         showMoreWrapper.style.display = 'flex';
         showMoreWrapper.classList.toggle('expanded', isExpanded);
         showMoreBtn.classList.toggle('expanded', isExpanded);
@@ -90,6 +122,6 @@ export function initGallery(options = {}) {
     render,
     getFilter: () => currentFilter,
     getAllCards: () => allCards.slice(),
-    getActiveCards: () => allCards.filter(card => currentFilter === 'all' || card.classList.contains(currentFilter)).slice()
+    getActiveCards: () => allCards.filter(card => cardMatchesFilter(card, currentFilter)).slice()
   };
 }

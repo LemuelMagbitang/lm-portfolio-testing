@@ -206,7 +206,9 @@ import { loadCmsJson, parseYouTubeUrl } from './cms-data.js';
       focus: item.focus || null,
       zoom: item.zoom || null,
       rotate: item.rotate || null,
-      background: item.background || null
+      background: item.background || null,
+      fadeInMs: Number.isFinite(Number(item.fadeInMs)) ? Math.max(0, Number(item.fadeInMs)) : 1500,
+      fadeOutMs: Number.isFinite(Number(item.fadeOutMs)) ? Math.max(0, Number(item.fadeOutMs)) : 1500
     };
   }
 
@@ -311,6 +313,11 @@ import { loadCmsJson, parseYouTubeUrl } from './cms-data.js';
         media.src = siteAssetUrl(source.src);
         media.alt = source.alt;
       }
+      const fadeInMs = Number.isFinite(Number(source.fadeInMs)) ? Math.max(0, Number(source.fadeInMs)) : 1500;
+      const fadeOutMs = Number.isFinite(Number(source.fadeOutMs)) ? Math.max(0, Number(source.fadeOutMs)) : 1500;
+      wrap.style.setProperty('--hero-fade-in-ms', `${fadeInMs}ms`);
+      wrap.style.setProperty('--hero-fade-out-ms', `${fadeOutMs}ms`);
+
       wrap.appendChild(media);
       heroContainer.appendChild(wrap);
       if (window.LMMediaBackground && source.background) window.LMMediaBackground.apply(wrap, source.background, siteAssetUrl);

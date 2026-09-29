@@ -140,7 +140,13 @@ function validateProjects(projects, filters) {
 
 function validateHeroLoop(heroLoop) {
   if (!Array.isArray(heroLoop)) return;
-  heroLoop.forEach((item, i) => validateMedia(item, `data/hero-loop.json item ${i + 1}`));
+  heroLoop.forEach((item, i) => {
+    const where = `data/hero-loop.json item ${i + 1}`;
+    validateMedia(item, where);
+    if (item?.fadeInMs !== undefined && (!Number.isFinite(Number(item.fadeInMs)) || Number(item.fadeInMs) < 0)) err(`${where}: fadeInMs must be non-negative.`);
+    if (item?.fadeOutMs !== undefined && (!Number.isFinite(Number(item.fadeOutMs)) || Number(item.fadeOutMs) < 0)) err(`${where}: fadeOutMs must be non-negative.`);
+  });
+}
 }
 
 function validateAbout(about) {
@@ -315,6 +321,18 @@ validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
+
+function validateCmsRegressionContracts() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const script = exists('js/script.js') ? readText('js/script.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
+  if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) err('Gallery: row-aware Show More contract is missing.');
+  if (!script.includes('card.dataset.filterIds')) err('Gallery filters: exact CMS filter IDs must be preserved.');
+  if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) err('Hero: per-slide fade timing CSS variables are missing.');
+}
+validateCmsRegressionContracts();
 validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();

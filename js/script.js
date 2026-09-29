@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const card = document.createElement('div');
     const filters = Array.isArray(p.filters) ? p.filters.filter(Boolean) : [];
     card.className = ['project-card', ...filters].join(' ');
+    card.dataset.filterIds = JSON.stringify(filters);
 
     if (p.badge) {
       const badges = document.createElement('div');
