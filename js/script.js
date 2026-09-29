@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const thumbBackground = (t.background && typeof t.background === 'object') ? t.background : inheritedThumbBackground;
     if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
     if (t.src) {
-      const media = buildThumbnailMedia({type:t.type||heroMediaTypeFromSrc(t.src),src:t.src,background:thumbBackground}, p.title || 'Project artwork');
+      const media = buildThumbnailMedia({type:t.type||mediaTypeFromSrc(t.src),src:t.src,background:thumbBackground}, p.title || 'Project artwork');
       if (media) {
         if (t.focus) media.setAttribute('data-focus', t.focus);
         if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
@@ -948,6 +948,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // animation while inheriting the exact CMS background. A model uses a
   // lightweight preview tile rather than creating a WebGL renderer for
   // every card, but it also inherits the model's CMS background.
+  function mediaTypeFromSrc(src) {
+    const clean = String(src || '').split('?')[0].split('#')[0].toLowerCase();
+    if (/\.(mp4|webm|mov|m4v)$/.test(clean)) return 'video';
+    if (/\.json$/.test(clean)) return 'lottie';
+    return 'image';
+  }
+
   function buildThumbnailMedia(source, altText){
     if (!source || !source.src) return null;
     let media;
