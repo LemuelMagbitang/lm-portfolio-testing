@@ -2479,6 +2479,27 @@ async function createMediaFolder(parentPath,onDone){
   toast(`Created folder ${folderPath}.`);
   if(onDone) onDone(folderPath);
 }
+const MEDIA_REFERENCE_FILES = [
+  'index.html',
+  'about/index.html',
+  '404.html',
+  'success/index.html',
+  'css/style.css',
+  'js/script.js',
+  'js/hero.js',
+  'js/lightbox.js',
+  'js/media-background.js',
+  'js/model-viewer.js',
+  'js/site-runtime.js',
+  'data/about.json',
+  'data/filters.json',
+  'data/hero-loop.json',
+  'data/hero.json',
+  'data/projects.json',
+  'data/reviews.json',
+  'data/settings.json'
+];
+
 async function renameMediaFolder(oldPath,onDone){
   if(!oldPath || oldPath==='assets'){ toast('The Media Library root cannot be renamed.',true); return; }
   const oldName=oldPath.split('/').pop();
@@ -2492,18 +2513,41 @@ async function renameMediaFolder(oldPath,onDone){
   const prefix=oldPath+'/';
   const moving=tree.filter(item=>item.type==='blob' && item.path.startsWith(prefix));
   if(!moving.length){ toast('That folder has no tracked files to move.',true); return; }
+
   const entries=[];
   moving.forEach(item=>{
     const suffix=item.path.slice(prefix.length);
     entries.push({path:newPath+'/'+suffix,mode:item.mode==='100755'?'100755':'100644',type:'blob',sha:item.sha});
     entries.push({path:item.path,mode:'100644',type:'blob',sha:null});
   });
-  if(!confirm(`Rename “${oldPath}” to “${newPath}”? Existing references to files inside this folder may need updating in project/about data.`)) return;
-  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath}`);
+
+  const changedReferenceFiles=[];
+  for(const filePath of MEDIA_REFERENCE_FILES){
+    try{
+      const current=await GH.getTextFile(filePath);
+      if(!current.text.includes(oldPath)) continue;
+      const next=current.text.split(oldPath).join(newPath);
+      if(next===current.text) continue;
+      const blob=await GH.createBlob(next,'utf-8');
+      entries.push({path:filePath,mode:'100644',type:'blob',sha:blob});
+      changedReferenceFiles.push(filePath);
+    }catch(err){
+      if(/was not found in the repository/i.test(err.message||'')) continue;
+      throw err;
+    }
+  }
+
+  const referenceNote=changedReferenceFiles.length
+    ? 'References in '+changedReferenceFiles.length+' site/data file'+(changedReferenceFiles.length===1?'':'s')+' will be updated automatically in the same commit.'
+    : 'No existing site/data references to this folder were found.';
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”? '+referenceNote)) return;
+
+  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath} and update references`);
   mediaTreeCache=null;
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
-  toast(`Renamed ${oldName} to ${name}.`);
+  ['about','heroLoop','hero','projects','reviews','settings','filters'].forEach(name=>{ delete cache[name]; });
+  toast('Renamed '+oldName+' to '+name+(changedReferenceFiles.length ? ' and updated '+changedReferenceFiles.length+' reference file'+(changedReferenceFiles.length===1?'':'s') : '')+'.');
   if(onDone) onDone(newPath);
 }
 
