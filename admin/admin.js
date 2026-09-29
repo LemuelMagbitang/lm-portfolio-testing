@@ -148,9 +148,10 @@ function loadConn(){
   }catch(e){ return null; }
 }
 function saveConn(c, remember){
-  if(remember){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); }catch(e){}
-  }
+  try{
+    if(remember) localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+    else localStorage.removeItem(STORAGE_KEY);
+  }catch(e){}
 }
 function clearConn(){
   try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
@@ -521,6 +522,23 @@ async function saveSection(name, obj, commitMessage){
   return result.commit && result.commit.sha; // the commit itself, for deploy-status tracking
 }
 
+// Saves several CMS JSON files in one Git commit. This is important for
+// settings that logically belong together (such as Hero Loop entries and
+// heroTiming) so one click produces one repository revision and one Pages
+// deployment instead of a chain of superseding deployments.
+async function saveSectionsAtomic(files, message){
+  if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
+  const commit = await GH.commitFiles(files, message);
+  for(const file of files){
+    const parsed = JSON.parse(file.content);
+    const fresh = await GH.getFile(file.path);
+    cache[file.name] = { json: parsed, sha: fresh.sha, missing:false };
+    dirty[file.name] = false;
+  }
+  updateDirtyDots();
+  return commit.sha;
+}
+
 /* =====================================================================
    6. RENDER ROUTER
    ===================================================================== */
@@ -640,11 +658,12 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   try{
     let commitSha;
     if(currentSave && currentSave.combined && name==='heroLoop'){
-      commitSha=await saveSection('heroLoop',obj.items||[],'CMS: update data/hero-loop.json');
       const sr=await loadSection('settings');
       const next={...(sr.json||{}),heroTiming:{...(sr.json?.heroTiming||{}),loopMode:obj.mode,transitionStyle:obj.transition,crossfadeMs:obj.interval}};
-      const settingsSha=await saveSection('settings',next,'CMS: update hero loop settings');
-      commitSha=settingsSha||commitSha;
+      commitSha=await saveSectionsAtomic([
+        {name:'heroLoop',path:SECTIONS.heroLoop.file,content:JSON.stringify(obj.items||[],null,2)+'\\n',encoding:'utf-8'},
+        {name:'settings',path:SECTIONS.settings.file,content:JSON.stringify(next,null,2)+'\\n',encoding:'utf-8'}
+      ],'CMS: update hero loop and transition settings');
       toast(`Saved — hero loop and transition settings committed to ${conn.branch}.`);
     }else{
       commitSha=await saveSection(name,obj,`CMS: update ${filePath}`);
