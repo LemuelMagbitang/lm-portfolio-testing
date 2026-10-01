@@ -534,13 +534,12 @@ document.getElementById('btnDisconnect').addEventListener('click', () => {
 
 function enterApp(){
   document.getElementById('connectScreen').style.display = 'none';
+  // Remove the credential field entirely after connection. Keeping a
+  // password input in the active DOM can cause browser password managers
+  // to surface save/update-password UI during unrelated dialogs such as
+  // the Media Picker. The token is already retained in session state.
   const tokenInput = document.getElementById('inToken');
-  if (tokenInput) {
-    tokenInput.value = '';
-    tokenInput.type = 'text';
-    tokenInput.autocomplete = 'off';
-    tokenInput.disabled = true;
-  }
+  tokenInput?.closest('.field')?.remove();
   document.getElementById('app').classList.add('active');
   document.getElementById('topbar').classList.add('active');
   const repoLabel = document.getElementById('repoLabel');
