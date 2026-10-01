@@ -350,6 +350,23 @@ function validateAdminStorageSecurity() {
   if (!html.includes('Never paste a token into project files')) err('CMS security: admin must warn against committing GitHub credentials.');
 }
 
+function validateAdminConnectionSecurity() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  if (!admin) return;
+
+  const required = [
+    ['safe repository-name validation', /function isSafeRepoName\(/],
+    ['safe branch-name validation', /function isSafeBranchName\(/],
+    ['validated stored connections', /return isValidConnection\(parsed\) \? parsed : null;/],
+    ['API path segment encoding', /function apiPath\(path\)/],
+    ['GitHub API referrer suppression', /referrerPolicy:\s*init\.referrerPolicy \|\| 'no-referrer'/]
+  ];
+
+  required.forEach(([label, pattern]) => {
+    if (!pattern.test(admin)) err('CMS security: ' + label + ' contract is missing.');
+  });
+}
+
 function validateExternalDependencyPins() {
   const htmlFiles = ['index.html', 'about/index.html', 'admin/index.html', '404.html', 'success/index.html'].filter(exists);
   for (const file of htmlFiles) {
@@ -510,6 +527,7 @@ validateAdminStorageSecurity();
 validateWorkflowHardening();
 validateWorkflowActionPins();
 validateExternalDependencyPins();
+validateAdminConnectionSecurity();
 validateTargetBlankRel('index.html');
 validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
