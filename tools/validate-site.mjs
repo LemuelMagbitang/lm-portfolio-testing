@@ -555,8 +555,8 @@ function validateResponsiveUiContracts() {
     err('Gallery responsive count contract: desktop should keep nine visible cards.');
   }
   if (!/grid-template-columns:1fr;/.test(style) ||
-      !/grid-template-columns:repeat\(2,minmax\(0,1fr)\);/.test(style) ||
-      !/grid-template-columns:repeat\(3,minmax\(0,1fr)\);/.test(style)) {
+      !/grid-template-columns:repeat\(2,minmax\(0,1fr\)\);/.test(style) ||
+      !/grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/.test(style)) {
     err('Gallery responsive layout contract: phone/tablet/desktop column rules are incomplete.');
   }
   if (!/Responsive lightbox sizing/.test(style)) err('Lightbox responsive sizing contract is missing.');
