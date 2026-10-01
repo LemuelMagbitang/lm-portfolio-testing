@@ -359,7 +359,7 @@ function validateAdminConnectionSecurity() {
     ['safe branch-name validation', /function isSafeBranchName\(/],
     ['validated stored connections', /return isValidConnection\(parsed\) \? parsed : null;/],
     ['API path segment encoding', /function apiPath\(path\)/],
-    ['GitHub API referrer suppression', /referrerPolicy:\s*init\.referrerPolicy \|\| 'no-referrer'/]
+    ['GitHub API referrer suppression', /referrerPolicy:\s*init\.referrerPolicy \|\| 'no-referrer'/],
     ['CMS writable-path allowlist', /const CMS_WRITABLE_PATHS = new Set\(/],
     ['CMS write-path enforcement', /assertCmsWritablePath\(file\?\.path\)/],
     ['Media delete restriction', /CMS delete blocked: only media assets can be deleted/],
@@ -407,11 +407,11 @@ function validateWorkflowActionPins() {
     err('CI security: GitHub Actions must be pinned to immutable commit SHAs. Unpinned actions: ' + mutable.join(', ') + '.');
   }
 
-  if (!workflow.includes('actions/checkout@11d5960a326750d5838078e36cf38b85af677262')) {
-    err('CI security: actions/checkout must stay pinned to its reviewed v4 commit SHA.');
+  if (!workflow.includes('actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09')) {
+    err('CI security: actions/checkout must stay pinned to its reviewed v5 commit SHA.');
   }
-  if (!workflow.includes('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020')) {
-    err('CI security: actions/setup-node must stay pinned to its reviewed v4 commit SHA.');
+  if (!workflow.includes('actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444')) {
+    err('CI security: actions/setup-node must stay pinned to its reviewed v5 commit SHA.');
   }
 }
 
