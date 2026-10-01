@@ -1711,7 +1711,10 @@ RENDERERS.projects = async function(data){
       wrap.innerHTML = `
         <div class="card-item-head" style="cursor:pointer" data-toggle-open>
           <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-          <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}</span>
+          <span class="project-item-label">
+            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}</span>
+            <span class="project-preview-text">${esc(p.subtitle||'')}</span>
+          </span>
           <div class="card-item-actions">
             <button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
             <button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
