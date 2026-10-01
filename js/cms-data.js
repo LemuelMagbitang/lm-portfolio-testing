@@ -24,7 +24,7 @@ export async function loadCmsJson(url, fallback = null, options = {}) {
     }
     const response = await fetch(resolveCmsUrl(url, resolveUrl || (value => value)), {
       signal: signal || controller?.signal,
-      credentials: 'same-origin',
+      credentials: 'omit',
       cache: 'no-cache'
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
