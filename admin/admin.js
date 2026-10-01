@@ -234,6 +234,36 @@ function githubFetch(url, init = {}){
     referrerPolicy: init.referrerPolicy || 'no-referrer'
   });
 }
+const CMS_WRITABLE_PATHS = new Set([
+  'data/about.json',
+  'data/filters.json',
+  'data/hero-loop.json',
+  'data/hero.json',
+  'data/projects.json',
+  'data/reviews.json',
+  'data/settings.json',
+  'index.html',
+  'about/index.html',
+  '404.html',
+  'success/index.html',
+  'css/style.css',
+  'js/script.js',
+  'js/hero.js',
+  'js/lightbox.js',
+  'js/media-background.js',
+  'js/model-viewer.js',
+  'js/site-runtime.js'
+]);
+function isCmsWritablePath(filePath){
+  const value = String(filePath || '').replace(/^\/+|\/+$/g, '');
+  return CMS_WRITABLE_PATHS.has(value) || value.startsWith('assets/');
+}
+function assertCmsWritablePath(filePath){
+  if (!isCmsWritablePath(filePath)) {
+    throw new Error('CMS write blocked: this editor can only modify site content, media, and its known reference files.');
+  }
+}
+
 const GH = {
   async getFile(path){
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
@@ -250,6 +280,7 @@ const GH = {
     return { json, sha: data.sha, missing:false };
   },
   async putFile(path, obj, sha, message){
+    assertCmsWritablePath(path);
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = {
       message,
@@ -363,6 +394,7 @@ const GH = {
   },
   async commitFiles(files, message){
     if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
+    files.forEach(file => assertCmsWritablePath(file?.path));
     const parentSha = await GH.getBranchHead();
     if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
     const commitUrl = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
@@ -389,6 +421,7 @@ const GH = {
     return newCommit;
   },
   async uploadBinary(path, dataUrl, message, existingSha){
+    assertCmsWritablePath(path);
     const base64 = dataUrl.split(',')[1]; // strip the "data:*/*;base64," prefix
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = { message, content: base64, branch: conn.branch };
@@ -405,6 +438,9 @@ const GH = {
     return res.json();
   },
   async deleteFile(path, sha, message){
+    if (!String(path || '').replace(/^\/+|\/+$/g, '').startsWith('assets/')) {
+      throw new Error('CMS delete blocked: only media assets can be deleted from the Media Library.');
+    }
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const res = await githubFetch(url, {
       method: 'DELETE',
