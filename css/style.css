@@ -544,6 +544,20 @@ body {
 .project-card:focus { outline: none; }
 .project-card:focus-visible { outline: 2px solid rgba(255,255,255,.78); outline-offset: -2px; }
 
+/* Responsive gallery columns:
+   phone = one column (2 visible cards = 2 rows),
+   tablet = two columns (4 or 6 visible cards = 2/3 rows),
+   desktop = three columns (9 visible cards = 3 rows). */
+@media (max-width: 767px){
+  .seamless-grid{grid-template-columns:1fr;}
+}
+@media (min-width: 768px) and (max-width: 1099px){
+  .seamless-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (min-width: 1100px){
+  .seamless-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
 .card-thumbnail {
   width: 100%;
   height: 100%;
@@ -1505,6 +1519,24 @@ body.center-page {
     height: 38px;
     font-size: 0.95rem;
   }
+}
+
+/* Responsive lightbox sizing. The media stack remains vertical, but
+   its usable width and media height scale with the device so the header,
+   description, artwork and controls keep a balanced frame. */
+@media (min-width: 768px) and (max-width: 1099px){
+  .lightbox-modal{padding:48px 24px;}
+  .modal-interior{max-width:760px;gap:26px;}
+  #lightboxMediaContainer img,
+  #lightboxMediaContainer iframe,
+  #lightboxMediaContainer video{max-height:min(78vh,760px);}
+}
+@media (max-width:767px){
+  .modal-interior{max-width:100%;gap:24px;margin-top:8px;}
+  #lightboxMediaContainer img,
+  #lightboxMediaContainer iframe,
+  #lightboxMediaContainer video{max-height:calc(100dvh - 220px);}
+  .media-caption{max-width:calc(100% - 40px);}
 }
 
 /* =========================================
