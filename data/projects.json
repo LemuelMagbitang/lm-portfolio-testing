@@ -550,5 +550,35 @@
         "orientation": ""
       }
     ]
+  },
+  {
+    "id": "test-project",
+    "title": "Test Project",
+    "subtitle": "this is a test project subtitle for this project website portfolio testing",
+    "badge": "3D Design",
+    "filters": [
+      "3d-motion"
+    ],
+    "description": "lorem ipsum dolor sit amet consectetur adipiscing elit id dolor consequat excepteur dolore nulla sit enim et et omnis possimus in officia ut fuga excepteur mollitia et eligendi non sunt temporibus voluptas excepturi vero est in voluptas occaecat occaecat quos est cum adipiscing rerum mollit cumque lorem in praesentium dolor",
+    "thumbnail": {
+      "type": "image",
+      "src": "",
+      "focus": "50% 50%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "lottie",
+        "src": "assets/projects/test/Sample.json",
+        "caption": "This is a lottie test animation and view",
+        "orientation": "square"
+      },
+      {
+        "type": "model",
+        "src": "assets/projects/test/Female base.obj",
+        "caption": "lorem ipsum dolor sit amet consectetur adipiscing elit id dolor consequat excepteur dolore nulla sit enim et et omnis possimus in officia ut fuga excepteur mollitia et eligendi non sunt temporibus voluptas excepturi vero est in voluptas occaecat occaecat quos est cum adipiscing rerum mollit cumque lorem in praesentium dolor",
+        "orientation": ""
+      }
+    ]
   }
 ]
