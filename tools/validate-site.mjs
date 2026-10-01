@@ -245,7 +245,8 @@ function validateHtml(file, expectedRoot = '') {
 }
 
 function scanSourceForBadPatterns() {
-  const candidates = ['index.html', 'about/index.html', 'js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'css/style.css'];
+  const candidates = ['index.html', 'about/index.html', 'js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'css/style.css', 'admin/index.html', 'admin/admin.js', '.github/workflows/site-validation.yml'];
+
   candidates.filter(exists).forEach(file => {
     const text = readText(file);
     if (/\/data\/data\//i.test(text)) err(`${file}: contains /data/data/ path.`);
@@ -309,6 +310,58 @@ validateHtml('index.html');
 validateHtml('about/index.html');
 validateHtml('404.html');
 validateHtml('success/index.html');
+function validateSecuritySecrets() {
+  const files = [];
+  function walk(dir) {
+    if (!exists(dir)) return;
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, entry.name).replaceAll(path.sep, '/');
+      if (entry.isDirectory()) {
+        if (!rel.startsWith('.git/')) walk(rel);
+        continue;
+      }
+      if (rel.startsWith('.git/')) continue;
+      const ext = path.extname(rel).toLowerCase();
+      if (['.html','.js','.mjs','.json','.yml','.yaml','.md','.css','.txt'].includes(ext)) files.push(rel);
+    }
+  }
+  walk('');
+
+  const githubToken = /(?:github_pat_|gh[pousr]_)?[A-Za-z0-9_]{30,}/;
+  const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/;
+  const knownGithubToken = /(?:github_pat_|ghp_|gho_|ghu_|ghs_|ghr_)[A-Za-z0-9_]+/;
+  for (const file of files) {
+    const text = readText(file);
+    if (knownGithubToken.test(text)) err(file + ': possible GitHub access token found in repository source. Keep GitHub credentials out of tracked files.');
+    if (privateKey.test(text)) err(file + ': private key material found in tracked source.');
+  }
+}
+
+function validateAdminStorageSecurity() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  const html = exists('admin/index.html') ? readText('admin/index.html') : '';
+
+  if (!admin.includes('SESSION_STORAGE_KEY')) err('CMS security: session-only connection storage contract is missing.');
+  if (!admin.includes('window.sessionStorage.setItem(SESSION_STORAGE_KEY')) err('CMS security: successful connections must be held in session storage.');
+  if (!admin.includes('if(remember) window.localStorage.setItem(STORAGE_KEY')) err('CMS security: persistent storage must require an explicit Remember checkbox.');
+  if (!admin.includes('window.localStorage.removeItem(STORAGE_KEY)')) err('CMS security: persistent storage must be cleared when Remember is disabled.');
+  if (!admin.includes('window.sessionStorage.removeItem(SESSION_STORAGE_KEY)')) err('CMS security: disconnect must clear the session credential.');
+  if (!html.includes('autocomplete="new-password"')) err('CMS security: GitHub token input should use a non-persistent password autocomplete mode.');
+  if (!html.includes('Fine-grained token')) err('CMS security: admin must recommend fine-grained GitHub tokens.');
+  if (!html.includes('Never paste a token into project files')) err('CMS security: admin must warn against committing GitHub credentials.');
+}
+
+function validateWorkflowHardening() {
+  const workflow = exists('.github/workflows/site-validation.yml')
+    ? readText('.github/workflows/site-validation.yml')
+    : '';
+  if (!workflow) return;
+  if (!/node-version:\s*24\b/.test(workflow)) err('CI security: validation workflow must use supported Node.js 24 LTS.');
+  if (!/permissions:\s*\n\s+contents:\s*read\b/.test(workflow)) err('CI security: validation workflow should explicitly grant only contents: read.');
+  if (!/timeout-minutes:\s*10\b/.test(workflow)) err('CI reliability: validation workflow needs a finite timeout.');
+  if (!/cancel-in-progress:\s*true\b/.test(workflow)) err('CI reliability: outdated validation runs should be cancelled.');
+}
+
 function validateTargetBlankRel(file) {
   if (!exists(file)) return;
   const html = readText(file);
@@ -408,6 +461,9 @@ function validateArchitecture() {
 }
 
 scanSourceForBadPatterns();
+validateSecuritySecrets();
+validateAdminStorageSecurity();
+validateWorkflowHardening();
 validateTargetBlankRel('index.html');
 validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
