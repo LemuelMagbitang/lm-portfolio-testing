@@ -433,6 +433,11 @@ document.getElementById('btnConnect').addEventListener('click', async () => {
     errBox.style.display = 'block';
     return;
   }
+  if(!/^github_pat_[A-Za-z0-9_]+$/.test(token)){
+    errBox.textContent = 'Use a GitHub fine-grained token (github_pat_…) scoped to this repository.';
+    errBox.style.display = 'block';
+    return;
+  }
   const btn = document.getElementById('btnConnect');
   btn.disabled = true; btn.textContent = 'Connecting…';
 
