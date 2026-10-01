@@ -373,6 +373,28 @@ function validateExternalDependencyPins() {
   }
 }
 
+function validateWorkflowActionPins() {
+  const workflow = exists('.github/workflows/site-validation.yml')
+    ? readText('.github/workflows/site-validation.yml')
+    : '';
+  if (!workflow) return;
+
+  const uses = [...workflow.matchAll(/^\s*uses:\s*([^\s#]+)(?:\s*#.*)?$/gm)]
+    .map(match => match[1]);
+
+  const mutable = uses.filter(ref => /@(?:v?\d+(?:\.\d+){0,2}|main|master|latest)$/i.test(ref));
+  if (mutable.length) {
+    err('CI security: GitHub Actions must be pinned to immutable commit SHAs. Unpinned actions: ' + mutable.join(', ') + '.');
+  }
+
+  if (!workflow.includes('actions/checkout@11d5960a326750d5838078e36cf38b85af677262')) {
+    err('CI security: actions/checkout must stay pinned to its reviewed v4 commit SHA.');
+  }
+  if (!workflow.includes('actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020')) {
+    err('CI security: actions/setup-node must stay pinned to its reviewed v4 commit SHA.');
+  }
+}
+
 function validateWorkflowHardening() {
   const workflow = exists('.github/workflows/site-validation.yml')
     ? readText('.github/workflows/site-validation.yml')
@@ -486,6 +508,7 @@ scanSourceForBadPatterns();
 validateSecuritySecrets();
 validateAdminStorageSecurity();
 validateWorkflowHardening();
+validateWorkflowActionPins();
 validateExternalDependencyPins();
 validateTargetBlankRel('index.html');
 validateTargetBlankRel('about/index.html');
