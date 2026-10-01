@@ -568,7 +568,7 @@ function validateResponsiveUiContracts() {
       !/wireBackgroundControl\(/.test(admin)) {
     err('CMS visual contract: background controls must be available for Lottie and 3D.');
   }
-  if (!/tokenInput\.disabled = true/.test(admin)) {
+  if (!/tokenInput\?\.closest\('\.field'\)\?\.remove\(\)|tokenInput\.disabled = true/.test(admin)) {
     err('CMS credential UI contract: the password-like token field should be removed from active browser interaction after connection.');
   }
 }
