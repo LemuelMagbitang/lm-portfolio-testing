@@ -573,6 +573,7 @@ function validateResponsiveUiContracts() {
   }
 }
 
+function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   const script = exists('js/script.js') ? readText('js/script.js') : '';
