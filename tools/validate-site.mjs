@@ -413,6 +413,7 @@ function validateWorkflowActionPins() {
   if (!workflow.includes('actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444')) {
     err('CI security: actions/setup-node must stay pinned to its reviewed v5 commit SHA.');
   }
+  if (!/persist-credentials:\s*false\b/.test(workflow)) err('CI security: checkout credentials must not persist after the repository is fetched.');
 }
 
 function validateWorkflowHardening() {
