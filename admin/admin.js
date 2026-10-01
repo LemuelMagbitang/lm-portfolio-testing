@@ -2,6 +2,7 @@
    0. STATE + STORAGE
    ===================================================================== */
 const STORAGE_KEY = 'lm_cms_connection_v2';
+const LEGACY_STORAGE_KEY = 'lm_cms_connection_v1';
 const SESSION_STORAGE_KEY = 'lm_cms_session_v1';
 let conn = null;          // { owner, repo, branch, token }
 let currentSection = 'hero';
@@ -160,6 +161,9 @@ function readStoredConnection(storage, key){
   }catch(e){ return null; }
 }
 function loadConn(){
+  // Drop the older v1 persistent key rather than silently preserving a
+  // credential format that did not have the session-first policy.
+  try{ window.localStorage.removeItem(LEGACY_STORAGE_KEY); }catch(e){}
   return readStoredConnection(window.sessionStorage, SESSION_STORAGE_KEY)
     || readStoredConnection(window.localStorage, STORAGE_KEY);
 }
@@ -175,6 +179,7 @@ function saveConn(c, remember){
 function clearConn(){
   try{ window.sessionStorage.removeItem(SESSION_STORAGE_KEY); }catch(e){}
   try{ window.localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ window.localStorage.removeItem(LEGACY_STORAGE_KEY); }catch(e){}
 }
 
 /* =====================================================================
@@ -400,7 +405,13 @@ function toast(msg, isError){
   const wrap = document.getElementById('toastWrap');
   const el = document.createElement('div');
   el.className = 'toast' + (isError ? ' error' : '');
-  el.innerHTML = `<i class="fa-solid ${isError?'fa-triangle-exclamation':'fa-check'}" style="color:${isError?'#e0584f':'#2ecc71'};margin-right:8px;"></i>${msg}`;
+  const icon = document.createElement('i');
+  icon.className = 'fa-solid ' + (isError ? 'fa-triangle-exclamation' : 'fa-check');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.marginRight = '8px';
+  icon.style.color = isError ? '#e0584f' : '#2ecc71';
+  el.appendChild(icon);
+  el.appendChild(document.createTextNode(String(msg ?? '')));
   wrap.appendChild(el);
   setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, isError ? 5000 : 3200);
 }
@@ -451,8 +462,13 @@ function enterApp(){
   document.getElementById('connectScreen').style.display = 'none';
   document.getElementById('app').classList.add('active');
   document.getElementById('topbar').classList.add('active');
-  document.getElementById('repoLabel').innerHTML =
-    `<i class="fa-solid fa-code-branch"></i> ${conn.owner}/${conn.repo} <span style="color:#555">·</span> ${conn.branch}`;
+  const repoLabel = document.getElementById('repoLabel');
+  repoLabel.replaceChildren();
+  const branchIcon = document.createElement('i');
+  branchIcon.className = 'fa-solid fa-code-branch';
+  branchIcon.setAttribute('aria-hidden', 'true');
+  repoLabel.appendChild(branchIcon);
+  repoLabel.appendChild(document.createTextNode(' ' + conn.owner + '/' + conn.repo + ' · ' + conn.branch));
   goToSection('hero');
 }
 
@@ -583,7 +599,8 @@ async function render(){
     const data = await loadSection(currentSection);
     if(RENDERERS[currentSection]) await RENDERERS[currentSection](data);
   }catch(err){
-    content.innerHTML = `<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn't load this file.</strong><br>${err.message}</div></div>`;
+    content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\'t load this file.</strong><br><span data-error-message></span></div></div>';
+    content.querySelector('[data-error-message]')?.replaceChildren(document.createTextNode(String(err?.message || 'Unknown error.')));
   }
 }
 
