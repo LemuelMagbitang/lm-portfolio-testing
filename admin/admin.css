@@ -73,7 +73,7 @@
   .nav-item .dirty-dot{width:6px;height:6px;border-radius:50%;background:var(--warn);margin-left:auto;flex-shrink:0;}
   .sidebar-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--line-soft);}
 
-  main.content{padding:34px 40px 80px;max-width:920px;}
+  main.content{padding:34px 40px 80px;max-width:920px;min-width:0;}
   .content-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:28px;flex-wrap:wrap;}
   .content-head h2{font-size:1.5rem;font-weight:800;color:#fff;}
   .content-head p{color:var(--text-dim);font-size:13px;margin-top:6px;max-width:56ch;}
@@ -112,6 +112,10 @@
   .card-item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;}
   .card-item-head .drag-handle{color:#555;font-size:13px;cursor:grab;padding:4px 6px;}
   .card-item-head .item-title{font-size:12.5px;font-weight:700;color:#ddd;flex:1;}
+.project-item-label{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
+.project-item-label .item-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.project-preview-text{font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35;min-width:0;}
+
   .card-item-actions{display:flex;gap:6px;}
   .add-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border:1.5px dashed var(--line);border-radius:9px;background:transparent;color:var(--text-dim);font-weight:600;font-size:13px;}
   .add-btn:hover{border-color:rgba(255,255,255,.35);color:#fff;}
