@@ -350,6 +350,29 @@ function validateAdminStorageSecurity() {
   if (!html.includes('Never paste a token into project files')) err('CMS security: admin must warn against committing GitHub credentials.');
 }
 
+function validateExternalDependencyPins() {
+  const htmlFiles = ['index.html', 'about/index.html', 'admin/index.html', '404.html', 'success/index.html'].filter(exists);
+  for (const file of htmlFiles) {
+    const html = readText(file);
+    if (/cdn\.jsdelivr\.net\/.*@latest|cdn\.jsdelivr\.net\/.*\/latest\//i.test(html)) {
+      err(file + ': floating jsDelivr dependency detected; pin third-party runtime versions.');
+    }
+  }
+
+  const runtime = exists('js/site-runtime.js') ? readText('js/site-runtime.js') : '';
+  if (runtime && /@lottiefiles\/lottie-player@[^\d]/.test(runtime)) {
+    err('js/site-runtime.js: Lottie dependency must use a pinned version.');
+  }
+  if (runtime && /lottiefiles\/lottie-player@latest/i.test(runtime)) {
+    err('js/site-runtime.js: floating Lottie dependency is not allowed.');
+  }
+
+  const index = exists('index.html') ? readText('index.html') : '';
+  if (index && !/three@\d+\.\d+\.\d+\/build\/three\.module\.js/.test(index)) {
+    err('index.html: Three.js import map must pin an exact version.');
+  }
+}
+
 function validateWorkflowHardening() {
   const workflow = exists('.github/workflows/site-validation.yml')
     ? readText('.github/workflows/site-validation.yml')
@@ -463,6 +486,7 @@ scanSourceForBadPatterns();
 validateSecuritySecrets();
 validateAdminStorageSecurity();
 validateWorkflowHardening();
+validateExternalDependencyPins();
 validateTargetBlankRel('index.html');
 validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
