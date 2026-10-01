@@ -151,13 +151,33 @@ const SECTIONS = {
   settings: { file: 'data/settings.json', label: 'Settings & Toggles' }
 };
 
+function isSafeRepoName(value){
+  return /^[A-Za-z0-9_.-]{1,100}$/.test(String(value || ''));
+}
+function isSafeBranchName(value){
+  const branch = String(value || '');
+  return branch.length >= 1 && branch.length <= 255
+    && /^[A-Za-z0-9._/-]+$/.test(branch)
+    && !branch.startsWith('/')
+    && !branch.endsWith('/')
+    && !branch.includes('//')
+    && !branch.includes('..');
+}
+function isValidConnection(value){
+  return !!value
+    && typeof value === 'object'
+    && typeof value.token === 'string'
+    && /^github_pat_[A-Za-z0-9_]+$/.test(value.token)
+    && isSafeRepoName(value.owner)
+    && isSafeRepoName(value.repo)
+    && isSafeBranchName(value.branch);
+}
 function readStoredConnection(storage, key){
   try{
     const raw = storage.getItem(key);
     if(!raw) return null;
     const parsed = JSON.parse(raw);
-    if(!parsed || typeof parsed !== 'object' || !parsed.token || !parsed.owner || !parsed.repo || !parsed.branch) return null;
-    return parsed;
+    return isValidConnection(parsed) ? parsed : null;
   }catch(e){ return null; }
 }
 function loadConn(){
@@ -327,7 +347,7 @@ const GH = {
   },
   async updateBranch(commitSha){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/refs/heads/${branchPath}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/refs/heads/${branchPath}`;
     const res = await githubFetch(url, {
       method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({sha:commitSha,force:false})
@@ -438,6 +458,11 @@ document.getElementById('btnConnect').addEventListener('click', async () => {
 
   if(!owner || !repo || !token){
     errBox.textContent = 'Fill in username, repository, and token.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if(!isSafeRepoName(owner) || !isSafeRepoName(repo) || !isSafeBranchName(branch)){
+    errBox.textContent = 'Use a valid GitHub username/repository and branch name.';
     errBox.style.display = 'block';
     return;
   }
