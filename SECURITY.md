@@ -23,6 +23,8 @@ Never commit a GitHub token, SSH private key, or other credential into this repo
 
 The browser must hold a credential with permission to write this repository because the CMS currently uses the GitHub API directly. This is a deliberate architecture constraint of the static-site CMS.
 
+The CMS also enforces a write-path boundary in application code: content files, media under `assets/`, and a small allowlist of known site reference files can be written; arbitrary repository paths are rejected. Media deletion is restricted to `assets/`.
+
 For a higher-security production CMS in the future, replace browser-held write credentials with a server-side authentication boundary, such as a small authenticated backend using a GitHub App installation token.
 
 ## Release safety
