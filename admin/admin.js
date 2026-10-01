@@ -1,7 +1,8 @@
 /* =====================================================================
    0. STATE + STORAGE
    ===================================================================== */
-const STORAGE_KEY = 'lm_cms_connection_v1';
+const STORAGE_KEY = 'lm_cms_connection_v2';
+const SESSION_STORAGE_KEY = 'lm_cms_session_v1';
 let conn = null;          // { owner, repo, branch, token }
 let currentSection = 'hero';
 let dirty = {};           // { hero: bool, ... }
@@ -149,21 +150,31 @@ const SECTIONS = {
   settings: { file: 'data/settings.json', label: 'Settings & Toggles' }
 };
 
-function loadConn(){
+function readStoredConnection(storage, key){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(key);
     if(!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed !== 'object' || !parsed.token || !parsed.owner || !parsed.repo || !parsed.branch) return null;
+    return parsed;
   }catch(e){ return null; }
+}
+function loadConn(){
+  return readStoredConnection(window.sessionStorage, SESSION_STORAGE_KEY)
+    || readStoredConnection(window.localStorage, STORAGE_KEY);
 }
 function saveConn(c, remember){
   try{
-    if(remember) localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
-    else localStorage.removeItem(STORAGE_KEY);
-  }catch(e){}
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(c));
+    if(remember) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+    else window.localStorage.removeItem(STORAGE_KEY);
+  }catch(e){
+    // Storage can be blocked by privacy mode. The in-memory connection still works.
+  }
 }
 function clearConn(){
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ window.sessionStorage.removeItem(SESSION_STORAGE_KEY); }catch(e){}
+  try{ window.localStorage.removeItem(STORAGE_KEY); }catch(e){}
 }
 
 /* =====================================================================
@@ -187,10 +198,13 @@ function authHeaders(){
     'X-GitHub-Api-Version': '2022-11-28'
   };
 }
+function githubFetch(url, init = {}){
+  return fetch(url, { ...init, credentials: 'omit' });
+}
 const GH = {
   async getFile(path){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) return { json: null, sha: null, missing: true };
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -210,7 +224,7 @@ const GH = {
       branch: conn.branch
     };
     if(sha) body.sha = sha;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method: 'PUT',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
       body: JSON.stringify(body)
@@ -223,7 +237,7 @@ const GH = {
   },
   async testAuth(){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) throw new Error('Repository not found — check the username and repo name.');
     if(res.status === 401) throw new Error('Token rejected — check it was copied in full.');
     if(res.status === 403) throw new Error('Token doesn\'t have access to this repo — check its repository access & Contents permission.');
@@ -232,7 +246,7 @@ const GH = {
   },
   async getTree(){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees/${encodeURIComponent(conn.branch)}?recursive=1`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
       throw new Error(e.message || `GitHub error ${res.status}`);
@@ -242,7 +256,7 @@ const GH = {
   },
   async getTextFile(path){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) throw new Error(`${path} was not found in the repository.`);
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -255,7 +269,7 @@ const GH = {
   async getBranchHead(){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/ref/heads/${branchPath}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
       throw new Error(e.message || `GitHub error ${res.status}`);
@@ -264,7 +278,7 @@ const GH = {
   },
   async createBlob(content, encoding='utf-8'){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/blobs`;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({content,encoding})
     });
@@ -276,7 +290,7 @@ const GH = {
   },
   async createTree(baseTreeSha, treeEntries){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees`;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({base_tree:baseTreeSha,tree:treeEntries})
     });
@@ -288,7 +302,7 @@ const GH = {
   },
   async createCommit(message, treeSha, parentSha){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits`;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({message,tree:treeSha,parents:[parentSha]})
     });
@@ -301,12 +315,15 @@ const GH = {
   async updateBranch(commitSha){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/refs/heads/${branchPath}`;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({sha:commitSha,force:false})
     });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
+      if (res.status === 409 || res.status === 422) {
+        throw new Error('The repository changed while saving. Reload the CMS and review the current content before saving again.');
+      }
       throw new Error(e.message || `GitHub error ${res.status}`);
     }
     return await res.json();
@@ -316,12 +333,16 @@ const GH = {
     const parentSha = await GH.getBranchHead();
     if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
     const commitUrl = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
-    const commitRes = await fetch(commitUrl, { headers: authHeaders() });
+    const commitRes = await githubFetch(commitUrl, { headers: authHeaders() });
     if(!commitRes.ok){
       const e=await commitRes.json().catch(()=>({}));
       throw new Error(e.message || `GitHub error ${commitRes.status}`);
     }
     const commitData = await commitRes.json();
+    const latestParentSha = await GH.getBranchHead();
+    if (latestParentSha !== parentSha) {
+      throw new Error('The repository changed while saving. Reload the CMS and review the current content before saving again.');
+    }
     const entries=[];
     for(const file of files){
       if(!file?.path) continue;
@@ -339,7 +360,7 @@ const GH = {
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
     const body = { message, content: base64, branch: conn.branch };
     if (existingSha) body.sha = existingSha;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method: 'PUT',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
       body: JSON.stringify(body)
@@ -352,7 +373,7 @@ const GH = {
   },
   async deleteFile(path, sha, message){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method: 'DELETE',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
       body: JSON.stringify({ message, sha, branch: conn.branch })
@@ -365,7 +386,7 @@ const GH = {
   },
   async getCheckRuns(sha){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/commits/${sha}/check-runs`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok) return []; // don't fail the save over a status-check read
     const data = await res.json();
     return data.check_runs || [];
