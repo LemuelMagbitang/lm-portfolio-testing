@@ -203,12 +203,20 @@ function authHeaders(){
     'X-GitHub-Api-Version': '2022-11-28'
   };
 }
+function apiPath(path){
+  return String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+}
 function githubFetch(url, init = {}){
-  return fetch(url, { ...init, credentials: 'omit' });
+  return fetch(url, {
+    ...init,
+    credentials: 'omit',
+    cache: init.cache || 'no-store',
+    referrerPolicy: init.referrerPolicy || 'no-referrer'
+  });
 }
 const GH = {
   async getFile(path){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) return { json: null, sha: null, missing: true };
     if(!res.ok){
@@ -222,7 +230,7 @@ const GH = {
     return { json, sha: data.sha, missing:false };
   },
   async putFile(path, obj, sha, message){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = {
       message,
       content: b64EncodeUtf8(JSON.stringify(obj, null, 2) + '\n'),
@@ -250,7 +258,7 @@ const GH = {
     return res.json();
   },
   async getTree(){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees/${encodeURIComponent(conn.branch)}?recursive=1`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/trees/${encodeURIComponent(conn.branch)}?recursive=1`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -260,7 +268,7 @@ const GH = {
     return data.tree || [];
   },
   async getTextFile(path){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) throw new Error(`${path} was not found in the repository.`);
     if(!res.ok){
@@ -273,7 +281,7 @@ const GH = {
   },
   async getBranchHead(){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/ref/heads/${branchPath}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/ref/heads/${branchPath}`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -282,7 +290,7 @@ const GH = {
     return (await res.json()).object?.sha;
   },
   async createBlob(content, encoding='utf-8'){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/blobs`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/blobs`;
     const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({content,encoding})
@@ -294,7 +302,7 @@ const GH = {
     return (await res.json()).sha;
   },
   async createTree(baseTreeSha, treeEntries){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/trees`;
     const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({base_tree:baseTreeSha,tree:treeEntries})
@@ -306,7 +314,7 @@ const GH = {
     return (await res.json()).sha;
   },
   async createCommit(message, treeSha, parentSha){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits`;
     const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({message,tree:treeSha,parents:[parentSha]})
@@ -337,7 +345,7 @@ const GH = {
     if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
     const parentSha = await GH.getBranchHead();
     if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
-    const commitUrl = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
+    const commitUrl = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
     const commitRes = await githubFetch(commitUrl, { headers: authHeaders() });
     if(!commitRes.ok){
       const e=await commitRes.json().catch(()=>({}));
@@ -362,7 +370,7 @@ const GH = {
   },
   async uploadBinary(path, dataUrl, message, existingSha){
     const base64 = dataUrl.split(',')[1]; // strip the "data:*/*;base64," prefix
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = { message, content: base64, branch: conn.branch };
     if (existingSha) body.sha = existingSha;
     const res = await githubFetch(url, {
@@ -377,7 +385,7 @@ const GH = {
     return res.json();
   },
   async deleteFile(path, sha, message){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const res = await githubFetch(url, {
       method: 'DELETE',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
@@ -2597,7 +2605,7 @@ async function renameMediaFolder(oldPath,onDone){
 async function ghCommitTreeEntries(entries,message){
   if(!entries.length) throw new Error('Nothing to commit.');
   const parentSha=await GH.getBranchHead();
-  const commitUrl=`https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
+  const commitUrl=`https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
   const res=await fetch(commitUrl,{headers:authHeaders()});
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||`GitHub error ${res.status}`);}
   const base=(await res.json()).tree.sha;
