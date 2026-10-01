@@ -360,6 +360,9 @@ function validateAdminConnectionSecurity() {
     ['validated stored connections', /return isValidConnection\(parsed\) \? parsed : null;/],
     ['API path segment encoding', /function apiPath\(path\)/],
     ['GitHub API referrer suppression', /referrerPolicy:\s*init\.referrerPolicy \|\| 'no-referrer'/]
+    ['CMS writable-path allowlist', /const CMS_WRITABLE_PATHS = new Set\(/],
+    ['CMS write-path enforcement', /assertCmsWritablePath\(file\?\.path\)/],
+    ['Media delete restriction', /CMS delete blocked: only media assets can be deleted/],
   ];
 
   required.forEach(([label, pattern]) => {
