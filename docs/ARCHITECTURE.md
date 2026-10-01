@@ -28,6 +28,8 @@ The CMS is a browser-based editor that writes content directly to GitHub.
 
 Single-file saves use GitHub's Contents API with the current blob SHA, which prevents overwriting a newer version accidentally.
 
+The CMS client encodes repository path segments, suppresses referrers on authenticated API requests, validates connection inputs before use, and applies a write-path allowlist as defense in depth.
+
 Cross-file saves use the Git Database API:
 
 ```
@@ -55,7 +57,7 @@ The 3D viewer:
 
 `tools/validate-site.mjs` is the repository's static safety net. It validates data relationships, local asset references, supported media, risky paths, token/private-key patterns, CMS storage contracts, architecture contracts, lightbox lifecycle contracts, and JavaScript syntax.
 
-GitHub Actions runs this validator on pushes and pull requests.
+GitHub Actions runs this validator on pushes and pull requests. The validation workflow uses immutable action commit pins and Dependabot monitors GitHub Actions dependencies.
 
 ## Branching model
 
