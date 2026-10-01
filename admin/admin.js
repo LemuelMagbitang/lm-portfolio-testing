@@ -1656,6 +1656,7 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
     onChanged?.();
   });
 
+  root.__bgEditorSync = sync;
   sync();
 }
 
