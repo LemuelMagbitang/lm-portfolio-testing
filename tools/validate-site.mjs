@@ -320,14 +320,13 @@ function validateSecuritySecrets() {
         if (!rel.startsWith('.git/')) walk(rel);
         continue;
       }
-      if (rel.startsWith('.git/')) continue;
+      if (rel === '.git' || rel.startsWith('.git/')) continue;
       const ext = path.extname(rel).toLowerCase();
       if (['.html','.js','.mjs','.json','.yml','.yaml','.md','.css','.txt'].includes(ext)) files.push(rel);
     }
   }
   walk('');
 
-  const githubToken = /(?:github_pat_|gh[pousr]_)?[A-Za-z0-9_]{30,}/;
   const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/;
   const knownGithubToken = /(?:github_pat_|ghp_|gho_|ghu_|ghs_|ghr_)[A-Za-z0-9_]+/;
   for (const file of files) {
