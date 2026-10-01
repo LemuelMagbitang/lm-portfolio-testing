@@ -29,7 +29,16 @@ export function initGallery(options = {}) {
   let suppressFilterClickUntil = 0;
 
   function getBaseCount() {
-    return window.innerWidth < 768 ? mobileCount : desktopCount;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Keep the visible gallery density proportional to the device:
+    // phones show two cards (two rows in the one-column layout);
+    // tablets use two columns and choose two or three rows based on
+    // available vertical space; desktop stays at three rows.
+    if (width < 768) return Math.min(2, allCards.length);
+    if (width < 1100) return Math.min(height < 820 ? 4 : 6, allCards.length);
+    return Math.min(9, allCards.length);
   }
 
   function ensureFilterPager() {
