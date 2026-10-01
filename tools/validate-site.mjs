@@ -525,6 +525,7 @@ function validateArchitecture() {
   if (/fetch\(siteAssetUrl\(window\.(SETTINGS|PROJECTS|REVIEWS|ABOUT|FILTERS|HERO_MESSAGES)_URL/.test(source)) err('Architecture V2: direct CMS fetch remains in script.js.');
 }
 
+validateResponsiveUiContracts();
 scanSourceForBadPatterns();
 validateSecuritySecrets();
 validateAdminStorageSecurity();
@@ -538,7 +539,40 @@ validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
 
-function validateCmsRegressionContracts() {
+function validateResponsiveUiContracts() {
+  const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const style = exists('css/style.css') ? readText('css/style.css') : '';
+  const adminCss = exists('admin/admin.css') ? readText('admin/admin.css') : '';
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+
+  if (!/if \(width < 768\) return Math\.min\(2, allCards\.length\);/.test(gallery)) {
+    err('Gallery responsive count contract: phones should collapse to two visible cards.');
+  }
+  if (!/if \(width < 1100\) return Math\.min\(height < 820 \? 4 : 6, allCards\.length\);/.test(gallery)) {
+    err('Gallery responsive count contract: tablets should choose two or three rows from viewport height.');
+  }
+  if (!/return Math\.min\(9, allCards\.length\);/.test(gallery)) {
+    err('Gallery responsive count contract: desktop should keep nine visible cards.');
+  }
+  if (!/grid-template-columns:1fr;/.test(style) ||
+      !/grid-template-columns:repeat\(2,minmax\(0,1fr)\);/.test(style) ||
+      !/grid-template-columns:repeat\(3,minmax\(0,1fr)\);/.test(style)) {
+    err('Gallery responsive layout contract: phone/tablet/desktop column rules are incomplete.');
+  }
+  if (!/Responsive lightbox sizing/.test(style)) err('Lightbox responsive sizing contract is missing.');
+
+  if (!/media-bg-control/.test(adminCss) || !/media-bg-row/.test(adminCss)) {
+    err('CMS visual contract: transparent-media background controls are missing.');
+  }
+  if (!/function mediaSupportsBackground\(type\)/.test(admin) ||
+      !/wireBackgroundControl\(/.test(admin)) {
+    err('CMS visual contract: background controls must be available for Lottie and 3D.');
+  }
+  if (!/tokenInput\.disabled = true/.test(admin)) {
+    err('CMS credential UI contract: the password-like token field should be removed from active browser interaction after connection.');
+  }
+}
+
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   const script = exists('js/script.js') ? readText('js/script.js') : '';
