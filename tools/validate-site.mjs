@@ -317,7 +317,7 @@ function validateSecuritySecrets() {
     for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
       const rel = path.join(dir, entry.name).replaceAll(path.sep, '/');
       if (entry.isDirectory()) {
-        if (!rel.startsWith('.git/')) walk(rel);
+        if (entry.name !== '.git' && !rel.startsWith('.git/')) walk(rel);
         continue;
       }
       if (rel === '.git' || rel.startsWith('.git/')) continue;
