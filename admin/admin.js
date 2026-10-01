@@ -534,6 +534,13 @@ document.getElementById('btnDisconnect').addEventListener('click', () => {
 
 function enterApp(){
   document.getElementById('connectScreen').style.display = 'none';
+  const tokenInput = document.getElementById('inToken');
+  if (tokenInput) {
+    tokenInput.value = '';
+    tokenInput.type = 'text';
+    tokenInput.autocomplete = 'off';
+    tokenInput.disabled = true;
+  }
   document.getElementById('app').classList.add('active');
   document.getElementById('topbar').classList.add('active');
   const repoLabel = document.getElementById('repoLabel');
@@ -1582,6 +1589,76 @@ function sourceTypeErrorHtml(message){
   return `<div class="source-type-error" role="alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>Source type error</strong><p>${esc(message)}</p></div></div>`;
 }
 
+function mediaSupportsBackground(type){
+  return type === 'lottie' || type === 'model';
+}
+
+function normalizeEditorBackground(value){
+  if (!value || typeof value !== 'object') return null;
+  if (value.type !== 'solid' || !/^#[0-9a-f]{6}$/i.test(String(value.color || ''))) return null;
+  return { type:'solid', color:String(value.color).toUpperCase() };
+}
+
+function backgroundControlHtml(background){
+  const normalized = normalizeEditorBackground(background);
+  const enabled = !!normalized;
+  const color = normalized?.color || '#121212';
+  return `
+    <div class="field media-bg-control" data-bg-control>
+      <label class="field-label">Background color</label>
+      <div class="media-bg-row">
+        <label class="media-bg-toggle"><input type="checkbox" data-bg-enabled ${enabled?'checked':''}> <span>Use background</span></label>
+        <input data-bg-color type="color" value="${attr(color)}" aria-label="Background color" ${enabled?'':'disabled'}>
+        <button type="button" class="ghost media-bg-reset" data-bg-reset>Reset</button>
+      </div>
+      <div class="hint">Used behind transparent Lottie and 3D artwork.</div>
+    </div>
+  `;
+}
+
+function wireBackgroundControl(root, getType, getBackground, setBackground, onChanged){
+  const control = root?.querySelector('[data-bg-control]');
+  if (!control) return;
+
+  const enabledInput = control.querySelector('[data-bg-enabled]');
+  const colorInput = control.querySelector('[data-bg-color]');
+  const resetButton = control.querySelector('[data-bg-reset]');
+
+  function sync(){
+    const supported = mediaSupportsBackground(getType());
+    control.hidden = !supported;
+    if (!supported) return;
+
+    const bg = normalizeEditorBackground(getBackground());
+    enabledInput.checked = !!bg;
+    colorInput.disabled = !bg;
+    colorInput.value = bg?.color || '#121212';
+  }
+
+  enabledInput.addEventListener('change', () => {
+    setBackground(enabledInput.checked ? {
+      type:'solid',
+      color:colorInput.value || '#121212'
+    } : null);
+    sync();
+    onChanged?.();
+  });
+
+  colorInput.addEventListener('input', () => {
+    if (!enabledInput.checked) return;
+    setBackground({type:'solid', color:colorInput.value || '#121212'});
+    onChanged?.();
+  });
+
+  resetButton.addEventListener('click', () => {
+    setBackground(null);
+    sync();
+    onChanged?.();
+  });
+
+  sync();
+}
+
 function buildMediaPreviewHtml(m){
   const sourceError = validateMediaSource(m.type, m.src);
   if (sourceError) return `<div class="media-preview media-preview-error">${sourceTypeErrorHtml(sourceError)}</div>`;
@@ -1732,6 +1809,7 @@ RENDERERS.projects = async function(data){
               <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
               <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
             </div>
+            ${backgroundControlHtml(p.thumbnail.background)}
           </div>
           <div>
             <label class="field-label">Drag to set focus point</label>
@@ -1796,6 +1874,14 @@ RENDERERS.projects = async function(data){
       picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
       if(note) note.style.display=fallback?'':'none';
     }
+    wireBackgroundControl(
+      el,
+      () => p.thumbnail.type,
+      () => p.thumbnail.background,
+      value => { p.thumbnail.background = value; refreshThumbPreview(); },
+      () => { refreshThumbPreview(); flagUnsaved(); }
+    );
+
     attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview(), () => ({
       kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : p.thumbnail.type === 'model' ? 'model' : 'image',
       title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : p.thumbnail.type === 'model' ? 'Choose a 3D model' : 'Choose an image file'
