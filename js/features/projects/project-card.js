@@ -4,7 +4,7 @@
  */
 
 import { buildMediaItemElement, findProjectMediaBackground, projectHas3D } from './project-media.js';
-import { buildProjectThumbnailMedia } from './project-thumbnail.js';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
 
 export function buildProjectCardElement(
   project = {},
@@ -34,7 +34,7 @@ export function buildProjectCardElement(
   if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
   if (t.src && typeof resolveAssetUrl === 'function') {
     const media = buildProjectThumbnailMedia(
-      { type: t.type || 'image', src: t.src, background },
+      { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
       project.title || 'Project artwork',
       { resolveAssetUrl }
     );
