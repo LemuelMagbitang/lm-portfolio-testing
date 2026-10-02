@@ -3,10 +3,9 @@
 /**
  * Architecture boundary validator.
  *
- * This intentionally starts as a low-risk guardrail: the existing portfolio
- * can continue running while new modules are introduced incrementally.
- * Once a subsystem moves into one of the architectural directories, this
- * validator prevents it from reaching outward into unrelated layers.
+ * This validator is intentionally incremental: existing root-level controllers
+ * remain buildable during migration, while new architectural directories are
+ * held to explicit dependency rules.
  */
 
 import fs from 'node:fs';
@@ -17,14 +16,22 @@ const JS_ROOT = path.join(ROOT, 'js');
 const errors = [];
 const warnings = [];
 
-const ARCH_DIRS = new Set(['core', 'data', 'features', 'infrastructure', 'app']);
+const ARCH_DIRS = new Set([
+  'core',
+  'data',
+  'features',
+  'infrastructure',
+  'integrations',
+  'app'
+]);
 
 const ALLOWED_IMPORTS = {
   core: new Set(['core']),
   data: new Set(['core', 'data', 'infrastructure']),
-  features: new Set(['core', 'data', 'features', 'infrastructure']),
+  features: new Set(['core', 'data', 'features', 'infrastructure', 'integrations']),
   infrastructure: new Set(['core', 'infrastructure']),
-  app: new Set(['core', 'data', 'features', 'infrastructure', 'app'])
+  integrations: new Set(['core', 'infrastructure', 'integrations']),
+  app: new Set(['core', 'data', 'features', 'infrastructure', 'integrations', 'app'])
 };
 
 function walk(dir) {
@@ -55,17 +62,24 @@ function importsFrom(source) {
     /\bimport\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g,
     /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g
   ];
+
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.exec(text))) imports.push(match[1]);
   }
+
   return imports;
 }
 
 function importedLayer(source, specifier) {
   if (!specifier.startsWith('.')) return null;
+
   const target = path.normalize(path.join(path.dirname(source), specifier));
-  const rel = relative(target).replace(/\.js$/, '');
+  const candidates = [target, `${target}.js`, path.join(target, 'index.js')];
+  const existing = candidates.find(candidate => fs.existsSync(candidate));
+  if (!existing) return null;
+
+  const rel = relative(existing).replace(/\.js$/, '');
   const match = rel.match(/^js\/([^/]+)(?:\/|$)/);
   return match && ARCH_DIRS.has(match[1]) ? match[1] : null;
 }
@@ -77,12 +91,14 @@ for (const file of walk(JS_ROOT)) {
   for (const specifier of importsFrom(file)) {
     const targetLayer = importedLayer(file, specifier);
     if (!targetLayer || targetLayer === layer) continue;
+
     if (!ALLOWED_IMPORTS[layer]?.has(targetLayer)) {
       errors.push(`${relative(file)} imports ${targetLayer}; ${layer} may not depend on ${targetLayer}.`);
     }
   }
 
   const source = fs.readFileSync(file, 'utf8');
+
   if (layer === 'core' && /\b(fetch|localStorage|sessionStorage|indexedDB)\s*\(/.test(source)) {
     errors.push(`${relative(file)}: core must not perform external I/O or storage access directly.`);
   }
@@ -92,12 +108,23 @@ for (const file of walk(JS_ROOT)) {
   }
 }
 
-// The legacy root-level controllers are deliberately reported as warnings
-// during the migration. This keeps the branch buildable while making the
-// remaining coupling visible until each controller is moved behind a feature
-// boundary.
-for (const legacy of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js']) {
-  if (fs.existsSync(path.join(ROOT, legacy))) warnings.push(`${legacy}: legacy root-level module; migrate behind an explicit architecture boundary when refactoring this subsystem.`);
+// Root-level controllers are deliberately reported as warnings during the
+// migration. Once a subsystem is migrated, the corresponding warning should
+// disappear because the legacy file should be deleted.
+for (const legacy of [
+  'js/script.js',
+  'js/cms-data.js',
+  'js/gallery.js',
+  'js/hero.js',
+  'js/lightbox.js',
+  'js/model-viewer.js',
+  'js/media-background.js'
+]) {
+  if (fs.existsSync(path.join(ROOT, legacy))) {
+    warnings.push(
+      `${legacy}: legacy root-level module; migrate behind an explicit architecture boundary when refactoring this subsystem.`
+    );
+  }
 }
 
 if (warnings.length) {
