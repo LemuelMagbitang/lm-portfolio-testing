@@ -16,12 +16,17 @@ export async function loadProjects({ url, loadJson, resolveUrl, buildCard, getGr
   const grid = getGrid();
   if (!grid) return false;
 
-  const raw = await loadJson(url, null, { resolveUrl });
-  const projects = normalizeProjects(raw);
-  if (!projects.length) return false;
+  try {
+    const raw = await loadJson(url, null, { resolveUrl });
+    const projects = normalizeProjects(raw);
+    if (!projects.length) return false;
 
-  const fragment = document.createDocumentFragment();
-  projects.forEach(project => fragment.appendChild(buildCard(project)));
-  grid.replaceChildren(fragment);
-  return true;
+    const fragment = document.createDocumentFragment();
+    projects.forEach(project => fragment.appendChild(buildCard(project)));
+    grid.replaceChildren(fragment);
+    return true;
+  } catch (error) {
+    console.warn('Projects: could not load normalized project data.', error);
+    return false;
+  }
 }
