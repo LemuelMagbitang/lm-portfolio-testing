@@ -7,6 +7,7 @@
 
 export { loadProjects } from './project-loader.js';
 export { buildProjectCardElement } from './project-card.js';
+export { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
 export {
   buildMediaItemElement,
   findProjectMediaBackground,
