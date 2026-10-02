@@ -5,8 +5,9 @@
  * only coordinates data loading and rendering; it does not know which CMS
  * provider supplies the JSON or how project cards are implemented internally.
  *
- * DOM creation is injected so the orchestration layer does not have to own
- * the browser document as a hidden dependency.
+ * DOM creation is injected explicitly. The Projects orchestration layer must
+ * not reach into the global browser environment, which keeps it usable from
+ * browser composition, previews, and non-browser tests alike.
  */
 
 import { normalizeProjects } from '../../data/project-normalizer.js';
@@ -17,9 +18,15 @@ export async function loadProjects({
   resolveUrl,
   buildCard,
   getGrid,
-  createFragment = () => document.createDocumentFragment()
+  createFragment
 } = {}) {
-  if (!url || typeof loadJson !== 'function' || typeof buildCard !== 'function' || typeof getGrid !== 'function') {
+  if (
+    !url ||
+    typeof loadJson !== 'function' ||
+    typeof buildCard !== 'function' ||
+    typeof getGrid !== 'function' ||
+    typeof createFragment !== 'function'
+  ) {
     return false;
   }
 
@@ -32,6 +39,8 @@ export async function loadProjects({
     if (!projects.length) return false;
 
     const fragment = createFragment();
+    if (!fragment || typeof fragment.appendChild !== 'function') return false;
+
     projects.forEach(project => fragment.appendChild(buildCard(project)));
     grid.replaceChildren(fragment);
     return true;
