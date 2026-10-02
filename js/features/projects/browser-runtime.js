@@ -10,7 +10,8 @@
  * project-card renderer while the CMS/data contract remains unchanged.
  */
 
-import { loadProjects, buildProjectCardElement } from './index.js';
+import { loadProjects } from './project-loader.js';
+import { buildProjectCardElement } from './project-card.js';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js';
 
