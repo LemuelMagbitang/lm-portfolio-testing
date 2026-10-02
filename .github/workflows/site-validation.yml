@@ -37,6 +37,9 @@ jobs:
       - name: Validate architecture boundaries
         run: node tools/validate-architecture.mjs
 
+      - name: Validate project data contract
+        run: node tools/validate-project-contract.mjs
+
       - name: Syntax-check every JavaScript module
         run: |
           set -euo pipefail
