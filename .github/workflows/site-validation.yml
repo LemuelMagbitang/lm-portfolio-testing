@@ -48,4 +48,5 @@ jobs:
           node --check js/core/script-loader.js &&
           node --check js/data/cms-loader.js &&
           node --check js/infrastructure/lottie/player.js &&
-          node --check js/infrastructure/media-background/loader.js
+          node --check js/infrastructure/media-background/loader.js &&
+          node --check js/infrastructure/youtube/url.js
