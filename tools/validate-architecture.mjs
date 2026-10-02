@@ -41,6 +41,11 @@ function normalizeImport(file, specifier) {
   return relative.endsWith('.js') ? relative : `${relative}.js`;
 }
 
+function featureName(rel) {
+  const match = rel.match(/^features\/([^/]+)\//);
+  return match ? match[1] : null;
+}
+
 for (const file of walk(jsRoot)) {
   if (!file.endsWith('.js')) continue;
 
@@ -74,6 +79,32 @@ for (const file of walk(jsRoot)) {
 
   if (rel.startsWith('features/') && imports.some(imported => legacyRootModules.has(imported))) {
     errors.push(`${rel} imports a legacy root controller; migrate through an explicit feature/infrastructure boundary`);
+  }
+
+  // Feature internals are private. Consumers outside a feature must use its
+  // index.js public API so implementation files can be reorganized freely.
+  const consumerFeature = featureName(rel);
+  for (const imported of imports) {
+    const match = imported.match(/^features\/([^/]+)\/(.+)$/);
+    if (!match) continue;
+    const importedFeature = match[1];
+    const importedInternalPath = match[2];
+    if (consumerFeature !== importedFeature && importedInternalPath !== 'index.js') {
+      errors.push(`${rel} imports private feature module ${imported}; import features/${importedFeature}/index.js instead`);
+    }
+  }
+}
+
+// Every multi-module feature gets one explicit public entry point.
+const featureDirs = fs.existsSync(path.join(jsRoot, 'features'))
+  ? fs.readdirSync(path.join(jsRoot, 'features'), { withFileTypes: true }).filter(entry => entry.isDirectory())
+  : [];
+
+for (const feature of featureDirs) {
+  const featurePath = path.join(jsRoot, 'features', feature.name);
+  const modules = walk(featurePath).filter(file => file.endsWith('.js'));
+  if (modules.length > 1 && !fs.existsSync(path.join(featurePath, 'index.js'))) {
+    errors.push(`features/${feature.name} has multiple modules but no public index.js API`);
   }
 }
 
