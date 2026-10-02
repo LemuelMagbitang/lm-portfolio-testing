@@ -4,8 +4,12 @@
  */
 
 import { buildMediaItemElement, findProjectMediaBackground, projectHas3D } from './project-media.js';
+import { buildProjectThumbnailMedia } from './project-thumbnail.js';
 
-export function buildProjectCardElement(project = {}, { buildThumbnailMedia, show3DIndicator = true } = {}) {
+export function buildProjectCardElement(
+  project = {},
+  { resolveAssetUrl, show3DIndicator = true } = {}
+) {
   const card = document.createElement('div');
   const filters = Array.isArray(project.filters) ? project.filters.filter(Boolean) : [];
   card.className = ['project-card', ...filters].join(' ');
@@ -28,10 +32,11 @@ export function buildProjectCardElement(project = {}, { buildThumbnailMedia, sho
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
 
   if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
-  if (t.src && typeof buildThumbnailMedia === 'function') {
-    const media = buildThumbnailMedia(
+  if (t.src && typeof resolveAssetUrl === 'function') {
+    const media = buildProjectThumbnailMedia(
       { type: t.type || 'image', src: t.src, background },
-      project.title || 'Project artwork'
+      project.title || 'Project artwork',
+      { resolveAssetUrl }
     );
     if (media) {
       if (t.focus) media.dataset.focus = String(t.focus);
