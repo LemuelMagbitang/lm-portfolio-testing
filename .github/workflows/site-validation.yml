@@ -40,6 +40,9 @@ jobs:
       - name: Validate project data contract
         run: node tools/validate-project-contract.mjs
 
+      - name: Validate Projects runtime composition
+        run: node tools/validate-project-runtime.mjs
+
       - name: Syntax-check every JavaScript module
         run: |
           set -euo pipefail
