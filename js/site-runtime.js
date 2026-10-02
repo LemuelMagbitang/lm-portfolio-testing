@@ -2,12 +2,12 @@
  * LM. Site Runtime — compatibility facade
  *
  * This module intentionally contains no feature implementation. It preserves
- * the existing runtime API while consumers migrate to the explicit core and
- * infrastructure layers.
+ * the existing runtime API while consumers migrate to explicit infrastructure
+ * boundaries.
  */
 
-export { getSiteRootUrl, siteAssetUrl } from './core/site-paths.js';
-export { loadScriptOnce } from './core/script-loader.js';
+export { getSiteRootUrl, siteAssetUrl } from './infrastructure/browser/site-paths.js';
+export { loadScriptOnce } from './infrastructure/browser/script-loader.js';
 export { ensureLottiePlayer } from './infrastructure/lottie/player.js';
 export { ensureMediaBackgroundHelper } from './infrastructure/media-background/loader.js';
 
