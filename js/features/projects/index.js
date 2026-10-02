@@ -6,6 +6,7 @@
  */
 
 export { loadProjects } from './project-loader.js';
+export { mountProjects } from './browser-runtime.js';
 export { buildProjectCardElement } from './project-card.js';
 export { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
 export {
