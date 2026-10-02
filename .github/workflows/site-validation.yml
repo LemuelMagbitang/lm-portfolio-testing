@@ -37,16 +37,7 @@ jobs:
       - name: Validate architecture boundaries
         run: node tools/validate-architecture.mjs
 
-      - name: Syntax-check JavaScript modules
-        run: >-
-          node --check js/cms-data.js &&
-          node --check js/gallery.js &&
-          node --check js/hero.js &&
-          node --check js/lightbox.js &&
-          node --check js/site-runtime.js &&
-          node --check js/core/site-paths.js &&
-          node --check js/core/script-loader.js &&
-          node --check js/data/cms-loader.js &&
-          node --check js/infrastructure/lottie/player.js &&
-          node --check js/infrastructure/media-background/loader.js &&
-          node --check js/infrastructure/youtube/url.js
+      - name: Syntax-check every JavaScript module
+        run: |
+          set -euo pipefail
+          find js -type f -name '*.js' -print0 | sort -z | xargs -0 -r -n1 node --check
