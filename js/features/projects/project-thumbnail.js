@@ -1,0 +1,78 @@
+/**
+ * Project thumbnail renderer.
+ *
+ * Owns only the visual media element used by a project card thumbnail.
+ * Asset resolution is injected so the feature does not know how the site
+ * resolves repository-relative paths.
+ */
+
+export function mediaTypeFromSrc(src = '') {
+  const clean = String(src).split('?')[0].split('#')[0].toLowerCase();
+  if (/\.(mp4|webm|mov|m4v)$/.test(clean)) return 'video';
+  if (/\.json$/.test(clean)) return 'lottie';
+  return 'image';
+}
+
+export function buildProjectThumbnailMedia(
+  source = {},
+  altText = 'Project artwork',
+  { resolveAssetUrl } = {}
+) {
+  if (!source?.src || typeof resolveAssetUrl !== 'function') return null;
+
+  const type = String(source.type || mediaTypeFromSrc(source.src));
+  const src = resolveAssetUrl(source.src);
+  let media;
+
+  if (type === 'video') {
+    media = document.createElement('video');
+    media.src = src;
+    media.muted = true;
+    media.loop = true;
+    media.autoplay = true;
+    media.playsInline = true;
+    media.preload = 'metadata';
+  } else if (type === 'lottie') {
+    media = document.createElement('lottie-player');
+    media.setAttribute('src', src);
+    media.setAttribute('autoplay', '');
+    media.setAttribute('loop', '');
+    media.setAttribute('background', 'transparent');
+    media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+  } else if (type === 'model') {
+    media = document.createElement('div');
+    media.className = 'project-thumb-model';
+    media.setAttribute('role', 'img');
+    media.setAttribute('aria-label', `${altText} — interactive 3D view available`);
+
+    const content = document.createElement('div');
+    content.className = 'project-thumb-model-content';
+
+    const icon = document.createElement('i');
+    icon.className = 'fa-solid fa-cube';
+    icon.setAttribute('aria-hidden', 'true');
+
+    const label = document.createElement('span');
+    label.textContent = 'INTERACTIVE 3D';
+
+    const hint = document.createElement('small');
+    hint.textContent = 'Open artwork to explore';
+
+    content.append(icon, label, hint);
+    media.appendChild(content);
+  } else {
+    media = document.createElement('img');
+    media.src = src;
+    media.alt = altText;
+    media.loading = 'lazy';
+    media.decoding = 'async';
+  }
+
+  media.classList.add('project-thumb-media');
+  if (type === 'model') media.dataset.modelThumb = String(source.src);
+  if (source.background && typeof source.background === 'object') {
+    media.dataset.background = JSON.stringify(source.background);
+  }
+
+  return media;
+}
