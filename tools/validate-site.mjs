@@ -245,7 +245,8 @@ function validateHtml(file, expectedRoot = '') {
 }
 
 function scanSourceForBadPatterns() {
-  const candidates = ['index.html', 'about/index.html', 'js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'css/style.css'];
+  const candidates = ['index.html', 'about/index.html', 'js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'css/style.css', 'admin/index.html', 'admin/admin.js', '.github/workflows/site-validation.yml'];
+
   candidates.filter(exists).forEach(file => {
     const text = readText(file);
     if (/\/data\/data\//i.test(text)) err(`${file}: contains /data/data/ path.`);
@@ -309,6 +310,123 @@ validateHtml('index.html');
 validateHtml('about/index.html');
 validateHtml('404.html');
 validateHtml('success/index.html');
+function validateSecuritySecrets() {
+  const files = [];
+  function walk(dir) {
+    if (!exists(dir)) return;
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, entry.name).replaceAll(path.sep, '/');
+      if (entry.isDirectory()) {
+        if (entry.name !== '.git' && !rel.startsWith('.git/')) walk(rel);
+        continue;
+      }
+      if (rel === '.git' || rel.startsWith('.git/')) continue;
+      const ext = path.extname(rel).toLowerCase();
+      if (['.html','.js','.mjs','.json','.yml','.yaml','.md','.css','.txt'].includes(ext)) files.push(rel);
+    }
+  }
+  walk('');
+
+  const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/;
+  const knownGithubToken = /(?:github_pat_|ghp_|gho_|ghu_|ghs_|ghr_)[A-Za-z0-9_]+/;
+  for (const file of files) {
+    const text = readText(file);
+    if (knownGithubToken.test(text)) err(file + ': possible GitHub access token found in repository source. Keep GitHub credentials out of tracked files.');
+    if (privateKey.test(text)) err(file + ': private key material found in tracked source.');
+  }
+}
+
+function validateAdminStorageSecurity() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  const html = exists('admin/index.html') ? readText('admin/index.html') : '';
+
+  if (!admin.includes('SESSION_STORAGE_KEY')) err('CMS security: session-only connection storage contract is missing.');
+  if (!admin.includes('window.sessionStorage.setItem(SESSION_STORAGE_KEY')) err('CMS security: successful connections must be held in session storage.');
+  if (!admin.includes('if(remember) window.localStorage.setItem(STORAGE_KEY')) err('CMS security: persistent storage must require an explicit Remember checkbox.');
+  if (!admin.includes('window.localStorage.removeItem(STORAGE_KEY)')) err('CMS security: persistent storage must be cleared when Remember is disabled.');
+  if (!admin.includes('window.sessionStorage.removeItem(SESSION_STORAGE_KEY)')) err('CMS security: disconnect must clear the session credential.');
+  if (!html.includes('autocomplete="new-password"')) err('CMS security: GitHub token input should use a non-persistent password autocomplete mode.');
+  if (!html.includes('Fine-grained token')) err('CMS security: admin must recommend fine-grained GitHub tokens.');
+  if (!html.includes('Never paste a token into project files')) err('CMS security: admin must warn against committing GitHub credentials.');
+}
+
+function validateAdminConnectionSecurity() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  if (!admin) return;
+
+  const required = [
+    ['safe repository-name validation', /function isSafeRepoName\(/],
+    ['safe branch-name validation', /function isSafeBranchName\(/],
+    ['validated stored connections', /return isValidConnection\(parsed\) \? parsed : null;/],
+    ['API path segment encoding', /function apiPath\(path\)/],
+    ['GitHub API referrer suppression', /referrerPolicy:\s*init\.referrerPolicy \|\| 'no-referrer'/],
+    ['CMS writable-path allowlist', /const CMS_WRITABLE_PATHS = new Set\(/],
+    ['CMS write-path enforcement', /assertCmsWritablePath\(file\?\.path\)/],
+    ['Media delete restriction', /CMS delete blocked: only media assets can be deleted/],
+  ];
+
+  required.forEach(([label, pattern]) => {
+    if (!pattern.test(admin)) err('CMS security: ' + label + ' contract is missing.');
+  });
+}
+
+function validateExternalDependencyPins() {
+  const htmlFiles = ['index.html', 'about/index.html', 'admin/index.html', '404.html', 'success/index.html'].filter(exists);
+  for (const file of htmlFiles) {
+    const html = readText(file);
+    if (/cdn\.jsdelivr\.net\/.*@latest|cdn\.jsdelivr\.net\/.*\/latest\//i.test(html)) {
+      err(file + ': floating jsDelivr dependency detected; pin third-party runtime versions.');
+    }
+  }
+
+  const runtime = exists('js/site-runtime.js') ? readText('js/site-runtime.js') : '';
+  if (runtime && /@lottiefiles\/lottie-player@[^\d]/.test(runtime)) {
+    err('js/site-runtime.js: Lottie dependency must use a pinned version.');
+  }
+  if (runtime && /lottiefiles\/lottie-player@latest/i.test(runtime)) {
+    err('js/site-runtime.js: floating Lottie dependency is not allowed.');
+  }
+
+  const index = exists('index.html') ? readText('index.html') : '';
+  if (index && !/three@\d+\.\d+\.\d+\/build\/three\.module\.js/.test(index)) {
+    err('index.html: Three.js import map must pin an exact version.');
+  }
+}
+
+function validateWorkflowActionPins() {
+  const workflow = exists('.github/workflows/site-validation.yml')
+    ? readText('.github/workflows/site-validation.yml')
+    : '';
+  if (!workflow) return;
+
+  const uses = [...workflow.matchAll(/^\s*uses:\s*([^\s#]+)(?:\s*#.*)?$/gm)]
+    .map(match => match[1]);
+
+  const mutable = uses.filter(ref => /@(?:v?\d+(?:\.\d+){0,2}|main|master|latest)$/i.test(ref));
+  if (mutable.length) {
+    err('CI security: GitHub Actions must be pinned to immutable commit SHAs. Unpinned actions: ' + mutable.join(', ') + '.');
+  }
+
+  if (!workflow.includes('actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09')) {
+    err('CI security: actions/checkout must stay pinned to its reviewed v5 commit SHA.');
+  }
+  if (!workflow.includes('actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444')) {
+    err('CI security: actions/setup-node must stay pinned to its reviewed v5 commit SHA.');
+  }
+  if (!/persist-credentials:\s*false\b/.test(workflow)) err('CI security: checkout credentials must not persist after the repository is fetched.');
+}
+
+function validateWorkflowHardening() {
+  const workflow = exists('.github/workflows/site-validation.yml')
+    ? readText('.github/workflows/site-validation.yml')
+    : '';
+  if (!workflow) return;
+  if (!/node-version:\s*24\b/.test(workflow)) err('CI security: validation workflow must use supported Node.js 24 LTS.');
+  if (!/permissions:\s*\n\s+contents:\s*read\b/.test(workflow)) err('CI security: validation workflow should explicitly grant only contents: read.');
+  if (!/timeout-minutes:\s*10\b/.test(workflow)) err('CI reliability: validation workflow needs a finite timeout.');
+  if (!/cancel-in-progress:\s*true\b/.test(workflow)) err('CI reliability: outdated validation runs should be cancelled.');
+}
+
 function validateTargetBlankRel(file) {
   if (!exists(file)) return;
   const html = readText(file);
@@ -407,12 +525,53 @@ function validateArchitecture() {
   if (/fetch\(siteAssetUrl\(window\.(SETTINGS|PROJECTS|REVIEWS|ABOUT|FILTERS|HERO_MESSAGES)_URL/.test(source)) err('Architecture V2: direct CMS fetch remains in script.js.');
 }
 
+validateResponsiveUiContracts();
 scanSourceForBadPatterns();
+validateSecuritySecrets();
+validateAdminStorageSecurity();
+validateWorkflowHardening();
+validateWorkflowActionPins();
+validateExternalDependencyPins();
+validateAdminConnectionSecurity();
 validateTargetBlankRel('index.html');
 validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
+
+function validateResponsiveUiContracts() {
+  const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const style = exists('css/style.css') ? readText('css/style.css') : '';
+  const adminCss = exists('admin/admin.css') ? readText('admin/admin.css') : '';
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+
+  if (!/if \(width < 768\) return Math\.min\(2, allCards\.length\);/.test(gallery)) {
+    err('Gallery responsive count contract: phones should collapse to two visible cards.');
+  }
+  if (!/if \(width < 1100\) return Math\.min\(height < 820 \? 4 : 6, allCards\.length\);/.test(gallery)) {
+    err('Gallery responsive count contract: tablets should choose two or three rows from viewport height.');
+  }
+  if (!/return Math\.min\(9, allCards\.length\);/.test(gallery)) {
+    err('Gallery responsive count contract: desktop should keep nine visible cards.');
+  }
+  if (!/grid-template-columns:1fr;/.test(style) ||
+      !/grid-template-columns:repeat\(2,minmax\(0,1fr\)\);/.test(style) ||
+      !/grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/.test(style)) {
+    err('Gallery responsive layout contract: phone/tablet/desktop column rules are incomplete.');
+  }
+  if (!/Responsive lightbox sizing/.test(style)) err('Lightbox responsive sizing contract is missing.');
+
+  if (!/media-bg-control/.test(adminCss) || !/media-bg-row/.test(adminCss)) {
+    err('CMS visual contract: transparent-media background controls are missing.');
+  }
+  if (!/function mediaSupportsBackground\(type\)/.test(admin) ||
+      !/wireBackgroundControl\(/.test(admin)) {
+    err('CMS visual contract: background controls must be available for Lottie and 3D.');
+  }
+  if (!/tokenInput\?\.closest\('\.field'\)\?\.remove\(\)|tokenInput\.disabled = true/.test(admin)) {
+    err('CMS credential UI contract: the password-like token field should be removed from active browser interaction after connection.');
+  }
+}
 
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';

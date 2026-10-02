@@ -29,13 +29,13 @@ document.addEventListener('DOMContentLoaded', async () => {
      loading, and reduced-motion state without changing the existing CMS data
      format. */
   const runtimeScript = Array.from(document.scripts || []).find(el => /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(el.src || el.getAttribute('src') || ''));
-  const runtimeUrl = runtimeScript ? new URL('site-runtime.js', runtimeScript.src).href : new URL('js/site-runtime.js', document.baseURI).href;
+  const runtimeUrl = runtimeScript ? new URL('site-runtime.js?v=20261001-03', runtimeScript.src).href : new URL('js/site-runtime.js', document.baseURI).href;
   const { getSiteRootUrl, siteAssetUrl, ensureLottiePlayer, ensureMediaBackgroundHelper } = await import(runtimeUrl);
   const [{ loadCmsJson, parseYouTubeUrl }, { initGallery }, { initHeroBannerV2 }, { initLightbox }] = await Promise.all([
-    import(new URL('cms-data.js', runtimeUrl).href),
-    import(new URL('gallery.js', runtimeUrl).href),
-    import(new URL('hero.js', runtimeUrl).href),
-    import(new URL('lightbox.js', runtimeUrl).href)
+    import(new URL('cms-data.js?v=20261001-03', runtimeUrl).href),
+    import(new URL('gallery.js?v=20261001-03', runtimeUrl).href),
+    import(new URL('hero.js?v=20261001-03', runtimeUrl).href),
+    import(new URL('lightbox.js?v=20261001-03', runtimeUrl).href)
   ]);
 
   /* =========================================

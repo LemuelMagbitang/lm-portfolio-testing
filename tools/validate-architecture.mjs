@@ -1,0 +1,126 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root = process.cwd();
+const jsRoot = path.join(root, 'js');
+
+const rules = [
+  { dir: 'core', forbidden: ['features/', 'data/', 'infrastructure/', 'app/'] },
+  { dir: 'data', forbidden: ['features/', 'infrastructure/', 'app/'] },
+  { dir: 'infrastructure', forbidden: ['features/', 'app/'] },
+  { dir: 'features', forbidden: ['app/'] }
+];
+
+const legacyFacades = new Set(['cms-data.js', 'site-runtime.js']);
+const legacyRootModules = new Set([
+  'gallery.js',
+  'hero.js',
+  'lightbox.js',
+  'model-viewer.js',
+  'media-background.js'
+]);
+const errors = [];
+
+function walk(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const full = path.join(dir, entry.name);
+    return entry.isDirectory() ? walk(full) : [full];
+  });
+}
+
+function importsFrom(source) {
+  const matches = source.matchAll(/(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g);
+  return [...matches].map(match => match[1]);
+}
+
+function normalizeImport(file, specifier) {
+  if (!specifier.startsWith('.')) return null;
+  const absolute = path.resolve(path.dirname(file), specifier);
+  const relative = path.relative(jsRoot, absolute).replaceAll(path.sep, '/');
+  return relative.endsWith('.js') ? relative : `${relative}.js`;
+}
+
+function featureName(rel) {
+  const match = rel.match(/^features\/([^/]+)\//);
+  return match ? match[1] : null;
+}
+
+for (const file of walk(jsRoot)) {
+  if (!file.endsWith('.js')) continue;
+
+  const rel = path.relative(jsRoot, file).replaceAll(path.sep, '/');
+  const source = fs.readFileSync(file, 'utf8');
+  const imports = importsFrom(source)
+    .map(specifier => normalizeImport(file, specifier))
+    .filter(Boolean);
+
+  for (const rule of rules) {
+    if (!rel.startsWith(`${rule.dir}/`)) continue;
+
+    for (const imported of imports) {
+      if (rule.forbidden.some(prefix => imported.startsWith(prefix))) {
+        errors.push(`${rel} imports forbidden layer ${imported}`);
+      }
+    }
+  }
+
+  if (rel.startsWith('core/') && /\b(fetch|XMLHttpRequest|document\.(querySelector|getElementById|createElement)|window\.)/.test(source)) {
+    errors.push(`${rel} contains browser/data access; core must remain environment-agnostic`);
+  }
+
+  if (rel.startsWith('data/') && /\b(document\.|window\.|HTMLElement|HTML[A-Z]\w*Element)/.test(source)) {
+    errors.push(`${rel} contains DOM/window coupling; data modules must not render UI`);
+  }
+
+  if (rel.startsWith('features/') && /\b(?:window\.(THREE|lottie|YT|Web3Forms)|THREE\.|lottie\.|YT\.)/.test(source)) {
+    errors.push(`${rel} references vendor globals directly; use an infrastructure adapter`);
+  }
+
+  if (rel.startsWith('features/') && imports.some(imported => legacyRootModules.has(imported))) {
+    errors.push(`${rel} imports a legacy root controller; migrate through an explicit feature/infrastructure boundary`);
+  }
+
+  // Feature internals are private. Consumers outside a feature must use its
+  // index.js public API so implementation files can be reorganized freely.
+  const consumerFeature = featureName(rel);
+  for (const imported of imports) {
+    const match = imported.match(/^features\/([^/]+)\/(.+)$/);
+    if (!match) continue;
+    const importedFeature = match[1];
+    const importedInternalPath = match[2];
+    if (consumerFeature !== importedFeature && importedInternalPath !== 'index.js') {
+      errors.push(`${rel} imports private feature module ${imported}; import features/${importedFeature}/index.js instead`);
+    }
+  }
+}
+
+// Every multi-module feature gets one explicit public entry point.
+const featureDirs = fs.existsSync(path.join(jsRoot, 'features'))
+  ? fs.readdirSync(path.join(jsRoot, 'features'), { withFileTypes: true }).filter(entry => entry.isDirectory())
+  : [];
+
+for (const feature of featureDirs) {
+  const featurePath = path.join(jsRoot, 'features', feature.name);
+  const modules = walk(featurePath).filter(file => file.endsWith('.js'));
+  if (modules.length > 1 && !fs.existsSync(path.join(featurePath, 'index.js'))) {
+    errors.push(`features/${feature.name} has multiple modules but no public index.js API`);
+  }
+}
+
+for (const facade of legacyFacades) {
+  const file = path.join(jsRoot, facade);
+  if (!fs.existsSync(file)) continue;
+  const source = fs.readFileSync(file, 'utf8');
+  const lineCount = source.split(/\r?\n/).length;
+  if (lineCount > 80) {
+    errors.push(`${facade} is a migration facade but is ${lineCount} lines; keep it temporary and thin`);
+  }
+}
+
+if (errors.length) {
+  console.error('Architecture validation failed:\n- ' + errors.join('\n- '));
+  process.exit(1);
+}
+
+console.log('Architecture boundaries validated.');

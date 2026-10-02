@@ -1,7 +1,9 @@
 /* =====================================================================
    0. STATE + STORAGE
    ===================================================================== */
-const STORAGE_KEY = 'lm_cms_connection_v1';
+const STORAGE_KEY = 'lm_cms_connection_v2';
+const LEGACY_STORAGE_KEY = 'lm_cms_connection_v1';
+const SESSION_STORAGE_KEY = 'lm_cms_session_v1';
 let conn = null;          // { owner, repo, branch, token }
 let currentSection = 'hero';
 let dirty = {};           // { hero: bool, ... }
@@ -149,21 +151,55 @@ const SECTIONS = {
   settings: { file: 'data/settings.json', label: 'Settings & Toggles' }
 };
 
-function loadConn(){
+function isSafeRepoName(value){
+  return /^[A-Za-z0-9_.-]{1,100}$/.test(String(value || ''));
+}
+function isSafeBranchName(value){
+  const branch = String(value || '');
+  return branch.length >= 1 && branch.length <= 255
+    && /^[A-Za-z0-9._/-]+$/.test(branch)
+    && !branch.startsWith('/')
+    && !branch.endsWith('/')
+    && !branch.includes('//')
+    && !branch.includes('..');
+}
+function isValidConnection(value){
+  return !!value
+    && typeof value === 'object'
+    && typeof value.token === 'string'
+    && /^github_pat_[A-Za-z0-9_]+$/.test(value.token)
+    && isSafeRepoName(value.owner)
+    && isSafeRepoName(value.repo)
+    && isSafeBranchName(value.branch);
+}
+function readStoredConnection(storage, key){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(key);
     if(!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return isValidConnection(parsed) ? parsed : null;
   }catch(e){ return null; }
+}
+function loadConn(){
+  // Drop the older v1 persistent key rather than silently preserving a
+  // credential format that did not have the session-first policy.
+  try{ window.localStorage.removeItem(LEGACY_STORAGE_KEY); }catch(e){}
+  return readStoredConnection(window.sessionStorage, SESSION_STORAGE_KEY)
+    || readStoredConnection(window.localStorage, STORAGE_KEY);
 }
 function saveConn(c, remember){
   try{
-    if(remember) localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
-    else localStorage.removeItem(STORAGE_KEY);
-  }catch(e){}
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(c));
+    if(remember) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+    else window.localStorage.removeItem(STORAGE_KEY);
+  }catch(e){
+    // Storage can be blocked by privacy mode. The in-memory connection still works.
+  }
 }
 function clearConn(){
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ window.sessionStorage.removeItem(SESSION_STORAGE_KEY); }catch(e){}
+  try{ window.localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ window.localStorage.removeItem(LEGACY_STORAGE_KEY); }catch(e){}
 }
 
 /* =====================================================================
@@ -187,10 +223,51 @@ function authHeaders(){
     'X-GitHub-Api-Version': '2022-11-28'
   };
 }
+function apiPath(path){
+  return String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+}
+function githubFetch(url, init = {}){
+  return fetch(url, {
+    ...init,
+    credentials: 'omit',
+    cache: init.cache || 'no-store',
+    referrerPolicy: init.referrerPolicy || 'no-referrer'
+  });
+}
+const CMS_WRITABLE_PATHS = new Set([
+  'data/about.json',
+  'data/filters.json',
+  'data/hero-loop.json',
+  'data/hero.json',
+  'data/projects.json',
+  'data/reviews.json',
+  'data/settings.json',
+  'index.html',
+  'about/index.html',
+  '404.html',
+  'success/index.html',
+  'css/style.css',
+  'js/script.js',
+  'js/hero.js',
+  'js/lightbox.js',
+  'js/media-background.js',
+  'js/model-viewer.js',
+  'js/site-runtime.js'
+]);
+function isCmsWritablePath(filePath){
+  const value = String(filePath || '').replace(/^\/+|\/+$/g, '');
+  return CMS_WRITABLE_PATHS.has(value) || value.startsWith('assets/');
+}
+function assertCmsWritablePath(filePath){
+  if (!isCmsWritablePath(filePath)) {
+    throw new Error('CMS write blocked: this editor can only modify site content, media, and its known reference files.');
+  }
+}
+
 const GH = {
   async getFile(path){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) return { json: null, sha: null, missing: true };
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -203,14 +280,15 @@ const GH = {
     return { json, sha: data.sha, missing:false };
   },
   async putFile(path, obj, sha, message){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
+    assertCmsWritablePath(path);
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = {
       message,
       content: b64EncodeUtf8(JSON.stringify(obj, null, 2) + '\n'),
       branch: conn.branch
     };
     if(sha) body.sha = sha;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method: 'PUT',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
       body: JSON.stringify(body)
@@ -223,7 +301,7 @@ const GH = {
   },
   async testAuth(){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) throw new Error('Repository not found — check the username and repo name.');
     if(res.status === 401) throw new Error('Token rejected — check it was copied in full.');
     if(res.status === 403) throw new Error('Token doesn\'t have access to this repo — check its repository access & Contents permission.');
@@ -231,8 +309,8 @@ const GH = {
     return res.json();
   },
   async getTree(){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees/${encodeURIComponent(conn.branch)}?recursive=1`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/trees/${encodeURIComponent(conn.branch)}?recursive=1`;
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
       throw new Error(e.message || `GitHub error ${res.status}`);
@@ -241,8 +319,8 @@ const GH = {
     return data.tree || [];
   },
   async getTextFile(path){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}?ref=${encodeURIComponent(conn.branch)}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) throw new Error(`${path} was not found in the repository.`);
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -254,8 +332,8 @@ const GH = {
   },
   async getBranchHead(){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/ref/heads/${branchPath}`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/ref/heads/${branchPath}`;
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
       throw new Error(e.message || `GitHub error ${res.status}`);
@@ -263,8 +341,8 @@ const GH = {
     return (await res.json()).object?.sha;
   },
   async createBlob(content, encoding='utf-8'){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/blobs`;
-    const res = await fetch(url, {
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/blobs`;
+    const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({content,encoding})
     });
@@ -275,8 +353,8 @@ const GH = {
     return (await res.json()).sha;
   },
   async createTree(baseTreeSha, treeEntries){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/trees`;
-    const res = await fetch(url, {
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/trees`;
+    const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({base_tree:baseTreeSha,tree:treeEntries})
     });
@@ -287,8 +365,8 @@ const GH = {
     return (await res.json()).sha;
   },
   async createCommit(message, treeSha, parentSha){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits`;
-    const res = await fetch(url, {
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits`;
+    const res = await githubFetch(url, {
       method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({message,tree:treeSha,parents:[parentSha]})
     });
@@ -300,28 +378,36 @@ const GH = {
   },
   async updateBranch(commitSha){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/refs/heads/${branchPath}`;
-    const res = await fetch(url, {
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/refs/heads/${branchPath}`;
+    const res = await githubFetch(url, {
       method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
       body:JSON.stringify({sha:commitSha,force:false})
     });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
+      if (res.status === 409 || res.status === 422) {
+        throw new Error('The repository changed while saving. Reload the CMS and review the current content before saving again.');
+      }
       throw new Error(e.message || `GitHub error ${res.status}`);
     }
     return await res.json();
   },
   async commitFiles(files, message){
     if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
+    files.forEach(file => assertCmsWritablePath(file?.path));
     const parentSha = await GH.getBranchHead();
     if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
-    const commitUrl = `https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
-    const commitRes = await fetch(commitUrl, { headers: authHeaders() });
+    const commitUrl = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
+    const commitRes = await githubFetch(commitUrl, { headers: authHeaders() });
     if(!commitRes.ok){
       const e=await commitRes.json().catch(()=>({}));
       throw new Error(e.message || `GitHub error ${commitRes.status}`);
     }
     const commitData = await commitRes.json();
+    const latestParentSha = await GH.getBranchHead();
+    if (latestParentSha !== parentSha) {
+      throw new Error('The repository changed while saving. Reload the CMS and review the current content before saving again.');
+    }
     const entries=[];
     for(const file of files){
       if(!file?.path) continue;
@@ -335,11 +421,12 @@ const GH = {
     return newCommit;
   },
   async uploadBinary(path, dataUrl, message, existingSha){
+    assertCmsWritablePath(path);
     const base64 = dataUrl.split(',')[1]; // strip the "data:*/*;base64," prefix
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = { message, content: base64, branch: conn.branch };
     if (existingSha) body.sha = existingSha;
-    const res = await fetch(url, {
+    const res = await githubFetch(url, {
       method: 'PUT',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
       body: JSON.stringify(body)
@@ -351,8 +438,11 @@ const GH = {
     return res.json();
   },
   async deleteFile(path, sha, message){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/contents/${path}`;
-    const res = await fetch(url, {
+    if (!String(path || '').replace(/^\/+|\/+$/g, '').startsWith('assets/')) {
+      throw new Error('CMS delete blocked: only media assets can be deleted from the Media Library.');
+    }
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
+    const res = await githubFetch(url, {
       method: 'DELETE',
       headers: { ...authHeaders(), 'Content-Type':'application/json' },
       body: JSON.stringify({ message, sha, branch: conn.branch })
@@ -365,7 +455,7 @@ const GH = {
   },
   async getCheckRuns(sha){
     const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/commits/${sha}/check-runs`;
-    const res = await fetch(url, { headers: authHeaders() });
+    const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok) return []; // don't fail the save over a status-check read
     const data = await res.json();
     return data.check_runs || [];
@@ -379,7 +469,13 @@ function toast(msg, isError){
   const wrap = document.getElementById('toastWrap');
   const el = document.createElement('div');
   el.className = 'toast' + (isError ? ' error' : '');
-  el.innerHTML = `<i class="fa-solid ${isError?'fa-triangle-exclamation':'fa-check'}" style="color:${isError?'#e0584f':'#2ecc71'};margin-right:8px;"></i>${msg}`;
+  const icon = document.createElement('i');
+  icon.className = 'fa-solid ' + (isError ? 'fa-triangle-exclamation' : 'fa-check');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.marginRight = '8px';
+  icon.style.color = isError ? '#e0584f' : '#2ecc71';
+  el.appendChild(icon);
+  el.appendChild(document.createTextNode(String(msg ?? '')));
   wrap.appendChild(el);
   setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, isError ? 5000 : 3200);
 }
@@ -398,6 +494,16 @@ document.getElementById('btnConnect').addEventListener('click', async () => {
 
   if(!owner || !repo || !token){
     errBox.textContent = 'Fill in username, repository, and token.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if(!isSafeRepoName(owner) || !isSafeRepoName(repo) || !isSafeBranchName(branch)){
+    errBox.textContent = 'Use a valid GitHub username/repository and branch name.';
+    errBox.style.display = 'block';
+    return;
+  }
+  if(!/^github_pat_[A-Za-z0-9_]+$/.test(token)){
+    errBox.textContent = 'Use a GitHub fine-grained token (github_pat_…) scoped to this repository.';
     errBox.style.display = 'block';
     return;
   }
@@ -428,10 +534,21 @@ document.getElementById('btnDisconnect').addEventListener('click', () => {
 
 function enterApp(){
   document.getElementById('connectScreen').style.display = 'none';
+  // Remove the credential field entirely after connection. Keeping a
+  // password input in the active DOM can cause browser password managers
+  // to surface save/update-password UI during unrelated dialogs such as
+  // the Media Picker. The token is already retained in session state.
+  const tokenInput = document.getElementById('inToken');
+  tokenInput?.closest('.field')?.remove();
   document.getElementById('app').classList.add('active');
   document.getElementById('topbar').classList.add('active');
-  document.getElementById('repoLabel').innerHTML =
-    `<i class="fa-solid fa-code-branch"></i> ${conn.owner}/${conn.repo} <span style="color:#555">·</span> ${conn.branch}`;
+  const repoLabel = document.getElementById('repoLabel');
+  repoLabel.replaceChildren();
+  const branchIcon = document.createElement('i');
+  branchIcon.className = 'fa-solid fa-code-branch';
+  branchIcon.setAttribute('aria-hidden', 'true');
+  repoLabel.appendChild(branchIcon);
+  repoLabel.appendChild(document.createTextNode(' ' + conn.owner + '/' + conn.repo + ' · ' + conn.branch));
   goToSection('hero');
 }
 
@@ -562,7 +679,8 @@ async function render(){
     const data = await loadSection(currentSection);
     if(RENDERERS[currentSection]) await RENDERERS[currentSection](data);
   }catch(err){
-    content.innerHTML = `<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn't load this file.</strong><br>${err.message}</div></div>`;
+    content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\'t load this file.</strong><br><span data-error-message></span></div></div>';
+    content.querySelector('[data-error-message]')?.replaceChildren(document.createTextNode(String(err?.message || 'Unknown error.')));
   }
 }
 
@@ -1470,6 +1588,77 @@ function sourceTypeErrorHtml(message){
   return `<div class="source-type-error" role="alert"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>Source type error</strong><p>${esc(message)}</p></div></div>`;
 }
 
+function mediaSupportsBackground(type){
+  return type === 'lottie' || type === 'model';
+}
+
+function normalizeEditorBackground(value){
+  if (!value || typeof value !== 'object') return null;
+  if (value.type !== 'solid' || !/^#[0-9a-f]{6}$/i.test(String(value.color || ''))) return null;
+  return { type:'solid', color:String(value.color).toUpperCase() };
+}
+
+function backgroundControlHtml(background){
+  const normalized = normalizeEditorBackground(background);
+  const enabled = !!normalized;
+  const color = normalized?.color || '#121212';
+  return `
+    <div class="field media-bg-control" data-bg-control>
+      <label class="field-label">Background color</label>
+      <div class="media-bg-row">
+        <label class="media-bg-toggle"><input type="checkbox" data-bg-enabled ${enabled?'checked':''}> <span>Use background</span></label>
+        <input data-bg-color type="color" value="${attr(color)}" aria-label="Background color" ${enabled?'':'disabled'}>
+        <button type="button" class="ghost media-bg-reset" data-bg-reset>Reset</button>
+      </div>
+      <div class="hint">Used behind transparent Lottie and 3D artwork.</div>
+    </div>
+  `;
+}
+
+function wireBackgroundControl(root, getType, getBackground, setBackground, onChanged){
+  const control = root?.querySelector('[data-bg-control]');
+  if (!control) return;
+
+  const enabledInput = control.querySelector('[data-bg-enabled]');
+  const colorInput = control.querySelector('[data-bg-color]');
+  const resetButton = control.querySelector('[data-bg-reset]');
+
+  function sync(){
+    const supported = mediaSupportsBackground(getType());
+    control.hidden = !supported;
+    if (!supported) return;
+
+    const bg = normalizeEditorBackground(getBackground());
+    enabledInput.checked = !!bg;
+    colorInput.disabled = !bg;
+    colorInput.value = bg?.color || '#121212';
+  }
+
+  enabledInput.addEventListener('change', () => {
+    setBackground(enabledInput.checked ? {
+      type:'solid',
+      color:colorInput.value || '#121212'
+    } : null);
+    sync();
+    onChanged?.();
+  });
+
+  colorInput.addEventListener('input', () => {
+    if (!enabledInput.checked) return;
+    setBackground({type:'solid', color:colorInput.value || '#121212'});
+    onChanged?.();
+  });
+
+  resetButton.addEventListener('click', () => {
+    setBackground(null);
+    sync();
+    onChanged?.();
+  });
+
+  root.__bgEditorSync = sync;
+  sync();
+}
+
 function buildMediaPreviewHtml(m){
   const sourceError = validateMediaSource(m.type, m.src);
   if (sourceError) return `<div class="media-preview media-preview-error">${sourceTypeErrorHtml(sourceError)}</div>`;
@@ -1521,7 +1710,10 @@ RENDERERS.projects = async function(data){
       wrap.innerHTML = `
         <div class="card-item-head" style="cursor:pointer" data-toggle-open>
           <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-          <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}</span>
+          <span class="project-item-label">
+            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}</span>
+            <span class="project-preview-text">${esc(p.subtitle||'')}</span>
+          </span>
           <div class="card-item-actions">
             <button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
             <button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
@@ -1620,6 +1812,7 @@ RENDERERS.projects = async function(data){
               <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
               <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
             </div>
+            ${backgroundControlHtml(p.thumbnail.background)}
           </div>
           <div>
             <label class="field-label">Drag to set focus point</label>
@@ -1684,6 +1877,14 @@ RENDERERS.projects = async function(data){
       picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
       if(note) note.style.display=fallback?'':'none';
     }
+    wireBackgroundControl(
+      el,
+      () => p.thumbnail.type,
+      () => p.thumbnail.background,
+      value => { p.thumbnail.background = value; refreshThumbPreview(); },
+      () => { refreshThumbPreview(); flagUnsaved(); }
+    );
+
     attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview(), () => ({
       kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : p.thumbnail.type === 'model' ? 'model' : 'image',
       title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : p.thumbnail.type === 'model' ? 'Choose a 3D model' : 'Choose an image file'
@@ -2554,7 +2755,7 @@ async function renameMediaFolder(oldPath,onDone){
 async function ghCommitTreeEntries(entries,message){
   if(!entries.length) throw new Error('Nothing to commit.');
   const parentSha=await GH.getBranchHead();
-  const commitUrl=`https://api.github.com/repos/${conn.owner}/${conn.repo}/git/commits/${parentSha}`;
+  const commitUrl=`https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
   const res=await fetch(commitUrl,{headers:authHeaders()});
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||`GitHub error ${res.status}`);}
   const base=(await res.json()).tree.sha;

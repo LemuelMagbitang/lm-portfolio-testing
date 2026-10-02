@@ -1,9 +1,16 @@
 name: Validate portfolio
 
+concurrency:
+  group: site-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
-    branches: [main, 'architecture-*']
+    branches:
+      - main
+      - architecture-security-hardening
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,17 +18,35 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 1
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Validate site data, paths, and JavaScript
         run: node tools/validate-site.mjs
 
-      - name: Syntax-check Architecture V2 modules
-        run: node --check js/cms-data.js && node --check js/gallery.js && node --check js/hero.js && node --check js/lightbox.js
+      - name: Validate architecture boundaries
+        run: node tools/validate-architecture.mjs
+
+      - name: Syntax-check JavaScript modules
+        run: >-
+          node --check js/cms-data.js &&
+          node --check js/gallery.js &&
+          node --check js/hero.js &&
+          node --check js/lightbox.js &&
+          node --check js/site-runtime.js &&
+          node --check js/core/site-paths.js &&
+          node --check js/core/script-loader.js &&
+          node --check js/data/cms-loader.js &&
+          node --check js/infrastructure/lottie/player.js &&
+          node --check js/infrastructure/media-background/loader.js &&
+          node --check js/infrastructure/youtube/url.js

@@ -1,0 +1,206 @@
+# Decoupling Roadmap
+
+This is the implementation roadmap for converting the portfolio into a highly decoupled, plug-and-play static application without changing its visual language or CMS data model unnecessarily.
+
+## Target architecture
+
+```text
+js/
+├── app/
+│   ├── bootstrap.js              # composition root
+│   └── page-composition.js       # page -> feature wiring
+│
+├── core/
+│   ├── config.js                 # normalized site configuration
+│   ├── dom.js                    # narrow DOM helpers
+│   ├── events.js                 # local event contracts
+│   ├── lifecycle.js              # cleanup/disposal primitives
+│   └── errors.js                 # failure containment
+│
+├── data/
+│   ├── cms-loader.js             # CMS content retrieval
+│   ├── normalizers.js            # CMS -> runtime models
+│   └── schemas.js                # runtime contracts
+│
+├── features/
+│   ├── gallery/
+│   │   ├── index.js
+│   │   ├── state.js
+│   │   ├── view.js
+│   │   └── controller.js
+│   ├── lightbox/
+│   ├── hero/
+│   ├── model-viewer/
+│   ├── media-background/
+│   ├── navigation/
+│   └── contact/
+│
+└── infrastructure/
+    ├── github/
+    ├── browser-storage/
+    ├── lottie/
+    ├── three/
+    ├── youtube/
+    └── web3forms/
+```
+
+The exact split may change during implementation. The dependency boundaries are more important than the folder names.
+
+## Migration strategy
+
+### Stage 0 — completed
+
+- Preserve the current visual baseline.
+- Preserve the CMS JSON contract.
+- Add architecture documentation.
+- Add an architecture dependency validator.
+- Add the validator to CI.
+- Create a recovery branch before structural migration.
+
+### Stage 1 — composition root
+
+Reduce `js/script.js` to bootstrap/composition responsibilities only.
+
+Move feature implementation out of the root controller without changing behavior.
+
+The bootstrap should be able to express the page approximately as:
+
+```js
+const app = createPortfolioApp({
+  runtime,
+  data,
+  features: {
+    navigation,
+    hero,
+    gallery,
+    lightbox,
+    modelViewer,
+    contact
+  }
+});
+
+await app.start();
+```
+
+### Stage 2 — data boundary
+
+Normalize CMS JSON before it reaches UI features.
+
+Example:
+
+```text
+CMS JSON
+   ↓
+loader
+   ↓
+normalizer
+   ↓
+PortfolioProject[]
+   ↓
+feature modules
+```
+
+Features should not need to know whether content came from GitHub, a local fallback, or a future backend.
+
+### Stage 3 — infrastructure adapters
+
+Move vendor-specific code behind adapters.
+
+Examples:
+
+```text
+Three.js      -> model-viewer adapter
+Lottie        -> lottie adapter
+GitHub API    -> repository adapter
+Web3Forms     -> contact adapter
+YouTube       -> video adapter
+Storage API   -> browser-storage adapter
+```
+
+This permits replacement or removal of a vendor without changing the feature's public contract.
+
+### Stage 4 — feature ownership
+
+Each feature receives:
+
+- explicit root element(s)
+- normalized input data
+- configuration
+- callbacks/events
+- lifecycle cleanup
+
+A feature must not search the whole page for unrelated elements as an implicit dependency.
+
+### Stage 5 — state isolation
+
+Remove shared mutable state from the global/root controller.
+
+Each feature owns its own state. Cross-feature communication uses explicit events or callbacks.
+
+### Stage 6 — CSS ownership
+
+Replace historical override layers with component-owned styles.
+
+The objective is not more CSS files. The objective is that a component's responsive, interactive, and visual states live together and can be replaced without fighting unrelated selectors.
+
+### Stage 7 — CMS application boundary
+
+The public site must never import CMS implementation code.
+
+The CMS should be decomposed separately into:
+
+```text
+admin/
+├── app/
+├── features/
+│   ├── editor/
+│   ├── media-library/
+│   └── connection/
+├── infrastructure/
+│   ├── github-api/
+│   └── storage/
+└── core/
+```
+
+The CMS and public portfolio are two applications sharing repository content—not one application with two pages.
+
+### Stage 8 — removal
+
+After each feature is migrated and validated:
+
+1. remove the old implementation;
+2. search for references to it;
+3. run the site validator;
+4. run the architecture validator;
+5. run syntax checks;
+6. perform browser/device QA;
+7. remove obsolete compatibility code.
+
+Do not keep old and new implementations permanently “just in case.” That creates two sources of truth.
+
+## Definition of done
+
+The architecture migration is complete when:
+
+- `script.js` is a small composition root;
+- each feature has one public entry point;
+- feature state is private;
+- CMS data is normalized before presentation;
+- vendor APIs are isolated in infrastructure adapters;
+- no feature imports another feature's private implementation;
+- feature cleanup is deterministic;
+- UI redesigns do not require changes to unrelated feature internals;
+- the CMS is independently deployable as an application surface;
+- CI rejects architecture-boundary violations;
+- the production visual baseline remains intentionally unchanged until a UI change is requested.
+
+## Non-goals
+
+This migration must not:
+
+- introduce a framework merely for architecture's sake;
+- rewrite the visual design;
+- replace the existing CMS data model without a demonstrated need;
+- add abstractions that have no consumer;
+- create dozens of tiny files with no meaningful ownership boundary;
+- preserve deprecated Phase 2.1 redesign layers.

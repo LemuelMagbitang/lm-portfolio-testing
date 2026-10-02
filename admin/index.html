@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>LM. — Site CMS</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="../assets/projects/site/favicon.png">
@@ -10,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin.css?v=20261001-03">
 </head>
 <body>
 
@@ -41,7 +42,7 @@
     </div>
     <div class="field">
       <label class="field-label">Personal access token</label>
-      <input id="inToken" type="password" placeholder="github_pat_••••••••" autocomplete="off">
+      <input id="inToken" type="password" placeholder="github_pat_••••••••" autocomplete="new-password" autocapitalize="none" spellcheck="false">
     </div>
     <div class="remember-row">
       <input type="checkbox" id="inRemember">
@@ -51,11 +52,15 @@
     <button class="primary" id="btnConnect">Connect</button>
 
     <div class="token-help">
+      <strong>Security-first connection:</strong> use a fine-grained GitHub token (the token normally begins with <code>github_pat_</code>) with a sensible expiration date. The token is kept in memory during this session.
+      The <em>Remember on this device</em> option stores it persistently in this browser; leave it off on shared computers.
+      For GitHub, use a <strong>fine-grained token scoped only to this repository</strong> with the minimum required repository permissions.
+      <br><br>
       <strong>Need a token?</strong> On GitHub: Settings → Developer settings →
       Fine-grained tokens → Generate new token. Scope it to <em>this one repository</em>,
-      and under Permissions give <strong>Contents: Read and write</strong> — nothing else is needed.
+      and under Permissions give <strong>Contents: Read and write</strong>. <strong>Checks: Read</strong> is optional and only enables the CMS deployment-status indicator.
       The token stays in this browser and talks to GitHub directly; it never passes through
-      any third-party server. Treat it like a password — anyone with it can edit your site.
+      any third-party server. Treat it like a password — anyone with it can edit your site. Never paste a token into project files, screenshots, issues, or public commits.
       <br><br>
       Full guide: <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens" target="_blank" rel="noopener noreferrer">docs.github.com — personal access tokens</a>
     </div>
@@ -124,7 +129,7 @@
   }
 }
 </script>
-<script src="../js/media-background.js"></script>
-<script src="admin.js"></script>
+<script src="../js/media-background.js?v=20261001-03"></script>
+<script src="admin.js?v=20261001-03"></script>
 </body>
 </html>
