@@ -4,11 +4,21 @@
  * CMS access and project normalization are injected boundaries. This module
  * only coordinates data loading and rendering; it does not know which CMS
  * provider supplies the JSON or how project cards are implemented internally.
+ *
+ * DOM creation is injected so the orchestration layer does not have to own
+ * the browser document as a hidden dependency.
  */
 
 import { normalizeProjects } from '../../data/project-normalizer.js';
 
-export async function loadProjects({ url, loadJson, resolveUrl, buildCard, getGrid } = {}) {
+export async function loadProjects({
+  url,
+  loadJson,
+  resolveUrl,
+  buildCard,
+  getGrid,
+  createFragment = () => document.createDocumentFragment()
+} = {}) {
   if (!url || typeof loadJson !== 'function' || typeof buildCard !== 'function' || typeof getGrid !== 'function') {
     return false;
   }
@@ -21,7 +31,7 @@ export async function loadProjects({ url, loadJson, resolveUrl, buildCard, getGr
     const projects = normalizeProjects(raw);
     if (!projects.length) return false;
 
-    const fragment = document.createDocumentFragment();
+    const fragment = createFragment();
     projects.forEach(project => fragment.appendChild(buildCard(project)));
     grid.replaceChildren(fragment);
     return true;
