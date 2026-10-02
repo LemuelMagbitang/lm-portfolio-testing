@@ -6,8 +6,10 @@
  * can use mountProjects() without knowing how CMS transport, asset paths, DOM
  * lookup, or card construction are implemented.
  *
- * Keeping this adapter separate is intentional: a future UI can replace the
- * project-card renderer while the CMS/data contract remains unchanged.
+ * The concrete browser services are still the defaults, but each capability
+ * can be replaced by the caller. This keeps the composition boundary useful
+ * for preview environments, browser tests, and future UI implementations
+ * without coupling the Projects feature to one runtime implementation.
  */
 
 import { loadProjects } from './project-loader.js';
@@ -18,20 +20,23 @@ import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js';
 export async function mountProjects({
   url,
   documentRef = globalThis.document,
+  loadJson = loadCmsJson,
   resolveAssetUrl = siteAssetUrl,
-  show3DIndicator = true
+  getGrid = () => documentRef?.getElementById('portfolioGrid'),
+  createFragment = () => documentRef?.createDocumentFragment(),
+  buildCard = project => buildProjectCardElement(project, {
+    resolveAssetUrl,
+    show3DIndicator: true
+  })
 } = {}) {
-  if (!documentRef) return false;
+  if (!documentRef || typeof loadJson !== 'function') return false;
 
   return loadProjects({
     url,
-    loadJson: loadCmsJson,
+    loadJson,
     resolveUrl: resolveAssetUrl,
-    getGrid: () => documentRef.getElementById('portfolioGrid'),
-    createFragment: () => documentRef.createDocumentFragment(),
-    buildCard: project => buildProjectCardElement(project, {
-      resolveAssetUrl,
-      show3DIndicator
-    })
+    getGrid,
+    createFragment,
+    buildCard
   });
 }
