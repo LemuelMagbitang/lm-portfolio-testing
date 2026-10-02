@@ -46,5 +46,6 @@ jobs:
           node --check js/site-runtime.js &&
           node --check js/core/site-paths.js &&
           node --check js/core/script-loader.js &&
-          node --check js/integrations/lottie-player.js &&
-          node --check js/integrations/media-background.js
+          node --check js/data/cms-loader.js &&
+          node --check js/infrastructure/lottie/player.js &&
+          node --check js/infrastructure/media-background/loader.js
