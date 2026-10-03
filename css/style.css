@@ -1237,7 +1237,7 @@ body.center-page {
 
   .tagline {
     font-size: 0.8rem;
-    flex-direction: left;        /* Stacks tagline items vertically to prevent text clipping horizontally */
+    flex-direction: row;         /* Keep the tagline's inline relationship intact; wrapping is handled below. */
     gap: 6px;
     margin-bottom: 22px;
     line-height: 1.35;
