@@ -67,7 +67,9 @@ export function applyGalleryReveal({
   windowRef = globalThis.window,
   fadeMs = 300,
   mobilePeek = 40,
-  desktopPeek = 70
+  desktopPeek = 70,
+  renderToken = 0,
+  isCurrentRender = () => true
 } = {}) {
   if (!grid) return;
 
@@ -79,7 +81,8 @@ export function applyGalleryReveal({
     card.style.opacity = '0';
   });
 
-  windowRef.setTimeout(() => {
+  const hideTimer = windowRef.setTimeout(() => {
+    if (!isCurrentRender(renderToken)) return;
     filteredCards.forEach(card => { card.style.display = 'block'; });
     hiddenCards.forEach(card => {
       if (!filteredSet.has(card)) card.style.display = 'none';
@@ -91,6 +94,7 @@ export function applyGalleryReveal({
   });
 
   windowRef.requestAnimationFrame(() => {
+    if (!isCurrentRender(renderToken)) return;
     filteredCards.forEach(card => { card.style.opacity = '1'; });
   });
 
@@ -109,7 +113,10 @@ export function applyGalleryReveal({
     fadeOverlay?.classList.add('is-hidden');
   }
 
-  if (!showMoreButton || !showMoreWrapper) return;
+  // The timer belongs to the current render. Returning a cancel function lets
+  // the Gallery lifecycle discard it during destroy() without owning the
+  // presentation implementation.
+  if (!showMoreButton || !showMoreWrapper) return () => windowRef.clearTimeout(hideTimer);
 
   const label = showMoreButton.querySelector('.btn-text');
   if (filteredCards.length > visibleCount) {
@@ -120,6 +127,8 @@ export function applyGalleryReveal({
   } else {
     showMoreWrapper.style.display = 'none';
   }
+
+  return () => windowRef.clearTimeout(hideTimer);
 }
 
 export function resetGalleryPresentation({
