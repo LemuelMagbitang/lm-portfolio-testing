@@ -1925,6 +1925,10 @@ RENDERERS.projects = async function(data){
       const sourceBackground = src.background && typeof src.background === 'object' ? src.background : null;
       if (sourceBackground) picker.setAttribute('data-background', JSON.stringify(sourceBackground)); else picker.removeAttribute('data-background');
       picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
+      if (globalThis.LMMediaBackground) {
+        const pickerBackground = ['lottie','model'].includes(src.type) && sourceBackground ? sourceBackground : {type:'none'};
+        globalThis.LMMediaBackground.apply(picker, pickerBackground, ghRawUrl);
+      }
       if(note) note.style.display=fallback?'':'none';
     }
     wireBackgroundControl(
@@ -2098,6 +2102,10 @@ RENDERERS.projects = async function(data){
           if (modelViewerCleanup) { modelViewerCleanup(); modelViewerCleanup = null; }
           previewEl.innerHTML = buildMediaPreviewHtml(m);
           wirePreviewAspect(previewEl.firstElementChild, m);
+          const previewBox = previewEl.firstElementChild;
+          if (previewBox && m.type === 'lottie' && m.background && globalThis.LMMediaBackground) {
+            globalThis.LMMediaBackground.apply(previewBox, m.background, ghRawUrl);
+          }
           if (m.type === 'model' && m.src) {
             try {
               const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js');
@@ -2124,6 +2132,13 @@ RENDERERS.projects = async function(data){
           // blank — the focus-picker preview needs to follow along too.
           if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
         }
+        wireBackgroundControl(
+          row,
+          () => m.type,
+          () => m.background,
+          value => { m.background = value; refreshPreview(); },
+          () => { refreshPreview(); flagUnsaved(); }
+        );
         refreshPreview();
         attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
           kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
@@ -2133,7 +2148,10 @@ RENDERERS.projects = async function(data){
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
           m[inp.dataset.mf]=inp.value;
           if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
-          if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') refreshPreview();
+          if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') {
+            refreshPreview();
+            row.__bgEditorSync?.();
+          }
           flagUnsaved();
         }));
         row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
@@ -2435,15 +2453,37 @@ RENDERERS.about = function(data){
   function buildSoftwareSkills(id, arr){
     const box = document.getElementById(id);
 
+    function applyAdminLogoTone(image, candidate = '') {
+      if (!image) return;
+      try {
+        const canvas=document.createElement('canvas'); canvas.width=16; canvas.height=16;
+        const ctx=canvas.getContext('2d',{willReadFrequently:true}); if(!ctx) throw new Error('tone canvas unavailable');
+        ctx.clearRect(0,0,16,16); ctx.drawImage(image,0,0,16,16);
+        const pixels=ctx.getImageData(0,0,16,16).data;
+        let weighted=0,weight=0;
+        for(let i=0;i<pixels.length;i+=4){
+          const alpha=pixels[i+3]/255; if(alpha<=.03) continue;
+          weighted+=((0.2126*pixels[i]+0.7152*pixels[i+1]+0.0722*pixels[i+2])/255)*alpha;
+          weight+=alpha;
+        }
+        image.dataset.logoTone=weight&&weighted/weight<.45 ? 'dark' : 'light';
+      }catch(_){
+        image.dataset.logoTone=/krita/i.test(candidate)||/cdn\.simpleicons\.org/i.test(candidate) ? 'dark' : 'unknown';
+      }
+    }
+
     function preloadCandidates(host, name, candidates, index = 0, onExhausted){
       if(!host || !host.isConnected || !candidates[index]){
         onExhausted?.();
         return;
       }
 
+      const candidate = candidates[index];
       const probe = new Image();
+      probe.crossOrigin = 'anonymous';
       probe.onload = () => {
         if(!host.isConnected) return;
+        applyAdminLogoTone(probe, candidate);
         probe.className='skill-logo';
         probe.alt=name;
         probe.title=name;
