@@ -441,6 +441,7 @@ try {
       const projectsNav = page.locator('.nav-item[data-section="projects"]');
       if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
       await projectsNav.click();
+      await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
 
       const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
       if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
