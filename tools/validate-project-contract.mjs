@@ -42,13 +42,38 @@ assert.deepEqual(project, {
   media: [
     { type: 'image', src: 'art.jpg', orientation: 'portrait' },
     { type: 'image', src: 'fallback.jpg' }
-  ]
+  ],
+  mediaCount: 2,
+  capabilities: {
+    hasImage: true,
+    hasVideo: false,
+    hasYouTube: false,
+    hasLottie: false,
+    hasModel: false
+  }
 });
 
 assert.equal(normalizeProjectMedia({ type: 'youtube', src: 'abc' }).type, 'youtube');
 assert.equal(normalizeProjectMedia({ type: 'model', src: 'scene.glb' }).type, 'model');
 assert.equal(normalizeProjectMedia({ type: 'image', src: '' }), null);
 assert.deepEqual(normalizeProjects({ projects: [{ id: 'a' }, { id: 'b' }] }).map(item => item.id), ['a', 'b']);
+
+const mixed = normalizeProject({
+  id: 'mixed',
+  media: [
+    { type: 'video', src: 'clip.mp4' },
+    { type: 'youtube', src: 'https://youtu.be/example' },
+    { type: 'lottie', src: 'motion.json' },
+    { type: 'model', src: 'scene.glb' }
+});
+assert.equal(mixed.mediaCount, 4);
+assert.deepEqual(mixed.capabilities, {
+  hasImage: false,
+  hasVideo: true,
+  hasYouTube: true,
+  hasLottie: true,
+  hasModel: true
+});
 assert.deepEqual(normalizeProjects({ filters: [] }), []);
 
 console.log('Project data contract validated.');
