@@ -443,18 +443,22 @@ function validateTargetBlankRel(file) {
 
 function validateLightboxLifecycle() {
   const source = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
+  const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
+    ? readText('js/features/lightbox/media-renderer.js')
+    : '';
   const legacy = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
 
   if (legacy) {
     err('Lightbox: retired root module js/lightbox.js must not remain after feature cutover.');
   }
 
-  if (!/if \(!modelWrap\.isConnected \|\| !lightbox\.classList\.contains\('active'\)\) return;/.test(source)) {
+  if (!/if \(!modelWrap\.isConnected \|\| !lightbox\?\.classList\.contains\('active'\)\) return;/.test(mediaRenderer)) {
     err('Lightbox: lazy 3D viewer mount is missing its detached-node/closed-lightbox guard.');
   }
 
-  if (!/modalMediaContainer\.querySelectorAll\('\.model-viewer-shell'\)\.forEach\(shell => \{\s*try \{ shell\.__modelViewerCleanup\?\.\(\); \} catch \(_\) \{\}/s.test(source)) {
-    err('Lightbox: closing the modal must dispose mounted 3D viewers before clearing their DOM.');
+  if (!/mediaRenderer\.dispose\(modalMediaContainer\)/.test(source) ||
+      !/querySelectorAll\('\.model-viewer-shell'\)/.test(mediaRenderer)) {
+    err('Lightbox: mounted 3D viewers must be disposed through the media renderer before clearing DOM.');
   }
   if (!/getProjectForCard/.test(source) ||
       /\.project-media-list|\.glass-info|\.project-description/.test(source)) {
