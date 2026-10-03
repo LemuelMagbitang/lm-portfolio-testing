@@ -70,6 +70,7 @@ export function initLightbox(options = {}) {
    7. LIGHTBOX MODAL
    ========================================= */
 const lightbox = documentRef.getElementById('lightbox');
+if (lightbox) lightbox.dataset.component = 'media-viewer';
 const lightboxControls = documentRef.getElementById('lightboxControls');
 const lightboxClose = documentRef.getElementById('lightboxClose');
 const lightboxPrev = documentRef.querySelector('.lightbox-prev');
