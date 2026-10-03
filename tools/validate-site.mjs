@@ -455,6 +455,17 @@ function validateLightboxLifecycle() {
   if (!/if \(!modelWrap\.isConnected \|\| !lightbox\?\.classList\.contains\('active'\)\) return;/.test(mediaRenderer)) {
     err('Lightbox: lazy 3D viewer mount is missing its detached-node/closed-lightbox guard.');
   }
+  if (!/\.then\(cleanup => \{[\s\S]*!modelWrap\.isConnected[\s\S]*cleanup\?\.\(\)/.test(mediaRenderer)) {
+    err('Lightbox: async 3D mounts must dispose themselves when the media node becomes detached or the modal closes while loading.');
+  }
+  if (!/createLightboxA11y\(lightbox, documentRef, windowRef, lifecycle\)/.test(source) ||
+      !/keydownCleanup\?\.\(\)/.test(source) ||
+      !/lifecycle\?\.animationFrame/.test(source)) {
+    err('Lightbox: accessibility focus/listener work must be owned by the shared feature lifecycle.');
+  }
+  if (/instanceof HTMLElement/.test(source)) {
+    err('Lightbox: opener detection must remain cross-document safe and not rely on the global HTMLElement constructor.');
+  }
 
   if (!/mediaRenderer\.dispose\(modalMediaContainer\)/.test(source) ||
       !/querySelectorAll\('\.model-viewer-shell'\)/.test(mediaRenderer)) {
@@ -783,6 +794,14 @@ function validateResponsiveUiContracts() {
 
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  if (admin.includes('SOFTWARE_DOMAINS') || admin.includes('logo.clearbit.com')) {
+    err('CMS software logos: retired inline SOFTWARE_DOMAINS/Clearbit lookup must not return.');
+  }
+  if (!/const SOFTWARE_LOGO_LOOKUP = import\(['"]\.\.\/js\/infrastructure\/software-logo\/lookup\.js/.test(admin) ||
+      !/async function findAutomaticSoftwareLogoCandidates\(name\)/.test(admin)) {
+    err('CMS software logos: About editor must resolve automatic logos through the shared lookup adapter.');
+  }
+
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
