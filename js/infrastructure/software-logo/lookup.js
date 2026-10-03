@@ -1,43 +1,50 @@
 /**
  * Automatic software-logo lookup adapter.
  *
- * Common software gets a deterministic, pinned Simple Icons CDN candidate.
- * Only when that direct candidate fails does the UI request Iconify Search
- * for a broader match. Candidate images are preloaded before being mounted.
+ * This follows the known-good portfolio implementation from the
+ * architecture-security-hardening branch and deployed main repo:
+ * Simple Icons direct lookup first, product-domain lookup second, and
+ * Iconify discovery only as a final fallback for names outside the common
+ * software list.
  */
 
-const SIMPLE_ICONS_VERSION = '16.33.0';
-
-const SOFTWARE_ALIASES = {
-  'blender':'blender',
-  'krita':'krita',
-  'figma':'figma',
-  'youtube':'youtube',
-  'after effects':'adobeaftereffects',
-  'adobe after effects':'adobeaftereffects',
-  'premier pro':'adobepremierepro',
-  'premiere pro':'adobepremierepro',
-  'adobe premiere pro':'adobepremierepro',
-  'photoshop':'adobephotoshop',
-  'adobe photoshop':'adobephotoshop',
-  'illustrator':'adobeillustrator',
-  'adobe illustrator':'adobeillustrator',
-  'davinci resolve':'davinciresolve',
-  'da vinci resolve':'davinciresolve',
-  'cinema 4d':'cinema4d',
-  'maya':'autodeskmaya',
-  'autodesk maya':'autodeskmaya',
-  '3ds max':'3dsmax',
-  'zbrush':'zbrush',
-  'unity':'unity',
-  'unreal engine':'unrealengine',
-  'procreate':'procreate',
-  'clip studio paint':'clipstudiopaint',
-  'substance painter':'substancepainter',
-  'houdini':'houdini',
-  'sketchup':'sketchup'
+const SOFTWARE_DOMAINS = {
+  krita: 'krita.org',
+  blender: 'blender.org',
+  figma: 'figma.com',
+  'davinci resolve': 'blackmagicdesign.com',
+  'cinema 4d': 'maxon.net',
+  zbrush: 'maxon.net',
+  maya: 'autodesk.com',
+  '3ds max': 'autodesk.com',
+  'autodesk maya': 'autodesk.com',
+  unity: 'unity.com',
+  'unreal engine': 'unrealengine.com',
+  procreate: 'procreate.com',
+  sketch: 'sketch.com',
+  sketchup: 'sketchup.com',
+  'substance painter': 'substance3d.com',
+  'substance designer': 'substance3d.com',
+  'affinity photo': 'affinity.serif.com',
+  'affinity designer': 'affinity.serif.com',
+  houdini: 'sidefx.com',
+  'clip studio paint': 'clipstudio.net'
 };
 
+const SOFTWARE_ALIASES = {
+  'premier pro': 'adobepremierepro',
+  'premiere pro': 'adobepremierepro',
+  'adobe premier pro': 'adobepremierepro',
+  'adobe premiere pro': 'adobepremierepro',
+  'after effects': 'adobeaftereffects',
+  'adobe after effects': 'adobeaftereffects',
+  'photoshop': 'adobephotoshop',
+  'adobe photoshop': 'adobephotoshop',
+  'illustrator': 'adobeillustrator',
+  'adobe illustrator': 'adobeillustrator'
+};
+
+const cache = new Map();
 const discoveryCache = new Map();
 const discoveryPending = new Map();
 
@@ -45,62 +52,69 @@ function normalize(value = '') {
   return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
-function simpleIconsUrl(slug) {
-  return 'https://cdn.jsdelivr.net/npm/simple-icons@' + SIMPLE_ICONS_VERSION
-    + '/icons/' + encodeURIComponent(slug) + '.svg';
+function slugFor(name) {
+  const raw = String(name || '').trim().toLowerCase();
+  return SOFTWARE_ALIASES[raw] || normalize(raw);
 }
 
-function iconifyIconUrl(iconId) {
+function simpleIconsUrl(slug) {
+  return 'https://cdn.simpleicons.org/' + encodeURIComponent(slug);
+}
+
+function clearbitUrl(domain) {
+  return 'https://logo.clearbit.com/' + encodeURIComponent(domain) + '?size=64';
+}
+
+function iconifyUrl(iconId) {
   const parts = String(iconId || '').split(':');
   const prefix = parts.shift();
-  const iconName = parts.join(':');
-  if (!prefix || !iconName) return '';
-  return 'https://api.iconify.design/' + encodeURIComponent(prefix) + '/'
-    + encodeURIComponent(iconName) + '.svg';
+  const name = parts.join(':');
+  return prefix && name
+    ? 'https://api.iconify.design/' + encodeURIComponent(prefix) + '/' + encodeURIComponent(name) + '.svg'
+    : '';
 }
 
 function scoreIcon(iconId, query) {
-  const rawName = String(iconId || '').split(':').pop() || '';
-  const normalized = normalize(rawName);
+  const iconName = String(iconId || '').split(':').pop() || '';
+  const normalized = normalize(iconName);
   if (!normalized) return -1;
   if (normalized === query) return 1000;
-  if (normalized.includes(query)) return 700 - Math.abs(normalized.length - query.length);
-  if (query.includes(normalized)) return 600 - Math.abs(normalized.length - query.length);
+  if (normalized.includes(query)) return 800 - Math.abs(normalized.length - query.length);
+  if (query.includes(normalized)) return 700 - Math.abs(normalized.length - query.length);
   return 0;
 }
 
 export function getSoftwareLogoDirectCandidates(name) {
-  const raw = String(name || '').trim();
+  const raw = String(name || '').trim().toLowerCase();
   if (!raw) return [];
-  const slug = SOFTWARE_ALIASES[raw.toLowerCase()] || normalize(raw);
-  return slug ? [simpleIconsUrl(slug)] : [];
+
+  const candidates = [];
+  const slug = slugFor(raw);
+  if (slug) candidates.push(simpleIconsUrl(slug));
+
+  const domain = SOFTWARE_DOMAINS[raw];
+  if (domain) candidates.push(clearbitUrl(domain));
+
+  return candidates;
 }
 
 export async function findSoftwareLogoDiscoveryCandidates(
   name,
   fetchRef = globalThis.fetch?.bind(globalThis)
 ) {
-  const rawName = String(name || '').trim();
-  const key = normalize(rawName);
-  if (!rawName || !key || typeof fetchRef !== 'function') return [];
+  const raw = String(name || '').trim();
+  const key = normalize(raw);
+  if (!raw || !key || typeof fetchRef !== 'function') return [];
   if (discoveryCache.has(key)) return discoveryCache.get(key);
   if (discoveryPending.has(key)) return discoveryPending.get(key);
 
   const request = (async () => {
-    const controller = typeof AbortController === 'function' ? new AbortController() : null;
-    const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
-
     try {
       const response = await fetchRef(
-        'https://api.iconify.design/search?query='
-        + encodeURIComponent(rawName)
+        'https://api.iconify.design/search?query=' + encodeURIComponent(raw)
         + '&prefixes=simple-icons,logos&limit=12',
-        {
-          headers: { Accept: 'application/json' },
-          ...(controller ? { signal: controller.signal } : {})
-        }
+        { headers: { Accept: 'application/json' } }
       );
-
       if (!response.ok) return [];
 
       const payload = await response.json();
@@ -108,12 +122,10 @@ export async function findSoftwareLogoDiscoveryCandidates(
         .map(icon => ({ icon, score: scoreIcon(icon, key) }))
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
-        .map(item => iconifyIconUrl(item.icon))
+        .map(item => iconifyUrl(item.icon))
         .filter(Boolean);
     } catch (_) {
       return [];
-    } finally {
-      if (timer) clearTimeout(timer);
     }
   })();
 
@@ -124,9 +136,13 @@ export async function findSoftwareLogoDiscoveryCandidates(
   return result;
 }
 
-// Kept as the feature-facing convenience API. It returns the deterministic
-// direct candidate immediately; discovery is requested by the feature only
-// after the direct candidate fails.
 export function findSoftwareLogoCandidates(name) {
-  return getSoftwareLogoDirectCandidates(name);
+  const raw = String(name || '').trim().toLowerCase();
+  const key = normalize(raw);
+  if (!key) return [];
+  if (cache.has(key)) return cache.get(key);
+
+  const candidates = getSoftwareLogoDirectCandidates(raw);
+  cache.set(key, candidates);
+  return candidates;
 }
