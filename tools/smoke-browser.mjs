@@ -309,6 +309,28 @@ try {
         throw new Error('Mobile Works gallery did not render its first row as two equal columns.');
       }
 
+      const mobileShowMore = page.locator('#showMoreBtn').first();
+      if (await mobileShowMore.isVisible().catch(() => false)) {
+        await mobileShowMore.click();
+        await page.waitForTimeout(350);
+        const expanded = await page.locator('#portfolioGrid').evaluate(el => getComputedStyle(el).maxHeight === 'none');
+        const expandedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
+        if (!expanded || expandedLabel?.trim().toUpperCase() !== 'SHOW LESS') {
+          throw new Error('Mobile Show More did not expand the full-bleed two-column gallery.');
+        }
+
+        await mobileShowMore.click();
+        await page.waitForTimeout(350);
+        const collapsed = await page.locator('#portfolioGrid').evaluate(el => {
+          const style = getComputedStyle(el);
+          return style.maxHeight !== 'none' && el.scrollHeight > el.clientHeight;
+        });
+        const collapsedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
+        if (!collapsed || collapsedLabel?.trim().toUpperCase() !== 'SHOW MORE') {
+          throw new Error('Mobile Show Less did not restore the collapsed gallery state.');
+        }
+      }
+
       const firstCard = page.locator('#portfolioGrid .project-card').first();
       await firstCard.click();
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
@@ -461,6 +483,22 @@ try {
       const bgControl = lottieMedia.locator('[data-bg-control]');
       if (await bgControl.count() !== 1) throw new Error('CMS Lottie media row is missing the background color control.');
       if (!(await bgControl.isVisible())) throw new Error('CMS Lottie background color control should be visible.');
+
+      const bgColorInput = bgControl.locator('[data-bg-color]').first();
+      const bgSwatch = bgControl.locator('[data-bg-swatch]').first();
+      if (await bgColorInput.count() !== 1 || await bgSwatch.count() !== 1) {
+        throw new Error('CMS Lottie background control is missing its compact color picker surface.');
+      }
+      if (await bgColorInput.isDisabled()) throw new Error('CMS Lottie color picker is disabled while background support is available.');
+
+      await bgColorInput.evaluate((input) => {
+        input.value = '#336699';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      const bgHex = await bgControl.locator('[data-bg-hex]').textContent().catch(() => '');
+      if (bgHex?.trim().toUpperCase() !== '#336699') {
+        throw new Error('CMS background color picker did not update its displayed value.');
+      }
 
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
