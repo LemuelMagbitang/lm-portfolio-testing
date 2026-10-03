@@ -79,7 +79,7 @@ try {
   const browser = await chromium.launch({ headless: true });
 
   try {
-    await browser.route('https://cdn.jsdelivr.net/npm/simple-icons@16.33.0/icons/*.svg', async route => {
+    await browser.route('https://cdn.simpleicons.org/**', async route => {
       const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>';
       await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
     });
@@ -181,7 +181,7 @@ try {
       if (brokenImages) throw new Error('About page contains a visibly broken software-logo image.');
       if (await kritaImage.count()) {
         const src = await kritaImage.getAttribute('src');
-        if (!src || !/cdn\\.jsdelivr\\.net\\/npm\\/simple-icons@16\\.33\\.0/i.test(src)) {
+        if (!src || !/cdn\\.simpleicons\\.org\\/krita/i.test(src)) {
           throw new Error('About page Krita logo did not use the pinned Simple Icons candidate.');
         }
       }

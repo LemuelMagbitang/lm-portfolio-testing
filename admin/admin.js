@@ -2337,93 +2337,20 @@ RENDERERS.about = function(data){
   // Settings & Toggles — this box just prepares each skill for
   // whichever way that switch is set.
 
-  const SOFTWARE_LOGO_CACHE = new Map();
-  const SOFTWARE_LOGO_PENDING = new Map();
-  const SOFTWARE_ALIASES = {
-    'premier pro':'adobepremierepro',
-    'premiere pro':'adobepremierepro',
-    'adobe premier pro':'adobepremierepro',
-    'adobe premiere pro':'adobepremierepro',
-    'after effects':'adobeaftereffects',
-    'adobe after effects':'adobeaftereffects',
-    'photoshop':'adobephotoshop',
-    'adobe photoshop':'adobephotoshop',
-    'illustrator':'adobeillustrator',
-    'adobe illustrator':'adobeillustrator'
-  };
-
-  function normalizeSoftwareName(value){
-    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
-  }
-
-  function softwareSlug(name){
-    const raw=String(name||'').trim().toLowerCase();
-    return SOFTWARE_ALIASES[raw] || normalizeSoftwareName(raw);
-  }
-
-  function simpleIconsSoftwareUrl(name){
-    const slug=softwareSlug(name);
-    return slug ? 'https://cdn.simpleicons.org/'+encodeURIComponent(slug) : '';
-  }
-
-  function iconifySoftwareUrl(iconId){
-    const parts=String(iconId||'').split(':');
-    const prefix=parts.shift();
-    const iconName=parts.join(':');
-    return prefix&&iconName
-      ? 'https://api.iconify.design/'+encodeURIComponent(prefix)+'/'+encodeURIComponent(iconName)+'.svg'
-      : '';
-  }
-
-  function scoreSoftwareIcon(iconId,name){
-    const iconName=normalizeSoftwareName(String(iconId||'').split(':').pop());
-    const query=normalizeSoftwareName(name);
-    if(!iconName||!query) return 0;
-    if(iconName===query) return 1000;
-    if(iconName.includes(query)||query.includes(iconName)) return 700;
-    return 0;
-  }
+  // Keep the CMS preview on the same logo adapter used by the public site.
+  // admin.js is intentionally a classic script, so it loads the feature's
+  // ES module through one cached dynamic import instead of duplicating the
+  // provider map, aliases, scoring, and discovery logic here.
+  const SOFTWARE_LOGO_LOOKUP = import('../js/infrastructure/software-logo/lookup.js?v=20261003-14');
 
   async function findAutomaticSoftwareLogoCandidates(name){
-    const raw=String(name||'').trim();
-    const key=raw.toLowerCase();
-    if(!raw) return [];
-    if(SOFTWARE_LOGO_CACHE.has(key)) return SOFTWARE_LOGO_CACHE.get(key);
-    if(SOFTWARE_LOGO_PENDING.has(key)) return SOFTWARE_LOGO_PENDING.get(key);
-
-    const candidates=[];
-    const direct=simpleIconsSoftwareUrl(raw);
-    if(direct) candidates.push(direct);
-
-    const domain=SOFTWARE_DOMAINS[key];
-
-    const request=Promise.resolve(candidates);
-    SOFTWARE_LOGO_PENDING.set(key,request);
-    const result=await request;
-    SOFTWARE_LOGO_PENDING.delete(key);
-    SOFTWARE_LOGO_CACHE.set(key,result);
-    return result;
+    const lookup=await SOFTWARE_LOGO_LOOKUP;
+    return lookup.findSoftwareLogoCandidates(name);
   }
 
   async function findAutomaticSoftwareLogoDiscovery(name){
-    const raw=String(name||'').trim();
-    if(!raw) return [];
-    try{
-      const response=await fetch(
-        'https://api.iconify.design/search?query='+encodeURIComponent(raw)+'&prefixes=simple-icons,logos&limit=12',
-        {headers:{Accept:'application/json'}}
-      );
-      if(!response.ok) return [];
-      const payload=await response.json();
-      return (Array.isArray(payload?.icons)?payload.icons:[])
-        .map(icon=>({icon,score:scoreSoftwareIcon(icon,raw)}))
-        .filter(x=>x.score>0)
-        .sort((a,b)=>b.score-a.score)
-        .map(x=>iconifySoftwareUrl(x.icon))
-        .filter(Boolean);
-    }catch(_){
-      return [];
-    }
+    const lookup=await SOFTWARE_LOGO_LOOKUP;
+    return lookup.findSoftwareLogoDiscoveryCandidates(name);
   }
 
   function buildSoftwareSkills(id, arr){
