@@ -172,6 +172,7 @@ export async function createPortfolioApp({
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
       galleryFeature?.destroy?.();
+      navigation.destroy?.();
       navigation.close();
       reviewsFeature.cleanup?.();
       forms.cleanup?.();
