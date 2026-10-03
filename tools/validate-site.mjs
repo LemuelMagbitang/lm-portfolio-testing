@@ -748,6 +748,7 @@ function validateResponsiveUiContracts() {
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
   const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
@@ -763,8 +764,11 @@ function validateCmsRegressionContracts() {
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
 
-  if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) {
-    err('Gallery: row-aware Show More contract is missing.');
+  if (!gallery.includes('getEffectiveBaseCount') ||
+      !gallery.includes('getRowAlignedCount') ||
+      !presentation.includes('getRowAlignedCount') ||
+      !presentation.includes('applyGalleryReveal')) {
+    err('Gallery: row-aware Show More state/presentation contract is missing.');
   }
 
   if (!projectCard.includes('card.dataset.filterIds')) {
