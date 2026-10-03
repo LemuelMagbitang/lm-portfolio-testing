@@ -592,6 +592,9 @@ function validateBootstrapHardening() {
   if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
     err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');
   }
+  if (!/createLifecycle/.test(hero) || !/lifecycle\.cleanup\(\)/.test(hero)) {
+    err('Hero: long-lived timers and crossfade resources must use the shared lifecycle.');
+  }
   if (/\.project-card|\.project-media-list|\.card-thumbnail|\.glass-info/.test(hero)) {
     err('Hero: project artwork selection must not depend on project-card DOM markup.');
   }
