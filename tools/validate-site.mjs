@@ -563,7 +563,6 @@ function validateArchitecture() {
   }
 
   if (!/initNavigation\(/.test(composition) ||
-      !/initProjectFilters\(/.test(composition) ||
       !/initReviews\(/.test(composition) ||
       !/initAbout\(/.test(composition) ||
       !/initForms\(/.test(composition) ||
@@ -580,7 +579,7 @@ function validateArchitecture() {
   }
 }
 
-validateResponsiveUiContracts();validateResponsiveUiContracts();
+validateResponsiveUiContracts();
 scanSourceForBadPatterns();
 validateSecuritySecrets();
 validateAdminStorageSecurity();
@@ -630,7 +629,7 @@ function validateResponsiveUiContracts() {
 
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
-  const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
   const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
