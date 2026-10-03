@@ -67,6 +67,14 @@ export function normalizeProject(project = {}) {
     ? project.media.map(normalizeProjectMedia).filter(Boolean)
     : [];
 
+  const capabilities = {
+    hasImage: media.some(item => item.type === 'image'),
+    hasVideo: media.some(item => item.type === 'video'),
+    hasYouTube: media.some(item => item.type === 'youtube'),
+    hasLottie: media.some(item => item.type === 'lottie'),
+    hasModel: media.some(item => item.type === 'model')
+  };
+
   const normalized = {
     id: normalizeString(project.id),
     title,
@@ -74,7 +82,9 @@ export function normalizeProject(project = {}) {
     description: normalizeString(project.description),
     badge: normalizeString(project.badge),
     filters: normalizeFilters(project.filters),
-    thumbnail: {}
+    thumbnail: {},
+    mediaCount: media.length,
+    capabilities
   };
 
   if (thumbnailSrc) {
