@@ -1340,9 +1340,15 @@ body.center-page {
 }
 @media (max-width:767px){
   .modal-interior{max-width:100%;gap:24px;margin-top:8px;}
+  /* Mobile Lightbox is a full-width artwork gallery, not a framed preview.
+     Do not cap the artwork by viewport height: a portrait image must keep
+     its full device width even when that makes the page taller. Scrolling
+     belongs to the modal, so tall artwork remains fully accessible. */
   #lightboxMediaContainer img,
   #lightboxMediaContainer iframe,
-  #lightboxMediaContainer video{max-height:calc(100dvh - 220px);}
+  #lightboxMediaContainer video{
+    max-height:none;
+  }
   .media-caption{max-width:calc(100% - 40px);}
 }
 
