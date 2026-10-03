@@ -454,8 +454,13 @@ function validateLightboxLifecycle() {
 }
 
 function validateGalleryContract() {
-  const source = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const source = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const legacy = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
+
+  if (!/export \{ initGallery \} from ['"]\.\/features\/gallery\/index\.js['"]/.test(legacy)) {
+    err('Gallery: legacy root module must remain a thin facade to the public feature API.');
+  }
   if (/getActiveCards:\s*\(\)\s*=>\s*getActiveCards\(\)/.test(source)) {
     err('Gallery: getActiveCards() recursively calls itself.');
   }
@@ -585,7 +590,7 @@ validateArchitecture();
 validateBootstrapHardening();
 
 function validateResponsiveUiContracts() {
-  const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const style = exists('css/style.css') ? readText('css/style.css') : '';
   const adminCss = exists('admin/admin.css') ? readText('admin/admin.css') : '';
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
