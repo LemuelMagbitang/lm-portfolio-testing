@@ -16,8 +16,9 @@ export function createLightboxMediaRenderer({
   lightbox = null,
   lightboxControls = null
 } = {}) {
-  function buildImageMedia(imgUrl) {
+  function buildImageMedia(imgUrl, altText = 'Project artwork') {
     const img = documentRef.createElement('img');
+    img.alt = String(altText || 'Project artwork').trim() || 'Project artwork';
     img.src = imgUrl;
     img.draggable = false;
     img.loading = 'lazy';
@@ -79,7 +80,10 @@ export function createLightboxMediaRenderer({
 
   function renderImage(item) {
     return buildMediaEntry(
-      buildImageMedia(resolveAssetUrl(item.src)),
+      buildImageMedia(
+        resolveAssetUrl(item.src),
+        item.caption || item.description || project.title || 'Project artwork'
+      ),
       item.caption || item.description,
       item.background
     );
