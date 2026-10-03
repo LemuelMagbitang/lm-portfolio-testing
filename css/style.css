@@ -553,20 +553,25 @@ body {
   position: relative;
 }
 
-.card-thumbnail img {
+.card-thumbnail img,
+.card-thumbnail video,
+.card-thumbnail .project-thumb-media.lottie-player {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Used by the data-zoom / data-rotate thumbnail controls in
-     script.js — left at their defaults (no zoom, no rotation) unless
-     that card's <img> (or the .card-thumbnail wrapper) sets them. */
+  /* The same presentation controls apply to every locally rendered visual
+     thumbnail type. Keeping the variables on the media node means CMS
+     settings survive fallback resolution without a second DOM pass. */
   --thumb-zoom: 1;
   --thumb-rotate: 0deg;
   transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  transform-origin: center center;
   transition: transform var(--lm-motion-image) cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.project-card:hover .card-thumbnail img {
+.project-card:hover .card-thumbnail img,
+.project-card:hover .card-thumbnail video,
+.project-card:hover .card-thumbnail .project-thumb-media.lottie-player {
   /* Multiplies on top of any manual zoom rather than overriding it,
      so the hover effect still works even on an already-zoomed thumbnail. */
   transform: scale(calc(var(--thumb-zoom) * 1.05)) rotate(var(--thumb-rotate));
@@ -2462,7 +2467,9 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     transition: none;
   }
 
-  .project-card:hover .card-thumbnail img {
+  .project-card:hover .card-thumbnail img,
+  .project-card:hover .card-thumbnail video,
+  .project-card:hover .card-thumbnail .project-thumb-media.lottie-player {
     transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
   }
 
