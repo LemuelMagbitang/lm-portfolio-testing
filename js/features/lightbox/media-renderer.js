@@ -78,7 +78,7 @@ export function createLightboxMediaRenderer({
     }
   }
 
-  function renderImage(item) {
+  function renderImage(item, project) {
     return buildMediaEntry(
       buildImageMedia(
         resolveAssetUrl(item.src),
