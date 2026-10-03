@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261003-02'
+  cacheVersion = '20261003-06'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   let initialTransitionTimer = null;
@@ -49,7 +49,8 @@ export async function bootstrapPortfolioApp({
         reviews: globalThis.REVIEWS_URL,
         about: globalThis.ABOUT_URL,
         filters: globalThis.FILTERS_URL,
-        heroLoop: globalThis.HERO_LOOP_URL
+        heroLoop: globalThis.HERO_LOOP_URL,
+        heroMessages: globalThis.HERO_MESSAGES_URL
       }
     });
 
