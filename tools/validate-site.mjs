@@ -546,6 +546,10 @@ function validateBootstrapHardening() {
     err('Composition: createPortfolioApp() public entry point is missing.');
   }
 
+  if (!/hero-section, #heroBanner, #heroBannerAbout/.test(composition)) {
+    err('Composition: Hero must initialize against the actual public hero section/container.');
+  }
+
   if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
       !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition)) {
     err('Composition: Hero timing must use the Hero feature option names loopMode and transitionStyle.');
@@ -571,6 +575,18 @@ function validateBootstrapHardening() {
   const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
   if (!/return \{[\s\S]*destroy\(\)[\s\S]*cleanup\.splice\(0\)/.test(navigation)) {
     err('Navigation: public feature lifecycle must expose destroy() and release persistent listeners.');
+  }
+
+  const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
+  if (!/about\.softwareSkills/.test(about) ||
+      !/about\.experience/.test(about) ||
+      !/about\.education/.test(about) ||
+      !/about\.awards/.test(about)) {
+    err('About: CMS feature must render software skills, experience, education, and awards data.');
+  }
+
+  if (!/skill\.icon \|\| skill\.logo/.test(about)) {
+    err('About: CMS software skill icons must support the stored icon field.');
   }
 }
 function validateArchitecture() {
@@ -690,6 +706,9 @@ function validateCmsRegressionContracts() {
   if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
   if (!admin.includes('await onCollect()')) err('CMS save: save collectors must support asynchronous cross-file validation/migrations.');
   if (!admin.includes('filtersWithProjects')) err('CMS filters: filter/project relationship saves must be atomic.');
+  if (admin.includes("import('../js/model-viewer.js')") || /['"]js\/model-viewer\.js['"]/.test(admin)) {
+    err('CMS 3D preview: retired js/model-viewer.js path must not be referenced.');
+  }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
 
   if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) {
@@ -710,6 +729,11 @@ function validateCmsRegressionContracts() {
 
   if (!/async function loadFilterButtons\(\)/.test(gallery) || !/options\.filterUrl/.test(gallery)) {
     err('Gallery filters: CMS filter loading must remain inside the Gallery feature boundary.');
+  }
+
+  if (!/className = 'tab-btn filter-btn active'/.test(gallery) ||
+      !/dataset\.filter = 'all'/.test(gallery)) {
+    err('Gallery filters: ALL must remain a permanent structural filter and retain the tab styling contract.');
   }
 
   if (!composition.includes('mountProjects(') ||
