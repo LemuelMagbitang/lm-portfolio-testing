@@ -55,8 +55,24 @@ export async function createPortfolioApp({
 
   const navigation = initNavigation({ root });
 
+  let lightboxFeature = null;
+  let pendingProjectOpen = null;
+
   const projectsPromise = config.urls.projects
-    ? mountProjects({ url: config.urls.projects, documentRef: root, getGrid: () => root.getElementById('portfolioGrid') })
+    ? mountProjects({
+        url: config.urls.projects,
+        documentRef: root,
+        getGrid: () => root.getElementById('portfolioGrid'),
+        onCardActivate: details => {
+          if (lightboxFeature?.openCard) {
+            lightboxFeature.openCard(details.card, {
+              initialMediaIndex: details.initialMediaIndex
+            });
+          } else {
+            pendingProjectOpen = details;
+          }
+        }
+      })
     : Promise.resolve(false);
 
   const reviewsPromise = initReviews({
@@ -144,7 +160,6 @@ export async function createPortfolioApp({
     console.warn('Gallery: initialization failed', error);
   }
 
-  let lightboxFeature = null;
   try {
     lightboxFeature = await initLightbox({
       root,
@@ -159,6 +174,14 @@ export async function createPortfolioApp({
     });
   } catch (error) {
     console.warn('Lightbox: initialization failed', error);
+  }
+
+  if (lightboxFeature?.openCard && pendingProjectOpen) {
+    const pending = pendingProjectOpen;
+    pendingProjectOpen = null;
+    lightboxFeature.openCard(pending.card, {
+      initialMediaIndex: pending.initialMediaIndex
+    });
   }
 
   return {
