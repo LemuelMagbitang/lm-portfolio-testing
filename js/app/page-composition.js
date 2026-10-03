@@ -88,9 +88,8 @@ export async function createPortfolioApp({
   // current DOM-dependent settings after all page content exists.
   settingsFeature.applyDom();
 
-  if (
-    root.querySelector('.project-media-list .media-item[data-lottie], .project-thumb-media[lottie-player]')
-  ) {
+  const projectModels = getProjects();
+  if (projectModels.some(project => project?.capabilities?.hasLottie)) {
     await ensureLottiePlayer();
   }
 
