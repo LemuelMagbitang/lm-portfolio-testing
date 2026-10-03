@@ -1,4 +1,4 @@
-import { findSoftwareLogoCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-09';
+import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-10';
 
 export async function initAbout({
   url,
@@ -45,9 +45,17 @@ export async function initAbout({
     frame.textContent = skillInitials(name);
   }
 
-  function preloadAndMountLogo(frame, name, candidates, index = 0) {
+  function showLogoFallback(frame, name) {
+    if (!frame || !frame.isConnected) return;
+    frame.classList.add('is-fallback');
+    frame.replaceChildren();
+    frame.textContent = skillInitials(name);
+  }
+
+  function preloadAndMountLogo(frame, name, candidates, index = 0, onExhausted) {
     if (!frame || !frame.isConnected || !candidates[index]) {
-      showLogoFallback(frame, name);
+      onExhausted?.();
+      if (!frame?.querySelector('img.skill-logo')) showLogoFallback(frame, name);
       return;
     }
 
@@ -64,20 +72,27 @@ export async function initAbout({
     }, { once: true });
 
     image.addEventListener('error', () => {
-      preloadAndMountLogo(frame, name, candidates, index + 1);
+      preloadAndMountLogo(frame, name, candidates, index + 1, onExhausted);
     }, { once: true });
 
-    // Keep the probe detached until it has loaded successfully.
     image.src = candidates[index];
   }
 
   async function hydrateAutomaticLogo(frame, name) {
     if (!frame || !frame.isConnected || !showSoftwareLogos) return;
 
-    const candidates = await findSoftwareLogoCandidates(name);
-    if (!frame.isConnected || !showSoftwareLogos) return;
+    const direct = findSoftwareLogoCandidates(name);
+    const showDiscovery = async () => {
+      const discovered = await findSoftwareLogoDiscoveryCandidates(name);
+      if (!frame.isConnected || !showSoftwareLogos) return;
+      preloadAndMountLogo(frame, name, discovered, 0);
+    };
 
-    preloadAndMountLogo(frame, name, candidates);
+    if (direct.length) {
+      preloadAndMountLogo(frame, name, direct, 0, showDiscovery);
+    } else {
+      showDiscovery();
+    }
   }
 
   function hydrateManualOrAutomaticLogo(frame, name, manualUrl) {
@@ -86,12 +101,8 @@ export async function initAbout({
       return;
     }
 
-    // Manual logos remain preferred. If that path fails, continue into the
-    // automatic software lookup instead of leaving a broken <img>.
-    preloadAndMountLogo(frame, name, [manualUrl]);
-    findSoftwareLogoCandidates(name).then(candidates => {
-      if (!frame.isConnected || frame.querySelector('img.skill-logo')) return;
-      preloadAndMountLogo(frame, name, candidates);
+    preloadAndMountLogo(frame, name, [manualUrl], 0, () => {
+      hydrateAutomaticLogo(frame, name);
     });
   }
 
@@ -124,6 +135,9 @@ export async function initAbout({
       frame.title = name;
       frame.textContent = skillInitials(name);
 
+      // Start loading before the visible frame is allowed to contain an image.
+      // The initials remain the stable placeholder while the remote asset is
+      // being checked.
       if (icon) {
         hydrateManualOrAutomaticLogo(
           frame,
