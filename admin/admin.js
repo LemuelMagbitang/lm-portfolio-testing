@@ -2330,7 +2330,7 @@ RENDERERS.about = function(data){
   // logos) keys its icons by. Same normalization used on the public
   // site's own copy of this lookup in script.js's fillSkillList.
   // Same lookup chain as the public site's fillSkillList in script.js
-  // (manual icon → Simple Icons → Clearbit → initials) — kept here too
+  // (manual icon → Simple Icons → Iconify discovery → initials) — kept here too
   // so this swatch preview shows what a skill will actually look like
   // rather than just "has an icon path or doesn't." Whether it's
   // actually shown as a logo at all, site-wide, is the one switch in
@@ -2339,28 +2339,6 @@ RENDERERS.about = function(data){
 
   const SOFTWARE_LOGO_CACHE = new Map();
   const SOFTWARE_LOGO_PENDING = new Map();
-  const SOFTWARE_DOMAINS = {
-    'krita':'krita.org',
-    'blender':'blender.org',
-    'figma':'figma.com',
-    'davinci resolve':'blackmagicdesign.com',
-    'cinema 4d':'maxon.net',
-    'zbrush':'maxon.net',
-    'maya':'autodesk.com',
-    '3ds max':'autodesk.com',
-    'autodesk maya':'autodesk.com',
-    'unity':'unity.com',
-    'unreal engine':'unrealengine.com',
-    'procreate':'procreate.com',
-    'sketch':'sketch.com',
-    'sketchup':'sketchup.com',
-    'substance painter':'substance3d.com',
-    'substance designer':'substance3d.com',
-    'affinity photo':'affinity.serif.com',
-    'affinity designer':'affinity.serif.com',
-    'houdini':'sidefx.com',
-    'clip studio paint':'clipstudio.net'
-  };
   const SOFTWARE_ALIASES = {
     'premier pro':'adobepremierepro',
     'premiere pro':'adobepremierepro',
@@ -3428,4 +3406,4 @@ function enableDragReorder(getContainer, itemsArr, onChange, painter){
     });
   });
 }
-// Automatic software logos use Iconify; retired Clearbit URLs are intentionally not used.
+// Automatic software logos use Iconify; automatic lookup uses Simple Icons and Iconify discovery.
