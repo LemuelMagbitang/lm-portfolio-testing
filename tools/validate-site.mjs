@@ -442,7 +442,12 @@ function validateTargetBlankRel(file) {
 }
 
 function validateLightboxLifecycle() {
-  const source = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
+  const source = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
+  const legacy = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
+
+  if (!/export \{ initLightbox \} from ['"]\.\/features\/lightbox\/index\.js['"]/.test(legacy)) {
+    err('Lightbox: legacy root module must remain a thin facade to the public feature API.');
+  }
 
   if (!/if \(!modelWrap\.isConnected \|\| !lightbox\.classList\.contains\('active'\)\) return;/.test(source)) {
     err('Lightbox: lazy 3D viewer mount is missing its detached-node/closed-lightbox guard.');
