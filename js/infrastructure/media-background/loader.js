@@ -5,8 +5,8 @@
  * loading mechanism or the site-root calculation.
  */
 
-import { loadScriptOnce } from '../../core/script-loader.js';
-import { getSiteRootUrl } from '../../core/site-paths.js';
+import { loadScriptOnce } from '../browser/script-loader.js';
+import { getSiteRootUrl } from '../browser/site-paths.js';
 
 let mediaBackgroundPromise = null;
 
