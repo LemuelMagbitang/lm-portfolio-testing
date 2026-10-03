@@ -3,7 +3,7 @@
  * Owns card DOM construction only. It does not fetch data or manage filtering.
  */
 
-import { buildMediaItemElement, findProjectMediaBackground, projectHas3D } from './project-media.js';
+import { findProjectMediaBackground, projectHas3D } from './project-media.js';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
 
 function getYouTubeId(src = '') {
