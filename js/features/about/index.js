@@ -64,7 +64,7 @@ export async function initAbout({
       }
       image.dataset.logoTone = weight && weighted / weight < 0.45 ? "dark" : "light";
     } catch (_) {
-      image.dataset.logoTone = /krita/i.test(candidate) || /cdn\.simpleicons\.org/i.test(candidate) ? "dark" : "unknown";
+      image.dataset.logoTone = /krita|youtube/i.test(candidate) || /cdn\.simpleicons\.org/i.test(candidate) ? "dark" : "unknown";
     }
   }
 
@@ -79,7 +79,6 @@ export async function initAbout({
     image.className = "skill-logo";
     image.alt = name;
     image.title = name;
-    image.crossOrigin = "anonymous";
 
     image.addEventListener("load", () => {
       if (!frame.isConnected) return;
