@@ -1,78 +1,229 @@
-/**
- * About feature.
- * Owns CMS-backed biography and software-skill presentation.
- */
-
 export async function initAbout({
   url,
   root = globalThis.document,
   loadJson,
   resolveAssetUrl,
+  getSiteRootUrl,
   showSoftwareLogos = false
 } = {}) {
-  const section = root?.querySelector('.about-section');
-  const skillsList = root?.querySelector('.software-skills');
-  let skills = [];
-
-  function applySoftwareLogosVisibility(show = showSoftwareLogos) {
-    showSoftwareLogos = Boolean(show);
-    root?.querySelectorAll('.software-skill').forEach(skill => {
-      const logo = skill.querySelector('.software-logo');
-      const name = skill.querySelector('.software-name');
-      if (logo) logo.style.display = showSoftwareLogos ? '' : 'none';
-      if (name) name.style.display = showSoftwareLogos ? 'none' : '';
-    });
+  const headline = root?.getElementById('aboutHeadline');
+  if (!headline) {
+    return {
+      setSoftwareLogosVisible() {},
+      renderSoftwareSkills() {},
+      getSkills: () => [],
+      cleanup() {}
+    };
   }
 
-  function renderSoftwareSkills(nextSkills = skills) {
-    if (!skillsList || !Array.isArray(nextSkills)) return;
-    skills = nextSkills;
+  const softwareList = root.getElementById('softwareSkillsList');
+  const multimediaList = root.getElementById('multimediaSkillsList');
+  const experienceList = root.getElementById('experienceList');
+  const educationList = root.getElementById('educationList');
+  const awardsList = root.getElementById('awardsList');
+  const subhead = root.getElementById('aboutSubhead');
+  const bio = root.getElementById('aboutBio');
+  const photo = root.getElementById('aboutPhoto');
+
+  let softwareSkills = [];
+  let multimediaSkills = [];
+
+  function skillInitials(name = '') {
+    const words = String(name).trim().split(/\\s+/).filter(Boolean);
+    if (words.length <= 1) return String(name).trim();
+    return words.map(word => /\\d/.test(word) || word.length <= 2
+      ? word.toUpperCase()
+      : word[0].toUpperCase()).join('');
+  }
+
+  function renderSoftwareSkills(list = softwareSkills) {
+    if (!softwareList || !Array.isArray(list)) return;
+    softwareSkills = list;
 
     const fragment = root.createDocumentFragment();
-    skills.forEach(skill => {
+
+    list.forEach(skill => {
       if (!skill) return;
 
-      const item = root.createElement('div');
-      item.className = 'software-skill';
+      const item = root.createElement('li');
+      const name = typeof skill === 'string' ? skill.trim() : String(skill.name || '').trim();
+      if (!name) return;
 
-      const logo = root.createElement('img');
-      logo.className = 'software-logo';
-      if (skill.logo && typeof resolveAssetUrl === 'function') logo.src = resolveAssetUrl(skill.logo);
-      logo.alt = skill.name || '';
+      const icon = typeof skill === 'object'
+        ? String(skill.icon || skill.logo || '').trim()
+        : '';
 
-      const name = root.createElement('span');
-      name.className = 'software-name';
-      name.textContent = skill.name || '';
+      if (!showSoftwareLogos || !icon) {
+        item.textContent = name;
+        fragment.appendChild(item);
+        return;
+      }
 
-      item.append(logo, name);
+      item.className = 'has-logo';
+      const frame = root.createElement('span');
+      frame.className = 'skill-logo-frame';
+      frame.title = name;
+
+      const image = root.createElement('img');
+      image.className = 'skill-logo';
+      image.alt = name;
+      image.title = name;
+      image.loading = 'lazy';
+      image.src = typeof resolveAssetUrl === 'function' ? resolveAssetUrl(icon) : icon;
+
+      image.addEventListener('error', () => {
+        frame.classList.add('is-fallback');
+        image.remove();
+        frame.textContent = skillInitials(name);
+      }, { once: true });
+
+      frame.appendChild(image);
+      item.appendChild(frame);
       fragment.appendChild(item);
     });
 
-    skillsList.replaceChildren(fragment);
-    applySoftwareLogosVisibility(showSoftwareLogos);
+    softwareList.replaceChildren(fragment);
   }
 
-  if (url && section && typeof loadJson === 'function') {
+  function renderMultimediaSkills(list = multimediaSkills) {
+    if (!multimediaList || !Array.isArray(list)) return;
+    multimediaSkills = list;
+
+    const fragment = root.createDocumentFragment();
+    list.forEach(skill => {
+      const name = typeof skill === 'string' ? skill.trim() : String(skill?.name || '').trim();
+      if (!name) return;
+      const item = root.createElement('li');
+      item.textContent = name;
+      fragment.appendChild(item);
+    });
+    multimediaList.replaceChildren(fragment);
+  }
+
+  function buildTimelineBlock({ title = '', dateLine = '', bullets = [] } = {}) {
+    const item = root.createElement('div');
+    item.className = 'timeline-item clean-timeline';
+
+    const heading = root.createElement('h4');
+    heading.textContent = title;
+    item.appendChild(heading);
+
+    if (dateLine) {
+      const date = root.createElement('span');
+      date.className = 'timeline-date';
+      date.textContent = dateLine;
+      item.appendChild(date);
+    }
+
+    (Array.isArray(bullets) ? bullets : [])
+      .map(value => String(value || '').trim())
+      .filter(Boolean)
+      .forEach((bullet, index, values) => {
+        const paragraph = root.createElement('p');
+        paragraph.textContent = bullet;
+        item.appendChild(paragraph);
+        if (index < values.length - 1) item.appendChild(root.createElement('br'));
+      });
+
+    return item;
+  }
+
+  function renderExperience(list) {
+    if (!experienceList || !Array.isArray(list) || !list.length) return;
+    const fragment = root.createDocumentFragment();
+
+    list.forEach(exp => {
+      if (!exp) return;
+      const dates = [exp.startDate, exp.endDate].filter(Boolean).join(' – ');
+      const dateLine = [exp.company, dates].filter(Boolean).join(' · ');
+      fragment.appendChild(buildTimelineBlock({
+        title: exp.role,
+        dateLine,
+        bullets: exp.bullets
+      }));
+    });
+
+    experienceList.replaceChildren(fragment);
+  }
+
+  function renderEducation(list) {
+    if (!educationList || !Array.isArray(list) || !list.length) return;
+    const fragment = root.createDocumentFragment();
+
+    list.forEach(entry => {
+      if (!entry) return;
+      const dateLine = [entry.degree, entry.graduationDate].filter(Boolean).join(' · ') || entry.detail || '';
+      fragment.appendChild(buildTimelineBlock({
+        title: entry.school || entry.title,
+        dateLine
+      }));
+    });
+
+    educationList.replaceChildren(fragment);
+  }
+
+  function renderAwards(list) {
+    if (!awardsList || !Array.isArray(list) || !list.length) return;
+    const fragment = root.createDocumentFragment();
+
+    list.forEach(entry => {
+      if (!entry) return;
+      fragment.appendChild(buildTimelineBlock({
+        title: entry.title,
+        dateLine: entry.detail || ''
+      }));
+    });
+
+    awardsList.replaceChildren(fragment);
+  }
+
+  function applySoftwareLogosVisibility(show = showSoftwareLogos) {
+    showSoftwareLogos = Boolean(show);
+    renderSoftwareSkills(softwareSkills);
+  }
+
+  if (url && typeof loadJson === 'function') {
     try {
-      const raw = await loadJson(url, null, { resolveUrl: resolveAssetUrl });
-      if (raw && typeof raw === 'object') {
-        const title = section.querySelector('.about-title');
-        const body = section.querySelector('.about-body');
-        if (title && raw.title) title.textContent = raw.title;
-        if (body && raw.body) body.textContent = raw.body;
-        if (Array.isArray(raw.skills)) renderSoftwareSkills(raw.skills);
+      const about = await loadJson(url, null, { resolveUrl: resolveAssetUrl });
+      if (about && typeof about === 'object') {
+        if (about.headline) headline.textContent = about.headline;
+        if (subhead && about.subhead) subhead.textContent = about.subhead;
+        if (bio && about.bio) bio.textContent = about.bio;
+
+        if (photo && about.photo) {
+          const photoData = typeof about.photo === 'string' ? { src: about.photo } : about.photo;
+          if (photoData?.src) {
+            const resolved = typeof resolveAssetUrl === 'function'
+              ? resolveAssetUrl(photoData.src)
+              : photoData.src;
+            photo.src = resolved;
+            if (photoData.focus) {
+              photo.style.objectPosition = photoData.focus;
+              photo.style.transformOrigin = photoData.focus;
+            }
+            if (photoData.zoom) photo.style.setProperty('--thumb-zoom', String(photoData.zoom));
+            if (photoData.rotate) photo.style.setProperty('--thumb-rotate', String(photoData.rotate) + 'deg');
+          }
+        }
+
+        softwareSkills = Array.isArray(about.softwareSkills) ? about.softwareSkills : [];
+        multimediaSkills = Array.isArray(about.multimediaSkills) ? about.multimediaSkills : [];
+        renderSoftwareSkills();
+        renderMultimediaSkills();
+        renderExperience(about.experience);
+        renderEducation(about.education);
+        renderAwards(about.awards);
       }
     } catch (error) {
       console.warn('About: could not load', url, error);
     }
   }
 
-  applySoftwareLogosVisibility(showSoftwareLogos);
-
+  renderSoftwareSkills();
   return {
     setSoftwareLogosVisible: applySoftwareLogosVisibility,
     renderSoftwareSkills,
-    getSkills: () => skills.slice(),
+    getSkills: () => softwareSkills.slice(),
     cleanup() {}
   };
 }
