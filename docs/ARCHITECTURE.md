@@ -29,7 +29,7 @@ The public runtime no longer depends on the retired `js/cms-data.js`, `js/site-r
 
 `js/app/page-composition.js` is the only place that wires the public feature graph. Features expose public entry points instead of importing each other's private implementation files.
 
-Current feature entry points include Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Site Settings.
+Current feature entry points include Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Site Settings. Gallery presentation mechanics are separated into its own presentation boundary, and Projects exposes a stable card-to-normalized-project lookup for consumers such as Lightbox.
 
 Gallery owns filter state and exposes the active-card contract consumed by Lightbox. Hero and Lightbox expose teardown methods, and the composition root calls them from `app.destroy()` so persistent listeners and timers can be released deterministically.
 
@@ -82,7 +82,7 @@ The public site and CMS are separate application surfaces that share repository 
 
 The public bootstrap has a top-level error boundary and contains Hero initialization so a hero-specific failure does not blank the rest of the page.
 
-The 3D viewer is lazy and disposes its renderer, controls, observers, animation resources, and document listeners during cleanup. Lightbox also disposes mounted 3D shells before replacing its media container.
+The 3D viewer is lazy and disposes its renderer, controls, observers, animation resources, and document listeners during cleanup. Shared feature lifecycle primitives are used where multiple long-lived feature resources need the same teardown contract. Lightbox also disposes mounted 3D shells before replacing its media container.
 
 ## Validation
 
