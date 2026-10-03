@@ -18,8 +18,10 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     if (event.shiftKey && documentRef.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && documentRef.activeElement === last) { event.preventDefault(); first.focus(); }
   }
-  function open() {
-    opener = documentRef.activeElement?.nodeType === 1 ? documentRef.activeElement : null;
+  function open({ captureOpener = true } = {}) {
+    if (captureOpener) {
+      opener = documentRef.activeElement?.nodeType === 1 ? documentRef.activeElement : null;
+    }
     lightboxEl.setAttribute('aria-modal','true');
     if (!lightboxEl.hasAttribute('tabindex')) lightboxEl.setAttribute('tabindex','-1');
     keydownCleanup?.();
@@ -116,7 +118,7 @@ let activeLightboxCards = []; // Only navigate through currently filtered items
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
 
 
-function openLightbox(index, initialMediaIndex = -1) {
+function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } = {}) {
   lightbox.classList.remove('is-3d-focused');
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
@@ -144,7 +146,7 @@ function openLightbox(index, initialMediaIndex = -1) {
 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
-  lightboxA11y.open();
+  lightboxA11y.open({ captureOpener: !preserveOpener });
   documentRef.body.style.overflow = 'hidden';
 
   windowRef.requestAnimationFrame(() => {
@@ -201,18 +203,18 @@ function closeLightbox() {
 const handlePrev = (event) => {
   event.stopPropagation();
   if (currentLightboxIndex > 0) {
-    openLightbox(currentLightboxIndex - 1);
+    openLightbox(currentLightboxIndex - 1, -1, { preserveOpener: true });
   } else {
-    openLightbox(activeLightboxCards.length - 1); // Loop to end
+    openLightbox(activeLightboxCards.length - 1, -1, { preserveOpener: true }); // Loop to end
   }
 };
 
 const handleNext = (event) => {
   event.stopPropagation();
   if (currentLightboxIndex < activeLightboxCards.length - 1) {
-    openLightbox(currentLightboxIndex + 1);
+    openLightbox(currentLightboxIndex + 1, -1, { preserveOpener: true });
   } else {
-    openLightbox(0); // Loop to start
+    openLightbox(0, -1, { preserveOpener: true }); // Loop to start
   }
 };
 
