@@ -156,6 +156,26 @@ try {
       const filterColor = await filterButtons.first().evaluate(el => getComputedStyle(el).color);
       if (!filterColor || filterColor === 'rgba(0, 0, 0, 0)') throw new Error('Works filter button styling did not load.');
 
+      const secondaryFilter = filterButtons.nth(1);
+      await secondaryFilter.click();
+      await page.waitForTimeout(420);
+      const filteredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
+        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+      );
+      if (filteredCards < 1) throw new Error('Works filter interaction hid every project unexpectedly.');
+      if (await secondaryFilter.getAttribute('data-filter') === 'all') throw new Error('Works secondary filter fixture is unexpectedly ALL.');
+
+      const activeFilterCount = await page.locator('.filter-tabs .tab-btn.active, .filter-tabs .filter-btn.active').count();
+      if (activeFilterCount !== 1) throw new Error(`Works filter interaction produced ${activeFilterCount} active filters.`);
+
+      const allFilter = page.locator('.filter-tabs [data-filter="all"]').first();
+      await allFilter.click();
+      await page.waitForTimeout(420);
+      const restoredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
+        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+      );
+      if (restoredCards < filteredCards) throw new Error('Works ALL filter did not restore the project set.');
+
       const firstCard = page.locator('#portfolioGrid .project-card').first();
       await firstCard.click();
       await page.waitForTimeout(200);
