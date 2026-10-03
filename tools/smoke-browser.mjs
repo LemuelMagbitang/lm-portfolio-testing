@@ -62,7 +62,7 @@ async function configureLogoRoutes(page) {
   });
 }
 
-async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }) {
+async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null) {
   const page = await browser.newPage({ viewport });
   await configureLogoRoutes(page);
 
@@ -72,6 +72,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
   });
 
+  if (typeof prepare === 'function') await prepare(page);
   await page.goto(`${BASE_URL}${path}`, {
     waitUntil: 'domcontentloaded',
     timeout: 15000
@@ -206,6 +207,68 @@ try {
           throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
         }
       }
+    });
+
+    await smokePage(browser, '/admin/', async page => {
+      const nav = page.locator('.nav-item[data-section="about"]');
+      if (await nav.count() !== 1) throw new Error('CMS About navigation item is missing.');
+
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+
+      const softwareRows = await page.locator('#tags_software .skill-editor-row').count();
+      if (softwareRows < 1) throw new Error('CMS About editor rendered no software skill rows.');
+
+      const kritaRow = page.locator('#tags_software .skill-editor-row').filter({ hasText: 'Krita' }).first();
+      if (await kritaRow.count() !== 1) throw new Error('CMS About editor did not render the stubbed Krita skill.');
+
+      const logo = kritaRow.locator('img').first();
+      await logo.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+      if (await logo.count() !== 1) throw new Error('CMS About editor did not render a Krita logo preview.');
+    }, { width: 1280, height: 900 }, async page => {
+      const about = {
+        headline: 'CMS Smoke Test',
+        subhead: 'Software logo lookup',
+        bio: 'Browser smoke fixture.',
+        photo: { src: '', zoom: 1, focus: '50% 50%', rotate: 0 },
+        softwareSkills: [{ name: 'Krita', icon: '' }],
+        multimediaSkills: [],
+        experience: [{ role: 'Test Role', company: 'Test Company', startDate: '2026', endDate: '', bullets: [] }],
+        education: [{ school: 'Test School', degree: 'Test Degree', graduationDate: '2026', title: '', detail: '' }],
+        awards: [{ title: 'Test Award', detail: '2026' }]
+      };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(about))));
+      await page.addInitScript(({ encodedAbout }) => {
+        sessionStorage.setItem('lm_cms_session_v1', JSON.stringify({
+          owner: 'Smoke',
+          repo: 'TestRepo',
+          branch: 'main',
+          token: 'github_pat_smoke_test_token'
+        }));
+        window.__LM_CMS_SMOKE_ABOUT__ = encodedAbout;
+      }, { encodedAbout: encoded });
+
+      await page.route('https://api.github.com/**', async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname === '/repos/Smoke/TestRepo') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ full_name: 'Smoke/TestRepo', default_branch: 'main' })
+          });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/contents/data/about.json') {
+          const body = window.__LM_CMS_SMOKE_ABOUT__;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ content: body, sha: 'smoke-about-sha' })
+          });
+          return;
+        }
+        await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Not found' }) });
+      });
     });
 
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
