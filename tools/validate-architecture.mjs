@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const jsRoot = path.join(root, 'js');
+const errors = [];
 
 const rules = [
   { dir: 'core', forbidden: ['features/', 'data/', 'infrastructure/', 'app/'] },
@@ -19,7 +20,6 @@ const legacyRootModules = new Set([
   'model-viewer.js',
   'media-background.js'
 ]);
-const errors = [];
 
 function walk(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -44,6 +44,24 @@ function normalizeImport(file, specifier) {
 function featureName(rel) {
   const match = rel.match(/^features\/([^/]+)\//);
   return match ? match[1] : null;
+}
+
+// script.js is only the browser entrypoint. Composition and orchestration
+// live under js/app so the entrypoint cannot slowly become a new monolith.
+const entrypoint = path.join(jsRoot, 'script.js');
+if (!fs.existsSync(entrypoint)) {
+  errors.push('js/script.js is missing');
+} else {
+  const lineCount = fs.readFileSync(entrypoint, 'utf8').split(/\r?\n/).length;
+  if (lineCount > 40) {
+    errors.push(`js/script.js must remain a thin entrypoint; found ${lineCount} lines`);
+  }
+}
+
+for (const required of ['app/bootstrap.js', 'app/page-composition.js']) {
+  if (!fs.existsSync(path.join(jsRoot, required))) {
+    errors.push(`Missing composition module js/${required}`);
+  }
 }
 
 for (const file of walk(jsRoot)) {
