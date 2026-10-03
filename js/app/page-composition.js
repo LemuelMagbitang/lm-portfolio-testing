@@ -173,7 +173,6 @@ export async function createPortfolioApp({
       heroFeature?.destroy?.();
       galleryFeature?.destroy?.();
       navigation.destroy?.();
-      navigation.close();
       reviewsFeature.cleanup?.();
       forms.cleanup?.();
     }
