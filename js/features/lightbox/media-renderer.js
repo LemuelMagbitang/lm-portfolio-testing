@@ -138,7 +138,7 @@ export function createLightboxMediaRenderer({
 
     Promise.resolve()
       .then(() => {
-        if (!modelWrap.isConnected || !lightbox?.classList.contains('active')) return;
+        if (!modelWrap.isConnected || !lightbox?.classList.contains('active')) return null;
 
         return mountModelViewer(modelWrap, resolveAssetUrl(item.src), {
           autoRotate: false,
@@ -176,7 +176,17 @@ export function createLightboxMediaRenderer({
           }
         });
       })
+      .then(cleanup => {
+        if (!cleanup) return;
+        // mountModelViewer is async. The Lightbox may have navigated or closed
+        // while the model loader was waiting on the asset. Never keep a WebGL
+        // viewer alive for a detached media item.
+        if (!modelWrap.isConnected || !lightbox?.classList.contains('active')) {
+          try { cleanup?.(); } catch (_) {}
+        }
+      })
       .catch(error => {
+        if (!modelWrap.isConnected) return;
         modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
         console.warn('3D model viewer:', error);
       });
