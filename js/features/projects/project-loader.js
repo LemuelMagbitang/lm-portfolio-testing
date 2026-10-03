@@ -57,23 +57,36 @@ export async function loadProjects({
     const raw = await loadJson(url, null, { resolveUrl });
     const projects = normalizeProjects(raw);
     if (!projects.length) return false;
-    projectModels = projects.slice();
-    projectCardMap.clear();
-
     const fragment = createFragment();
     if (!fragment || typeof fragment.appendChild !== 'function') return false;
 
     let mountedCount = 0;
+    const mountedPairs = [];
+
     projects.forEach(project => {
       const card = buildCard(project);
       if (!card) return;
-      cardProjectMap.set(card, project);
-      if (project.id) projectCardMap.set(project.id, card);
+      mountedPairs.push([card, project]);
       fragment.appendChild(card);
       mountedCount += 1;
     });
-    if (!mountedCount) return false;
+
+    if (!mountedCount || mountedCount !== projects.length) {
+      // Keep the published project state and card mappings coherent. A partial
+      // build must not replace the current gallery while leaving the Projects
+      // API describing cards that never reached the DOM.
+      return false;
+    }
+
     grid.replaceChildren(fragment);
+
+    projectModels = projects.slice();
+    projectCardMap.clear();
+    mountedPairs.forEach(([card, project]) => {
+      cardProjectMap.set(card, project);
+      if (project.id) projectCardMap.set(project.id, card);
+    });
+
     return true;
   } catch (error) {
     console.warn('Projects: could not load normalized project data.', error);
