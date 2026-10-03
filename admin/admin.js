@@ -1645,7 +1645,11 @@ function backgroundControlHtml(background){
       <label class="field-label">Background color</label>
       <div class="media-bg-row">
         <label class="media-bg-toggle"><input type="checkbox" data-bg-enabled ${enabled?'checked':''}> <span>Use background</span></label>
-        <input data-bg-color type="color" value="${attr(color)}" aria-label="Background color" ${enabled?'':'disabled'}>
+        <div class="media-bg-color">
+          <span class="media-bg-swatch" data-bg-swatch style="background:${attr(color)}" aria-hidden="true"></span>
+          <input data-bg-color type="color" value="${attr(color)}" aria-label="Background color" ${enabled?'':'disabled'}>
+          <span class="media-bg-hex" data-bg-hex>${esc(color)}</span>
+        </div>
         <button type="button" class="ghost media-bg-reset" data-bg-reset>Reset</button>
       </div>
       <div class="hint">Used behind transparent Lottie and 3D artwork.</div>
@@ -1670,6 +1674,10 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
     enabledInput.checked = !!bg;
     colorInput.disabled = !bg;
     colorInput.value = bg?.color || '#121212';
+    const swatch = control.querySelector('[data-bg-swatch]');
+    const hex = control.querySelector('[data-bg-hex]');
+    if (swatch) swatch.style.background = colorInput.value;
+    if (hex) hex.textContent = colorInput.value.toUpperCase();
   }
 
   enabledInput.addEventListener('change', () => {
@@ -1684,6 +1692,10 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
   colorInput.addEventListener('input', () => {
     if (!enabledInput.checked) return;
     setBackground({type:'solid', color:colorInput.value || '#121212'});
+    const swatch = control.querySelector('[data-bg-swatch]');
+    const hex = control.querySelector('[data-bg-hex]');
+    if (swatch) swatch.style.background = colorInput.value;
+    if (hex) hex.textContent = colorInput.value.toUpperCase();
     onChanged?.();
   });
 
@@ -2048,7 +2060,7 @@ RENDERERS.projects = async function(data){
             </div>
           </div>
           <div class="collapsible-body" style="display:${isOpen?'block':'none'};margin-top:16px;" data-mbody>
-            <div class="row">
+            <div class="row media-editor-row">
               <div class="field" style="max-width:140px"><label class="field-label">Type</label>
                 <select data-mf="type">
                   <option value="image" ${m.type==='image'?'selected':''}>Image</option>
@@ -2060,7 +2072,7 @@ RENDERERS.projects = async function(data){
               </div>
               <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
             </div>
-            <div class="row">
+            <div class="row media-editor-row media-editor-meta">
               <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
               <div class="field" style="max-width:180px"><label class="field-label">Orientation</label>
                 <select data-mf="orientation">
@@ -2072,6 +2084,7 @@ RENDERERS.projects = async function(data){
               </div>
             </div>
             <div data-mediapreview></div>
+             ${backgroundControlHtml(m.background)}
           </div>
         `;
         row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
