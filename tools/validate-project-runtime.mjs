@@ -55,7 +55,24 @@ assert.equal(children[0].project.id, 'runtime-test-project');
 assert.equal(calls.length, 1);
 assert.equal(calls[0][0], 'replaceChildren');
 assert.equal(calls[0][1], fragment);
-assert.equal(getProjectForCard(children[0]), projects[0]);
+assert.deepEqual(getProjectForCard(children[0]), {
+  id: 'runtime-test-project',
+  title: 'Runtime Test Project',
+  subtitle: '',
+  description: '',
+  badge: '',
+  filters: ['3d-motion'],
+  thumbnail: {},
+  mediaCount: 1,
+  capabilities: {
+    hasImage: true,
+    hasVideo: false,
+    hasYouTube: false,
+    hasLottie: false,
+    hasModel: false
+  },
+  media: [{ type: 'image', src: 'media/test.webp' }]
+});
 assert.equal(getProjectForCard({}), null);
 
 const missingUrl = await mountProjects({
