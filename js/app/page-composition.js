@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects, getProjectForCard, getProjects } from '../features/projects/index.js';
+import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout } from '../features/about/index.js?v=20261003-12';
@@ -154,7 +154,9 @@ export async function createPortfolioApp({
       loadJson: loadCmsJson,
       resolveAssetUrl: siteAssetUrl,
       ensureLottiePlayer,
-      ensureMediaBackgroundHelper
+      ensureMediaBackgroundHelper,
+      getProjects,
+      getCardForProject
     });
   } catch (error) {
     console.warn('Gallery: initialization failed', error);
