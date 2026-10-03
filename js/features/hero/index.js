@@ -195,6 +195,87 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background };
   }
 
+  function normalizeHeroMessages(raw) {
+    const list = Array.isArray(raw)
+      ? raw
+      : (Array.isArray(raw?.messages) ? raw.messages : []);
+
+    return list
+      .filter(item => item && typeof item === 'object' && String(item.text || '').trim())
+      .map(item => ({
+        label: String(item.label || '').trim(),
+        text: String(item.text || '').trim(),
+        author: String(item.author || '').trim(),
+        source: String(item.source || '').trim(),
+        weight: Number.isFinite(Number(item.weight)) && Number(item.weight) >= 0 ? Number(item.weight) : 1
+      }));
+  }
+
+  function pickHeroMessage(messages, exclude = -1) {
+    if (messages.length <= 1) return 0;
+
+    const weights = messages.map(item => item.weight);
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    let chosen = 0;
+
+    if (total <= 0) {
+      chosen = Math.floor(Math.random() * messages.length);
+    } else {
+      let roll = Math.random() * total;
+      for (let i = 0; i < messages.length; i += 1) {
+        roll -= weights[i];
+        if (roll <= 0) {
+          chosen = i;
+          break;
+        }
+      }
+    }
+
+    if (chosen === exclude) {
+      const alternatives = messages
+        .map((_, i) => i)
+        .filter(i => i !== exclude && messages[i].weight > 0);
+      if (alternatives.length) {
+        chosen = alternatives[Math.floor(Math.random() * alternatives.length)];
+      }
+    }
+
+    return chosen;
+  }
+
+  function buildHeroMessageView(documentRef, root) {
+    if (!root) return null;
+
+    const ensure = (id, className, tagName) => {
+      let element = root.querySelector('.' + className);
+      if (!element) {
+        element = documentRef.createElement(tagName);
+        element.className = className;
+        element.id = id;
+        root.appendChild(element);
+      }
+      return element;
+    };
+
+    const label = ensure('heroQuoteLabel', 'hero-quote-label', 'span');
+    const text = ensure('heroQuoteText', 'hero-quote-text', 'p');
+    const author = ensure('heroQuoteAuthor', 'hero-quote-author', 'span');
+
+    root.append(label, text, author);
+    return { root, label, text, author };
+  }
+
+  function renderHeroMessage(view, item) {
+    if (!view || !item) return;
+    view.label.textContent = item.label;
+    view.label.style.display = item.label ? '' : 'none';
+    view.text.textContent = item.text;
+    const credit = [item.author, item.source].filter(Boolean).join(', ');
+    view.author.textContent = credit ? '— ' + credit : '';
+    view.author.style.display = credit ? '' : 'none';
+    view.root.classList.add('is-ready');
+  }
+
   // Same shape again, this time for a hand-curated entry in
   // data/hero-loop.json — used only in 'manual' loop mode. Every field
   // already exists on the entry itself; this just resolves its path
@@ -231,12 +312,15 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     const isReducedMotion = typeof options.prefersReducedMotion === 'function' ? options.prefersReducedMotion : prefersReducedMotion;
 
     const heroLoopUrl = options.heroLoopUrl || 'data/hero-loop.json';
+    const heroMessagesUrl = options.heroMessagesUrl || 'data/hero.json';
     const projectsUrl = options.projectsUrl || 'data/projects.json';
 
     const config = {
       loopMode: ['latest','manual','mixed'].includes(options.loopMode) ? options.loopMode : 'latest',
       transitionStyle: ['kenburns','fade','none'].includes(options.transitionStyle) ? options.transitionStyle : 'kenburns',
-      crossfadeMs: Number.isFinite(Number(options.crossfadeMs)) && Number(options.crossfadeMs) >= 500 ? Number(options.crossfadeMs) : 3500
+      crossfadeMs: Number.isFinite(Number(options.crossfadeMs)) && Number(options.crossfadeMs) >= 500 ? Number(options.crossfadeMs) : 3500,
+      messageFadeMs: Number.isFinite(Number(options.messageFadeMs)) && Number(options.messageFadeMs) >= 0 ? Number(options.messageFadeMs) : 600,
+      messageAutoRotateMs: Number.isFinite(Number(options.messageAutoRotateMs)) && Number(options.messageAutoRotateMs) >= 0 ? Number(options.messageAutoRotateMs) : 0
     };
     const heroContainer = documentRef.getElementById('heroBanner') || documentRef.getElementById('heroBannerAbout');
     if (!heroContainer) return;
@@ -245,6 +329,55 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     let latestSources = [];
     let manualSources = [];
     let sources = [];
+    let messageRotationTimer = null;
+    let messageFadeTimer = null;
+
+
+    const heroMessageRoot = documentRef.getElementById('heroQuote') || documentRef.querySelector('.hero-quote');
+    if (heroMessageRoot) {
+      const messageView = buildHeroMessageView(documentRef, heroMessageRoot);
+      let messages = [{ label: 'LM.', text: 'Open for freelance work.', author: '', source: '', weight: 1 }];
+      let currentMessage = -1;
+
+      const fadeToMessage = (index, animate = true) => {
+        const item = messages[index];
+        if (!item) return;
+        currentMessage = index;
+        if (!animate) {
+          renderHeroMessage(messageView, item);
+          return;
+        }
+
+        windowRef.clearTimeout(messageFadeTimer);
+        messageView.root.style.opacity = '0';
+        messageFadeTimer = windowRef.setTimeout(() => {
+          renderHeroMessage(messageView, item);
+          windowRef.requestAnimationFrame(() => { messageView.root.style.opacity = '1'; });
+        }, config.messageFadeMs);
+      };
+
+      fadeToMessage(pickHeroMessage(messages), false);
+      windowRef.requestAnimationFrame(() => {
+        messageView.root.style.opacity = '1';
+      });
+
+      try {
+        const rawMessages = await loadJson(heroMessagesUrl, null, { resolveUrl: resolveAssetUrl });
+        const cmsMessages = normalizeHeroMessages(rawMessages);
+        if (cmsMessages.length) {
+          messages = cmsMessages;
+          fadeToMessage(pickHeroMessage(messages, currentMessage));
+        }
+      } catch (err) {
+        console.warn('Hero messages: could not load', heroMessagesUrl, err);
+      }
+
+      if (config.messageAutoRotateMs > 0 && messages.length > 1) {
+        messageRotationTimer = windowRef.setInterval(() => {
+          fadeToMessage(pickHeroMessage(messages, currentMessage));
+        }, config.messageAutoRotateMs);
+      }
+    }
 
     // Load the CMS-curated manual list from the configured URL. A file path
     // is preferred over pasted JSON because it stays version-controlled,
@@ -360,6 +493,8 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     return {
       destroy() {
         stopCrossfade?.();
+        windowRef.clearInterval(messageRotationTimer);
+        windowRef.clearTimeout(messageFadeTimer);
         heroContainer.querySelectorAll('.slide').forEach(slide => {
           slide.querySelectorAll('video').forEach(video => video.pause?.());
         });
