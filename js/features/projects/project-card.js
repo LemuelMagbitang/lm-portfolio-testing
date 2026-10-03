@@ -103,23 +103,6 @@ export function buildProjectCardElement(
   info.append(title, subtitle);
   card.appendChild(info);
 
-  if (project.description) {
-    const description = documentRef.createElement('div');
-    description.className = 'project-description';
-    description.style.display = 'none';
-    const text = documentRef.createElement('p');
-    text.textContent = project.description;
-    description.appendChild(text);
-    card.appendChild(description);
-  }
-
-  const mediaList = documentRef.createElement('div');
-  mediaList.className = 'project-media-list';
-  mediaList.style.display = 'none';
-  (Array.isArray(project.media) ? project.media : []).forEach(media => {
-    if (media?.src) mediaList.appendChild(buildMediaItemElement(media, { documentRef }));
-  });
-  card.appendChild(mediaList);
 
   return card;
 }
