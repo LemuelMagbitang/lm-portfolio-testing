@@ -197,6 +197,9 @@ try {
       const firstArtwork = page.locator('#lightboxMediaContainer .lightbox-media-item img').first();
       if (await firstArtwork.count() !== 1) throw new Error('Mobile Lightbox did not render the first artwork as an image.');
 
+      const artworkAlt = await firstArtwork.getAttribute('alt');
+      if (!artworkAlt?.trim()) throw new Error('Mobile Lightbox image is missing accessible alt text.');
+
       const viewportWidth = await page.evaluate(() => window.innerWidth);
       const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
       if (Math.abs(artworkWidth - viewportWidth) > 2) {
