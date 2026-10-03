@@ -306,6 +306,7 @@ function openLightbox(index, initialMediaIndex = -1) {
               console.warn('3D model viewer:', err);
             });
         }
+      }
       if (lottieUrl) {
         // <lottie-player> plays a Lottie/JSON animation the same way
         // <video> plays a video file — same orientation handling as
