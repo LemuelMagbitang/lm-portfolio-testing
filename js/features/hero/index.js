@@ -256,6 +256,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
     };
     const heroContainer = documentRef.getElementById('heroBanner') || documentRef.getElementById('heroBannerAbout');
     if (!heroContainer) return;
+    heroContainer.dataset.component = 'portfolio-hero';
 
     const siteRootUrl = getSiteRoot();
     const lifecycle = createLifecycle();
