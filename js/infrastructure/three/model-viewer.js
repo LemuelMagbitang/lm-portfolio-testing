@@ -280,6 +280,12 @@ export async function mountModelViewer(container, src, options = {}) {
       fitRequested = true;
       if (active) {
         if (typeof options.onActivate === 'function') options.onActivate();
+        // Activation can begin from keyboard or a pointer tap. Move focus to
+        // the visible Back control so keyboard users have an immediate,
+        // deterministic way out of the full-screen 3D state.
+        requestAnimationFrame(() => {
+          try { back.focus({ preventScroll: true }); } catch (_) { back.focus(); }
+        });
       } else {
         controls.reset();
         if (typeof options.onDeactivate === 'function') options.onDeactivate();
