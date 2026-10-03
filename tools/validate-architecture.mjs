@@ -12,7 +12,6 @@ const rules = [
   { dir: 'features', forbidden: ['app/'] }
 ];
 
-const legacyFacades = new Set(['cms-data.js', 'site-runtime.js']);
 const legacyRootModules = new Set([
   'gallery.js',
   'hero.js',
@@ -126,13 +125,10 @@ for (const feature of featureDirs) {
   }
 }
 
-for (const facade of legacyFacades) {
+for (const facade of ['cms-data.js', 'site-runtime.js']) {
   const file = path.join(jsRoot, facade);
-  if (!fs.existsSync(file)) continue;
-  const source = fs.readFileSync(file, 'utf8');
-  const lineCount = source.split(/\r?\n/).length;
-  if (lineCount > 80) {
-    errors.push(`${facade} is a migration facade but is ${lineCount} lines; keep it temporary and thin`);
+  if (fs.existsSync(file)) {
+    errors.push(`Legacy runtime facade js/${facade} must be removed after infrastructure cutover`);
   }
 }
 
