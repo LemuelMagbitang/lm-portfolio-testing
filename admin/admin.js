@@ -3054,7 +3054,7 @@ function openMediaPicker(onPick, options={}){
 // calls onPicked with the chosen path for anything that needs to react
 // beyond that — a live preview, most often.
 function attachMediaBrowseButton(inputEl, onPicked, optionsOrProvider){
-  if(!inputEl || inputEl.closest('.browse-row')) return null;
+  if(!inputEl || !inputEl.parentNode || inputEl.closest('.browse-row')) return null;
   const row = document.createElement('div');
   row.className = 'browse-row';
   inputEl.parentNode.insertBefore(row, inputEl);
