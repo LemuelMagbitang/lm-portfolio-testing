@@ -101,6 +101,9 @@ export function normalizeProject(project = {}) {
     const focus = normalizeString(thumbnailSource.focus);
     if (focus) normalized.thumbnail.focus = focus;
 
+    const orientation = normalizeString(thumbnailSource.orientation).toLowerCase();
+    if (ORIENTATIONS.has(orientation)) normalized.thumbnail.orientation = orientation;
+
     const zoom = Number(thumbnailSource.zoom);
     if (Number.isFinite(zoom) && zoom > 0) normalized.thumbnail.zoom = zoom;
 
