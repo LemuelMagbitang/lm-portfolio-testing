@@ -61,6 +61,16 @@ export async function initGallery(options = {}) {
   let filterSettling = false;
   let suppressFilterClickUntil = 0;
 
+  // Gallery owns these persistent listeners and removes them on destroy().
+  // The generated pagination-dot listeners are attached to short-lived dot
+  // nodes and disappear with the nodes when the pager is rebuilt.
+  const listenerCleanups = [];
+  const bind = (target, type, handler, listenerOptions) => {
+    if (!target?.addEventListener) return;
+    target.addEventListener(type, handler, listenerOptions);
+    listenerCleanups.push(() => target.removeEventListener(type, handler, listenerOptions));
+  };
+
   function getBaseCount() {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -301,7 +311,7 @@ export async function initGallery(options = {}) {
     }
   }
 
-  filterBtns.forEach(btn => btn.addEventListener('click', event => {
+  filterBtns.forEach(btn => bind(btn, 'click', event => {
     if (Date.now() < suppressFilterClickUntil) {
       event.preventDefault();
       return;
@@ -309,14 +319,14 @@ export async function initGallery(options = {}) {
     activateFilterButton(btn, { center: true, updateUrl: true });
   }));
 
-  showMoreBtn?.addEventListener('click', () => {
+  bind(showMoreBtn, 'click', () => {
     isExpanded = !isExpanded;
     render();
     if (!isExpanded) document.querySelector('.filter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   let resizeTimer;
-  window.addEventListener('resize', () => {
+  bind(window, 'resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       baseCount = getBaseCount();
@@ -328,7 +338,7 @@ export async function initGallery(options = {}) {
     }, 120);
   });
 
-  filterTabs?.addEventListener('scroll', () => {
+  bind(filterTabs, 'scroll', () => {
     if (!isFilterCarousel()) return;
     if (filterScrollFrame) return;
     filterScrollFrame = window.requestAnimationFrame(() => {
@@ -338,7 +348,7 @@ export async function initGallery(options = {}) {
     });
   }, { passive: true });
 
-  filterTabs?.addEventListener('scrollend', () => {
+  bind(filterTabs, 'scrollend', () => {
     if (!isFilterCarousel()) return;
     if (filterPointerActive) return;
     if (filterSettling) {
@@ -353,7 +363,7 @@ export async function initGallery(options = {}) {
      all share the same settling rule. The centered filter is selected only
      after the user's movement ends, so the interface never fights an
      in-progress swipe or drag. */
-  filterTabs?.addEventListener('pointerdown', event => {
+  bind(filterTabs, 'pointerdown', event => {
     if (!isFilterCarousel()) return;
     filterPointerActive = true;
 
@@ -366,7 +376,7 @@ export async function initGallery(options = {}) {
     };
   });
 
-  filterTabs?.addEventListener('pointermove', event => {
+  bind(filterTabs, 'pointermove', event => {
     if (!filterDrag || event.pointerId !== filterDrag.pointerId) return;
     const distance = event.clientX - filterDrag.startX;
     if (Math.abs(distance) > 4) {
@@ -402,8 +412,8 @@ export async function initGallery(options = {}) {
     }
   }
 
-  filterTabs?.addEventListener('pointerup', finishFilterPointer);
-  filterTabs?.addEventListener('pointercancel', finishFilterPointer);
+  bind(filterTabs, 'pointerup', finishFilterPointer);
+  bind(filterTabs, 'pointercancel', finishFilterPointer);
 
   function applyHash() {
     const hash = decodeURIComponent(window.location.hash.replace('#', ''));
@@ -428,12 +438,30 @@ export async function initGallery(options = {}) {
     if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
     updateFilterPager(filterBtns.indexOf(activeBtn));
   });
-  window.addEventListener('hashchange', applyHash);
-  window.addEventListener('load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
+  bind(window, 'hashchange', applyHash);
+  bind(window, 'load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
   return {
     render,
     getFilter: () => currentFilter,
     getAllCards: () => allCards.slice(),
-    getActiveCards: () => allCards.filter(card => cardMatchesFilter(card, currentFilter)).slice()
+    getActiveCards: () => allCards.filter(card => cardMatchesFilter(card, currentFilter)).slice(),
+    destroy() {
+      window.clearTimeout(filterScrollTimer);
+      window.clearTimeout(filterSettleTimer);
+      window.cancelAnimationFrame?.(filterScrollFrame);
+      window.clearTimeout(resizeTimer);
+      listenerCleanups.splice(0).forEach(cleanup => {
+        try { cleanup(); } catch (_) {}
+      });
+      filterDrag = null;
+      filterPointerActive = false;
+      filterSettling = false;
+      filterPager?.remove();
+      filterPager = null;
+      filterPageDots = [];
+      filterTabs?.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
+      if (portfolioGrid) portfolioGrid.style.maxHeight = '';
+      gridFadeOverlay?.classList.add('is-hidden');
+    }
   };
 }
