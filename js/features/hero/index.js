@@ -489,7 +489,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       }
     }
 
-    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef);
+    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef, isReducedMotion);
     return {
       destroy() {
         stopCrossfade?.();
@@ -504,12 +504,12 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     };
   }
 
-  function startHeroCrossfade(heroContainer, crossfadeMs, windowRef = globalThis.window) {
+  function startHeroCrossfade(heroContainer, crossfadeMs, windowRef = globalThis.window, isReducedMotionFn = prefersReducedMotion) {
     const slides = heroContainer.querySelectorAll('.slide');
     if (slides.length <= 1) return () => {};
 
     let currentSlide = 0;
-    if (isReducedMotion()) return () => {};
+    if (isReducedMotionFn()) return () => {};
     const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
       ? Number(crossfadeMs)
       : 3500;
@@ -519,6 +519,6 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       slides[currentSlide].classList.add('active');
     }, intervalMs); // configured in Hero Loop Animation
 
-    return () => clearInterval(intervalId);
+    return () => windowRef.clearInterval(intervalId);
   }
 export { initHeroBanner as initHeroBannerV2 };
