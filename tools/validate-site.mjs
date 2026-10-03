@@ -631,7 +631,7 @@ function validateArchitecture() {
     ['js/infrastructure/software-logo/lookup.js', /export function findSoftwareLogoCandidates/],
     ['js/core/lifecycle.js', /export function createLifecycle/],
     ['js/features/gallery/presentation.js', /export function applyGalleryReveal/],
-    ['js/features/projects/index.js', /export \{ mountProjects \}/],
+    ['js/features/projects/index.js', /export \{ mountProjects[^\n]*getProjects/],
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
     ['js/features/lightbox/index.js', /export function initLightbox/],
@@ -810,6 +810,16 @@ function validateCmsRegressionContracts() {
       !composition.includes('initGallery(') ||
       !composition.includes('initLightbox(')) {
     err('Portfolio composition: Projects, Gallery, and Lightbox controllers must remain explicitly wired.');
+  }
+
+  if (!composition.includes('getProjects()') || /project-media-list/.test(composition)) {
+    err('Composition: runtime media capability checks must use normalized Projects, not hidden card markup.');
+  }
+
+  if (!projectCard.includes('project-card') ||
+      projectCard.includes('project-media-list') ||
+      projectCard.includes('buildMediaItemElement')) {
+    err('Project cards: presentation markup must not act as an inter-feature project-data bus.');
   }
 
   if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) {
