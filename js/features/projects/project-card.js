@@ -6,6 +6,35 @@
 import { buildMediaItemElement, findProjectMediaBackground, projectHas3D } from './project-media.js';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
 
+function getYouTubeId(src = '') {
+  const value = String(src).trim();
+  const match = value.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
+  return match ? match[1] : '';
+}
+
+function getFallbackThumbnailSource(project = {}) {
+  const media = Array.isArray(project.media) ? project.media : [];
+
+  for (const item of media) {
+    if (!item?.src) continue;
+    const type = String(item.type || mediaTypeFromSrc(item.src)).toLowerCase();
+    if (['image', 'video', 'lottie', 'model'].includes(type)) {
+      return {
+        type,
+        src: item.src,
+        background: item.background && typeof item.background === 'object' ? item.background : null
+      };
+    }
+  }
+
+  const youtube = media.find(item => String(item?.type || '').toLowerCase() === 'youtube' && item?.src);
+  const id = youtube ? getYouTubeId(youtube.src) : '';
+  return id ? {
+    type: 'image',
+    src: `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+  } : null;
+}
+
 export function buildProjectCardElement(
   project = {},
   { resolveAssetUrl, show3DIndicator = true } = {}
@@ -27,11 +56,13 @@ export function buildProjectCardElement(
 
   const thumbnail = document.createElement('div');
   thumbnail.className = 'card-thumbnail';
-  const t = project.thumbnail || {};
+  const explicitThumbnail = project.thumbnail || {};
+  const fallbackThumbnail = explicitThumbnail.src ? null : getFallbackThumbnailSource(project);
+  const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
 
-  if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
+  if (explicitThumbnail.type) thumbnail.dataset.thumbnailType = String(explicitThumbnail.type);
   if (t.src && typeof resolveAssetUrl === 'function') {
     const media = buildProjectThumbnailMedia(
       { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
@@ -43,6 +74,9 @@ export function buildProjectCardElement(
       if (t.zoom && Number(t.zoom) !== 1) media.dataset.zoom = String(t.zoom);
       if (t.rotate) media.dataset.rotate = String(t.rotate);
       if (background && typeof background === 'object') thumbnail.dataset.background = JSON.stringify(background);
+      if (fallbackThumbnail?.type === 'video') media.setAttribute('data-video-thumb', '');
+      if (fallbackThumbnail?.type === 'lottie') media.setAttribute('data-lottie-thumb', '');
+      if (fallbackThumbnail?.type === 'model') media.setAttribute('data-model-thumb', '');
       thumbnail.appendChild(media);
     }
   } else {
