@@ -44,7 +44,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     // Progressive enhancement only — most browsers don't support this
     // yet, so this silently does nothing and the CSS default (top-biased
     // crop) is what visitors see. Nothing breaks either way.
-    if (!('FaceDetector' in window)) return;
+    if (!('FaceDetector' in windowRef)) return;
 
     try {
       const detector = new windowRef.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
@@ -356,7 +356,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       }
     }
 
-    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs);
+    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef);
     return {
       destroy() {
         stopCrossfade?.();
@@ -369,7 +369,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     };
   }
 
-  function startHeroCrossfade(heroContainer, crossfadeMs) {
+  function startHeroCrossfade(heroContainer, crossfadeMs, windowRef = globalThis.window) {
     const slides = heroContainer.querySelectorAll('.slide');
     if (slides.length <= 1) return () => {};
 
@@ -378,7 +378,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
       ? Number(crossfadeMs)
       : 3500;
-    const intervalId = (heroContainer.ownerDocument?.defaultView || globalThis.window).setInterval(() => {
+    const intervalId = windowRef.setInterval(() => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
