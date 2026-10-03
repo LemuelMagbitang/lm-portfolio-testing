@@ -7,8 +7,17 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
   let focusCleanup = null;
   let keydownCleanup = null;
   function getFocusable() {
-    return Array.from(lightboxEl.querySelectorAll('a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'))
-      .filter(el => !el.hidden && el.offsetParent !== null);
+    return Array.from(lightboxEl.querySelectorAll(
+      'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    )).filter(el => {
+      if (el.hidden) return false;
+      const style = documentRef.defaultView?.getComputedStyle?.(el);
+      if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+      // offsetParent is null for fixed-position controls in Chromium. Use
+      // client rects instead so the Lightbox chrome remains part of the
+      // keyboard focus cycle without admitting detached/zero-sized nodes.
+      return el.getClientRects?.().length > 0;
+    });
   }
   function onKeydown(event) {
     if (!lightboxEl.classList.contains('active') || event.key !== 'Tab') return;
