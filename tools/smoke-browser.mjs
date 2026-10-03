@@ -346,43 +346,6 @@ try {
       const videos = page.locator('#lightboxMediaContainer video');
       if (await videos.count() >= 2) {
         const handoffWorked = await page.evaluate(() => {
-          const videoNodes = Array.from(document.querySelectorAll('#lightboxMediaContainer video'));
-          const originalPause = HTMLMediaElement.prototype.pause;
-          const pauseTargets = [];
-          HTMLMediaElement.prototype.pause = function(){ pauseTargets.push(this); };
-          try {
-            videoNodes[0].dispatchEvent(new Event('play', { bubbles: true }));
-            videoNodes[1].dispatchEvent(new Event('play', { bubbles: true }));
-          } finally {
-            HTMLMediaElement.prototype.pause = originalPause;
-          }
-          return pauseTargets.includes(videoNodes[0]);
-        });
-        if (!handoffWorked) throw new Error('Starting a second local video did not pause the previous video.');
-      }
-
-      const youtubeFrames = page.locator('#lightboxMediaContainer iframe[data-lm-youtube]');
-      if (await youtubeFrames.count()) {
-        const src = await youtubeFrames.first().getAttribute('src');
-        if (!src?.includes('enablejsapi=1')) {
-          throw new Error('YouTube Lightbox embeds are missing the JS API needed for playback handoff.');
-        }
-      }
-
-      await page.locator('#lightboxClose').click();
-      await page.waitForTimeout(100);
-    }, { width: 1280, height: 900 });
-
-    await smokePage(browser, '/', async page => {
-      const playbackCard = page.locator('#portfolioGrid .project-card[data-project-id="haeru"]').first();
-      if (await playbackCard.count() !== 1) throw new Error('Haeru playback smoke fixture card is missing.');
-
-      await playbackCard.click();
-      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-
-      const videos = page.locator('#lightboxMediaContainer video');
-      if (await videos.count() >= 2) {
-        const handoffWorked = await page.evaluate(() => {
           const nodes = Array.from(document.querySelectorAll('#lightboxMediaContainer video'));
           const originalPause = HTMLMediaElement.prototype.pause;
           const pauseTargets = [];
@@ -411,7 +374,7 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
-      const shortsCard
+      const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts smoke fixture card is missing.');
 
       await shortsCard.click();
