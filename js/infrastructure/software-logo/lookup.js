@@ -3,8 +3,7 @@
  *
  * This follows the known-good portfolio implementation from the
  * architecture-security-hardening branch and deployed main repo:
- * Simple Icons direct lookup first, product-domain lookup second, and
- * Iconify discovery only as a final fallback for names outside the common
+ * Simple Icons direct lookup first, then Iconify discovery as a final fallback for names outside the common
  * software list.
  */
 
@@ -61,9 +60,6 @@ function simpleIconsUrl(slug) {
   return 'https://cdn.simpleicons.org/' + encodeURIComponent(slug);
 }
 
-function clearbitUrl(domain) {
-  return 'https://logo.clearbit.com/' + encodeURIComponent(domain) + '?size=64';
-}
 
 function iconifyUrl(iconId) {
   const parts = String(iconId || '').split(':');
@@ -92,8 +88,6 @@ export function getSoftwareLogoDirectCandidates(name) {
   const slug = slugFor(raw);
   if (slug) candidates.push(simpleIconsUrl(slug));
 
-  const domain = SOFTWARE_DOMAINS[raw];
-  if (domain) candidates.push(clearbitUrl(domain));
 
   return candidates;
 }
