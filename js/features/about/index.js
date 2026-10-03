@@ -1,4 +1,4 @@
-import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-13';
+import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-14';
 
 export async function initAbout({
   url,
@@ -66,7 +66,12 @@ export async function initAbout({
       preloadAndMountLogo(frame, name, candidates, index + 1, onExhausted);
     }, { once: true });
 
-    image.src = candidates[index];
+    const candidate = candidates[index];
+    const resolvedCandidate = /^(?:[a-z][a-z0-9+.-]*:)?\\/\\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
+      ? candidate
+      : (typeof resolveAssetUrl === 'function' ? resolveAssetUrl(candidate) : candidate);
+
+    image.src = resolvedCandidate;
   }
 
   async function resolveSoftwareLogo(frame, name, manualIcon = '') {

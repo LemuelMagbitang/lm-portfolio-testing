@@ -43,6 +43,20 @@ const SOFTWARE_ALIASES = {
   'adobe illustrator': 'adobeillustrator'
 };
 
+// Local assets cover the software already represented by this portfolio.
+// Remote Simple Icons / Iconify discovery remains available for newly typed
+// programs, so the CMS stays automatic without making the live site depend
+// on a third-party logo CDN for known entries.
+const BUNDLED_SOFTWARE_LOGOS = {
+  blender: 'assets/projects/site/logos/blender_icon_512x512.png',
+  figma: 'assets/projects/site/logos/figma.png',
+  krita: 'assets/projects/site/logos/krita.svg',
+  adobepremierepro: 'assets/projects/site/logos/adobe-premiew-pro-cc.png',
+  adobeaftereffects: 'assets/projects/site/logos/adobe-after-effects-cc.png',
+  adobephotoshop: 'assets/projects/site/logos/adobe-photoshop-cc.png',
+  adobeillustrator: 'assets/projects/site/logos/adobe-illustrator-cc.png'
+};
+
 const cache = new Map();
 const discoveryCache = new Map();
 const discoveryPending = new Map();
@@ -86,8 +100,13 @@ export function getSoftwareLogoDirectCandidates(name) {
 
   const candidates = [];
   const slug = slugFor(raw);
-  if (slug) candidates.push(simpleIconsUrl(slug));
+  if (!slug) return [];
 
+  const bundled = BUNDLED_SOFTWARE_LOGOS[slug];
+  if (bundled) candidates.push(bundled);
+
+  const remote = simpleIconsUrl(slug);
+  if (remote) candidates.push(remote);
 
   return candidates;
 }
