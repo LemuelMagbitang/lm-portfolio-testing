@@ -50,7 +50,7 @@ export async function createPortfolioApp({
   const navigation = initNavigation({ root });
 
   const projectsPromise = config.urls.projects
-    ? mountProjects({ url: config.urls.projects })
+    ? mountProjects({ url: config.urls.projects, documentRef: root, getGrid: () => root.getElementById('portfolioGrid') })
     : Promise.resolve(false);
 
   const reviewsPromise = initReviews({
