@@ -46,10 +46,8 @@ async function waitForServer(url, timeoutMs = 5000) {
   throw new Error(`Local site server did not become ready: ${url}`);
 }
 
-async function smokePage(browser, path, assertions) {
-  const page = await browser.newPage({
-    viewport: { width: 1280, height: 900 }
-  });
+async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }) {
+  const page = await browser.newPage({ viewport });
 
   const errors = [];
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
@@ -116,6 +114,25 @@ try {
         await page.waitForTimeout(100);
       }
     });
+
+    await smokePage(browser, '/', async page => {
+      const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
+      if (await filters.count() < 2) throw new Error('Mobile/tablet Works filter UI did not render.');
+
+      const allFilter = page.locator('.filter-tabs [data-filter="all"]');
+      if (await allFilter.count() !== 1) throw new Error('Mobile/tablet Works filter UI is missing ALL.');
+
+      const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
+      if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
+    }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/', async page => {
+      const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
+      if (await filters.count() < 2) throw new Error('Tablet Works filter UI did not render.');
+
+      const allFilter = page.locator('.filter-tabs [data-filter="all"]');
+      if (await allFilter.count() !== 1) throw new Error('Tablet Works filter UI is missing ALL.');
+    }, { width: 834, height: 900 });
 
     await smokePage(browser, '/about/', async page => {
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
