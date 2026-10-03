@@ -4,6 +4,7 @@
  *
  * This intentionally checks the failure mode static validators cannot see:
  * the browser must execute the ES-module bootstrap and render the page without
+ * the CI workflow is expected to run this script on the checked-out commit.
  * uncaught runtime errors.
  */
 
