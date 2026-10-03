@@ -109,6 +109,76 @@ const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
 const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle);
 
+let contrastRaf = 0;
+let contrastCanvas = null;
+
+function sampleMediaLuminance(mediaItem) {
+  if (!mediaItem) return null;
+  const media = mediaItem.querySelector("img, video");
+  if (!media) return null;
+  if (media.tagName === "IMG" && (!media.complete || !media.naturalWidth)) return null;
+  if (media.tagName === "VIDEO" && media.readyState < 2) return null;
+
+  try {
+    contrastCanvas ||= documentRef.createElement("canvas");
+    contrastCanvas.width = 16;
+    contrastCanvas.height = 16;
+    const ctx = contrastCanvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, 16, 16);
+    ctx.drawImage(media, 0, 0, 16, 16);
+    const pixels = ctx.getImageData(0, 0, 16, 16).data;
+    let weighted = 0, weight = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const alpha = pixels[i + 3] / 255;
+      if (alpha <= 0.03) continue;
+      const luminance = (0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255;
+      weighted += luminance * alpha;
+      weight += alpha;
+    }
+    return weight ? weighted / weight : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getMostVisibleMediaItem() {
+  const items = Array.from(modalMediaContainer?.querySelectorAll(".lightbox-media-item") || []);
+  if (!items.length) return null;
+  const bounds = lightbox.getBoundingClientRect();
+  const center = bounds.top + bounds.height / 2;
+  let best = null, bestScore = -Infinity;
+  items.forEach(item => {
+    const rect = item.getBoundingClientRect();
+    const overlap = Math.max(0, Math.min(rect.bottom, bounds.bottom) - Math.max(rect.top, bounds.top));
+    if (overlap <= 0) return;
+    const distance = Math.abs((rect.top + rect.bottom) / 2 - center);
+    const score = overlap * 2 - distance * 0.25;
+    if (score > bestScore) { bestScore = score; best = item; }
+  });
+  return best;
+}
+
+function updateLightboxControlContrast() {
+  contrastRaf = 0;
+  if (!lightbox?.classList.contains("active")) return;
+  const luminance = sampleMediaLuminance(getMostVisibleMediaItem());
+  const bright = Number.isFinite(luminance) && luminance >= 0.68;
+  lightbox.classList.toggle("has-bright-media", bright);
+  lightbox.dataset.controlContrast = bright ? "dark" : "light";
+}
+
+function scheduleLightboxControlContrast() {
+  if (contrastRaf || !lightbox?.classList.contains("active")) return;
+  contrastRaf = windowRef.requestAnimationFrame(updateLightboxControlContrast);
+}
+
+bind(lightbox, "scroll", scheduleLightboxControlContrast, { passive: true });
+bind(windowRef, "resize", scheduleLightboxControlContrast);
+bind(modalMediaContainer, "load", scheduleLightboxControlContrast, true);
+bind(modalMediaContainer, "loadeddata", scheduleLightboxControlContrast, true);
+lifecycle.add(() => windowRef.cancelAnimationFrame?.(contrastRaf));
+
 const mediaRenderer = createLightboxMediaRenderer({
   documentRef,
   windowRef,
@@ -129,7 +199,8 @@ let activeLightboxCards = []; // Only navigate through currently filtered items
 
 
 function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } = {}) {
-  lightbox.classList.remove('is-3d-focused');
+  lightbox.classList.remove('is-3d-focused', 'has-bright-media');
+  delete lightbox.dataset.controlContrast;
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
@@ -170,6 +241,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     } else {
       lightbox.scrollTop = 0;
     }
+    scheduleLightboxControlContrast();
   });
 }
 
@@ -189,7 +261,12 @@ function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
 
 // Close Lightbox function
 function closeLightbox() {
-  lightbox.classList.remove('active', 'is-3d-focused');
+  lightbox.classList.remove('active', 'is-3d-focused', 'has-bright-media');
+  delete lightbox.dataset.controlContrast;
+  if (contrastRaf) {
+    windowRef.cancelAnimationFrame?.(contrastRaf);
+    contrastRaf = 0;
+  }
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
