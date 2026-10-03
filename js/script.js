@@ -413,234 +413,281 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function buildReviewCardEl(r) {
     const card = document.createElement('div');
-    card.className = 'review-card';
-
-    const stars = document.createElement('div');
-    stars.className = 'review-stars';
-    const filled = Math.max(0, Math.min(5, Math.round(Number(r.stars) || 0)));
-    for (let i = 0; i < 5; i++) {
-      const s = document.createElement('span');
-      s.className = i < filled ? 'star filled' : 'star';
-      s.textContent = '★';
-      stars.appendChild(s);
-    }
-
+    card.className = 'review-card glass';
     const quote = document.createElement('p');
     quote.className = 'review-quote';
-    quote.textContent = r.quote || '';
-    const person = document.createElement('div');
-    person.className = 'review-person';
-    const name = document.createElement('strong');
+    quote.textContent = r.quote || r.review || '';
+    const name = document.createElement('h4');
+    name.className = 'review-name';
     name.textContent = r.name || '';
-    const role = document.createElement('span');
+    const role = document.createElement('div');
+    role.className = 'review-role';
     role.textContent = r.role || '';
-    person.append(name, role);
-    card.append(stars, quote, person);
+    card.append(quote, name, role);
     return card;
   }
 
   async function loadReviewsFromCMS() {
     if (!window.REVIEWS_URL) return;
-    if (!reviewsTrack) return;
+    const track = document.getElementById('reviewsTrack');
+    if (!track) return;
     try {
       const raw = await loadCmsJson(window.REVIEWS_URL, null, { resolveUrl: siteAssetUrl });
-      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.reviews) ? raw.reviews : []);
+      if (!raw) return;
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.reviews) ? raw.reviews : []);
       if (!list.length) return;
       const frag = document.createDocumentFragment();
       list.forEach(r => frag.appendChild(buildReviewCardEl(r)));
-      reviewsTrack.innerHTML = '';
-      reviewsTrack.appendChild(frag);
+      track.innerHTML = '';
+      track.appendChild(frag);
     } catch (err) {
       console.warn('Reviews: could not load', window.REVIEWS_URL, err);
     }
   }
 
-
   /* =========================================
      0d. CMS OVERRIDE — ABOUT
      ========================================= */
-  /* If window.ABOUT_URL points at data/about.json, fetch it and fill the
-     about page's existing fields. If it fails, the static HTML is left
-     exactly as-is. */
-
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (!el || value === undefined || value === null) return;
-    el.textContent = String(value);
-  }
-
-  function buildTimelineBlock({ title, dateLine, bullets }) {
-    const wrap = document.createElement('div');
-    wrap.className = 'timeline-block';
-    if (title) {
-      const h = document.createElement('h3');
-      h.textContent = title;
-      wrap.appendChild(h);
-    }
-    if (dateLine) {
-      const d = document.createElement('p');
-      d.className = 'timeline-date';
-      d.textContent = dateLine;
-      wrap.appendChild(d);
-    }
-    if (Array.isArray(bullets) && bullets.length) {
-      const ul = document.createElement('ul');
-      bullets.forEach(b => {
-        const li = document.createElement('li');
-        li.textContent = b;
-        ul.appendChild(li);
-      });
-      wrap.appendChild(ul);
-    }
-    return wrap;
-  }
-
   async function loadAboutFromCMS() {
     if (!window.ABOUT_URL) return;
+    const about = document.querySelector('.about-section');
+    if (!about) return;
     try {
       const raw = await loadCmsJson(window.ABOUT_URL, null, { resolveUrl: siteAssetUrl });
       if (!raw || typeof raw !== 'object') return;
-      const a = raw.about && typeof raw.about === 'object' ? raw.about : raw;
-
-      setText('aboutName', a.name);
-      setText('aboutRole', a.role);
-      setText('aboutBio', a.bio);
-      setText('aboutLocation', a.location);
-      setText('aboutEmail', a.email);
-
-      if (a.photo?.src) {
-        const photoEl = document.getElementById('aboutPhoto');
-        if (photoEl) {
-          // Resolving against the site root (not document.baseURI) is
-          // important on GitHub Pages sub-path deployments: a relative
-          // CMS path such as "assets/about/me.jpg" must resolve to the
-          // site's asset root rather than the current page directory.
-          const siteRoot = getSiteRootUrl();
-          photoEl.src = new URL(photo.src, siteRoot).href;
-          if (photo.alt) photoEl.alt = photo.alt;
-          // Same three adjustments a project thumbnail supports (see
-          // applyThumbnailAdjustments below), applied directly here
-          // since the profile photo isn't a .project-card thumbnail for
-          // that function to find on its own. transformOrigin has to
-          // match objectPosition here too, for the same reason it does
-          // on a project thumbnail — see the comment there.
-          if (photo.focus) { photoEl.style.objectPosition = photo.focus; photoEl.style.transformOrigin = photo.focus; }
-          if (photo.zoom) photoEl.style.setProperty('--thumb-zoom', photo.zoom);
-          if (photo.rotate) photoEl.style.setProperty('--thumb-rotate', photo.rotate + 'deg');
-        }
-      }
-
-      cachedSoftwareSkills = a.softwareSkills;
-      fillSkillList('softwareSkillsList', a.softwareSkills);
-      fillSkillList('multimediaSkillsList', a.multimediaSkills);
-
-      const expList = document.getElementById('experienceList');
-      if (expList && Array.isArray(a.experience) && a.experience.length) {
-        expList.innerHTML = '';
-        a.experience.forEach(exp => {
-          expList.appendChild(buildTimelineBlock({ title: exp.role, dateLine: [exp.company, exp.startDate || exp.endDate ? `${exp.startDate || ''}${exp.startDate || exp.endDate ? ' – ' : ''}${exp.endDate || ''}` : ''].filter(Boolean).join(' · '), bullets: exp.bullets }));
-        });
-      }
-
-      const eduList = document.getElementById('educationList');
-      if (eduList && Array.isArray(a.education) && a.education.length) {
-        eduList.innerHTML = '';
-        a.education.forEach(e => {
-          eduList.innerHTML = '';
-          eduList.appendChild(buildTimelineBlock({ title: e.school || e.title, dateLine: [e.degree, e.graduationDate].filter(Boolean).join(' · ') || e.detail, bullets: [] }));
-        });
-      }
-
-      const awList = document.getElementById('awardsList');
-      if (awList && Array.isArray(a.awards) && a.awards.length) {
-        awList.innerHTML = '';
-        a.awards.forEach(aw => {
-          awList.appendChild(buildTimelineBlock({ title: aw.title, dateLine: aw.detail, bullets: [] }));
-        });
+      const title = about.querySelector('.about-title');
+      const body = about.querySelector('.about-body');
+      if (title && raw.title) title.textContent = raw.title;
+      if (body && raw.body) body.textContent = raw.body;
+      if (Array.isArray(raw.skills)) {
+        cachedSoftwareSkills = raw.skills;
+        renderSoftwareSkills(raw.skills);
       }
     } catch (err) {
       console.warn('About: could not load', window.ABOUT_URL, err);
-      // Leave the existing static content in place.
     }
   }
-  /* =========================================
-     0e. CMS OVERRIDE — FILTERS & BADGES
-     ========================================= */
-  /* Rebuilds the filter-tab buttons (homepage only) and the nav-bar
-     "Works" dropdown (every page that has one) from data/filters.json.
-     The ALL tab is never part of this data — it's structural, kept
-     exactly as already written in the HTML — matching the CMS plan's
-     own rule that ALL always exists automatically.
 
-     Same "must finish before it's read" requirement as projects and
-     reviews: filterBtns is captured once, in section 5 below, so this
-     needs to run first. */
+  /* =========================================
+     0e. CMS OVERRIDE — FILTERS
+     ========================================= */
   async function loadFiltersFromCMS() {
     if (!window.FILTERS_URL) return;
-
+    const container = document.querySelector('.filter-buttons');
+    if (!container) return;
     try {
       const raw = await loadCmsJson(window.FILTERS_URL, null, { resolveUrl: siteAssetUrl });
-      if (raw === null || raw === undefined) return;
-      const list = Array.isArray(raw)
-        ? raw
-        : (Array.isArray(raw?.filters) ? raw.filters : null);
-      // A valid empty CMS list is still meaningful: it means ALL is the
-      // only filter. Do not fall back to the hardcoded HTML filters just
-      // because the CMS currently has zero custom filters.
-      if (!Array.isArray(list)) return;
-
-      // Filter tabs — only exist on the homepage; harmless no-op elsewhere.
-      const tabs = document.querySelector('.filter-tabs');
-      if (tabs) {
-        const allBtn = tabs.querySelector('.tab-btn[data-filter="all"]');
-        tabs.innerHTML = '';
-        tabs.appendChild(allBtn || Object.assign(document.createElement('button'), {
-          className: 'tab-btn active', textContent: 'ALL'
-        }));
-        if (!allBtn) tabs.lastChild.setAttribute('data-filter', 'all');
-
-        list.forEach(f => {
-          if (!f || !f.id) return;
-          const btn = document.createElement('button');
-          btn.className = 'tab-btn';
-          btn.setAttribute('data-filter', f.id);
-          btn.textContent = f.label || f.id;
-          tabs.appendChild(btn);
-        });
-      }
-
-      // Nav-bar "Works" dropdown — appears on every page. Each page
-      // already links to itself with a different prefix (the
-      // homepage uses "/#id", the about page uses "../#id"), so the
-      // prefix is read off whatever link is already there rather than
-      // hardcoded, and reused for every rebuilt item.
-      document.querySelectorAll('.nav-dropdown-menu').forEach(menu => {
-        const firstLink = menu.querySelector('a');
-        const prefix = firstLink ? firstLink.getAttribute('href').split('#')[0] + '#' : '#';
-        menu.innerHTML = '';
-        list.forEach(f => {
-          if (!f || !f.id) return;
-          const li = document.createElement('li');
-          const a = document.createElement('a');
-          a.href = prefix + f.id;
-          a.textContent = f.label || f.id;
-          li.appendChild(a);
-          menu.appendChild(li);
-        });
+      if (!raw) return;
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
+      if (!list.length) return;
+      const frag = document.createDocumentFragment();
+      list.forEach(filter => {
+        if (!filter || !filter.id) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'filter-btn';
+        button.dataset.filter = filter.id;
+        button.textContent = filter.label || filter.name || filter.id;
+        frag.appendChild(button);
       });
+      container.innerHTML = '';
+      container.appendChild(frag);
     } catch (err) {
       console.warn('Filters: could not load', window.FILTERS_URL, err);
-      // Leave the existing static tabs/dropdown in place.
     }
   }
 
   /* =========================================
-     0f. HOMEPAGE HERO — MESSAGES (fallback only)
+     1. NAV / MENU
      ========================================= */
-  /* Hero messages now live in data/hero.json and are edited through
-     admin/ — see /README-CMS-SETUP.md. This single entry is a
-     fallback only, used if that fetch ever fails; it's not where you
-     add real messages anymore. */
-  const HERO_MESSAGES = [
-    { text: 'Open for freelance work.' }
-  ];
+  const menuButton = document.querySelector('.menu-button');
+  const mobileMenu = document.querySelector('.mobile-menu');
+  const mobileMenuClose = document.querySelector('.mobile-menu-close');
+  const mobileMenuLinks = document.querySelectorAll('.mobile-menu a');
+
+  function openMobileMenu() {
+    if (!mobileMenu) return;
+    mobileMenu.classList.add('is-open');
+    document.body.classList.add('menu-open');
+  }
+
+  function closeMobileMenu() {
+    if (!mobileMenu) return;
+    mobileMenu.classList.remove('is-open');
+    document.body.classList.remove('menu-open');
+  }
+
+  menuButton?.addEventListener('click', openMobileMenu);
+  mobileMenuClose?.addEventListener('click', closeMobileMenu);
+  mobileMenuLinks.forEach(link => link.addEventListener('click', closeMobileMenu));
+
+  /* =========================================
+     2. PROJECT FILTERS
+     ========================================= */
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const projectGrid = document.getElementById('portfolioGrid');
+
+  function applyFilter(filter) {
+    document.querySelectorAll('.project-card').forEach(card => {
+      const ids = JSON.parse(card.dataset.filterIds || '[]');
+      const show = filter === 'all' || ids.includes(filter);
+      card.style.display = show ? '' : 'none';
+    });
+  }
+
+  filterButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      filterButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      applyFilter(button.dataset.filter || 'all');
+    });
+  });
+
+  /* =========================================
+     3. HERO / BANNER
+     ========================================= */
+  const heroSection = document.querySelector('.hero');
+  if (heroSection) {
+    try {
+      await initHeroBannerV2(heroSection, {
+        mode: HERO_LOOP_MODE,
+        transition: HERO_TRANSITION,
+        crossfadeMs: HERO_CROSSFADE_MS,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl
+      });
+    } catch (err) {
+      console.warn('Hero: initialization failed', err);
+    }
+  }
+
+  /* =========================================
+     4. LIGHTBOX / MEDIA
+     ========================================= */
+  try {
+    await initLightbox({
+      root: document,
+      protectionEnabled: () => PROTECTION_ENABLED,
+      ensureMediaBackgroundHelper,
+      parseYouTubeUrl
+    });
+  } catch (err) {
+    console.warn('Lightbox: initialization failed', err);
+  }
+
+  /* =========================================
+     5. GALLERY
+     ========================================= */
+  try {
+    await initGallery({
+      root: document,
+      projectGrid,
+      resolveAssetUrl: siteAssetUrl,
+      ensureLottiePlayer,
+      ensureMediaBackgroundHelper
+    });
+  } catch (err) {
+    console.warn('Gallery: initialization failed', err);
+  }
+
+  /* =========================================
+     6. REVIEWS
+     ========================================= */
+  function applyReviewsVisibility() {
+    if (!reviewsSection) return;
+    reviewsSection.style.display = SHOW_REVIEWS ? '' : 'none';
+  }
+
+  function buildReviewsMarquee() {
+    if (!reviewsTrack || !reviewsMarquee) return;
+    if (!pristineTopCards) pristineTopCards = Array.from(reviewsTrack.children).map(el => el.cloneNode(true));
+    if (!pristineTopCards.length) return;
+    reviewsTrack.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    pristineTopCards.forEach(card => fragment.appendChild(card.cloneNode(true)));
+    pristineTopCards.forEach(card => fragment.appendChild(card.cloneNode(true)));
+    reviewsTrack.appendChild(fragment);
+  }
+
+  applyReviewsVisibility();
+  buildReviewsMarquee();
+
+  /* =========================================
+     7. SOFTWARE SKILLS
+     ========================================= */
+  function applySoftwareLogosVisibility() {
+    document.querySelectorAll('.software-skill').forEach(skill => {
+      const logo = skill.querySelector('.software-logo');
+      const name = skill.querySelector('.software-name');
+      if (logo) logo.style.display = SHOW_SOFTWARE_LOGOS ? '' : 'none';
+      if (name) name.style.display = SHOW_SOFTWARE_LOGOS ? 'none' : '';
+    });
+  }
+
+  function renderSoftwareSkills(skills) {
+    const list = document.querySelector('.software-skills');
+    if (!list || !Array.isArray(skills)) return;
+    list.innerHTML = '';
+    skills.forEach(skill => {
+      if (!skill) return;
+      const item = document.createElement('div');
+      item.className = 'software-skill';
+      const logo = document.createElement('img');
+      logo.className = 'software-logo';
+      if (skill.logo) logo.src = siteAssetUrl(skill.logo);
+      logo.alt = skill.name || '';
+      const name = document.createElement('span');
+      name.className = 'software-name';
+      name.textContent = skill.name || '';
+      item.append(logo, name);
+      list.appendChild(item);
+    });
+    applySoftwareLogosVisibility();
+  }
+
+  applySoftwareLogosVisibility();
+
+  /* =========================================
+     8. FORMS
+     ========================================= */
+  function applyFormToggle(form, emailButton, enabled) {
+    if (!form || !emailButton) return;
+    form.style.display = enabled ? '' : 'none';
+    emailButton.style.display = enabled ? 'none' : '';
+  }
+
+  const projectForm = document.getElementById('projectForm');
+  const projectEmailBtn = document.getElementById('projectEmailBtn');
+  const reviewForm = document.getElementById('reviewForm');
+  const reviewEmailBtn = document.getElementById('reviewEmailBtn');
+
+  applyFormToggle(projectForm, projectEmailBtn, FORMS_ENABLED.project);
+  applyFormToggle(reviewForm, reviewEmailBtn, FORMS_ENABLED.review);
+
+  projectEmailBtn?.addEventListener('click', () => {
+    const email = document.querySelector('a[href^="mailto:"]')?.getAttribute('href');
+    if (email) window.location.href = email;
+  });
+
+  reviewEmailBtn?.addEventListener('click', () => {
+    const email = document.querySelector('a[href^="mailto:"]')?.getAttribute('href');
+    if (email) window.location.href = email;
+  });
+
+  /* =========================================
+     9. CMS SETTINGS FINALIZATION
+     ========================================= */
+  await Promise.all([settingsReady, cmsReady]);
+  applyCardBadgesVisibility();
+  applyReviewsVisibility();
+  applySoftwareLogosVisibility();
+
+  hideInitialPageTransition();
+  if (initialTransitionTimer) window.clearTimeout(initialTransitionTimer);
+
+  } catch (err) {
+    console.error('Portfolio runtime failed to initialize', err);
+    hideInitialPageTransition();
+    if (initialTransitionTimer) window.clearTimeout(initialTransitionTimer);
+  }
+});
