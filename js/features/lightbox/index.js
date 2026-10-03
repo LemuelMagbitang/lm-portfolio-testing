@@ -19,12 +19,12 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     lightboxEl.setAttribute('aria-modal','true');
     if (!lightboxEl.hasAttribute('tabindex')) lightboxEl.setAttribute('tabindex','-1');
     documentRef.addEventListener('keydown', onKeydown, true);
-    windowRef.windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); });
+    windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); });
   }
   function close() {
     documentRef.removeEventListener('keydown', onKeydown, true);
     const target=opener; opener=null;
-    if(target?.isConnected) windowRef.windowRef.requestAnimationFrame(()=>target.focus());
+    if(target?.isConnected) windowRef.requestAnimationFrame(()=>target.focus());
   }
   return {open,close};
 }
@@ -129,7 +129,11 @@ function buildMediaEntry(mediaEl, captionText, background) {
   const wrap = documentRef.createElement('div');
   wrap.className = 'lightbox-media-item';
   wrap.appendChild(mediaEl);
-  if (windowRef.LMMediaBackground && background) windowRef.LMMediaBackground.apply(wrap, background, siteAssetUrl);
+  if (background && applyMediaBackground) {
+    Promise.resolve(applyMediaBackground(wrap, background, resolveAssetUrl)).catch(error => {
+      console.warn('Lightbox: media background could not be applied.', error);
+    });
+  }
 
   const caption = buildMediaCaption(captionText);
   if (caption) wrap.appendChild(caption);
