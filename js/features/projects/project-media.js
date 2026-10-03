@@ -7,7 +7,7 @@ export function buildMediaItemElement(media = {}) {
   const el = document.createElement('div');
   el.className = 'media-item';
 
-  const type = String(media.type || 'image');
+  const type = String(media.type || 'image').toLowerCase();
   const src = String(media.src || '');
 
   if (type === 'video') el.dataset.video = src;
@@ -16,7 +16,8 @@ export function buildMediaItemElement(media = {}) {
   else if (type === 'model') el.dataset.model = src;
   else el.dataset.image = src;
 
-  if (media.caption) el.dataset.description = String(media.caption);
+  const description = media.caption ?? media.description;
+  if (description) el.dataset.description = String(description);
   if (media.orientation) el.dataset.orientation = String(media.orientation);
   if (media.background && typeof media.background === 'object') {
     el.dataset.background = JSON.stringify(media.background);
