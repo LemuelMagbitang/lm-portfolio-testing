@@ -241,10 +241,13 @@ export async function initAbout({
     renderSoftwareSkills(softwareSkills);
   }
 
+  let aboutLoaded = false;
+
   if (url && typeof loadJson === 'function') {
     try {
       const about = await loadJson(url, null, { resolveUrl: resolveAssetUrl });
       if (about && typeof about === 'object') {
+        aboutLoaded = true;
         if (about.headline) headline.textContent = about.headline;
         if (subhead && about.subhead) subhead.textContent = about.subhead;
         if (bio && about.bio) bio.textContent = about.bio;
@@ -278,7 +281,11 @@ export async function initAbout({
     }
   }
 
-  renderSoftwareSkills();
+  // A successful CMS load already renders the software list with the loaded
+  // data above. Render the empty/default state only when loading failed or
+  // produced no object, preventing duplicate logo-resolution jobs.
+  if (!aboutLoaded) renderSoftwareSkills();
+
   return {
     setSoftwareLogosVisible: applySoftwareLogosVisibility,
     renderSoftwareSkills,
