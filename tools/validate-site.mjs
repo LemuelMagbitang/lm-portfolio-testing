@@ -603,6 +603,7 @@ function validateArchitecture() {
     ['js/infrastructure/browser/site-paths.js', /export function getSiteRootUrl/],
     ['js/infrastructure/youtube/url.js', /export function parseYouTubeUrl/],
     ['js/infrastructure/three/model-viewer.js', /export (?:async )?function mountModelViewer/],
+    ['js/infrastructure/software-logo/lookup.js', /export async function findSoftwareLogoCandidates/],
     ['js/features/projects/index.js', /export \{ mountProjects \}/],
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
@@ -651,6 +652,7 @@ function validateArchitecture() {
     err('Architecture V2: composition must not import legacy runtime/data facades.');
   }
 }
+validateSoftwareLogoLookup();
 validateResponsiveUiContracts();
 scanSourceForBadPatterns();
 validateSecuritySecrets();
@@ -665,6 +667,32 @@ validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
 validateModuleScriptContract();
+
+
+function validateSoftwareLogoLookup() {
+  const resolver = exists('js/infrastructure/software-logo/lookup.js')
+    ? readText('js/infrastructure/software-logo/lookup.js')
+    : '';
+  const about = exists('js/features/about/index.js')
+    ? readText('js/features/about/index.js')
+    : '';
+  const admin = exists('admin/admin.js')
+    ? readText('admin/admin.js')
+    : '';
+
+  if (/logo\\.clearbit\\.com/i.test(resolver) || /logo\\.clearbit\\.com/i.test(admin)) {
+    err('Software logos: retired Clearbit Logo API must not be referenced.');
+  }
+  if (!/api\\.iconify\\.design\\/search/i.test(resolver)) {
+    err('Software logos: public resolver must use the Iconify search API.');
+  }
+  if (!/findSoftwareLogoCandidates/.test(about)) {
+    err('Software logos: About feature must consume the automatic logo resolver.');
+  }
+  if (!/findAutomaticSoftwareLogoCandidates/.test(admin)) {
+    err('Software logos: CMS must use the automatic logo lookup for skills without manual icons.');
+  }
+}
 
 function validateResponsiveUiContracts() {
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
