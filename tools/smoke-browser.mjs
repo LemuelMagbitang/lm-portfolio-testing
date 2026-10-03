@@ -238,6 +238,26 @@ try {
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
+      const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts smoke fixture card is missing.');
+
+      await shortsCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const shorts = page.locator('#lightboxMediaContainer .lightbox-media-item iframe.yt-portrait').first();
+      if (await shorts.count() !== 1) throw new Error('Lightbox did not render the Friends Gacha Short as portrait media.');
+
+      const viewportWidth = await page.evaluate(() => window.innerWidth);
+      const shortsWidth = await shorts.evaluate(el => Math.round(el.getBoundingClientRect().width));
+      if (Math.abs(shortsWidth - viewportWidth) > 2) {
+        throw new Error(`Mobile Shorts media is not full-bleed (media ${shortsWidth}px vs viewport ${viewportWidth}px).`);
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/', async page => {
       const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       if (await filters.count() < 2) throw new Error('Tablet Works filter UI did not render.');
 
