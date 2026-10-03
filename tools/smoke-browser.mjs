@@ -236,7 +236,7 @@ try {
           throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
         }
       }
-    });
+    }, { width: 390, height: 844 });
 
     await smokePage(browser, '/admin/', async page => {
       const nav = page.locator('.nav-item[data-section="about"]');
