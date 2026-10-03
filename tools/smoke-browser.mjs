@@ -79,6 +79,20 @@ try {
   const browser = await chromium.launch({ headless: true });
 
   try {
+    await browser.route('https://cdn.jsdelivr.net/npm/simple-icons@16.33.0/icons/*.svg', async route => {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>';
+      await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+    });
+    await browser.route('https://api.iconify.design/search**', async route => {
+      const query = new URL(route.request().url()).searchParams.get('query') || '';
+      const icon = query.toLowerCase().includes('krita') ? 'simple-icons:krita' : 'simple-icons:blender';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ icons: [icon], total: 1, limit: 12, start: 0 })
+      });
+    });
+
     await smokePage(browser, '/', async page => {
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('Works page is missing its module bootstrap script.');
@@ -154,13 +168,23 @@ try {
       const education = await page.locator('#educationList .timeline-item').count();
       const awards = await page.locator('#awardsList .timeline-item').count();
       const softwareSkills = await page.locator('#softwareSkillsList li').count();
+      await page.locator('#softwareSkillsList li.has-logo img.skill-logo').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
       const softwareImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').count();
+      const brokenImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').evaluateAll(images => images.filter(img => !img.complete || !img.naturalWidth).length);
+      const kritaImage = page.locator('#softwareSkillsList li.has-logo img[alt="Krita"]').first();
 
       if (experience < 1) throw new Error('About page rendered no work experience entries.');
       if (education < 1) throw new Error('About page rendered no education entries.');
       if (awards < 1) throw new Error('About page rendered no awards entries.');
       if (softwareSkills < 1) throw new Error('About page rendered no software skills.');
       if (softwareImages < 1) throw new Error('About page software-logo mode is enabled but no software logo rendered.');
+      if (brokenImages) throw new Error('About page contains a visibly broken software-logo image.');
+      if (await kritaImage.count()) {
+        const src = await kritaImage.getAttribute('src');
+        if (!src || !/cdn\\.jsdelivr\\.net\\/npm\\/simple-icons@16\\.33\\.0/i.test(src)) {
+          throw new Error('About page Krita logo did not use the pinned Simple Icons candidate.');
+        }
+      }
     });
 
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
