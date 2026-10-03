@@ -1,18 +1,20 @@
 /**
  * Portfolio bootstrap.
- * Owns the outer lifecycle, cache-busted module loading, and fatal-error
- * containment. Feature behavior stays in the application composition root.
+ * Owns the outer lifecycle, page-composition loading, and fatal-error
+ * containment. Infrastructure capabilities are imported directly so the
+ * application has no dependency on legacy root facades.
  */
 
-function resolveRuntimeUrl(root = globalThis.document) {
-  const runtimeScript = Array.from(root?.scripts || []).find(el =>
-    /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(el.src || el.getAttribute('src') || '')
-  );
-
-  return runtimeScript
-    ? new URL('site-runtime.js?v=20261003-02', runtimeScript.src).href
-    : new URL('js/site-runtime.js?v=20261003-02', root.baseURI).href;
-}
+import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js';
+import { prefersReducedMotion } from '../infrastructure/browser/reduced-motion.js';
+import { loadScriptOnce } from '../infrastructure/browser/script-loader.js';
+import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
+import {
+  ensureMediaBackgroundHelper,
+  applyMediaBackground
+} from '../infrastructure/media-background/loader.js';
+import { loadCmsJson } from '../infrastructure/cms/loader.js';
+import { parseYouTubeUrl } from '../infrastructure/youtube/url.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
@@ -37,12 +39,22 @@ export async function bootstrapPortfolioApp({
   showInitialPageTransition();
 
   try {
-    const runtimeUrl = resolveRuntimeUrl(root);
-    const [{ createPortfolioApp }, runtime, cms] = await Promise.all([
-      import(`./page-composition.js?v=${cacheVersion}`),
-      import(runtimeUrl),
-      import(new URL(`cms-data.js?v=${cacheVersion}`, runtimeUrl).href)
-    ]);
+    const { createPortfolioApp } = await import(`./page-composition.js?v=${cacheVersion}`);
+
+    const runtime = {
+      getSiteRootUrl,
+      siteAssetUrl,
+      prefersReducedMotion,
+      loadScriptOnce,
+      ensureLottiePlayer,
+      ensureMediaBackgroundHelper,
+      applyMediaBackground
+    };
+
+    const cms = {
+      loadCmsJson,
+      parseYouTubeUrl
+    };
 
     await createPortfolioApp({ root, runtime, cms });
 
