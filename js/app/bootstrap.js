@@ -15,6 +15,7 @@ import {
 } from '../infrastructure/media-background/loader.js';
 import { loadCmsJson } from '../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../infrastructure/youtube/url.js';
+import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
@@ -41,6 +42,17 @@ export async function bootstrapPortfolioApp({
   try {
     const { createPortfolioApp } = await import(`./page-composition.js?v=${cacheVersion}`);
 
+    const config = normalizeAppConfig({
+      urls: {
+        settings: globalThis.SETTINGS_URL,
+        projects: globalThis.PROJECTS_URL,
+        reviews: globalThis.REVIEWS_URL,
+        about: globalThis.ABOUT_URL,
+        filters: globalThis.FILTERS_URL,
+        heroLoop: globalThis.HERO_LOOP_URL
+      }
+    });
+
     const runtime = {
       getSiteRootUrl,
       siteAssetUrl,
@@ -56,7 +68,7 @@ export async function bootstrapPortfolioApp({
       parseYouTubeUrl
     };
 
-    await createPortfolioApp({ root, runtime, cms });
+    await createPortfolioApp({ root, runtime, cms, config });
 
     hideInitialPageTransition();
     if (initialTransitionTimer) root.defaultView.clearTimeout(initialTransitionTimer);
