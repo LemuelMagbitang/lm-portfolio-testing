@@ -2471,3 +2471,10 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     display: none;
   }
 }
+
+@media (min-width: 768px) {
+  .project-card:focus-visible .glass-info {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
