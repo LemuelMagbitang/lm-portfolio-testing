@@ -43,7 +43,10 @@ export function createLightboxMediaRenderer({
   function pauseOtherPlayback(container, activeElement = null) {
     if (!container) return;
     container.querySelectorAll("video").forEach(video => {
-      if (video === activeElement || video.paused) return;
+      if (video === activeElement) return;
+      /* pause() is idempotent; calling it even on an already-paused element
+         makes playback handoff deterministic when media state is changing
+         asynchronously across devices. */
       try { video.pause(); } catch (_) {}
     });
     container.querySelectorAll("iframe[data-lm-youtube]").forEach(iframe => {
