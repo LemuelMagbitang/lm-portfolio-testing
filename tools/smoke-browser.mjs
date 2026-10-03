@@ -89,8 +89,17 @@ try {
       const heroSlides = await page.locator('#heroBanner .slide').count();
       if (heroSlides < 1) throw new Error(`Works Hero rendered no artwork slides (found ${heroSlides}).`);
 
+      const firstActiveSlide = await page.locator('#heroBanner .slide.active').first().getAttribute('class').catch(() => '');
+      if (!firstActiveSlide) throw new Error('Works Hero has no active artwork slide.');
+
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
       if (!heroText?.trim()) throw new Error('Works Hero rendered no message text.');
+
+      if (heroSlides > 1) {
+        await page.waitForTimeout(3800);
+        const activeSlides = await page.locator('#heroBanner .slide.active').count();
+        if (activeSlides !== 1) throw new Error(`Works Hero loop has invalid active-slide state (found ${activeSlides}).`);
+      }
 
       const allFilter = page.locator('.filter-tabs .filter-btn[data-filter="all"], .filter-tabs .tab-btn[data-filter="all"]');
       if (await allFilter.count() !== 1) throw new Error('Works filter UI is missing the ALL filter.');
