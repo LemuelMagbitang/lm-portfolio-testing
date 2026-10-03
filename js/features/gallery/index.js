@@ -305,6 +305,13 @@ export async function initGallery(options = {}) {
     const filtered = getCardsForProjects(filteredProjects);
     renderToken += 1;
     const token = renderToken;
+
+    // Cards from the previous filter can still be display:none while their
+    // opacity fade is finishing. Make the incoming set participate in layout
+    // before measuring row alignment; presentation.js still owns opacity and
+    // final hiding.
+    filtered.forEach(card => { card.style.display = 'block'; });
+
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
     cancelReveal?.();
     cancelReveal = applyGalleryReveal({
