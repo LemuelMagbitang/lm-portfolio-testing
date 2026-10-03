@@ -36,6 +36,10 @@
     {
       "name": "Figma",
       "icon": "assets/projects/site/logos/figma.png"
+    },
+    {
+      "name": "Youtube",
+      "icon": ""
     }
   ],
   "multimediaSkills": [
