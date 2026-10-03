@@ -2463,3 +2463,11 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     transform: translateY(0);
   }
 }
+
+@media (max-width: 767px) {
+  /* Narrow cards are artwork-first. The project title remains available to
+     assistive technology through the card's aria-label. */
+  .project-card .glass-info {
+    display: none;
+  }
+}
