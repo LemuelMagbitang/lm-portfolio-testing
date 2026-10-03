@@ -6,6 +6,7 @@ import { ensureMediaBackgroundHelper } from '../../infrastructure/media-backgrou
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js';
+import { createLifecycle } from '../../core/lifecycle.js';
 
   /* =========================================
      4. HERO BANNER — AUTO-FILLED WITH THE
@@ -257,11 +258,14 @@ import { normalizeProjects } from '../../data/project-normalizer.js';
     if (!heroContainer) return;
 
     const siteRootUrl = getSiteRoot();
+    const lifecycle = createLifecycle();
     let latestSources = [];
     let manualSources = [];
     let sources = [];
     let messageRotationTimer = null;
     let messageFadeTimer = null;
+    lifecycle.add(() => windowRef.clearInterval(messageRotationTimer));
+    lifecycle.add(() => windowRef.clearTimeout(messageFadeTimer));
 
 
     const heroMessageRoot = documentRef.getElementById('heroQuote') || documentRef.querySelector('.hero-quote');
@@ -427,11 +431,11 @@ import { normalizeProjects } from '../../data/project-normalizer.js';
     }
 
     const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef, isReducedMotion);
+    lifecycle.add(stopCrossfade);
+
     return {
       destroy() {
-        stopCrossfade?.();
-        windowRef.clearInterval(messageRotationTimer);
-        windowRef.clearTimeout(messageFadeTimer);
+        lifecycle.cleanup();
         heroContainer.querySelectorAll('.slide').forEach(slide => {
           slide.querySelectorAll('video').forEach(video => video.pause?.());
         });
