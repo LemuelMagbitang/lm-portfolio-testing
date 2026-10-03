@@ -44,6 +44,12 @@ jobs:
       - name: Validate Projects runtime composition
         run: node tools/validate-project-runtime.mjs
 
+      - name: Validate Gallery presentation boundary
+        run: node tools/validate-gallery-presentation.mjs
+
+      - name: Validate feature lifecycle boundary
+        run: node tools/validate-lifecycle.mjs
+
       - name: Syntax-check every JavaScript module
         run: |
           set -euo pipefail
