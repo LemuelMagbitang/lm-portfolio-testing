@@ -17,8 +17,12 @@ As of October 3, 2026, the branch has completed the first composition/data-bound
 - Architecture and site validators were updated to enforce the new boundaries.
 - The validation workflow now includes a real Chromium smoke test covering Works, About, Hero rendering/looping, CMS filters/ALL, and About resume/software content at desktop, phone, and tablet sizes.
 - The browser smoke gate has passed on the current runtime cutover after fixing the public ES-module boot path, Hero initialization, CMS filter reconstruction, About CMS rendering, and the CMS 3D preview adapter path.
+- Gallery state now consumes a separate presentation boundary for responsive density, row-aware reveal/collapse, and reset behavior.
+- Shared feature lifecycle management now centralizes listener/timer/animation cleanup without introducing cross-feature state.
+- Project normalization now exposes media capabilities and preserves thumbnail orientation as part of the stable application model.
+- Lightbox now consumes normalized project models through the Projects public API instead of reading project-card markup.
 
-The remaining work is deliberate rather than wholesale refactoring: strengthen feature lifecycles/cleanup and CSS ownership where they materially reduce coupling, then stop architecture work when the boundaries are sufficient for the Phase 3 artwork-first redesign.
+Phase 3A has therefore started: the architecture is being shaped specifically to support major UI/UX changes without rewriting CMS data, project transport, or media infrastructure. The immediate work remains targeted hardening and presentation ownership, not a visual redesign by itself.
 
 The current deployment gate is intentionally separate from architectural completion: the public pages must load `js/script.js` as an ES module, and each page must provide the import map required by optional vendor infrastructure before this branch can be treated as testable.
 
@@ -183,6 +187,28 @@ admin/
 ```
 
 The CMS and public portfolio are two applications sharing repository content—not one application with two pages.
+
+### Phase 3A — UI foundation
+
+Before changing the portfolio's visual language, stabilize the contracts that future presentation work will sit on:
+
+1. Gallery state must not own grid/layout decisions.
+2. Project cards and Lightbox must consume normalized project data rather than scraping each other's DOM.
+3. Shared lifecycle cleanup must be deterministic.
+4. Project media capabilities must be part of the stable model, not inferred repeatedly by UI components.
+5. CSS duplication and override layers should be reduced before introducing a new presentation system.
+
+### Phase 3B — dynamic project cards
+
+Once the presentation boundary is stable, make cards media-capability aware while keeping the CMS/project data contract unchanged.
+
+### Phase 3C — lightbox media viewer
+
+Treat the Lightbox as a media-viewer product surface with independent presentation, navigation, orientation, and media capability handling.
+
+### Phase 3D — content-independent responsive UX
+
+Viewport behavior should be presentation configuration, not a storage or content concern.
 
 ### Stage 8 — removal
 
