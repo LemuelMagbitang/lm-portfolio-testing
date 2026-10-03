@@ -644,6 +644,7 @@ function validateArchitecture() {
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
     ['js/features/lightbox/index.js', /export function initLightbox/],
+    ['js/features/lightbox/media-renderer.js', /export function createLightboxMediaRenderer/],
     ['js/features/settings/index.js', /export async function initSiteSettings/]
   ];
 
