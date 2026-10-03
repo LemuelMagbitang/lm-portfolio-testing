@@ -588,6 +588,14 @@ function validateBootstrapHardening() {
     err('Composition: Hero, Gallery, Lightbox, and Navigation lifecycle cleanup must be wired to app.destroy().');
   }
 
+  const hero = exists('js/features/hero/index.js') ? readText('js/features/hero/index.js') : '';
+  if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
+    err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');
+  }
+  if (/\.project-card|\.project-media-list|\.card-thumbnail|\.glass-info/.test(hero)) {
+    err('Hero: project artwork selection must not depend on project-card DOM markup.');
+  }
+
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   if (!/return \{[\s\S]*destroy\(\)[\s\S]*lifecycle\.cleanup\(\)/.test(gallery)) {
     err('Gallery: public feature lifecycle must expose destroy() through the shared lifecycle primitive.');
