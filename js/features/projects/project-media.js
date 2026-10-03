@@ -3,8 +3,8 @@
  * Pure DOM builders for project content; no CMS fetching and no global state.
  */
 
-export function buildMediaItemElement(media = {}) {
-  const el = document.createElement('div');
+export function buildMediaItemElement(media = {}, { documentRef = globalThis.document } = {}) {
+  const el = documentRef.createElement('div');
   el.className = 'media-item';
 
   const type = String(media.type || 'image').toLowerCase();
