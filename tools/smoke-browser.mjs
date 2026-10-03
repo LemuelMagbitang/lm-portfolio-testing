@@ -181,8 +181,8 @@ try {
       if (brokenImages) throw new Error('About page contains a visibly broken software-logo image.');
       if (await kritaImage.count()) {
         const src = await kritaImage.getAttribute('src');
-        if (!src || !/cdn\\.simpleicons\\.org\\/krita/i.test(src)) {
-          throw new Error('About page Krita logo did not use the pinned Simple Icons candidate.');
+        if (!src || !/(assets\\/projects\\/site\\/logos\\/krita\\.svg|cdn\\.simpleicons\\.org\\/krita)/i.test(src)) {
+          throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
         }
       }
     });
