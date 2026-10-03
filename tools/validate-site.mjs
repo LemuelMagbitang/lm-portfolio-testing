@@ -558,13 +558,19 @@ function validateBootstrapHardening() {
 
   if (!/lightboxFeature\?\.destroy\?\.\(\)/.test(composition) ||
       !/heroFeature\?\.destroy\?\.\(\)/.test(composition) ||
-      !/galleryFeature\?\.destroy\?\.\(\)/.test(composition)) {
-    err('Composition: Hero, Gallery, and Lightbox lifecycle cleanup must be wired to app.destroy().');
+      !/galleryFeature\?\.destroy\?\.\(\)/.test(composition) ||
+      !/navigation\.destroy\?\.\(\)/.test(composition)) {
+    err('Composition: Hero, Gallery, Lightbox, and Navigation lifecycle cleanup must be wired to app.destroy().');
   }
 
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   if (!/return \{[\s\S]*destroy\(\)[\s\S]*listenerCleanups\.splice\(0\)/.test(gallery)) {
     err('Gallery: public feature lifecycle must expose destroy() and release persistent listeners.');
+  }
+
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  if (!/return \{[\s\S]*destroy\(\)[\s\S]*cleanup\.splice\(0\)/.test(navigation)) {
+    err('Navigation: public feature lifecycle must expose destroy() and release persistent listeners.');
   }
 }
 function validateArchitecture() {
