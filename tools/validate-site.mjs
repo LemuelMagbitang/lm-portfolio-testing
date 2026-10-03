@@ -832,10 +832,11 @@ function validateCmsRegressionContracts() {
     err('Composition: runtime media capability checks must use normalized Projects, not hidden card markup.');
   }
 
-  if (!projectCard.includes('project-card') ||
+  if (!projectCard.includes("card.className = 'project-card'") ||
+      /className = \['project-card', \.\.\.filters\]/.test(projectCard) ||
       projectCard.includes('project-media-list') ||
       projectCard.includes('buildMediaItemElement')) {
-    err('Project cards: presentation markup must not act as an inter-feature project-data bus.');
+    err('Project cards: taxonomy must remain data-driven and presentation markup must not act as an inter-feature project-data bus.');
   }
 
   if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) {
