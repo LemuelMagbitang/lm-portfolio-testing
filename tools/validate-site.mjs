@@ -460,6 +460,7 @@ function validateLightboxLifecycle() {
 
 function validateGalleryContract() {
   const source = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const legacy = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
@@ -472,8 +473,20 @@ function validateGalleryContract() {
   if (!/getActiveCards:\s*\(\)\s*=>\s*allCards\.filter\(/.test(source)) {
     err('Gallery: getActiveCards() contract is missing its active-card filter.');
   }
-  if (!/function\s+getBaseCount\s*\(\)/.test(source)) {
-    err('Gallery: responsive base-count contract is missing.');
+  if (!/createLifecycle/.test(source) || !/lifecycle\.cleanup\(\)/.test(source)) {
+    err('Gallery: persistent runtime resources must use the shared feature lifecycle.');
+  }
+  if (!/from ['"]\.\/presentation\.js['"]/.test(source) ||
+      !/getResponsiveBaseCount/.test(source) ||
+      !/getRowAlignedCount/.test(source) ||
+      !/applyGalleryReveal/.test(source)) {
+    err('Gallery: state controller must consume the presentation boundary instead of owning layout mechanics.');
+  }
+  if (!/export function getResponsiveBaseCount\(/.test(presentation) ||
+      !/export function getRowAlignedCount\(/.test(presentation) ||
+      !/export function applyGalleryReveal\(/.test(presentation) ||
+      !/export function resetGalleryPresentation\(/.test(presentation)) {
+    err('Gallery: presentation boundary is incomplete.');
   }
   if (!/function\s+isFilterCarousel\s*\(\)/.test(source) ||
       !/function\s+getNearestCenteredFilterIndex\s*\(\)/.test(source)) {
@@ -572,8 +585,8 @@ function validateBootstrapHardening() {
   }
 
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
-  if (!/return \{[\s\S]*destroy\(\)[\s\S]*listenerCleanups\.splice\(0\)/.test(gallery)) {
-    err('Gallery: public feature lifecycle must expose destroy() and release persistent listeners.');
+  if (!/return \{[\s\S]*destroy\(\)[\s\S]*lifecycle\.cleanup\(\)/.test(gallery)) {
+    err('Gallery: public feature lifecycle must expose destroy() through the shared lifecycle primitive.');
   }
 
   const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
@@ -604,6 +617,8 @@ function validateArchitecture() {
     ['js/infrastructure/youtube/url.js', /export function parseYouTubeUrl/],
     ['js/infrastructure/three/model-viewer.js', /export (?:async )?function mountModelViewer/],
     ['js/infrastructure/software-logo/lookup.js', /export function findSoftwareLogoCandidates/],
+    ['js/core/lifecycle.js', /export function createLifecycle/],
+    ['js/features/gallery/presentation.js', /export function applyGalleryReveal/],
     ['js/features/projects/index.js', /export \{ mountProjects \}/],
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
@@ -699,18 +714,17 @@ function validateSoftwareLogoLookup() {
 
 function validateResponsiveUiContracts() {
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const style = exists('css/style.css') ? readText('css/style.css') : '';
   const adminCss = exists('admin/admin.css') ? readText('admin/admin.css') : '';
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
 
-  if (!/if \(width < 768\) return Math\.min\(2, allCards\.length\);/.test(gallery)) {
-    err('Gallery responsive count contract: phones should collapse to two visible cards.');
+  if (!/phoneCount/.test(presentation) || !/tabletShortCount/.test(presentation) ||
+      !/tabletTallCount/.test(presentation) || !/desktopCount/.test(presentation)) {
+    err('Gallery responsive presentation contract: density must be configurable outside the Gallery state controller.');
   }
-  if (!/if \(width < 1100\) return Math\.min\(height < 820 \? 4 : 6, allCards\.length\);/.test(gallery)) {
-    err('Gallery responsive count contract: tablets should choose two or three rows from viewport height.');
-  }
-  if (!/return Math\.min\(9, allCards\.length\);/.test(gallery)) {
-    err('Gallery responsive count contract: desktop should keep nine visible cards.');
+  if (!/phoneBreakpoint/.test(presentation) || !/tabletBreakpoint/.test(presentation)) {
+    err('Gallery responsive presentation contract: breakpoint decisions belong to the presentation boundary.');
   }
   if (!/grid-template-columns:1fr;/.test(style) ||
       !/grid-template-columns:repeat\(2,minmax\(0,1fr\)\);/.test(style) ||
