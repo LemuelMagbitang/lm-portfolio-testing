@@ -34,7 +34,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
   //      style.css (object-position: center 18%), which is a safe default
   //      for character art and portraits.
 
-  async function applyFocalPoint(slideImg, manualFocus) {
+  async function applyFocalPoint(slideImg, manualFocus, windowRef = globalThis.window) {
     if (manualFocus) {
       slideImg.style.objectPosition = manualFocus;
       slideImg.style.transformOrigin = manualFocus;
@@ -47,7 +47,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     if (!('FaceDetector' in window)) return;
 
     try {
-      const detector = new window.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
+      const detector = new windowRef.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
       const faces = await detector.detect(slideImg);
       if (!faces.length) return;
 
@@ -217,6 +217,10 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
   }
 
   async function initHeroBanner(options = {}) {
+    const documentRef = options.root?.getElementById ? options.root : globalThis.document;
+    const windowRef = documentRef?.defaultView || globalThis.window;
+    if (!documentRef || !windowRef) return;
+
     const loadJson = typeof options.loadJson === 'function' ? options.loadJson : loadCmsJson;
     const resolveAssetUrl = typeof options.resolveAssetUrl === 'function' ? options.resolveAssetUrl : siteAssetUrl;
     const getSiteRoot = typeof options.getSiteRootUrl === 'function' ? options.getSiteRootUrl : getSiteRootUrl;
@@ -234,7 +238,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       transitionStyle: ['kenburns','fade','none'].includes(options.transitionStyle) ? options.transitionStyle : 'kenburns',
       crossfadeMs: Number.isFinite(Number(options.crossfadeMs)) && Number(options.crossfadeMs) >= 500 ? Number(options.crossfadeMs) : 3500
     };
-    const heroContainer = document.getElementById('heroBanner') || document.getElementById('heroBannerAbout');
+    const heroContainer = documentRef.getElementById('heroBanner') || documentRef.getElementById('heroBannerAbout');
     if (!heroContainer) return;
 
     const siteRootUrl = getSiteRoot();
@@ -306,26 +310,26 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     heroContainer.classList.add('transition-' + config.transitionStyle);
 
     for (const [i, source] of sources.entries()) {
-      const wrap = document.createElement('div');
+      const wrap = documentRef.createElement('div');
       wrap.className = 'slide' + (i === 0 ? ' active' : '');
 
       let media;
       if (source.type === 'video') {
-        media = document.createElement('video');
+        media = documentRef.createElement('video');
         media.src = resolveAssetUrl(source.src);
         media.autoplay = true; media.muted = true; media.loop = true; media.playsInline = true;
       } else if (source.type === 'lottie') {
         // <lottie-player> is a custom element from the lottie-player
         // library (loaded in this page's <head>) — it takes a JSON
         // animation file the same way an <img> takes a picture file.
-        media = document.createElement('lottie-player');
+        media = documentRef.createElement('lottie-player');
         media.setAttribute('src', resolveAssetUrl(source.src));
         media.setAttribute('autoplay', '');
         media.setAttribute('loop', '');
         media.setAttribute('background', 'transparent');
         media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       } else {
-        media = document.createElement('img');
+        media = documentRef.createElement('img');
         media.src = resolveAssetUrl(source.src);
         media.alt = source.alt;
       }
@@ -347,8 +351,8 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       // Lottie slides skip it entirely, and an image with an explicit
       // focus already has what it needs.
       if (source.type === 'image' && !source.focus) {
-        if (media.complete) applyFocalPoint(media, null);
-        else media.addEventListener('load', () => applyFocalPoint(media, null), { once: true });
+        if (media.complete) applyFocalPoint(media, null, windowRef);
+        else media.addEventListener('load', () => applyFocalPoint(media, null, windowRef), { once: true });
       }
     }
 
@@ -374,7 +378,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
       ? Number(crossfadeMs)
       : 3500;
-    const intervalId = setInterval(() => {
+    const intervalId = (heroContainer.ownerDocument?.defaultView || globalThis.window).setInterval(() => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
