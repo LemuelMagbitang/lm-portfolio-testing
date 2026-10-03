@@ -57,9 +57,9 @@ if (!fs.existsSync(entrypoint)) {
   }
 }
 
-for (const required of ['app/bootstrap.js', 'app/page-composition.js']) {
+for (const required of ['app/bootstrap.js', 'app/page-composition.js', 'core/config.js']) {
   if (!fs.existsSync(path.join(jsRoot, required))) {
-    errors.push(`Missing composition module js/${required}`);
+    errors.push(`Missing required architecture module js/${required}`);
   }
 }
 
