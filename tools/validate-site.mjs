@@ -455,6 +455,9 @@ function validateLightboxLifecycle() {
 
   if (!/modalMediaContainer\.querySelectorAll\('\.model-viewer-shell'\)\.forEach\(shell => \{\s*try \{ shell\.__modelViewerCleanup\?\.\(\); \} catch \(_\) \{\}/s.test(source)) {
     err('Lightbox: closing the modal must dispose mounted 3D viewers before clearing their DOM.');
+  }\n  if (!/getProjectForCard/.test(source) ||
+      /\.project-media-list|\.glass-info|\.project-description/.test(source)) {
+    err('Lightbox: project content must come from the normalized Projects contract, not card markup.');
   }
 }
 
