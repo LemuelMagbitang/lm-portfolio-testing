@@ -48,7 +48,7 @@ jobs:
 
           source = source.replace(
             "if (!script.includes('await cmsReady;') || script.indexOf('await cmsReady;') > script.indexOf('initGallery()')) {",
-            "const cmsReadyPos = script.indexOf('await cmsReady;');\\n  const galleryInitPos = script.indexOf('initGallery(');\\n  if (cmsReadyPos < 0 || galleryInitPos < 0 || cmsReadyPos > galleryInitPos) {"
+            "const cmsReadyPos = script.indexOf('await cmsReady;');\n  const galleryInitPos = script.indexOf('initGallery(');\n  if (cmsReadyPos < 0 || galleryInitPos < 0 || cmsReadyPos > galleryInitPos) {"
           );
 
           source = source.replace(
