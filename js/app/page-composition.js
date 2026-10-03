@@ -16,7 +16,7 @@ import { initSiteSettings } from '../features/settings/index.js';
 import { initGallery } from '../features/gallery/index.js';
 import { initHeroBannerV2 } from '../features/hero/index.js';
 import { initLightbox } from '../features/lightbox/index.js';
-import { mountModelViewer } from '../model-viewer.js';
+import { mountModelViewer } from '../infrastructure/three/model-viewer.js';
 
 export async function createPortfolioApp({
   root = globalThis.document,
