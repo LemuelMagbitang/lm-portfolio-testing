@@ -65,7 +65,6 @@ export function initLightbox(options = {}) {
   const bind = (target, type, handler, listenerOptions) =>
     lifecycle.listen(target, type, handler, listenerOptions);
 
-  const allCards = Array.from(documentRef.querySelectorAll('.project-card'));
 
 /* =========================================
    7. LIGHTBOX MODAL
@@ -356,37 +355,17 @@ function openLightbox(index, initialMediaIndex = -1) {
 }
 
 
-// Project cards are keyboard-operable as well as pointer-operable.
-allCards.forEach(card => {
-  card.setAttribute('role', 'button');
-  card.setAttribute('tabindex', '0');
-  const titleText = getProjectForCard(card)?.title?.trim() || '';
-  card.setAttribute('aria-label', titleText ? `Open project: ${titleText}` : 'Open project');
 
-  const openFromCard = (event) => {
-    activeLightboxCards = getActiveCards();
-    const index = activeLightboxCards.indexOf(card);
-    if (index < 0) return;
-
-    const project = getProjectForCard(card);
-    let initialMediaIndex = -1;
-
-    if (event.target.closest('.card-thumbnail [data-model-thumb]') && project) {
-      initialMediaIndex = Array.isArray(project.media)
-        ? project.media.findIndex(item => item?.type === 'model' && item?.src)
-        : -1;
-    }
-
-    openLightbox(index, initialMediaIndex);
-  };
-
-  bind(card, 'click', openFromCard);
-  bind(card, 'keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    openFromCard(event);
-  });
-});
+// Projects owns card activation and calls this public method. Lightbox only
+// resolves the active-project index and manages viewer state from there.
+function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
+  if (!card) return false;
+  activeLightboxCards = getActiveCards();
+  const index = activeLightboxCards.indexOf(card);
+  if (index < 0) return false;
+  openLightbox(index, initialMediaIndex);
+  return true;
+}
 
 // Close Lightbox function
 function closeLightbox() {
