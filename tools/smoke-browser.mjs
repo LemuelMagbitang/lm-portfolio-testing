@@ -440,25 +440,35 @@ try {
 
       const projectsNav = page.locator('.nav-item[data-section="projects"]');
       if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
-
       await projectsNav.click();
-      const projectCard = page.locator('#content .card-item').first();
-      await projectCard.waitFor({ state: 'visible', timeout: 5000 });
 
-      const mediaList = projectCard.locator('[data-medialist]').first();
-      if (await mediaList.count()) {
-        const mediaRow = mediaList.locator('.card-item').first();
-        if (await mediaRow.count()) {
-          const toggle = mediaRow.locator('[data-mact="toggle"]');
-          if (await toggle.count()) await toggle.click();
-          const bgControl = mediaRow.locator('[data-bg-control]');
-          if (await bgControl.count() !== 1) {
-            throw new Error('CMS media editor is missing the Lottie/3D background color control.');
-          }
-        }
+      const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
+      if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
+
+      const testBody = testProject.locator('[data-body]').first();
+      const bodyStyle = await testBody.getAttribute('style');
+      if (!bodyStyle?.includes('display:block')) {
+        await testProject.locator('[data-toggle-open]').click();
       }
 
-      const projectsNav = page.locator('.nav-item[data-section="projects"]');
+      const lottieMedia = testProject.locator('[data-medialist] .card-item').first();
+      if (await lottieMedia.count() !== 1) throw new Error('CMS test-project Lottie media row is missing.');
+
+      const toggle = lottieMedia.locator('[data-mact="toggle"]');
+      if (await toggle.count()) {
+        const body = lottieMedia.locator('[data-mbody]').first();
+        const style = await body.getAttribute('style');
+        if (!style?.includes('display:block')) await toggle.click();
+      }
+
+      const bgControl = lottieMedia.locator('[data-bg-control]');
+      if (await bgControl.count() !== 1) throw new Error('CMS Lottie media row is missing the background color control.');
+      if (!(await bgControl.isVisible())) throw new Error('CMS Lottie background color control should be visible.');
+
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+
+      const softwareRows = await page.locator('#tags_software .skill-editor-row').count();      const projectsNav = page.locator('.nav-item[data-section="projects"]');
       if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
       await projectsNav.click();
 
