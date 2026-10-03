@@ -65,9 +65,12 @@ export async function initGallery(options = {}) {
 
   await loadFilterButtons();
 
-  const allProjects = getProjects().filter(project => project && project.id);
-  const allCards = allProjects.map(project => getCardForProject(project.id)).filter(Boolean);
-  if (allProjects.length === 0 || allCards.length === 0) return;
+  const getProjectSnapshot = () => getProjects().filter(project => project && project.id);
+  const getCardSnapshot = projects => projects.map(project => getCardForProject(project.id)).filter(Boolean);
+
+  const initialProjects = getProjectSnapshot();
+  const initialCards = getCardSnapshot(initialProjects);
+  if (initialProjects.length === 0 || initialCards.length === 0) return;
   const filterBtns = Array.from(documentRef.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
 
   const phoneCount = Number.isFinite(options.phoneCount) ? options.phoneCount : 2;
@@ -104,7 +107,7 @@ export async function initGallery(options = {}) {
     return getResponsiveBaseCount({
       width: windowRef.innerWidth,
       height: windowRef.innerHeight,
-      total: allCards.length,
+      total: getCardSnapshot(getProjectSnapshot()).length,
       phoneCount,
       tabletShortCount,
       tabletTallCount,
@@ -286,7 +289,7 @@ export async function initGallery(options = {}) {
   }
 
   function getFilteredProjects() {
-    return allProjects.filter(project => projectMatchesFilter(project, currentFilter));
+    return getProjectSnapshot().filter(project => projectMatchesFilter(project, currentFilter));
   }
 
   function getCardsForProjects(projects) {
