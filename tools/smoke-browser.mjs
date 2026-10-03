@@ -161,7 +161,7 @@ try {
       const viewportWidth = await page.evaluate(() => window.innerWidth);
       const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
       if (Math.abs(artworkWidth - viewportWidth) > 2) {
-        throw new Error(`Mobile Lightbox artwork is not full-bleed (artwork {artworkWidth{'}'}px vs viewport {viewportWidth{'}'}px).`);
+        throw new Error(`Mobile Lightbox artwork is not full-bleed (artwork ${artworkWidth}px vs viewport ${viewportWidth}px).`);
       }
 
       await page.locator('#lightboxClose').click();
