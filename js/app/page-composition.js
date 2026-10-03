@@ -17,6 +17,7 @@ import { initGallery } from '../features/gallery/index.js';
 import { initHeroBannerV2 } from '../features/hero/index.js';
 import { initLightbox } from '../features/lightbox/index.js';
 import { mountModelViewer } from '../infrastructure/three/model-viewer.js';
+import { applyMediaBackground } from '../infrastructure/media-background/loader.js';
 
 export async function createPortfolioApp({
   root = globalThis.document,
@@ -98,6 +99,7 @@ export async function createPortfolioApp({
         getSiteRootUrl,
         ensureLottiePlayer,
         ensureMediaBackgroundHelper,
+        applyMediaBackground,
         parseYouTubeUrl,
         prefersReducedMotion: runtime.prefersReducedMotion
       });
@@ -136,6 +138,7 @@ export async function createPortfolioApp({
       root,
       protectionEnabled: () => settings.protectionEnabled,
       ensureMediaBackgroundHelper,
+      applyMediaBackground,
       parseYouTubeUrl,
       resolveAssetUrl: siteAssetUrl,
       mountModelViewer,
