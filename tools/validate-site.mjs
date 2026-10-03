@@ -799,8 +799,11 @@ function validateCmsRegressionContracts() {
     err('Gallery: row-aware Show More state/presentation contract is missing.');
   }
 
-  if (!projectCard.includes('card.dataset.filterIds')) {
-    err('Gallery filters: exact CMS filter IDs must be preserved on project cards.');
+  if (!gallery.includes('getFilteredProjects') ||
+      !gallery.includes('projectMatchesFilter') ||
+      !gallery.includes('getCardForProject') ||
+      !gallery.includes('getProjects')) {
+    err('Gallery filters: filter state must consume normalized Projects and map selections to cards through the Projects API.');
   }
 
   if (!/className = 'tab-btn filter-btn active'/.test(gallery) ||
