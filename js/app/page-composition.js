@@ -94,8 +94,8 @@ export async function createPortfolioApp({
       await initHeroBannerV2({
         heroLoopUrl: config.urls.heroLoop,
         projectsUrl: config.urls.projects,
-        mode: settings.heroTiming.loopMode,
-        transition: settings.heroTiming.transitionStyle,
+        loopMode: settings.heroTiming.loopMode,
+        transitionStyle: settings.heroTiming.transitionStyle,
         crossfadeMs: settings.heroTiming.crossfadeMs,
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl,
