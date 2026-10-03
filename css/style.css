@@ -1,3 +1,1702 @@
+@import url('./tokens.css');
+
+/* --- GLOBAL RESETS --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* Kills the browser's default translucent tap-highlight rectangle on
+     touch devices. Without this, tapping a button/link on mobile flashes
+     a blue box sized to its full hit-area (padding included), which reads
+     as the element jumping or misaligning even though nothing moved. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--lm-color-background);
+  color: var(--lm-color-text-secondary);
+  /* "Inter" is loaded as a real webfont in every page's <head> (Google
+     Fonts), so this renders identically on Windows, macOS, iOS and
+     Android instead of each OS substituting its own default sans-serif
+     (which is what caused the site to look "wrong" on Android before —
+     it was quietly falling back all the way to plain Roboto/Arial). The
+     system names after it are just an offline/slow-network safety net. */
+  font-family: var(--lm-font-sans);
+  overflow-x: hidden;
+}
+
+/* Keep code/pre/kbd/samp on the centralized site type system instead of
+   allowing browser-default monospace typography to leak into the UI. */
+code, pre, kbd, samp { font-family: var(--lm-font-sans); }
+
+/* =========================================
+   NAVIGATION BAR & BRANDING
+   ========================================= */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-container {
+  max-width: var(--lm-container-max);
+  margin: 0 auto;
+  padding: 15px var(--lm-page-gutter);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--lm-color-text-primary);
+  letter-spacing: 2px;
+  text-decoration: none;
+}
+
+.site-logo {
+  width: 45px;
+  height: auto;
+  vertical-align: middle;
+  transition: transform 0.3s ease;
+}
+
+.site-logo:hover {
+  transform: scale(1.05);
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 30px;
+}
+
+.nav-links a {
+  color: #aaa;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.3s;
+}
+
+.nav-links a:hover, .nav-links a.active-link {
+  color: #fff;
+}
+
+.hamburger {
+  display: none;
+  font-size: 1.5rem;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* "Works" dropdown — desktop: hover-reveal panel below the nav link.
+   Mobile: folds into the same rules, see the mobile query further down. */
+.nav-item-dropdown { position: relative; }
+
+.nav-dropdown-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.nav-caret { font-size: 0.6rem; transition: transform 0.2s ease; }
+.nav-item-dropdown:hover .nav-caret { transform: rotate(180deg); }
+
+.nav-dropdown-menu {
+  list-style: none;
+  position: absolute;
+  /* Sits flush against the nav row (no real gap) — a floating gap is
+     what breaks hover: the cursor exits the "Works" link's hoverable
+     box before it reaches the menu, so the menu closes mid-move. Flush
+     positioning means there's no dead zone to cross. The breathing
+     room you'd visually want from a gap comes from this box's own
+     top padding instead, which stays part of the hoverable area. */
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  margin-top: 0;
+  padding: 18px 0 10px;
+  min-width: 170px;
+  background: rgba(18, 18, 18, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+}
+
+.nav-item-dropdown:hover .nav-dropdown-menu,
+.nav-item-dropdown:focus-within .nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.nav-dropdown-menu li { text-align: center; }
+.nav-dropdown-menu a {
+  display: block;
+  padding: 9px 22px;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+
+/* =========================================
+   HERO SECTION
+   ========================================= */
+.hero-section {
+  position: relative;
+  width: 100%;
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-top: 60px;
+}
+
+.hero-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  background-color: #121212;
+  z-index: 1;
+}
+
+.hero-banner::after {
+  content: ''; 
+  position: absolute; 
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(18,18,18,0.4) 0%, #121212 100%);
+  z-index: 2;
+}
+
+/* Each slide is now a wrapper, not the media itself — the same
+   .slide governs opacity/active-state regardless of whether what's
+   inside it is an <img>, a <video>, or a <lottie-player> (a Lottie/
+   JSON animation), so startHeroCrossfade() in script.js never needs
+   to know or care which one it's looking at. */
+.hero-banner .slide {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  --hero-fade-in-ms: 1500ms;
+  --hero-fade-out-ms: 1500ms;
+  transition: opacity var(--hero-fade-out-ms) ease-in-out;
+}
+.hero-banner .slide.active {
+  opacity: 0.4;
+  transition-duration: var(--hero-fade-in-ms);
+}
+
+.hero-banner .slide img,
+.hero-banner .slide video,
+.hero-banner .slide lottie-player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Biases the crop toward the top ~1/5 of the image by default,
+     which is where faces/heads usually sit in character art and
+     portraits — overridden per-slide from data/hero-loop.json's (or a
+     project's thumbnail) own focus value, the same --thumb-zoom /
+     object-position mechanism used everywhere else on the site. */
+  object-position: center 18%;
+  transform-origin: center 18%;
+  --thumb-zoom: 1;
+  --thumb-rotate: 0deg;
+  will-change: opacity, transform;
+}
+
+/* THREE TRANSITION STYLES, chosen from Settings & Toggles
+   (data/settings.json's heroTiming.transitionStyle), applied as a
+   class on .hero-banner itself by script.js:
+
+   - kenburns (default): the continuous ambient zoom below, running on
+     every slide at once, in sync, forever — never tied to .active.
+     That's deliberate: if the zoom were only applied while a slide is
+     active, removing that class the instant it fades out would snap
+     the transform back to nothing instantly (a jump cut). With one
+     shared loop, whichever slide is visible just gets caught wherever
+     that loop currently is — no start/stop, so nothing ever snaps.
+     A slide's own zoom/rotate value is sat out while this is active,
+     since the animation already owns `transform` continuously.
+   - fade: a plain crossfade, no zoom motion at all — a slide's own
+     zoom/rotate/focus still fully applies, just held static.
+   - none: an instant cut, no fade duration either — set by removing
+     the .slide transition, below. */
+.hero-banner.transition-kenburns .slide img,
+.hero-banner.transition-kenburns .slide video,
+.hero-banner.transition-kenburns .slide lottie-player {
+  animation: hero-kenburns 14s ease-in-out infinite;
+}
+.hero-banner.transition-fade .slide img,
+.hero-banner.transition-fade .slide video,
+.hero-banner.transition-fade .slide lottie-player {
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+}
+.hero-banner.transition-none .slide {
+  transition: none;
+}
+.hero-banner.transition-none .slide img,
+.hero-banner.transition-none .slide video,
+.hero-banner.transition-none .slide lottie-player {
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+}
+
+@keyframes hero-kenburns {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.hero-overlay { position: relative; z-index: 3; text-align: center; padding: 0 20px; }
+.subtext-header { font-size: 0.85rem; letter-spacing: 3px; color: #aaa; display: block; margin-bottom: 10px; }
+.name { font-size: 3.5rem; font-weight: 800; color: #fff; letter-spacing: 2px; margin-bottom: 10px; }
+.tagline { font-size: 1rem; color: #ccc; margin-bottom: 25px; display: flex; align-items: center; justify-content: center; }
+.status-dot { display: inline-block; width: 8px; height: 8px; background-color: #2ecc71; border-radius: 50%; box-shadow: 0 0 8px #2ecc71; margin: 0 10px; }
+
+/* =========================================
+   HERO MESSAGE (homepage)
+   =========================================
+   Set flush-left and locked to the same 1400px / 24px gutter as the
+   project grid below it, so the first letter of the statement sits on
+   exactly the same vertical line as the left edge of the first card.
+   That single shared margin is what makes the page read as one
+   deliberate layout rather than a centred block floating above a grid
+   — the same trick an architectural plan uses with a datum line.
+   script.js writes the label/text/author into this block (see
+   HERO_MESSAGES) and picks one at random on each page load. */
+.hero-quote {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  text-align: left;            /* overrides .hero-overlay's centring */
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+/* Fades in only once script.js has chosen and written a message, so
+   you never see a flash of the placeholder markup on load. */
+.hero-quote.is-ready { opacity: 1; }
+
+/* Small tracked label above the statement, with a short hairline rule
+   leading into it — the drawing-sheet annotation look. */
+.hero-quote-label {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+  margin-bottom: 22px;
+}
+
+.hero-quote-label::before {
+  content: '';
+  width: 42px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+  flex-shrink: 0;
+}
+
+/* The statement itself: large, tight, flush-left, ragged right.
+   Deliberately NOT justified — justifying display type at this size
+   opens white rivers between words and softens the left edge, which
+   is the one thing holding the whole layout together. The measure is
+   capped in ch so it always breaks into a solid multi-line block
+   regardless of how long the entry is. */
+.hero-quote-text {
+  font-size: clamp(1.75rem, 5.4vw, 3.6rem);
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  max-width: 24ch;
+  margin-bottom: 30px;
+  text-wrap: pretty;
+  /* Pulls the opening “ into the left margin so the first real letter
+     stays on the datum line instead of being pushed off it. */
+  hanging-punctuation: first last;
+  transition: opacity 0.6s ease;
+}
+
+/* Credit line, aligned to the same left edge as the statement, set
+   small and tracked so it reads as a caption rather than a sentence.
+   Plain text only — no link. */
+.hero-quote-author {
+  display: block;
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #909090;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  max-width: 24ch;             /* rule stops under the text block, not the full page */
+  transition: opacity 0.6s ease;
+}
+
+@media (max-width: 768px) {
+  .hero-quote { padding: 0 24px; }
+  .hero-quote-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.22em;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .hero-quote-label::before { width: 26px; }
+  .hero-quote-text {
+    /* Bigger relative to the screen than desktop on purpose — on a
+       phone this block is the whole first impression, so it should
+       fill the viewport edge to edge like a poster. */
+    font-size: clamp(1.75rem, 8.2vw, 2.6rem);
+    line-height: 1.14;
+    max-width: 18ch;
+    margin-bottom: 24px;
+  }
+  .hero-quote-author {
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    max-width: 22ch;
+    padding-top: 14px;
+  }
+}
+
+.social-icons {display: flex; gap: 15px; justify-content: center; }
+
+.social-icons a {
+  color: #fff; background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  text-decoration: none; font-size: 1.1rem; transition: all var(--lm-motion-standard);
+  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+}
+.social-icons a:hover { background: #fff; color: #000; transform: scale(1.1); }
+
+/* =========================================
+   MAIN CONTAINER & FILTER TABS
+   ========================================= */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.page-spacing { padding-top: 80px; padding-bottom: 60px; }
+.section-title { font-size: 1.1rem; letter-spacing: 2px; color: #888; margin-bottom: 40px; text-align: center; }
+
+.filter-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  width: 100%;
+  margin: 28px auto 10px;
+  padding: 0;
+  overflow: visible;
+}
+
+.filter-tabs .filter-edge-spacer {
+  display: none;
+}
+
+.filter-tabs .tab-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Desktop keeps the established wrapped filter layout. The horizontal
+   carousel and centered snapping are intentionally enabled only for
+   small screens below. */
+
+/* Lead-in line used on the targeted landing pages (3d-motion.html,
+   illustration.html) in place of the filter tabs — sits in the same
+   spot so the layout below doesn't shift. */
+.landing-lead { max-width: 640px; margin: 30px auto; text-align: center; color: #aaa; font-size: 0.95rem; line-height: 1.6; }
+.landing-lead a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.landing-lead a:hover { color: #ccc; }
+.tab-btn {
+  background: none; border: none; color: #666; font-size: 0.9rem;
+  letter-spacing: 1.5px; cursor: pointer; padding: 8px 16px; transition: color var(--lm-motion-fast); font-weight: 600;
+  /* Long-pressing a button on Android fires native TEXT SELECTION, which
+     paints a solid highlight across the whole padding box — wider than
+     the label and starting further left, so the tab appears to jump left
+     even though the text never moves. These lines stop the browser
+     treating the label as selectable text. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Underline drawn with box-shadow instead of border-bottom: a border
+   adds 2px to the element's real height and can nudge the wrapped flex
+   row, while a shadow paints outside the layout box entirely. Same
+   look, zero reflow when a tab becomes active. */
+.tab-btn.active { color: #fff; box-shadow: inset 0 -2px 0 0 #fff; }
+
+/* Tapping a <button> leaves it focused, and the UA focus ring draws
+   around the padding box — another source of a phantom "box" after tap.
+   Suppressed for pointer input, kept for keyboard users. */
+.tab-btn:focus { outline: none; }
+.tab-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Apple/Figma-style page control. There is one dot per actual
+   filter, including ALL. The active dot tracks the filter nearest the
+   horizontal center of the strip. */
+.filter-page-controls{
+  display:none;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:12px;
+  margin:0 auto 28px;
+}
+.filter-page-controls[hidden]{display:none !important;}
+.filter-page-dot{
+  appearance:none;
+  -webkit-appearance:none;
+  width:7px;
+  height:7px;
+  flex:0 0 7px;
+  padding:0;
+  margin:0;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.30);
+  cursor:pointer;
+  opacity:.72;
+  transition:transform .22s ease, background .22s ease, opacity .22s ease;
+}
+.filter-page-dot.active{
+  transform:scale(1.5);
+  background:rgba(255,255,255,.95);
+  opacity:1;
+}
+@media (hover:hover) and (pointer:fine){
+  .filter-page-dot:hover{opacity:1;transform:scale(1.28);}
+}
+.filter-page-dot:focus{outline:none;}
+.filter-page-dot:focus-visible{outline:2px solid #fff;outline-offset:4px;}
+
+/* Hover-only visual state, scoped to devices with a real hover-capable
+   pointer (a mouse). Touchscreens have no real "mouse leave," so a plain
+   :hover rule gets stuck "on" after a tap until something else is
+   touched — that's what made a previously-tapped tab look like it was
+   still selected, or a button look like it never released. */
+@media (hover: hover) and (pointer: fine) {
+  .tab-btn:hover { color: #fff; box-shadow: inset 0 -2px 0 0 #fff; }
+}
+
+/* =========================================
+   SEAMLESS WORKS GRID
+   ========================================= */
+.portfolio-wrapper {
+  position: relative;
+}
+
+.seamless-grid {
+  display: grid;
+  /* min(400px, 100%) instead of a bare 400px: on any viewport narrower
+     than 400px, the track shrinks to exactly the container's width
+     rather than forcing a 400px-wide card into a smaller box. That
+     forced overflow (silently clipped by body's overflow-x: hidden) was
+     the real cause of the "cropped title/subtitle", "card isn't square"
+     and "thumbnail looks left-aligned" bugs — all three were the same
+     card, just sliced down its right edge. */
+  grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
+  gap: 0;
+  border-radius: var(--lm-card-radius);
+  overflow: hidden;
+}
+
+.project-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--lm-color-surface);
+  aspect-ratio: 1 / 1;
+  /* Lets .glass-info's clamp(...cqw...) font sizes scale off the
+     card's own width rather than the viewport's — so text keeps the
+     same comfortable proportion whether the grid is showing 1, 2 or 4
+     columns. */
+  container-type: inline-size;
+  /* Lets script.js fade cards in/out on filter change instead of the
+     old instant display:none snap. Opacity only — never transform —
+     so the grid's own height/collapse measurements stay accurate while
+     a card is mid-fade. */
+  width: 100%;
+  transition: opacity var(--lm-motion-standard) var(--lm-motion-ease);
+}
+
+.project-card:focus { outline: none; }
+.project-card:focus-visible { outline: 2px solid rgba(255,255,255,.78); outline-offset: -2px; }
+
+
+.card-thumbnail {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.card-thumbnail img,
+.card-thumbnail video,
+.card-thumbnail .project-thumb-media.lottie-player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The same presentation controls apply to every locally rendered visual
+     thumbnail type. Keeping the variables on the media node means CMS
+     settings survive fallback resolution without a second DOM pass. */
+  --thumb-zoom: 1;
+  --thumb-rotate: 0deg;
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  transform-origin: center center;
+  transition: transform var(--lm-motion-image) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.project-card:hover .card-thumbnail img,
+.project-card:hover .card-thumbnail video,
+.project-card:hover .card-thumbnail .project-thumb-media.lottie-player {
+  /* Multiplies on top of any manual zoom rather than overriding it,
+     so the hover effect still works even on an already-zoomed thumbnail. */
+  transform: scale(calc(var(--thumb-zoom) * 1.05)) rotate(var(--thumb-rotate));
+}
+
+.card-badges { position: absolute; top: 20px; left: 20px; display: flex; gap: 8px; z-index: 5; }
+.badge.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 1px;
+  padding: 6px 14px; border-radius: 30px; text-transform: uppercase;
+}
+
+.glass-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 40px 20px 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transform: translateY(10px);
+  opacity: 0;
+  transition: opacity var(--lm-motion-slow) var(--lm-motion-ease), transform var(--lm-motion-slow) var(--lm-motion-ease);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.project-card:hover .glass-info {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.glass-info h3 {
+  /* Scales fluidly with the card's own width instead of a fixed
+     rem value, so it keeps fitting comfortably as cards get narrower
+     on small screens or in a denser grid. */
+  font-size: clamp(1.1rem, 5cqw, 1.5rem);
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 5px;
+  line-height: 1.25;
+  /* Safety net: even a title long enough to want 3+ lines is clamped
+     to 2 with an ellipsis, so it can never grow past the space the
+     card actually has and get clipped by .project-card's overflow:hidden. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;              /* standard property — silences the
+                                 "also define the standard property"
+                                 editor warning; -webkit- above is what
+                                 actually does the work in every current
+                                 browser, so keep both. */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.glass-info p {
+  font-size: clamp(0.8rem, 3.2cqw, 0.95rem);
+  color: #ccc;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;              /* standard property — silences the
+                                 "also define the standard property"
+                                 editor warning; -webkit- above is what
+                                 actually does the work in every current
+                                 browser, so keep both. */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.social-icons {display: flex; gap: 15px; justify-content: center; }
+
+.social-icons a {
+  color: #fff; background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  text-decoration: none; font-size: 1.1rem; transition: background-color var(--lm-motion-standard), color var(--lm-motion-standard), transform var(--lm-motion-standard);
+  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+}
+.social-icons a:hover { background: #fff; color: #000; transform: scale(1.1); }
+
+/* =========================================
+   ABOUT ME SECTION
+   ========================================= */
+.resume-section { display: flex; flex-direction: column; gap: 70px; max-width: 1000px; margin: 0 auto; }
+/* THE FIX for the photo bleeding into whatever sits below it once
+   zoomed in: .photo-frame is the fixed-size, actually-circular box —
+   the thing everything else lays out around — and it clips anything
+   that overflows it. .profile-pic-large (the <img> itself) just
+   fills that box completely and is free to be scaled/rotated/
+   repositioned however zoom and focus need, because the frame around
+   it catches whatever spills past its edges.
+   Without this wrapper, scaling the <img> directly scaled its own
+   border-radius circle right along with it — a 128px circle at 1.35×
+   zoom became a ~173px circle, still perfectly round, just bigger
+   than the space the layout had reserved for it, which is what let
+   it visually overlap the heading below it on a phone. A project
+   thumbnail never had this problem because .project-card (its
+   ancestor two levels up) already has overflow: hidden — this gives
+   the profile photo that exact same protection. */
+.photo-frame {
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.profile-pic-large {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  /* Same zoom/rotate mechanism as a project's thumbnail (see
+     .card-thumbnail img above) — set from data/about.json's photo.zoom
+     / photo.rotate via script.js, defaulting to no change here. focus
+     comes through as a plain object-position, set the same way. */
+  --thumb-zoom: 1;
+  --thumb-rotate: 0deg;
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  transition: transform 0.4s ease, object-position 0.4s ease;
+}
+
+/* LAYOUT: skills row on top, everything else full width beneath it.
+
+   Was two tall columns side by side — skills on the left, the entire
+   career on the right — which left a long empty gutter under the
+   short skills column and squeezed the experience text into half the
+   page. Now the two skill blocks share one row across the top, and
+   Work Experience / Education / Awards run the full width below.
+
+   This is the same reading order the mobile view already had, so the
+   two views now tell the same story; mobile itself is unchanged. */
+.resume-skills-row,
+.resume-grid {                 /* .resume-grid kept as an alias so any
+                                   older markup still lays out correctly */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+}
+
+.resume-main {
+  display: flex;
+  flex-direction: column;
+  gap: 50px;
+}
+
+/* Full width means a much longer line, and long lines are hard to
+   track back to the start of. Capping the measure keeps the body copy
+   readable no matter how wide the container gets — the headings and
+   the rule above them still span the full width, so the section still
+   reads as wide. */
+.resume-main .clean-timeline p { max-width: 74ch; }
+
+.resume-block.borderless h3 { color: #fff; font-size: 1.3rem; padding-bottom: 15px; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+.skill-list.minimal-list { list-style: none; display: flex; flex-wrap: wrap; gap: 12px; }
+.skill-list.minimal-list li { background: rgba(255, 255, 255, 0.05); padding: 8px 18px; border-radius: 30px; font-size: 0.9rem; color: #ddd; letter-spacing: 0.5px; }
+/* Software logo mode is intentionally NOT a pill. The text-chip treatment
+   above is for normal skills; a logo should read as a standalone mark with
+   the same visual language as the white marks used elsewhere on the About
+   page. */
+/* Software logo mode is a presentation surface, not a pill. Each logo gets
+   a compact rectangular plate so transparent PNGs remain legible against the
+   dark About page. The site's own neutral surface replaces the source logo's
+   color without relying on the source image's alpha to define the boundary. */
+.skill-list.minimal-list.logo-mode {
+  align-items: center;
+  gap: 18px 18px;
+}
+.skill-list.minimal-list li.has-logo {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+}
+.skill-logo-frame {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 56px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.026));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.055),
+    inset 0 0 0 1px rgba(0,0,0,0.12),
+    0 8px 24px rgba(0,0,0,0.14);
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+.skill-logo-frame::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 11px;
+  pointer-events: none;
+  background: linear-gradient(145deg, rgba(255,255,255,0.035), transparent 42%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .skill-logo-frame:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.18);
+    background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.065),
+      0 10px 28px rgba(0,0,0,0.2);
+  }
+}
+/* Preserve internal logo detail while keeping the mark neutral. The frame is
+   intentionally separate from the image, so the image's own transparent or
+   dark background can no longer make the logo vanish into the page. */
+.skill-list.minimal-list li .skill-logo {
+  position: relative;
+  z-index: 1;
+  width: auto;
+  max-width: 76%;
+  height: auto;
+  max-height: 72%;
+  object-fit: contain;
+  display: block;
+  filter: grayscale(1) contrast(1.12) brightness(1.16);
+  mix-blend-mode: normal;
+  opacity: 1;
+  transition: filter .2s ease, opacity .2s ease;
+}
+.skill-list.minimal-list li .skill-logo[data-logo-tone="dark"]{
+  filter: grayscale(1) contrast(1.18) brightness(0) invert(1);
+}
+.skill-list.minimal-list li .skill-logo[data-logo-tone="light"]{
+  filter: grayscale(1) contrast(1.12) brightness(1.08);
+}
+.skill-logo-frame.is-fallback {
+  color: #f3f3f3;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.clean-timeline {
+  margin-bottom: 30px;
+  position: relative;
+  padding-left: 16px;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+}
+.clean-timeline h4 { color: #fff; font-size: 1.2rem; margin-bottom: 5px; }
+.clean-timeline .timeline-date { display: block; color: #888; font-size: 0.9rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.clean-timeline p { color: #aaa; font-size: 1rem; line-height: 1.6; }
+
+/* =========================================
+   CONTACT & FORMS
+   ========================================= */
+.form-container { max-width: 600px; margin: 0 auto; }
+.simple-form { display: flex; flex-direction: column; gap: 20px; }
+input, textarea, select { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 8px; color: #fff; font-size: 1rem; outline: none; transition: border-color 0.3s; }
+input:focus, textarea:focus, select:focus { border-color: #555; background: rgba(255,255,255,0.05); }
+textarea { resize: vertical; }
+
+.submit-btn { width: 100%; background: #fff; color: #000; border: none; padding: 16px; border-radius: 8px; font-size: 0.95rem; font-weight: 700; letter-spacing: 1.5px; cursor: pointer; transition: all 0.3s; }
+.submit-btn:hover { background: #ccc; }
+
+.star-rating input[type="radio"] { display: none; }
+.star-rating label { font-size: 2.2rem; color: #333; cursor: pointer; transition: color 0.2s ease-in-out; }
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input[type="radio"]:checked ~ label {
+  color: #f39c12;
+}
+
+/* =========================================
+   LIGHTBOX MODAL
+   ========================================= */
+.lightbox-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 10, 10, 0.95);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  /* Stops this box's scroll from chaining into the page behind it once
+     it hits either end. Without it the whole document rubber-bands
+     underneath the modal, which is half of what made the side arrows
+     appear to snap at the top and bottom of a project. */
+  overscroll-behavior: contain;
+  z-index: 9999;
+  padding: 60px 20px;
+}
+
+.lightbox-modal.active {
+  display: flex;
+}
+
+.modal-interior {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.modal-header, .modal-full-desc {
+  text-align: center;
+}
+
+.modal-header { color: #fff; }
+.modal-header h2 { font-size: 2rem; margin-bottom: 5px; }
+
+.modal-full-desc {
+  margin-top: 15px;
+  color: #ccc;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.modal-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* NOTE: image/iframe sizing for the lightbox lives in the
+   "#lightboxMediaContainer" rules further down this file.
+   (An older duplicate rule used to live here and force every
+   video into 16:9, which is why Shorts looked squished — removed.) */
+
+.lightbox-controls {
+  position: relative;
+  z-index: 10000;
+  display: none;
+  pointer-events: none;
+}
+
+.lightbox-controls.active {
+  display: block;
+}
+
+button.lightbox-close,
+button.lightbox-nav,
+button.hamburger {
+  appearance:none;
+  -webkit-appearance:none;
+  font:inherit;
+}
+
+button.lightbox-close,
+button.lightbox-nav {
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+}
+
+button.hamburger {
+  border:0;
+  background:transparent;
+  padding:0;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  width:52px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:0;
+  background:transparent;
+  border:0;
+  font-size:2.15rem;
+  line-height:1;
+  color:#fff;
+  cursor:pointer;
+  z-index:10000;
+  pointer-events:auto;
+  transition:opacity .2s,transform .2s ease;
+}
+
+@media (hover:hover) and (pointer:fine){
+  .lightbox-close:hover { opacity:.7; transform:scale(1.04); }
+}
+.lightbox-close:focus{outline:none;}
+.lightbox-close:focus-visible{outline:2px solid #fff;outline-offset:3px;}
+
+.lightbox-nav {
+  position: fixed;
+  top: 50%;
+  /* On mobile, the browser's own address bar retracts as you scroll,
+     which changes the actual visible viewport height mid-scroll.
+     `top: 50%` on a `position: fixed` element is computed against
+     that viewport height — so as the address bar animates away, this
+     50% mark moves, and the arrow visibly jumps to catch up. That's
+     the snap in the recording: nothing to do with scroll performance,
+     it's the viewport itself changing size underneath a percentage
+     value. The line below asks for 50% of the SMALL viewport instead
+     — the one that already assumes the address bar is showing, so it
+     never has to move when the bar does. Older browsers that don't
+     understand `svh` simply ignore this line and keep the `50%`
+     above, so this is a safe, no-downside upgrade either way. */
+  top: 50svh;
+  /* translate3d keeps the control composited independently while the
+     lightbox itself is scrolling. */
+  transform: translate3d(0, -50%, 0);
+  backface-visibility: hidden;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1rem;
+  color: #fff;
+  cursor: pointer;
+  z-index: 10000;
+  pointer-events:auto;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+/* Hover-only — see the note above .tab-btn:hover for why this must not
+   apply on touch devices: it's exactly what left the arrow looking
+   permanently "clicked" (stuck white) after tapping it on mobile. */
+@media (hover: hover) and (pointer: fine) {
+  .lightbox-nav:hover {
+    background: #fff;
+    color: #000;
+  }
+}
+
+/* Keep the desktop chevrons on the same visual centerline while reducing
+   the circular hover/hit area so it cannot be clipped by a narrow browser
+   viewport or tab edge. Mobile keeps its existing touch-sized controls. */
+@media (min-width: 769px) {
+  .lightbox-nav {
+    width: 44px;
+    height: 44px;
+  }
+  .lightbox-nav.lightbox-prev { left: 14px; }
+  .lightbox-nav.lightbox-next { right: 14px; }
+}
+
+.lightbox-prev { left: 10px; }
+.lightbox-next { right: 10px; }
+
+/* Bright artwork gets a dark lightbox control treatment automatically. */
+.lightbox-modal.has-bright-media .lightbox-close,
+.lightbox-modal.has-bright-media .lightbox-nav{
+  color:#111;
+  background:rgba(255,255,255,.78);
+  border-color:rgba(0,0,0,.14);
+  box-shadow:0 8px 24px rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.12);
+}
+.lightbox-modal.has-bright-media .lightbox-close:focus-visible,
+.lightbox-modal.has-bright-media .lightbox-nav:focus-visible{outline-color:#111;}
+@media (hover:hover) and (pointer:fine){
+  .lightbox-modal.has-bright-media .lightbox-close:hover,
+  .lightbox-modal.has-bright-media .lightbox-nav:hover{
+    background:#111;
+    color:#fff;
+    border-color:rgba(0,0,0,.42);
+  }
+}
+
+/* Easy Touch Target Back to Top */
+footer a[href="#"] {
+  display: inline-block;
+  padding: 20px;
+  margin-top: 15px;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   CENTERED PAGES (SUCCESS & 404)
+   ========================================= */
+body.center-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  background-color: #121212;
+  color: #fff;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.message-box {
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status-logo { width: 55px; height: auto; margin-bottom: 24px; }
+.message-box h1 { font-size: 2rem; font-weight: 700; margin-bottom: 12px; color: #fff; }
+.message-box h1.error-code { font-size: 5.5rem; line-height: 1; margin-bottom: 10px; letter-spacing: 2px; }
+.message-box p { font-size: 1.05rem; color: #aaa; line-height: 1.6; margin-bottom: 30px; }
+
+.status-btn {
+  display: inline-block;
+  padding: 14px 32px;
+  background-color: #fff;
+  color: #000;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  width: auto;
+}
+.status-btn:hover { background-color: #dddddd; transform: translateY(-2px); }
+
+/* =========================================
+   MOBILE RESPONSIVE QUERIES
+   ========================================= */
+@media (max-width: 768px) {
+  .hamburger { display: block; }
+  
+  .nav-links {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 100%;
+    /* Bumped to near-opaque — a translucent tint reads fine over the
+       dark top of a hero image but gets swallowed by brighter colors
+       further down (e.g. a colorful artwork), making the lower menu
+       rows look "broken". A near-solid tint stays legible regardless
+       of what's behind it. */
+    background: rgba(14, 14, 14, 0.97);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+    box-sizing: border-box;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+  }
+  .nav-links.active {
+    max-height: 520px;
+    opacity: 1;
+    padding: 20px 0;
+    pointer-events: auto;
+  }
+
+  /* Mobile dropdown layout locking & centered visual states */
+  .nav-item-dropdown {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .nav-dropdown-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .nav-dropdown-menu {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    width: 100%;
+    margin: 10px 0 0 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  .nav-dropdown-menu li {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .nav-dropdown-menu a {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    color: #888;
+    text-align: center;
+    text-decoration: none;
+    transition: color 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
+    -webkit-tap-highlight-color: transparent; /* Fixes browser blue/grey tap box shift */
+  }
+  /* Tap & Press visual effect: stays still, scale and color change only */
+  .nav-dropdown-menu a:active,
+  .nav-dropdown-menu a:focus {
+    color: #ffffff;
+    opacity: 0.85;
+    transform: scale(0.95);
+  }
+  .nav-caret { display: none; }
+
+  /* Dims the rest of the page behind the menu while it's open, so the
+     translucent panel above reads clearly as a menu rather than just
+     blending into whatever artwork happens to be behind it. Tapping
+     anywhere in this dimmed area closes the menu (handled in script.js). */
+  body.menu-open::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 900;
+  }
+
+  /* Mobile is untouched by the desktop restructure above: everything
+     was already one column here, and it still is. */
+  .resume-skills-row,
+  .resume-grid { grid-template-columns: 1fr; gap: 40px; }
+  .resume-main { gap: 40px; }
+  
+  .skill-list.minimal-list li { padding: 6px 14px; font-size: 0.8rem; }
+  .skill-list.minimal-list.logo-mode { gap: 14px 14px; }
+  .skill-list.minimal-list li.has-logo { padding: 0; min-height: 46px; }
+  .skill-logo-frame { width: 48px; height: 48px; flex-basis: 48px; border-radius: 11px; }
+  .skill-logo-frame::after { border-radius: 10px; }
+  .skill-list.minimal-list li .skill-logo { max-width: 74%; max-height: 70%; }
+  
+  .lightbox-nav { width: 36px; height: 36px; font-size: 0.8rem; }
+  .lightbox-prev { left: 8px; }
+  .lightbox-next { right: 8px; }
+  
+  .glass-info { transform: translateY(0); opacity: 1; padding: 20px 15px 15px; }
+
+  /* =========================================
+     HERO SECTION — MOBILE PROPORTIONAL FIX
+     ========================================= */
+  .hero-section {
+    height: auto !important;       /* Overrides fixed 60vh so content never crops/overflows */
+    min-height: 75vh;              /* Matches about.html hero height ratio */
+    padding: 80px 16px 40px 16px;  /* Clearance for top nav bar and bottom spacing */
+    box-sizing: border-box;
+  }
+
+  .hero-overlay {
+    width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .subtext-header {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .name {
+    /* Scaled down from 3.5rem (56px) to 1.75rem (28px) so 'LEMUEL MAGBITANG' fits cleanly on mobile screens */
+    font-size: 1.75rem !important;
+    line-height: 1.25;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .tagline {
+    font-size: 0.8rem;
+    flex-direction: row;         /* Keep the tagline's inline relationship intact; wrapping is handled below. */
+    gap: 6px;
+    margin-bottom: 22px;
+    line-height: 1.35;
+  }
+
+  .status-dot {
+    margin: 2px 0;
+  }
+
+  .social-icons {
+    gap: 12px;
+  }
+
+  .social-icons a {
+    width: 40px;
+    height: 40px;
+    font-size: 0.95rem;
+  }
+}
+/* =========================================
+   1. HERO & WORKS SPACING ADJUSTMENT
+   ========================================= */
+/* Shrinks the hero banner itself, which pulls the social icons up */
+.hero-section {
+  height: 46vh;
+}
+
+/* Cuts the empty padding between the hero and the works grid.
+   This only targets the <main> that comes right after the hero,
+   so it won't affect spacing anywhere else on the site. */
+.hero-section + main.page-spacing {
+  padding-top: 30px;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    height: auto;
+    min-height: 52vh;
+    padding: 30px 0;
+  }
+  .hero-section + main.page-spacing {
+    padding-top: 20px;
+  }
+  /* Gives the "MULTIMEDIA ARTIST" line some breathing room from the
+     fixed navbar above it instead of sitting flush against it. */
+  .hero-overlay {
+    padding-top: 0;
+  }
+  /* The real fix for the cropped/cramped mobile hero: .name was still
+     rendering at the full 3.5rem desktop size with nothing scaling it
+     down, so "LEMUEL MAGBITANG" alone nearly filled the fixed-height
+     box the old rule gave this section, pushing the tagline and social
+     icons out past its bottom edge. Scaling text down and letting the
+     section grow to fit its content (min-height above, not a hard
+     height) fixes both at once. */
+  .subtext-header {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .name {
+    font-size: 2.1rem;
+    line-height: 1.15;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .tagline {
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    margin-bottom: 20px;
+  }
+  .status-dot {
+    margin: 0 6px;
+  }
+  .social-icons {
+    gap: 10px;
+  }
+  .social-icons a {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Responsive lightbox sizing. The media stack remains vertical, but
+   its usable width and media height scale with the device so the header,
+   description, artwork and controls keep a balanced frame. */
+@media (min-width: 768px) and (max-width: 1099px){
+  .lightbox-modal{padding:48px 24px;}
+  .modal-interior{max-width:760px;gap:26px;}
+  #lightboxMediaContainer img,
+  #lightboxMediaContainer iframe,
+  #lightboxMediaContainer video{max-height:min(78vh,760px);}
+}
+@media (max-width:767px){
+  .modal-interior{max-width:100%;gap:24px;margin-top:8px;}
+  /* Mobile Lightbox is a full-width artwork gallery, not a framed preview.
+     Do not cap the artwork by viewport height: a portrait image must keep
+     its full device width even when that makes the page taller. Scrolling
+     belongs to the modal, so tall artwork remains fully accessible. */
+  #lightboxMediaContainer img,
+  #lightboxMediaContainer iframe,
+  #lightboxMediaContainer video{
+    max-height:none;
+  }
+  .media-caption{max-width:calc(100% - 40px);}
+}
+
+/* =========================================
+   2. LIGHTBOX MEDIA DYNAMIC SCALING
+   ========================================= */
+#lightboxMediaContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Prevents anything from spilling out */
+  padding: 1rem;
+}
+
+/* Artworks dynamically adjust and center (1:1, portrait, landscape) */
+#lightboxMediaContainer img {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain; 
+  border-radius: 4px;
+}
+
+/* Base styling for YouTube Iframes AND local MP4 <video> elements —
+   same treatment so they sit consistently in the lightbox either way. */
+#lightboxMediaContainer iframe,
+#lightboxMediaContainer video {
+  width: 100%;
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Groups one artwork/video with its optional caption (added via
+   data-description="..." on that media-item in index.html). Only
+   appears in the DOM at all when there's actual caption text —
+   script.js skips it entirely otherwise, so there's never an empty
+   gap under artworks that don't have one. */
+.lightbox-media-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.media-caption {
+  color: #aaa;
+  font-size: 0.9rem;
+  text-align: center;
+  max-width: 80%;
+}
+
+@media (max-width: 768px) {
+  /* Mobile Lightbox is an artwork-first gallery. Portrait media such as
+     YouTube Shorts must be allowed to use the full device width instead of
+     inheriting the desktop 45vh width cap. */
+  #lightboxMediaContainer .yt-portrait,
+  #lightboxMediaContainer .yt-square,
+  #lightboxMediaContainer .yt-landscape {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Images go flush to the screen's edges on mobile — no side padding,
+     no rounded corners — while the modal keeps its own top/bottom
+     padding so the close button and scrolling still work normally. */
+  .lightbox-modal {
+    padding: 60px 0;
+  }
+  #lightboxMediaContainer {
+    padding: 0;
+    height: auto;
+    overflow: visible;
+  }
+  #lightboxMediaContainer .lightbox-media-item {
+    width: 100%;
+  }
+  #lightboxMediaContainer img {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+  }
+  /* Title/description text still needs its own side margin even though
+     the artwork above it doesn't. */
+  .modal-header,
+  .modal-full-desc {
+    padding: 0 20px;
+  }
+}
+
+/* Landscape (standard YouTube uploads + local MP4s by default) */
+.yt-landscape {
+  aspect-ratio: 16 / 9;
+  max-width: 1000px; /* Prevents it from getting too massive on ultrawide monitors */
+}
+
+/* Portrait (YouTube Shorts, or any video/image tagged data-orientation="portrait") */
+.yt-portrait {
+  aspect-ratio: 9 / 16;
+  max-width: 45vh; /* Limits width based on screen height so it never overflows */
+}
+
+/* Square (1:1) */
+.yt-square {
+  aspect-ratio: 1 / 1;
+  max-width: 70vh;
+}
+
+/* =========================================
+   3. SHOW MORE / SHOW LESS: FADE "PEEK" EFFECT
+   ========================================= */
+/* JS sets the grid's max-height in pixels when collapsed, so this
+   just needs to clip whatever spills past that and animate smoothly. */
+.seamless-grid {
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+}
+
+/* The "there's more below" band. It's pinned to the exact bottom edge
+   of .portfolio-wrapper (not a guessed negative margin), so it always
+   lines up correctly no matter how tall the cards are — this is what
+   fixes it floating behind/underneath cards on mobile.
+   A soft gradient fade only (no blur) reads much cleaner than a hard
+   blurred box. JS just adds/removes "is-hidden", nothing else to edit. */
+.grid-fade-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 180px;
+  background: linear-gradient(to bottom, rgba(18,18,18,0) 0%, rgba(18,18,18,0.75) 55%, #121212 100%);
+  pointer-events: none;
+  /* Higher than .glass-info's z-index (10) on the project cards —
+     that label stays visible on mobile even without hover, and was
+     previously painting on top of this fade + the button below. */
+  z-index: 20;
+}
+
+.grid-fade-overlay.is-hidden {
+  display: none;
+}
+
+.show-more-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  z-index: 21;
+  display: flex;
+  justify-content: center;
+}
+
+/* Once expanded, there's no grid left to clip, so the button drops
+   into the normal document flow below the grid instead of floating
+   over it — this is the other half of the mobile-overlap fix. */
+.show-more-wrapper.expanded {
+  position: static;
+  margin-top: 3rem;
+  padding-bottom: 2rem;
+}
+
+.btn-show-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 14px 34px;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background-color var(--lm-motion-standard) var(--lm-motion-ease), color var(--lm-motion-standard) var(--lm-motion-ease), transform var(--lm-motion-standard) var(--lm-motion-ease), border-color var(--lm-motion-standard) var(--lm-motion-ease);
+}
+
+.btn-show-more:hover {
+  background: #fff;
+  color: #000;
+  transform: translateY(-2px);
+}
+
+.btn-show-more .btn-icon {
+  font-size: 0.75rem;
+  transition: transform 0.3s ease;
+}
+
+/* Flips the chevron when the grid is expanded (SHOW LESS state) */
+.btn-show-more.expanded .btn-icon {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+  .grid-fade-overlay {
+    height: 130px;
+  }
+  .show-more-wrapper {
+    bottom: 14px;
+  }
+}
+
+/* =========================================
+   4. ABOUT PAGE HERO (banner behind the profile)
+   =========================================
+   Rebuilt around one strict hierarchy, read top to bottom:
+
+     1  MULTIMEDIA DESIGNER   tracked micro-label, hairline rule
+     2  HELLO I AM LM.        the only large element on the page
+     3  Visual Designer & Motion Specialist   accent, small, tracked
+     4  body copy             grey, capped measure, quiet
+     5  social icons          smallest, last
+
+   Each step down is smaller, lighter and less saturated than the one
+   above it, and every one of them starts on the same left edge as the
+   photo beside it. Nothing competes with the name. */
+.about-hero {
+  height: auto;
+  min-height: 62vh;
+  padding: 150px 20px 90px;
+}
+
+/* A flatter, slightly darker tint reads better here since text sits
+   across the whole banner, not just anchored at the bottom. */
+.about-hero .hero-banner::after {
+  background: rgba(18, 18, 18, 0.72);
+}
+
+.about-hero-overlay {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start; /* photo aligns with the top of the text
+                               column instead of floating at its
+                               optical centre */
+  gap: 56px;
+  text-align: left;
+}
+
+.about-hero-overlay .photo-frame {
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18); /* hairline, not a heavy
+                                                   3px ring — keeps the
+                                                   photo from reading as
+                                                   a badge */
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.about-bio-text { text-align: left; }
+
+/* The old "MULTIMEDIA DESIGNER" micro-label that used to sit above the
+   headline has been removed from the HTML — the headline now opens the
+   page with nothing above it. These two rules are kept (unused, inert)
+   only so the label can be dropped back in later without rewriting any
+   CSS; delete them if you're sure it's never coming back.
+.about-subtext-header { ... }
+*/
+
+/* Level 2 — the name. Uses the same loaded Inter webfont as the rest
+   of the site so it looks identical everywhere. */
+.hello-heading {
+  font-family: var(--lm-font-display);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  margin-bottom: 16px;
+}
+
+.about-hero-overlay .name.hello-heading {
+  font-size: clamp(2.6rem, 6.8vw, 4.2rem);
+}
+
+/* Level 3 — the role. Was a 1.1rem bold green sentence, which sat at
+   nearly the same visual weight as the heading and flattened the
+   hierarchy. Demoted to a small tracked caption: the green accent is
+   still there, it just no longer competes. */
+.about-hero-overlay .about-tagline {
+  color: #2ecc71;
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  justify-content: flex-start;
+  margin-bottom: 26px;
+}
+
+/* Level 4 — body copy. Capped at a readable measure and separated by
+   a hairline rule rather than more blank space. */
+.about-hero-overlay .bio-text {
+  color: #b5b5b5;
+  line-height: 1.85;
+  font-size: 1rem;
+  max-width: 54ch;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Level 5 — icons, smallest and last. */
+.about-social-icons {
+  justify-content: flex-start;
+  margin-top: 28px;
+}
+
+.about-hero-overlay .about-social-icons a {
+  width: 38px;
+  height: 38px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .about-hero {
     min-height: auto;
     padding: 110px 20px 64px;
   }
@@ -89,3 +1788,763 @@
   flex: 0 0 280px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px 18px;
+  text-align: left;
+}
+
+.review-card + .review-card {
+  margin-left: -1px; /* collapses touching cards' borders into one shared 1px seam */
+}
+
+.review-stars {
+  color: #f39c12;
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.review-quote {
+  color: #ddd;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.review-author {
+  color: #888;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .review-card {
+    flex-basis: 230px;
+    padding: 18px 16px;
+  }
+  .reviews-row {
+    animation-duration: 22s;
+  }
+  .reviews-row-b {
+    margin-left: -115px;
+  }
+  .reviews-section {
+    padding-bottom: 80px;
+  }
+}
+
+/* =========================================
+   6. CONTACT SECTION: HIERARCHY LAYOUT
+   ========================================= */
+/* "Start a Project" is the primary call-to-action, "Leave a Review"
+   is secondary — side-by-side on desktop with the primary one wider
+   and visually heavier, stacked on mobile with the primary one first. */
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 50px;
+  align-items: start;
+}
+
+.contact-block { text-align: center; }
+
+.contact-primary {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 40px 36px;
+}
+
+.contact-secondary {
+  padding: 24px 20px 0;
+  opacity: 0.92; /* subtly lighter visual weight than the primary card */
+}
+
+.contact-primary .section-title {
+  margin-bottom: 24px;
+}
+
+/* "START A PROJECT WITH LM." — same treatment as the About page
+   heading (genuine SF Pro Display on Apple devices, close fallback
+   elsewhere), no logo image needed. */
+.start-project-title {
+  font-size: 1.6rem;
+  letter-spacing: 0.5px;
+  color: #fff;
+  text-transform: none;
+}
+
+@media (max-width: 900px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 60px;
+  }
+  .contact-secondary {
+    padding-top: 0;
+    border-top: 1px solid #222;
+    padding-top: 40px;
+  }
+}
+
+/* =========================================
+   7. EMAIL-ME FALLBACK BUTTON
+   ========================================= */
+/* Shown instead of a form when that form is switched off in
+   js/script.js (see FORMS_ENABLED near the top of that file). */
+.email-me-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  text-decoration: none;
+  padding: 16px 20px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+}
+
+.email-me-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+/* =========================================
+   8. LIGHTBOX: RIGHT-CLICK / SAVE PROTECTION
+   ========================================= */
+/* Applied by JS whenever protection is switched on (PROTECTION_ENABLED
+   in js/script.js), so the artwork can't be text-selected or grabbed
+   via a long-press callout on mobile, on top of the right-click block. */
+.no-save {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* =========================================
+   9. PAGE TRANSITION
+   ========================================= */
+/* Full-screen, same dark as the page itself, so there's no flash of a
+   different color — just the logo appearing/disappearing over it.
+   script.js decides exactly when to add/remove is-entering/is-hidden;
+   this file only defines what each state looks like. */
+.page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: #121212;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+
+.page-transition-logo {
+  width: 52px;
+  height: auto;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.page-transition.is-entering .page-transition-logo {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.page-transition.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================================
+   HOMEPAGE HERO SHELL (holds the message block)
+   =========================================
+   The old hero was a fixed-height box built around a short centred
+   name. The statement that replaced it is several lines of large
+   type, so the section has to grow to fit its content instead of
+   cropping it, and the overlay has to stop centring and stop adding
+   its own 20px padding (that padding is what would knock the text
+   off the grid's 24px datum line by 4px).
+
+   :has() targets the homepage hero only — the About hero and any
+   other .hero-section are untouched. .quote-overlay is the same rule
+   written as a plain class, as a safety net for older browsers; both
+   are listed so either one works on its own. */
+/* ELASTIC HEIGHT.
+
+   The section is sized by its content plus the padding below, not by a
+   fixed viewport fraction: a two-line message gives a short hero, a
+   six-line one gives a taller hero, and the artwork banner behind it
+   follows automatically (it's inset:0, so it's always exactly as tall
+   as this box).
+
+   min-height is a floor, not a target — it stops a very short message
+   from leaving the hero looking like a stray strip of nav.
+   The ceiling isn't set here: it's set by HERO_MAX_CHARS in script.js,
+   which caps the text at the length that fills roughly the old fixed
+   height. Limiting the words rather than clipping the box means text
+   can never be cut off — it just can't get long enough to overflow. */
+.hero-section:has(.hero-quote),
+.hero-section.hero-section--message {
+  height: auto;
+  min-height: 38vh;
+  padding: 56px 0;
+  align-items: center;
+}
+
+.hero-overlay:has(.hero-quote),
+.hero-overlay.quote-overlay {
+  width: 100%;
+  padding: 0;
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .hero-section:has(.hero-quote),
+  .hero-section.hero-section--message {
+    min-height: 44vh;
+    padding: 44px 0;
+  }
+  .hero-overlay:has(.hero-quote),
+  .hero-overlay.quote-overlay {
+    padding: 0;
+  }
+}
+
+/* Footer copyright: .footer-content already centers each child as a
+   whole box (align-items: center), but that only centers the <p>'s
+   own box in the row — it says nothing about the text inside it. At
+   full width the line fits on one row so it never showed. On a
+   narrow phone it wraps to two lines, and text inside a block
+   defaults to left-aligned, so the second line ("Reserved.") was
+   hanging under the left edge of the first instead of sitting under
+   its center. text-align: center fixes that at any width, and the
+   smaller mobile size makes wrapping to two lines less likely in the
+   first place. */
+.footer-content p { text-align: center; }
+@media (max-width: 768px) {
+  .footer-content p { font-size: 0.85rem; padding: 0 10px; }
+}
+
+
+/* =====================================================
+   MEDIA BACKGROUNDS — transparent Lottie / 3D artwork
+   ===================================================== */
+.lm-media-background-host{isolation:isolate;}
+.lm-media-background-host > .lm-media-background-layer{z-index:0!important;}
+.lm-media-background-host > .lm-media-background-overlay{z-index:1!important;}
+.lm-media-background-host > :not(.lm-media-background-layer):not(.lm-media-background-overlay){position:relative;z-index:2;}
+.lm-media-background-shader{background-size:160% 160%;animation:lm-bg-shader-drift 14s ease-in-out infinite alternate;}
+.lm-media-background-shader.shader-mesh{animation-duration:18s;}
+@keyframes lm-bg-shader-drift{
+  0%{background-position:0% 48%;transform:scale(1.06) rotate(0deg);}
+  50%{background-position:100% 52%;transform:scale(1.1) rotate(1deg);}
+  100%{background-position:18% 100%;transform:scale(1.06) rotate(-1deg);}
+}
+
+/* Lottie is an SVG-based custom element rather than a native <img>, so
+   object-fit alone does not guarantee a cover crop. preserveAspectRatio is
+   set by script.js and this host rule keeps the player itself full-bleed. */
+.hero-banner .slide lottie-player,
+.card-thumbnail .project-thumb-media.lottie-player,
+.lightbox-media-item > lottie-player{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0;
+  min-height:0;
+}
+.card-thumbnail .project-thumb-media.lottie-player{position:absolute;inset:0;}
+
+@media (prefers-reduced-motion: reduce){
+  .lm-media-background-shader{animation:none;}
+}
+
+/* Lightweight card fallback when a project uses a 3D model as its first
+   media item but does not provide a raster thumbnail. The full interactive
+   viewer remains reserved for the opened artwork/lightbox, so the grid does
+   not create one WebGL renderer per card. The actual background comes from
+   the CMS media.background object and is applied to .card-thumbnail. */
+.project-thumb-model{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.09),rgba(255,255,255,.02) 58%,rgba(0,0,0,.12));
+  color:rgba(255,255,255,.78);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-align:center;
+}
+.project-thumb-model-content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:20px;
+  text-shadow:0 1px 10px rgba(0,0,0,.25);
+}
+.project-thumb-model-content i{font-size:22px;}
+.project-thumb-model-content span{font-size:11px;letter-spacing:.16em;}
+.project-thumb-model-content small{font-size:9px;font-weight:600;letter-spacing:.08em;color:rgba(255,255,255,.52);text-transform:none;}
+.card-3d-indicator{
+  position:absolute;
+  left:14px;
+  bottom:14px;
+  z-index:6;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:rgba(8,8,8,.48);
+  color:rgba(255,255,255,.82);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.11em;
+  pointer-events:none;
+}
+.card-3d-indicator i{font-size:10px;}
+
+/* =====================================================
+   INTERACTIVE 3D VIEWER — passive media preview → device-focused 3D
+   ===================================================== */
+.model-viewer-shell{
+  position:relative;
+  width:100%;
+  min-width:0;
+  min-height:0;
+  height:clamp(260px, 34vw, 420px);
+  background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.045),rgba(255,255,255,.012) 58%,transparent 82%);
+  border-radius:12px;
+  overflow:hidden;
+  touch-action:pan-y;
+  overscroll-behavior:auto;
+  isolation:isolate;
+  -webkit-tap-highlight-color:transparent;
+  cursor:zoom-in;
+}
+.model-viewer-shell canvas{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:100%!important;
+  display:block;
+  touch-action:auto;
+  pointer-events:none;
+  outline:none;
+}
+.model-viewer-shell.is-interactive{
+  touch-action:none;
+  cursor:grab;
+}
+.model-viewer-shell.is-interactive canvas{
+  touch-action:none;
+  pointer-events:auto;
+  cursor:grab;
+}
+.model-viewer-shell.is-interactive canvas:active{cursor:grabbing;}
+
+/* The shell, not the visual label, is the interaction target. This is what
+   lets wheel and vertical touch movement continue through a 3D preview. */
+.model-viewer-activate{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:clamp(16px,3vw,28px);
+  background:linear-gradient(to bottom,rgba(0,0,0,.02),rgba(0,0,0,.14));
+  color:#fff;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.model-viewer-activate-content{
+  display:inline-flex;
+  align-items:center;
+  gap:clamp(8px,1.2vw,11px);
+  min-height:clamp(44px,6vw,52px);
+  padding:0 clamp(15px,2.4vw,20px);
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(8,8,8,.46);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+  opacity:.96;
+  transition:background .2s ease,transform .2s ease;
+}
+.model-viewer-activate-content i{font-size:clamp(12px,2vw,15px);}
+.model-viewer-activate-content strong{font-size:clamp(10px,1.8vw,13px);letter-spacing:.14em;font-weight:800;}
+@media (hover:hover) and (pointer:fine){
+  .model-viewer-shell:hover .model-viewer-activate-content{background:rgba(8,8,8,.54);transform:translateY(-1px);}
+}
+
+.model-viewer-shell.is-interactive .model-viewer-activate{
+  opacity:0;
+  visibility:hidden;
+}
+
+.model-viewer-ui{
+  position:absolute;
+  left:50%;
+  bottom:max(calc(env(safe-area-inset-bottom, 0px) + 14px), clamp(14px,2.8vh,30px));
+  z-index:40;
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:clamp(8px,1.5vh,12px);
+  width:min(calc(100% - 32px),820px);
+  pointer-events:none;
+}
+.model-viewer-hint[hidden],
+.model-viewer-back[hidden]{display:none!important;}
+.model-viewer-hint{
+  width:auto;
+  max-width:min(100%,820px);
+  box-sizing:border-box;
+  color:rgba(255,255,255,.48);
+  background:transparent;
+  border:0;
+  padding:0;
+  border-radius:0;
+  font-size:clamp(10px,1.65vw,13px);
+  font-weight:500;
+  letter-spacing:.015em;
+  line-height:1.45;
+  text-align:center;
+  pointer-events:none;
+  box-shadow:none;
+  text-shadow:0 1px 8px rgba(0,0,0,.35);
+}
+.model-viewer-back{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.19);
+  border-radius:999px;
+  background:rgba(10,10,10,.84);
+  color:rgba(255,255,255,.96);
+  min-height:clamp(48px,6.4vh,58px);
+  padding:0 clamp(18px,2.8vw,24px);
+  font:700 clamp(11px,1.8vw,14px)/1 inherit;
+  letter-spacing:.1em;
+  cursor:pointer;
+  pointer-events:auto;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  box-shadow:0 12px 32px rgba(0,0,0,.3);
+  transition:background .2s ease,color .2s ease,border-color .2s ease,transform .2s ease;
+}
+.model-viewer-back i{font-size:.9em;margin-right:8px;}
+.model-viewer-back span{font-size:inherit;}
+@media (hover:hover) and (pointer:fine){
+  .model-viewer-back:hover{background:rgba(255,255,255,.96);color:#111;border-color:rgba(255,255,255,.84);transform:translateY(-1px);}
+}
+.model-viewer-back:focus{outline:none;}
+.model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:3px;}
+.model-viewer-error{padding:20px;text-align:center;color:#aaa;font-size:clamp(12px,2.1vw,14px);line-height:1.5;}
+
+/* Orientation drives the normal media-list presentation. Auto is square
+   until the model viewer inspects the model bounds and refines it. */
+.lightbox-model-viewer{
+  width:min(100%,860px);
+  min-width:0;
+  min-height:0;
+  margin:0 auto;
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 16px 40px rgba(0,0,0,.18);
+}
+.lightbox-model-viewer[data-orientation="portrait"]{aspect-ratio:9 / 16; width:min(100%,540px);}
+.lightbox-model-viewer[data-orientation="landscape"]{aspect-ratio:16 / 9; width:min(100%,900px);}
+.lightbox-model-viewer[data-orientation="square"],
+.lightbox-model-viewer:not([data-orientation]),
+.lightbox-model-viewer[data-orientation="auto"]{aspect-ratio:1 / 1; width:min(100%,760px);}
+.lightbox-media-item.is-3d-media-item{width:100%;}
+
+/* Focus mode keeps the 3D stack intentional:
+   project content -> blur/darken veil -> focused 3D model.
+   Global X / project navigation remain visually subordinate to the model,
+   so they read as lightbox controls rather than OrbitControls. */
+.lightbox-modal.is-3d-focused{
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:0;
+  touch-action:none;
+  background:rgba(5,5,5,.92);
+  scrollbar-width:none;
+}
+.lightbox-modal.is-3d-focused::-webkit-scrollbar{display:none;}
+.lightbox-modal.is-3d-focused .modal-interior{
+  position:relative;
+  z-index:1;
+  width:100%;
+  max-width:none;
+  min-height:100dvh;
+  height:100dvh;
+  margin:0;
+  gap:0;
+}
+.lightbox-modal.is-3d-focused .modal-interior::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:10;
+  background:rgba(0,0,0,.56);
+  backdrop-filter:blur(18px) saturate(.72);
+  -webkit-backdrop-filter:blur(18px) saturate(.72);
+  pointer-events:none;
+}
+.lightbox-modal.is-3d-focused .modal-header,
+.lightbox-modal.is-3d-focused .modal-full-desc,
+.lightbox-modal.is-3d-focused #lightboxMediaContainer > .lightbox-media-item:not(.is-3d-focus-target){
+  position:relative;
+  z-index:1;
+  opacity:.1;
+  filter:blur(10px);
+  pointer-events:none;
+  transition:opacity .25s ease,filter .25s ease;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  width:100dvw;
+  height:100dvh;
+  min-width:0;
+  max-width:none;
+  margin:0;
+  padding:0;
+  transform:none;
+  will-change:transform,opacity;
+  display:block;
+  filter:none;
+  opacity:1;
+  background:transparent;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
+  position:absolute;
+  inset:0;
+  z-index:20;
+  width:100dvw;
+  height:100dvh;
+  min-height:0;
+  max-width:none;
+  aspect-ratio:auto;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{display:none;}
+
+/* Explicit 3D focus stacking: modal media list < backdrop veil < focused
+   3D stage < model UI. This preserves the clicked model as the visual focus. */
+.lightbox-modal.is-3d-focused .modal-interior::before{z-index:10;}
+.lightbox-modal.is-3d-focused .is-3d-focus-target{z-index:20;}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{z-index:20;}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .model-viewer-ui{z-index:40;}
+/* Global lightbox chrome (X / previous / next) belongs below the 3D
+   backdrop veil while the interactive model is active. It is deliberately
+   inert and non-hit-testable so it cannot be mistaken for OrbitControls or
+   accidentally triggered while the visitor is orbiting the model. */
+.lightbox-modal.is-3d-focused .lightbox-controls{
+  position:fixed;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+  opacity:.24;
+  filter:blur(2px) saturate(.55);
+  transition:opacity .25s ease, filter .25s ease;
+}
+.lightbox-modal.is-3d-focused .lightbox-nav,
+.lightbox-modal.is-3d-focused .lightbox-nav:hover,
+.lightbox-modal.is-3d-focused .lightbox-close,
+.lightbox-modal.is-3d-focused .lightbox-close:hover{
+  opacity:.9;
+  pointer-events:none;
+}
+.lightbox-modal.is-3d-focused .lightbox-nav{
+  background:rgba(8,8,8,.18);
+  border-color:rgba(255,255,255,.05);
+}
+
+.lightbox-modal.is-3d-focused .lightbox-close{
+  top:calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.5vw, 28px));
+  right:calc(env(safe-area-inset-right, 0px) + clamp(14px, 2.5vw, 28px));
+  width:clamp(46px, 10vw, 54px);
+  height:clamp(46px, 10vw, 54px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:rgba(8,8,8,.5);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  font-size:clamp(1.15rem,4.5vw,1.5rem);
+}
+
+/* Keep the rest of the lightbox legible on phones/tablets instead of using
+   desktop-scale controls inside a narrow viewport. */
+.modal-header h2{font-size:clamp(1.55rem,5vw,2rem);}
+.modal-full-desc{font-size:clamp(.95rem,2.8vw,1rem);}
+.media-caption{font-size:clamp(.8rem,2.5vw,.9rem);}
+ .lightbox-close{font-size:clamp(1.5rem,4vw,2.25rem);}
+.lightbox-nav{width:clamp(44px,8vw,48px);height:clamp(44px,8vw,48px);font-size:clamp(.86rem,2.2vw,1rem);}
+
+html.lm-3d-focus-open,
+body.lm-3d-focus-open{overscroll-behavior:none;}
+
+@media (max-width:767px){
+  /* Small screens use the centered horizontal filter carousel. Touch
+     keeps native horizontal momentum; a mouse on a narrow window can
+     drag the same strip with a primary-button hold. */
+  .filter-tabs{
+    justify-content:flex-start;
+    flex-wrap:nowrap;
+    gap:8px;
+    width:100%;
+    margin:14px 0 10px;
+    padding:0;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+    scroll-snap-type:x mandatory;
+    overscroll-behavior-x:contain;
+    touch-action:pan-x;
+    cursor:grab;
+  }
+  .filter-tabs.is-dragging{
+    cursor:grabbing;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .filter-tabs::-webkit-scrollbar{display:none;}
+  .filter-tabs .filter-edge-spacer{
+    display:block;
+    flex:0 0 auto;
+    height:1px;
+    pointer-events:none;
+  }
+  .filter-tabs .tab-btn{
+    flex:0 0 auto;
+    font-size:.8rem;
+    letter-spacing:1.1px;
+    padding:8px 12px;
+    scroll-snap-align:center;
+  }
+  .filter-page-controls{
+    gap:7px;
+    margin-bottom:24px;
+  }
+  .filter-page-controls:not([hidden]){
+    display:flex;
+  }
+}
+
+@media (max-width:768px){
+  .grid-fade-overlay{height:100px;}
+  .lightbox-close{top:8px;right:17px;width:52px;height:52px;font-size:2.35rem;}
+  .lightbox-nav{width:50px;height:50px;font-size:1.05rem;}
+  .lightbox-prev{left:6px;}
+  .lightbox-next{right:6px;}
+}
+
+/* ============================================================
+   RESPONSIVE OVERRIDES — final cascade layer
+   Keep these rules at the end of the file so they cannot be
+   shadowed by the older duplicated gallery declarations above.
+   ============================================================ */
+@media (max-width: 767px){
+  /* Full-bleed two-column Works gallery on phones/small screens. */
+  .portfolio-wrapper{
+    width:100vw;
+    margin-left:calc(50% - 50vw);
+    margin-right:calc(50% - 50vw);
+  }
+  .seamless-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    border-radius:0;
+  }
+}
+@media (min-width: 768px) and (max-width: 1099px){
+  .seamless-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .modal-interior{max-width:760px;}
+}
+@media (min-width: 1100px){
+  .seamless-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
+
+/* =========================================
+   ACCESSIBILITY — REDUCED MOTION
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .project-card,
+  .project-card .card-thumbnail img,
+  .project-card .glass-info,
+  .site-logo,
+  .nav-caret,
+  .nav-dropdown-menu,
+  .filter-page-dot,
+  .btn-show-more,
+  .page-transition,
+  .page-transition-logo,
+  .reviews-track,
+  .seamless-grid,
+  .lightbox-modal .lightbox-controls,
+  .lightbox-modal .lightbox-nav,
+  .lightbox-modal .lightbox-close {
+    animation: none;
+    transition: none;
+  }
+
+  .project-card:hover .card-thumbnail img,
+  .project-card:hover .card-thumbnail video,
+  .project-card:hover .card-thumbnail .project-thumb-media.lottie-player {
+    transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  }
+
+  .project-card:hover .glass-info {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Narrow cards are artwork-first. The project title remains available to
+     assistive technology through the card's aria-label. */
+  .project-card .glass-info {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .project-card:focus-visible .glass-info {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
