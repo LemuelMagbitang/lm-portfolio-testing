@@ -477,6 +477,9 @@ function validateGalleryContract() {
   if (!/getActiveCards:\s*\(\)\s*=>\s*getCardsForProjects\(getFilteredProjects\(\)\)\.slice\(\)/.test(source)) {
     err('Gallery: getActiveCards() contract must expose cards mapped from the current normalized project filter.');
   }
+  if (!/getAllCards:\s*\(\)\s*=>\s*getCardSnapshot\(getProjectSnapshot\(\)\)\.slice\(\)/.test(source)) {
+    err('Gallery: getAllCards() must resolve from the current Projects/card mapping.');
+  }
   if (!/createLifecycle/.test(source) || !/lifecycle\.cleanup\(\)/.test(source)) {
     err('Gallery: persistent runtime resources must use the shared feature lifecycle.');
   }
