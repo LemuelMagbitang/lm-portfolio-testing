@@ -37,6 +37,9 @@ export function initLightbox(options = {}) {
   const parseYouTube = typeof options.parseYouTubeUrl === 'function'
     ? options.parseYouTubeUrl
     : () => ({ id: null, isShort: false });
+  const applyMediaBackground = typeof options.applyMediaBackground === 'function'
+    ? options.applyMediaBackground
+    : null;
   const mountModelViewer = typeof options.mountModelViewer === 'function'
     ? options.mountModelViewer
     : null;
