@@ -45,6 +45,19 @@ export function buildProjectCardElement(
   } = {}
 ) {
   const card = documentRef.createElement('div');
+  card.dataset.component = 'project-card';
+  if (project.id) card.dataset.projectId = String(project.id);
+
+  const capabilities = project.capabilities && typeof project.capabilities === 'object'
+    ? project.capabilities
+    : {};
+  Object.entries(capabilities).forEach(([key, enabled]) => {
+    if (!enabled || !key.startsWith('has')) return;
+    const type = key.slice(3).toLowerCase();
+    if (type) card.classList.add(`has-media-${type}`);
+  });
+  if (Number(project.mediaCount) > 1) card.classList.add('has-multiple-media');
+
   const filters = Array.isArray(project.filters) ? project.filters.filter(Boolean) : [];
   card.className = ['project-card', ...filters].join(' ');
   card.dataset.filterIds = JSON.stringify(filters);
@@ -68,6 +81,7 @@ export function buildProjectCardElement(
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
 
   if (explicitThumbnail.type) thumbnail.dataset.thumbnailType = String(explicitThumbnail.type);
+  if (explicitThumbnail.orientation) thumbnail.dataset.thumbnailOrientation = String(explicitThumbnail.orientation);
   if (t.src && typeof resolveAssetUrl === 'function') {
     const media = buildProjectThumbnailMedia(
       { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
