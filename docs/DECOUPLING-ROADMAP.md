@@ -15,6 +15,8 @@ As of October 3, 2026, the branch has completed the first composition/data-bound
 - The obsolete `cms-data.js` and `site-runtime.js` runtime facades have been removed.
 - Gallery is the single owner of project-filter state; Lightbox consumes Gallery's active-project contract rather than maintaining a second filter model.
 - Architecture and site validators were updated to enforce the new boundaries.
+- The validation workflow now includes a real Chromium smoke test covering Works, About, Hero rendering/looping, CMS filters/ALL, and About resume/software content at desktop, phone, and tablet sizes.
+- The browser smoke gate has passed on the current runtime cutover after fixing the public ES-module boot path, Hero initialization, CMS filter reconstruction, About CMS rendering, and the CMS 3D preview adapter path.
 
 The remaining work is deliberate rather than wholesale refactoring: strengthen feature lifecycles/cleanup and CSS ownership where they materially reduce coupling, then stop architecture work when the boundaries are sufficient for the Phase 3 artwork-first redesign.
 
