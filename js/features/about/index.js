@@ -1,4 +1,4 @@
-import { findSoftwareLogoCandidates } from '../../infrastructure/software-logo/lookup.js';
+import { findSoftwareLogoCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-09';
 
 export async function initAbout({
   url,
@@ -38,10 +38,18 @@ export async function initAbout({
       : word[0].toUpperCase()).join('');
   }
 
-  async function hydrateAutomaticLogo(frame, name) {
-    if (!frame || !frame.isConnected || !showSoftwareLogos) return;
-    const candidates = await findSoftwareLogoCandidates(name);
-    if (!frame.isConnected || !showSoftwareLogos || !candidates.length) return;
+  function showLogoFallback(frame, name) {
+    if (!frame || !frame.isConnected) return;
+    frame.classList.add('is-fallback');
+    frame.replaceChildren();
+    frame.textContent = skillInitials(name);
+  }
+
+  function preloadAndMountLogo(frame, name, candidates, index = 0) {
+    if (!frame || !frame.isConnected || !candidates[index]) {
+      showLogoFallback(frame, name);
+      return;
+    }
 
     const image = root.createElement('img');
     image.className = 'skill-logo';
@@ -49,27 +57,42 @@ export async function initAbout({
     image.title = name;
     image.loading = 'lazy';
 
-    let index = 0;
-    const tryCandidate = () => {
-      if (index >= candidates.length || !frame.isConnected) {
-        frame.classList.add('is-fallback');
-        frame.textContent = skillInitials(name);
-        return;
-      }
-      image.src = candidates[index];
-    };
-
     image.addEventListener('load', () => {
       if (!frame.isConnected) return;
       frame.classList.remove('is-fallback');
       frame.replaceChildren(image);
-    });
-    image.addEventListener('error', () => {
-      index += 1;
-      tryCandidate();
-    });
+    }, { once: true });
 
-    tryCandidate();
+    image.addEventListener('error', () => {
+      preloadAndMountLogo(frame, name, candidates, index + 1);
+    }, { once: true });
+
+    // Keep the probe detached until it has loaded successfully.
+    image.src = candidates[index];
+  }
+
+  async function hydrateAutomaticLogo(frame, name) {
+    if (!frame || !frame.isConnected || !showSoftwareLogos) return;
+
+    const candidates = await findSoftwareLogoCandidates(name);
+    if (!frame.isConnected || !showSoftwareLogos) return;
+
+    preloadAndMountLogo(frame, name, candidates);
+  }
+
+  function hydrateManualOrAutomaticLogo(frame, name, manualUrl) {
+    if (!manualUrl) {
+      hydrateAutomaticLogo(frame, name);
+      return;
+    }
+
+    // Manual logos remain preferred. If that path fails, continue into the
+    // automatic software lookup instead of leaving a broken <img>.
+    preloadAndMountLogo(frame, name, [manualUrl]);
+    findSoftwareLogoCandidates(name).then(candidates => {
+      if (!frame.isConnected || frame.querySelector('img.skill-logo')) return;
+      preloadAndMountLogo(frame, name, candidates);
+    });
   }
 
   function renderSoftwareSkills(list = softwareSkills) {
@@ -77,7 +100,6 @@ export async function initAbout({
     softwareSkills = list;
 
     const fragment = root.createDocumentFragment();
-    const automaticJobs = [];
 
     list.forEach(skill => {
       if (!skill) return;
@@ -98,33 +120,25 @@ export async function initAbout({
 
       item.className = 'has-logo';
       const frame = root.createElement('span');
-      frame.className = 'skill-logo-frame';
+      frame.className = 'skill-logo-frame is-fallback';
       frame.title = name;
-
-      const image = root.createElement('img');
-      image.className = 'skill-logo';
-      image.alt = name;
-      image.title = name;
-      image.loading = 'lazy';
+      frame.textContent = skillInitials(name);
 
       if (icon) {
-        image.src = typeof resolveAssetUrl === 'function' ? resolveAssetUrl(icon) : icon;
-        image.addEventListener('error', () => {
-          hydrateAutomaticLogo(frame, name);
-        }, { once: true });
+        hydrateManualOrAutomaticLogo(
+          frame,
+          name,
+          typeof resolveAssetUrl === 'function' ? resolveAssetUrl(icon) : icon
+        );
       } else {
-        frame.classList.add('is-fallback');
-        frame.textContent = skillInitials(name);
-        automaticJobs.push({ frame, name });
+        hydrateAutomaticLogo(frame, name);
       }
 
-      frame.appendChild(image);
       item.appendChild(frame);
       fragment.appendChild(item);
     });
 
     softwareList.replaceChildren(fragment);
-    automaticJobs.forEach(job => hydrateAutomaticLogo(job.frame, job.name));
   }
 
   function renderMultimediaSkills(list = multimediaSkills) {
