@@ -244,33 +244,38 @@ try {
     });
 
     await smokePage(browser, '/', async page => {
-      const visibleCardsBeforeResize = await page.locator('#portfolioGrid .project-card').evaluateAll(
-        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
-      );
-      if (visibleCardsBeforeResize < 1) throw new Error('Resize smoke started with no visible project cards.');
+      const gridBeforeResize = page.locator('#portfolioGrid').first();
+      const initialCollapsedHeight = await gridBeforeResize.evaluate(el => {
+        const style = getComputedStyle(el);
+        return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
+      });
+      if (initialCollapsedHeight.maxHeight === 'none' || initialCollapsedHeight.scrollHeight <= initialCollapsedHeight.clientHeight) {
+        throw new Error('Resize smoke started without an active desktop collapsed gallery state.');
+      }
 
       await page.setViewportSize({ width: 390, height: 844 });
       await page.waitForTimeout(500);
 
-      const visibleCardsAfterResize = await page.locator('#portfolioGrid .project-card').evaluateAll(
-        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
-      );
-      if (visibleCardsAfterResize > 2) {
-        throw new Error(`Desktop-to-mobile resize left too many project cards visible: ${visibleCardsAfterResize}.`);
-      }
-
       const showMoreAfterResize = page.locator('#showMoreBtn').first();
-      if (visibleCardsAfterResize < 2 || !(await showMoreAfterResize.isVisible().catch(() => false))) {
-        throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed Show More state.');
+      const mobileCollapsedState = await gridBeforeResize.evaluate(el => {
+        const style = getComputedStyle(el);
+        return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
+      });
+      if (mobileCollapsedState.maxHeight === 'none' || mobileCollapsedState.scrollHeight <= mobileCollapsedState.clientHeight) {
+        throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed gallery state.');
+      }
+      if (!(await showMoreAfterResize.isVisible().catch(() => false))) {
+        throw new Error('Desktop-to-mobile resize did not restore the mobile Show More control.');
       }
 
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.waitForTimeout(500);
-      const visibleCardsAfterReturn = await page.locator('#portfolioGrid .project-card').evaluateAll(
-        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
-      );
-      if (visibleCardsAfterReturn > 9) {
-        throw new Error(`Mobile-to-desktop resize left too many collapsed project cards visible: ${visibleCardsAfterReturn}.`);
+      const desktopCollapsedState = await gridBeforeResize.evaluate(el => {
+        const style = getComputedStyle(el);
+        return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
+      });
+      if (desktopCollapsedState.maxHeight === 'none' || desktopCollapsedState.scrollHeight <= desktopCollapsedState.clientHeight) {
+        throw new Error('Mobile-to-desktop resize did not restore the desktop collapsed gallery state.');
       }
     }, { width: 1280, height: 900 });
 
