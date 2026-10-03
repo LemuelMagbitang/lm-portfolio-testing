@@ -14,7 +14,7 @@ import { initAbout } from '../features/about/index.js';
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
-import { initGallery } from '../gallery.js';
+import { initGallery } from '../features/gallery/index.js';
 import { initHeroBannerV2 } from '../hero.js';
 import { initLightbox } from '../lightbox.js';
 
