@@ -36,7 +36,7 @@ export function initLightbox(options = {}) {
     : value => value;
   const parseYouTube = typeof options.parseYouTubeUrl === 'function'
     ? options.parseYouTubeUrl
-    : url => ({ id: null, isShort: false });
+    : () => ({ id: null, isShort: false });
   const mountModelViewer = typeof options.mountModelViewer === 'function'
     ? options.mountModelViewer
     : null;
@@ -255,59 +255,54 @@ function openLightbox(index, initialMediaIndex = -1) {
         const modelEntry = buildMediaEntry(modelWrap, caption, itemBackground);
         modelEntry.classList.add('is-3d-media-item');
         modalMediaContainer.appendChild(modelEntry);
-
         if (typeof mountModelViewer !== 'function') {
           modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
         } else {
-          Promise.resolve().then(() => {
-            // The project may have been closed or replaced while the viewer
-            // capability was being resolved. Never mount into a detached node.
-            if (!modelWrap.isConnected || !lightbox.classList.contains('active')) return;
-            mountModelViewer(modelWrap, resolveAssetUrl(modelUrl), {
-              autoRotate: false,
-              background: itemBackground || null,
-              orientation: modelOrientation,
-              resolveUrl: resolveAssetUrl,
-              onActivate: () => {
-                const currentScroll = lightbox.scrollTop;
-                lightbox.dataset.pre3dScrollTop = String(currentScroll);
-                lightbox.classList.add('is-3d-focused');
-                modelEntry.classList.add('is-3d-focus-target');
-                if (lightboxControls) {
-                  lightboxControls.classList.add('is-3d-controls-disabled');
-                  lightboxControls.inert = true;
+          Promise.resolve()
+            .then(() => {
+              // The project may have been closed or replaced while the viewer
+              // capability was being resolved. Never mount into a detached node.
+              if (!modelWrap.isConnected || !lightbox.classList.contains('active')) return;
+              mountModelViewer(modelWrap, resolveAssetUrl(modelUrl), {
+                autoRotate: false,
+                background: itemBackground || null,
+                orientation: modelOrientation,
+                resolveUrl: resolveAssetUrl,
+                onActivate: () => {
+                  const currentScroll = lightbox.scrollTop;
+                  lightbox.dataset.pre3dScrollTop = String(currentScroll);
+                  lightbox.classList.add('is-3d-focused');
+                  modelEntry.classList.add('is-3d-focus-target');
+                  if (lightboxControls) {
+                    lightboxControls.classList.add('is-3d-controls-disabled');
+                    lightboxControls.inert = true;
+                  }
+                  document.documentElement.classList.add('lm-3d-focus-open');
+                  document.body.classList.add('lm-3d-focus-open');
+                  requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
+                },
+                onDeactivate: () => {
+                  lightbox.classList.remove('is-3d-focused');
+                  modelEntry.classList.remove('is-3d-focus-target');
+                  if (lightboxControls) {
+                    lightboxControls.classList.remove('is-3d-controls-disabled');
+                    lightboxControls.inert = false;
+                  }
+                  document.documentElement.classList.remove('lm-3d-focus-open');
+                  document.body.classList.remove('lm-3d-focus-open');
+                  const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
+                  if (Number.isFinite(previousScroll)) {
+                    requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
+                  }
+                  delete lightbox.dataset.pre3dScrollTop;
                 }
-                document.documentElement.classList.add('lm-3d-focus-open');
-                document.body.classList.add('lm-3d-focus-open');
-                requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
-              },
-              onDeactivate: () => {
-                lightbox.classList.remove('is-3d-focused');
-                modelEntry.classList.remove('is-3d-focus-target');
-                if (lightboxControls) {
-                  lightboxControls.classList.remove('is-3d-controls-disabled');
-                  lightboxControls.inert = false;
-                }
-                document.documentElement.classList.remove('lm-3d-focus-open');
-                document.body.classList.remove('lm-3d-focus-open');
-                const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
-                if (Number.isFinite(previousScroll)) {
-                  requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
-                }
-                delete lightbox.dataset.pre3dScrollTop;
-              }
+              });
+            })
+            .catch(err => {
+              modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
+              console.warn('3D model viewer:', err);
             });
-          }).catch(err => {
-            modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-            console.warn('3D model viewer:', err);
-          });
-        };
-        }).catch(err => {
-          modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-          console.warn('3D model viewer:', err);
-        });
-      }
-
+        }
       if (lottieUrl) {
         // <lottie-player> plays a Lottie/JSON animation the same way
         // <video> plays a video file — same orientation handling as
