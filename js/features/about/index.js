@@ -1,4 +1,4 @@
-import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-10';
+import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-11';
 
 export async function initAbout({
   url,
@@ -45,17 +45,9 @@ export async function initAbout({
     frame.textContent = skillInitials(name);
   }
 
-  function showLogoFallback(frame, name) {
-    if (!frame || !frame.isConnected) return;
-    frame.classList.add('is-fallback');
-    frame.replaceChildren();
-    frame.textContent = skillInitials(name);
-  }
-
   function preloadAndMountLogo(frame, name, candidates, index = 0, onExhausted) {
     if (!frame || !frame.isConnected || !candidates[index]) {
       onExhausted?.();
-      if (!frame?.querySelector('img.skill-logo')) showLogoFallback(frame, name);
       return;
     }
 
@@ -63,7 +55,6 @@ export async function initAbout({
     image.className = 'skill-logo';
     image.alt = name;
     image.title = name;
-    image.loading = 'lazy';
 
     image.addEventListener('load', () => {
       if (!frame.isConnected) return;
@@ -78,32 +69,27 @@ export async function initAbout({
     image.src = candidates[index];
   }
 
-  async function hydrateAutomaticLogo(frame, name) {
+  async function resolveSoftwareLogo(frame, name, manualIcon = '') {
     if (!frame || !frame.isConnected || !showSoftwareLogos) return;
 
-    const direct = findSoftwareLogoCandidates(name);
-    const showDiscovery = async () => {
+    const directCandidates = [];
+    if (manualIcon) directCandidates.push(manualIcon);
+    findSoftwareLogoCandidates(name).forEach(url => {
+      if (!directCandidates.includes(url)) directCandidates.push(url);
+    });
+
+    const fallbackToDiscovery = async () => {
       const discovered = await findSoftwareLogoDiscoveryCandidates(name);
       if (!frame.isConnected || !showSoftwareLogos) return;
-      preloadAndMountLogo(frame, name, discovered, 0);
+      preloadAndMountLogo(frame, name, discovered, 0, () => showLogoFallback(frame, name));
     };
 
-    if (direct.length) {
-      preloadAndMountLogo(frame, name, direct, 0, showDiscovery);
-    } else {
-      showDiscovery();
-    }
-  }
-
-  function hydrateManualOrAutomaticLogo(frame, name, manualUrl) {
-    if (!manualUrl) {
-      hydrateAutomaticLogo(frame, name);
+    if (!directCandidates.length) {
+      await fallbackToDiscovery();
       return;
     }
 
-    preloadAndMountLogo(frame, name, [manualUrl], 0, () => {
-      hydrateAutomaticLogo(frame, name);
-    });
+    preloadAndMountLogo(frame, name, directCandidates, 0, fallbackToDiscovery);
   }
 
   function renderSoftwareSkills(list = softwareSkills) {
@@ -135,21 +121,17 @@ export async function initAbout({
       frame.title = name;
       frame.textContent = skillInitials(name);
 
-      // Start loading before the visible frame is allowed to contain an image.
-      // The initials remain the stable placeholder while the remote asset is
-      // being checked.
-      if (icon) {
-        hydrateManualOrAutomaticLogo(
-          frame,
-          name,
-          typeof resolveAssetUrl === 'function' ? resolveAssetUrl(icon) : icon
-        );
-      } else {
-        hydrateAutomaticLogo(frame, name);
-      }
-
       item.appendChild(frame);
       fragment.appendChild(item);
+
+      const manualUrl = icon && typeof resolveAssetUrl === 'function'
+        ? resolveAssetUrl(icon)
+        : icon;
+
+      // Resolve after the initial text layout is committed. This mirrors the
+      // reference branch's manual → Simple Icons → domain/discovery order,
+      // while never inserting a failed image into the visible DOM.
+      Promise.resolve(resolveSoftwareLogo(frame, name, manualUrl));
     });
 
     softwareList.replaceChildren(fragment);
