@@ -362,7 +362,7 @@ function openLightbox(index, initialMediaIndex = -1) {
 allCards.forEach(card => {
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
-  const titleText = card.querySelector('.glass-info h3')?.textContent?.trim();
+  const titleText = getProjectForCard(card)?.title?.trim() || '';
   card.setAttribute('aria-label', titleText ? `Open project: ${titleText}` : 'Open project');
 
   const openFromCard = (event) => {
