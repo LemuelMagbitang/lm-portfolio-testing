@@ -592,18 +592,6 @@ function validateBootstrapHardening() {
   if (!/skill\.icon \|\| skill\.logo/.test(about)) {
     err('About: CMS software skill icons must support the stored icon field.');
   }
-
-  const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
-  if (!/about\.softwareSkills/.test(about) ||
-      !/about\.experience/.test(about) ||
-      !/about\.education/.test(about) ||
-      !/about\.awards/.test(about)) {
-    err('About: CMS feature must render software skills, experience, education, and awards data.');
-  }
-
-  if (!/skill\.icon \|\| skill\.logo/.test(about)) {
-    err('About: CMS software skill icons must support the stored icon field.');
-  }
 }
 function validateArchitecture() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
