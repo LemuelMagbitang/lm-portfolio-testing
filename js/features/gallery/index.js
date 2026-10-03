@@ -28,15 +28,24 @@ export async function initGallery(options = {}) {
       if (!list.length) return;
 
       const fragment = documentRef.createDocumentFragment();
+
+      const allButton = documentRef.createElement('button');
+      allButton.type = 'button';
+      allButton.className = 'tab-btn filter-btn active';
+      allButton.dataset.filter = 'all';
+      allButton.textContent = 'ALL';
+      fragment.appendChild(allButton);
+
       list.forEach(filter => {
-        if (!filter || !filter.id) return;
+        if (!filter || !filter.id || String(filter.id).toLowerCase() === 'all') return;
         const button = documentRef.createElement('button');
         button.type = 'button';
-        button.className = 'filter-btn';
+        button.className = 'tab-btn filter-btn';
         button.dataset.filter = String(filter.id);
         button.textContent = filter.label || filter.name || filter.id;
         fragment.appendChild(button);
       });
+
       filterTabs.replaceChildren(fragment);
     } catch (error) {
       console.warn('Filters: could not load', options.filterUrl, error);
