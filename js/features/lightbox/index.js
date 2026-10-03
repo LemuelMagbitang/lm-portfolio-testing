@@ -114,53 +114,6 @@ function openLightbox(index, initialMediaIndex = -1) {
   const card = activeLightboxCards[currentLightboxIndex];
   const project = getProjectForCard(card);
 
-  // The viewer consumes the normalized Project model exposed by the Projects
-  // feature. It deliberately does not inspect project-card markup, so a card
-  // redesign can change its DOM without changing Lightbox behavior.
-  if (!project) {
-    console.warn('Lightbox: no normalized project model is available for this card.');
-    return;
-  }
-
-  // 1. Populate Text
-  if (modalTitle) modalTitle.textContent = project.title || '';
-  if (modalDesc) modalDesc.textContent = project.subtitle || '';
-  if (modalFullDesc) modalFullDesc.textContent = project.description || '';
-
-  // 2. Clear previous media and dispose mounted 3D resources.
-  mediaRenderer.dispose(modalMediaContainer);
-  modalMediaContainer.innerHTML = '';
-
-  // 3. Render directly from the normalized project model.
-  const mediaList = Array.isArray(project.media) && project.media.length
-    ? project.media
-    : (project.thumbnail?.src ? [{ ...project.thumbnail }] : []);
-
-  mediaList.forEach(item => {
-    if (!item?.src) return;
-
-    const type = String(item.type || 'image').toLowerCase();
-    const src = String(item.src);
-    const caption = String(item.caption || item.description || '');
-    const background = item.background && typeof item.background === 'object'
-      ? item.background
-      : null;
-    const orientation = String(item.orientation || '').toLowerCase();
-
-    if (type === 'image') {
-      modalMediaContainfunction openLightbox(index, initialMediaIndex = -1) {
-  lightbox.classList.remove('is-3d-focused');
-  if (lightboxControls) {
-    lightboxControls.classList.remove('is-3d-controls-disabled');
-    lightboxControls.inert = false;
-  }
-  documentRef.documentElement.classList.remove('lm-3d-focus-open');
-  documentRef.body.classList.remove('lm-3d-focus-open');
-  currentLightboxIndex = index;
-
-  const card = activeLightboxCards[currentLightboxIndex];
-  const project = getProjectForCard(card);
-
   if (!project) {
     console.warn('Lightbox: no normalized project model is available for this card.');
     return;
