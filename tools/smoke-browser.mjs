@@ -258,11 +258,24 @@ try {
           });
           return;
         }
-        if (url.pathname === '/repos/Smoke/TestRepo/contents/data/about.json') {
+        const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
+        const genericDataMatch = url.pathname.match(/^\/repos\/Smoke\/TestRepo\/contents\/data\/([^/]+\.json)$/);
+        if (url.pathname === aboutPath) {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({ content: encoded, sha: 'smoke-about-sha' })
+          });
+          return;
+        }
+        if (genericDataMatch) {
+          const filename = genericDataMatch[1];
+          const fixture = filename === 'hero.json' ? [] : filename === 'settings.json' ? {} : [];
+          const content = btoa(unescape(encodeURIComponent(JSON.stringify(fixture))));
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ content, sha: `smoke-${filename}-sha` })
           });
           return;
         }
