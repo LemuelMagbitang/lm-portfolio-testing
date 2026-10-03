@@ -95,7 +95,7 @@ const modalTitle = documentRef.getElementById('modalTitle');
 const modalDesc = documentRef.getElementById('modalDesc');
 const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
-const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef);
+const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle);
 
 const mediaRenderer = createLightboxMediaRenderer({
   documentRef,
