@@ -2339,45 +2339,71 @@ RENDERERS.about = function(data){
 
   const SOFTWARE_LOGO_CACHE = new Map();
   const SOFTWARE_LOGO_PENDING = new Map();
-  const SOFTWARE_ICON_ALIASES = {
-    'blender':'blender',
-    'krita':'krita',
-    'figma':'figma',
-    'youtube':'youtube',
-    'after effects':'adobeaftereffects',
-    'adobe after effects':'adobeaftereffects',
+  const SOFTWARE_DOMAINS = {
+    'krita':'krita.org',
+    'blender':'blender.org',
+    'figma':'figma.com',
+    'davinci resolve':'blackmagicdesign.com',
+    'cinema 4d':'maxon.net',
+    'zbrush':'maxon.net',
+    'maya':'autodesk.com',
+    '3ds max':'autodesk.com',
+    'autodesk maya':'autodesk.com',
+    'unity':'unity.com',
+    'unreal engine':'unrealengine.com',
+    'procreate':'procreate.com',
+    'sketch':'sketch.com',
+    'sketchup':'sketchup.com',
+    'substance painter':'substance3d.com',
+    'substance designer':'substance3d.com',
+    'affinity photo':'affinity.serif.com',
+    'affinity designer':'affinity.serif.com',
+    'houdini':'sidefx.com',
+    'clip studio paint':'clipstudio.net'
+  };
+  const SOFTWARE_ALIASES = {
     'premier pro':'adobepremierepro',
     'premiere pro':'adobepremierepro',
+    'adobe premier pro':'adobepremierepro',
     'adobe premiere pro':'adobepremierepro',
+    'after effects':'adobeaftereffects',
+    'adobe after effects':'adobeaftereffects',
     'photoshop':'adobephotoshop',
     'adobe photoshop':'adobephotoshop',
     'illustrator':'adobeillustrator',
-    'adobe illustrator':'adobeillustrator',
-    'davinci resolve':'davinciresolve',
-    'da vinci resolve':'davinciresolve',
-    'cinema 4d':'cinema4d',
-    'maya':'autodeskmaya',
-    'autodesk maya':'autodeskmaya',
-    '3ds max':'3dsmax',
-    'zbrush':'zbrush',
-    'unity':'unity',
-    'unreal engine':'unrealengine',
-    'procreate':'procreate',
-    'clip studio paint':'clipstudiopaint',
-    'substance painter':'substancepainter',
-    'houdini':'houdini',
-    'sketchup':'sketchup'
+    'adobe illustrator':'adobeillustrator'
   };
-  const SOFTWARE_ICONS_VERSION = '16.33.0';
 
   function normalizeSoftwareName(value){
     return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
   }
 
-  function automaticSoftwareIconCandidates(name){
-    const raw=String(name||'').trim();
-    const slug=SOFTWARE_ICON_ALIASES[raw.toLowerCase()] || normalizeSoftwareName(raw);
-    return slug ? ['https://cdn.jsdelivr.net/npm/simple-icons@'+SOFTWARE_ICONS_VERSION+'/icons/'+encodeURIComponent(slug)+'.svg'] : [];
+  function softwareSlug(name){
+    const raw=String(name||'').trim().toLowerCase();
+    return SOFTWARE_ALIASES[raw] || normalizeSoftwareName(raw);
+  }
+
+  function simpleIconsSoftwareUrl(name){
+    const slug=softwareSlug(name);
+    return slug ? 'https://cdn.simpleicons.org/'+encodeURIComponent(slug) : '';
+  }
+
+  function iconifySoftwareUrl(iconId){
+    const parts=String(iconId||'').split(':');
+    const prefix=parts.shift();
+    const iconName=parts.join(':');
+    return prefix&&iconName
+      ? 'https://api.iconify.design/'+encodeURIComponent(prefix)+'/'+encodeURIComponent(iconName)+'.svg'
+      : '';
+  }
+
+  function scoreSoftwareIcon(iconId,name){
+    const iconName=normalizeSoftwareName(String(iconId||'').split(':').pop());
+    const query=normalizeSoftwareName(name);
+    if(!iconName||!query) return 0;
+    if(iconName===query) return 1000;
+    if(iconName.includes(query)||query.includes(iconName)) return 700;
+    return 0;
   }
 
   async function findAutomaticSoftwareLogoCandidates(name){
@@ -2387,14 +2413,19 @@ RENDERERS.about = function(data){
     if(SOFTWARE_LOGO_CACHE.has(key)) return SOFTWARE_LOGO_CACHE.get(key);
     if(SOFTWARE_LOGO_PENDING.has(key)) return SOFTWARE_LOGO_PENDING.get(key);
 
-    const request=(async()=>{
-      const direct=automaticSoftwareIconCandidates(raw);
-      SOFTWARE_LOGO_CACHE.set(key,direct);
-      return direct;
-    })().finally(()=>SOFTWARE_LOGO_PENDING.delete(key));
+    const candidates=[];
+    const direct=simpleIconsSoftwareUrl(raw);
+    if(direct) candidates.push(direct);
 
+    const domain=SOFTWARE_DOMAINS[key];
+    if(domain) candidates.push('https://logo.clearbit.com/'+domain+'?size=64');
+
+    const request=Promise.resolve(candidates);
     SOFTWARE_LOGO_PENDING.set(key,request);
-    return request;
+    const result=await request;
+    SOFTWARE_LOGO_PENDING.delete(key);
+    SOFTWARE_LOGO_CACHE.set(key,result);
+    return result;
   }
 
   async function findAutomaticSoftwareLogoDiscovery(name){
@@ -2407,20 +2438,12 @@ RENDERERS.about = function(data){
       );
       if(!response.ok) return [];
       const payload=await response.json();
-      const normalized=normalizeSoftwareName(raw);
       return (Array.isArray(payload?.icons)?payload.icons:[])
-        .map(icon=>String(icon||''))
-        .map(icon=>{
-          const parts=icon.split(':');
-          const prefix=parts.shift();
-          const iconName=parts.join(':');
-          const slug=normalizeSoftwareName(iconName);
-          const score=slug===normalized?1000:slug.includes(normalized)?700:0;
-          return {prefix,iconName,score};
-        })
-        .filter(x=>x.prefix&&x.iconName&&x.score>0)
+        .map(icon=>({icon,score:scoreSoftwareIcon(icon,raw)}))
+        .filter(x=>x.score>0)
         .sort((a,b)=>b.score-a.score)
-        .map(x=>'https://api.iconify.design/'+encodeURIComponent(x.prefix)+'/'+encodeURIComponent(x.iconName)+'.svg');
+        .map(x=>iconifySoftwareUrl(x.icon))
+        .filter(Boolean);
     }catch(_){
       return [];
     }
