@@ -4,8 +4,8 @@
  *
  * This intentionally checks the failure mode static validators cannot see:
  * the browser must execute the ES-module bootstrap and render the page without
- * the CI workflow is expected to run this script on the checked-out commit.
- * uncaught runtime errors.
+ * uncaught runtime errors. The CI workflow runs this against the checked-out
+ * commit so static validation cannot mask runtime regressions.
  */
 
 import { spawn } from 'node:child_process';
@@ -88,6 +88,22 @@ try {
       const cards = await page.locator('#portfolioGrid .project-card').count();
       if (cards < 1) throw new Error(`Works page rendered no project cards (found ${cards}).`);
 
+      const heroSlides = await page.locator('#heroBanner .slide').count();
+      if (heroSlides < 1) throw new Error(`Works Hero rendered no artwork slides (found ${heroSlides}).`);
+
+      const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
+      if (!heroText?.trim()) throw new Error('Works Hero rendered no message text.');
+
+      const allFilter = page.locator('.filter-tabs .filter-btn[data-filter="all"], .filter-tabs .tab-btn[data-filter="all"]');
+      if (await allFilter.count() !== 1) throw new Error('Works filter UI is missing the ALL filter.');
+
+      const filterButtons = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
+      const filterCount = await filterButtons.count();
+      if (filterCount < 2) throw new Error(`Works filter UI rendered too few filters (found ${filterCount}).`);
+
+      const filterColor = await filterButtons.first().evaluate(el => getComputedStyle(el).color);
+      if (!filterColor || filterColor === 'rgba(0, 0, 0, 0)') throw new Error('Works filter button styling did not load.');
+
       const firstCard = page.locator('#portfolioGrid .project-card').first();
       await firstCard.click();
       await page.waitForTimeout(200);
@@ -107,6 +123,18 @@ try {
 
       const hero = page.locator('#heroBannerAbout, #heroBanner').first();
       if (await hero.count() !== 1) throw new Error('About page hero container is missing.');
+
+      const experience = await page.locator('#experienceList .timeline-item').count();
+      const education = await page.locator('#educationList .timeline-item').count();
+      const awards = await page.locator('#awardsList .timeline-item').count();
+      const softwareSkills = await page.locator('#softwareSkillsList li').count();
+      const softwareImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').count();
+
+      if (experience < 1) throw new Error('About page rendered no work experience entries.');
+      if (education < 1) throw new Error('About page rendered no education entries.');
+      if (awards < 1) throw new Error('About page rendered no awards entries.');
+      if (softwareSkills < 1) throw new Error('About page rendered no software skills.');
+      if (softwareImages < 1) throw new Error('About page software-logo mode is enabled but no software logo rendered.');
     });
 
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
