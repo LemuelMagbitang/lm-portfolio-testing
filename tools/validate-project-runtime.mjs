@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js';
 
 const calls = [];
 const children = [];
@@ -103,5 +104,58 @@ const missingUrl = await mountProjects({
 });
 
 assert.equal(missingUrl, false);
+
+
+const makeElement = () => ({
+  className: '',
+  dataset: {},
+  children: [],
+  attributes: new Map(),
+  classList: {
+    values: new Set(),
+    add(...names) { names.forEach(name => this.values.add(name)); },
+    remove(...names) { names.forEach(name => this.values.delete(name)); }
+  },
+  append(...nodes) { this.children.push(...nodes); },
+  appendChild(node) { this.children.push(node); return node; },
+  setAttribute(name, value) { this.attributes.set(name, String(value)); },
+  addEventListener() {},
+  removeEventListener() {},
+  textContent: '',
+  innerHTML: ''
+});
+
+const cardDocument = {
+  createElement() {
+    return makeElement();
+  }
+};
+
+const capabilityCard = buildProjectCardElement({
+  id: 'capability-regression',
+  title: 'Capability Regression',
+  filters: ['3d-motion'],
+  mediaCount: 2,
+  capabilities: {
+    hasImage: true,
+    hasVideo: false,
+    hasYouTube: false,
+    hasLottie: false,
+    hasModel: true
+  },
+  thumbnail: { type: 'model', src: 'models/test.glb' },
+  media: [
+    { type: 'image', src: 'media/test.webp' },
+    { type: 'model', src: 'models/test.glb' }
+  ]
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value
+});
+
+assert.equal(capabilityCard.className, 'project-card');
+assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
+assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
+assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
 
 console.log('Projects runtime boundary validation passed.');
