@@ -683,9 +683,8 @@ function validateSoftwareLogoLookup() {
   if (resolver.includes('logo.clearbit.com') || admin.includes('logo.clearbit.com')) {
     err('Software logos: retired Clearbit Logo API must not be referenced.');
   }
-  if (!resolver.includes("SIMPLE_ICONS_VERSION = '16.33.0'") ||
-      !resolver.includes('cdn.jsdelivr.net/npm/simple-icons@')) {
-    err('Software logos: public resolver must use pinned Simple Icons 16.33.0 assets.');
+  if (!resolver.includes('cdn.simpleicons.org/')) {
+    err('Software logos: public resolver must use the reference Simple Icons CDN.');
   }
   if (!resolver.includes('api.iconify.design/search')) {
     err('Software logos: public resolver must use the Iconify search API as a discovery fallback.');
