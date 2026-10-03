@@ -262,7 +262,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 
     // Load the same project ordering the portfolio uses.
     try {
-      latestSources = collectHeroSources(document, null);
+      latestSources = collectHeroSources(documentRef, null);
       if (latestSources.length === 0) {
         const list = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
         latestSources = (Array.isArray(list) ? list : [])
