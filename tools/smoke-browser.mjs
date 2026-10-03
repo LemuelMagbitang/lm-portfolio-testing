@@ -504,6 +504,7 @@ try {
         throw new Error('CMS background color picker did not update its displayed value.');
       }
 
+      page.once('dialog', dialog => dialog.accept());
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
 
