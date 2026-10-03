@@ -450,11 +450,11 @@ export async function initGallery(options = {}) {
   render();
   applyHash();
   ensureFilterEdges();
-  windowRef.requestAnimationFrame(() => {
+  lifecycle.animationFrame(() => {
     const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
     if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
     updateFilterPager(filterBtns.indexOf(activeBtn));
-  });
+  }, windowRef);
   bind(windowRef, 'hashchange', applyHash);
   bind(windowRef, 'load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
   return {
