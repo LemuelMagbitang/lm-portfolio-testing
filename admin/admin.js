@@ -723,7 +723,9 @@ function wireSave(onCollect, name, filePath){
    Pages setup doesn't use Actions (no check runs ever appear) this
    quietly falls back to the plain "committed" message rather than
    hanging in a "deploying" state forever. */
+let deployTrackVersion = 0;
 async function trackDeployStatus(sha){
+  const trackVersion = ++deployTrackVersion;
   if (!sha) return;
   const status = document.getElementById('saveStatus');
   const statusText = document.getElementById('saveStatusText');
@@ -736,10 +738,11 @@ async function trackDeployStatus(sha){
   const deadline = Date.now() + 120000; // 2 minutes
   let sawAnyCheck = false;
 
-  while (Date.now() < deadline) {
+  while (Date.now() < deadline && trackVersion === deployTrackVersion) {
     let runs;
     try { runs = await GH.getCheckRuns(sha); }
     catch(err){ runs = []; }
+    if(trackVersion !== deployTrackVersion) return;
 
     const pagesRuns = runs.filter(r => /pages/i.test(r.name || ''));
     const relevant = pagesRuns.length ? pagesRuns : runs;
@@ -996,7 +999,38 @@ RENDERERS.heroLoop=async function(data){
           kind: item.type === 'lottie' ? 'lottie' : item.type === 'video' ? 'video' : 'image',
           title: item.type === 'lottie' ? 'Choose a Lottie JSON file' : item.type === 'video' ? 'Choose a video file' : 'Choose an image file'
         }));
-        let dragging=false;const pointer=e=>{const r=picker.getBoundingClientRect(),x=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientX:e.clientX)-r.left)/r.width*100)),y=Math.max(0,Math.min(100,((e.touches?e.touches[0].clientY:e.clientY)-r.top)/r.height*100));item.focus=`${x.toFixed(0)}% ${y.toFixed(0)}%`;body.querySelector('[data-f="focus"]').value=item.focus;setCross();refreshHeroPreview();flagUnsaved();};picker.addEventListener('mousedown',e=>{dragging=true;pointer(e)});window.addEventListener('mousemove',e=>{if(dragging)pointer(e)});window.addEventListener('mouseup',()=>dragging=false);picker.addEventListener('touchstart',pointer,{passive:true});picker.addEventListener('touchmove',pointer,{passive:true});
+        let dragging=false;
+        const pointer=e=>{
+          const r=picker.getBoundingClientRect();
+          const x=Math.max(0,Math.min(100,((e.clientX-r.left)/r.width)*100));
+          const y=Math.max(0,Math.min(100,((e.clientY-r.top)/r.height)*100));
+          item.focus=`${x.toFixed(0)}% ${y.toFixed(0)}%`;
+          body.querySelector('[data-f="focus"]').value=item.focus;
+          setCross();
+          refreshHeroPreview();
+          flagUnsaved();
+        };
+        picker.style.touchAction='none';
+        picker.addEventListener('pointerdown',e=>{
+          if(e.pointerType==='mouse' && e.button!==0) return;
+          dragging=true;
+          picker.setPointerCapture?.(e.pointerId);
+          pointer(e);
+        });
+        picker.addEventListener('pointermove',e=>{
+          if(dragging) {
+            e.preventDefault();
+            pointer(e);
+          }
+        });
+        const finishPointer=()=>{
+          dragging=false;
+        };
+        picker.addEventListener('pointerup',e=>{
+          finishPointer();
+          try { picker.releasePointerCapture?.(e.pointerId); } catch (_) {}
+        });
+        picker.addEventListener('pointercancel',finishPointer);
         body.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{const f=inp.dataset.f;item[f]=(f==='zoom'||f==='rotate')?(parseFloat(inp.value)||0):inp.value;row.querySelector('.preview-line').textContent=item.alt||item.src||'(empty)';if(f==='focus')setCross();refreshHeroPreview();flagUnsaved();}));
         body.querySelectorAll('[data-time-f]').forEach(inp=>inp.addEventListener('input',()=>{const f=inp.dataset.timeF;const unit=body.querySelector(`[data-time-unit="${f}"]`)?.value||'s';item[f]=Math.max(0,toMs(inp.value,unit));flagUnsaved();}));
         body.querySelectorAll('[data-time-unit]').forEach(sel=>sel.addEventListener('change',()=>{const f=sel.dataset.timeUnit;const unit=sel.value;const units={...(fadeUnits.get(item._uid)||{})};units[f==='fadeInMs'?'in':'out']=unit;fadeUnits.set(item._uid,units);const field=body.querySelector(`[data-time-f="${f}"]`);if(field)field.value=formatTimedValue(item[f],unit);flagUnsaved();}));
@@ -1954,8 +1988,8 @@ RENDERERS.projects = async function(data){
     refreshThumbPreview();
     function pointerToFocus(e){
       const rect = picker.getBoundingClientRect();
-      const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-      const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
       const x = Math.max(0, Math.min(100, (cx/rect.width)*100));
       const y = Math.max(0, Math.min(100, (cy/rect.height)*100));
       p.thumbnail.focus = `${x.toFixed(0)}% ${y.toFixed(0)}%`;
@@ -1973,11 +2007,23 @@ RENDERERS.projects = async function(data){
       flagUnsaved();
     }
     let dragging=false;
-    picker.addEventListener('mousedown', e=>{ dragging=true; pointerToFocus(e); });
-    window.addEventListener('mousemove', e=>{ if(dragging) pointerToFocus(e); });
-    window.addEventListener('mouseup', ()=> dragging=false);
-    picker.addEventListener('touchstart', e=>{ pointerToFocus(e); }, {passive:true});
-    picker.addEventListener('touchmove', e=>{ pointerToFocus(e); }, {passive:true});
+    picker.style.touchAction='none';
+    picker.addEventListener('pointerdown', e=>{
+      if(e.pointerType==='mouse' && e.button!==0) return;
+      dragging=true;
+      picker.setPointerCapture?.(e.pointerId);
+      pointerToFocus(e);
+    });
+    picker.addEventListener('pointermove', e=>{
+      if(!dragging) return;
+      e.preventDefault();
+      pointerToFocus(e);
+    });
+    picker.addEventListener('pointerup', e=>{
+      dragging=false;
+      try { picker.releasePointerCapture?.(e.pointerId); } catch (_) {}
+    });
+    picker.addEventListener('pointercancel', ()=>{ dragging=false; });
 
     // media list
     let medWrap = el.querySelector('[data-medialist]');
@@ -2262,8 +2308,8 @@ RENDERERS.about = function(data){
 
     function pointerToPhotoFocus(e){
       const rect = photoPicker.getBoundingClientRect();
-      const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-      const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
       const x = Math.max(0, Math.min(100, (cx/rect.width)*100));
       const y = Math.max(0, Math.min(100, (cy/rect.height)*100));
       a.photo.focus = `${x.toFixed(0)}% ${y.toFixed(0)}%`;
@@ -2273,11 +2319,23 @@ RENDERERS.about = function(data){
       refreshPhotoPreview();
     }
     let draggingPhotoFocus = false;
-    photoPicker.addEventListener('mousedown', e=>{ draggingPhotoFocus=true; pointerToPhotoFocus(e); });
-    window.addEventListener('mousemove', e=>{ if(draggingPhotoFocus) pointerToPhotoFocus(e); });
-    window.addEventListener('mouseup', ()=> draggingPhotoFocus=false);
-    photoPicker.addEventListener('touchstart', e=>{ pointerToPhotoFocus(e); }, {passive:true});
-    photoPicker.addEventListener('touchmove', e=>{ pointerToPhotoFocus(e); }, {passive:true});
+    photoPicker.style.touchAction='none';
+    photoPicker.addEventListener('pointerdown', e=>{
+      if(e.pointerType==='mouse' && e.button!==0) return;
+      draggingPhotoFocus=true;
+      photoPicker.setPointerCapture?.(e.pointerId);
+      pointerToPhotoFocus(e);
+    });
+    photoPicker.addEventListener('pointermove', e=>{
+      if(!draggingPhotoFocus) return;
+      e.preventDefault();
+      pointerToPhotoFocus(e);
+    });
+    photoPicker.addEventListener('pointerup', e=>{
+      draggingPhotoFocus=false;
+      try { photoPicker.releasePointerCapture?.(e.pointerId); } catch (_) {}
+    });
+    photoPicker.addEventListener('pointercancel', ()=>{ draggingPhotoFocus=false; });
 
     buildSoftwareSkills('tags_software', a.softwareSkills);
     buildTagBox('tags_multimedia', a.multimediaSkills, 'e.g. 3D Modeling');
