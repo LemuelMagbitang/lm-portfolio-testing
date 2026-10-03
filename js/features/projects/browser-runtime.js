@@ -24,10 +24,12 @@ export async function mountProjects({
   resolveAssetUrl = siteAssetUrl,
   getGrid = () => documentRef?.getElementById('portfolioGrid'),
   createFragment = () => documentRef?.createDocumentFragment(),
+  onCardActivate,
   buildCard = project => buildProjectCardElement(project, {
     resolveAssetUrl,
     show3DIndicator: true,
-    documentRef
+    documentRef,
+    onActivate: onCardActivate
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;
