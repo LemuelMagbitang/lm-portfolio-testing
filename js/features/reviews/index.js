@@ -74,7 +74,7 @@ export async function initReviews({
     setVisible: applyVisibility,
     isVisible: () => visible,
     cleanup() {
-      if (!track || !marquee) return;
+      if (!track) return;
       track.replaceChildren(...pristineCards.map(card => card.cloneNode(true)));
     }
   };
