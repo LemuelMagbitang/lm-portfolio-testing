@@ -87,32 +87,34 @@ export function normalizeProject(project = {}) {
     capabilities
   };
 
+  // Thumbnail presentation controls remain meaningful even when the CMS
+  // leaves thumbnail.src empty and the Projects card chooses its first media
+  // item automatically as the visible thumbnail.
   if (thumbnailSrc) {
-    const thumbnailType = normalizeString(thumbnailSource.type).toLowerCase();
     normalized.thumbnail.src = thumbnailSrc;
-
-    // Preserve an explicitly declared type. If CMS data omits it, leave the
-    // field unset so the Projects card runtime can retain the legacy
-    // extension-based inference for video/Lottie thumbnails.
-    if (MEDIA_TYPES.has(thumbnailType)) {
-      normalized.thumbnail.type = thumbnailType;
-    }
-
-    const focus = normalizeString(thumbnailSource.focus);
-    if (focus) normalized.thumbnail.focus = focus;
-
-    const orientation = normalizeString(thumbnailSource.orientation).toLowerCase();
-    if (ORIENTATIONS.has(orientation)) normalized.thumbnail.orientation = orientation;
-
-    const zoom = Number(thumbnailSource.zoom);
-    if (Number.isFinite(zoom) && zoom > 0) normalized.thumbnail.zoom = zoom;
-
-    const rotate = Number(thumbnailSource.rotate);
-    if (Number.isFinite(rotate)) normalized.thumbnail.rotate = rotate;
-
-    const background = normalizeBackground(thumbnailSource.background);
-    if (background) normalized.thumbnail.background = background;
   }
+
+  const thumbnailType = normalizeString(thumbnailSource.type).toLowerCase();
+  // Preserve an explicitly declared type. If CMS data omits it, leave the
+  // field unset so the Projects card runtime can retain extension inference.
+  if (MEDIA_TYPES.has(thumbnailType)) {
+    normalized.thumbnail.type = thumbnailType;
+  }
+
+  const focus = normalizeString(thumbnailSource.focus);
+  if (focus) normalized.thumbnail.focus = focus;
+
+  const orientation = normalizeString(thumbnailSource.orientation).toLowerCase();
+  if (ORIENTATIONS.has(orientation)) normalized.thumbnail.orientation = orientation;
+
+  const zoom = Number(thumbnailSource.zoom);
+  if (Number.isFinite(zoom) && zoom > 0) normalized.thumbnail.zoom = zoom;
+
+  const rotate = Number(thumbnailSource.rotate);
+  if (Number.isFinite(rotate)) normalized.thumbnail.rotate = rotate;
+
+  const background = normalizeBackground(thumbnailSource.background);
+  if (background) normalized.thumbnail.background = background;
 
   normalized.media = media;
   return normalized;
