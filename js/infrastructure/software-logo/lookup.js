@@ -1,28 +1,61 @@
 /**
- * Software-logo lookup adapter.
+ * Automatic software-logo lookup adapter.
  *
- * Searches Iconify's brand-logo sets by the software name entered in CMS
- * and returns image URLs. The public site does not write these URLs back
- * into CMS content.
+ * Uses a pinned Simple Icons CDN asset first for common software names, then
+ * Iconify Search as a discovery fallback. UI code preloads candidates before
+ * attaching them, so failed URLs never become visible broken-image icons.
  */
 
+const SIMPLE_ICONS_VERSION = '16.33.0';
 const cache = new Map();
 const pending = new Map();
 
-const QUERY_ALIASES = {
-  'premier pro': 'premiere pro',
-  'adobe premier pro': 'adobe premiere pro',
-  'after effects': 'adobe after effects',
-  'ae': 'adobe after effects',
-  'photoshop': 'adobe photoshop',
-  'ps': 'adobe photoshop',
-  'illustrator': 'adobe illustrator',
-  'ai': 'adobe illustrator',
-  'youtube': 'youtube'
+const SOFTWARE_ALIASES = {
+  'blender':'blender',
+  'krita':'krita',
+  'figma':'figma',
+  'youtube':'youtube',
+  'after effects':'adobeaftereffects',
+  'adobe after effects':'adobeaftereffects',
+  'premier pro':'adobepremierepro',
+  'premiere pro':'adobepremierepro',
+  'adobe premiere pro':'adobepremierepro',
+  'photoshop':'adobephotoshop',
+  'adobe photoshop':'adobephotoshop',
+  'illustrator':'adobeillustrator',
+  'adobe illustrator':'adobeillustrator',
+  'davinci resolve':'davinciresolve',
+  'da vinci resolve':'davinciresolve',
+  'cinema 4d':'cinema4d',
+  'maya':'autodeskmaya',
+  'autodesk maya':'autodeskmaya',
+  '3ds max':'3dsmax',
+  'zbrush':'zbrush',
+  'unity':'unity',
+  'unreal engine':'unrealengine',
+  'procreate':'procreate',
+  'clip studio paint':'clipstudiopaint',
+  'substance painter':'substancepainter',
+  'houdini':'houdini',
+  'sketchup':'sketchup'
 };
 
 function normalize(value = '') {
   return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function simpleIconsUrl(slug) {
+  return 'https://cdn.jsdelivr.net/npm/simple-icons@' + SIMPLE_ICONS_VERSION
+    + '/icons/' + encodeURIComponent(slug) + '.svg';
+}
+
+function iconifyIconUrl(iconId) {
+  const parts = String(iconId || '').split(':');
+  const prefix = parts.shift();
+  const iconName = parts.join(':');
+  if (!prefix || !iconName) return '';
+  return 'https://api.iconify.design/' + encodeURIComponent(prefix) + '/'
+    + encodeURIComponent(iconName) + '.svg';
 }
 
 function scoreIcon(iconId, query) {
@@ -37,48 +70,54 @@ function scoreIcon(iconId, query) {
 
 export async function findSoftwareLogoCandidates(name, fetchRef = globalThis.fetch?.bind(globalThis)) {
   const rawName = String(name || '').trim();
-  if (!rawName || typeof fetchRef !== 'function') return [];
+  if (!rawName) return [];
 
-  const queryText = QUERY_ALIASES[rawName.toLowerCase()] || rawName;
-  const key = normalize(queryText);
+  const lowered = rawName.toLowerCase();
+  const aliasSlug = SOFTWARE_ALIASES[lowered] || '';
+  const normalizedName = normalize(rawName);
+  const key = aliasSlug || normalizedName;
+
   if (!key) return [];
   if (cache.has(key)) return cache.get(key);
   if (pending.has(key)) return pending.get(key);
 
-  const url = 'https://api.iconify.design/search?query='
-    + encodeURIComponent(queryText)
-    + '&prefixes=simple-icons,logos&limit=12';
+  const request = (async () => {
+    const candidates = [simpleIconsUrl(aliasSlug || normalizedName)];
 
-  const request = fetchRef(url, { headers: { Accept: 'application/json' } })
-    .then(async response => {
-      if (!response.ok) return [];
-      const payload = await response.json();
-      const icons = Array.isArray(payload?.icons) ? payload.icons : [];
-      const sorted = icons
-        .map(icon => ({ icon, score: scoreIcon(icon, key) }))
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map(item => item.icon);
+    if (typeof fetchRef === 'function') {
+      try {
+        const response = await fetchRef(
+          'https://api.iconify.design/search?query='
+          + encodeURIComponent(rawName)
+          + '&prefixes=simple-icons,logos&limit=12',
+          { headers: { Accept: 'application/json' } }
+        );
 
-      const urls = sorted.map(iconId => {
-        const parts = String(iconId).split(':');
-        const prefix = parts.shift();
-        const iconName = parts.join(':');
-        return 'https://api.iconify.design/'
-          + encodeURIComponent(prefix)
-          + '/'
-          + encodeURIComponent(iconName)
-          + '.svg';
-      });
+        if (response.ok) {
+          const payload = await response.json();
+          const discovered = (Array.isArray(payload?.icons) ? payload.icons : [])
+            .map(icon => ({ icon, score: scoreIcon(icon, normalizedName) }))
+            .filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .map(item => iconifyIconUrl(item.icon))
+            .filter(Boolean);
 
-      cache.set(key, urls);
-      return urls;
-    })
-    .catch(() => {
-      cache.set(key, []);
-      return [];
-    })
-    .finally(() => pending.delete(key));
+          const seen = new Set(candidates);
+          discovered.forEach(url => {
+            if (!seen.has(url)) {
+              seen.add(url);
+              candidates.push(url);
+            }
+          });
+        }
+      } catch (_) {
+        // Direct Simple Icons remains usable without discovery.
+      }
+    }
+
+    cache.set(key, candidates);
+    return candidates;
+  })().finally(() => pending.delete(key));
 
   pending.set(key, request);
   return request;
