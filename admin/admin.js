@@ -683,7 +683,7 @@ async function render(){
     if(RENDERERS[section]) await RENDERERS[section](data);
   }catch(err){
     if(version !== renderVersion || section !== currentSection) return;
-    content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\\'t load this file.</strong><br><span data-error-message></span></div></div>';
+    content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\'t load this file.</strong><br><span data-error-message></span></div></div>';
     content.querySelector('[data-error-message]')?.replaceChildren(document.createTextNode(String(err?.message || 'Unknown error.')));
   }
 }
