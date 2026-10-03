@@ -319,17 +319,17 @@ try {
       const artworkAlt = await firstArtwork.getAttribute('alt');
       if (!artworkAlt?.trim()) throw new Error('Mobile Lightbox image is missing accessible alt text.');
 
-      const viewportWidth = await page.evaluate(() => window.innerWidth);
+      const lightboxViewportWidth = await page.evaluate(() => window.innerWidth);
       const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
-      if (Math.abs(artworkWidth - viewportWidth) > 2) {
-        throw new Error(`Mobile Lightbox artwork is not full-bleed (artwork ${artworkWidth}px vs viewport ${viewportWidth}px).`);
+      if (Math.abs(artworkWidth - lightboxViewportWidth) > 2) {
+        throw new Error(`Mobile Lightbox artwork is not full-bleed (artwork ${artworkWidth}px vs viewport ${lightboxViewportWidth}px).`);
       }
 
       const renderedArtworkWidths = await page.locator('#lightboxMediaContainer .lightbox-media-item img').evaluateAll(
         images => images.map(image => Math.round(image.getBoundingClientRect().width)).filter(width => width > 0)
       );
-      if (renderedArtworkWidths.some(width => Math.abs(width - viewportWidth) > 2)) {
-        throw new Error(`Mobile Lightbox contains a non-full-bleed artwork width: ${renderedArtworkWidths.join(', ')} vs viewport ${viewportWidth}px.`);
+      if (renderedArtworkWidths.some(width => Math.abs(width - lightboxViewportWidth) > 2)) {
+        throw new Error(`Mobile Lightbox contains a non-full-bleed artwork width: ${renderedArtworkWidths.join(', ')} vs viewport ${lightboxViewportWidth}px.`);
       }
 
       await page.locator('#lightboxClose').click();
