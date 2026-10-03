@@ -16,7 +16,7 @@ export function mediaTypeFromSrc(src = '') {
 export function buildProjectThumbnailMedia(
   source = {},
   altText = 'Project artwork',
-  { resolveAssetUrl } = {}
+  { resolveAssetUrl, documentRef = globalThis.document } = {}
 ) {
   if (!source?.src || typeof resolveAssetUrl !== 'function') return null;
 
@@ -25,7 +25,7 @@ export function buildProjectThumbnailMedia(
   let media;
 
   if (type === 'video') {
-    media = document.createElement('video');
+    media = documentRef.createElement('video');
     media.src = src;
     media.muted = true;
     media.loop = true;
@@ -33,35 +33,35 @@ export function buildProjectThumbnailMedia(
     media.playsInline = true;
     media.preload = 'metadata';
   } else if (type === 'lottie') {
-    media = document.createElement('lottie-player');
+    media = documentRef.createElement('lottie-player');
     media.setAttribute('src', src);
     media.setAttribute('autoplay', '');
     media.setAttribute('loop', '');
     media.setAttribute('background', 'transparent');
     media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
   } else if (type === 'model') {
-    media = document.createElement('div');
+    media = documentRef.createElement('div');
     media.className = 'project-thumb-model';
     media.setAttribute('role', 'img');
     media.setAttribute('aria-label', `${altText} — interactive 3D view available`);
 
-    const content = document.createElement('div');
+    const content = documentRef.createElement('div');
     content.className = 'project-thumb-model-content';
 
-    const icon = document.createElement('i');
+    const icon = documentRef.createElement('i');
     icon.className = 'fa-solid fa-cube';
     icon.setAttribute('aria-hidden', 'true');
 
-    const label = document.createElement('span');
+    const label = documentRef.createElement('span');
     label.textContent = 'INTERACTIVE 3D';
 
-    const hint = document.createElement('small');
+    const hint = documentRef.createElement('small');
     hint.textContent = 'Open artwork to explore';
 
     content.append(icon, label, hint);
     media.appendChild(content);
   } else {
-    media = document.createElement('img');
+    media = documentRef.createElement('img');
     media.src = src;
     media.alt = altText;
     media.loading = 'lazy';
