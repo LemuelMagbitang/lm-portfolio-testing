@@ -427,12 +427,11 @@ bind(lightbox, 'click', handleBackdropClick);
 bind(documentRef, 'keydown', handleDocumentKeydown);
 
 return {
+  openCard: openProjectCard,
   close: closeLightbox,
   destroy() {
     closeLightbox();
-    listenerCleanups.splice(0).forEach(cleanup => {
-      try { cleanup(); } catch (_) {}
-    });
+    lifecycle.cleanup();
     activeLightboxCards = [];
   }
 };
