@@ -550,6 +550,16 @@ function validateBootstrapHardening() {
       !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition)) {
     err('Composition: Hero timing must use the Hero feature option names loopMode and transitionStyle.');
   }
+
+  const lightbox = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
+  if (!/return \{[\s\S]*destroy\(\)[\s\S]*listenerCleanups\.splice\(0\)/.test(lightbox)) {
+    err('Lightbox: public feature lifecycle must expose destroy() and release persistent listeners.');
+  }
+
+  if (!/lightboxFeature\?\.destroy\?\.\(\)/.test(composition) ||
+      !/heroFeature\?\.destroy\?\.\(\)/.test(composition)) {
+    err('Composition: Hero and Lightbox lifecycle cleanup must be wired to app.destroy().');
+  }
 }
 function validateArchitecture() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
