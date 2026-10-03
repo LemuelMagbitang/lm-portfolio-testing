@@ -593,7 +593,7 @@ body {
   -webkit-backdrop-filter: blur(4px);
   transform: translateY(10px);
   opacity: 0;
-  transition: all 0.4s ease;
+  transition: opacity var(--lm-motion-slow) var(--lm-motion-ease), transform var(--lm-motion-slow) var(--lm-motion-ease);
   z-index: 10;
   pointer-events: none;
 }
@@ -645,7 +645,7 @@ body {
 .social-icons a {
   color: #fff; background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  text-decoration: none; font-size: 1.1rem; transition: all 0.3s;
+  text-decoration: none; font-size: 1.1rem; transition: background-color var(--lm-motion-standard), color var(--lm-motion-standard), transform var(--lm-motion-standard);
   backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
 }
 .social-icons a:hover { background: #fff; color: #000; transform: scale(1.1); }
@@ -1498,7 +1498,7 @@ body.center-page {
   cursor: pointer;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  transition: background-color var(--lm-motion-standard) var(--lm-motion-ease), color var(--lm-motion-standard) var(--lm-motion-ease), transform var(--lm-motion-standard) var(--lm-motion-ease), border-color var(--lm-motion-standard) var(--lm-motion-ease);
 }
 
 .btn-show-more:hover {
@@ -2427,4 +2427,39 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 }
 @media (min-width: 1100px){
   .seamless-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
+
+/* =========================================
+   ACCESSIBILITY — REDUCED MOTION
+   ========================================= */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .project-card,
+  .project-card .card-thumbnail img,
+  .project-card .glass-info,
+  .site-logo,
+  .nav-caret,
+  .nav-dropdown-menu,
+  .filter-page-dot,
+  .btn-show-more,
+  .page-transition,
+  .page-transition-logo,
+  .reviews-track,
+  .seamless-grid,
+  .lightbox-modal .lightbox-controls,
+  .lightbox-modal .lightbox-nav,
+  .lightbox-modal .lightbox-close {
+    animation: none;
+    transition: none;
+  }
+
+  .project-card:hover .card-thumbnail img {
+    transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  }
+
+  .project-card:hover .glass-info {
+    transform: translateY(0);
+  }
 }
