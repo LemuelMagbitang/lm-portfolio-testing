@@ -206,6 +206,13 @@ try {
         throw new Error(`Mobile Lightbox artwork is not full-bleed (artwork ${artworkWidth}px vs viewport ${viewportWidth}px).`);
       }
 
+      const renderedArtworkWidths = await page.locator('#lightboxMediaContainer .lightbox-media-item img').evaluateAll(
+        images => images.map(image => Math.round(image.getBoundingClientRect().width)).filter(width => width > 0)
+      );
+      if (renderedArtworkWidths.some(width => Math.abs(width - viewportWidth) > 2)) {
+        throw new Error(`Mobile Lightbox contains a non-full-bleed artwork width: ${renderedArtworkWidths.join(', ')} vs viewport ${viewportWidth}px.`);
+      }
+
       await page.locator('#lightboxClose').click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
     }, { width: 390, height: 844 });
