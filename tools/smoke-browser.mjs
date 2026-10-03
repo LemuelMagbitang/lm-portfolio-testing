@@ -182,6 +182,12 @@ try {
       const lightbox = page.locator('#lightbox.active');
       if (await lightbox.count() !== 1) throw new Error('Lightbox did not open from the first project card.');
 
+      const closeBeforeTab = page.locator('#lightboxClose').first();
+      await closeBeforeTab.waitFor({ state: 'visible', timeout: 3000 });
+      await page.keyboard.press('Tab');
+      const firstTabTarget = await page.evaluate(() => document.activeElement?.id || document.activeElement?.className || '');
+      if (!firstTabTarget) throw new Error('Lightbox keyboard focus did not move to a visible control.');
+
       const nextButton = page.locator('.lightbox-next').first();
       if (await nextButton.count() === 1) {
         await nextButton.click();
