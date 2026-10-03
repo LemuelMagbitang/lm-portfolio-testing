@@ -94,7 +94,7 @@ export async function createPortfolioApp({
     await ensureLottiePlayer();
   }
 
-  const hero = root.querySelector('.hero');
+  const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
   let heroFeature = null;
   if (hero) {
     try {
