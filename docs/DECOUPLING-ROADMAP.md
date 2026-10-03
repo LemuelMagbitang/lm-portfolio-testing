@@ -2,6 +2,22 @@
 
 This is the implementation roadmap for converting the portfolio into a highly decoupled, plug-and-play static application without changing its visual language or CMS data model unnecessarily.
 
+## Current implementation checkpoint
+
+As of October 3, 2026, the branch has completed the first composition/data-boundary slice of the migration without changing the public visual baseline:
+
+- `js/script.js` is a 19-line browser entrypoint.
+- `js/app/bootstrap.js` owns startup/error containment and passes normalized application configuration into the composition root.
+- `js/app/page-composition.js` is the explicit wiring layer for page features and infrastructure.
+- Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings now have feature entry points.
+- CMS project data and site settings are normalized before presentation.
+- Three.js, media-background, YouTube parsing, Lottie loading, site paths, and reduced-motion are isolated behind infrastructure modules.
+- The obsolete `cms-data.js` and `site-runtime.js` runtime facades have been removed.
+- Gallery is the single owner of project-filter state; Lightbox consumes Gallery's active-project contract rather than maintaining a second filter model.
+- Architecture and site validators were updated to enforce the new boundaries.
+
+The remaining work is deliberate rather than wholesale refactoring: strengthen feature lifecycles/cleanup and CSS ownership where they materially reduce coupling, then stop architecture work when the boundaries are sufficient for the Phase 3 artwork-first redesign.
+
 ## Target architecture
 
 ```text
