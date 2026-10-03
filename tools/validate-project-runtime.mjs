@@ -77,6 +77,25 @@ assert.equal(getProjectForCard({}), null);
 assert.equal(getCardForProject('runtime-test-project'), children[0]);
 assert.deepEqual(getProjects().map(project => project.id), ['runtime-test-project']);
 
+const partialBuild = await mountProjects({
+  url: 'data/projects.json',
+  documentRef: fakeDocument,
+  loadJson: async () => [
+    ...projects,
+    {
+      id: 'runtime-test-project-2',
+      title: 'Partial Build Project',
+      media: [{ type: 'image', src: 'media/test-2.webp' }]
+    }
+  ],
+  resolveAssetUrl: value => `/assets/${value}`,
+  buildCard: project => project.id === 'runtime-test-project' ? ({ project }) : null
+});
+
+assert.equal(partialBuild, false);
+assert.deepEqual(getProjects().map(project => project.id), ['runtime-test-project']);
+assert.equal(getCardForProject('runtime-test-project'), children[0]);
+
 const missingUrl = await mountProjects({
   documentRef: fakeDocument,
   loadJson: async () => projects,
