@@ -665,17 +665,25 @@ async function saveSectionsAtomic(files, message){
    6. RENDER ROUTER
    ===================================================================== */
 const content = document.getElementById('content');
+let renderVersion = 0;
 
 async function render(){
-  if(currentSection === 'guide'){ renderGuide(); return; }
-  if(currentSection === 'media'){ RENDERERS.media(); return; }
+  const version = ++renderVersion;
+  const section = currentSection;
 
-  content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading ${SECTIONS[currentSection].label.toLowerCase()}…</div>`;
+  if(section === 'guide'){ renderGuide(); return; }
+  if(section === 'media'){ RENDERERS.media(); return; }
+
+  content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading ${SECTIONS[section].label.toLowerCase()}…</div>`;
   try{
-    const data = await loadSection(currentSection);
-    if(RENDERERS[currentSection]) await RENDERERS[currentSection](data);
+    const data = await loadSection(section);
+    // Navigation can change while GitHub is responding. Never let an older
+    // section request paint into the section the user selected afterward.
+    if(version !== renderVersion || section !== currentSection) return;
+    if(RENDERERS[section]) await RENDERERS[section](data);
   }catch(err){
-    content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\'t load this file.</strong><br><span data-error-message></span></div></div>';
+    if(version !== renderVersion || section !== currentSection) return;
+    content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\\'t load this file.</strong><br><span data-error-message></span></div></div>';
     content.querySelector('[data-error-message]')?.replaceChildren(document.createTextNode(String(err?.message || 'Unknown error.')));
   }
 }
