@@ -20,6 +20,8 @@ export async function initGallery(options = {}) {
   const portfolioGrid = documentRef.getElementById('portfolioGrid');
   const gridFadeOverlay = documentRef.getElementById('gridFadeOverlay');
   if (!portfolioGrid) return;
+  portfolioGrid.dataset.component = 'project-gallery';
+  filterTabs?.setAttribute('data-component', 'project-filters');
 
   async function loadFilterButtons() {
     if (!filterTabs || !options.filterUrl || typeof options.loadJson !== 'function') return;
