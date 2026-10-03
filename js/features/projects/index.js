@@ -7,4 +7,4 @@
  */
 
 export { mountProjects } from './browser-runtime.js';
-export { loadProjects } from './project-loader.js';
+export { loadProjects, getProjectForCard } from './project-loader.js';

@@ -50,6 +50,9 @@ export function initLightbox(options = {}) {
   const getActiveCards = typeof options.getActiveCards === 'function'
     ? options.getActiveCards
     : () => Array.from(documentRef.querySelectorAll('.project-card'));
+  const getProjectForCard = typeof options.getProjectForCard === 'function'
+    ? options.getProjectForCard
+    : () => null;
   const protectionEnabled = typeof options.protectionEnabled === 'function'
     ? options.protectionEnabled
     : () => true;
@@ -150,232 +153,196 @@ function openLightbox(index, initialMediaIndex = -1) {
   documentRef.documentElement.classList.remove('lm-3d-focus-open');
   documentRef.body.classList.remove('lm-3d-focus-open');
   currentLightboxIndex = index;
+
   const card = activeLightboxCards[currentLightboxIndex];
+  const project = getProjectForCard(card);
+
+  // The viewer consumes the normalized Project model exposed by the Projects
+  // feature. It deliberately does not inspect project-card markup, so a card
+  // redesign can change its DOM without changing Lightbox behavior.
+  if (!project) {
+    console.warn('Lightbox: no normalized project model is available for this card.');
+    return;
+  }
 
   // 1. Populate Text
-  modalTitle.textContent = card.querySelector('.glass-info h3').textContent;
-  modalDesc.textContent = card.querySelector('.glass-info p').textContent;
+  if (modalTitle) modalTitle.textContent = project.title || '';
+  if (modalDesc) modalDesc.textContent = project.subtitle || '';
+  if (modalFullDesc) modalFullDesc.textContent = project.description || '';
 
-  const descEl = card.querySelector('.project-description');
-  modalFullDesc.textContent = descEl ? descEl.textContent : '';
-
-  // 2. Clear previous media. Give mounted 3D viewers a chance to dispose
-  // their OrbitControls, WebGL renderer, ResizeObserver and document-level
-  // key listener before their DOM nodes are removed. This prevents stale
-  // render loops and interaction handlers when moving between projects.
+  // 2. Clear previous media and dispose mounted 3D resources.
   modalMediaContainer.querySelectorAll('.model-viewer-shell').forEach(shell => {
     try { shell.__modelViewerCleanup?.(); } catch (_) {}
   });
   modalMediaContainer.innerHTML = '';
 
-  // 3. Populate Media (Images & YouTube)
-  const mediaList = card.querySelectorAll('.project-media-list .media-item');
+  // 3. Render directly from the normalized project model.
+  const mediaList = Array.isArray(project.media) && project.media.length
+    ? project.media
+    : (project.thumbnail?.src ? [{ ...project.thumbnail }] : []);
 
-  if (mediaList.length > 0) {
-    mediaList.forEach(item => {
-      const imgUrl = item.getAttribute('data-image');
-      const ytUrl = item.getAttribute('data-youtube');
-      const videoUrl = item.getAttribute('data-video');
-      const lottieUrl = item.getAttribute('data-lottie');
-      const modelUrl = item.getAttribute('data-model');
-      const caption = item.getAttribute('data-description');
-      let itemBackground=null; try { const raw=item.getAttribute('data-background'); itemBackground=raw?JSON.parse(raw):null; } catch(e){}
+  mediaList.forEach(item => {
+    if (!item?.src) return;
 
-      if (imgUrl) {
-        modalMediaContainer.appendChild(buildMediaEntry(buildImageMedia(imgUrl), caption, itemBackground));
-      }
+    const type = String(item.type || 'image').toLowerCase();
+    const src = String(item.src);
+    const caption = String(item.caption || item.description || '');
+    const background = item.background && typeof item.background === 'object'
+      ? item.background
+      : null;
+    const orientation = String(item.orientation || '').toLowerCase();
 
-      if (ytUrl) {
-        const { id, isShort } = parseYouTube(ytUrl);
-        const embedUrl = id ? `https://www.youtube.com/embed/${id}` : ytUrl;
-
-        const iframe = documentRef.createElement('iframe');
-        iframe.src = embedUrl;
-        iframe.frameBorder = '0';
-        iframe.loading = 'lazy';
-        iframe.title = caption || 'Project video';
-        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-        iframe.allowFullscreen = true;
-
-        // Orientation: a manual "data-orientation" attribute always wins.
-        // Otherwise, Shorts links default to portrait and everything
-        // else defaults to landscape.
-        const manualOrientation = item.getAttribute('data-orientation');
-        let orientationClass = 'yt-landscape';
-
-        if (manualOrientation === 'portrait') {
-          orientationClass = 'yt-portrait';
-        } else if (manualOrientation === 'square') {
-          orientationClass = 'yt-square';
-        } else if (manualOrientation === 'landscape') {
-          orientationClass = 'yt-landscape';
-        } else if (isShort) {
-          orientationClass = 'yt-portrait';
-        }
-
-        iframe.classList.add(orientationClass);
-        modalMediaContainer.appendChild(buildMediaEntry(iframe, caption, itemBackground));
-      }
-
-      if (videoUrl) {
-        const video = documentRef.createElement('video');
-        video.src = resolveAssetUrl(videoUrl);
-        video.controls = true;
-        video.playsInline = true;
-        video.controlsList = 'nodownload';
-        video.disablePictureInPicture = true;
-
-        if (protectionEnabled()) {
-          video.classList.add('no-save');
-          video.addEventListener('contextmenu', (e) => e.preventDefault());
-        }
-
-        const manualVideoOrientation = item.getAttribute('data-orientation');
-
-        if (manualVideoOrientation === 'portrait') {
-          video.classList.add('yt-portrait');
-        } else if (manualVideoOrientation === 'square') {
-          video.classList.add('yt-square');
-        } else if (manualVideoOrientation === 'landscape') {
-          video.classList.add('yt-landscape');
-        } else {
-          // No manual override — start with a landscape placeholder
-          // (avoids a layout jump before the file loads), then read
-          // the video's own real width/height as soon as we know
-          // them and size it exactly to that, same spirit as how
-          // YouTube Shorts links get auto-detected as portrait.
-          video.classList.add('yt-landscape');
-
-          video.addEventListener('loadedmetadata', () => {
-            const ratio = video.videoWidth / video.videoHeight;
-
-            video.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
-            if (ratio > 1.15) {
-              video.classList.add('yt-landscape');
-            } else if (ratio < 0.85) {
-              video.classList.add('yt-portrait');
-            } else {
-              video.classList.add('yt-square');
-            }
-
-            // Exact proportions rather than a fixed 16:9 / 9:16 / 1:1
-            // template — the class above just sets a sensible max-size
-            // envelope for that general shape.
-            video.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
-          });
-        }
-
-        modalMediaContainer.appendChild(buildMediaEntry(video, caption, itemBackground));
-      }
-
-      if (modelUrl) {
-        const modelWrap = documentRef.createElement('div');
-        modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
-        const modelOrientation = item.getAttribute('data-orientation') || 'auto';
-        modelWrap.setAttribute('data-orientation', modelOrientation);
-        modelWrap.setAttribute('aria-label', '3D artwork preview');
-        const modelEntry = buildMediaEntry(modelWrap, caption, itemBackground);
-        modelEntry.classList.add('is-3d-media-item');
-        modalMediaContainer.appendChild(modelEntry);
-        if (typeof mountModelViewer !== 'function') {
-          modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-        } else {
-          Promise.resolve()
-            .then(() => {
-              // The project may have been closed or replaced while the viewer
-              // capability was being resolved. Never mount into a detached node.
-              if (!modelWrap.isConnected || !lightbox.classList.contains('active')) return;
-              mountModelViewer(modelWrap, resolveAssetUrl(modelUrl), {
-                autoRotate: false,
-                background: itemBackground || null,
-                orientation: modelOrientation,
-                resolveUrl: resolveAssetUrl,
-                onActivate: () => {
-                  const currentScroll = lightbox.scrollTop;
-                  lightbox.dataset.pre3dScrollTop = String(currentScroll);
-                  lightbox.classList.add('is-3d-focused');
-                  modelEntry.classList.add('is-3d-focus-target');
-                  if (lightboxControls) {
-                    lightboxControls.classList.add('is-3d-controls-disabled');
-                    lightboxControls.inert = true;
-                  }
-                  documentRef.documentElement.classList.add('lm-3d-focus-open');
-                  documentRef.body.classList.add('lm-3d-focus-open');
-                  windowRef.requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
-                },
-                onDeactivate: () => {
-                  lightbox.classList.remove('is-3d-focused');
-                  modelEntry.classList.remove('is-3d-focus-target');
-                  if (lightboxControls) {
-                    lightboxControls.classList.remove('is-3d-controls-disabled');
-                    lightboxControls.inert = false;
-                  }
-                  documentRef.documentElement.classList.remove('lm-3d-focus-open');
-                  documentRef.body.classList.remove('lm-3d-focus-open');
-                  const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
-                  if (Number.isFinite(previousScroll)) {
-                    windowRef.requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
-                  }
-                  delete lightbox.dataset.pre3dScrollTop;
-                }
-              });
-            })
-            .catch(err => {
-              modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-              console.warn('3D model viewer:', err);
-            });
-        }
-      }
-      if (lottieUrl) {
-        // <lottie-player> plays a Lottie/JSON animation the same way
-        // <video> plays a video file — same orientation handling as
-        // video above (manual override, else a landscape default),
-        // since there's no equivalent of videoWidth/videoHeight to
-        // read the real proportions from up front.
-        const player = documentRef.createElement('lottie-player');
-        player.setAttribute('src', resolveAssetUrl(lottieUrl));
-        player.setAttribute('autoplay', '');
-        player.setAttribute('loop', '');
-        player.setAttribute('background', 'transparent');
-
-        const manualLottieOrientation = item.getAttribute('data-orientation');
-        if (manualLottieOrientation === 'portrait') player.classList.add('yt-portrait');
-        else if (manualLottieOrientation === 'square') player.classList.add('yt-square');
-        else player.classList.add('yt-landscape');
-
-        player.setAttribute('preserveAspectRatio', 'xMidYMid slice'); player.preserveAspectRatio='xMidYMid slice';
-        modalMediaContainer.appendChild(buildMediaEntry(player, caption, itemBackground));
-      }
-    });
-  } else {
-    // Fallback: use whichever thumbnail media the card actually renders.
-    const thumbMedia = card.querySelector('.card-thumbnail .project-thumb-media, .card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player');
-    if (thumbMedia) {
-      if (thumbMedia.tagName === 'LOTTIE-PLAYER') {
-        const player = documentRef.createElement('lottie-player');
-        player.setAttribute('src', resolveAssetUrl(thumbMedia.getAttribute('src') || ''));
-        player.setAttribute('autoplay',''); player.setAttribute('loop',''); player.setAttribute('background','transparent');
-        modalMediaContainer.appendChild(buildMediaEntry(player, ''));
-      } else if (thumbMedia.tagName === 'VIDEO') {
-        const video = documentRef.createElement('video');
-        video.src = thumbMedia.src; video.controls = true; video.playsInline = true;
-        modalMediaContainer.appendChild(buildMediaEntry(video, ''));
-      } else if (thumbMedia.src) {
-        modalMediaContainer.appendChild(buildImageMedia(thumbMedia.src));
-      }
+    if (type === 'image') {
+      modalMediaContainer.appendChild(
+        buildMediaEntry(buildImageMedia(resolveAssetUrl(src)), caption, background)
+      );
+      return;
     }
-  }
 
-  // 4. Show Lightbox and lock body scroll
+    if (type === 'youtube') {
+      const { id, isShort } = parseYouTube(src);
+      const embedUrl = id ? `https://www.youtube.com/embed/${id}` : src;
+      const iframe = documentRef.createElement('iframe');
+      iframe.src = embedUrl;
+      iframe.frameBorder = '0';
+      iframe.loading = 'lazy';
+      iframe.title = caption || project.title || 'Project video';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+
+      let orientationClass = 'yt-landscape';
+      if (orientation === 'portrait') orientationClass = 'yt-portrait';
+      else if (orientation === 'square') orientationClass = 'yt-square';
+      else if (orientation === 'landscape') orientationClass = 'yt-landscape';
+      else if (isShort) orientationClass = 'yt-portrait';
+
+      iframe.classList.add(orientationClass);
+      modalMediaContainer.appendChild(buildMediaEntry(iframe, caption, background));
+      return;
+    }
+
+    if (type === 'video') {
+      const video = documentRef.createElement('video');
+      video.src = resolveAssetUrl(src);
+      video.controls = true;
+      video.playsInline = true;
+      video.controlsList = 'nodownload';
+      video.disablePictureInPicture = true;
+
+      if (protectionEnabled()) {
+        video.classList.add('no-save');
+        video.addEventListener('contextmenu', (e) => e.preventDefault());
+      }
+
+      if (orientation === 'portrait') {
+        video.classList.add('yt-portrait');
+      } else if (orientation === 'square') {
+        video.classList.add('yt-square');
+      } else if (orientation === 'landscape') {
+        video.classList.add('yt-landscape');
+      } else {
+        video.classList.add('yt-landscape');
+        video.addEventListener('loadedmetadata', () => {
+          const ratio = video.videoWidth / video.videoHeight;
+          if (!Number.isFinite(ratio) || ratio <= 0) return;
+
+          video.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
+          if (ratio > 1.15) video.classList.add('yt-landscape');
+          else if (ratio < 0.85) video.classList.add('yt-portrait');
+          else video.classList.add('yt-square');
+
+          video.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+        });
+      }
+
+      modalMediaContainer.appendChild(buildMediaEntry(video, caption, background));
+      return;
+    }
+
+    if (type === 'model') {
+      const modelWrap = documentRef.createElement('div');
+      modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
+      const modelOrientation = orientation || 'auto';
+      modelWrap.setAttribute('data-orientation', modelOrientation);
+      modelWrap.setAttribute('aria-label', `${project.title || 'Project'} — 3D artwork preview`);
+
+      const modelEntry = buildMediaEntry(modelWrap, caption, background);
+      modelEntry.classList.add('is-3d-media-item');
+      modalMediaContainer.appendChild(modelEntry);
+
+      if (typeof mountModelViewer !== 'function') {
+        modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
+      } else {
+        Promise.resolve()
+          .then(() => {
+            if (!modelWrap.isConnected || !lightbox.classList.contains('active')) return;
+
+            return mountModelViewer(modelWrap, resolveAssetUrl(src), {
+              autoRotate: false,
+              background: background || null,
+              orientation: modelOrientation,
+              resolveUrl: resolveAssetUrl,
+              onActivate: () => {
+                const currentScroll = lightbox.scrollTop;
+                lightbox.dataset.pre3dScrollTop = String(currentScroll);
+                lightbox.classList.add('is-3d-focused');
+                modelEntry.classList.add('is-3d-focus-target');
+                if (lightboxControls) {
+                  lightboxControls.classList.add('is-3d-controls-disabled');
+                  lightboxControls.inert = true;
+                }
+                documentRef.documentElement.classList.add('lm-3d-focus-open');
+                documentRef.body.classList.add('lm-3d-focus-open');
+                windowRef.requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
+              },
+              onDeactivate: () => {
+                lightbox.classList.remove('is-3d-focused');
+                modelEntry.classList.remove('is-3d-focus-target');
+                if (lightboxControls) {
+                  lightboxControls.classList.remove('is-3d-controls-disabled');
+                  lightboxControls.inert = false;
+                }
+                documentRef.documentElement.classList.remove('lm-3d-focus-open');
+                documentRef.body.classList.remove('lm-3d-focus-open');
+                const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
+                if (Number.isFinite(previousScroll)) {
+                  windowRef.requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
+                }
+                delete lightbox.dataset.pre3dScrollTop;
+              }
+            });
+          })
+          .catch(err => {
+            modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
+            console.warn('3D model viewer:', err);
+          });
+      }
+      return;
+    }
+
+    if (type === 'lottie') {
+      const player = documentRef.createElement('lottie-player');
+      player.setAttribute('src', resolveAssetUrl(src));
+      player.setAttribute('autoplay', '');
+      player.setAttribute('loop', '');
+      player.setAttribute('background', 'transparent');
+
+      if (orientation === 'portrait') player.classList.add('yt-portrait');
+      else if (orientation === 'square') player.classList.add('yt-square');
+      else player.classList.add('yt-landscape');
+
+      player.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      player.preserveAspectRatio = 'xMidYMid slice';
+      modalMediaContainer.appendChild(buildMediaEntry(player, caption, background));
+    }
+  });
+
+  // 4. Show Lightbox and lock body scroll.
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open();
   documentRef.body.style.overflow = 'hidden';
 
-  // When a project was opened by clicking its 3D thumbnail, keep the
-  // visitor at that artwork instead of resetting the project overlay to
-  // the first media item. The target is centered because it remains easy
-  // to understand on both desktop and small touch screens.
   windowRef.requestAnimationFrame(() => {
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
     if (initialMediaIndex >= 0 && items[initialMediaIndex]) {
@@ -390,6 +357,7 @@ function openLightbox(index, initialMediaIndex = -1) {
   });
 }
 
+
 // Project cards are keyboard-operable as well as pointer-operable.
 allCards.forEach(card => {
   card.setAttribute('role', 'button');
@@ -400,15 +368,15 @@ allCards.forEach(card => {
   const openFromCard = (event) => {
     activeLightboxCards = getActiveCards();
     const index = activeLightboxCards.indexOf(card);
+    if (index < 0) return;
 
-    // The project card uses its first media item as the visual thumbnail
-    // fallback. When that fallback is a 3D model, clicking the thumbnail
-    // should open the project at that same 3D artwork instead of jumping
-    // to the top of the media stack.
+    const project = getProjectForCard(card);
     let initialMediaIndex = -1;
-    if (event.target.closest('.card-thumbnail [data-model-thumb]')) {
-      const mediaItems = Array.from(card.querySelectorAll('.project-media-list .media-item'));
-      initialMediaIndex = mediaItems.findIndex(item => item.hasAttribute('data-model'));
+
+    if (event.target.closest('.card-thumbnail [data-model-thumb]') && project) {
+      initialMediaIndex = Array.isArray(project.media)
+        ? project.media.findIndex(item => item?.type === 'model' && item?.src)
+        : -1;
     }
 
     openLightbox(index, initialMediaIndex);

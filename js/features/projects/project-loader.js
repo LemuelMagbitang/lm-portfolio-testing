@@ -12,6 +12,15 @@
 
 import { normalizeProjects } from '../../data/project-normalizer.js';
 
+// Project models belong to the Projects feature, not to card markup. The
+// WeakMap keeps the model private while exposing a stable card -> project
+// lookup through the feature's public API for Gallery/Lightbox consumers.
+const cardProjectMap = new WeakMap();
+
+export function getProjectForCard(card) {
+  return cardProjectMap.get(card) || null;
+}
+
 export async function loadProjects({
   url,
   loadJson,
@@ -41,7 +50,15 @@ export async function loadProjects({
     const fragment = createFragment();
     if (!fragment || typeof fragment.appendChild !== 'function') return false;
 
-    projects.forEach(project => fragment.appendChild(buildCard(project)));
+    let mountedCount = 0;
+    projects.forEach(project => {
+      const card = buildCard(project);
+      if (!card) return;
+      cardProjectMap.set(card, project);
+      fragment.appendChild(card);
+      mountedCount += 1;
+    });
+    if (!mountedCount) return false;
     grid.replaceChildren(fragment);
     return true;
   } catch (error) {

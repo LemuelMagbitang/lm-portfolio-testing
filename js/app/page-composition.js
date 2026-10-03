@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects } from '../features/projects/index.js';
+import { mountProjects, getProjectForCard } from '../features/projects/index.js';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout } from '../features/about/index.js?v=20261003-12';
@@ -154,7 +154,8 @@ export async function createPortfolioApp({
       parseYouTubeUrl,
       resolveAssetUrl: siteAssetUrl,
       mountModelViewer,
-      getActiveCards: () => galleryFeature?.getActiveCards?.() || Array.from(root.querySelectorAll('.project-card'))
+      getActiveCards: () => galleryFeature?.getActiveCards?.() || Array.from(root.querySelectorAll('.project-card')),
+      getProjectForCard
     });
   } catch (error) {
     console.warn('Lightbox: initialization failed', error);
