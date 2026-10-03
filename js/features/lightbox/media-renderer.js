@@ -33,6 +33,41 @@ export function createLightboxMediaRenderer({
     return img;
   }
 
+  function pauseYouTubeFrame(iframe) {
+    if (!iframe?.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), "*");
+    } catch (_) {}
+  }
+
+  function pauseOtherPlayback(container, activeElement = null) {
+    if (!container) return;
+    container.querySelectorAll("video").forEach(video => {
+      if (video === activeElement || video.paused) return;
+      try { video.pause(); } catch (_) {}
+    });
+    container.querySelectorAll("iframe[data-lm-youtube]").forEach(iframe => {
+      if (iframe === activeElement) return;
+      pauseYouTubeFrame(iframe);
+    });
+  }
+
+  function bindPlaybackHandoff(container, mediaElement, type) {
+    if (!container || !mediaElement) return;
+    if (type === "video") {
+      mediaElement.addEventListener("play", () => pauseOtherPlayback(container, mediaElement));
+      mediaElement.addEventListener("pointerdown", () => pauseOtherPlayback(container, mediaElement), { capture: true });
+      return;
+    }
+    if (type === "youtube") {
+      /* YouTube is cross-origin, so its play event cannot bubble into the page.
+         A pointer/focus handoff pauses every other player before the new
+         iframe receives the user's gesture. */
+      mediaElement.addEventListener("pointerdown", () => pauseOtherPlayback(container, mediaElement), { capture: true });
+      mediaElement.addEventListener("focus", () => pauseOtherPlayback(container, mediaElement));
+    }
+  }
+
   function buildMediaCaption(text) {
     const value = String(text || '').trim();
     if (!value) return null;
@@ -91,8 +126,17 @@ export function createLightboxMediaRenderer({
 
   function renderYouTube(item, project) {
     const { id, isShort } = parseYouTube(item.src);
-    const iframe = documentRef.createElement('iframe');
-    iframe.src = id ? `https://www.youtube.com/embed/${id}` : item.src;
+    const iframe = documentRef.createElement("iframe");
+    iframe.dataset.lmYoutube = "true";
+    let embedSrc = item.src;
+    if (id) {
+      const params = new URLSearchParams();
+      params.set("enablejsapi", "1");
+      params.set("playsinline", "1");
+      if (windowRef?.location?.origin) params.set("origin", windowRef.location.origin);
+      embedSrc = "https://www.youtube.com/embed/" + id + "?" + params.toString();
+    }
+    iframe.src = embedSrc;
     iframe.frameBorder = '0';
     iframe.loading = 'lazy';
     iframe.title = item.caption || item.description || project.title || 'Project video';
@@ -239,6 +283,10 @@ export function createLightboxMediaRenderer({
       const entry = renderItem(item, project);
       if (!entry) return;
       container.appendChild(entry);
+      const video = entry.querySelector("video");
+      if (video) bindPlaybackHandoff(container, video, "video");
+      const youtube = entry.querySelector("iframe[data-lm-youtube]");
+      if (youtube) bindPlaybackHandoff(container, youtube, "youtube");
       rendered += 1;
     });
     return rendered;
@@ -246,6 +294,7 @@ export function createLightboxMediaRenderer({
 
   function dispose(container) {
     if (!container) return;
+    pauseOtherPlayback(container);
     container.querySelectorAll('.model-viewer-shell').forEach(shell => {
       try { shell.__modelViewerCleanup?.(); } catch (_) {}
     });
