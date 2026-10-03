@@ -1,7 +1,14 @@
 /**
  * Architecture V2 — gallery controller.
- * Owns filtering, reveal/collapse behavior, deep links and responsive sizing.
+ * Owns filtering/state and exposes the public gallery contract.
  */
+import { createLifecycle } from '../../core/lifecycle.js';
+import {
+  getResponsiveBaseCount,
+  getRowAlignedCount,
+  applyGalleryReveal,
+  resetGalleryPresentation
+} from './presentation.js';
 export async function initGallery(options = {}) {
   const documentRef = options.root?.getElementById ? options.root : globalThis.document;
   const windowRef = documentRef?.defaultView || globalThis.window;
@@ -58,8 +65,12 @@ export async function initGallery(options = {}) {
   if (allCards.length === 0) return;
   const filterBtns = Array.from(documentRef.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
 
-  const mobileCount = Number.isFinite(options.mobileCount) ? options.mobileCount : 5;
+  const phoneCount = Number.isFinite(options.phoneCount) ? options.phoneCount : 2;
+  const tabletShortCount = Number.isFinite(options.tabletShortCount) ? options.tabletShortCount : 4;
+  const tabletTallCount = Number.isFinite(options.tabletTallCount) ? options.tabletTallCount : 6;
   const desktopCount = Number.isFinite(options.desktopCount) ? options.desktopCount : 9;
+  const phoneBreakpoint = Number.isFinite(options.phoneBreakpoint) ? options.phoneBreakpoint : 768;
+  const tabletBreakpoint = Number.isFinite(options.tabletBreakpoint) ? options.tabletBreakpoint : 1100;
   const fadeMs = Number.isFinite(options.fadeMs) ? options.fadeMs : 300;
   let currentFilter = 'all';
   let isExpanded = false;
@@ -74,27 +85,26 @@ export async function initGallery(options = {}) {
   let filterSettling = false;
   let suppressFilterClickUntil = 0;
 
-  // Gallery owns these persistent listeners and removes them on destroy().
-  // The generated pagination-dot listeners are attached to short-lived dot
-  // nodes and disappear with the nodes when the pager is rebuilt.
-  const listenerCleanups = [];
-  const bind = (target, type, handler, listenerOptions) => {
-    if (!target?.addEventListener) return;
-    target.addEventListener(type, handler, listenerOptions);
-    listenerCleanups.push(() => target.removeEventListener(type, handler, listenerOptions));
-  };
+  // Gallery owns persistent listeners and timers through one lifecycle.
+  // Short-lived pagination nodes disappear with the pager rather than
+  // accumulating separate global teardown paths.
+  const lifecycle = createLifecycle();
+  const bind = (target, type, handler, listenerOptions) =>
+    lifecycle.listen(target, type, handler, listenerOptions);
+  let renderToken = 0;
 
   function getBaseCount() {
-    const width = windowRef.innerWidth;
-    const height = windowRef.innerHeight;
-
-    // Keep the visible gallery density proportional to the device:
-    // phones show two cards (two rows in the one-column layout);
-    // tablets use two columns and choose two or three rows based on
-    // available vertical space; desktop stays at three rows.
-    if (width < 768) return Math.min(2, allCards.length);
-    if (width < 1100) return Math.min(height < 820 ? 4 : 6, allCards.length);
-    return Math.min(9, allCards.length);
+    return getResponsiveBaseCount({
+      width: windowRef.innerWidth,
+      height: windowRef.innerHeight,
+      total: allCards.length,
+      phoneCount,
+      tabletShortCount,
+      tabletTallCount,
+      desktopCount,
+      phoneBreakpoint,
+      tabletBreakpoint
+    });
   }
 
   function ensureFilterPager() {
@@ -276,53 +286,30 @@ export async function initGallery(options = {}) {
   }
 
   function getEffectiveBaseCount(filtered) {
-    const requested = getBaseCount();
-    if (filtered.length <= requested || windowRef.innerWidth < 768) return Math.min(requested, filtered.length);
-    const firstTop = filtered[0]?.getBoundingClientRect().top;
-    let columns = 1;
-    if (Number.isFinite(firstTop)) {
-      let count = 0;
-      for (const card of filtered) {
-        if (Math.abs(card.getBoundingClientRect().top - firstTop) <= 2) count++;
-        else break;
-      }
-      columns = Math.max(1, count);
-    }
-    const rowAlignedCount = Math.ceil(requested / columns) * columns;
-    return Math.min(rowAlignedCount, filtered.length);
+    return getRowAlignedCount(filtered, getBaseCount(), windowRef);
   }
 
   function render() {
     const filtered = allCards.filter(card => cardMatchesFilter(card, currentFilter));
-    const hidden = allCards.filter(card => !filtered.includes(card));
-    hidden.forEach(card => { card.style.opacity = '0'; });
-    windowRef.setTimeout(() => hidden.forEach(card => {
-      if (currentFilter !== 'all' && !cardMatchesFilter(card, currentFilter)) card.style.display = 'none';
-    }), fadeMs);
-    filtered.forEach(card => { card.style.display = 'block'; });
-    windowRef.requestAnimationFrame(() => filtered.forEach(card => { card.style.opacity = '1'; }));
+    renderToken += 1;
+    const token = renderToken;
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
-
-    if (!isExpanded && filtered.length > effectiveBaseCount) {
-      const gridRect = portfolioGrid.getBoundingClientRect();
-      const cardRect = filtered[effectiveBaseCount - 1].getBoundingClientRect();
-      const peek = windowRef.innerWidth < 768 ? 40 : 70;
-      portfolioGrid.style.maxHeight = `${Math.round(cardRect.bottom - gridRect.top + peek)}px`;
-      gridFadeOverlay?.classList.remove('is-hidden');
-    } else {
-      portfolioGrid.style.maxHeight = 'none';
-      gridFadeOverlay?.classList.add('is-hidden');
-    }
-    if (showMoreBtn && showMoreWrapper) {
-      const label = showMoreBtn.querySelector('.btn-text');
-      if (filtered.length > effectiveBaseCount) {
-        showMoreWrapper.style.display = 'flex';
-        showMoreWrapper.classList.toggle('expanded', isExpanded);
-        showMoreBtn.classList.toggle('expanded', isExpanded);
-        if (label) label.textContent = isExpanded ? 'SHOW LESS' : 'SHOW MORE';
-      } else showMoreWrapper.style.display = 'none';
-    }
+    const cancelReveal = applyGalleryReveal({
+      grid: portfolioGrid,
+      fadeOverlay: gridFadeOverlay,
+      showMoreButton: showMoreBtn,
+      showMoreWrapper,
+      filteredCards: filtered,
+      visibleCount: effectiveBaseCount,
+      expanded: isExpanded,
+      windowRef,
+      fadeMs,
+      renderToken: token,
+      isCurrentRender: value => value === renderToken
+    });
+    lifecycle.add(cancelReveal);
   }
+
 
   filterBtns.forEach(btn => bind(btn, 'click', event => {
     if (Date.now() < suppressFilterClickUntil) {
@@ -338,7 +325,8 @@ export async function initGallery(options = {}) {
     if (!isExpanded) documentRef.querySelector('.filter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  let resizeTimer;
+  let resizeTimer = null;
+  lifecycle.add(() => windowRef.clearTimeout(resizeTimer));
   bind(windowRef, 'resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = windowRef.setTimeout(() => {
@@ -442,6 +430,10 @@ export async function initGallery(options = {}) {
     updateFilterPager(filterBtns.indexOf(btn));
   }
 
+  lifecycle.add(() => windowRef.clearTimeout(filterScrollTimer));
+  lifecycle.add(() => windowRef.clearTimeout(filterSettleTimer));
+  lifecycle.add(() => windowRef.cancelAnimationFrame?.(filterScrollFrame));
+
   buildFilterPager();
   render();
   applyHash();
@@ -459,13 +451,8 @@ export async function initGallery(options = {}) {
     getAllCards: () => allCards.slice(),
     getActiveCards: () => allCards.filter(card => cardMatchesFilter(card, currentFilter)).slice(),
     destroy() {
-      windowRef.clearTimeout(filterScrollTimer);
-      windowRef.clearTimeout(filterSettleTimer);
-      windowRef.cancelAnimationFrame?.(filterScrollFrame);
-      windowRef.clearTimeout(resizeTimer);
-      listenerCleanups.splice(0).forEach(cleanup => {
-        try { cleanup(); } catch (_) {}
-      });
+      renderToken += 1;
+      lifecycle.cleanup();
       filterDrag = null;
       filterPointerActive = false;
       filterSettling = false;
@@ -473,8 +460,12 @@ export async function initGallery(options = {}) {
       filterPager = null;
       filterPageDots = [];
       filterTabs?.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
-      if (portfolioGrid) portfolioGrid.style.maxHeight = '';
-      gridFadeOverlay?.classList.add('is-hidden');
+      resetGalleryPresentation({
+        grid: portfolioGrid,
+        fadeOverlay: gridFadeOverlay,
+        showMoreButton: showMoreBtn,
+        showMoreWrapper
+      });
     }
   };
 }
