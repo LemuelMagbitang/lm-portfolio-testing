@@ -222,6 +222,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     const getSiteRoot = typeof options.getSiteRootUrl === 'function' ? options.getSiteRootUrl : getSiteRootUrl;
     const ensureLottie = typeof options.ensureLottiePlayer === 'function' ? options.ensureLottiePlayer : ensureLottiePlayer;
     const ensureMediaBackground = typeof options.ensureMediaBackgroundHelper === 'function' ? options.ensureMediaBackgroundHelper : ensureMediaBackgroundHelper;
+    const applyMediaBackground = typeof options.applyMediaBackground === 'function' ? options.applyMediaBackground : null;
     const parseYouTube = typeof options.parseYouTubeUrl === 'function' ? options.parseYouTubeUrl : parseYouTubeUrl;
     const isReducedMotion = typeof options.prefersReducedMotion === 'function' ? options.prefersReducedMotion : prefersReducedMotion;
 
@@ -332,7 +333,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 
       wrap.appendChild(media);
       heroContainer.appendChild(wrap);
-      if (window.LMMediaBackground && source.background) window.LMMediaBackground.apply(wrap, source.background, siteAssetUrl);
+      if (applyMediaBackground && source.background) await applyMediaBackground(wrap, source.background, resolveAssetUrl);
 
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
       media.style.setProperty('--hero-zoom', source.zoom || 1);
@@ -348,22 +349,34 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       }
     });
 
-    startHeroCrossfade(heroContainer, config.crossfadeMs);
+    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs);
+    return {
+      destroy() {
+        stopCrossfade?.();
+        heroContainer.querySelectorAll('.slide').forEach(slide => {
+          slide.querySelectorAll('video').forEach(video => video.pause?.());
+        });
+        heroContainer.replaceChildren();
+        heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
+      }
+    };
   }
 
   function startHeroCrossfade(heroContainer, crossfadeMs) {
     const slides = heroContainer.querySelectorAll('.slide');
-    if (slides.length <= 1) return;
+    if (slides.length <= 1) return () => {};
 
     let currentSlide = 0;
-    if (isReducedMotion()) return;
+    if (isReducedMotion()) return () => {};
     const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
       ? Number(crossfadeMs)
       : 3500;
-    setInterval(() => {
+    const intervalId = setInterval(() => {
       slides[currentSlide].classList.remove('active');
       currentSlide = (currentSlide + 1) % slides.length;
       slides[currentSlide].classList.add('active');
     }, intervalMs); // configured in Hero Loop Animation
+
+    return () => clearInterval(intervalId);
   }
 export { initHeroBanner as initHeroBannerV2 };
