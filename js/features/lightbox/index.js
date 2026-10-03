@@ -49,6 +49,17 @@ export function initLightbox(options = {}) {
   const protectionEnabled = typeof options.protectionEnabled === 'function'
     ? options.protectionEnabled
     : () => true;
+
+  // Persistent listeners are owned by this feature and removed by destroy().
+  // Media-node listeners remain scoped to short-lived DOM nodes and disappear
+  // naturally when the lightbox content is replaced.
+  const listenerCleanups = [];
+  const bind = (target, type, handler, listenerOptions) => {
+    if (!target?.addEventListener) return;
+    target.addEventListener(type, handler, listenerOptions);
+    listenerCleanups.push(() => target.removeEventListener(type, handler, listenerOptions));
+  };
+
   const allCards = Array.from(document.querySelectorAll('.project-card'));
 
 /* =========================================
@@ -395,8 +406,8 @@ allCards.forEach(card => {
     openLightbox(index, initialMediaIndex);
   };
 
-  card.addEventListener('click', openFromCard);
-  card.addEventListener('keydown', (event) => {
+  bind(card, 'click', openFromCard);
+  bind(card, 'keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     openFromCard(event);
@@ -426,48 +437,51 @@ function closeLightbox() {
 }
 
 // Event Listeners for Lightbox Controls
-if (lightboxClose) {
-  lightboxClose.addEventListener('click', closeLightbox);
-}
+const handlePrev = (event) => {
+  event.stopPropagation();
+  if (currentLightboxIndex > 0) {
+    openLightbox(currentLightboxIndex - 1);
+  } else {
+    openLightbox(activeLightboxCards.length - 1); // Loop to end
+  }
+};
 
-if (lightboxPrev) {
-  lightboxPrev.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (currentLightboxIndex > 0) {
-      openLightbox(currentLightboxIndex - 1);
-    } else {
-      openLightbox(activeLightboxCards.length - 1); // Loop to end
-    }
-  });
-}
+const handleNext = (event) => {
+  event.stopPropagation();
+  if (currentLightboxIndex < activeLightboxCards.length - 1) {
+    openLightbox(currentLightboxIndex + 1);
+  } else {
+    openLightbox(0); // Loop to start
+  }
+};
 
-if (lightboxNext) {
-  lightboxNext.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (currentLightboxIndex < activeLightboxCards.length - 1) {
-      openLightbox(currentLightboxIndex + 1);
-    } else {
-      openLightbox(0); // Loop to start
-    }
-  });
-}
-
-// Close when clicking the dark background outside the modal interior
-if (lightbox) {
-  lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) {
-      closeLightbox();
-    }
-  });
-}
-
-// Close on 'Esc' key
-document.addEventListener('keydown', (e) => {
-  if (lightbox && e.key === 'Escape' && lightbox.classList.contains('active')) {
+const handleBackdropClick = (event) => {
+  if (event.target === lightbox) {
     closeLightbox();
   }
-});
+};
 
+const handleDocumentKeydown = (event) => {
+  if (lightbox && event.key === 'Escape' && lightbox.classList.contains('active')) {
+    closeLightbox();
+  }
+};
 
+bind(lightboxClose, 'click', closeLightbox);
+bind(lightboxPrev, 'click', handlePrev);
+bind(lightboxNext, 'click', handleNext);
+bind(lightbox, 'click', handleBackdropClick);
+bind(document, 'keydown', handleDocumentKeydown);
+
+return {
+  close: closeLightbox,
+  destroy() {
+    closeLightbox();
+    listenerCleanups.splice(0).forEach(cleanup => {
+      try { cleanup(); } catch (_) {}
+    });
+    activeLightboxCards = [];
+  }
+};
 
 }
