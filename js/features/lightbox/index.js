@@ -11,6 +11,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
     )).filter(el => {
       if (el.hidden) return false;
+      if (el.closest?.('[inert]')) return false;
       const style = documentRef.defaultView?.getComputedStyle?.(el);
       if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
       // offsetParent is null for fixed-position controls in Chromium. Use
