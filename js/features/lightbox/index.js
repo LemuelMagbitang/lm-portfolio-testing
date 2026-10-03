@@ -1,4 +1,5 @@
 /** Architecture V2 — complete lightbox controller. */
+import { createLifecycle } from '../../core/lifecycle.js';
 function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
@@ -57,15 +58,12 @@ export function initLightbox(options = {}) {
     ? options.protectionEnabled
     : () => true;
 
-  // Persistent listeners are owned by this feature and removed by destroy().
-  // Media-node listeners remain scoped to short-lived DOM nodes and disappear
-  // naturally when the lightbox content is replaced.
-  const listenerCleanups = [];
-  const bind = (target, type, handler, listenerOptions) => {
-    if (!target?.addEventListener) return;
-    target.addEventListener(type, handler, listenerOptions);
-    listenerCleanups.push(() => target.removeEventListener(type, handler, listenerOptions));
-  };
+  // Persistent listeners belong to the Lightbox lifecycle. Media-node listeners
+  // remain scoped to short-lived DOM nodes and disappear when their content is
+  // replaced.
+  const lifecycle = createLifecycle();
+  const bind = (target, type, handler, listenerOptions) =>
+    lifecycle.listen(target, type, handler, listenerOptions);
 
   const allCards = Array.from(documentRef.querySelectorAll('.project-card'));
 
