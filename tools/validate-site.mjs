@@ -482,7 +482,7 @@ function validateGalleryContract() {
   if (!/filterPageDots\s*=\s*buttons\.map/.test(source)) {
     err('Gallery: filter page controls must be generated one-to-one from actual filter buttons.');
   }
-  if (!/filterTabs\?\.addEventListener\('scroll'/.test(source) ||
+  if (!/(?:filterTabs\?\.addEventListener\('scroll'|bind\(filterTabs,\s*'scroll')/.test(source) ||
       !/settleCenteredFilter/.test(source)) {
     err('Gallery: horizontal scrolling must update and settle on the centered filter.');
   }
