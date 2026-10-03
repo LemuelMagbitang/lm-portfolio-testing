@@ -16,9 +16,14 @@ import { normalizeProjects } from '../../data/project-normalizer.js';
 // WeakMap keeps the model private while exposing a stable card -> project
 // lookup through the feature's public API for Gallery/Lightbox consumers.
 const cardProjectMap = new WeakMap();
+let projectModels = [];
 
 export function getProjectForCard(card) {
   return cardProjectMap.get(card) || null;
+}
+
+export function getProjects() {
+  return projectModels.slice();
 }
 
 export async function loadProjects({
@@ -46,6 +51,7 @@ export async function loadProjects({
     const raw = await loadJson(url, null, { resolveUrl });
     const projects = normalizeProjects(raw);
     if (!projects.length) return false;
+    projectModels = projects.slice();
 
     const fragment = createFragment();
     if (!fragment || typeof fragment.appendChild !== 'function') return false;

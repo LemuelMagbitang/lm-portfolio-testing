@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects, getProjectForCard } from '../features/projects/index.js';
+import { mountProjects, getProjectForCard, getProjects } from '../features/projects/index.js';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout } from '../features/about/index.js?v=20261003-12';
@@ -112,6 +112,7 @@ export async function createPortfolioApp({
         ensureMediaBackgroundHelper,
         applyMediaBackground,
         parseYouTubeUrl,
+        getProjects,
         prefersReducedMotion: runtime.prefersReducedMotion
       });
     } catch (error) {

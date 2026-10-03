@@ -5,6 +5,7 @@ import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
 import { ensureMediaBackgroundHelper } from '../../infrastructure/media-background/loader.js';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
+import { normalizeProjects } from '../../data/project-normalizer.js';
 
   /* =========================================
      4. HERO BANNER — AUTO-FILLED WITH THE
@@ -69,81 +70,10 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     }
   }
 
-  // Reads the first 5 project cards out of a document and returns a plain
-  // list of {src, alt, focus} for the hero to use.
-  //
-  // Why it reads data-image and not <img src>: in index.html most
-  // .card-thumbnail divs are left EMPTY on purpose, and script.js fills
-  // them in at runtime from each card's own first media-item. That works
-  // fine on the Works page (the script has already run by then), but a
-  // document pulled in with fetch() is raw HTML that never executed any
-  // JavaScript — so its thumbnails are still empty divs and looking for
-  // an <img> inside them finds nothing. Reading the same data-image
-  // attribute the runtime filler reads makes both paths agree.
-  //
-  // baseUrl matters for the same reason: paths in index.html like
-  // "assets/projects/..." are relative to the site root, so when the
-  // About page (at /about/) reuses them they must be resolved against
-  // the root rather than against /about/, or every slide 404s.
-  function collectHeroSources(doc, baseUrl) {
-    const cards = doc.querySelectorAll('.project-card');
-    return Array.from(cards).map(card => {
-      const thumbWrap = card.querySelector('.card-thumbnail');
-      const thumbImg = thumbWrap ? thumbWrap.querySelector('img') : null;
-
-      // Same order of preference as fillMissingThumbnails(): a real
-      // <img src> if one was written by hand, else the card's first
-      // data-image, else its first YouTube thumbnail.
-      let rawSrc = thumbImg ? thumbImg.getAttribute('src') : null;
-      let explicitType = thumbWrap ? thumbWrap.getAttribute('data-thumbnail-type') : null;
-      let explicitBackground = null;
-      try { explicitBackground = thumbWrap?.getAttribute('data-background') ? JSON.parse(thumbWrap.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
-      const thumbMedia = thumbWrap ? thumbWrap.querySelector('.project-thumb-media') : null;
-      if (!rawSrc && thumbMedia && !thumbMedia.hasAttribute('data-model-thumb')) {
-        rawSrc = thumbMedia.getAttribute('src');
-        explicitType = explicitType || (thumbMedia.tagName === 'VIDEO' ? 'video' : thumbMedia.tagName === 'LOTTIE-PLAYER' ? 'lottie' : 'image');
-        if (!explicitBackground) {
-          try { explicitBackground = thumbMedia.getAttribute('data-background') ? JSON.parse(thumbMedia.getAttribute('data-background')) : null; } catch (e) { explicitBackground = null; }
-        }
-      }
-      if (!rawSrc) {
-        const mediaItems = card.querySelectorAll('.project-media-list .media-item');
-        for (const mediaItem of mediaItems) {
-          const image = mediaItem.getAttribute('data-image');
-          const video = mediaItem.getAttribute('data-video');
-          const lottie = mediaItem.getAttribute('data-lottie');
-          const rawBg = mediaItem.getAttribute('data-background');
-          let mediaBackground=null; try { mediaBackground = rawBg ? JSON.parse(rawBg) : null; } catch(e) {}
-          if (image) { rawSrc = image; explicitType = explicitType || 'image'; explicitBackground = mediaBackground; break; }
-          if (video) { rawSrc = video; explicitType = explicitType || 'video'; explicitBackground = mediaBackground; break; }
-          if (lottie) { rawSrc = lottie; explicitType = explicitType || 'lottie'; explicitBackground = mediaBackground; break; }
-        }
-        if (!rawSrc) {
-          const firstYouTubeItem = card.querySelector('.project-media-list .media-item[data-youtube]');
-          if (firstYouTubeItem) { const { id } = parseYouTube(firstYouTubeItem.getAttribute('data-youtube')); if (id) rawSrc = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; }
-        }
-      }
-
-      if (!rawSrc) return null; // this card has no usable artwork
-
-      let src = rawSrc;
-      if (baseUrl) {
-        try { src = new URL(rawSrc, baseUrl).href; } catch (e) { /* keep raw */ }
-      }
-
-      const titleEl = card.querySelector('.glass-info h3');
-
-      return {
-        type: explicitType || heroMediaTypeFromSrc(rawSrc),
-        src,
-        alt: (thumbImg && thumbImg.getAttribute('alt')) || (titleEl ? titleEl.textContent : 'Featured artwork'),
-        focus: (thumbImg && thumbImg.getAttribute('data-focus')) || (thumbWrap && thumbWrap.getAttribute('data-focus')) || null,
-        zoom: (thumbImg && thumbImg.getAttribute('data-zoom')) || null,
-        rotate: (thumbImg && thumbImg.getAttribute('data-rotate')) || null,
-        background: explicitBackground
-      };
-    }).filter(Boolean);
-  }
+  // The Hero consumes normalized Project models supplied by the Projects
+  // feature. About/standalone pages can supply none; in that case the Hero
+  // loads the same CMS project data itself and normalizes it locally. This
+  // keeps Hero independent from whatever DOM representation the gallery uses.
 
   // Guesses a hero slide's media type from its file extension — used
   // wherever the source doesn't already carry an explicit type field
@@ -309,6 +239,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     const ensureMediaBackground = typeof options.ensureMediaBackgroundHelper === 'function' ? options.ensureMediaBackgroundHelper : ensureMediaBackgroundHelper;
     const applyMediaBackground = typeof options.applyMediaBackground === 'function' ? options.applyMediaBackground : null;
     const parseYouTube = typeof options.parseYouTubeUrl === 'function' ? options.parseYouTubeUrl : parseYouTubeUrl;
+    const getProjects = typeof options.getProjects === 'function' ? options.getProjects : null;
     const isReducedMotion = typeof options.prefersReducedMotion === 'function' ? options.prefersReducedMotion : prefersReducedMotion;
 
     const heroLoopUrl = options.heroLoopUrl || 'data/hero-loop.json';
@@ -393,17 +324,23 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
       }
     }
 
-    // Load the same project ordering the portfolio uses.
+    // Consume the same normalized Project models used by cards and Lightbox.
+    // On the About page there is no mounted Projects feature, so fall back to
+    // the CMS project source and normalize it at this boundary.
     try {
-      latestSources = collectHeroSources(documentRef, null);
-      if (latestSources.length === 0) {
+      let models = [];
+      try { models = getProjects?.() || []; } catch (_) { models = []; }
+
+      if (!Array.isArray(models) || !models.length) {
         const list = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
-        latestSources = (Array.isArray(list) ? list : [])
-          .map(p => heroSourceFromProjectData(p, siteRootUrl))
-          .filter(Boolean);
+        models = normalizeProjects(list);
       }
+
+      latestSources = models
+        .map(project => heroSourceFromProjectData(project, siteRootUrl))
+        .filter(Boolean);
     } catch (err) {
-      console.warn('Hero banner: could not load artwork from data/projects.json.', err);
+      console.warn('Hero banner: could not load normalized artwork from data/projects.json.', err);
     }
 
     function sourceKey(source) {
