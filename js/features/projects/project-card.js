@@ -12,8 +12,14 @@ function getYouTubeId(src = '') {
   return match ? match[1] : '';
 }
 
-function getFallbackThumbnailSource(project = {}) {
+function getFallbackThumbnailSource(project = {}, thumbnail = {}) {
   const media = Array.isArray(project.media) ? project.media : [];
+  const presentation = {
+    focus: thumbnail.focus || '',
+    zoom: thumbnail.zoom,
+    rotate: thumbnail.rotate,
+    orientation: thumbnail.orientation || ''
+  };
 
   for (const item of media) {
     if (!item?.src) continue;
@@ -22,7 +28,8 @@ function getFallbackThumbnailSource(project = {}) {
       return {
         type,
         src: item.src,
-        background: item.background && typeof item.background === 'object' ? item.background : null
+        background: item.background && typeof item.background === 'object' ? item.background : null,
+        ...presentation
       };
     }
   }
@@ -31,7 +38,8 @@ function getFallbackThumbnailSource(project = {}) {
   const id = youtube ? getYouTubeId(youtube.src) : '';
   return id ? {
     type: 'image',
-    src: `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+    src: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+    ...presentation
   } : null;
 }
 
@@ -39,6 +47,7 @@ export function buildProjectCardElement(
   project = {},
   {
     resolveAssetUrl,
+    applyMediaBackground,
     show3DIndicator = true,
     documentRef = globalThis.document,
     onActivate
@@ -75,13 +84,15 @@ export function buildProjectCardElement(
   const thumbnail = documentRef.createElement('div');
   thumbnail.className = 'card-thumbnail';
   const explicitThumbnail = project.thumbnail || {};
-  const fallbackThumbnail = explicitThumbnail.src ? null : getFallbackThumbnailSource(project);
+  const fallbackThumbnail = explicitThumbnail.src
+    ? null
+    : getFallbackThumbnailSource(project, explicitThumbnail);
   const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
 
-  if (explicitThumbnail.type) thumbnail.dataset.thumbnailType = String(explicitThumbnail.type);
-  if (explicitThumbnail.orientation) thumbnail.dataset.thumbnailOrientation = String(explicitThumbnail.orientation);
+  if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
+  if (t.orientation) thumbnail.dataset.thumbnailOrientation = String(t.orientation);
   if (t.src && typeof resolveAssetUrl === 'function') {
     const media = buildProjectThumbnailMedia(
       { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
@@ -89,14 +100,30 @@ export function buildProjectCardElement(
       { resolveAssetUrl, documentRef }
     );
     if (media) {
-      if (t.focus) media.dataset.focus = String(t.focus);
-      if (t.zoom && Number(t.zoom) !== 1) media.dataset.zoom = String(t.zoom);
-      if (t.rotate) media.dataset.rotate = String(t.rotate);
+      // Apply CMS crop/zoom/rotation directly at card-build time. The old
+      // monolith performed this as a second pass; the component now owns the
+      // presentation contract itself so it also works after responsive
+      // remounts and automatic fallback resolution.
+      if (t.focus && 'objectPosition' in media.style) {
+        media.style.objectPosition = String(t.focus);
+        media.style.transformOrigin = String(t.focus);
+      }
+      if (t.zoom && Number(t.zoom) !== 1) {
+        media.style.setProperty('--thumb-zoom', String(t.zoom));
+      }
+      if (t.rotate) {
+        media.style.setProperty('--thumb-rotate', String(t.rotate) + 'deg');
+      }
       if (background && typeof background === 'object') thumbnail.dataset.background = JSON.stringify(background);
       if (fallbackThumbnail?.type === 'video') media.setAttribute('data-video-thumb', '');
       if (fallbackThumbnail?.type === 'lottie') media.setAttribute('data-lottie-thumb', '');
       if (fallbackThumbnail?.type === 'model') media.setAttribute('data-model-thumb', '');
       thumbnail.appendChild(media);
+
+      if (background && typeof applyMediaBackground === 'function') {
+        Promise.resolve(applyMediaBackground(thumbnail, background, resolveAssetUrl))
+          .catch(error => console.warn('Project card: media background could not be applied.', error));
+      }
     }
   } else {
     if (t.focus) thumbnail.dataset.focus = String(t.focus);
