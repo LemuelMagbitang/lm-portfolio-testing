@@ -165,6 +165,7 @@ export async function createPortfolioApp({
     destroy() {
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
+      galleryFeature?.destroy?.();
       navigation.close();
       reviewsFeature.cleanup?.();
       forms.cleanup?.();
