@@ -8,7 +8,6 @@
 
 import { mountProjects } from '../features/projects/index.js';
 import { initNavigation } from '../features/navigation/index.js';
-import { initProjectFilters } from '../features/project-filters/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout } from '../features/about/index.js';
 import { initForms } from '../features/forms/index.js';
@@ -66,13 +65,6 @@ export async function createPortfolioApp({
     resolveAssetUrl: siteAssetUrl
   });
 
-  const filtersPromise = initProjectFilters({
-    url: globalThis.FILTERS_URL,
-    root,
-    loadJson: loadCmsJson,
-    resolveAssetUrl: siteAssetUrl
-  });
-
   const forms = initForms({ root });
 
   const [settingsFeature] = await Promise.all([
@@ -80,7 +72,6 @@ export async function createPortfolioApp({
     projectsPromise,
     reviewsPromise,
     aboutPromise,
-    filtersPromise
   ]);
 
   const settings = settingsFeature.getState();
@@ -124,26 +115,14 @@ export async function createPortfolioApp({
   const aboutFeature = await aboutPromise;
   aboutFeature.setSoftwareLogosVisible(settings.showSoftwareLogos);
 
-  const filterFeature = await filtersPromise;
+  let galleryFeature;
 
   try {
-    await initLightbox({
+    galleryFeature = await initGallery({
       root,
-      protectionEnabled: () => settings.protectionEnabled,
-      ensureMediaBackgroundHelper,
-      parseYouTubeUrl,
-      resolveAssetUrl: siteAssetUrl,
-      mountModelViewer
-    });
-  } catch (error) {
-    console.warn('Lightbox: initialization failed', error);
-  }
-
-  const projectGrid = root.getElementById('portfolioGrid');
-  try {
-    await initGallery({
-      root,
-      projectGrid,
+      projectGrid: root.getElementById('portfolioGrid'),
+      filterUrl: globalThis.FILTERS_URL,
+      loadJson: loadCmsJson,
       resolveAssetUrl: siteAssetUrl,
       ensureLottiePlayer,
       ensureMediaBackgroundHelper
@@ -152,16 +131,29 @@ export async function createPortfolioApp({
     console.warn('Gallery: initialization failed', error);
   }
 
+  try {
+    await initLightbox({
+      root,
+      protectionEnabled: () => settings.protectionEnabled,
+      ensureMediaBackgroundHelper,
+      parseYouTubeUrl,
+      resolveAssetUrl: siteAssetUrl,
+      mountModelViewer,
+      getActiveCards: () => galleryFeature?.getActiveCards?.() || Array.from(root.querySelectorAll('.project-card'))
+    });
+  } catch (error) {
+    console.warn('Lightbox: initialization failed', error);
+  }
+
   return {
     settings,
     navigation,
-    filters: filterFeature,
+    gallery: galleryFeature,
     reviews: reviewsFeature,
     about: aboutFeature,
     forms,
     destroy() {
       navigation.close();
-      filterFeature.cleanup?.();
       reviewsFeature.cleanup?.();
       forms.cleanup?.();
     }
