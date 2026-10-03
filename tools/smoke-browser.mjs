@@ -374,7 +374,44 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
-      const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      const playbackCard = page.locator('#portfolioGrid .project-card[data-project-id="haeru"]').first();
+      if (await playbackCard.count() !== 1) throw new Error('Haeru playback smoke fixture card is missing.');
+
+      await playbackCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const videos = page.locator('#lightboxMediaContainer video');
+      if (await videos.count() >= 2) {
+        const handoffWorked = await page.evaluate(() => {
+          const nodes = Array.from(document.querySelectorAll('#lightboxMediaContainer video'));
+          const originalPause = HTMLMediaElement.prototype.pause;
+          const pauseTargets = [];
+          HTMLMediaElement.prototype.pause = function(){ pauseTargets.push(this); };
+          try {
+            nodes[0].dispatchEvent(new Event('play', { bubbles: true }));
+            nodes[1].dispatchEvent(new Event('play', { bubbles: true }));
+          } finally {
+            HTMLMediaElement.prototype.pause = originalPause;
+          }
+          return pauseTargets.includes(nodes[0]);
+        });
+        if (!handoffWorked) throw new Error('Starting a second local video did not pause the previous video.');
+      }
+
+      const youtubeFrames = page.locator('#lightboxMediaContainer iframe[data-lm-youtube]');
+      if (await youtubeFrames.count()) {
+        const src = await youtubeFrames.first().getAttribute('src');
+        if (!src?.includes('enablejsapi=1')) {
+          throw new Error('YouTube Lightbox embeds are missing the JS API needed for playback handoff.');
+        }
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
+      const shortsCard
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts smoke fixture card is missing.');
 
       await shortsCard.click();
@@ -457,6 +494,33 @@ try {
           }
         }
       }
+
+      const projectsNav = page.locator('.nav-item[data-section="projects"]');
+      if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
+      await projectsNav.click();
+
+      const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
+      if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
+
+      const testBody = testProject.locator('[data-body]').first();
+      const bodyStyle = await testBody.getAttribute('style');
+      if (!bodyStyle?.includes('display:block')) {
+        await testProject.locator('[data-toggle-open]').click();
+      }
+
+      const lottieMedia = testProject.locator('[data-medialist] .card-item').first();
+      if (await lottieMedia.count() !== 1) throw new Error('CMS test-project Lottie media row is missing.');
+
+      const toggle = lottieMedia.locator('[data-mact="toggle"]');
+      if (await toggle.count()) {
+        const body = lottieMedia.locator('[data-mbody]').first();
+        const style = await body.getAttribute('style');
+        if (!style?.includes('display:block')) await toggle.click();
+      }
+
+      const bgControl = lottieMedia.locator('[data-bg-control]');
+      if (await bgControl.count() !== 1) throw new Error('CMS Lottie media row is missing the background color control.');
+      if (!(await bgControl.isVisible())) throw new Error('CMS Lottie background color control should be visible.');
 
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
