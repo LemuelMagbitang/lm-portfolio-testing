@@ -42,18 +42,52 @@ jobs:
           let source = fs.readFileSync(file, 'utf8');
 
           source = source.replace(
-            "if (!/catch \\(err\\) \\{\\s*console\\.error\\('LM bootstrap: public frontend failed to initialize\\.'/.test(source)) {",
-            "if (!/catch \\(err\\) \\{\\s*console\\.error\\('Portfolio runtime failed to initialize'/.test(source)) {"
+            /function validateBootstrapHardening\(\) \{[\s\S]*?\n\}\n\nfunction validateArchitecture/,
+            `function validateBootstrapHardening() {
+  const source = exists('js/script.js') ? readText('js/script.js') : '';
+  const transitionPos = source.indexOf("const pageTransition = document.getElementById('pageTransition');");
+  const importPos = source.indexOf("await import(runtimeUrl)");
+  if (transitionPos < 0 || importPos < 0 || transitionPos > importPos) {
+    err('Bootstrap: page transition must initialize before dynamic module imports.');
+  }
+  if (!/initialTransitionTimer\\s*=\\s*window\\.setTimeout\\(\\s*\\(\\)\\s*=>\\s*\\{[\\s\\S]*?\\},\\s*900\\)/.test(source)) {
+    err('Bootstrap: initial page transition is missing its fail-safe timeout.');
+  }
+  if (!/try\\s*\\{\\s*await initHeroBannerV2\\(/.test(source)) {
+    err('Bootstrap: hero initialization must be isolated so a hero failure cannot abort the rest of the public UI.');
+  }
+  if (!/try\\s*\\{[\\s\\S]*?catch \\(err\\) \\{\\s*console\\.error\\('Portfolio runtime failed to initialize'/.test(source)) {
+    err('Bootstrap: top-level initialization error boundary is missing.');
+  }
+}
+
+function validateArchitecture`
           );
 
           source = source.replace(
-            "if (!script.includes('await cmsReady;') || script.indexOf('await cmsReady;') > script.indexOf('initGallery()')) {",
-            "const cmsReadyPos = script.indexOf('await cmsReady;');\n  const galleryInitPos = script.indexOf('initGallery(');\n  if (cmsReadyPos < 0 || galleryInitPos < 0 || cmsReadyPos > galleryInitPos) {"
-          );
-
-          source = source.replace(
-            "if (!script.includes('const allBtn = tabs.querySelector')) err('Gallery filters: ALL fallback/structural button contract is missing.');",
-            "if (!script.includes('card.dataset.filterIds') || !gallery.includes(\"currentFilter = 'all'\")) err('Gallery filters: ALL fallback/structural button contract is missing.');"
+            /function validateCmsRegressionContracts\(\) \{[\s\S]*?\n\}\nvalidateCmsRegressionContracts\(\);/,
+            `function validateCmsRegressionContracts() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
+  const script = exists('js/script.js') ? readText('js/script.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
+  if (!admin.includes('await onCollect()')) err('CMS save: save collectors must support asynchronous cross-file validation/migrations.');
+  if (!admin.includes('filtersWithProjects')) err('CMS filters: filter/project relationship saves must be atomic.');
+  if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
+  if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) err('Gallery: row-aware Show More contract is missing.');
+  if (!script.includes('card.dataset.filterIds')) err('Gallery filters: exact CMS filter IDs must be preserved.');
+  const cmsReadyPos = script.indexOf('await cmsReady;');
+  const galleryInitPos = script.indexOf('initGallery(');
+  if (cmsReadyPos < 0 || galleryInitPos < 0 || cmsReadyPos > galleryInitPos) {
+    err('Gallery filters: CMS data must finish loading before gallery initialization.');
+  }
+  if (!gallery.includes("currentFilter = 'all'") || !gallery.includes("querySelectorAll('.filter-tabs .tab-btn')")) {
+    err('Gallery filters: ALL fallback/structural button contract is missing.');
+  }
+  if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) err('Hero: per-slide fade timing CSS variables are missing.');
+}
+validateCmsRegressionContracts();`
           );
 
           fs.writeFileSync(file, source, 'utf8');
