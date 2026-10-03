@@ -445,8 +445,8 @@ function validateLightboxLifecycle() {
   const source = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
   const legacy = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
 
-  if (!/export \{ initLightbox \} from ['"]\.\/features\/lightbox\/index\.js['"]/.test(legacy)) {
-    err('Lightbox: legacy root module must remain a thin facade to the public feature API.');
+  if (legacy) {
+    err('Lightbox: retired root module js/lightbox.js must not remain after feature cutover.');
   }
 
   if (!/if \(!modelWrap\.isConnected \|\| !lightbox\.classList\.contains\('active'\)\) return;/.test(source)) {
@@ -463,8 +463,8 @@ function validateGalleryContract() {
   const legacy = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
-  if (!/export \{ initGallery \} from ['"]\.\/features\/gallery\/index\.js['"]/.test(legacy)) {
-    err('Gallery: legacy root module must remain a thin facade to the public feature API.');
+  if (legacy) {
+    err('Gallery: retired root module js/gallery.js must not remain after feature cutover.');
   }
   if (/getActiveCards:\s*\(\)\s*=>\s*getActiveCards\(\)/.test(source)) {
     err('Gallery: getActiveCards() recursively calls itself.');
@@ -504,17 +504,18 @@ function validateBootstrapHardening() {
   }
 
   const transitionPos = bootstrap.indexOf("const pageTransition = root?.getElementById('pageTransition');");
-  const importPos = bootstrap.indexOf('await Promise.all([');
-  if (transitionPos < 0 || importPos < 0 || transitionPos > importPos) {
-    err('Bootstrap: page transition must initialize before dynamic module imports.');
+  const importPos = bootstrap.indexOf('const { createPortfolioApp } = await import(');
+  const transitionCallPos = bootstrap.indexOf('showInitialPageTransition();');
+  if (transitionPos < 0 || transitionCallPos < 0 || importPos < 0 || transitionCallPos > importPos) {
+    err('Bootstrap: page transition must initialize before application module loading.');
   }
 
   if (!/initialTransitionTimer\s*=\s*root\.defaultView\.setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?\},\s*900\)/.test(bootstrap)) {
     err('Bootstrap: initial page transition is missing its fail-safe timeout.');
   }
 
-  if (!/await createPortfolioApp\(\{ root, runtime, cms \}\)/.test(bootstrap)) {
-    err('Bootstrap: composition root is not started after dependencies load.');
+  if (!/await createPortfolioApp\(\{ root, runtime, cms, config \}\)/.test(bootstrap)) {
+    err('Bootstrap: composition root must receive normalized app configuration.');
   }
 
   if (!/catch \(error\) \{\s*console\.error\('Portfolio runtime failed to initialize'/.test(bootstrap)) {
@@ -538,7 +539,7 @@ function validateArchitecture() {
     ['js/infrastructure/cms/loader.js', /export async function loadCmsJson/],
     ['js/infrastructure/browser/site-paths.js', /export function getSiteRootUrl/],
     ['js/infrastructure/youtube/url.js', /export function parseYouTubeUrl/],
-    ['js/infrastructure/three/model-viewer.js', /export function mountModelViewer/],
+    ['js/infrastructure/three/model-viewer.js', /export (?:async )?function mountModelViewer/],
     ['js/features/projects/index.js', /export \{ mountProjects \}/],
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
@@ -679,7 +680,7 @@ validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
 
-for (const js of ['js/script.js', 'js/cms-data.js', 'js/gallery.js', 'js/hero.js', 'js/lightbox.js', 'js/model-viewer.js', 'js/media-background.js', 'js/site-runtime.js', 'admin/admin.js']) {
+for (const js of ['js/script.js', 'admin/admin.js']) {
   if (!exists(js)) continue;
   try {
     execFileSync(process.execPath, ['--check', js], { stdio: 'pipe' });
