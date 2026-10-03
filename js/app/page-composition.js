@@ -63,6 +63,7 @@ export async function createPortfolioApp({
         url: config.urls.projects,
         documentRef: root,
         getGrid: () => root.getElementById('portfolioGrid'),
+        applyMediaBackground,
         onCardActivate: details => {
           if (lightboxFeature?.openCard) {
             lightboxFeature.openCard(details.card, {
