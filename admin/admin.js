@@ -2396,7 +2396,6 @@ RENDERERS.about = function(data){
     if(direct) candidates.push(direct);
 
     const domain=SOFTWARE_DOMAINS[key];
-    if(domain) candidates.push('https://logo.clearbit.com/'+domain+'?size=64');
 
     const request=Promise.resolve(candidates);
     SOFTWARE_LOGO_PENDING.set(key,request);
