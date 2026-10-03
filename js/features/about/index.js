@@ -102,6 +102,7 @@ export async function initAbout({
     softwareSkills = list;
 
     const fragment = root.createDocumentFragment();
+    const logoJobs = [];
 
     list.forEach(skill => {
       if (!skill) return;
@@ -133,13 +134,14 @@ export async function initAbout({
         ? resolveAssetUrl(icon)
         : icon;
 
-      // Resolve after the initial text layout is committed. This mirrors the
-      // reference branch's manual → Simple Icons → domain/discovery order,
-      // while never inserting a failed image into the visible DOM.
-      Promise.resolve(resolveSoftwareLogo(frame, name, manualUrl));
+      // Queue the logo lookup until the fragment has been committed to the
+      // live list. resolveSoftwareLogo intentionally guards detached nodes,
+      // so starting it before replaceChildren() would abort every lookup.
+      logoJobs.push(() => resolveSoftwareLogo(frame, name, manualUrl));
     });
 
     softwareList.replaceChildren(fragment);
+    logoJobs.forEach(start => Promise.resolve(start()));
   }
 
   function renderMultimediaSkills(list = multimediaSkills) {

@@ -2414,6 +2414,11 @@ RENDERERS.about = function(data){
           }
         };
 
+        // Commit the pill before probing its logo. preloadCandidates has an
+        // intentional connected-node guard so detached previews cannot mount
+        // into stale DOM or trigger work that can never be displayed.
+        box.appendChild(pill);
+
         if(hasManualIcon){
           const manualUrl=ghRawUrl(skill.icon);
           preloadCandidates(host,skill.name,[manualUrl],0,showAutomatic);
@@ -2443,7 +2448,6 @@ RENDERERS.about = function(data){
           repaint();
         });
 
-        box.appendChild(pill);
       });
     }
 
