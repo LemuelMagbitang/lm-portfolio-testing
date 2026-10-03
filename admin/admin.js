@@ -248,11 +248,7 @@ const CMS_WRITABLE_PATHS = new Set([
   'success/index.html',
   'css/style.css',
   'js/script.js',
-  'js/hero.js',
-  'js/lightbox.js',
-  'js/media-background.js',
-  'js/model-viewer.js',
-  'js/site-runtime.js'
+  'js/media-background.js'
 ]);
 function isCmsWritablePath(filePath){
   const value = String(filePath || '').replace(/^\/+|\/+$/g, '');
