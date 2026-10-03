@@ -444,51 +444,17 @@ try {
 
       const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
       if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
-
       const testBody = testProject.locator('[data-body]').first();
       const bodyStyle = await testBody.getAttribute('style');
-      if (!bodyStyle?.includes('display:block')) {
-        await testProject.locator('[data-toggle-open]').click();
-      }
+      if (!bodyStyle?.includes('display:block')) await testProject.locator('[data-toggle-open]').click();
 
       const lottieMedia = testProject.locator('[data-medialist] .card-item').first();
       if (await lottieMedia.count() !== 1) throw new Error('CMS test-project Lottie media row is missing.');
-
-      const toggle = lottieMedia.locator('[data-mact="toggle"]');
-      if (await toggle.count()) {
-        const body = lottieMedia.locator('[data-mbody]').first();
-        const style = await body.getAttribute('style');
-        if (!style?.includes('display:block')) await toggle.click();
-      }
-
-      const bgControl = lottieMedia.locator('[data-bg-control]');
-      if (await bgControl.count() !== 1) throw new Error('CMS Lottie media row is missing the background color control.');
-      if (!(await bgControl.isVisible())) throw new Error('CMS Lottie background color control should be visible.');
-
-      await nav.click();
-      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
-
-      const softwareRows = await page.locator('#tags_software .skill-editor-row').count();      const projectsNav = page.locator('.nav-item[data-section="projects"]');
-      if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
-      await projectsNav.click();
-
-      const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
-      if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
-
-      const testBody = testProject.locator('[data-body]').first();
-      const bodyStyle = await testBody.getAttribute('style');
-      if (!bodyStyle?.includes('display:block')) {
-        await testProject.locator('[data-toggle-open]').click();
-      }
-
-      const lottieMedia = testProject.locator('[data-medialist] .card-item').first();
-      if (await lottieMedia.count() !== 1) throw new Error('CMS test-project Lottie media row is missing.');
-
-      const toggle = lottieMedia.locator('[data-mact="toggle"]');
-      if (await toggle.count()) {
-        const body = lottieMedia.locator('[data-mbody]').first();
-        const style = await body.getAttribute('style');
-        if (!style?.includes('display:block')) await toggle.click();
+      const mediaToggle = lottieMedia.locator('[data-mact="toggle"]');
+      if (await mediaToggle.count()) {
+        const mediaBody = lottieMedia.locator('[data-mbody]').first();
+        const mediaStyle = await mediaBody.getAttribute('style');
+        if (!mediaStyle?.includes('display:block')) await mediaToggle.click();
       }
 
       const bgControl = lottieMedia.locator('[data-bg-control]');
@@ -533,38 +499,25 @@ try {
       await page.route('https://api.github.com/**', async route => {
         const url = new URL(route.request().url());
         if (url.pathname === '/repos/Smoke/TestRepo') {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ full_name: 'Smoke/TestRepo', default_branch: 'main' })
-          });
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ full_name: 'Smoke/TestRepo', default_branch: 'main' }) });
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
         const genericDataMatch = url.pathname.match(/^\/repos\/Smoke\/TestRepo\/contents\/data\/([^/]+\.json)$/);
         if (url.pathname === aboutPath) {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ content: encoded, sha: 'smoke-about-sha' })
-          });
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: encoded, sha: 'smoke-about-sha' }) });
           return;
         }
         if (genericDataMatch) {
           const filename = genericDataMatch[1];
           const fixture = filename === 'hero.json' ? [] : filename === 'settings.json' ? {} : [];
           const content = btoa(unescape(encodeURIComponent(JSON.stringify(fixture))));
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ content, sha: `smoke-${filename}-sha` })
-          });
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content, sha: `smoke-${filename}-sha` }) });
           return;
         }
         await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Not found' }) });
       });
     });
-
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
   } finally {
     await browser.close();
