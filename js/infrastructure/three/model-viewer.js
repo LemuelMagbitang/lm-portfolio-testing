@@ -99,6 +99,8 @@ export async function mountModelViewer(container, src, options = {}) {
 
   container.innerHTML = '';
   container.style.position = 'relative';
+  container.dataset.ready = 'false';
+  container.setAttribute('aria-busy', 'true');
 
   // Transparent renderer + shared media-background system lets the same
   // Lottie/3D presentation use a solid, gradient, pattern, image, video,
@@ -371,7 +373,11 @@ export async function mountModelViewer(container, src, options = {}) {
     renderer.domElement.removeAttribute('aria-hidden');
     renderer.domElement.style.pointerEvents = 'none';
     renderer.domElement.style.touchAction = 'auto';
+    container.dataset.ready = 'true';
+    container.setAttribute('aria-busy', 'false');
   } catch (err) {
+    container.dataset.ready = 'false';
+    container.setAttribute('aria-busy', 'false');
     renderer.dispose();
     throw err;
   }
