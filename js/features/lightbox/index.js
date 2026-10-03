@@ -1,5 +1,6 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
+import { createLightboxMediaRenderer } from './media-renderer.js';
 function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
@@ -81,66 +82,24 @@ const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
 const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef);
 
+const mediaRenderer = createLightboxMediaRenderer({
+  documentRef,
+  windowRef,
+  resolveAssetUrl,
+  parseYouTube,
+  applyMediaBackground,
+  mountModelViewer,
+  protectionEnabled,
+  lightbox,
+  lightboxControls
+});
+
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
 
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
 
-
-// Builds one artwork image with save-protection applied only when
-// switched on at the top of this file (right-click + drag disabled,
-// so there's no "Save Image As" path — no watermark, no zoom, just a
-// clean image that can't be casually saved).
-function buildImageMedia(imgUrl) {
-  const img = documentRef.createElement('img');
-  img.src = imgUrl;
-  img.draggable = false;
-  img.loading = 'lazy';
-  img.decoding = 'async';
-
-  if (protectionEnabled()) {
-    img.classList.add('no-save');
-    // Worth being upfront: no front-end trick can block a screenshot
-    // outright. This blocks the right-click "Save Image As" menu and
-    // drag-to-save, which covers casual reuse — a determined person
-    // with a screenshot tool can't be stopped client-side.
-    img.addEventListener('contextmenu', (e) => e.preventDefault());
-    img.addEventListener('dragstart', (e) => e.preventDefault());
-  }
-
-  return img;
-}
-
-// Builds a small caption under a media item — but only if there's
-// actual text. Add one by putting data-description="..." on that
-// <div class="media-item">; leave it off (or empty) and nothing
-// renders, no empty box.
-function buildMediaCaption(text) {
-  if (!text || !text.trim()) return null;
-  const p = documentRef.createElement('p');
-  p.className = 'media-caption';
-  p.textContent = text.trim();
-  return p;
-}
-
-// Wraps one media element (image or video iframe) together with its
-// optional caption so they stay grouped as a single unit.
-function buildMediaEntry(mediaEl, captionText, background) {
-  const wrap = documentRef.createElement('div');
-  wrap.className = 'lightbox-media-item';
-  wrap.appendChild(mediaEl);
-  if (background && applyMediaBackground) {
-    Promise.resolve(applyMediaBackground(wrap, background, resolveAssetUrl)).catch(error => {
-      console.warn('Lightbox: media background could not be applied.', error);
-    });
-  }
-
-  const caption = buildMediaCaption(captionText);
-  if (caption) wrap.appendChild(caption);
-
-  return wrap;
-}
 
 function openLightbox(index, initialMediaIndex = -1) {
   lightbox.classList.remove('is-3d-focused');
@@ -169,9 +128,7 @@ function openLightbox(index, initialMediaIndex = -1) {
   if (modalFullDesc) modalFullDesc.textContent = project.description || '';
 
   // 2. Clear previous media and dispose mounted 3D resources.
-  modalMediaContainer.querySelectorAll('.model-viewer-shell').forEach(shell => {
-    try { shell.__modelViewerCleanup?.(); } catch (_) {}
-  });
+  mediaRenderer.dispose(modalMediaContainer);
   modalMediaContainer.innerHTML = '';
 
   // 3. Render directly from the normalized project model.
@@ -191,151 +148,32 @@ function openLightbox(index, initialMediaIndex = -1) {
     const orientation = String(item.orientation || '').toLowerCase();
 
     if (type === 'image') {
-      modalMediaContainer.appendChild(
-        buildMediaEntry(buildImageMedia(resolveAssetUrl(src)), caption, background)
-      );
-      return;
-    }
+      modalMediaContainfunction openLightbox(index, initialMediaIndex = -1) {
+  lightbox.classList.remove('is-3d-focused');
+  if (lightboxControls) {
+    lightboxControls.classList.remove('is-3d-controls-disabled');
+    lightboxControls.inert = false;
+  }
+  documentRef.documentElement.classList.remove('lm-3d-focus-open');
+  documentRef.body.classList.remove('lm-3d-focus-open');
+  currentLightboxIndex = index;
 
-    if (type === 'youtube') {
-      const { id, isShort } = parseYouTube(src);
-      const embedUrl = id ? `https://www.youtube.com/embed/${id}` : src;
-      const iframe = documentRef.createElement('iframe');
-      iframe.src = embedUrl;
-      iframe.frameBorder = '0';
-      iframe.loading = 'lazy';
-      iframe.title = caption || project.title || 'Project video';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
+  const card = activeLightboxCards[currentLightboxIndex];
+  const project = getProjectForCard(card);
 
-      let orientationClass = 'yt-landscape';
-      if (orientation === 'portrait') orientationClass = 'yt-portrait';
-      else if (orientation === 'square') orientationClass = 'yt-square';
-      else if (orientation === 'landscape') orientationClass = 'yt-landscape';
-      else if (isShort) orientationClass = 'yt-portrait';
+  if (!project) {
+    console.warn('Lightbox: no normalized project model is available for this card.');
+    return;
+  }
 
-      iframe.classList.add(orientationClass);
-      modalMediaContainer.appendChild(buildMediaEntry(iframe, caption, background));
-      return;
-    }
+  if (modalTitle) modalTitle.textContent = project.title || '';
+  if (modalDesc) modalDesc.textContent = project.subtitle || '';
+  if (modalFullDesc) modalFullDesc.textContent = project.description || '';
 
-    if (type === 'video') {
-      const video = documentRef.createElement('video');
-      video.src = resolveAssetUrl(src);
-      video.controls = true;
-      video.playsInline = true;
-      video.controlsList = 'nodownload';
-      video.disablePictureInPicture = true;
+  mediaRenderer.dispose(modalMediaContainer);
+  modalMediaContainer.innerHTML = '';
+  mediaRenderer.renderProjectMedia(modalMediaContainer, project);
 
-      if (protectionEnabled()) {
-        video.classList.add('no-save');
-        video.addEventListener('contextmenu', (e) => e.preventDefault());
-      }
-
-      if (orientation === 'portrait') {
-        video.classList.add('yt-portrait');
-      } else if (orientation === 'square') {
-        video.classList.add('yt-square');
-      } else if (orientation === 'landscape') {
-        video.classList.add('yt-landscape');
-      } else {
-        video.classList.add('yt-landscape');
-        video.addEventListener('loadedmetadata', () => {
-          const ratio = video.videoWidth / video.videoHeight;
-          if (!Number.isFinite(ratio) || ratio <= 0) return;
-
-          video.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
-          if (ratio > 1.15) video.classList.add('yt-landscape');
-          else if (ratio < 0.85) video.classList.add('yt-portrait');
-          else video.classList.add('yt-square');
-
-          video.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
-        });
-      }
-
-      modalMediaContainer.appendChild(buildMediaEntry(video, caption, background));
-      return;
-    }
-
-    if (type === 'model') {
-      const modelWrap = documentRef.createElement('div');
-      modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
-      const modelOrientation = orientation || 'auto';
-      modelWrap.setAttribute('data-orientation', modelOrientation);
-      modelWrap.setAttribute('aria-label', `${project.title || 'Project'} — 3D artwork preview`);
-
-      const modelEntry = buildMediaEntry(modelWrap, caption, background);
-      modelEntry.classList.add('is-3d-media-item');
-      modalMediaContainer.appendChild(modelEntry);
-
-      if (typeof mountModelViewer !== 'function') {
-        modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-      } else {
-        Promise.resolve()
-          .then(() => {
-            if (!modelWrap.isConnected || !lightbox.classList.contains('active')) return;
-
-            return mountModelViewer(modelWrap, resolveAssetUrl(src), {
-              autoRotate: false,
-              background: background || null,
-              orientation: modelOrientation,
-              resolveUrl: resolveAssetUrl,
-              onActivate: () => {
-                const currentScroll = lightbox.scrollTop;
-                lightbox.dataset.pre3dScrollTop = String(currentScroll);
-                lightbox.classList.add('is-3d-focused');
-                modelEntry.classList.add('is-3d-focus-target');
-                if (lightboxControls) {
-                  lightboxControls.classList.add('is-3d-controls-disabled');
-                  lightboxControls.inert = true;
-                }
-                documentRef.documentElement.classList.add('lm-3d-focus-open');
-                documentRef.body.classList.add('lm-3d-focus-open');
-                windowRef.requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
-              },
-              onDeactivate: () => {
-                lightbox.classList.remove('is-3d-focused');
-                modelEntry.classList.remove('is-3d-focus-target');
-                if (lightboxControls) {
-                  lightboxControls.classList.remove('is-3d-controls-disabled');
-                  lightboxControls.inert = false;
-                }
-                documentRef.documentElement.classList.remove('lm-3d-focus-open');
-                documentRef.body.classList.remove('lm-3d-focus-open');
-                const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
-                if (Number.isFinite(previousScroll)) {
-                  windowRef.requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
-                }
-                delete lightbox.dataset.pre3dScrollTop;
-              }
-            });
-          })
-          .catch(err => {
-            modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
-            console.warn('3D model viewer:', err);
-          });
-      }
-      return;
-    }
-
-    if (type === 'lottie') {
-      const player = documentRef.createElement('lottie-player');
-      player.setAttribute('src', resolveAssetUrl(src));
-      player.setAttribute('autoplay', '');
-      player.setAttribute('loop', '');
-      player.setAttribute('background', 'transparent');
-
-      if (orientation === 'portrait') player.classList.add('yt-portrait');
-      else if (orientation === 'square') player.classList.add('yt-square');
-      else player.classList.add('yt-landscape');
-
-      player.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-      player.preserveAspectRatio = 'xMidYMid slice';
-      modalMediaContainer.appendChild(buildMediaEntry(player, caption, background));
-    }
-  });
-
-  // 4. Show Lightbox and lock body scroll.
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open();
@@ -354,6 +192,7 @@ function openLightbox(index, initialMediaIndex = -1) {
     }
   });
 }
+
 
 
 
