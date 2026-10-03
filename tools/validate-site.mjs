@@ -452,7 +452,7 @@ function validateLightboxLifecycle() {
     err('Lightbox: retired root module js/lightbox.js must not remain after feature cutover.');
   }
 
-  if (!/if \(!modelWrap\.isConnected \|\| !lightbox\?\.classList\.contains\('active'\)\) return;/.test(mediaRenderer)) {
+  if (!/if \(!modelWrap\.isConnected \|\| !lightbox\?\.classList\.contains\('active'\)\) return(?:;| null;)/.test(mediaRenderer)) {
     err('Lightbox: lazy 3D viewer mount is missing its detached-node/closed-lightbox guard.');
   }
   if (!/\.then\(cleanup => \{[\s\S]*!modelWrap\.isConnected[\s\S]*cleanup\?\.\(\)/.test(mediaRenderer)) {
