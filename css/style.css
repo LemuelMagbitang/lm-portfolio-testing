@@ -1,3 +1,5 @@
+@import url('./tokens.css');
+
 /* --- GLOBAL RESETS --- */
 * {
   margin: 0;
@@ -13,8 +15,8 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background-color: #121212;
-  color: #cccccc;
+  background-color: var(--lm-color-background);
+  color: var(--lm-color-text-secondary);
   /* "Inter" is loaded as a real webfont in every page's <head> (Google
      Fonts), so this renders identically on Windows, macOS, iOS and
      Android instead of each OS substituting its own default sans-serif
@@ -41,9 +43,9 @@ body {
 }
 
 .nav-container {
-  max-width: 1400px;
+  max-width: var(--lm-container-max);
   margin: 0 auto;
-  padding: 15px 24px;
+  padding: 15px var(--lm-page-gutter);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -52,7 +54,7 @@ body {
 .nav-logo {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--lm-color-text-primary);
   letter-spacing: 2px;
   text-decoration: none;
 }
@@ -379,7 +381,7 @@ body {
 .social-icons a {
   color: #fff; background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  text-decoration: none; font-size: 1.1rem; transition: all 0.3s;
+  text-decoration: none; font-size: 1.1rem; transition: all var(--lm-motion-standard);
   backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
 }
 .social-icons a:hover { background: #fff; color: #000; transform: scale(1.1); }
@@ -429,7 +431,7 @@ body {
 .landing-lead a:hover { color: #ccc; }
 .tab-btn {
   background: none; border: none; color: #666; font-size: 0.9rem;
-  letter-spacing: 1.5px; cursor: pointer; padding: 8px 16px; transition: color 0.2s; font-weight: 600;
+  letter-spacing: 1.5px; cursor: pointer; padding: 8px 16px; transition: color var(--lm-motion-fast); font-weight: 600;
   /* Long-pressing a button on Android fires native TEXT SELECTION, which
      paints a solid highlight across the whole padding box — wider than
      the label and starting further left, so the tab appears to jump left
@@ -518,7 +520,7 @@ body {
      card, just sliced down its right edge. */
   grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
   gap: 0;
-  border-radius: 12px;
+  border-radius: var(--lm-card-radius);
   overflow: hidden;
 }
 
@@ -526,7 +528,7 @@ body {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  background: #0d0d0d;
+  background: var(--lm-color-surface);
   aspect-ratio: 1 / 1;
   /* Lets .glass-info's clamp(...cqw...) font sizes scale off the
      card's own width rather than the viewport's — so text keeps the
@@ -538,7 +540,7 @@ body {
      so the grid's own height/collapse measurements stay accurate while
      a card is mid-fade. */
   width: 100%;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--lm-motion-standard) var(--lm-motion-ease);
 }
 
 .project-card:focus { outline: none; }
@@ -561,7 +563,7 @@ body {
   --thumb-zoom: 1;
   --thumb-rotate: 0deg;
   transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
-  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform var(--lm-motion-image) cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .project-card:hover .card-thumbnail img {
