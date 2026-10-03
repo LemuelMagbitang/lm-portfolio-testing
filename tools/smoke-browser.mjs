@@ -46,8 +46,25 @@ async function waitForServer(url, timeoutMs = 5000) {
   throw new Error(`Local site server did not become ready: ${url}`);
 }
 
+async function configureLogoRoutes(page) {
+  await page.route('https://cdn.simpleicons.org/**', async route => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>';
+    await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+  });
+  await page.route('https://api.iconify.design/search**', async route => {
+    const query = new URL(route.request().url()).searchParams.get('query') || '';
+    const icon = query.toLowerCase().includes('krita') ? 'simple-icons:krita' : 'simple-icons:blender';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ icons: [icon], total: 1, limit: 12, start: 0 })
+    });
+  });
+}
+
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }) {
   const page = await browser.newPage({ viewport });
+  await configureLogoRoutes(page);
 
   const errors = [];
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
@@ -79,20 +96,6 @@ try {
   const browser = await chromium.launch({ headless: true });
 
   try {
-    await browser.route('https://cdn.simpleicons.org/**', async route => {
-      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>';
-      await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
-    });
-    await browser.route('https://api.iconify.design/search**', async route => {
-      const query = new URL(route.request().url()).searchParams.get('query') || '';
-      const icon = query.toLowerCase().includes('krita') ? 'simple-icons:krita' : 'simple-icons:blender';
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ icons: [icon], total: 1, limit: 12, start: 0 })
-      });
-    });
-
     await smokePage(browser, '/', async page => {
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('Works page is missing its module bootstrap script.');
