@@ -242,7 +242,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     // is preferred over pasted JSON because it stays version-controlled,
     // cacheable, and easy to replace from the Media Library.
     try {
-      const list = await loadJson(window.HERO_LOOP_URL || 'data/hero-loop.json', [], { resolveUrl: siteAssetUrl });
+      const list = await loadJson(window.HERO_LOOP_URL || 'data/hero-loop.json', [], { resolveUrl: resolveAssetUrl });
       manualSources = (Array.isArray(list) ? list : [])
         .map(item => heroSourceFromManualEntry(item, siteRootUrl))
         .filter(Boolean);
@@ -256,7 +256,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     try {
       latestSources = collectHeroSources(document, null);
       if (latestSources.length === 0) {
-        const list = await loadJson(window.PROJECTS_URL || 'data/projects.json', [], { resolveUrl: siteAssetUrl });
+        const list = await loadJson(window.PROJECTS_URL || 'data/projects.json', [], { resolveUrl: resolveAssetUrl });
         latestSources = (Array.isArray(list) ? list : [])
           .map(p => heroSourceFromProjectData(p, siteRootUrl))
           .filter(Boolean);
