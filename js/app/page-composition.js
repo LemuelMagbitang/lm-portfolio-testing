@@ -100,6 +100,7 @@ export async function createPortfolioApp({
     try {
       heroFeature = await initHeroBannerV2({
         heroLoopUrl: config.urls.heroLoop,
+        heroMessagesUrl: config.urls.heroMessages,
         projectsUrl: config.urls.projects,
         loopMode: settings.heroTiming.loopMode,
         transitionStyle: settings.heroTiming.transitionStyle,
