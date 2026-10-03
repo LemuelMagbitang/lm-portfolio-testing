@@ -305,7 +305,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
     heroContainer.classList.add('transition-' + config.transitionStyle);
 
-    sources.forEach((source, i) => {
+    for (const [i, source] of sources.entries()) {
       const wrap = document.createElement('div');
       wrap.className = 'slide' + (i === 0 ? ' active' : '');
 
@@ -350,7 +350,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
         if (media.complete) applyFocalPoint(media, null);
         else media.addEventListener('load', () => applyFocalPoint(media, null), { once: true });
       }
-    });
+    }
 
     const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs);
     return {
