@@ -460,7 +460,7 @@ export async function initGallery(options = {}) {
   return {
     render,
     getFilter: () => currentFilter,
-    getAllCards: () => allCards.slice(),
+    getAllCards: () => getCardSnapshot(getProjectSnapshot()).slice(),
     getActiveCards: () => getCardsForProjects(getFilteredProjects()).slice(),
     destroy() {
       renderToken += 1;
