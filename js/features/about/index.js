@@ -1,4 +1,4 @@
-import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-11';
+import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-12';
 
 export async function initAbout({
   url,
