@@ -486,10 +486,14 @@ try {
 
       const bgColorInput = bgControl.locator('[data-bg-color]').first();
       const bgSwatch = bgControl.locator('[data-bg-swatch]').first();
-      if (await bgColorInput.count() !== 1 || await bgSwatch.count() !== 1) {
+      const bgEnableInput = bgControl.locator('[data-bg-enabled]').first();
+      if (await bgColorInput.count() !== 1 || await bgSwatch.count() !== 1 || await bgEnableInput.count() !== 1) {
         throw new Error('CMS Lottie background control is missing its compact color picker surface.');
       }
-      if (await bgColorInput.isDisabled()) throw new Error('CMS Lottie color picker is disabled while background support is available.');
+      if (!(await bgColorInput.isDisabled())) throw new Error('CMS Lottie color picker should start disabled until its background is enabled.');
+
+      await bgEnableInput.check();
+      if (await bgColorInput.isDisabled()) throw new Error('CMS Lottie color picker did not enable after turning on its background.');
 
       await bgColorInput.evaluate((input) => {
         input.value = '#336699';
