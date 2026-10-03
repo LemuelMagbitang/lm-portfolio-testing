@@ -35,7 +35,8 @@ function importsFrom(source) {
 
 function normalizeImport(file, specifier) {
   if (!specifier.startsWith('.')) return null;
-  const absolute = path.resolve(path.dirname(file), specifier);
+  const cleanSpecifier = specifier.split(/[?#]/)[0];
+  const absolute = path.resolve(path.dirname(file), cleanSpecifier);
   const relative = path.relative(jsRoot, absolute).replaceAll(path.sep, '/');
   return relative.endsWith('.js') ? relative : `${relative}.js`;
 }
