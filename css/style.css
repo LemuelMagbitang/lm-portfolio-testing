@@ -1403,6 +1403,16 @@ body.center-page {
 }
 
 @media (max-width: 768px) {
+  /* Mobile Lightbox is an artwork-first gallery. Portrait media such as
+     YouTube Shorts must be allowed to use the full device width instead of
+     inheriting the desktop 45vh width cap. */
+  #lightboxMediaContainer .yt-portrait,
+  #lightboxMediaContainer .yt-square,
+  #lightboxMediaContainer .yt-landscape {
+    width: 100%;
+    max-width: 100%;
+  }
+
   /* Images go flush to the screen's edges on mobile — no side padding,
      no rounded corners — while the modal keeps its own top/bottom
      padding so the close button and scrolling still work normally. */
