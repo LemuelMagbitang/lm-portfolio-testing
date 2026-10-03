@@ -29,9 +29,9 @@ export async function initAbout({
   let multimediaSkills = [];
 
   function skillInitials(name = '') {
-    const words = String(name).trim().split(/\\s+/).filter(Boolean);
+    const words = String(name).trim().split(/\s+/).filter(Boolean);
     if (words.length <= 1) return String(name).trim();
-    return words.map(word => /\\d/.test(word) || word.length <= 2
+    return words.map(word => /\d/.test(word) || word.length <= 2
       ? word.toUpperCase()
       : word[0].toUpperCase()).join('');
   }
