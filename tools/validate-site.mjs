@@ -700,8 +700,12 @@ function validateCmsRegressionContracts() {
     err('Gallery filters: exact CMS filter IDs must be preserved on project cards.');
   }
 
-  if (!/className = 'filter-btn'/.test(gallery) || !/filterBtns = Array.from\(document\.querySelectorAll\('\.filter-tabs \.filter-btn, \.filter-tabs \.tab-btn'\)\)/.test(gallery)) {
+  if (!/className = 'filter-btn'/.test(gallery) || !/filterBtns = Array\.from\(document(?:Ref)?\.querySelectorAll\('\.filter-tabs \.filter-btn, \.filter-tabs \.tab-btn'\)\)/.test(gallery)) {
     err('Gallery filters: CMS filter buttons must have an owned click/filter contract.');
+  }
+
+  if (!/(?:filterBtns\.forEach\(btn\s*=>\s*btn\.addEventListener|filterBtns\.forEach\(btn\s*=>\s*bind\(btn,\s*'click')/.test(gallery)) {
+    err('Gallery filters: filter buttons must be connected through the feature lifecycle.');
   }
 
   if (!/async function loadFilterButtons\(\)/.test(gallery) || !/options\.filterUrl/.test(gallery)) {
