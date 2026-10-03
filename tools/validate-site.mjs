@@ -795,9 +795,9 @@ function validateResponsiveUiContracts() {
   if (!/phoneBreakpoint/.test(presentation) || !/tabletBreakpoint/.test(presentation)) {
     err('Gallery responsive presentation contract: breakpoint decisions belong to the presentation boundary.');
   }
-  const phoneTwoColumn = /@media\\s*\\(max-width:\\s*767px\\)[\\s\\S]*?grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\);/.test(style);
-  const tabletThreeColumn = /@media\\s*\\(min-width:\\s*768px\\)\\s*and\\s*\\(max-width:\\s*1099px\\)[\\s\\S]*?grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\);/.test(style);
-  const desktopThreeColumn = /@media\\s*\\(min-width:\\s*1100px\\)[\\s\\S]*?grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\);/.test(style);
+  const phoneTwoColumn = style.includes('@media (max-width: 767px)') && style.includes('grid-template-columns:repeat(2,minmax(0,1fr));');
+  const tabletThreeColumn = style.includes('@media (min-width: 768px) and (max-width: 1099px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
+  const desktopThreeColumn = style.includes('@media (min-width: 1100px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
   if (!phoneTwoColumn || !tabletThreeColumn || !desktopThreeColumn) {
     err('Gallery responsive layout contract: phone must use two columns, tablet and desktop must use three columns.');
   }
