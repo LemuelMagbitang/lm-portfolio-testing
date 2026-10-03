@@ -2,15 +2,48 @@
  * Architecture V2 — gallery controller.
  * Owns filtering, reveal/collapse behavior, deep links and responsive sizing.
  */
-export function initGallery(options = {}) {
+export async function initGallery(options = {}) {
   const filterTabs = document.querySelector('.filter-tabs');
-  const filterBtns = Array.from(document.querySelectorAll('.filter-tabs .tab-btn'));
-  const allCards = Array.from(document.querySelectorAll('.project-card'));
   const showMoreBtn = document.getElementById('showMoreBtn');
   const showMoreWrapper = document.getElementById('showMoreWrapper');
   const portfolioGrid = document.getElementById('portfolioGrid');
   const gridFadeOverlay = document.getElementById('gridFadeOverlay');
-  if (!portfolioGrid || allCards.length === 0) return;
+  if (!portfolioGrid) return;
+
+  async function loadFilterButtons() {
+    if (!filterTabs || !options.filterUrl || typeof options.loadJson !== 'function') return;
+
+    try {
+      const raw = await options.loadJson(options.filterUrl, null, {
+        resolveUrl: options.resolveAssetUrl
+      });
+      const list = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.filters) ? raw.filters : []);
+
+      if (!list.length) return;
+
+      const fragment = document.createDocumentFragment();
+      list.forEach(filter => {
+        if (!filter || !filter.id) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'filter-btn';
+        button.dataset.filter = String(filter.id);
+        button.textContent = filter.label || filter.name || filter.id;
+        fragment.appendChild(button);
+      });
+      filterTabs.replaceChildren(fragment);
+    } catch (error) {
+      console.warn('Filters: could not load', options.filterUrl, error);
+    }
+  }
+
+  await loadFilterButtons();
+
+  const allCards = Array.from(document.querySelectorAll('.project-card'));
+  if (allCards.length === 0) return;
+  const filterBtns = Array.from(document.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
 
   const mobileCount = Number.isFinite(options.mobileCount) ? options.mobileCount : 5;
   const desktopCount = Number.isFinite(options.desktopCount) ? options.desktopCount : 9;
@@ -54,7 +87,7 @@ export function initGallery(options = {}) {
     const current = Array.from(filterTabs.querySelectorAll('.filter-edge-spacer'));
     current.forEach(el => el.remove());
 
-    const buttons = Array.from(filterTabs.querySelectorAll('.tab-btn'));
+    const buttons = Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn'));
     if (!buttons.length) return;
 
     const first = buttons[0];
@@ -77,7 +110,7 @@ export function initGallery(options = {}) {
   }
 
   function getFilterButtons() {
-    return filterTabs ? Array.from(filterTabs.querySelectorAll('.tab-btn')) : [];
+    return filterTabs ? Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn')) : [];
   }
 
   function getNearestCenteredFilterIndex() {
