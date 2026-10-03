@@ -222,6 +222,7 @@ try {
 
       const modelShell = page.locator('#lightbox .lightbox-model-viewer').first();
       await modelShell.waitFor({ state: 'visible', timeout: 7000 });
+      await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
       await modelShell.click();
       await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
 
