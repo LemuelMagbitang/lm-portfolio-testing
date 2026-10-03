@@ -72,7 +72,7 @@ export function buildProjectCardElement(
   if (project.description) {
     const description = document.createElement('div');
     description.className = 'project-description';
-    description.hidden = true;
+    description.style.display = 'none';
     const text = document.createElement('p');
     text.textContent = project.description;
     description.appendChild(text);
@@ -81,7 +81,7 @@ export function buildProjectCardElement(
 
   const mediaList = document.createElement('div');
   mediaList.className = 'project-media-list';
-  mediaList.hidden = true;
+  mediaList.style.display = 'none';
   (Array.isArray(project.media) ? project.media : []).forEach(media => {
     if (media?.src) mediaList.appendChild(buildMediaItemElement(media));
   });
