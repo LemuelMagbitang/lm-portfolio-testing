@@ -19,7 +19,7 @@ GitHub Desktop can clone repositories and switch between remote branches without
 In GitHub Desktop:
 
 1. Click **Current Branch**.
-2. Select `architecture-security-hardening`.
+2. Select `projects-runtime-cutover`.
 3. Let Desktop fetch/pull the branch if prompted.
 
 Do not make or commit changes to `main` during this test.
@@ -88,7 +88,7 @@ GitHub Desktop is easier for beginners, but the same workflow can be done with G
 git clone https://github.com/LemuelMagbitang/lm-portfolio-testing.git
 cd lm-portfolio-testing
 git fetch origin
-git switch --track origin/architecture-security-hardening
+git switch --track origin/projects-runtime-cutover
 ```
 
 Then open the folder in VS Code and use Live Server.
