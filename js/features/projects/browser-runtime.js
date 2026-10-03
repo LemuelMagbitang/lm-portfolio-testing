@@ -26,7 +26,8 @@ export async function mountProjects({
   createFragment = () => documentRef?.createDocumentFragment(),
   buildCard = project => buildProjectCardElement(project, {
     resolveAssetUrl,
-    show3DIndicator: true
+    show3DIndicator: true,
+    documentRef
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;
