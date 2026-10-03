@@ -279,14 +279,15 @@ export async function initGallery(options = {}) {
   }
   function cardMatchesFilter(card, filter) {
     if (filter === 'all') return true;
-    const raw = card.dataset.filterIds;
-    if (raw) {
-      try {
-        const ids = JSON.parse(raw);
-        if (Array.isArray(ids)) return ids.includes(filter);
-      } catch (e) {}
+    const raw = card?.dataset?.filterIds;
+    if (!raw) return false;
+
+    try {
+      const ids = JSON.parse(raw);
+      return Array.isArray(ids) && ids.includes(filter);
+    } catch (_) {
+      return false;
     }
-    return card.classList.contains(filter);
   }
 
   function getEffectiveBaseCount(filtered) {
