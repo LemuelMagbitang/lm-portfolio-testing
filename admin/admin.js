@@ -2373,7 +2373,7 @@ RENDERERS.about = function(data){
       };
       probe.onerror = () => preloadCandidates(host,name,candidates,index+1,onExhausted);
       const candidate = candidates[index];
-      probe.src = /^(?:[a-z][a-z0-9+.-]*:)?\\/\\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
+      probe.src = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
         ? candidate
         : ghRawUrl(candidate);
     }

@@ -67,7 +67,7 @@ export async function initAbout({
     }, { once: true });
 
     const candidate = candidates[index];
-    const resolvedCandidate = /^(?:[a-z][a-z0-9+.-]*:)?\\/\\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
+    const resolvedCandidate = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
       ? candidate
       : (typeof resolveAssetUrl === 'function' ? resolveAssetUrl(candidate) : candidate);
 
