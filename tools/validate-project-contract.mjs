@@ -13,6 +13,7 @@ const project = normalizeProject({
   thumbnail: {
     type: 'MODEL',
     src: ' media/demo.glb ',
+    orientation: 'portrait',
     zoom: '1.25',
     rotate: '90',
     background: { type: 'color', color: ' #fff ', opacity: '0.8' }
@@ -35,6 +36,7 @@ assert.deepEqual(project, {
   thumbnail: {
     src: 'media/demo.glb',
     type: 'model',
+    orientation: 'portrait',
     zoom: 1.25,
     rotate: 90,
     background: { type: 'color', color: '#fff', opacity: 0.8 }
