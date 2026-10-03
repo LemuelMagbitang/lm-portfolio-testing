@@ -485,47 +485,92 @@ function validateGalleryContract() {
 }
 
 function validateBootstrapHardening() {
-  const source = exists('js/script.js') ? readText('js/script.js') : '';
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
 
-  const transitionPos = source.indexOf("const pageTransition = document.getElementById('pageTransition');");
-  const importPos = source.indexOf("await import(runtimeUrl)");
+  if (!/import \{ bootstrapPortfolioApp \} from ['"]\.\/app\/bootstrap\.js/.test(entry)) {
+    err('Bootstrap: js/script.js must delegate to app/bootstrap.js.');
+  }
+
+  const transitionPos = bootstrap.indexOf("const pageTransition = root?.getElementById('pageTransition');");
+  const importPos = bootstrap.indexOf('await Promise.all([');
   if (transitionPos < 0 || importPos < 0 || transitionPos > importPos) {
     err('Bootstrap: page transition must initialize before dynamic module imports.');
   }
 
-  if (!/initialTransitionTimer\s*=\s*window\.setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?\},\s*900\)/.test(source)) {
+  if (!/initialTransitionTimer\s*=\s*root\.defaultView\.setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?\},\s*900\)/.test(bootstrap)) {
     err('Bootstrap: initial page transition is missing its fail-safe timeout.');
   }
 
-  if (!/try\s*\{\s*await initHeroBannerV2\(/.test(source)) {
-    err('Bootstrap: hero initialization must be isolated so a hero failure cannot abort the rest of the public UI.');
+  if (!/await createPortfolioApp\(\{ root, runtime, cms \}\)/.test(bootstrap)) {
+    err('Bootstrap: composition root is not started after dependencies load.');
   }
 
-  if (!/catch \(err\) \{\s*console\.error\('LM bootstrap: public frontend failed to initialize\.'/.test(source)) {
+  if (!/catch \(error\) \{\s*console\.error\('Portfolio runtime failed to initialize'/.test(bootstrap)) {
     err('Bootstrap: top-level initialization error boundary is missing.');
   }
-}
 
+  if (/function\s+(loadProjectsFromCMS|openLightbox|initHeroBanner|initGallery)\s*\(/.test(entry)) {
+    err('Bootstrap: implementation logic has leaked back into js/script.js.');
+  }
+
+  if (!/export async function createPortfolioApp\(/.test(composition)) {
+    err('Composition: createPortfolioApp() public entry point is missing.');
+  }
+}
 function validateArchitecture() {
-  const source = exists('js/script.js') ? readText('js/script.js') : '';
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+
   const required = [
     ['js/cms-data.js', /export (?:async )?function loadCmsJson/],
     ['js/gallery.js', /export function initGallery/],
     ['js/hero.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
-    ['js/lightbox.js', /export function initLightbox/]
+    ['js/lightbox.js', /export function initLightbox/],
+    ['js/features/projects/index.js', /export \{ mountProjects \}/],
+    ['js/features/project-filters/index.js', /export async function initProjectFilters/],
+    ['js/features/settings/index.js', /export async function initSiteSettings/]
   ];
+
   required.forEach(([file, pattern]) => {
     if (!exists(file) || !pattern.test(readText(file))) {
       err('Architecture V2: expected module contract missing from ' + file + '.');
     }
   });
-  if (/function\s+initGallery\s*\(/.test(source)) err('Architecture V2: gallery implementation remains in script.js.');
-  if (/function\s+initHeroBanner\s*\(/.test(source)) err('Architecture V2: hero implementation remains in script.js.');
-  if (/function\s+openLightbox\s*\(/.test(source)) err('Architecture V2: lightbox implementation remains in script.js.');
-  if (/fetch\(siteAssetUrl\(window\.(SETTINGS|PROJECTS|REVIEWS|ABOUT|FILTERS|HERO_MESSAGES)_URL/.test(source)) err('Architecture V2: direct CMS fetch remains in script.js.');
+
+  if (entry.split(/\r?\n/).length > 40) {
+    err('Architecture V2: js/script.js must remain a thin browser entrypoint.');
+  }
+
+  if (/function\s+(initGallery|initHeroBanner|openLightbox|buildProjectCardEl|loadProjectsFromCMS)\s*\(/.test(entry)) {
+    err('Architecture V2: feature implementation remains in js/script.js.');
+  }
+
+  if (/\bfetch\s*\(/.test(entry) || /(?:SETTINGS|PROJECTS|REVIEWS|ABOUT|FILTERS)_URL/.test(entry)) {
+    err('Architecture V2: CMS/page configuration access remains in js/script.js.');
+  }
+
+  if (!/initNavigation\(/.test(composition) ||
+      !/initProjectFilters\(/.test(composition) ||
+      !/initReviews\(/.test(composition) ||
+      !/initAbout\(/.test(composition) ||
+      !/initForms\(/.test(composition) ||
+      !/initSiteSettings\(/.test(composition)) {
+    err('Architecture V2: page-shell features are not composed through explicit feature APIs.');
+  }
+
+  if (!/runtime\s*,\s*cms/.test(composition)) {
+    err('Architecture V2: runtime and CMS services must enter through the composition boundary.');
+  }
+
+  if (/from ['"]\.\/site-runtime\.js/.test(readText('js/features/settings/index.js'))) {
+    err('Architecture V2: settings feature must use infrastructure/data boundaries instead of the legacy runtime facade.');
+  }
 }
 
-validateResponsiveUiContracts();
+validateResponsiveUiContracts();validateResponsiveUiContracts();
 scanSourceForBadPatterns();
 validateSecuritySecrets();
 validateAdminStorageSecurity();
@@ -576,21 +621,44 @@ function validateResponsiveUiContracts() {
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
-  const script = exists('js/script.js') ? readText('js/script.js') : '';
+  const filterFeature = exists('js/features/project-filters/index.js') ? readText('js/features/project-filters/index.js') : '';
+  const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
+
   if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
   if (!admin.includes('await onCollect()')) err('CMS save: save collectors must support asynchronous cross-file validation/migrations.');
   if (!admin.includes('filtersWithProjects')) err('CMS filters: filter/project relationship saves must be atomic.');
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
-  if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) err('Gallery: row-aware Show More contract is missing.');
-  if (!script.includes('card.dataset.filterIds')) err('Gallery filters: exact CMS filter IDs must be preserved.');
-  if (!script.includes('await cmsReady;') || script.indexOf('await cmsReady;') > script.indexOf('initGallery()')) {
-    err('Gallery filters: CMS data must finish loading before gallery initialization.');
+
+  if (!gallery.includes('getEffectiveBaseCount') || !gallery.includes('rowAlignedCount')) {
+    err('Gallery: row-aware Show More contract is missing.');
   }
-  if (!script.includes('const allBtn = tabs.querySelector')) err('Gallery filters: ALL fallback/structural button contract is missing.');
-  if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) err('Hero: per-slide fade timing CSS variables are missing.');
+
+  if (!projectCard.includes('card.dataset.filterIds')) {
+    err('Gallery filters: exact CMS filter IDs must be preserved on project cards.');
+  }
+
+  if (!/className = 'filter-btn'/.test(filterFeature) || !/container\.addEventListener\('click'/.test(filterFeature)) {
+    err('Gallery filters: CMS filter buttons must have an owned click/filter contract.');
+  }
+
+  if (!/Array\.from\(container\.querySelectorAll\('\.filter-btn, \.tab-btn'\)\)/.test(filterFeature)) {
+    err('Gallery filters: ALL fallback button must remain compatible with the structural CMS filter.');
+  }
+
+  if (!composition.includes('mountProjects(') ||
+      !composition.includes('initGallery(') ||
+      !composition.includes('initLightbox(')) {
+    err('Portfolio composition: Projects, Gallery, and Lightbox controllers must remain explicitly wired.');
+  }
+
+  if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) {
+    err('Hero: per-slide fade timing CSS variables are missing.');
+  }
 }
-validateCmsRegressionContracts();
+
+validateCmsRegressionContracts();validateCmsRegressionContracts();
 validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
