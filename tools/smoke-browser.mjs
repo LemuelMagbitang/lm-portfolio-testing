@@ -162,11 +162,21 @@ try {
       const lightbox = page.locator('#lightbox.active');
       if (await lightbox.count() !== 1) throw new Error('Lightbox did not open from the first project card.');
 
+      const nextButton = page.locator('.lightbox-next').first();
+      if (await nextButton.count() === 1) {
+        await nextButton.click();
+        await page.waitForTimeout(120);
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      }
+
       const closeButton = page.locator('#lightboxClose');
       if (await closeButton.count()) {
         await closeButton.click();
-        await page.waitForTimeout(100);
+        await page.waitForTimeout(120);
       }
+
+      const restoredFocus = await firstCard.evaluate(el => document.activeElement === el);
+      if (!restoredFocus) throw new Error('Lightbox close did not restore focus to the project card that opened it.');
     });
 
     await smokePage(browser, '/', async page => {
