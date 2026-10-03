@@ -1666,7 +1666,6 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
   const enabledInput = control.querySelector('[data-bg-enabled]');
   const colorInput = control.querySelector('[data-bg-color]');
   const resetButton = control.querySelector('[data-bg-reset]');
-  const picker = control.querySelector('[data-bg-picker]');
 
   function sync(){
     const supported = mediaSupportsBackground(getType());
@@ -1690,10 +1689,6 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
     } : null);
     sync();
     onChanged?.();
-  });
-
-  picker?.addEventListener('click', () => {
-    if (!colorInput.disabled) colorInput.click();
   });
 
   colorInput.addEventListener('input', () => {
