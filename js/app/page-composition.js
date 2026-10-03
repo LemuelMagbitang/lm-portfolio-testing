@@ -89,9 +89,10 @@ export async function createPortfolioApp({
   }
 
   const hero = root.querySelector('.hero');
+  let heroFeature = null;
   if (hero) {
     try {
-      await initHeroBannerV2({
+      heroFeature = await initHeroBannerV2({
         heroLoopUrl: config.urls.heroLoop,
         projectsUrl: config.urls.projects,
         loopMode: settings.heroTiming.loopMode,
@@ -136,8 +137,9 @@ export async function createPortfolioApp({
     console.warn('Gallery: initialization failed', error);
   }
 
+  let lightboxFeature = null;
   try {
-    await initLightbox({
+    lightboxFeature = await initLightbox({
       root,
       protectionEnabled: () => settings.protectionEnabled,
       ensureMediaBackgroundHelper,
@@ -155,10 +157,14 @@ export async function createPortfolioApp({
     settings,
     navigation,
     gallery: galleryFeature,
+    hero: heroFeature,
+    lightbox: lightboxFeature,
     reviews: reviewsFeature,
     about: aboutFeature,
     forms,
     destroy() {
+      lightboxFeature?.destroy?.();
+      heroFeature?.destroy?.();
       navigation.close();
       reviewsFeature.cleanup?.();
       forms.cleanup?.();
