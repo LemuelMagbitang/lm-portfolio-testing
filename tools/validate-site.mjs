@@ -603,7 +603,7 @@ function validateArchitecture() {
     ['js/infrastructure/browser/site-paths.js', /export function getSiteRootUrl/],
     ['js/infrastructure/youtube/url.js', /export function parseYouTubeUrl/],
     ['js/infrastructure/three/model-viewer.js', /export (?:async )?function mountModelViewer/],
-    ['js/infrastructure/software-logo/lookup.js', /export async function findSoftwareLogoCandidates/],
+    ['js/infrastructure/software-logo/lookup.js', /export function findSoftwareLogoCandidates/],
     ['js/features/projects/index.js', /export \{ mountProjects \}/],
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
@@ -683,7 +683,8 @@ function validateSoftwareLogoLookup() {
   if (resolver.includes('logo.clearbit.com') || admin.includes('logo.clearbit.com')) {
     err('Software logos: retired Clearbit Logo API must not be referenced.');
   }
-  if (!resolver.includes('cdn.jsdelivr.net/npm/simple-icons@16.33.0/icons/')) {
+  if (!resolver.includes("SIMPLE_ICONS_VERSION = '16.33.0'") ||
+      !resolver.includes('cdn.jsdelivr.net/npm/simple-icons@')) {
     err('Software logos: public resolver must use pinned Simple Icons 16.33.0 assets.');
   }
   if (!resolver.includes('api.iconify.design/search')) {
@@ -696,6 +697,7 @@ function validateSoftwareLogoLookup() {
     err('Software logos: CMS must use the automatic logo lookup for skills without manual icons.');
   }
 }
+
 function validateResponsiveUiContracts() {
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const style = exists('css/style.css') ? readText('css/style.css') : '';
