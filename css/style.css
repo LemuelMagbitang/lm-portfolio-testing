@@ -2490,7 +2490,7 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   }
 }
 @media (min-width: 768px) and (max-width: 1099px){
-  .seamless-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .seamless-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
   .modal-interior{max-width:760px;}
 }
 @media (min-width: 1100px){
