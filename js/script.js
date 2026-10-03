@@ -31,12 +31,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const runtimeScript = Array.from(document.scripts || []).find(el => /(?:^|\/)js\/script\.js(?:[?#].*)?$/i.test(el.src || el.getAttribute('src') || ''));
   const runtimeUrl = runtimeScript ? new URL('site-runtime.js?v=20261001-03', runtimeScript.src).href : new URL('js/site-runtime.js', document.baseURI).href;
   const { getSiteRootUrl, siteAssetUrl, ensureLottiePlayer, ensureMediaBackgroundHelper } = await import(runtimeUrl);
-  const [{ loadCmsJson, parseYouTubeUrl }, { initGallery }, { initHeroBannerV2 }, { initLightbox }, { mountProjects }] = await Promise.all([
+  const [{ loadCmsJson, parseYouTubeUrl }, { initGallery }, { initHeroBannerV2 }, { initLightbox }] = await Promise.all([
     import(new URL('cms-data.js?v=20261001-03', runtimeUrl).href),
     import(new URL('gallery.js?v=20261001-03', runtimeUrl).href),
     import(new URL('hero.js?v=20261001-03', runtimeUrl).href),
-    import(new URL('lightbox.js?v=20261001-03', runtimeUrl).href),
-    import(new URL('features/projects/index.js?v=20261001-03', runtimeUrl).href)
+    import(new URL('lightbox.js?v=20261001-03', runtimeUrl).href)
   ]);
 
   /* =========================================
@@ -252,15 +251,147 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* =========================================
      0b. CMS OVERRIDE — PROJECTS
      ========================================= */
-  /* Projects now mount through the feature runtime. The runtime preserves the
-     existing fallback contract: failed/empty CMS data leaves the static cards
-     untouched. It must finish before filters, hero, gallery, and lightbox
-     capture the project grid. */
+  /* If window.PROJECTS_URL points at data/projects.json, fetch it and,
+     when it returns a non-empty array, rebuild #portfolioGrid entirely
+     from that data. This has to happen — and finish — before anything
+     further down reads the grid: filtering, the hero banner's "5
+     latest artworks", and the lightbox click handlers each capture
+     the grid's cards once, early, into a fixed list. That's why this
+     is awaited before section 1 below, instead of firing in the
+     background the way hero text and settings do.
 
-  const projectsReady = mountProjects({ url: window.PROJECTS_URL });
+     If the fetch fails, is empty, or window.PROJECTS_URL isn't set,
+     the static cards already written in this file are left exactly
+     as they are — that's the fallback, not an error state. */
 
+  function buildMediaItemEl(m) {
+    const el = document.createElement('div');
+    el.className = 'media-item';
+    if (m.type === 'video') el.setAttribute('data-video', m.src || '');
+    else if (m.type === 'youtube') el.setAttribute('data-youtube', m.src || '');
+    else if (m.type === 'lottie') el.setAttribute('data-lottie', m.src || '');
+    else if (m.type === 'model') el.setAttribute('data-model', m.src || '');
+    else el.setAttribute('data-image', m.src || '');
+    if (m.caption) el.setAttribute('data-description', m.caption);
+    if (m.orientation) el.setAttribute('data-orientation', m.orientation);
+    if (m.background && typeof m.background === 'object') el.setAttribute('data-background', JSON.stringify(m.background));
+    return el;
+  }
+
+  function findMediaBackgroundFromProject(p, src) {
+    if (!p || !src || !Array.isArray(p.media)) return null;
+    const match = p.media.find(m => m && m.src === src && m.background && typeof m.background === 'object');
+    return match ? match.background : null;
+  }
+
+  function projectHas3D(p) {
+    return !!(p && Array.isArray(p.media) && p.media.some(m => m && m.type === 'model' && m.src));
+  }
+
+  // 3D media presentation shape comes from the same Orientation field used
+  // by every other artwork. Auto is handled by the model viewer itself.
+  function add3DAvailabilityIndicator(thumb, p) {
+    if (!thumb || !projectHas3D(p) || thumb.querySelector('.card-3d-indicator')) return;
+    thumb.classList.add('has-3d-view');
+    const indicator = document.createElement('div');
+    indicator.className = 'card-3d-indicator';
+    indicator.innerHTML = '<i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D VIEW AVAILABLE</span>';
+    thumb.appendChild(indicator);
+  }
+
+  function buildProjectCardEl(p) {
+    const card = document.createElement('div');
+    const filters = Array.isArray(p.filters) ? p.filters.filter(Boolean) : [];
+    card.className = ['project-card', ...filters].join(' ');
+    card.dataset.filterIds = JSON.stringify(filters);
+
+    if (p.badge) {
+      const badges = document.createElement('div');
+      badges.className = 'card-badges';
+      const span = document.createElement('span');
+      span.className = 'badge glass';
+      span.textContent = p.badge;
+      badges.appendChild(span);
+      card.appendChild(badges);
+    }
+
+    const thumb = document.createElement('div');
+    thumb.className = 'card-thumbnail';
+    const t = p.thumbnail || {};
+    const inheritedThumbBackground = t.src ? findMediaBackgroundFromProject(p, t.src) : null;
+    const thumbBackground = (t.background && typeof t.background === 'object') ? t.background : inheritedThumbBackground;
+    if (t.type) thumb.setAttribute('data-thumbnail-type', t.type);
+    if (t.src) {
+      const media = buildThumbnailMedia({type:t.type||mediaTypeFromSrc(t.src),src:t.src,background:thumbBackground}, p.title || 'Project artwork');
+      if (media) {
+        if (t.focus) media.setAttribute('data-focus', t.focus);
+        if (t.zoom && Number(t.zoom)!==1) media.setAttribute('data-zoom', t.zoom);
+        if (t.rotate) media.setAttribute('data-rotate', t.rotate);
+        if (thumbBackground && typeof thumbBackground === 'object') thumb.setAttribute('data-background', JSON.stringify(thumbBackground));
+        thumb.appendChild(media);
+      }
+    } else {
+      if (t.focus) thumb.setAttribute('data-focus', t.focus);
+      if (t.zoom && Number(t.zoom)!==1) thumb.setAttribute('data-zoom', t.zoom);
+      if (t.rotate) thumb.setAttribute('data-rotate', t.rotate);
+    }
+    add3DAvailabilityIndicator(thumb, p);
+    card.appendChild(thumb);
+
+    const info = document.createElement('div');
+    info.className = 'glass-info';
+    const h3 = document.createElement('h3');
+    h3.textContent = p.title || '';
+    const subtitleP = document.createElement('p');
+    subtitleP.textContent = p.subtitle || '';
+    info.appendChild(h3);
+    info.appendChild(subtitleP);
+    card.appendChild(info);
+
+    if (p.description) {
+      const descWrap = document.createElement('div');
+      descWrap.className = 'project-description';
+      descWrap.style.display = 'none';
+      const descP = document.createElement('p');
+      descP.textContent = p.description;
+      descWrap.appendChild(descP);
+      card.appendChild(descWrap);
+    }
+
+    const mediaList = document.createElement('div');
+    mediaList.className = 'project-media-list';
+    mediaList.style.display = 'none';
+    (Array.isArray(p.media) ? p.media : []).forEach(m => {
+      if (!m || !m.src) return;
+      mediaList.appendChild(buildMediaItemEl(m));
+    });
+    card.appendChild(mediaList);
+
+    return card;
+  }
+
+  async function loadProjectsFromCMS() {
+    if (!window.PROJECTS_URL) return;
+    const grid = document.getElementById('portfolioGrid');
+    if (!grid) return;
+
+    try {
+      const raw = await loadCmsJson(window.PROJECTS_URL, null, { resolveUrl: siteAssetUrl });
+      if (!raw) return;
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw.filters) ? raw.filters : []);
+      if (!list.length) return;
+
+      const frag = document.createDocumentFragment();
+      list.forEach(p => frag.appendChild(buildProjectCardEl(p)));
+      grid.innerHTML = '';
+      grid.appendChild(frag);
+    } catch (err) {
+      console.warn('Projects: could not load', window.PROJECTS_URL, err);
+      // Leave the existing static cards in place.
+    }
+  }
   const cmsReady = Promise.all([
-    projectsReady,
+    loadProjectsFromCMS(),
     loadReviewsFromCMS(),
     loadAboutFromCMS(),
     loadFiltersFromCMS()
@@ -380,12 +511,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (a.photo?.src) {
         const photoEl = document.getElementById('aboutPhoto');
         if (photoEl) {
+          // Resolving against the site root (not document.baseURI) is
+          // important on GitHub Pages sub-path deployments: a relative
+          // CMS path such as "assets/about/me.jpg" must resolve to the
+          // site's asset root rather than the current page directory.
           const siteRoot = getSiteRootUrl();
-          photoEl.src = new URL(a.photo.src, siteRoot).href;
-          if (a.photo.alt) photoEl.alt = a.photo.alt;
-          if (a.photo.focus) { photoEl.style.objectPosition = a.photo.focus; photoEl.style.transformOrigin = a.photo.focus; }
-          if (a.photo.zoom) photoEl.style.setProperty('--thumb-zoom', a.photo.zoom);
-          if (a.photo.rotate) photoEl.style.setProperty('--thumb-rotate', a.photo.rotate + 'deg');
+          photoEl.src = new URL(photo.src, siteRoot).href;
+          if (photo.alt) photoEl.alt = photo.alt;
+          // Same three adjustments a project thumbnail supports (see
+          // applyThumbnailAdjustments below), applied directly here
+          // since the profile photo isn't a .project-card thumbnail for
+          // that function to find on its own. transformOrigin has to
+          // match objectPosition here too, for the same reason it does
+          // on a project thumbnail — see the comment there.
+          if (photo.focus) { photoEl.style.objectPosition = photo.focus; photoEl.style.transformOrigin = photo.focus; }
+          if (photo.zoom) photoEl.style.setProperty('--thumb-zoom', photo.zoom);
+          if (photo.rotate) photoEl.style.setProperty('--thumb-rotate', photo.rotate + 'deg');
         }
       }
 
@@ -405,6 +546,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (eduList && Array.isArray(a.education) && a.education.length) {
         eduList.innerHTML = '';
         a.education.forEach(e => {
+          eduList.innerHTML = '';
           eduList.appendChild(buildTimelineBlock({ title: e.school || e.title, dateLine: [e.degree, e.graduationDate].filter(Boolean).join(' · ') || e.detail, bullets: [] }));
         });
       }
@@ -412,7 +554,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const awList = document.getElementById('awardsList');
       if (awList && Array.isArray(a.awards) && a.awards.length) {
         awList.innerHTML = '';
-        a.awList.forEach(aw => {
+        a.awards.forEach(aw => {
           awList.appendChild(buildTimelineBlock({ title: aw.title, dateLine: aw.detail, bullets: [] }));
         });
       }
@@ -421,7 +563,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static content in place.
     }
   }
-
   /* =========================================
      0e. CMS OVERRIDE — FILTERS & BADGES
      ========================================= */
@@ -492,8 +633,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Leave the existing static tabs/dropdown in place.
     }
   }
+
   /* =========================================
      0f. HOMEPAGE HERO — MESSAGES (fallback only)
      ========================================= */
   /* Hero messages now live in data/hero.json and are edited through
-  ...
+     admin/ — see /README-CMS-SETUP.md. This single entry is a
+     fallback only, used if that fetch ever fails; it's not where you
+     add real messages anymore. */
+  const HERO_MESSAGES = [
+    { text: 'Open for freelance work.' }
+  ];
