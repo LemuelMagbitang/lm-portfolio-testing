@@ -9,12 +9,12 @@
 import { mountProjects } from '../features/projects/index.js';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
-import { initAbout } from '../features/about/index.js?v=20261003-07';
+import { initAbout } from '../features/about/index.js?v=20261003-10';
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
 import { initGallery } from '../features/gallery/index.js';
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261003-07';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261003-10';
 import { initLightbox } from '../features/lightbox/index.js';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js';
 
