@@ -92,6 +92,8 @@ export async function initGallery(options = {}) {
   const bind = (target, type, handler, listenerOptions) =>
     lifecycle.listen(target, type, handler, listenerOptions);
   let renderToken = 0;
+  let cancelReveal = null;
+  lifecycle.add(() => cancelReveal?.());
 
   function getBaseCount() {
     return getResponsiveBaseCount({
@@ -294,7 +296,8 @@ export async function initGallery(options = {}) {
     renderToken += 1;
     const token = renderToken;
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
-    const cancelReveal = applyGalleryReveal({
+    cancelReveal?.();
+    cancelReveal = applyGalleryReveal({
       grid: portfolioGrid,
       fadeOverlay: gridFadeOverlay,
       showMoreButton: showMoreBtn,
@@ -307,7 +310,6 @@ export async function initGallery(options = {}) {
       renderToken: token,
       isCurrentRender: value => value === renderToken
     });
-    lifecycle.add(cancelReveal);
   }
 
 
