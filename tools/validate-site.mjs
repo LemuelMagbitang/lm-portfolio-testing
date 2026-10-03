@@ -589,6 +589,9 @@ function validateBootstrapHardening() {
   }
 
   const hero = exists('js/features/hero/index.js') ? readText('js/features/hero/index.js') : '';
+  if (!/dataset\.component = 'portfolio-hero'/.test(hero)) {
+    err('Hero: explicit component marker is missing.');
+  }
   if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
     err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');
   }
@@ -731,6 +734,16 @@ function validateResponsiveUiContracts() {
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const style = exists('css/style.css') ? readText('css/style.css') : '';
+  const tokens = exists('css/tokens.css') ? readText('css/tokens.css') : '';
+  if (!style.startsWith("@import url('./tokens.css');")) {
+    err('CSS foundation: style.css must load the shared UI token layer first.');
+  }
+  if (!/--lm-color-background:/.test(tokens) ||
+      !/--lm-container-max:/.test(tokens) ||
+      !/--lm-card-radius:/.test(tokens) ||
+      !/--lm-motion-standard:/.test(tokens)) {
+    err('CSS foundation: shared visual and motion tokens are incomplete.');
+  }
   const adminCss = exists('admin/admin.css') ? readText('admin/admin.css') : '';
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
 
