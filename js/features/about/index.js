@@ -45,20 +45,46 @@ export async function initAbout({
     frame.textContent = skillInitials(name);
   }
 
+  function applyLogoTone(image, candidate = "") {
+    if (!image) return;
+    try {
+      const canvas = root.createElement("canvas");
+      canvas.width = 16; canvas.height = 16;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("logo tone canvas unavailable");
+      ctx.clearRect(0, 0, 16, 16);
+      ctx.drawImage(image, 0, 0, 16, 16);
+      const pixels = ctx.getImageData(0, 0, 16, 16).data;
+      let weighted = 0, weight = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const alpha = pixels[i + 3] / 255;
+        if (alpha <= 0.03) continue;
+        weighted += ((0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255) * alpha;
+        weight += alpha;
+      }
+      image.dataset.logoTone = weight && weighted / weight < 0.45 ? "dark" : "light";
+    } catch (_) {
+      image.dataset.logoTone = /krita/i.test(candidate) || /cdn\.simpleicons\.org/i.test(candidate) ? "dark" : "unknown";
+    }
+  }
+
   function preloadAndMountLogo(frame, name, candidates, index = 0, onExhausted) {
     if (!frame || !frame.isConnected || !candidates[index]) {
       onExhausted?.();
       return;
     }
 
-    const image = root.createElement('img');
-    image.className = 'skill-logo';
+    const image = root.createElement("img");
+    const candidate = candidates[index];
+    image.className = "skill-logo";
     image.alt = name;
     image.title = name;
+    image.crossOrigin = "anonymous";
 
-    image.addEventListener('load', () => {
+    image.addEventListener("load", () => {
       if (!frame.isConnected) return;
-      frame.classList.remove('is-fallback');
+      applyLogoTone(image, candidate);
+      frame.classList.remove("is-fallback");
       frame.replaceChildren(image);
     }, { once: true });
 
@@ -66,7 +92,6 @@ export async function initAbout({
       preloadAndMountLogo(frame, name, candidates, index + 1, onExhausted);
     }, { once: true });
 
-    const candidate = candidates[index];
     const resolvedCandidate = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
       ? candidate
       : (typeof resolveAssetUrl === 'function' ? resolveAssetUrl(candidate) : candidate);
