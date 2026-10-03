@@ -255,6 +255,16 @@ function scanSourceForBadPatterns() {
   });
 }
 
+function validateCssDeclarations() {
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const invalidFlex = [...css.matchAll(/flex-direction\s*:\s*([^;]+);/g)]
+    .map(match => String(match[1]).trim())
+    .filter(value => !['row','row-reverse','column','column-reverse','initial','inherit','unset','revert','revert-layer'].includes(value));
+  if (invalidFlex.length) {
+    err('CSS: invalid flex-direction value(s) detected: ' + [...new Set(invalidFlex)].join(', ') + '.');
+  }
+}
+
 function checkLargeAssets() {
   const assetRoot = path.join(ROOT, 'assets');
   if (!fs.existsSync(assetRoot)) return;
@@ -283,6 +293,7 @@ validateFilters(filters);
 validateProjects(projects, filters);
 validateHeroLoop(heroLoop);
 validateAbout(about);
+validateCssDeclarations();
 
 const reviews = parseJson('data/reviews.json', []);
 const heroMessages = parseJson('data/hero.json', []);
@@ -794,6 +805,12 @@ function validateResponsiveUiContracts() {
 
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  if (!/let renderVersion = 0;/.test(admin) ||
+      !/const version = \+\+renderVersion;/.test(admin) ||
+      !/const section = currentSection;/.test(admin) ||
+      !/if\(version !== renderVersion \|\| section !== currentSection\) return;/.test(admin)) {
+    err('CMS render: asynchronous section loads must be guarded against stale navigation responses.');
+  }
   if (admin.includes('SOFTWARE_DOMAINS') || admin.includes('logo.clearbit.com')) {
     err('CMS software logos: retired inline SOFTWARE_DOMAINS/Clearbit lookup must not return.');
   }
