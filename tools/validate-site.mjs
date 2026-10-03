@@ -503,9 +503,8 @@ function validateModuleScriptContract() {
   for (const [file, src] of pages) {
     if (!exists(file)) continue;
     const html = readText(file);
-    const escapedSrc = src.replace(/[.*+?^$(){}|[\]\\]/g, '\\function validateBootstrapHardening() {');
-    const pattern = new RegExp('<script\\b[^>]*type=["\\\']module["\\\'][^>]*src=["\\\']' + escapedSrc);
-    if (!pattern.test(html)) {
+    const scriptPattern = '<script type="module" src="' + src;
+    if (!html.includes(scriptPattern)) {
       err(file + ': js/script.js must be loaded with type="module".');
     }
   }
