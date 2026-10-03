@@ -1646,8 +1646,10 @@ function backgroundControlHtml(background){
       <div class="media-bg-row">
         <label class="media-bg-toggle"><input type="checkbox" data-bg-enabled ${enabled?'checked':''}> <span>Use background</span></label>
         <div class="media-bg-color">
-          <span class="media-bg-swatch" data-bg-swatch style="background:${attr(color)}" aria-hidden="true"></span>
-          <input data-bg-color type="color" value="${attr(color)}" aria-label="Background color" ${enabled?'':'disabled'}>
+          <span class="media-bg-color-picker" data-bg-picker>
+            <span class="media-bg-swatch" data-bg-swatch style="background:${attr(color)}" aria-hidden="true"></span>
+            <input data-bg-color type="color" value="${attr(color)}" aria-label="Choose background color" ${enabled?'':'disabled'}>
+          </span>
           <span class="media-bg-hex" data-bg-hex>${esc(color)}</span>
         </div>
         <button type="button" class="ghost media-bg-reset" data-bg-reset>Reset</button>
@@ -1664,6 +1666,7 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
   const enabledInput = control.querySelector('[data-bg-enabled]');
   const colorInput = control.querySelector('[data-bg-color]');
   const resetButton = control.querySelector('[data-bg-reset]');
+  const picker = control.querySelector('[data-bg-picker]');
 
   function sync(){
     const supported = mediaSupportsBackground(getType());
@@ -1687,6 +1690,10 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
     } : null);
     sync();
     onChanged?.();
+  });
+
+  picker?.addEventListener('click', () => {
+    if (!colorInput.disabled) colorInput.click();
   });
 
   colorInput.addEventListener('input', () => {
