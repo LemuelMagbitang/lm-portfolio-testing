@@ -203,6 +203,43 @@ try {
 
       const restoredFocus = await firstCard.evaluate(el => document.activeElement === el);
       if (!restoredFocus) throw new Error('Lightbox close did not restore focus to the project card that opened it.');
+
+      const showMore = page.locator('#showMoreBtn').first();
+      if (await showMore.isVisible().catch(() => false)) {
+        await showMore.click();
+        await page.waitForTimeout(450);
+      }
+
+      const modelCard = page.locator('#portfolioGrid .project-card[data-project-id="test-project"]').first();
+      if (await modelCard.count() !== 1) throw new Error('3D Lightbox smoke fixture card is missing.');
+      if (await modelCard.evaluate(el => getComputedStyle(el).display === 'none')) {
+        throw new Error('3D Lightbox smoke fixture card is still hidden.');
+      }
+
+      await modelCard.scrollIntoViewIfNeeded();
+      await modelCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const modelShell = page.locator('#lightbox .lightbox-model-viewer').first();
+      await modelShell.waitFor({ state: 'visible', timeout: 7000 });
+      await modelShell.click();
+      await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
+
+      const modelBack = page.locator('#lightbox .model-viewer-back').first();
+      if (await modelBack.isVisible().catch(() => false) !== true) {
+        throw new Error('3D interactive mode did not expose its Back control.');
+      }
+
+      const backFocused = await modelBack.evaluate(el => document.activeElement === el);
+      if (!backFocused) throw new Error('3D activation did not move keyboard focus to the Back control.');
+
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(100);
+      const interactiveAfterEscape = await modelShell.evaluate(el => el.classList.contains('is-interactive'));
+      if (interactiveAfterEscape) throw new Error('Escape did not exit interactive 3D mode.');
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
     });
 
     await smokePage(browser, '/', async page => {
