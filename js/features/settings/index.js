@@ -92,6 +92,7 @@ export async function initSiteSettings({
 
   return {
     getState: () => ({ ...state, formsEnabled: { ...state.formsEnabled }, heroTiming: { ...state.heroTiming } }),
+    applyDom: () => applyDom(state),
     state
   };
 }
