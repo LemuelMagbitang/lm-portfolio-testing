@@ -330,7 +330,7 @@ export async function initGallery(options = {}) {
   });
 
   let resizeTimer;
-  bind(window, 'resize', () => {
+  bind(windowRef, 'resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = windowRef.setTimeout(() => {
       baseCount = getBaseCount();
@@ -442,8 +442,8 @@ export async function initGallery(options = {}) {
     if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
     updateFilterPager(filterBtns.indexOf(activeBtn));
   });
-  bind(window, 'hashchange', applyHash);
-  bind(window, 'load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
+  bind(windowRef, 'hashchange', applyHash);
+  bind(windowRef, 'load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
   return {
     render,
     getFilter: () => currentFilter,
