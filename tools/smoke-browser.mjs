@@ -259,11 +259,10 @@ try {
           return;
         }
         if (url.pathname === '/repos/Smoke/TestRepo/contents/data/about.json') {
-          const body = window.__LM_CMS_SMOKE_ABOUT__;
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ content: body, sha: 'smoke-about-sha' })
+            body: JSON.stringify({ content: encoded, sha: 'smoke-about-sha' })
           });
           return;
         }
