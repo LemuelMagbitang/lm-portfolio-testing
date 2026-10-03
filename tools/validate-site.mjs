@@ -555,6 +555,10 @@ function validateBootstrapHardening() {
     err('Composition: Hero timing must use the Hero feature option names loopMode and transitionStyle.');
   }
 
+  if (!/hero-section, #heroBanner, #heroBannerAbout/.test(composition)) {
+    err('Composition: Hero must initialize against the actual public hero section/container.');
+  }
+
   const lightbox = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
   if (!/return \{[\s\S]*destroy\(\)[\s\S]*listenerCleanups\.splice\(0\)/.test(lightbox)) {
     err('Lightbox: public feature lifecycle must expose destroy() and release persistent listeners.');
@@ -575,6 +579,18 @@ function validateBootstrapHardening() {
   const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
   if (!/return \{[\s\S]*destroy\(\)[\s\S]*cleanup\.splice\(0\)/.test(navigation)) {
     err('Navigation: public feature lifecycle must expose destroy() and release persistent listeners.');
+  }
+
+  const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
+  if (!/about\.softwareSkills/.test(about) ||
+      !/about\.experience/.test(about) ||
+      !/about\.education/.test(about) ||
+      !/about\.awards/.test(about)) {
+    err('About: CMS feature must render software skills, experience, education, and awards data.');
+  }
+
+  if (!/skill\.icon \|\| skill\.logo/.test(about)) {
+    err('About: CMS software skill icons must support the stored icon field.');
   }
 
   const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
@@ -719,7 +735,9 @@ function validateCmsRegressionContracts() {
     err('Gallery filters: exact CMS filter IDs must be preserved on project cards.');
   }
 
-  if (!/className = 'filter-btn'/.test(gallery) || !/filterBtns = Array\.from\(document(?:Ref)?\.querySelectorAll\('\.filter-tabs \.filter-btn, \.filter-tabs \.tab-btn'\)\)/.test(gallery)) {
+  if (!/className = 'tab-btn filter-btn active'/.test(gallery) ||
+      !/className = 'tab-btn filter-btn'/.test(gallery) ||
+      !/filterBtns = Array\.from\(document(?:Ref)?\.querySelectorAll\('\.filter-tabs \.filter-btn, \.filter-tabs \.tab-btn'\)\)/.test(gallery)) {
     err('Gallery filters: CMS filter buttons must have an owned click/filter contract.');
   }
 
@@ -747,7 +765,7 @@ function validateCmsRegressionContracts() {
   }
 }
 
-validateCmsRegressionContracts();validateCmsRegressionContracts();
+validateCmsRegressionContracts();
 validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
