@@ -18,6 +18,8 @@ As of October 3, 2026, the branch has completed the first composition/data-bound
 
 The remaining work is deliberate rather than wholesale refactoring: strengthen feature lifecycles/cleanup and CSS ownership where they materially reduce coupling, then stop architecture work when the boundaries are sufficient for the Phase 3 artwork-first redesign.
 
+The current deployment gate is intentionally separate from architectural completion: the public pages must load `js/script.js` as an ES module, and each page must provide the import map required by optional vendor infrastructure before this branch can be treated as testable.
+
 ## Target architecture
 
 ```text
