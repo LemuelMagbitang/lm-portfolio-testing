@@ -640,6 +640,17 @@ function validateBootstrapHardening() {
   if (!/return \{[\s\S]*destroy\(\)[\s\S]*cleanup\.splice\(0\)/.test(navigation)) {
     err('Navigation: public feature lifecycle must expose destroy() and release persistent listeners.');
   }
+  const publicWorks = exists('index.html') ? readText('index.html') : '';
+  const publicAbout = exists('about/index.html') ? readText('about/index.html') : '';
+  if (!/class="hamburger"/.test(publicWorks) || !/class="nav-links"/.test(publicWorks) ||
+      !/class="hamburger"/.test(publicAbout) || !/class="nav-links"/.test(publicAbout)) {
+    err('Navigation: public Works/About markup must expose the .hamburger and .nav-links contract.');
+  }
+  if (!/querySelector\('\.hamburger, \.menu-button'\)/.test(navigation) ||
+      !/querySelector\('\.nav-links, \.mobile-menu'\)/.test(navigation) ||
+      !/mobileMenu\.classList\.add\('active'\)/.test(navigation)) {
+    err('Navigation: runtime must bind the public hamburger to the public nav-links menu and toggle its active state.');
+  }
 
   const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
   if (!/about\.softwareSkills/.test(about) ||
