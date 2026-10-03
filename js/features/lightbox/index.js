@@ -1,5 +1,5 @@
 /** Architecture V2 — complete lightbox controller. */
-function createLightboxA11y(lightboxEl) {
+function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
   function getFocusable() {
@@ -11,26 +11,30 @@ function createLightboxA11y(lightboxEl) {
     const items = getFocusable();
     if (!items.length) { event.preventDefault(); lightboxEl.focus?.(); return; }
     const first = items[0], last = items[items.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    if (event.shiftKey && documentRef.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && documentRef.activeElement === last) { event.preventDefault(); first.focus(); }
   }
   function open() {
-    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    opener = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
     lightboxEl.setAttribute('aria-modal','true');
     if (!lightboxEl.hasAttribute('tabindex')) lightboxEl.setAttribute('tabindex','-1');
-    document.addEventListener('keydown', onKeydown, true);
-    window.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); });
+    documentRef.addEventListener('keydown', onKeydown, true);
+    windowRef.windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); });
   }
   function close() {
-    document.removeEventListener('keydown', onKeydown, true);
+    documentRef.removeEventListener('keydown', onKeydown, true);
     const target=opener; opener=null;
-    if(target?.isConnected) window.requestAnimationFrame(()=>target.focus());
+    if(target?.isConnected) windowRef.windowRef.requestAnimationFrame(()=>target.focus());
   }
   return {open,close};
 }
 
 
 export function initLightbox(options = {}) {
+  const documentRef = options.root?.getElementById ? options.root : globalThis.document;
+  const windowRef = documentRef?.defaultView || globalThis.window;
+  if (!documentRef) return null;
+
   const resolveAssetUrl = typeof options.resolveAssetUrl === 'function'
     ? options.resolveAssetUrl
     : value => value;
@@ -45,7 +49,7 @@ export function initLightbox(options = {}) {
     : null;
   const getActiveCards = typeof options.getActiveCards === 'function'
     ? options.getActiveCards
-    : () => Array.from(document.querySelectorAll('.project-card'));
+    : () => Array.from(documentRef.querySelectorAll('.project-card'));
   const protectionEnabled = typeof options.protectionEnabled === 'function'
     ? options.protectionEnabled
     : () => true;
@@ -60,21 +64,21 @@ export function initLightbox(options = {}) {
     listenerCleanups.push(() => target.removeEventListener(type, handler, listenerOptions));
   };
 
-  const allCards = Array.from(document.querySelectorAll('.project-card'));
+  const allCards = Array.from(documentRef.querySelectorAll('.project-card'));
 
 /* =========================================
    7. LIGHTBOX MODAL
    ========================================= */
-const lightbox = document.getElementById('lightbox');
-const lightboxControls = document.getElementById('lightboxControls');
-const lightboxClose = document.getElementById('lightboxClose');
-const lightboxPrev = document.querySelector('.lightbox-prev');
-const lightboxNext = document.querySelector('.lightbox-next');
-const modalTitle = document.getElementById('modalTitle');
-const modalDesc = document.getElementById('modalDesc');
-const modalFullDesc = document.getElementById('modalFullDesc');
-const modalMediaContainer = document.getElementById('lightboxMediaContainer');
-const lightboxA11y = createLightboxA11y(lightbox);
+const lightbox = documentRef.getElementById('lightbox');
+const lightboxControls = documentRef.getElementById('lightboxControls');
+const lightboxClose = documentRef.getElementById('lightboxClose');
+const lightboxPrev = documentRef.querySelector('.lightbox-prev');
+const lightboxNext = documentRef.querySelector('.lightbox-next');
+const modalTitle = documentRef.getElementById('modalTitle');
+const modalDesc = documentRef.getElementById('modalDesc');
+const modalFullDesc = documentRef.getElementById('modalFullDesc');
+const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
+const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef);
 
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
@@ -88,7 +92,7 @@ let activeLightboxCards = []; // Only navigate through currently filtered items
 // so there's no "Save Image As" path — no watermark, no zoom, just a
 // clean image that can't be casually saved).
 function buildImageMedia(imgUrl) {
-  const img = document.createElement('img');
+  const img = documentRef.createElement('img');
   img.src = imgUrl;
   img.draggable = false;
   img.loading = 'lazy';
@@ -113,7 +117,7 @@ function buildImageMedia(imgUrl) {
 // renders, no empty box.
 function buildMediaCaption(text) {
   if (!text || !text.trim()) return null;
-  const p = document.createElement('p');
+  const p = documentRef.createElement('p');
   p.className = 'media-caption';
   p.textContent = text.trim();
   return p;
@@ -122,10 +126,10 @@ function buildMediaCaption(text) {
 // Wraps one media element (image or video iframe) together with its
 // optional caption so they stay grouped as a single unit.
 function buildMediaEntry(mediaEl, captionText, background) {
-  const wrap = document.createElement('div');
+  const wrap = documentRef.createElement('div');
   wrap.className = 'lightbox-media-item';
   wrap.appendChild(mediaEl);
-  if (window.LMMediaBackground && background) window.LMMediaBackground.apply(wrap, background, siteAssetUrl);
+  if (windowRef.LMMediaBackground && background) windowRef.LMMediaBackground.apply(wrap, background, siteAssetUrl);
 
   const caption = buildMediaCaption(captionText);
   if (caption) wrap.appendChild(caption);
@@ -139,8 +143,8 @@ function openLightbox(index, initialMediaIndex = -1) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
   }
-  document.documentElement.classList.remove('lm-3d-focus-open');
-  document.body.classList.remove('lm-3d-focus-open');
+  documentRef.documentElement.classList.remove('lm-3d-focus-open');
+  documentRef.body.classList.remove('lm-3d-focus-open');
   currentLightboxIndex = index;
   const card = activeLightboxCards[currentLightboxIndex];
 
@@ -181,7 +185,7 @@ function openLightbox(index, initialMediaIndex = -1) {
         const { id, isShort } = parseYouTube(ytUrl);
         const embedUrl = id ? `https://www.youtube.com/embed/${id}` : ytUrl;
 
-        const iframe = document.createElement('iframe');
+        const iframe = documentRef.createElement('iframe');
         iframe.src = embedUrl;
         iframe.frameBorder = '0';
         iframe.loading = 'lazy';
@@ -210,7 +214,7 @@ function openLightbox(index, initialMediaIndex = -1) {
       }
 
       if (videoUrl) {
-        const video = document.createElement('video');
+        const video = documentRef.createElement('video');
         video.src = resolveAssetUrl(videoUrl);
         video.controls = true;
         video.playsInline = true;
@@ -261,7 +265,7 @@ function openLightbox(index, initialMediaIndex = -1) {
       }
 
       if (modelUrl) {
-        const modelWrap = document.createElement('div');
+        const modelWrap = documentRef.createElement('div');
         modelWrap.className = 'model-viewer-shell lightbox-model-viewer';
         const modelOrientation = item.getAttribute('data-orientation') || 'auto';
         modelWrap.setAttribute('data-orientation', modelOrientation);
@@ -291,9 +295,9 @@ function openLightbox(index, initialMediaIndex = -1) {
                     lightboxControls.classList.add('is-3d-controls-disabled');
                     lightboxControls.inert = true;
                   }
-                  document.documentElement.classList.add('lm-3d-focus-open');
-                  document.body.classList.add('lm-3d-focus-open');
-                  requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
+                  documentRef.documentElement.classList.add('lm-3d-focus-open');
+                  documentRef.body.classList.add('lm-3d-focus-open');
+                  windowRef.requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
                 },
                 onDeactivate: () => {
                   lightbox.classList.remove('is-3d-focused');
@@ -302,11 +306,11 @@ function openLightbox(index, initialMediaIndex = -1) {
                     lightboxControls.classList.remove('is-3d-controls-disabled');
                     lightboxControls.inert = false;
                   }
-                  document.documentElement.classList.remove('lm-3d-focus-open');
-                  document.body.classList.remove('lm-3d-focus-open');
+                  documentRef.documentElement.classList.remove('lm-3d-focus-open');
+                  documentRef.body.classList.remove('lm-3d-focus-open');
                   const previousScroll = Number(lightbox.dataset.pre3dScrollTop);
                   if (Number.isFinite(previousScroll)) {
-                    requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
+                    windowRef.requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
                   }
                   delete lightbox.dataset.pre3dScrollTop;
                 }
@@ -324,7 +328,7 @@ function openLightbox(index, initialMediaIndex = -1) {
         // video above (manual override, else a landscape default),
         // since there's no equivalent of videoWidth/videoHeight to
         // read the real proportions from up front.
-        const player = document.createElement('lottie-player');
+        const player = documentRef.createElement('lottie-player');
         player.setAttribute('src', resolveAssetUrl(lottieUrl));
         player.setAttribute('autoplay', '');
         player.setAttribute('loop', '');
@@ -344,12 +348,12 @@ function openLightbox(index, initialMediaIndex = -1) {
     const thumbMedia = card.querySelector('.card-thumbnail .project-thumb-media, .card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player');
     if (thumbMedia) {
       if (thumbMedia.tagName === 'LOTTIE-PLAYER') {
-        const player = document.createElement('lottie-player');
+        const player = documentRef.createElement('lottie-player');
         player.setAttribute('src', resolveAssetUrl(thumbMedia.getAttribute('src') || ''));
         player.setAttribute('autoplay',''); player.setAttribute('loop',''); player.setAttribute('background','transparent');
         modalMediaContainer.appendChild(buildMediaEntry(player, ''));
       } else if (thumbMedia.tagName === 'VIDEO') {
-        const video = document.createElement('video');
+        const video = documentRef.createElement('video');
         video.src = thumbMedia.src; video.controls = true; video.playsInline = true;
         modalMediaContainer.appendChild(buildMediaEntry(video, ''));
       } else if (thumbMedia.src) {
@@ -362,13 +366,13 @@ function openLightbox(index, initialMediaIndex = -1) {
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open();
-  document.body.style.overflow = 'hidden';
+  documentRef.body.style.overflow = 'hidden';
 
   // When a project was opened by clicking its 3D thumbnail, keep the
   // visitor at that artwork instead of resetting the project overlay to
   // the first media item. The target is centered because it remains easy
   // to understand on both desktop and small touch screens.
-  requestAnimationFrame(() => {
+  windowRef.requestAnimationFrame(() => {
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
     if (initialMediaIndex >= 0 && items[initialMediaIndex]) {
       items[initialMediaIndex].scrollIntoView({
@@ -421,12 +425,12 @@ function closeLightbox() {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
   }
-  document.documentElement.classList.remove('lm-3d-focus-open');
-  document.body.classList.remove('lm-3d-focus-open');
+  documentRef.documentElement.classList.remove('lm-3d-focus-open');
+  documentRef.body.classList.remove('lm-3d-focus-open');
   if (lightboxControls) lightboxControls.classList.remove('active');
   lightboxA11y.close();
   delete lightbox.dataset.pre3dScrollTop;
-  document.body.style.overflow = ''; // Restore body scroll
+  documentRef.body.style.overflow = ''; // Restore body scroll
   // Dispose any mounted 3D viewers before removing their DOM nodes. The
   // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
   // keydown listener, none of which are cleaned up by innerHTML alone.
