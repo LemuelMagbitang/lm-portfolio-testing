@@ -1,0 +1,27 @@
+/* LM UI tokens — shared visual primitives for the portfolio.
+   Values mirror the current visual baseline; changing a token is the intended
+   way to evolve the system without editing every component selector. */
+
+:root {
+  --lm-color-background: #121212;
+  --lm-color-surface: #0d0d0d;
+  --lm-color-text-primary: #ffffff;
+  --lm-color-text-secondary: #cccccc;
+  --lm-color-text-tertiary: #aaaaaa;
+  --lm-color-text-muted: #888888;
+  --lm-color-text-subtle: #666666;
+
+  --lm-container-max: 1400px;
+  --lm-page-gutter: 24px;
+  --lm-card-radius: 12px;
+
+  --lm-glass-fill: rgba(255, 255, 255, 0.05);
+  --lm-glass-border: rgba(255, 255, 255, 0.10);
+  --lm-glass-blur: 10px;
+
+  --lm-motion-fast: 0.2s;
+  --lm-motion-standard: 0.3s;
+  --lm-motion-slow: 0.4s;
+  --lm-motion-image: 0.8s;
+  --lm-motion-ease: ease;
+}
