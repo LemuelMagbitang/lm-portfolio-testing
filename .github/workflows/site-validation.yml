@@ -33,32 +33,7 @@ jobs:
           node-version: 24
 
       - name: Validate site data, paths, and JavaScript
-        run: |
-          set -euo pipefail
-          cp tools/validate-site.mjs "$RUNNER_TEMP/validate-site.mjs"
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          const file = process.env.RUNNER_TEMP + '/validate-site.mjs';
-          let source = fs.readFileSync(file, 'utf8');
-
-          source = source.replace(
-            "if (!/catch \\(err\\) \\{\\s*console\\.error\\('LM bootstrap: public frontend failed to initialize\\.'/.test(source)) {",
-            "if (!/catch \\(err\\) \\{\\s*console\\.error\\('Portfolio runtime failed to initialize'/.test(source)) {"
-          );
-
-          source = source.replace(
-            "if (!script.includes('await cmsReady;') || script.indexOf('await cmsReady;') > script.indexOf('initGallery()')) {",
-            "const cmsReadyPos = script.indexOf('await cmsReady;');\n  const galleryInitPos = script.indexOf('initGallery(');\n  if (cmsReadyPos < 0 || galleryInitPos < 0 || cmsReadyPos > galleryInitPos) {"
-          );
-
-          source = source.replace(
-            "if (!script.includes('const allBtn = tabs.querySelector')) err('Gallery filters: ALL fallback/structural button contract is missing.');",
-            "if (!script.includes('card.dataset.filterIds') || !gallery.includes(\"currentFilter = 'all'\")) err('Gallery filters: ALL fallback/structural button contract is missing.');"
-          );
-
-          fs.writeFileSync(file, source, 'utf8');
-          NODE
-          node "$RUNNER_TEMP/validate-site.mjs"
+        run: node tools/validate-site.mjs
 
       - name: Validate architecture boundaries
         run: node tools/validate-architecture.mjs
