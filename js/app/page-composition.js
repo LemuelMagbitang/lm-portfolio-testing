@@ -98,7 +98,7 @@ export async function createPortfolioApp({
   const hero = root.querySelector('.hero');
   if (hero) {
     try {
-      await initHeroBannerV2(hero, {
+      await initHeroBannerV2({
         mode: settings.heroTiming.loopMode,
         transition: settings.heroTiming.transitionStyle,
         crossfadeMs: settings.heroTiming.crossfadeMs,
