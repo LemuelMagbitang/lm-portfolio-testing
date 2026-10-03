@@ -540,7 +540,7 @@ function validateArchitecture() {
     ['js/hero.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
     ['js/lightbox.js', /export function initLightbox/],
     ['js/features/projects/index.js', /export \{ mountProjects \}/],
-    ['js/features/project-filters/index.js', /export async function initProjectFilters/],
+    ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/settings/index.js', /export async function initSiteSettings/]
   ];
 
@@ -631,7 +631,6 @@ function validateResponsiveUiContracts() {
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   const gallery = exists('js/gallery.js') ? readText('js/gallery.js') : '';
-  const filterFeature = exists('js/features/project-filters/index.js') ? readText('js/features/project-filters/index.js') : '';
   const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
   const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
@@ -649,12 +648,12 @@ function validateCmsRegressionContracts() {
     err('Gallery filters: exact CMS filter IDs must be preserved on project cards.');
   }
 
-  if (!/className = 'filter-btn'/.test(filterFeature) || !/container\.addEventListener\('click'/.test(filterFeature)) {
+  if (!/className = 'filter-btn'/.test(gallery) || !/filterBtns = Array.from\(document\.querySelectorAll\('\.filter-tabs \.filter-btn, \.filter-tabs \.tab-btn'\)\)/.test(gallery)) {
     err('Gallery filters: CMS filter buttons must have an owned click/filter contract.');
   }
 
-  if (!/Array\.from\(container\.querySelectorAll\('\.filter-btn, \.tab-btn'\)\)/.test(filterFeature)) {
-    err('Gallery filters: ALL fallback button must remain compatible with the structural CMS filter.');
+  if (!/async function loadFilterButtons\(\)/.test(gallery) || !/options\.filterUrl/.test(gallery)) {
+    err('Gallery filters: CMS filter loading must remain inside the Gallery feature boundary.');
   }
 
   if (!composition.includes('mountProjects(') ||
