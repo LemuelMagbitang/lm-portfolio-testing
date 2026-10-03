@@ -511,6 +511,31 @@ try {
         window.__LM_CMS_SMOKE_ABOUT__ = encodedAbout;
       }, { encodedAbout: encoded });
 
+      await page.route('https://raw.githubusercontent.com/Smoke/TestRepo/**', async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname.endsWith('Sample.json')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 100, h: 100, nm: 'Smoke', ddd: 0, assets: [], layers: [] })
+          });
+          return;
+        }
+        if (url.pathname.endsWith('.obj')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'text/plain',
+            body: 'o Smoke\nv 0 0 0\nv 0 1 0\nv 1 0 0\nf 1 2 3\n'
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#fff"/></svg>'
+        });
+      });
+
       await page.route('https://api.github.com/**', async route => {
         const url = new URL(route.request().url());
         if (url.pathname === '/repos/Smoke/TestRepo') {
