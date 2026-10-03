@@ -52,6 +52,9 @@ jobs:
       - name: Syntax-check CMS
         run: node --check admin/admin.js
 
+      - name: Syntax-check smoke test
+        run: node --check tools/smoke-browser.mjs
+
       - name: Browser smoke test
         run: |
           set -euo pipefail
