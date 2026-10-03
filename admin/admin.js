@@ -2377,110 +2377,116 @@ RENDERERS.about = function(data){
   function automaticSoftwareIconCandidates(name){
     const raw=String(name||'').trim();
     const slug=SOFTWARE_ICON_ALIASES[raw.toLowerCase()] || normalizeSoftwareName(raw);
-    return slug
-      ? ['https://cdn.jsdelivr.net/npm/simple-icons@'+SOFTWARE_ICONS_VERSION+'/icons/'+encodeURIComponent(slug)+'.svg']
-      : [];
+    return slug ? ['https://cdn.jsdelivr.net/npm/simple-icons@'+SOFTWARE_ICONS_VERSION+'/icons/'+encodeURIComponent(slug)+'.svg'] : [];
   }
 
   async function findAutomaticSoftwareLogoCandidates(name){
     const raw=String(name||'').trim();
-    if(!raw) return [];
     const key=raw.toLowerCase();
+    if(!raw) return [];
     if(SOFTWARE_LOGO_CACHE.has(key)) return SOFTWARE_LOGO_CACHE.get(key);
     if(SOFTWARE_LOGO_PENDING.has(key)) return SOFTWARE_LOGO_PENDING.get(key);
 
     const request=(async()=>{
-      const candidates=automaticSoftwareIconCandidates(raw);
-      try{
-        const response=await fetch(
-          'https://api.iconify.design/search?query='+encodeURIComponent(raw)+'&prefixes=simple-icons,logos&limit=12',
-          {headers:{Accept:'application/json'}}
-        );
-        if(response.ok){
-          const payload=await response.json();
-          const normalized=normalizeSoftwareName(raw);
-          const discovered=(Array.isArray(payload?.icons)?payload.icons:[])
-            .map(icon=>String(icon||''))
-            .map(icon=>{
-              const parts=icon.split(':');
-              const prefix=parts.shift();
-              const iconName=parts.join(':');
-              const slug=normalizeSoftwareName(iconName);
-              const score=slug===normalized?1000:slug.includes(normalized)?700:0;
-              return {prefix,iconName,score};
-            })
-            .filter(x=>x.prefix&&x.iconName&&x.score>0)
-            .sort((a,b)=>b.score-a.score)
-            .map(x=>'https://api.iconify.design/'+encodeURIComponent(x.prefix)+'/'+encodeURIComponent(x.iconName)+'.svg');
-          const seen=new Set(candidates);
-          discovered.forEach(url=>{if(!seen.has(url)){seen.add(url);candidates.push(url);}});
-        }
-      }catch(_){}
-      SOFTWARE_LOGO_CACHE.set(key,candidates);
-      return candidates;
+      const direct=automaticSoftwareIconCandidates(raw);
+      SOFTWARE_LOGO_CACHE.set(key,direct);
+      return direct;
     })().finally(()=>SOFTWARE_LOGO_PENDING.delete(key));
 
     SOFTWARE_LOGO_PENDING.set(key,request);
     return request;
   }
 
+  async function findAutomaticSoftwareLogoDiscovery(name){
+    const raw=String(name||'').trim();
+    if(!raw) return [];
+    try{
+      const response=await fetch(
+        'https://api.iconify.design/search?query='+encodeURIComponent(raw)+'&prefixes=simple-icons,logos&limit=12',
+        {headers:{Accept:'application/json'}}
+      );
+      if(!response.ok) return [];
+      const payload=await response.json();
+      const normalized=normalizeSoftwareName(raw);
+      return (Array.isArray(payload?.icons)?payload.icons:[])
+        .map(icon=>String(icon||''))
+        .map(icon=>{
+          const parts=icon.split(':');
+          const prefix=parts.shift();
+          const iconName=parts.join(':');
+          const slug=normalizeSoftwareName(iconName);
+          const score=slug===normalized?1000:slug.includes(normalized)?700:0;
+          return {prefix,iconName,score};
+        })
+        .filter(x=>x.prefix&&x.iconName&&x.score>0)
+        .sort((a,b)=>b.score-a.score)
+        .map(x=>'https://api.iconify.design/'+encodeURIComponent(x.prefix)+'/'+encodeURIComponent(x.iconName)+'.svg');
+    }catch(_){
+      return [];
+    }
+  }
+
   function buildSoftwareSkills(id, arr){
     const box = document.getElementById(id);
 
-    function preloadCandidates(host, name, candidates, index = 0){
-      if(!host || !host.isConnected || !candidates[index]) return;
-      const probe = new Image();
+    function preloadCandidates(host, name, candidates, index = 0, onExhausted){
+      if(!host || !host.isConnected || !candidates[index]){
+        onExhausted?.();
+        return;
+      }
 
+      const probe = new Image();
       probe.onload = () => {
         if(!host.isConnected) return;
-        probe.className = 'skill-logo';
-        probe.alt = name;
-        probe.title = name;
-        probe.loading = 'lazy';
+        probe.className='skill-logo';
+        probe.alt=name;
+        probe.title=name;
+        probe.loading='lazy';
         host.replaceChildren(probe);
       };
-
-      probe.onerror = () => preloadCandidates(host, name, candidates, index + 1);
-      probe.src = candidates[index];
+      probe.onerror = () => preloadCandidates(host,name,candidates,index+1,onExhausted);
+      probe.src=candidates[index];
     }
 
     function repaint(){
-      box.innerHTML = '';
+      box.innerHTML='';
 
       arr.forEach((skill,i)=>{
-        const hasManualIcon = !!skill.icon;
-        const pill = document.createElement('span');
-        pill.className = 'skill-editor-row';
+        const hasManualIcon=!!skill.icon;
+        const pill=document.createElement('span');
+        pill.className='skill-editor-row';
         pill.innerHTML = [
-          '<span class="skill-pill-icon" data-iconbtn title="' + (hasManualIcon ? 'Change logo' : 'Automatic logo lookup — click to set a specific logo') + '">',
-          '<span class="skill-pill-logo-placeholder" aria-hidden="true">' + esc((skill.name || '').slice(0,2).toUpperCase()) + '</span>',
-          '</span>',
-          '<span class="skill-pill-name">' + esc(skill.name) + '</span>',
+          '<span class="skill-pill-icon" data-iconbtn title="',
+          hasManualIcon ? 'Change logo' : 'Automatic logo lookup — click to set a specific logo',
+          '"><span class="skill-pill-logo-placeholder" aria-hidden="true">',
+          esc((skill.name||'').slice(0,2).toUpperCase()),
+          '</span></span>',
+          '<span class="skill-pill-name">',esc(skill.name),'</span>',
           hasManualIcon ? '<button type="button" class="clear-icon-btn" data-clearicon title="Use the automatic lookup instead">&times;</button>' : '',
-          '<button type="button" data-removeskill title="Remove ' + esc(skill.name) + '">&times;</button>'
+          '<button type="button" data-removeskill title="Remove ',esc(skill.name),'">&times;</button>'
         ].join('');
 
-        const host = pill.querySelector('[data-iconbtn]');
+        const host=pill.querySelector('[data-iconbtn]');
 
-        async function showAutomatic(){
-          const candidates = await findAutomaticSoftwareLogoCandidates(skill.name);
+        async function discoverAfterDirectFails(){
+          const discovered=await findAutomaticSoftwareLogoDiscovery(skill.name);
           if(!pill.isConnected || host.querySelector('img.skill-logo')) return;
-          preloadCandidates(host, skill.name, candidates);
+          preloadCandidates(host,skill.name,discovered);
         }
 
+        const showAutomatic=async()=>{
+          const direct=await findAutomaticSoftwareLogoCandidates(skill.name);
+          if(!pill.isConnected) return;
+          if(direct.length){
+            preloadCandidates(host,skill.name,direct,0,discoverAfterDirectFails);
+          }else{
+            discoverAfterDirectFails();
+          }
+        };
+
         if(hasManualIcon){
-          const manualUrl = ghRawUrl(skill.icon);
-          const manualProbe = new Image();
-          manualProbe.onload = () => {
-            if(!pill.isConnected || host.querySelector('img.skill-logo')) return;
-            manualProbe.className = 'skill-logo';
-            manualProbe.alt = skill.name;
-            manualProbe.title = skill.name;
-            manualProbe.loading = 'lazy';
-            host.replaceChildren(manualProbe);
-          };
-          manualProbe.onerror = () => showAutomatic();
-          manualProbe.src = manualUrl;
+          const manualUrl=ghRawUrl(skill.icon);
+          preloadCandidates(host,skill.name,[manualUrl],0,showAutomatic);
         }else{
           showAutomatic();
         }
