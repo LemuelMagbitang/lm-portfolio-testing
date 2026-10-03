@@ -1,16 +1,10 @@
 /**
  * Public API for the Projects feature.
  *
- * Consumers import from this module instead of reaching into implementation
- * files. Internal filenames can change without forcing application-wide edits.
+ * Application code should enter the feature through mountProjects() instead
+ * of reaching into card/media implementation files. Internal filenames can
+ * change without forcing application-wide edits.
  */
 
-export { loadProjects } from './project-loader.js';
 export { mountProjects } from './browser-runtime.js';
-export { buildProjectCardElement } from './project-card.js';
-export { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
-export {
-  buildMediaItemElement,
-  findProjectMediaBackground,
-  projectHas3D
-} from './project-media.js';
+export { loadProjects } from './project-loader.js';
