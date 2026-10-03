@@ -226,6 +226,9 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     const parseYouTube = typeof options.parseYouTubeUrl === 'function' ? options.parseYouTubeUrl : parseYouTubeUrl;
     const isReducedMotion = typeof options.prefersReducedMotion === 'function' ? options.prefersReducedMotion : prefersReducedMotion;
 
+    const heroLoopUrl = options.heroLoopUrl || 'data/hero-loop.json';
+    const projectsUrl = options.projectsUrl || 'data/projects.json';
+
     const config = {
       loopMode: ['latest','manual','mixed'].includes(options.loopMode) ? options.loopMode : 'latest',
       transitionStyle: ['kenburns','fade','none'].includes(options.transitionStyle) ? options.transitionStyle : 'kenburns',
@@ -243,7 +246,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     // is preferred over pasted JSON because it stays version-controlled,
     // cacheable, and easy to replace from the Media Library.
     try {
-      const list = await loadJson(window.HERO_LOOP_URL || 'data/hero-loop.json', [], { resolveUrl: resolveAssetUrl });
+      const list = await loadJson(heroLoopUrl, [], { resolveUrl: resolveAssetUrl });
       manualSources = (Array.isArray(list) ? list : [])
         .map(item => heroSourceFromManualEntry(item, siteRootUrl))
         .filter(Boolean);
@@ -257,7 +260,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
     try {
       latestSources = collectHeroSources(document, null);
       if (latestSources.length === 0) {
-        const list = await loadJson(window.PROJECTS_URL || 'data/projects.json', [], { resolveUrl: resolveAssetUrl });
+        const list = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
         latestSources = (Array.isArray(list) ? list : [])
           .map(p => heroSourceFromProjectData(p, siteRootUrl))
           .filter(Boolean);
