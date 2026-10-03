@@ -2037,7 +2037,7 @@ RENDERERS.projects = async function(data){
           wirePreviewAspect(previewEl.firstElementChild, m);
           if (m.type === 'model' && m.src) {
             try {
-              const { mountModelViewer } = await import('../js/model-viewer.js');
+              const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js');
               const host = previewEl.querySelector('[data-model-preview]');
               if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), {
                 background: m.background || null,
@@ -2687,11 +2687,7 @@ const MEDIA_REFERENCE_FILES = [
   'success/index.html',
   'css/style.css',
   'js/script.js',
-  'js/hero.js',
-  'js/lightbox.js',
   'js/media-background.js',
-  'js/model-viewer.js',
-  'js/site-runtime.js',
   'data/about.json',
   'data/filters.json',
   'data/hero-loop.json',
