@@ -1,3 +1,5 @@
+import { findSoftwareLogoCandidates } from '../../infrastructure/software-logo/lookup.js';
+
 export async function initAbout({
   url,
   root = globalThis.document,
@@ -36,11 +38,46 @@ export async function initAbout({
       : word[0].toUpperCase()).join('');
   }
 
+  async function hydrateAutomaticLogo(frame, name) {
+    if (!frame || !frame.isConnected || !showSoftwareLogos) return;
+    const candidates = await findSoftwareLogoCandidates(name);
+    if (!frame.isConnected || !showSoftwareLogos || !candidates.length) return;
+
+    const image = root.createElement('img');
+    image.className = 'skill-logo';
+    image.alt = name;
+    image.title = name;
+    image.loading = 'lazy';
+
+    let index = 0;
+    const tryCandidate = () => {
+      if (index >= candidates.length || !frame.isConnected) {
+        frame.classList.add('is-fallback');
+        frame.textContent = skillInitials(name);
+        return;
+      }
+      image.src = candidates[index];
+    };
+
+    image.addEventListener('load', () => {
+      if (!frame.isConnected) return;
+      frame.classList.remove('is-fallback');
+      frame.replaceChildren(image);
+    });
+    image.addEventListener('error', () => {
+      index += 1;
+      tryCandidate();
+    });
+
+    tryCandidate();
+  }
+
   function renderSoftwareSkills(list = softwareSkills) {
     if (!softwareList || !Array.isArray(list)) return;
     softwareSkills = list;
 
     const fragment = root.createDocumentFragment();
+    const automaticJobs = [];
 
     list.forEach(skill => {
       if (!skill) return;
@@ -53,7 +90,7 @@ export async function initAbout({
         ? String(skill.icon || skill.logo || '').trim()
         : '';
 
-      if (!showSoftwareLogos || !icon) {
+      if (!showSoftwareLogos) {
         item.textContent = name;
         fragment.appendChild(item);
         return;
@@ -69,13 +106,17 @@ export async function initAbout({
       image.alt = name;
       image.title = name;
       image.loading = 'lazy';
-      image.src = typeof resolveAssetUrl === 'function' ? resolveAssetUrl(icon) : icon;
 
-      image.addEventListener('error', () => {
+      if (icon) {
+        image.src = typeof resolveAssetUrl === 'function' ? resolveAssetUrl(icon) : icon;
+        image.addEventListener('error', () => {
+          hydrateAutomaticLogo(frame, name);
+        }, { once: true });
+      } else {
         frame.classList.add('is-fallback');
-        image.remove();
         frame.textContent = skillInitials(name);
-      }, { once: true });
+        automaticJobs.push({ frame, name });
+      }
 
       frame.appendChild(image);
       item.appendChild(frame);
@@ -83,6 +124,7 @@ export async function initAbout({
     });
 
     softwareList.replaceChildren(fragment);
+    automaticJobs.forEach(job => hydrateAutomaticLogo(job.frame, job.name));
   }
 
   function renderMultimediaSkills(list = multimediaSkills) {
