@@ -494,6 +494,23 @@ function validateGalleryContract() {
   }
 }
 
+function validateModuleScriptContract() {
+  const pages = [
+    ['index.html', 'js/script.js'],
+    ['about/index.html', '../js/script.js']
+  ];
+
+  for (const [file, src] of pages) {
+    if (!exists(file)) continue;
+    const html = readText(file);
+    const escapedSrc = src.replace(/[.*+?^$(){}|[\]\\]/g, '\\function validateBootstrapHardening() {');
+    const pattern = new RegExp('<script\\b[^>]*type=["\\\']module["\\\'][^>]*src=["\\\']' + escapedSrc);
+    if (!pattern.test(html)) {
+      err(file + ': js/script.js must be loaded with type="module".');
+    }
+  }
+}
+
 function validateBootstrapHardening() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
   const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
@@ -601,6 +618,7 @@ validateTargetBlankRel('about/index.html');
 validateTargetBlankRel('admin/index.html');
 validateArchitecture();
 validateBootstrapHardening();
+validateModuleScriptContract();
 
 function validateResponsiveUiContracts() {
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
