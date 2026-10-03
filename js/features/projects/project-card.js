@@ -37,24 +37,24 @@ function getFallbackThumbnailSource(project = {}) {
 
 export function buildProjectCardElement(
   project = {},
-  { resolveAssetUrl, show3DIndicator = true } = {}
+  { resolveAssetUrl, show3DIndicator = true, documentRef = globalThis.document } = {}
 ) {
-  const card = document.createElement('div');
+  const card = documentRef.createElement('div');
   const filters = Array.isArray(project.filters) ? project.filters.filter(Boolean) : [];
   card.className = ['project-card', ...filters].join(' ');
   card.dataset.filterIds = JSON.stringify(filters);
 
   if (project.badge) {
-    const badges = document.createElement('div');
+    const badges = documentRef.createElement('div');
     badges.className = 'card-badges';
-    const span = document.createElement('span');
+    const span = documentRef.createElement('span');
     span.className = 'badge glass';
     span.textContent = String(project.badge);
     badges.appendChild(span);
     card.appendChild(badges);
   }
 
-  const thumbnail = document.createElement('div');
+  const thumbnail = documentRef.createElement('div');
   thumbnail.className = 'card-thumbnail';
   const explicitThumbnail = project.thumbnail || {};
   const fallbackThumbnail = explicitThumbnail.src ? null : getFallbackThumbnailSource(project);
@@ -67,7 +67,7 @@ export function buildProjectCardElement(
     const media = buildProjectThumbnailMedia(
       { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
       project.title || 'Project artwork',
-      { resolveAssetUrl }
+      { resolveAssetUrl, documentRef }
     );
     if (media) {
       if (t.focus) media.dataset.focus = String(t.focus);
@@ -87,37 +87,37 @@ export function buildProjectCardElement(
 
   if (show3DIndicator && projectHas3D(project)) {
     thumbnail.classList.add('has-3d-view');
-    const indicator = document.createElement('div');
+    const indicator = documentRef.createElement('div');
     indicator.className = 'card-3d-indicator';
     indicator.innerHTML = '<i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D VIEW AVAILABLE</span>';
     thumbnail.appendChild(indicator);
   }
   card.appendChild(thumbnail);
 
-  const info = document.createElement('div');
+  const info = documentRef.createElement('div');
   info.className = 'glass-info';
-  const title = document.createElement('h3');
+  const title = documentRef.createElement('h3');
   title.textContent = project.title || '';
-  const subtitle = document.createElement('p');
+  const subtitle = documentRef.createElement('p');
   subtitle.textContent = project.subtitle || '';
   info.append(title, subtitle);
   card.appendChild(info);
 
   if (project.description) {
-    const description = document.createElement('div');
+    const description = documentRef.createElement('div');
     description.className = 'project-description';
     description.style.display = 'none';
-    const text = document.createElement('p');
+    const text = documentRef.createElement('p');
     text.textContent = project.description;
     description.appendChild(text);
     card.appendChild(description);
   }
 
-  const mediaList = document.createElement('div');
+  const mediaList = documentRef.createElement('div');
   mediaList.className = 'project-media-list';
   mediaList.style.display = 'none';
   (Array.isArray(project.media) ? project.media : []).forEach(media => {
-    if (media?.src) mediaList.appendChild(buildMediaItemElement(media));
+    if (media?.src) mediaList.appendChild(buildMediaItemElement(media, { documentRef }));
   });
   card.appendChild(mediaList);
 
