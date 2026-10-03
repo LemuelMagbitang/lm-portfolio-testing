@@ -2431,12 +2431,14 @@ RENDERERS.about = function(data){
           if(!pill.isConnected) return;
           const attempts = await findAutomaticSoftwareLogoCandidates(skill.name);
           if(!pill.isConnected || !attempts.length) return;
+
           let index = 0;
           const tryNext = () => {
             if(index >= attempts.length || !pill.isConnected) return;
             img.style.display = '';
             img.src = attempts[index];
           };
+
           img.addEventListener('load', () => {
             if(!pill.isConnected) return;
             fallback.style.display = 'none';
@@ -2444,12 +2446,15 @@ RENDERERS.about = function(data){
           img.addEventListener('error', () => {
             index++;
             tryNext();
-          });
+          }, { once: false });
           tryNext();
         };
 
-        if(!hasManualIcon) automaticJobs.push(hydrateAutomatic);
-        img?.addEventListener('error', () => hydrateAutomatic());
+        if(!hasManualIcon) {
+          automaticJobs.push(hydrateAutomatic);
+        } else {
+          img?.addEventListener('error', () => hydrateAutomatic(), { once: true });
+        }
 
         pill.querySelector('[data-iconbtn]').addEventListener('click', ()=>{
           openMediaPicker(path => { skill.icon = path; flagUnsaved(); repaint(); });
