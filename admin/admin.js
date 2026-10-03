@@ -2336,72 +2336,91 @@ RENDERERS.about = function(data){
   // actually shown as a logo at all, site-wide, is the one switch in
   // Settings & Toggles — this box just prepares each skill for
   // whichever way that switch is set.
+
   const SOFTWARE_LOGO_CACHE = new Map();
   const SOFTWARE_LOGO_PENDING = new Map();
-  const SOFTWARE_QUERY_ALIASES = {
-    'premier pro': 'premiere pro',
-    'adobe premier pro': 'adobe premiere pro',
-    'after effects': 'adobe after effects',
-    'ae': 'adobe after effects',
-    'photoshop': 'adobe photoshop',
-    'ps': 'adobe photoshop',
-    'illustrator': 'adobe illustrator',
-    'ai': 'adobe illustrator',
-    'youtube': 'youtube'
+  const SOFTWARE_ICON_ALIASES = {
+    'blender':'blender',
+    'krita':'krita',
+    'figma':'figma',
+    'youtube':'youtube',
+    'after effects':'adobeaftereffects',
+    'adobe after effects':'adobeaftereffects',
+    'premier pro':'adobepremierepro',
+    'premiere pro':'adobepremierepro',
+    'adobe premiere pro':'adobepremierepro',
+    'photoshop':'adobephotoshop',
+    'adobe photoshop':'adobephotoshop',
+    'illustrator':'adobeillustrator',
+    'adobe illustrator':'adobeillustrator',
+    'davinci resolve':'davinciresolve',
+    'da vinci resolve':'davinciresolve',
+    'cinema 4d':'cinema4d',
+    'maya':'autodeskmaya',
+    'autodesk maya':'autodeskmaya',
+    '3ds max':'3dsmax',
+    'zbrush':'zbrush',
+    'unity':'unity',
+    'unreal engine':'unrealengine',
+    'procreate':'procreate',
+    'clip studio paint':'clipstudiopaint',
+    'substance painter':'substancepainter',
+    'houdini':'houdini',
+    'sketchup':'sketchup'
   };
+  const SOFTWARE_ICONS_VERSION = '16.33.0';
 
   function normalizeSoftwareName(value){
     return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
   }
 
-  function scoreSoftwareLogo(iconId, query){
-    const rawName = String(iconId || '').split(':').pop() || '';
-    const normalized = normalizeSoftwareName(rawName);
-    if(!normalized) return -1;
-    if(normalized===query) return 1000;
-    if(normalized.includes(query)) return 700-Math.abs(normalized.length-query.length);
-    if(query.includes(normalized)) return 600-Math.abs(normalized.length-query.length);
-    return 0;
+  function automaticSoftwareIconCandidates(name){
+    const raw=String(name||'').trim();
+    const slug=SOFTWARE_ICON_ALIASES[raw.toLowerCase()] || normalizeSoftwareName(raw);
+    return slug
+      ? ['https://cdn.jsdelivr.net/npm/simple-icons@'+SOFTWARE_ICONS_VERSION+'/icons/'+encodeURIComponent(slug)+'.svg']
+      : [];
   }
 
   async function findAutomaticSoftwareLogoCandidates(name){
-    const rawName = String(name || '').trim();
-    if(!rawName) return [];
-    const queryText = SOFTWARE_QUERY_ALIASES[rawName.toLowerCase()] || rawName;
-    const key = normalizeSoftwareName(queryText);
-    if(!key) return [];
+    const raw=String(name||'').trim();
+    if(!raw) return [];
+    const key=raw.toLowerCase();
     if(SOFTWARE_LOGO_CACHE.has(key)) return SOFTWARE_LOGO_CACHE.get(key);
     if(SOFTWARE_LOGO_PENDING.has(key)) return SOFTWARE_LOGO_PENDING.get(key);
 
-    const url = 'https://api.iconify.design/search?query='
-      + encodeURIComponent(queryText)
-      + '&prefixes=simple-icons,logos&limit=12';
+    const request=(async()=>{
+      const candidates=automaticSoftwareIconCandidates(raw);
+      try{
+        const response=await fetch(
+          'https://api.iconify.design/search?query='+encodeURIComponent(raw)+'&prefixes=simple-icons,logos&limit=12',
+          {headers:{Accept:'application/json'}}
+        );
+        if(response.ok){
+          const payload=await response.json();
+          const normalized=normalizeSoftwareName(raw);
+          const discovered=(Array.isArray(payload?.icons)?payload.icons:[])
+            .map(icon=>String(icon||''))
+            .map(icon=>{
+              const parts=icon.split(':');
+              const prefix=parts.shift();
+              const iconName=parts.join(':');
+              const slug=normalizeSoftwareName(iconName);
+              const score=slug===normalized?1000:slug.includes(normalized)?700:0;
+              return {prefix,iconName,score};
+            })
+            .filter(x=>x.prefix&&x.iconName&&x.score>0)
+            .sort((a,b)=>b.score-a.score)
+            .map(x=>'https://api.iconify.design/'+encodeURIComponent(x.prefix)+'/'+encodeURIComponent(x.iconName)+'.svg');
+          const seen=new Set(candidates);
+          discovered.forEach(url=>{if(!seen.has(url)){seen.add(url);candidates.push(url);}});
+        }
+      }catch(_){}
+      SOFTWARE_LOGO_CACHE.set(key,candidates);
+      return candidates;
+    })().finally(()=>SOFTWARE_LOGO_PENDING.delete(key));
 
-    const request = fetch(url, { headers: { Accept: 'application/json' } })
-      .then(async response => {
-        if(!response.ok) return [];
-        const payload = await response.json();
-        const icons = Array.isArray(payload?.icons) ? payload.icons : [];
-        const sorted = icons.map(icon => ({icon,score:scoreSoftwareLogo(icon,key)}))
-          .filter(item => item.score > 0)
-          .sort((a,b) => b.score-a.score)
-          .map(item => item.icon);
-        const urls = sorted.map(iconId => {
-          const parts = String(iconId).split(':');
-          const prefix = parts.shift();
-          const iconName = parts.join(':');
-          return 'https://api.iconify.design/' + encodeURIComponent(prefix) + '/' + encodeURIComponent(iconName) + '.svg';
-        });
-        SOFTWARE_LOGO_CACHE.set(key, urls);
-        return urls;
-      })
-      .catch(() => {
-        SOFTWARE_LOGO_CACHE.set(key, []);
-        return [];
-      })
-      .finally(() => SOFTWARE_LOGO_PENDING.delete(key));
-
-    SOFTWARE_LOGO_PENDING.set(key, request);
+    SOFTWARE_LOGO_PENDING.set(key,request);
     return request;
   }
 
