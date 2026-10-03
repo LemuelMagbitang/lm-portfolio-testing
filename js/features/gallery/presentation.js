@@ -87,6 +87,21 @@ export function applyGalleryReveal({
     hiddenCards.forEach(card => {
       if (!filteredSet.has(card)) card.style.display = 'none';
     });
+
+    // Re-measure after the outgoing filter cards leave layout. Otherwise a
+    // collapsed gallery can keep the previous filter's taller grid height
+    // even though those cards are now display:none.
+    if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
+      windowRef.requestAnimationFrame(() => {
+        if (!isCurrentRender(renderToken)) return;
+        const gridRect = grid.getBoundingClientRect();
+        const lastVisible = filteredCards[visibleCount - 1];
+        const cardRect = lastVisible?.getBoundingClientRect?.();
+        if (!cardRect || !Number.isFinite(cardRect.bottom)) return;
+        const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
+        grid.style.maxHeight = `${Math.round(cardRect.bottom - gridRect.top + peek)}px`;
+      });
+    }
   }, Math.max(0, Number(fadeMs) || 0));
 
   filteredCards.forEach(card => {
