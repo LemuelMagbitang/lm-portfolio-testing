@@ -290,6 +290,25 @@ try {
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
       if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
 
+      const galleryBox = await page.locator('#portfolioGrid').boundingBox();
+      const viewportWidth = await page.evaluate(() => window.innerWidth);
+      if (!galleryBox || Math.abs(galleryBox.x) > 2 || Math.abs(galleryBox.width - viewportWidth) > 2) {
+        throw new Error('Mobile Works gallery did not become full-bleed.');
+      }
+
+      const firstRowBoxes = await page.locator('#portfolioGrid .project-card').evaluateAll(cards => cards.slice(0, 2).map(card => {
+        const r = card.getBoundingClientRect();
+        return { x: r.x, y: r.y, width: r.width };
+      }));
+      if (
+        firstRowBoxes.length < 2 ||
+        Math.abs(firstRowBoxes[0].y - firstRowBoxes[1].y) > 2 ||
+        Math.abs(firstRowBoxes[0].x - firstRowBoxes[1].x) < 2 ||
+        Math.abs(firstRowBoxes[0].width - firstRowBoxes[1].width) > 2
+      ) {
+        throw new Error('Mobile Works gallery did not render its first row as two equal columns.');
+      }
+
       const firstCard = page.locator('#portfolioGrid .project-card').first();
       await firstCard.click();
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
@@ -316,6 +335,43 @@ try {
       await page.locator('#lightboxClose').click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
     }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/', async page => {
+      const playbackCard = page.locator('#portfolioGrid .project-card[data-project-id="haeru"]').first();
+      if (await playbackCard.count() !== 1) throw new Error('Haeru playback smoke fixture card is missing.');
+
+      await playbackCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const videos = page.locator('#lightboxMediaContainer video');
+      if (await videos.count() >= 2) {
+        const handoffWorked = await page.evaluate(() => {
+          const videoNodes = Array.from(document.querySelectorAll('#lightboxMediaContainer video'));
+          const originalPause = HTMLMediaElement.prototype.pause;
+          const pauseTargets = [];
+          HTMLMediaElement.prototype.pause = function(){ pauseTargets.push(this); };
+          try {
+            videoNodes[0].dispatchEvent(new Event('play', { bubbles: true }));
+            videoNodes[1].dispatchEvent(new Event('play', { bubbles: true }));
+          } finally {
+            HTMLMediaElement.prototype.pause = originalPause;
+          }
+          return pauseTargets.includes(videoNodes[0]);
+        });
+        if (!handoffWorked) throw new Error('Starting a second local video did not pause the previous video.');
+      }
+
+      const youtubeFrames = page.locator('#lightboxMediaContainer iframe[data-lm-youtube]');
+      if (await youtubeFrames.count()) {
+        const src = await youtubeFrames.first().getAttribute('src');
+        if (!src?.includes('enablejsapi=1')) {
+          throw new Error('YouTube Lightbox embeds are missing the JS API needed for playback handoff.');
+        }
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
@@ -381,6 +437,26 @@ try {
     await smokePage(browser, '/admin/', async page => {
       const nav = page.locator('.nav-item[data-section="about"]');
       if (await nav.count() !== 1) throw new Error('CMS About navigation item is missing.');
+
+      const projectsNav = page.locator('.nav-item[data-section="projects"]');
+      if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
+
+      await projectsNav.click();
+      const projectCard = page.locator('#content .card-item').first();
+      await projectCard.waitFor({ state: 'visible', timeout: 5000 });
+
+      const mediaList = projectCard.locator('[data-medialist]').first();
+      if (await mediaList.count()) {
+        const mediaRow = mediaList.locator('.card-item').first();
+        if (await mediaRow.count()) {
+          const toggle = mediaRow.locator('[data-mact="toggle"]');
+          if (await toggle.count()) await toggle.click();
+          const bgControl = mediaRow.locator('[data-bg-control]');
+          if (await bgControl.count() !== 1) {
+            throw new Error('CMS media editor is missing the Lottie/3D background color control.');
+          }
+        }
+      }
 
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
