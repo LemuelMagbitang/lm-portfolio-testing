@@ -1,9 +1,11 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
 import { createLightboxMediaRenderer } from './media-renderer.js';
-function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window) {
+function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
+  let focusCleanup = null;
+  let keydownCleanup = null;
   function getFocusable() {
     return Array.from(lightboxEl.querySelectorAll('a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'))
       .filter(el => !el.hidden && el.offsetParent !== null);
@@ -17,16 +19,29 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     else if (!event.shiftKey && documentRef.activeElement === last) { event.preventDefault(); first.focus(); }
   }
   function open() {
-    opener = documentRef.activeElement instanceof HTMLElement ? documentRef.activeElement : null;
+    opener = documentRef.activeElement?.nodeType === 1 ? documentRef.activeElement : null;
     lightboxEl.setAttribute('aria-modal','true');
     if (!lightboxEl.hasAttribute('tabindex')) lightboxEl.setAttribute('tabindex','-1');
-    documentRef.addEventListener('keydown', onKeydown, true);
-    windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); });
+    keydownCleanup?.();
+    keydownCleanup = lifecycle?.listen
+      ? lifecycle.listen(documentRef, 'keydown', onKeydown, true)
+      : (() => { documentRef.addEventListener('keydown', onKeydown, true); return () => documentRef.removeEventListener('keydown', onKeydown, true); })();
+    focusCleanup?.();
+    focusCleanup = lifecycle?.animationFrame
+      ? lifecycle.animationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }, windowRef)
+      : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }); return () => windowRef.cancelAnimationFrame?.(id); })();
   }
   function close() {
-    documentRef.removeEventListener('keydown', onKeydown, true);
+    keydownCleanup?.();
+    keydownCleanup = null;
+    focusCleanup?.();
+    focusCleanup = null;
     const target=opener; opener=null;
-    if(target?.isConnected) windowRef.requestAnimationFrame(()=>target.focus());
+    if(target?.isConnected) {
+      focusCleanup = lifecycle?.animationFrame
+        ? lifecycle.animationFrame(() => target.focus(), windowRef)
+        : (() => { const id=windowRef.requestAnimationFrame(()=>target.focus()); return () => windowRef.cancelAnimationFrame?.(id); })();
+    }
   }
   return {open,close};
 }
