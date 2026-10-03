@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js';
+import { normalizeProjects } from '../js/data/project-normalizer.js';
 
 const calls = [];
 const children = [];
@@ -111,6 +112,11 @@ const makeElement = () => ({
   dataset: {},
   children: [],
   attributes: new Map(),
+  style: {
+    objectPosition: '',
+    transformOrigin: '',
+    setProperty(name, value) { this[name] = String(value); }
+  },
   classList: {
     values: new Set(),
     add(...names) { names.forEach(name => this.values.add(name)); },
@@ -157,5 +163,75 @@ assert.equal(capabilityCard.className, 'project-card');
 assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
+
+// Regression: projects with no explicit thumbnail src still rely on thumbnail
+// focus/zoom/rotation when the first media item becomes the fallback artwork.
+const normalizedFallback = normalizeProjects([{
+  id: 'fallback-presentation',
+  title: 'Fallback Presentation',
+  thumbnail: {
+    type: 'image',
+    src: '',
+    focus: '50% 30%',
+    zoom: 1.25,
+    rotate: 2
+  },
+  media: [{ type: 'image', src: 'media/fallback.webp' }]
+}])[0];
+
+assert.deepEqual(normalizedFallback.thumbnail, {
+  type: 'image',
+  focus: '50% 30%',
+  zoom: 1.25,
+  rotate: 2
+});
+
+let backgroundCalls = 0;
+const fallbackCard = buildProjectCardElement(normalizedFallback, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value,
+  applyMediaBackground: (element, background) => {
+    backgroundCalls += 1;
+    assert.equal(element.className, 'card-thumbnail');
+    assert.deepEqual(background, { type: 'color', color: '#222222' });
+    return Promise.resolve(true);
+  }
+});
+
+// No badge means the thumbnail is the first card child.
+const fallbackThumbnail = fallbackCard.children[0];
+const fallbackMedia = fallbackThumbnail.children[0];
+assert.equal(fallbackMedia.style.objectPosition, '50% 30%');
+assert.equal(fallbackMedia.style.transformOrigin, '50% 30%');
+assert.equal(fallbackMedia.style['--thumb-zoom'], '1.25');
+assert.equal(fallbackMedia.style['--thumb-rotate'], '2deg');
+assert.equal(backgroundCalls, 0);
+
+const normalizedBackground = normalizeProjects([{
+  id: 'fallback-background',
+  title: 'Fallback Background',
+  thumbnail: {
+    src: '',
+    focus: '50% 50%',
+    zoom: 1
+  },
+  media: [{
+    type: 'image',
+    src: 'media/background.webp',
+    background: { type: 'color', color: '#222222' }
+  }]
+}])[0];
+
+buildProjectCardElement(normalizedBackground, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value,
+  applyMediaBackground: (element, background) => {
+    backgroundCalls += 1;
+    assert.equal(element.className, 'card-thumbnail');
+    assert.deepEqual(background, { type: 'color', color: '#222222' });
+    return Promise.resolve(true);
+  }
+});
+assert.equal(backgroundCalls, 1);
 
 console.log('Projects runtime boundary validation passed.');
