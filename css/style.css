@@ -1400,8 +1400,15 @@ body.center-page {
   }
   #lightboxMediaContainer {
     padding: 0;
+    height: auto;
+    overflow: visible;
+  }
+  #lightboxMediaContainer .lightbox-media-item {
+    width: 100%;
   }
   #lightboxMediaContainer img {
+    width: 100%;
+    max-width: 100%;
     border-radius: 0;
   }
   /* Title/description text still needs its own side margin even though
