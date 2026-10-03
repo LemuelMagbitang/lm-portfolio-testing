@@ -577,8 +577,8 @@ function validateBootstrapHardening() {
   }
 
   const lightbox = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
-  if (!/return \{[\s\S]*destroy\(\)[\s\S]*listenerCleanups\.splice\(0\)/.test(lightbox)) {
-    err('Lightbox: public feature lifecycle must expose destroy() and release persistent listeners.');
+  if (!/createLifecycle/.test(lightbox) || !/lifecycle\.cleanup\(\)/.test(lightbox)) {
+    err('Lightbox: public feature lifecycle must use the shared lifecycle primitive.');
   }
 
   if (!/lightboxFeature\?\.destroy\?\.\(\)/.test(composition) ||
