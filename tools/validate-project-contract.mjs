@@ -67,6 +67,7 @@ const mixed = normalizeProject({
     { type: 'youtube', src: 'https://youtu.be/example' },
     { type: 'lottie', src: 'motion.json' },
     { type: 'model', src: 'scene.glb' }
+  ]
 });
 assert.equal(mixed.mediaCount, 4);
 assert.deepEqual(mixed.capabilities, {
