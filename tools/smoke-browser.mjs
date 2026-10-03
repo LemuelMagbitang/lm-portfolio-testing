@@ -168,8 +168,8 @@ try {
       const activeFilterCount = await page.locator('.filter-tabs .tab-btn.active, .filter-tabs .filter-btn.active').count();
       if (activeFilterCount !== 1) throw new Error(`Works filter interaction produced ${activeFilterCount} active filters.`);
 
-      const allFilter = page.locator('.filter-tabs [data-filter="all"]').first();
-      await allFilter.click();
+      const allFilterButton = page.locator('.filter-tabs [data-filter="all"]').first();
+      await allFilterButton.click();
       await page.waitForTimeout(420);
       const restoredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
         cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
