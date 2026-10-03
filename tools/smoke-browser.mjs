@@ -88,6 +88,33 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
   await page.close();
 }
 
+async function assertMobileNavigation(page, label) {
+  const button = page.locator('.hamburger').first();
+  const menu = page.locator('.nav-links').first();
+  if (await button.count() !== 1) throw new Error(label + ' is missing the public hamburger button.');
+  if (await menu.count() !== 1) throw new Error(label + ' is missing the public mobile navigation.');
+
+  await button.click();
+  const expanded = await button.getAttribute('aria-expanded');
+  const active = await menu.evaluate(el => el.classList.contains('active'));
+  if (expanded !== 'true' || !active) {
+    throw new Error(label + ' hamburger did not open the mobile navigation.');
+  }
+
+  await page.locator('.navbar').click({ position: { x: 4, y: 4 } }).catch(() => {});
+  const stillOpenAfterInsideClick = await menu.evaluate(el => el.classList.contains('active'));
+  if (!stillOpenAfterInsideClick) {
+    throw new Error(label + ' mobile navigation closed when clicking inside the navbar.');
+  }
+
+  await page.locator('body').click({ position: { x: 5, y: 300 } });
+  const closed = await menu.evaluate(el => !el.classList.contains('active'));
+  const collapsed = await button.getAttribute('aria-expanded');
+  if (!closed || collapsed !== 'false') {
+    throw new Error(label + ' mobile navigation did not close from an outside tap.');
+  }
+}
+
 const { server, getStderr } = startServer();
 process.on('exit', () => stopServer(server));
 
@@ -143,6 +170,7 @@ try {
     });
 
     await smokePage(browser, '/', async page => {
+      await assertMobileNavigation(page, 'Works page');
       const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       if (await filters.count() < 2) throw new Error('Mobile/tablet Works filter UI did not render.');
 
@@ -178,6 +206,7 @@ try {
     }, { width: 834, height: 900 });
 
     await smokePage(browser, '/about/', async page => {
+      await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('About page is missing its module bootstrap script.');
 
