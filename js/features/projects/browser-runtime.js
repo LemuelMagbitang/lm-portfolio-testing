@@ -25,8 +25,10 @@ export async function mountProjects({
   getGrid = () => documentRef?.getElementById('portfolioGrid'),
   createFragment = () => documentRef?.createDocumentFragment(),
   onCardActivate,
+  applyMediaBackground,
   buildCard = project => buildProjectCardElement(project, {
     resolveAssetUrl,
+    applyMediaBackground,
     show3DIndicator: true,
     documentRef,
     onActivate: onCardActivate
