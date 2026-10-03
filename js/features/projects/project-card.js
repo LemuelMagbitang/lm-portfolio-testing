@@ -45,6 +45,7 @@ export function buildProjectCardElement(
   } = {}
 ) {
   const card = documentRef.createElement('div');
+  card.className = 'project-card';
   card.dataset.component = 'project-card';
   if (project.id) card.dataset.projectId = String(project.id);
 
@@ -59,7 +60,6 @@ export function buildProjectCardElement(
   if (Number(project.mediaCount) > 1) card.classList.add('has-multiple-media');
 
   const filters = Array.isArray(project.filters) ? project.filters.filter(Boolean) : [];
-  card.className = 'project-card';
   card.dataset.filterIds = JSON.stringify(filters);
 
   if (project.badge) {
