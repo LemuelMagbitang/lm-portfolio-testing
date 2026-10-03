@@ -15,6 +15,9 @@ The goal is runtime reliability plus freedom to redesign the UI/UX. The folder s
 | Lightbox UI | CMS and project storage | Active project/media contract |
 | Mobile presentation | CMS/data model | Feature behavior + presentation layer |
 | Desktop presentation | CMS/data model | Feature behavior + presentation layer |
+| Gallery presentation | Gallery state, CMS, Lightbox internals | Gallery state contract + presentation API |
+| Project media capability model | Project storage/provider | Normalized project contract |
+| Lightbox project content | Card markup, CMS transport | Normalized project contract |
 | Hero presentation | Project storage | Hero data contract |
 | Reviews presentation | Reviews JSON shape | Review data contract |
 | GitHub transport | Projects, gallery, lightbox | CMS/content-provider contract |
