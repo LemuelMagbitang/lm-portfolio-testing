@@ -2336,74 +2336,135 @@ RENDERERS.about = function(data){
   // actually shown as a logo at all, site-wide, is the one switch in
   // Settings & Toggles — this box just prepares each skill for
   // whichever way that switch is set.
-  const SOFTWARE_DOMAINS = {
-    krita: 'krita.org', blender: 'blender.org', figma: 'figma.com',
-    'davinci resolve': 'blackmagicdesign.com', 'cinema 4d': 'maxon.net',
-    zbrush: 'maxon.net', maya: 'autodesk.com', '3ds max': 'autodesk.com',
-    'autodesk maya': 'autodesk.com', unity: 'unity.com',
-    'unreal engine': 'unrealengine.com', procreate: 'procreate.com',
-    sketch: 'sketch.com', sketchup: 'sketchup.com',
-    'substance painter': 'substance3d.com', 'substance designer': 'substance3d.com',
-    'affinity photo': 'affinity.serif.com', 'affinity designer': 'affinity.serif.com',
-    houdini: 'sidefx.com', 'clip studio paint': 'clipstudio.net'
+  const SOFTWARE_LOGO_CACHE = new Map();
+  const SOFTWARE_LOGO_PENDING = new Map();
+  const SOFTWARE_QUERY_ALIASES = {
+    'premier pro': 'premiere pro',
+    'adobe premier pro': 'adobe premiere pro',
+    'after effects': 'adobe after effects',
+    'ae': 'adobe after effects',
+    'photoshop': 'adobe photoshop',
+    'ps': 'adobe photoshop',
+    'illustrator': 'adobe illustrator',
+    'ai': 'adobe illustrator',
+    'youtube': 'youtube'
   };
-  function skillLogoSlug(name){
-    return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  function normalizeSoftwareName(value){
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
   }
-  function skillLogoAttempts(skill){
-    const attempts = [];
-    if (skill.icon) attempts.push(ghRawUrl(skill.icon));
-    const slug = skillLogoSlug(skill.name);
-    if (slug) attempts.push(`https://cdn.simpleicons.org/${slug}`);
-    const domain = SOFTWARE_DOMAINS[(skill.name || '').toLowerCase()];
-    if (domain) attempts.push(`https://logo.clearbit.com/${domain}?size=64`);
-    return attempts;
+
+  function scoreSoftwareLogo(iconId, query){
+    const rawName = String(iconId || '').split(':').pop() || '';
+    const normalized = normalizeSoftwareName(rawName);
+    if(!normalized) return -1;
+    if(normalized===query) return 1000;
+    if(normalized.includes(query)) return 700-Math.abs(normalized.length-query.length);
+    if(query.includes(normalized)) return 600-Math.abs(normalized.length-query.length);
+    return 0;
+  }
+
+  async function findAutomaticSoftwareLogoCandidates(name){
+    const rawName = String(name || '').trim();
+    if(!rawName) return [];
+    const queryText = SOFTWARE_QUERY_ALIASES[rawName.toLowerCase()] || rawName;
+    const key = normalizeSoftwareName(queryText);
+    if(!key) return [];
+    if(SOFTWARE_LOGO_CACHE.has(key)) return SOFTWARE_LOGO_CACHE.get(key);
+    if(SOFTWARE_LOGO_PENDING.has(key)) return SOFTWARE_LOGO_PENDING.get(key);
+
+    const url = 'https://api.iconify.design/search?query='
+      + encodeURIComponent(queryText)
+      + '&prefixes=simple-icons,logos&limit=12';
+
+    const request = fetch(url, { headers: { Accept: 'application/json' } })
+      .then(async response => {
+        if(!response.ok) return [];
+        const payload = await response.json();
+        const icons = Array.isArray(payload?.icons) ? payload.icons : [];
+        const sorted = icons.map(icon => ({icon,score:scoreSoftwareLogo(icon,key)}))
+          .filter(item => item.score > 0)
+          .sort((a,b) => b.score-a.score)
+          .map(item => item.icon);
+        const urls = sorted.map(iconId => {
+          const parts = String(iconId).split(':');
+          const prefix = parts.shift();
+          const iconName = parts.join(':');
+          return 'https://api.iconify.design/' + encodeURIComponent(prefix) + '/' + encodeURIComponent(iconName) + '.svg';
+        });
+        SOFTWARE_LOGO_CACHE.set(key, urls);
+        return urls;
+      })
+      .catch(() => {
+        SOFTWARE_LOGO_CACHE.set(key, []);
+        return [];
+      })
+      .finally(() => SOFTWARE_LOGO_PENDING.delete(key));
+
+    SOFTWARE_LOGO_PENDING.set(key, request);
+    return request;
   }
 
   function buildSoftwareSkills(id, arr){
     const box = document.getElementById(id);
     function repaint(){
       box.innerHTML = '';
+      const automaticJobs = [];
+
       arr.forEach((skill,i)=>{
-        const attempts = skillLogoAttempts(skill);
         const hasManualIcon = !!skill.icon;
         const pill = document.createElement('span');
         pill.className = 'skill-editor-row';
         pill.innerHTML = `
-          <span class="skill-pill-icon" data-iconbtn title="${hasManualIcon ? 'Change logo' : 'Click to set a specific logo by hand'}">
-            <img data-attempt="0" src="${attr(attempts[0] || '')}">
-            <i class="fa-solid fa-image fallback-icon" style="display:none"></i>
+          <span class="skill-pill-icon" data-iconbtn title="${hasManualIcon ? 'Change logo' : 'Automatic logo lookup — click to set a specific logo'}">
+            <img data-attempt="0" ${hasManualIcon ? `src="${attr(ghRawUrl(skill.icon))}"` : ''}>
+            <i class="fa-solid fa-image fallback-icon" style="display:${hasManualIcon ? 'none' : 'flex'}"></i>
           </span>
           <span class="skill-pill-name">${esc(skill.name)}</span>
           ${hasManualIcon ? `<button type="button" class="clear-icon-btn" data-clearicon title="Use the automatic lookup instead">&times;</button>` : ''}
           <button type="button" data-removeskill title="Remove ${esc(skill.name)}">&times;</button>
         `;
         const img = pill.querySelector('img');
-        if (!attempts.length) { img.style.display = 'none'; pill.querySelector('.fallback-icon').style.display = 'flex'; }
-        img.addEventListener('error', () => {
-          const next = parseInt(img.dataset.attempt, 10) + 1;
-          if (next < attempts.length) { img.dataset.attempt = next; img.src = attempts[next]; }
-          else { img.style.display = 'none'; pill.querySelector('.fallback-icon').style.display = 'flex'; }
-        });
+        const fallback = pill.querySelector('.fallback-icon');
+
+        const hydrateAutomatic = async () => {
+          if(!pill.isConnected) return;
+          const attempts = await findAutomaticSoftwareLogoCandidates(skill.name);
+          if(!pill.isConnected || !attempts.length) return;
+          let index = 0;
+          const tryNext = () => {
+            if(index >= attempts.length || !pill.isConnected) return;
+            img.style.display = '';
+            img.src = attempts[index];
+          };
+          img.addEventListener('load', () => {
+            if(!pill.isConnected) return;
+            fallback.style.display = 'none';
+          }, { once: true });
+          img.addEventListener('error', () => {
+            index++;
+            tryNext();
+          });
+          tryNext();
+        };
+
+        if(!hasManualIcon) automaticJobs.push(hydrateAutomatic);
+        img?.addEventListener('error', () => hydrateAutomatic());
+
         pill.querySelector('[data-iconbtn]').addEventListener('click', ()=>{
           openMediaPicker(path => { skill.icon = path; flagUnsaved(); repaint(); });
         });
         const clearBtn = pill.querySelector('[data-clearicon]');
-        if (clearBtn) clearBtn.addEventListener('click', (e)=>{ e.stopPropagation(); skill.icon = ''; flagUnsaved(); repaint(); });
+        if(clearBtn) clearBtn.addEventListener('click', e=>{ e.stopPropagation(); skill.icon=''; flagUnsaved(); repaint(); });
         pill.querySelector('[data-removeskill]').addEventListener('click', ()=>{ arr.splice(i,1); flagUnsaved(); repaint(); });
         box.appendChild(pill);
       });
-      const inp = document.createElement('input');
-      inp.placeholder = 'e.g. Blender';
-      inp.addEventListener('keydown', e=>{
-        if(e.key==='Enter' && inp.value.trim()){
-          e.preventDefault(); arr.push({ name: inp.value.trim(), icon: '' }); flagUnsaved(); repaint();
-        }
-      });
-      box.appendChild(inp);
+
+      automaticJobs.forEach(job => job());
     }
     repaint();
   }
+
 
   function buildSimpleRepeater(listId, arr, addBtnId, fields){
     function repaint(){
@@ -3289,3 +3350,4 @@ function enableDragReorder(getContainer, itemsArr, onChange, painter){
     });
   });
 }
+// Automatic software logos use Iconify; retired Clearbit URLs are intentionally not used.
