@@ -219,7 +219,7 @@ export function createLightboxMediaRenderer({
     if (!item?.src) return null;
 
     const type = String(item.type || 'image').toLowerCase();
-    if (type === 'image') return renderImage(item);
+    if (type === 'image') return renderImage(item, project);
     if (type === 'youtube') return renderYouTube(item, project);
     if (type === 'video') return renderVideo(item);
     if (type === 'model') return renderModel(item, project);
