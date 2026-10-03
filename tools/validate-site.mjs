@@ -474,8 +474,8 @@ function validateGalleryContract() {
   if (/getActiveCards:\s*\(\)\s*=>\s*getActiveCards\(\)/.test(source)) {
     err('Gallery: getActiveCards() recursively calls itself.');
   }
-  if (!/getActiveCards:\s*\(\)\s*=>\s*allCards\.filter\(/.test(source)) {
-    err('Gallery: getActiveCards() contract is missing its active-card filter.');
+  if (!/getActiveCards:\s*\(\)\s*=>\s*getCardsForProjects\(getFilteredProjects\(\)\)\.slice\(\)/.test(source)) {
+    err('Gallery: getActiveCards() contract must expose cards mapped from the current normalized project filter.');
   }
   if (!/createLifecycle/.test(source) || !/lifecycle\.cleanup\(\)/.test(source)) {
     err('Gallery: persistent runtime resources must use the shared feature lifecycle.');
@@ -637,7 +637,7 @@ function validateArchitecture() {
     ['js/infrastructure/software-logo/lookup.js', /export function findSoftwareLogoCandidates/],
     ['js/core/lifecycle.js', /export function createLifecycle/],
     ['js/features/gallery/presentation.js', /export function applyGalleryReveal/],
-    ['js/features/projects/index.js', /export \{ mountProjects[^\n]*getProjects/],
+    ['js/features/projects/index.js', /export \{ mountProjects \}/],
     ['js/features/gallery/index.js', /export async function initGallery/],
     ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
     ['js/features/lightbox/index.js', /export function initLightbox/],
