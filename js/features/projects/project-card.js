@@ -37,7 +37,12 @@ function getFallbackThumbnailSource(project = {}) {
 
 export function buildProjectCardElement(
   project = {},
-  { resolveAssetUrl, show3DIndicator = true, documentRef = globalThis.document } = {}
+  {
+    resolveAssetUrl,
+    show3DIndicator = true,
+    documentRef = globalThis.document,
+    onActivate
+  } = {}
 ) {
   const card = documentRef.createElement('div');
   const filters = Array.isArray(project.filters) ? project.filters.filter(Boolean) : [];
@@ -103,6 +108,30 @@ export function buildProjectCardElement(
   info.append(title, subtitle);
   card.appendChild(info);
 
+  // Projects owns card activation semantics. Lightbox receives a small
+  // activation contract instead of reaching into the card's DOM itself.
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
+  card.setAttribute('aria-label', project.title ? `Open project: ${project.title}` : 'Open project');
+
+  const activate = event => {
+    if (event.type === 'keydown') {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+    }
+
+    let initialMediaIndex = -1;
+    if (event.target?.closest?.('.card-thumbnail [data-model-thumb]')) {
+      initialMediaIndex = Array.isArray(project.media)
+        ? project.media.findIndex(item => item?.type === 'model' && item?.src)
+        : -1;
+    }
+
+    onActivate?.({ card, project, event, initialMediaIndex });
+  };
+
+  card.addEventListener('click', activate);
+  card.addEventListener('keydown', activate);
 
   return card;
 }
