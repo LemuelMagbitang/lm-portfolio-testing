@@ -1,14 +1,12 @@
 /**
  * Automatic software-logo lookup adapter.
  *
- * Uses a pinned Simple Icons CDN asset first for common software names, then
- * Iconify Search as a discovery fallback. UI code preloads candidates before
- * attaching them, so failed URLs never become visible broken-image icons.
+ * Common software gets a deterministic, pinned Simple Icons CDN candidate.
+ * Only when that direct candidate fails does the UI request Iconify Search
+ * for a broader match. Candidate images are preloaded before being mounted.
  */
 
 const SIMPLE_ICONS_VERSION = '16.33.0';
-const cache = new Map();
-const pending = new Map();
 
 const SOFTWARE_ALIASES = {
   'blender':'blender',
@@ -40,6 +38,9 @@ const SOFTWARE_ALIASES = {
   'sketchup':'sketchup'
 };
 
+const discoveryCache = new Map();
+const discoveryPending = new Map();
+
 function normalize(value = '') {
   return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
@@ -68,57 +69,64 @@ function scoreIcon(iconId, query) {
   return 0;
 }
 
-export async function findSoftwareLogoCandidates(name, fetchRef = globalThis.fetch?.bind(globalThis)) {
+export function getSoftwareLogoDirectCandidates(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return [];
+  const slug = SOFTWARE_ALIASES[raw.toLowerCase()] || normalize(raw);
+  return slug ? [simpleIconsUrl(slug)] : [];
+}
+
+export async function findSoftwareLogoDiscoveryCandidates(
+  name,
+  fetchRef = globalThis.fetch?.bind(globalThis)
+) {
   const rawName = String(name || '').trim();
-  if (!rawName) return [];
-
-  const lowered = rawName.toLowerCase();
-  const aliasSlug = SOFTWARE_ALIASES[lowered] || '';
-  const normalizedName = normalize(rawName);
-  const key = aliasSlug || normalizedName;
-
-  if (!key) return [];
-  if (cache.has(key)) return cache.get(key);
-  if (pending.has(key)) return pending.get(key);
+  const key = normalize(rawName);
+  if (!rawName || !key || typeof fetchRef !== 'function') return [];
+  if (discoveryCache.has(key)) return discoveryCache.get(key);
+  if (discoveryPending.has(key)) return discoveryPending.get(key);
 
   const request = (async () => {
-    const candidates = [simpleIconsUrl(aliasSlug || normalizedName)];
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
 
-    if (typeof fetchRef === 'function') {
-      try {
-        const response = await fetchRef(
-          'https://api.iconify.design/search?query='
-          + encodeURIComponent(rawName)
-          + '&prefixes=simple-icons,logos&limit=12',
-          { headers: { Accept: 'application/json' } }
-        );
-
-        if (response.ok) {
-          const payload = await response.json();
-          const discovered = (Array.isArray(payload?.icons) ? payload.icons : [])
-            .map(icon => ({ icon, score: scoreIcon(icon, normalizedName) }))
-            .filter(item => item.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .map(item => iconifyIconUrl(item.icon))
-            .filter(Boolean);
-
-          const seen = new Set(candidates);
-          discovered.forEach(url => {
-            if (!seen.has(url)) {
-              seen.add(url);
-              candidates.push(url);
-            }
-          });
+    try {
+      const response = await fetchRef(
+        'https://api.iconify.design/search?query='
+        + encodeURIComponent(rawName)
+        + '&prefixes=simple-icons,logos&limit=12',
+        {
+          headers: { Accept: 'application/json' },
+          ...(controller ? { signal: controller.signal } : {})
         }
-      } catch (_) {
-        // Direct Simple Icons remains usable without discovery.
-      }
+      );
+
+      if (!response.ok) return [];
+
+      const payload = await response.json();
+      return (Array.isArray(payload?.icons) ? payload.icons : [])
+        .map(icon => ({ icon, score: scoreIcon(icon, key) }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(item => iconifyIconUrl(item.icon))
+        .filter(Boolean);
+    } catch (_) {
+      return [];
+    } finally {
+      if (timer) clearTimeout(timer);
     }
+  })();
 
-    cache.set(key, candidates);
-    return candidates;
-  })().finally(() => pending.delete(key));
+  discoveryPending.set(key, request);
+  const result = await request;
+  discoveryPending.delete(key);
+  discoveryCache.set(key, result);
+  return result;
+}
 
-  pending.set(key, request);
-  return request;
+// Kept as the feature-facing convenience API. It returns the deterministic
+// direct candidate immediately; discovery is requested by the feature only
+// after the direct candidate fails.
+export function findSoftwareLogoCandidates(name) {
+  return getSoftwareLogoDirectCandidates(name);
 }
