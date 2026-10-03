@@ -545,6 +545,11 @@ function validateBootstrapHardening() {
   if (!/export async function createPortfolioApp\(/.test(composition)) {
     err('Composition: createPortfolioApp() public entry point is missing.');
   }
+
+  if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
+      !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition)) {
+    err('Composition: Hero timing must use the Hero feature option names loopMode and transitionStyle.');
+  }
 }
 function validateArchitecture() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
