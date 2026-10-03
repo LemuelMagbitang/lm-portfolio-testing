@@ -10,7 +10,8 @@ const DEFAULT_URLS = Object.freeze({
   reviews: 'data/reviews.json',
   about: 'data/about.json',
   filters: 'data/filters.json',
-  heroLoop: 'data/hero-loop.json'
+  heroLoop: 'data/hero-loop.json',
+  heroMessages: 'data/hero.json'
 });
 
 function cleanUrl(value, fallback) {
@@ -28,7 +29,8 @@ export function normalizeAppConfig(raw = {}) {
       reviews: cleanUrl(urls.reviews, DEFAULT_URLS.reviews),
       about: cleanUrl(urls.about, DEFAULT_URLS.about),
       filters: cleanUrl(urls.filters, DEFAULT_URLS.filters),
-      heroLoop: cleanUrl(urls.heroLoop, DEFAULT_URLS.heroLoop)
+      heroLoop: cleanUrl(urls.heroLoop, DEFAULT_URLS.heroLoop),
+      heroMessages: cleanUrl(urls.heroMessages, DEFAULT_URLS.heroMessages)
     }
   };
 }
