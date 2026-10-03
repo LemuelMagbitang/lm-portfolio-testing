@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
-import { getProjectForCard } from '../js/features/projects/project-loader.js';
+import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js';
 
 const calls = [];
 const children = [];
@@ -74,6 +74,8 @@ assert.deepEqual(getProjectForCard(children[0]), {
   media: [{ type: 'image', src: 'media/test.webp' }]
 });
 assert.equal(getProjectForCard({}), null);
+assert.equal(getCardForProject('runtime-test-project'), children[0]);
+assert.deepEqual(getProjects().map(project => project.id), ['runtime-test-project']);
 
 const missingUrl = await mountProjects({
   documentRef: fakeDocument,
