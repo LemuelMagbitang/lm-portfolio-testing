@@ -84,6 +84,10 @@ export async function createPortfolioApp({
 
   const settings = settingsFeature.getState();
 
+  // Settings can resolve before CMS-backed cards are mounted. Re-apply the
+  // current DOM-dependent settings after all page content exists.
+  settingsFeature.applyDom();
+
   if (
     root.querySelector('.project-media-list .media-item[data-lottie], .project-thumb-media[lottie-player]')
   ) {
