@@ -150,6 +150,22 @@ try {
 
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
       if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
+
+      const firstCard = page.locator('#portfolioGrid .project-card').first();
+      await firstCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const firstArtwork = page.locator('#lightboxMediaContainer .lightbox-media-item img').first();
+      if (await firstArtwork.count() !== 1) throw new Error('Mobile Lightbox did not render the first artwork as an image.');
+
+      const viewportWidth = await page.evaluate(() => window.innerWidth);
+      const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
+      if (Math.abs(artworkWidth - viewportWidth) > 2) {
+        throw new Error(`Mobile Lightbox artwork is not full-bleed (artwork {artworkWidth{'}'}px vs viewport {viewportWidth{'}'}px).`);
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
