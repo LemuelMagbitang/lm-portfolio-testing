@@ -21,3 +21,15 @@ export function ensureMediaBackgroundHelper() {
 
   return mediaBackgroundPromise;
 }
+
+/**
+ * Apply an optional media background through the loaded helper.
+ * Consumers do not need to know that the helper exposes a global.
+ */
+export async function applyMediaBackground(element, background, resolveAssetUrl) {
+  if (!element || !background) return false;
+  const ready = await ensureMediaBackgroundHelper();
+  if (!ready || !window.LMMediaBackground?.apply) return false;
+  window.LMMediaBackground.apply(element, background, resolveAssetUrl);
+  return true;
+}
