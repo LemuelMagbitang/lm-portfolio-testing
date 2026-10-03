@@ -22,9 +22,10 @@ import { applyMediaBackground } from '../infrastructure/media-background/loader.
 export async function createPortfolioApp({
   root = globalThis.document,
   runtime,
-  cms
+  cms,
+  config
 } = {}) {
-  if (!root || !runtime || !cms) throw new Error('Portfolio app dependencies are incomplete.');
+  if (!root || !runtime || !cms || !config?.urls) throw new Error('Portfolio app dependencies are incomplete.');
 
   const {
     getSiteRootUrl,
@@ -39,7 +40,7 @@ export async function createPortfolioApp({
   } = cms;
 
   const settingsPromise = initSiteSettings({
-    url: globalThis.SETTINGS_URL,
+    url: config.urls.settings,
     root,
     loadJson: loadCmsJson,
     resolveAssetUrl: siteAssetUrl,
@@ -48,19 +49,19 @@ export async function createPortfolioApp({
 
   const navigation = initNavigation({ root });
 
-  const projectsPromise = globalThis.PROJECTS_URL
-    ? mountProjects({ url: globalThis.PROJECTS_URL })
+  const projectsPromise = config.urls.projects
+    ? mountProjects({ url: config.urls.projects })
     : Promise.resolve(false);
 
   const reviewsPromise = initReviews({
-    url: globalThis.REVIEWS_URL,
+    url: config.urls.reviews,
     root,
     loadJson: loadCmsJson,
     resolveAssetUrl: siteAssetUrl
   });
 
   const aboutPromise = initAbout({
-    url: globalThis.ABOUT_URL,
+    url: config.urls.about,
     root,
     loadJson: loadCmsJson,
     resolveAssetUrl: siteAssetUrl
@@ -91,6 +92,8 @@ export async function createPortfolioApp({
   if (hero) {
     try {
       await initHeroBannerV2({
+        heroLoopUrl: config.urls.heroLoop,
+        projectsUrl: config.urls.projects,
         mode: settings.heroTiming.loopMode,
         transition: settings.heroTiming.transitionStyle,
         crossfadeMs: settings.heroTiming.crossfadeMs,
@@ -123,7 +126,7 @@ export async function createPortfolioApp({
     galleryFeature = await initGallery({
       root,
       projectGrid: root.getElementById('portfolioGrid'),
-      filterUrl: globalThis.FILTERS_URL,
+      filterUrl: config.urls.filters,
       loadJson: loadCmsJson,
       resolveAssetUrl: siteAssetUrl,
       ensureLottiePlayer,
