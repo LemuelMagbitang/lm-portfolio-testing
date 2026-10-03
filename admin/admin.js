@@ -2426,66 +2426,91 @@ RENDERERS.about = function(data){
 
   function buildSoftwareSkills(id, arr){
     const box = document.getElementById(id);
+
+    function preloadCandidates(host, name, candidates, index = 0){
+      if(!host || !host.isConnected || !candidates[index]) return;
+      const probe = new Image();
+
+      probe.onload = () => {
+        if(!host.isConnected) return;
+        probe.className = 'skill-logo';
+        probe.alt = name;
+        probe.title = name;
+        probe.loading = 'lazy';
+        host.replaceChildren(probe);
+      };
+
+      probe.onerror = () => preloadCandidates(host, name, candidates, index + 1);
+      probe.src = candidates[index];
+    }
+
     function repaint(){
       box.innerHTML = '';
-      const automaticJobs = [];
 
       arr.forEach((skill,i)=>{
         const hasManualIcon = !!skill.icon;
         const pill = document.createElement('span');
         pill.className = 'skill-editor-row';
-        pill.innerHTML = `
-          <span class="skill-pill-icon" data-iconbtn title="${hasManualIcon ? 'Change logo' : 'Automatic logo lookup — click to set a specific logo'}">
-            <img data-attempt="0" ${hasManualIcon ? `src="${attr(ghRawUrl(skill.icon))}"` : ''}>
-            <i class="fa-solid fa-image fallback-icon" style="display:${hasManualIcon ? 'none' : 'flex'}"></i>
-          </span>
-          <span class="skill-pill-name">${esc(skill.name)}</span>
-          ${hasManualIcon ? `<button type="button" class="clear-icon-btn" data-clearicon title="Use the automatic lookup instead">&times;</button>` : ''}
-          <button type="button" data-removeskill title="Remove ${esc(skill.name)}">&times;</button>
-        `;
-        const img = pill.querySelector('img');
-        const fallback = pill.querySelector('.fallback-icon');
+        pill.innerHTML = [
+          '<span class="skill-pill-icon" data-iconbtn title="' + (hasManualIcon ? 'Change logo' : 'Automatic logo lookup — click to set a specific logo') + '">',
+          '<span class="skill-pill-logo-placeholder" aria-hidden="true">' + esc((skill.name || '').slice(0,2).toUpperCase()) + '</span>',
+          '</span>',
+          '<span class="skill-pill-name">' + esc(skill.name) + '</span>',
+          hasManualIcon ? '<button type="button" class="clear-icon-btn" data-clearicon title="Use the automatic lookup instead">&times;</button>' : '',
+          '<button type="button" data-removeskill title="Remove ' + esc(skill.name) + '">&times;</button>'
+        ].join('');
 
-        const hydrateAutomatic = async () => {
-          if(!pill.isConnected) return;
-          const attempts = await findAutomaticSoftwareLogoCandidates(skill.name);
-          if(!pill.isConnected || !attempts.length) return;
+        const host = pill.querySelector('[data-iconbtn]');
 
-          let index = 0;
-          const tryNext = () => {
-            if(index >= attempts.length || !pill.isConnected) return;
-            img.style.display = '';
-            img.src = attempts[index];
-          };
-
-          img.addEventListener('load', () => {
-            if(!pill.isConnected) return;
-            fallback.style.display = 'none';
-          }, { once: true });
-          img.addEventListener('error', () => {
-            index++;
-            tryNext();
-          }, { once: false });
-          tryNext();
-        };
-
-        if(!hasManualIcon) {
-          automaticJobs.push(hydrateAutomatic);
-        } else {
-          img?.addEventListener('error', () => hydrateAutomatic(), { once: true });
+        async function showAutomatic(){
+          const candidates = await findAutomaticSoftwareLogoCandidates(skill.name);
+          if(!pill.isConnected || host.querySelector('img.skill-logo')) return;
+          preloadCandidates(host, skill.name, candidates);
         }
 
-        pill.querySelector('[data-iconbtn]').addEventListener('click', ()=>{
-          openMediaPicker(path => { skill.icon = path; flagUnsaved(); repaint(); });
+        if(hasManualIcon){
+          const manualUrl = ghRawUrl(skill.icon);
+          const manualProbe = new Image();
+          manualProbe.onload = () => {
+            if(!pill.isConnected || host.querySelector('img.skill-logo')) return;
+            manualProbe.className = 'skill-logo';
+            manualProbe.alt = skill.name;
+            manualProbe.title = skill.name;
+            manualProbe.loading = 'lazy';
+            host.replaceChildren(manualProbe);
+          };
+          manualProbe.onerror = () => showAutomatic();
+          manualProbe.src = manualUrl;
+        }else{
+          showAutomatic();
+        }
+
+        host.addEventListener('click',()=>{
+          openMediaPicker(path=>{
+            skill.icon=path;
+            flagUnsaved();
+            repaint();
+          });
         });
-        const clearBtn = pill.querySelector('[data-clearicon]');
-        if(clearBtn) clearBtn.addEventListener('click', e=>{ e.stopPropagation(); skill.icon=''; flagUnsaved(); repaint(); });
-        pill.querySelector('[data-removeskill]').addEventListener('click', ()=>{ arr.splice(i,1); flagUnsaved(); repaint(); });
+
+        const clearBtn=pill.querySelector('[data-clearicon]');
+        if(clearBtn) clearBtn.addEventListener('click',e=>{
+          e.stopPropagation();
+          skill.icon='';
+          flagUnsaved();
+          repaint();
+        });
+
+        pill.querySelector('[data-removeskill]').addEventListener('click',()=>{
+          arr.splice(i,1);
+          flagUnsaved();
+          repaint();
+        });
+
         box.appendChild(pill);
       });
-
-      automaticJobs.forEach(job => job());
     }
+
     repaint();
   }
 
