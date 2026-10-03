@@ -3,11 +3,15 @@
  * Owns filtering, reveal/collapse behavior, deep links and responsive sizing.
  */
 export async function initGallery(options = {}) {
-  const filterTabs = document.querySelector('.filter-tabs');
-  const showMoreBtn = document.getElementById('showMoreBtn');
-  const showMoreWrapper = document.getElementById('showMoreWrapper');
-  const portfolioGrid = document.getElementById('portfolioGrid');
-  const gridFadeOverlay = document.getElementById('gridFadeOverlay');
+  const documentRef = options.root?.getElementById ? options.root : globalThis.document;
+  const windowRef = documentRef?.defaultView || globalThis.window;
+  if (!documentRef || !windowRef) return null;
+
+  const filterTabs = documentRef.querySelector('.filter-tabs');
+  const showMoreBtn = documentRef.getElementById('showMoreBtn');
+  const showMoreWrapper = documentRef.getElementById('showMoreWrapper');
+  const portfolioGrid = documentRef.getElementById('portfolioGrid');
+  const gridFadeOverlay = documentRef.getElementById('gridFadeOverlay');
   if (!portfolioGrid) return;
 
   async function loadFilterButtons() {
@@ -23,10 +27,10 @@ export async function initGallery(options = {}) {
 
       if (!list.length) return;
 
-      const fragment = document.createDocumentFragment();
+      const fragment = documentRef.createDocumentFragment();
       list.forEach(filter => {
         if (!filter || !filter.id) return;
-        const button = document.createElement('button');
+        const button = documentRef.createElement('button');
         button.type = 'button';
         button.className = 'filter-btn';
         button.dataset.filter = String(filter.id);
@@ -41,9 +45,9 @@ export async function initGallery(options = {}) {
 
   await loadFilterButtons();
 
-  const allCards = Array.from(document.querySelectorAll('.project-card'));
+  const allCards = Array.from(documentRef.querySelectorAll('.project-card'));
   if (allCards.length === 0) return;
-  const filterBtns = Array.from(document.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
+  const filterBtns = Array.from(documentRef.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
 
   const mobileCount = Number.isFinite(options.mobileCount) ? options.mobileCount : 5;
   const desktopCount = Number.isFinite(options.desktopCount) ? options.desktopCount : 9;
@@ -72,8 +76,8 @@ export async function initGallery(options = {}) {
   };
 
   function getBaseCount() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const width = windowRef.innerWidth;
+    const height = windowRef.innerHeight;
 
     // Keep the visible gallery density proportional to the device:
     // phones show two cards (two rows in the one-column layout);
@@ -86,7 +90,7 @@ export async function initGallery(options = {}) {
 
   function ensureFilterPager() {
     if (!filterTabs || filterPager) return;
-    filterPager = document.createElement('div');
+    filterPager = documentRef.createElement('div');
     filterPager.className = 'filter-page-controls';
     filterPager.setAttribute('aria-label', 'Filter navigation');
     filterTabs.insertAdjacentElement('afterend', filterPager);
@@ -105,12 +109,12 @@ export async function initGallery(options = {}) {
     const firstSpace = Math.max(0, (filterTabs.clientWidth - first.getBoundingClientRect().width) / 2);
     const lastSpace = Math.max(0, (filterTabs.clientWidth - last.getBoundingClientRect().width) / 2);
 
-    const leading = document.createElement('span');
+    const leading = documentRef.createElement('span');
     leading.className = 'filter-edge-spacer';
     leading.setAttribute('aria-hidden', 'true');
     leading.style.width = `${firstSpace}px`;
 
-    const trailing = document.createElement('span');
+    const trailing = documentRef.createElement('span');
     trailing.className = 'filter-edge-spacer';
     trailing.setAttribute('aria-hidden', 'true');
     trailing.style.width = `${lastSpace}px`;
@@ -158,7 +162,7 @@ export async function initGallery(options = {}) {
   }
 
   function isFilterCarousel() {
-    return window.innerWidth < 768;
+    return windowRef.innerWidth < 768;
   }
 
   function centerFilterButton(button, behavior = 'smooth') {
@@ -191,8 +195,8 @@ export async function initGallery(options = {}) {
       history.replaceState(
         null,
         '',
-        window.location.pathname +
-          window.location.search +
+        windowRef.location.pathname +
+          windowRef.location.search +
           (currentFilter === 'all' ? '' : `#${currentFilter}`)
       );
     }
@@ -207,13 +211,13 @@ export async function initGallery(options = {}) {
     if (!nearest) return;
 
     filterSettling = true;
-    window.clearTimeout(filterSettleTimer);
+    windowRef.clearTimeout(filterSettleTimer);
     activateFilterButton(nearest, { center: false, updateUrl: true });
     updateFilterPager(filterBtns.indexOf(nearest));
 
     if (center) {
       centerFilterButton(nearest, 'smooth');
-      filterSettleTimer = window.setTimeout(() => {
+      filterSettleTimer = windowRef.setTimeout(() => {
         filterSettling = false;
       }, 450);
     } else {
@@ -223,8 +227,8 @@ export async function initGallery(options = {}) {
 
   function scheduleCenteredFilter() {
     if (!filterTabs || !isFilterCarousel() || filterPointerActive || filterSettling) return;
-    window.clearTimeout(filterScrollTimer);
-    filterScrollTimer = window.setTimeout(() => settleCenteredFilter(), 140);
+    windowRef.clearTimeout(filterScrollTimer);
+    filterScrollTimer = windowRef.setTimeout(() => settleCenteredFilter(), 140);
   }
 
   function buildFilterPager() {
@@ -234,7 +238,7 @@ export async function initGallery(options = {}) {
     const buttons = getFilterButtons();
     filterPager.innerHTML = '';
     filterPageDots = buttons.map((button, index) => {
-      const dot = document.createElement('button');
+      const dot = documentRef.createElement('button');
       dot.type = 'button';
       dot.className = 'filter-page-dot';
       dot.setAttribute('aria-label', `Show filter ${button.textContent.trim() || index + 1}`);
@@ -264,7 +268,7 @@ export async function initGallery(options = {}) {
 
   function getEffectiveBaseCount(filtered) {
     const requested = getBaseCount();
-    if (filtered.length <= requested || window.innerWidth < 768) return Math.min(requested, filtered.length);
+    if (filtered.length <= requested || windowRef.innerWidth < 768) return Math.min(requested, filtered.length);
     const firstTop = filtered[0]?.getBoundingClientRect().top;
     let columns = 1;
     if (Number.isFinite(firstTop)) {
@@ -283,17 +287,17 @@ export async function initGallery(options = {}) {
     const filtered = allCards.filter(card => cardMatchesFilter(card, currentFilter));
     const hidden = allCards.filter(card => !filtered.includes(card));
     hidden.forEach(card => { card.style.opacity = '0'; });
-    window.setTimeout(() => hidden.forEach(card => {
+    windowRef.setTimeout(() => hidden.forEach(card => {
       if (currentFilter !== 'all' && !cardMatchesFilter(card, currentFilter)) card.style.display = 'none';
     }), fadeMs);
     filtered.forEach(card => { card.style.display = 'block'; });
-    window.requestAnimationFrame(() => filtered.forEach(card => { card.style.opacity = '1'; }));
+    windowRef.requestAnimationFrame(() => filtered.forEach(card => { card.style.opacity = '1'; }));
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
 
     if (!isExpanded && filtered.length > effectiveBaseCount) {
       const gridRect = portfolioGrid.getBoundingClientRect();
       const cardRect = filtered[effectiveBaseCount - 1].getBoundingClientRect();
-      const peek = window.innerWidth < 768 ? 40 : 70;
+      const peek = windowRef.innerWidth < 768 ? 40 : 70;
       portfolioGrid.style.maxHeight = `${Math.round(cardRect.bottom - gridRect.top + peek)}px`;
       gridFadeOverlay?.classList.remove('is-hidden');
     } else {
@@ -322,13 +326,13 @@ export async function initGallery(options = {}) {
   bind(showMoreBtn, 'click', () => {
     isExpanded = !isExpanded;
     render();
-    if (!isExpanded) document.querySelector('.filter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!isExpanded) documentRef.querySelector('.filter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   let resizeTimer;
   bind(window, 'resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => {
+    resizeTimer = windowRef.setTimeout(() => {
       baseCount = getBaseCount();
       ensureFilterEdges();
       const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
@@ -341,7 +345,7 @@ export async function initGallery(options = {}) {
   bind(filterTabs, 'scroll', () => {
     if (!isFilterCarousel()) return;
     if (filterScrollFrame) return;
-    filterScrollFrame = window.requestAnimationFrame(() => {
+    filterScrollFrame = windowRef.requestAnimationFrame(() => {
       filterScrollFrame = null;
       updateFilterPager();
       scheduleCenteredFilter();
@@ -353,7 +357,7 @@ export async function initGallery(options = {}) {
     if (filterPointerActive) return;
     if (filterSettling) {
       filterSettling = false;
-      window.clearTimeout(filterSettleTimer);
+      windowRef.clearTimeout(filterSettleTimer);
       return;
     }
     settleCenteredFilter();
@@ -416,7 +420,7 @@ export async function initGallery(options = {}) {
   bind(filterTabs, 'pointercancel', finishFilterPointer);
 
   function applyHash() {
-    const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+    const hash = decodeURIComponent(windowRef.location.hash.replace('#', ''));
     if (!hash) return;
     const btn = filterBtns.find(item => item.getAttribute('data-filter') === hash);
     if (!btn) return;
@@ -433,7 +437,7 @@ export async function initGallery(options = {}) {
   render();
   applyHash();
   ensureFilterEdges();
-  window.requestAnimationFrame(() => {
+  windowRef.requestAnimationFrame(() => {
     const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
     if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
     updateFilterPager(filterBtns.indexOf(activeBtn));
@@ -446,10 +450,10 @@ export async function initGallery(options = {}) {
     getAllCards: () => allCards.slice(),
     getActiveCards: () => allCards.filter(card => cardMatchesFilter(card, currentFilter)).slice(),
     destroy() {
-      window.clearTimeout(filterScrollTimer);
-      window.clearTimeout(filterSettleTimer);
-      window.cancelAnimationFrame?.(filterScrollFrame);
-      window.clearTimeout(resizeTimer);
+      windowRef.clearTimeout(filterScrollTimer);
+      windowRef.clearTimeout(filterSettleTimer);
+      windowRef.cancelAnimationFrame?.(filterScrollFrame);
+      windowRef.clearTimeout(resizeTimer);
       listenerCleanups.splice(0).forEach(cleanup => {
         try { cleanup(); } catch (_) {}
       });
