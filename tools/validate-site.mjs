@@ -795,10 +795,11 @@ function validateResponsiveUiContracts() {
   if (!/phoneBreakpoint/.test(presentation) || !/tabletBreakpoint/.test(presentation)) {
     err('Gallery responsive presentation contract: breakpoint decisions belong to the presentation boundary.');
   }
-  if (!/grid-template-columns:1fr;/.test(style) ||
-      !/grid-template-columns:repeat\(2,minmax\(0,1fr\)\);/.test(style) ||
-      !/grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/.test(style)) {
-    err('Gallery responsive layout contract: phone/tablet/desktop column rules are incomplete.');
+  const phoneTwoColumn = /@media\\s*\\(max-width:\\s*767px\\)[\\s\\S]*?grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\);/.test(style);
+  const tabletThreeColumn = /@media\\s*\\(min-width:\\s*768px\\)\\s*and\\s*\\(max-width:\\s*1099px\\)[\\s\\S]*?grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\);/.test(style);
+  const desktopThreeColumn = /@media\\s*\\(min-width:\\s*1100px\\)[\\s\\S]*?grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\);/.test(style);
+  if (!phoneTwoColumn || !tabletThreeColumn || !desktopThreeColumn) {
+    err('Gallery responsive layout contract: phone must use two columns, tablet and desktop must use three columns.');
   }
   if (!/Responsive lightbox sizing/.test(style)) err('Lightbox responsive sizing contract is missing.');
 
