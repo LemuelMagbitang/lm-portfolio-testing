@@ -535,12 +535,14 @@ function validateArchitecture() {
   const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
 
   const required = [
-    ['js/cms-data.js', /export (?:async )?function loadCmsJson/],
-    ['js/gallery.js', /export function initGallery/],
-    ['js/hero.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
-    ['js/lightbox.js', /export function initLightbox/],
+    ['js/infrastructure/cms/loader.js', /export async function loadCmsJson/],
+    ['js/infrastructure/browser/site-paths.js', /export function getSiteRootUrl/],
+    ['js/infrastructure/youtube/url.js', /export function parseYouTubeUrl/],
+    ['js/infrastructure/three/model-viewer.js', /export function mountModelViewer/],
     ['js/features/projects/index.js', /export \{ mountProjects \}/],
     ['js/features/gallery/index.js', /export async function initGallery/],
+    ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
+    ['js/features/lightbox/index.js', /export function initLightbox/],
     ['js/features/settings/index.js', /export async function initSiteSettings/]
   ];
 
@@ -548,6 +550,10 @@ function validateArchitecture() {
     if (!exists(file) || !pattern.test(readText(file))) {
       err('Architecture V2: expected module contract missing from ' + file + '.');
     }
+  });
+
+  ['js/cms-data.js', 'js/site-runtime.js'].forEach(file => {
+    if (exists(file)) err('Architecture V2: legacy runtime facade must be removed: ' + file);
   });
 
   if (entry.split(/\r?\n/).length > 40) {
@@ -566,7 +572,9 @@ function validateArchitecture() {
       !/initReviews\(/.test(composition) ||
       !/initAbout\(/.test(composition) ||
       !/initForms\(/.test(composition) ||
-      !/initSiteSettings\(/.test(composition)) {
+      !/initSiteSettings\(/.test(composition) ||
+      !/initGallery\(/.test(composition) ||
+      !/initLightbox\(/.test(composition)) {
     err('Architecture V2: page-shell features are not composed through explicit feature APIs.');
   }
 
@@ -574,11 +582,11 @@ function validateArchitecture() {
     err('Architecture V2: runtime and CMS services must enter through the composition boundary.');
   }
 
-  if (/from ['"]\.\/site-runtime\.js/.test(readText('js/features/settings/index.js'))) {
-    err('Architecture V2: settings feature must use infrastructure/data boundaries instead of the legacy runtime facade.');
+  if (/from ['"]\.\/site-runtime\.js/.test(composition) ||
+      /from ['"]\.\/cms-data\.js/.test(composition)) {
+    err('Architecture V2: composition must not import legacy runtime/data facades.');
   }
 }
-
 validateResponsiveUiContracts();
 scanSourceForBadPatterns();
 validateSecuritySecrets();
