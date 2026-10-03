@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
+import { getProjectForCard } from '../js/features/projects/project-loader.js';
 
 const calls = [];
 const children = [];
@@ -54,6 +55,8 @@ assert.equal(children[0].project.id, 'runtime-test-project');
 assert.equal(calls.length, 1);
 assert.equal(calls[0][0], 'replaceChildren');
 assert.equal(calls[0][1], fragment);
+assert.equal(getProjectForCard(children[0]), projects[0]);
+assert.equal(getProjectForCard({}), null);
 
 const missingUrl = await mountProjects({
   documentRef: fakeDocument,
