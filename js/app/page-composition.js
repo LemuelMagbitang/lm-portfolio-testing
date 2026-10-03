@@ -15,8 +15,9 @@ import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
 import { initGallery } from '../features/gallery/index.js';
-import { initHeroBannerV2 } from '../hero.js';
-import { initLightbox } from '../lightbox.js';
+import { initHeroBannerV2 } from '../features/hero/index.js';
+import { initLightbox } from '../features/lightbox/index.js';
+import { mountModelViewer } from '../model-viewer.js';
 
 export async function createPortfolioApp({
   root = globalThis.document,
@@ -102,7 +103,12 @@ export async function createPortfolioApp({
         transition: settings.heroTiming.transitionStyle,
         crossfadeMs: settings.heroTiming.crossfadeMs,
         loadJson: loadCmsJson,
-        resolveAssetUrl: siteAssetUrl
+        resolveAssetUrl: siteAssetUrl,
+        getSiteRootUrl,
+        ensureLottiePlayer,
+        ensureMediaBackgroundHelper,
+        parseYouTubeUrl,
+        prefersReducedMotion: runtime.prefersReducedMotion
       });
     } catch (error) {
       console.warn('Hero: initialization failed', error);
@@ -125,7 +131,9 @@ export async function createPortfolioApp({
       root,
       protectionEnabled: () => settings.protectionEnabled,
       ensureMediaBackgroundHelper,
-      parseYouTubeUrl
+      parseYouTubeUrl,
+      resolveAssetUrl: siteAssetUrl,
+      mountModelViewer
     });
   } catch (error) {
     console.warn('Lightbox: initialization failed', error);
