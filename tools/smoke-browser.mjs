@@ -485,7 +485,21 @@ try {
         education: [{ school: 'Test School', degree: 'Test Degree', graduationDate: '2026', title: '', detail: '' }],
         awards: [{ title: 'Test Award', detail: '2026' }]
       };
+      const projectsFixture = [{
+        id: 'test-project',
+        title: 'Test Project',
+        subtitle: 'CMS fixture',
+        badge: '',
+        filters: [],
+        description: '',
+        thumbnail: { type: 'image', src: '', focus: '50% 50%', zoom: 1 },
+        media: [
+          { type: 'lottie', src: 'assets/projects/test/Sample.json', caption: 'Lottie fixture', orientation: 'square' },
+          { type: 'model', src: 'assets/projects/test/Female base.obj', caption: '3D fixture', orientation: '' }
+        ]
+      }];
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(about))));
+      const encodedProjects = btoa(unescape(encodeURIComponent(JSON.stringify(projectsFixture))));
       await page.addInitScript(({ encodedAbout }) => {
         sessionStorage.setItem('lm_cms_session_v1', JSON.stringify({
           owner: 'Smoke',
@@ -510,7 +524,11 @@ try {
         }
         if (genericDataMatch) {
           const filename = genericDataMatch[1];
-          const fixture = filename === 'hero.json' ? [] : filename === 'settings.json' ? {} : [];
+          const fixture =
+            filename === 'hero.json' ? [] :
+            filename === 'projects.json' ? JSON.parse(decodeURIComponent(escape(atob(encodedProjects)))) :
+            filename === 'settings.json' ? {} :
+            [];
           const content = btoa(unescape(encodeURIComponent(JSON.stringify(fixture))));
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content, sha: `smoke-${filename}-sha` }) });
           return;
