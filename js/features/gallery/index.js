@@ -15,6 +15,8 @@ export async function initGallery(options = {}) {
   if (!documentRef || !windowRef) return null;
 
   const filterTabs = documentRef.querySelector('.filter-tabs');
+  const getProjects = typeof options.getProjects === 'function' ? options.getProjects : () => [];
+  const getCardForProject = typeof options.getCardForProject === 'function' ? options.getCardForProject : () => null;
   const showMoreBtn = documentRef.getElementById('showMoreBtn');
   const showMoreWrapper = documentRef.getElementById('showMoreWrapper');
   const portfolioGrid = documentRef.getElementById('portfolioGrid');
@@ -63,8 +65,9 @@ export async function initGallery(options = {}) {
 
   await loadFilterButtons();
 
-  const allCards = Array.from(documentRef.querySelectorAll('.project-card'));
-  if (allCards.length === 0) return;
+  const allProjects = getProjects().filter(project => project && project.id);
+  const allCards = allProjects.map(project => getCardForProject(project.id)).filter(Boolean);
+  if (allProjects.length === 0 || allCards.length === 0) return;
   const filterBtns = Array.from(documentRef.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
 
   const phoneCount = Number.isFinite(options.phoneCount) ? options.phoneCount : 2;
@@ -277,17 +280,17 @@ export async function initGallery(options = {}) {
     if (buttons[activeIndex] && isFilterCarousel()) centerFilterButton(buttons[activeIndex], 'auto');
     updateFilterPager(activeIndex >= 0 ? activeIndex : 0);
   }
-  function cardMatchesFilter(card, filter) {
+  function projectMatchesFilter(project, filter) {
     if (filter === 'all') return true;
-    const raw = card?.dataset?.filterIds;
-    if (!raw) return false;
+    return Array.isArray(project?.filters) && project.filters.includes(filter);
+  }
 
-    try {
-      const ids = JSON.parse(raw);
-      return Array.isArray(ids) && ids.includes(filter);
-    } catch (_) {
-      return false;
-    }
+  function getFilteredProjects() {
+    return allProjects.filter(project => projectMatchesFilter(project, currentFilter));
+  }
+
+  function getCardsForProjects(projects) {
+    return projects.map(project => getCardForProject(project.id)).filter(Boolean);
   }
 
   function getEffectiveBaseCount(filtered) {
@@ -295,7 +298,8 @@ export async function initGallery(options = {}) {
   }
 
   function render() {
-    const filtered = allCards.filter(card => cardMatchesFilter(card, currentFilter));
+    const filteredProjects = getFilteredProjects();
+    const filtered = getCardsForProjects(filteredProjects);
     renderToken += 1;
     const token = renderToken;
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
@@ -454,7 +458,7 @@ export async function initGallery(options = {}) {
     render,
     getFilter: () => currentFilter,
     getAllCards: () => allCards.slice(),
-    getActiveCards: () => allCards.filter(card => cardMatchesFilter(card, currentFilter)).slice(),
+    getActiveCards: () => getCardsForProjects(getFilteredProjects()).slice(),
     destroy() {
       renderToken += 1;
       lifecycle.cleanup();
