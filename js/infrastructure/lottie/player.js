@@ -5,7 +5,7 @@
  * loader provides the custom element.
  */
 
-import { loadScriptOnce } from '../../core/script-loader.js';
+import { loadScriptOnce } from '../browser/script-loader.js';
 
 const LOTTIE_SOURCES = [
   'https://unpkg.com/@lottiefiles/lottie-player@2.0.12/dist/lottie-player.js',
