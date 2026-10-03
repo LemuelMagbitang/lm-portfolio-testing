@@ -33,5 +33,8 @@ export function findProjectMediaBackground(project, src) {
 }
 
 export function projectHas3D(project) {
+  if (project?.capabilities && typeof project.capabilities.hasModel === 'boolean') {
+    return project.capabilities.hasModel;
+  }
   return !!(project && Array.isArray(project.media) && project.media.some(media => media && media.type === 'model' && media.src));
 }
