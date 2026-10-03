@@ -80,7 +80,13 @@ export function normalizeProject(project = {}) {
   if (thumbnailSrc) {
     const thumbnailType = normalizeString(thumbnailSource.type).toLowerCase();
     normalized.thumbnail.src = thumbnailSrc;
-    normalized.thumbnail.type = MEDIA_TYPES.has(thumbnailType) ? thumbnailType : 'image';
+
+    // Preserve an explicitly declared type. If CMS data omits it, leave the
+    // field unset so the Projects card runtime can retain the legacy
+    // extension-based inference for video/Lottie thumbnails.
+    if (MEDIA_TYPES.has(thumbnailType)) {
+      normalized.thumbnail.type = thumbnailType;
+    }
 
     const focus = normalizeString(thumbnailSource.focus);
     if (focus) normalized.thumbnail.focus = focus;
