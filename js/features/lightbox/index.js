@@ -479,7 +479,7 @@ bind(lightboxClose, 'click', closeLightbox);
 bind(lightboxPrev, 'click', handlePrev);
 bind(lightboxNext, 'click', handleNext);
 bind(lightbox, 'click', handleBackdropClick);
-bind(document, 'keydown', handleDocumentKeydown);
+bind(documentRef, 'keydown', handleDocumentKeydown);
 
 return {
   close: closeLightbox,
