@@ -318,13 +318,13 @@ import { createLifecycle } from '../../core/lifecycle.js';
     // Load the CMS-curated manual list from the configured URL. A file path
     // is preferred over pasted JSON because it stays version-controlled,
     // cacheable, and easy to replace from the Media Library.
-    try {
-      const list = await loadJson(heroLoopUrl, [], { resolveUrl: resolveAssetUrl });
-      manualSources = (Array.isArray(list) ? list : [])
-        .map(item => heroSourceFromManualEntry(item, siteRootUrl))
-        .filter(Boolean);
-    } catch (err) {
-      if (config.loopMode === 'manual' || config.loopMode === 'mixed') {
+    if (config.loopMode === 'manual' || config.loopMode === 'mixed') {
+      try {
+        const list = await loadJson(heroLoopUrl, [], { resolveUrl: resolveAssetUrl });
+        manualSources = (Array.isArray(list) ? list : [])
+          .map(item => heroSourceFromManualEntry(item, siteRootUrl))
+          .filter(Boolean);
+      } catch (err) {
         console.warn('Hero banner: could not load manual hero loop data.', err);
       }
     }
