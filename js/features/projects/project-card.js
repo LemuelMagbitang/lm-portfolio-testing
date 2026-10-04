@@ -118,7 +118,9 @@ export function buildProjectCardElement(
       if (background && typeof background === 'object') thumbnail.dataset.background = JSON.stringify(background);
       if (fallbackThumbnail?.type === 'video') media.setAttribute('data-video-thumb', '');
       if (fallbackThumbnail?.type === 'lottie') media.setAttribute('data-lottie-thumb', '');
-      if (fallbackThumbnail?.type === 'model') media.setAttribute('data-model-thumb', '');
+      if (fallbackThumbnail?.type === 'model' || String(t.type || '').toLowerCase() === 'model') {
+        media.setAttribute('data-model-thumb', '');
+      }
       thumbnail.appendChild(media);
       if (background && typeof applyMediaBackground === 'function') {
         Promise.resolve(applyMediaBackground(thumbnail, background, resolveAssetUrl))
