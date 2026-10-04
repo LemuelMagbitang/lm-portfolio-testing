@@ -671,6 +671,30 @@ try {
 
     await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts desktop smoke fixture card is missing.');
+
+      await shortsCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const shorts = page.locator('#lightboxMediaContainer .lightbox-media-item iframe.yt-portrait').first();
+      if (await shorts.count() !== 1) throw new Error('Desktop Lightbox did not render the Friends Gacha Short as portrait media.');
+
+      const shortsGeometry = await shorts.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return { width: r.width, height: r.height, ratio: r.width / Math.max(r.height, 1) };
+      });
+      if (Math.abs(shortsGeometry.ratio - (9 / 16)) > 0.025) {
+        throw new Error('Desktop Shorts surface is not portrait (ratio ' + shortsGeometry.ratio.toFixed(3) + ').');
+      }
+      if (shortsGeometry.width >= window.innerWidth * 0.8) {
+        throw new Error('Desktop Shorts surface is too wide for portrait media (' + Math.round(shortsGeometry.width) + 'px).');
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 });
+    await smokePage(browser, '/', async page => {
+      const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts smoke fixture card is missing.');
 
       await shortsCard.click();
