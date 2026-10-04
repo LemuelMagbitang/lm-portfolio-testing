@@ -1,6 +1,6 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
-import { createLightboxMediaRenderer } from './media-renderer.js?v=20261004-06';
+import { createLightboxMediaRenderer } from './media-renderer.js?v=20261004-07';
 function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
@@ -170,6 +170,31 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
+
+  // Opening the modal can trigger several layout/asset reconciliation passes
+  // on mobile Chromium. The document itself must remain stationary because
+  // the Lightbox owns its own fixed viewport and scroll container. Re-assert
+  // the captured page position across the initial frames instead of relying
+  // on a document overflow lock, which previously caused its own mobile
+  // reconciliation jump.
+  const capturedPageScrollX = previousPageScrollX;
+  const capturedPageScrollY = previousPageScrollY;
+  for (let frame = 0; frame < 10; frame += 1) {
+    windowRef.requestAnimationFrame(() => {
+      if (!lightbox.classList.contains('active')) return;
+      try {
+        documentRef.documentElement.scrollLeft = capturedPageScrollX;
+        documentRef.documentElement.scrollTop = capturedPageScrollY;
+        documentRef.body.scrollLeft = capturedPageScrollX;
+        documentRef.body.scrollTop = capturedPageScrollY;
+        windowRef.scrollTo({
+          left: capturedPageScrollX,
+          top: capturedPageScrollY,
+          behavior: 'auto'
+        });
+      } catch (_) {}
+    });
+  }
 
   windowRef.requestAnimationFrame(() => {
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
