@@ -304,6 +304,14 @@ const handleDocumentKeydown = (event) => {
   }
 };
 
+// Lightbox controls have custom activation behavior. Suppress the browser
+// button default on the click capture phase so activation cannot scroll the
+// underlying document before our custom close/navigation handler runs.
+const suppressControlDefault = event => event.preventDefault();
+bind(lightboxClose, 'click', suppressControlDefault, true);
+bind(lightboxPrev, 'click', suppressControlDefault, true);
+bind(lightboxNext, 'click', suppressControlDefault, true);
+
 bind(lightboxClose, 'click', closeLightbox);
 bind(lightboxPrev, 'click', handlePrev);
 bind(lightboxNext, 'click', handleNext);
