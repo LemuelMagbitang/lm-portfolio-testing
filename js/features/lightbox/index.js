@@ -167,6 +167,29 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   modalMediaContainer.replaceChildren();
   mediaRenderer.renderProjectMedia(modalMediaContainer, project);
 
+  // When a card opens the viewer directly on a non-first media item, promote
+  // that exact target to eager loading as well. The renderer deliberately
+  // defers secondary media during normal gallery browsing, but the visitor has
+  // already expressed intent to view this specific item.
+  if (initialMediaIndex >= 0) {
+    const target = modalMediaContainer.querySelectorAll('.lightbox-media-item')[initialMediaIndex];
+    const image = target?.querySelector('img');
+    const video = target?.querySelector('video');
+    const youtube = target?.querySelector('iframe[data-lm-youtube]');
+    if (image) {
+      image.loading = 'eager';
+      image.fetchPriority = 'high';
+    }
+    if (video) {
+      video.preload = 'auto';
+      video.fetchPriority = 'high';
+    }
+    if (youtube) {
+      youtube.loading = 'eager';
+      youtube.fetchPriority = 'high';
+    }
+  }
+
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
