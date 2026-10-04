@@ -812,8 +812,20 @@ try {
       }
 
       if (await videos.count()) {
+        const primaryMedia = page.locator('#lightboxMediaContainer .lightbox-media-item').first();
+        const primaryImage = primaryMedia.locator('img').first();
+        if (await primaryImage.count()) {
+          const primaryLoading = await primaryImage.getAttribute('loading');
+          const primaryPriority = await primaryImage.getAttribute('fetchpriority');
+          if (primaryLoading !== 'eager' || primaryPriority !== 'high') {
+            throw new Error('Lightbox primary media is not prioritized for immediate playback/display.');
+          }
+        }
+
         const preloadMode = await videos.first().getAttribute('preload');
-        if (preloadMode !== 'auto') throw new Error('Lightbox local video is not preloaded for immediate playback.');
+        if (preloadMode !== 'metadata') {
+          throw new Error('Lightbox secondary local video should use metadata preload under progressive loading.');
+        }
         const firstVideo = videos.first();
         const intrinsicRatio = await firstVideo.evaluate(video => {
           Object.defineProperty(video, 'videoWidth', { configurable: true, get: () => 720 });
