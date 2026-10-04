@@ -509,8 +509,21 @@ try {
         throw new Error(`Mobile Lightbox contains a non-full-bleed artwork width: ${renderedArtworkWidths.join(', ')} vs viewport ${lightboxViewportWidth}px.`);
       }
 
+      await page.evaluate(() => {
+        const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        window.scrollTo(0, Math.max(0, Math.min(max, Math.round(max * 0.55))));
+      });
+      await page.waitForTimeout(100);
+      const scrollBeforeLightboxClose = await page.evaluate(() => window.scrollY);
+      await page.locator('#portfolioGrid .project-card').first().click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       await page.locator('#lightboxClose').click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(120);
+      const scrollAfterLightboxClose = await page.evaluate(() => window.scrollY);
+      if (Math.abs(scrollAfterLightboxClose - scrollBeforeLightboxClose) > 4) {
+        throw new Error(`Lightbox close changed document scroll position (${scrollBeforeLightboxClose} -> ${scrollAfterLightboxClose}).`);
+      }
 
       // Simulate browser back/forward navigation so the gallery gets a
       // pageshow event with potentially restored layout state.

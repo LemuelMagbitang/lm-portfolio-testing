@@ -50,9 +50,13 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     focusCleanup = null;
     const target=opener; opener=null;
     if(target?.isConnected) {
+      const restoreFocus = () => {
+        try { target.focus({ preventScroll: true }); }
+        catch (_) { target.focus(); }
+      };
       focusCleanup = lifecycle?.animationFrame
-        ? lifecycle.animationFrame(() => target.focus(), windowRef)
-        : (() => { const id=windowRef.requestAnimationFrame(()=>target.focus()); return () => windowRef.cancelAnimationFrame?.(id); })();
+        ? lifecycle.animationFrame(restoreFocus, windowRef)
+        : (() => { const id=windowRef.requestAnimationFrame(restoreFocus); return () => windowRef.cancelAnimationFrame?.(id); })();
     }
   }
   return {open,close};

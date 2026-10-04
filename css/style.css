@@ -1374,7 +1374,7 @@ body.center-page {
 }
 
 /* ============================================================
-   LIGHTBOX MEDIA — single ownership layer
+   Responsive lightbox sizing — single ownership layer
    ------------------------------------------------------------
    The Lightbox controller creates one .lightbox-media-item per asset and
    one .lightbox-artwork surface around the actual media element. These rules
@@ -1529,8 +1529,8 @@ body.center-page {
 /* =========================================
    3. SHOW MORE / SHOW LESS: FADE "PEEK" EFFECT
    ========================================= */
-/* JS sets the grid's max-height in pixels when collapsed, so this
-   just needs to clip whatever spills past that and animate smoothly. */
+/* JS sets the dedicated gallery viewport's max-height in pixels when
+   collapsed; the grid itself keeps its natural height. */
 .seamless-grid {
   overflow: hidden;
 }
@@ -2008,7 +2008,8 @@ body.center-page {
   transition:opacity .35s ease, transform .35s ease;
 }
 
-.page-transition.is-entering .page-transition-logo {
+.page-transition.is-entering .page-transition-logo,
+.page-transition.is-steady .page-transition-logo {
   opacity:1;
   transform:scale(1);
 }

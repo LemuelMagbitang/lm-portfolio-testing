@@ -28,6 +28,7 @@ export async function bootstrapPortfolioApp({
     : Date.now();
   const MIN_LOADING_SCREEN_MS = 450;
   let initialTransitionFrame = null;
+  let initialTransitionTimer = null;
 
 
   function showInitialPageTransition() {
@@ -35,13 +36,23 @@ export async function bootstrapPortfolioApp({
     pageTransition.classList.remove('is-hidden', 'is-entering', 'is-error');
     pageTransition.setAttribute('aria-hidden', 'false');
     pageTransition.dataset.loading = 'active';
+    pageTransition.classList.remove('is-steady');
     root.body?.setAttribute('aria-busy', 'true');
     initialTransitionFrame = windowRef?.requestAnimationFrame?.(() => {
       pageTransition.classList.add('is-entering');
     });
+    initialTransitionTimer = root.defaultView.setTimeout(() => {
+      if (pageTransition.dataset.loading === 'active') {
+        pageTransition.classList.add('is-steady');
+      }
+    }, 900);
   }
 
   function hideInitialPageTransition() {
+    if (initialTransitionTimer) {
+      windowRef.clearTimeout(initialTransitionTimer);
+      initialTransitionTimer = null;
+    }
     if (!pageTransition) return;
     pageTransition.classList.add('is-hidden');
     pageTransition.setAttribute('aria-hidden', 'true');

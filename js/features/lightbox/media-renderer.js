@@ -21,11 +21,11 @@ export function createLightboxMediaRenderer({
   function buildImageMedia(imgUrl, altText = 'Project artwork', { eager = false } = {}) {
     const img = documentRef.createElement('img');
     img.alt = String(altText || 'Project artwork').trim() || 'Project artwork';
-    img.src = imgUrl;
     img.draggable = false;
     img.loading = 'eager';
     img.decoding = 'async';
     if (eager) img.fetchPriority = 'high';
+    img.src = imgUrl;
 
     if (protectionEnabled()) {
       img.classList.add('no-save');
@@ -265,12 +265,12 @@ export function createLightboxMediaRenderer({
 
   function renderVideo(item) {
     const video = documentRef.createElement('video');
-    video.src = resolveAssetUrl(item.src);
     video.controls = true;
     video.playsInline = true;
     video.preload = 'auto';
     video.controlsList = 'nodownload';
     video.disablePictureInPicture = true;
+    video.src = resolveAssetUrl(item.src);
 
     if (protectionEnabled()) {
       video.classList.add('no-save');

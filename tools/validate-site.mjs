@@ -509,7 +509,7 @@ function validateGalleryContract() {
   if (!/createLifecycle/.test(source) || !/lifecycle\.cleanup\(\)/.test(source)) {
     err('Gallery: persistent runtime resources must use the shared feature lifecycle.');
   }
-  if (!/from ['"]\.\/presentation\.js['"]/.test(source) ||
+  if (!/from ['"]\.\/presentation\.js(?:\?[^'"]*)?['"]/.test(source) ||
       !/getResponsiveBaseCount/.test(source) ||
       !/getRowAlignedCount/.test(source) ||
       !/applyGalleryReveal/.test(source)) {
@@ -576,7 +576,7 @@ function validateBootstrapHardening() {
     err('Bootstrap: initial page transition is missing its fail-safe timeout.');
   }
 
-  if (!/await createPortfolioApp\(\{ root, runtime, cms, config \}\)/.test(bootstrap)) {
+  if (!/await\s+createPortfolioApp\(\{\s*root,\s*runtime,\s*cms,\s*config\s*\}\)/.test(bootstrap)) {
     err('Bootstrap: composition root must receive normalized app configuration.');
   }
 
