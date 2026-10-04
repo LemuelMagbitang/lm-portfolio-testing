@@ -9,6 +9,7 @@ import {
 } from '../js/features/projects/card-presentation.js';
 import { normalizeProjects } from '../js/data/project-normalizer.js';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
+import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js';
 
 const calls = [];
 const children = [];
@@ -289,5 +290,35 @@ assert.deepEqual(parseYouTubeUrl('not-a-url'), {
   id: null,
   isShort: false
 });
+
+const pathDocument = {
+  baseURI: 'https://example.com/portfolio/',
+  scripts: []
+};
+const pathWindow = {
+  location: { href: 'https://example.com/portfolio/' }
+};
+const pathOptions = { documentRef: pathDocument, windowRef: pathWindow };
+
+assert.equal(
+  siteAssetUrl('assets/artwork.webp', pathOptions),
+  'https://example.com/portfolio/assets/artwork.webp'
+);
+assert.equal(
+  siteAssetUrl('https://cdn.example.com/artwork.webp', pathOptions),
+  'https://cdn.example.com/artwork.webp'
+);
+assert.equal(
+  siteAssetUrl('//cdn.example.com/artwork.webp', pathOptions),
+  '//cdn.example.com/artwork.webp'
+);
+assert.equal(
+  siteAssetUrl('data:image/png;base64,AAA', pathOptions),
+  'data:image/png;base64,AAA'
+);
+assert.equal(siteAssetUrl('javascript:alert(1)', pathOptions), '');
+assert.equal(siteAssetUrl('vbscript:msgbox(1)', pathOptions), '');
+assert.equal(siteAssetUrl('ftp://example.com/file.zip', pathOptions), '');
+assert.equal(siteAssetUrl('file:///etc/passwd', pathOptions), '');
 
 console.log('Projects runtime boundary validation passed.');
