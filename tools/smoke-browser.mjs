@@ -902,8 +902,10 @@ try {
       if (await fixtureCard.count() !== 1) throw new Error('Direct-media smoke fixture card is missing.');
 
       const thumbnail = fixtureCard.locator('.card-thumbnail').first();
-      await thumbnail.setAttribute('data-model-thumb', '');
-      await thumbnail.click();
+      const activationTarget = thumbnail.locator('[data-lottie-thumb], lottie-player').first();
+      if (await activationTarget.count() !== 1) throw new Error('Direct-media fixture thumbnail target is missing.');
+      await activationTarget.setAttribute('data-model-thumb', '');
+      await activationTarget.click();
 
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
 
