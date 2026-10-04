@@ -59,51 +59,15 @@ export async function bootstrapPortfolioApp({
     root.body?.setAttribute('aria-busy', 'false');
   }
 
-  async function waitForInitialViewportMedia() {
-    const viewportHeight = Number(windowRef?.innerHeight) || 0;
-    const viewportWidth = Number(windowRef?.innerWidth) || 0;
-    const media = Array.from(root.querySelectorAll?.('img,video') || [])
-      .filter(node => !pageTransition?.contains(node))
-      .filter(node => {
-        const rect = node.getBoundingClientRect?.();
-        if (!rect || rect.width <= 0 || rect.height <= 0) return false;
-        return rect.bottom >= 0 && rect.top <= viewportHeight + Math.max(180, viewportHeight * 0.35)
-          && rect.right >= 0 && rect.left <= viewportWidth;
-      });
-
-    const waits = media.map(node => new Promise(resolve => {
-      if (node.tagName === 'IMG') {
-        if (node.complete) return resolve();
-        const done = () => { cleanup(); resolve(); };
-        const cleanup = () => {
-          node.removeEventListener('load', done);
-          node.removeEventListener('error', done);
-        };
-        node.addEventListener('load', done, { once: true });
-        node.addEventListener('error', done, { once: true });
-        windowRef.setTimeout(done, 5000);
-        return;
-      }
-
-      if (node.readyState >= 1) return resolve();
-      const done = () => { cleanup(); resolve(); };
-      const cleanup = () => {
-        node.removeEventListener('loadedmetadata', done);
-        node.removeEventListener('loadeddata', done);
-        node.removeEventListener('error', done);
-      };
-      node.addEventListener('loadedmetadata', done, { once: true });
-      node.addEventListener('loadeddata', done, { once: true });
-      node.addEventListener('error', done, { once: true });
-      windowRef.setTimeout(done, 5000);
-    }));
-
-    await Promise.allSettled(waits);
-  }
-
   async function waitForReadyPaint() {
-    const fontReady = root.fonts?.ready ? Promise.resolve(root.fonts.ready).catch(() => {}) : Promise.resolve();
-    await Promise.allSettled([fontReady, waitForInitialViewportMedia()]);
+    const fontReady = root.fonts?.ready
+      ? Promise.resolve(root.fonts.ready).catch(() => {})
+      : Promise.resolve();
+
+    // All CMS-backed content and feature composition are already awaited by
+    // createPortfolioApp. Here we only give the browser two paint opportunities
+    // to commit the complete DOM before removing the branded gate.
+    await fontReady;
     await new Promise(resolve => windowRef.requestAnimationFrame(resolve));
     await new Promise(resolve => windowRef.requestAnimationFrame(resolve));
 
