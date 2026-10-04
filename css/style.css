@@ -950,8 +950,8 @@ textarea { resize: vertical; }
 
 .lightbox-controls {
   position: relative;
-  /* Avoid creating a stacking context here: the controls' difference blend
-     must sample the artwork backdrop, not an intermediate transparent layer. */
+  /* Keep controls in normal compositing; contrast comes from their explicit
+     text-shadow edge rather than blend-mode sampling of the artwork. */
   z-index: auto;
   display: block;
   visibility: hidden;

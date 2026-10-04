@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 4, 2026, the branch has completed the composition/data-boundary cutover and is in Phase 3A presentation hardening without intentionally changing the public visual baseline:
+As of October 5, 2026, the branch has completed the composition/data-boundary cutover and is in Phase 3A presentation hardening without intentionally changing the public visual baseline:
 
 - `js/script.js` is a 19-line browser entrypoint.
 - `js/app/bootstrap.js` owns startup/error containment and passes normalized application configuration into the composition root.
@@ -24,10 +24,10 @@ As of October 4, 2026, the branch has completed the composition/data-boundary cu
 - Lightbox startup no longer waits for the full-project media warm-up; media preloading runs as a background cache warm-up.
 - Lightbox media loading is progressive: the first image/video/YouTube item is prioritized while later media is deferred.
 - Background Lightbox warm-up is intentionally limited to the first local image/video/Lottie item per project; full 3D binaries and YouTube iframes are loaded on demand.
-- Lightbox navigation controls remain transparent and blend-based, with the rectangular focus/tap artifact removed.
+- Lightbox navigation controls remain transparent and use normal compositing with a restrained text-shadow contrast edge; the rectangular focus/tap artifact has been removed.
 - Gallery row-alignment now derives its column count from the actual grid geometry, avoiding incorrect Show More thresholds while previous-filter cards are still fading out.
-- Cache-version references were refreshed for the changed public CSS/bootstrap/Gallery/Lightbox modules.
-- The edited public modules were structurally syntax-checked after the latest changes.
+- Desktop YouTube artwork is presentation-capped while mobile YouTube remains width-first/full-bleed; the regression suite covers both behaviors.
+- Cache-version references were refreshed for the changed public CSS/bootstrap/Projects modules, and the edited public modules were structurally syntax-checked after the latest changes.
 
 Phase 3A has therefore started: the architecture is being shaped specifically to support major UI/UX changes without rewriting CMS data, project transport, or media infrastructure. The immediate work remains targeted hardening and presentation ownership, not a visual redesign by itself.
 
