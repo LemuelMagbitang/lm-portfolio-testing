@@ -33,6 +33,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       opener = documentRef.activeElement?.nodeType === 1 ? documentRef.activeElement : null;
     }
     lightboxEl.setAttribute('aria-modal','true');
+    lightboxEl.setAttribute('aria-hidden','false');
     if (!lightboxEl.hasAttribute('tabindex')) lightboxEl.setAttribute('tabindex','-1');
     keydownCleanup?.();
     keydownCleanup = lifecycle?.listen
@@ -53,6 +54,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       try { target.focus({ preventScroll: true }); }
       catch (_) { target.focus(); }
     }
+    lightboxEl.setAttribute('aria-hidden','true');
     afterFocus?.();
   }
   return {open,close};
