@@ -93,9 +93,7 @@ export function observeProjectCardOrientation(
 
   const update = () => {
     const elementTag = String(mediaElement?.tagName || '').toLowerCase();
-    const declaredType = normalizeCardOrientation(mediaType) === 'auto'
-      ? ''
-      : String(mediaType).trim().toLowerCase();
+    const declaredType = String(mediaType || '').trim().toLowerCase();
     const effectiveType = declaredType || elementTag;
 
     if (elementTag === 'img') {
