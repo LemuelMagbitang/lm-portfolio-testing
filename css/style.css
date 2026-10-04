@@ -966,6 +966,7 @@ button.lightbox-nav {
   padding:0;
   border:0;
   background:transparent;
+  -webkit-tap-highlight-color:transparent;
 }
 
 button.hamburger {
@@ -1003,10 +1004,17 @@ button.hamburger {
 @media (hover:hover) and (pointer:fine){
   .lightbox-close:hover { opacity:.72; transform:scale(1.04); }
 }
-.lightbox-close:focus{outline:none;}
-.lightbox-close:focus-visible{outline:2px solid #fff;outline-offset:3px;}
-.lightbox-nav:focus{outline:none;}
-.lightbox-nav:focus-visible{outline:2px solid #fff;outline-offset:3px;}
+.lightbox-close:focus,
+.lightbox-nav:focus,
+.lightbox-close:focus-visible,
+.lightbox-nav:focus-visible{
+  outline:none;
+  box-shadow:none;
+}
+.lightbox-close:focus-visible i,
+.lightbox-nav:focus-visible i{
+  filter:drop-shadow(0 0 3px currentColor);
+}
 
 .lightbox-nav {
   mix-blend-mode:difference;
