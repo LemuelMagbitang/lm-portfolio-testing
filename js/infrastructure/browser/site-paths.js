@@ -55,18 +55,25 @@ export function siteAssetUrl(src, options = {}) {
 
   const value = String(src).trim();
   if (
-    /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(value) ||
+    /^https?:\/\//i.test(value) ||
+    /^\/\//.test(value) ||
     /^(?:data|blob):/i.test(value)
   ) {
     return value;
   }
 
+  // Asset URLs are a trust boundary: relative paths and HTTP(S) resources are
+  // supported, while executable or otherwise unsupported URI schemes are not.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return '';
+
   try {
-    return new URL(
+    const resolved = new URL(
       value.replace(/^\/+/, ''),
       getSiteRootUrl(options)
-    ).href;
+    );
+    if (!['http:', 'https:'].includes(resolved.protocol)) return '';
+    return resolved.href;
   } catch (_) {
-    return value;
+    return '';
   }
 }
