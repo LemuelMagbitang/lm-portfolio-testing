@@ -173,7 +173,7 @@ export function createLightboxMediaRenderer({
     if (youtubeFrameCache.has(embedSrc)) return Promise.resolve(true);
     if (youtubeFramePending.has(embedSrc)) return youtubeFramePending.get(embedSrc);
 
-    const promise = new Promise(resolve => {
+    const promise = withPreloadTimeout(new Promise(resolve => {
       const iframe = documentRef.createElement('iframe');
       iframe.dataset.lmYoutube = 'true';
       iframe.dataset.lmYoutubeCacheKey = embedSrc;
@@ -200,7 +200,7 @@ export function createLightboxMediaRenderer({
       iframe.addEventListener('error', onError, { once: true });
       iframe.src = embedSrc;
       ensureYouTubePreloadRoot().appendChild(iframe);
-    });
+    }));
 
     youtubeFramePending.set(embedSrc, promise);
     return promise.finally(() => youtubeFramePending.delete(embedSrc));
