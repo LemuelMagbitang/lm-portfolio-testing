@@ -35,4 +35,23 @@ assert.equal(getRowAlignedCount(cards, 9, fakeWindow), 9);
 assert.equal(getRowAlignedCount(cards, 4, fakeWindow), 6);
 assert.equal(getRowAlignedCount(cards.slice(0, 2), 9, fakeWindow), 2);
 
+// Regression: during a filter transition, row positions can be misleading
+// because previous-filter cards still occupy the CSS grid. The presentation
+// boundary must prefer actual grid geometry when it is available.
+const geometricWindow = {
+  innerWidth: 1280,
+  getComputedStyle: () => ({ columnGap: '20px' })
+};
+const geometricGrid = {
+  getBoundingClientRect: () => ({ width: 1000 })
+};
+const geometricCards = Array.from({ length: 10 }, () => ({
+  getBoundingClientRect: () => ({ width: 320, top: 100 })
+}));
+
+assert.equal(
+  getRowAlignedCount(geometricCards, 4, geometricWindow, geometricGrid),
+  6
+);
+
 console.log('Gallery presentation boundary validated.');
