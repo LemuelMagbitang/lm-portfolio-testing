@@ -45,8 +45,6 @@ export async function createPortfolioApp({
     return module.mountModelViewer(...args);
   };
 
-  onProgress('Loading portfolio data…');
-
   const settingsPromise = initSiteSettings({
     url: config.urls.settings,
     root,
