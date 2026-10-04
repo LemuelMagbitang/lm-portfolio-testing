@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js';
+import {
+  applyProjectCardOrientation,
+  getProjectCardOrientation,
+  orientationFromAspectRatio
+} from '../js/features/projects/card-presentation.js';
 import { normalizeProjects } from '../js/data/project-normalizer.js';
 
 const calls = [];
@@ -163,6 +168,35 @@ assert.equal(capabilityCard.className, 'project-card');
 assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
+
+assert.equal(orientationFromAspectRatio(1000, 1000), 'square');
+assert.equal(orientationFromAspectRatio(1600, 1000), 'landscape');
+assert.equal(orientationFromAspectRatio(600, 1000), 'portrait');
+assert.equal(orientationFromAspectRatio(0, 1000), 'auto');
+
+assert.equal(getProjectCardOrientation({
+  thumbnail: { orientation: 'portrait' },
+  media: [{ type: 'image', src: 'media/test.webp', orientation: 'landscape' }]
+}), 'portrait');
+
+assert.equal(getProjectCardOrientation({
+  thumbnail: { orientation: 'auto' },
+  media: [{ type: 'image', src: 'media/test.webp', orientation: 'landscape' }]
+}), 'landscape');
+
+assert.equal(getProjectCardOrientation({
+  thumbnail: { orientation: 'auto' },
+  media: [{ type: 'youtube', src: 'https://www.youtube.com/shorts/test' }]
+}, {
+  mediaType: 'youtube'
+}), 'square');
+
+const presentationCard = makeElement();
+assert.equal(applyProjectCardOrientation(presentationCard, 'landscape'), 'landscape');
+assert.equal(presentationCard.dataset.cardOrientation, 'landscape');
+assert.equal(presentationCard.classList.values.has('card-orientation-landscape'), true);
+assert.equal(presentationCard.classList.values.has('card-orientation-square'), false);
+
 
 // Regression: projects with no explicit thumbnail src still rely on thumbnail
 // focus/zoom/rotation when the first media item becomes the fallback artwork.
