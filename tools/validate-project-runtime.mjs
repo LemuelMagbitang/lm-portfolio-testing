@@ -253,6 +253,49 @@ assert.equal(
   'YouTube fallback thumbnails must stay square even when the fallback image is 16:9'
 );
 
+const deferredImageListeners = {};
+const deferredImage = {
+  tagName: 'IMG',
+  naturalWidth: 0,
+  naturalHeight: 0,
+  addEventListener(name, callback) {
+    deferredImageListeners[name] = callback;
+  },
+  removeEventListener(name) {
+    delete deferredImageListeners[name];
+  }
+};
+const deferredImageCard = makeElement();
+const disposeDeferredImage = observeProjectCardOrientation(
+  deferredImageCard,
+  {
+    thumbnail: { src: 'media/deferred.webp', orientation: 'auto' },
+    media: [{ type: 'image', src: 'media/deferred.webp' }]
+  },
+  deferredImage,
+  { mediaType: 'image' }
+);
+
+assert.equal(
+  deferredImageCard.dataset.cardOrientation,
+  'square',
+  'Unloaded image thumbnails should receive a stable square tier before dimensions are available'
+);
+assert.equal(typeof deferredImageListeners.load, 'function');
+
+deferredImage.naturalWidth = 1600;
+deferredImage.naturalHeight = 1000;
+deferredImageListeners.load();
+
+assert.equal(
+  deferredImageCard.dataset.cardOrientation,
+  'landscape',
+  'Explicit image thumbnails must refine to their intrinsic landscape tier after <img> load'
+);
+
+disposeDeferredImage();
+assert.equal(deferredImageListeners.load, undefined);
+
 const presentationCard = makeElement();
 assert.equal(applyProjectCardOrientation(presentationCard, 'landscape'), 'landscape');
 assert.equal(presentationCard.dataset.cardOrientation, 'landscape');
