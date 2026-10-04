@@ -455,6 +455,12 @@ export async function initGallery(options = {}) {
   bind(filterTabs, 'pointerup', finishFilterPointer);
   bind(filterTabs, 'pointercancel', finishFilterPointer);
 
+  // A touch can begin on the filter rail and finish outside it. Keep the
+  // cleanup listener on the window so pointer state cannot remain stuck after
+  // a swipe exits the tab strip.
+  bind(windowRef, 'pointerup', finishFilterPointer);
+  bind(windowRef, 'pointercancel', finishFilterPointer);
+
   function applyHash() {
     const hash = decodeURIComponent(windowRef.location.hash.replace('#', ''));
     if (!hash) return;

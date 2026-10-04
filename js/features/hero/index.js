@@ -51,7 +51,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
     try {
       const detector = new windowRef.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
       const faces = await detector.detect(slideImg);
-      if (!faces.length) return;
+      if (!slideImg.isConnected || !faces.length) return;
 
       const box = faces[0].boundingBox;
       const naturalW = slideImg.naturalWidth || slideImg.width;
