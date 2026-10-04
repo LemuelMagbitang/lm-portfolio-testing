@@ -40,7 +40,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       : (() => { documentRef.addEventListener('keydown', onKeydown, true); return () => documentRef.removeEventListener('keydown', onKeydown, true); })();
     focusCleanup?.();
     focusCleanup = lifecycle?.animationFrame
-      ? lifecycle.animationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }, windowRef)
+      ? lifecycle.animationFrame(() => { const items=getFocusable(); try { (items[0]||lightboxEl).focus({ preventScroll: true }); } catch (_) { (items[0]||lightboxEl).focus?.(); } }, windowRef)
       : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }); return () => windowRef.cancelAnimationFrame?.(id); })();
   }
   function close({ afterFocus } = {}) {
