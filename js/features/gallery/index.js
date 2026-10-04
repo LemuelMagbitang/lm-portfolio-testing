@@ -315,14 +315,6 @@ export async function initGallery(options = {}) {
 
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
 
-    // Expansion is a presentation state, not a one-render side effect. When
-    // the viewport changes, recompute the available base count but preserve
-    // SHOW LESS while there is still content below it. Only drop the state
-    // when the new viewport has no overflow to reveal.
-    if (isExpanded && filtered.length <= effectiveBaseCount) {
-      isExpanded = false;
-    }
-
     cancelReveal?.();
     cancelReveal = applyGalleryReveal({
       grid: portfolioGrid,
