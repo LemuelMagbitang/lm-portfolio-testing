@@ -401,6 +401,33 @@ try {
       );
       if (desktopCards < 9) throw new Error(`Desktop resize fixture rendered too few projects (found ${desktopCards}).`);
 
+      // The card's presentation ratio must own the grid geometry. This
+      // catches regressions where intrinsic thumbnail dimensions pull the
+      // CSS grid row height away from the bounded card orientation tiers.
+      const desktopCardGeometry = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+        cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .map(card => {
+            const rect = card.getBoundingClientRect();
+            const orientation = card.dataset.cardOrientation || 'square';
+            const expected = orientation === 'landscape'
+              ? 4 / 3
+              : orientation === 'portrait' ? 3 / 4 : 1;
+            return {
+              orientation,
+              ratio: rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 0,
+              expected
+            };
+          })
+      );
+      desktopCardGeometry.forEach(({ orientation, ratio, expected }) => {
+        if (!ratio || Math.abs(ratio - expected) > 0.035) {
+          throw new Error(
+            `Desktop project card geometry drifted for ${orientation}: ratio=${ratio.toFixed(3)}, expected=${expected.toFixed(3)}.`
+          );
+        }
+      });
+
       // Current portfolio has 11 projects. The new presentation contract
       // intentionally shows 9–15 projects without Show More on desktop.
       const desktopShowMore = page.locator('#showMoreBtn').first();
@@ -418,6 +445,21 @@ try {
       });
       const mobileCardsInDom = await page.locator('#portfolioGrid .project-card').count();
       if (mobileCardsInDom !== 11) throw new Error(`Mobile smoke fixture unexpectedly changed project count (found ${mobileCardsInDom}).`);
+
+      const mobileCardGeometry = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+        cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .map(card => {
+            const rect = card.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 0;
+          })
+      );
+      mobileCardGeometry.forEach(ratio => {
+        if (!ratio || Math.abs(ratio - 1) > 0.035) {
+          throw new Error(`Mobile project card is no longer square after responsive resize: ratio=${ratio.toFixed(3)}.`);
+        }
+      });
+
       if (mobileCollapsedState.maxHeight === 'none' || mobileCollapsedState.scrollHeight <= mobileCollapsedState.clientHeight) {
         throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed gallery viewport.');
       }
