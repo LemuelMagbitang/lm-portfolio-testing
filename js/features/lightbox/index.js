@@ -126,11 +126,6 @@ const mediaRenderer = createLightboxMediaRenderer({
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
 let previousBodyOverflow = '';
-let previousBodyPosition = '';
-let previousBodyTop = '';
-let previousBodyLeft = '';
-let previousBodyRight = '';
-let previousBodyWidth = '';
 let previousPageScrollX = 0;
 let previousPageScrollY = 0;
 
@@ -167,11 +162,6 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     // so this branch could never run and closing the viewer could clobber a
     // caller-owned body overflow value.
     previousBodyOverflow = documentRef.body.style.overflow;
-    previousBodyPosition = documentRef.body.style.position;
-    previousBodyTop = documentRef.body.style.top;
-    previousBodyLeft = documentRef.body.style.left;
-    previousBodyRight = documentRef.body.style.right;
-    previousBodyWidth = documentRef.body.style.width;
     previousPageScrollX = Number(windowRef.scrollX) || 0;
     previousPageScrollY = Number(windowRef.scrollY) || 0;
   }
@@ -184,16 +174,9 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
 
-  // Freeze the page itself at the exact scroll offset while the fixed
-  // Lightbox owns the viewport. Overflow-only locking allows mobile browsers
-  // to reconcile late image/layout changes and scroll anchoring underneath the
-  // modal, which can produce a large jump when the viewer closes.
+  // Keep the page from scrolling behind the fixed Lightbox while it is open.
+  // The saved viewport position is restored explicitly on close.
   if (!wasActive) {
-    documentRef.body.style.position = 'fixed';
-    documentRef.body.style.top = '-' + previousPageScrollY + 'px';
-    documentRef.body.style.left = '0';
-    documentRef.body.style.right = '0';
-    documentRef.body.style.width = '100%';
     documentRef.body.style.overflow = 'hidden';
   }
 
@@ -240,6 +223,12 @@ function closeLightbox() {
   const pageScrollX = previousPageScrollX;
   const pageScrollY = previousPageScrollY;
   const restorePageScroll = () => {
+    try {
+      documentRef.documentElement.scrollLeft = pageScrollX;
+      documentRef.documentElement.scrollTop = pageScrollY;
+      documentRef.body.scrollLeft = pageScrollX;
+      documentRef.body.scrollTop = pageScrollY;
+    } catch (_) {}
     windowRef.scrollTo({
       left: pageScrollX,
       top: pageScrollY,
@@ -247,25 +236,15 @@ function closeLightbox() {
     });
   };
 
-  // Release the fixed-body lock before restoring focus. The focus callback
-  // restores the saved viewport immediately after focus, so a browser that
-  // scrolls the opener as part of focus cannot win the race.
   documentRef.body.style.overflow = previousBodyOverflow;
-  documentRef.body.style.position = previousBodyPosition;
-  documentRef.body.style.top = previousBodyTop;
-  documentRef.body.style.left = previousBodyLeft;
-  documentRef.body.style.right = previousBodyRight;
-  documentRef.body.style.width = previousBodyWidth;
   previousBodyOverflow = '';
-  previousBodyPosition = '';
-  previousBodyTop = '';
-  previousBodyLeft = '';
-  previousBodyRight = '';
-  previousBodyWidth = '';
   previousPageScrollX = 0;
   previousPageScrollY = 0;
 
+  // Restore focus synchronously and immediately put the viewport back where
+  // it was. The post-layout frames below catch mobile reconciliation.
   lightboxA11y.close({ afterFocus: restorePageScroll });
+  restorePageScroll();
   // Dispose any mounted 3D viewers before removing their DOM nodes. The
   // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
   // keydown listener, none of which are cleaned up by innerHTML alone.
@@ -273,9 +252,12 @@ function closeLightbox() {
     try { shell.__modelViewerCleanup?.(); } catch (_) {}
   });
   modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background
-  // One final post-layout correction handles browsers that reconcile the
-  // restored body styles after this fixed modal subtree is removed.
-  windowRef.requestAnimationFrame(() => restorePageScroll?.());
+  // Post-layout corrections catch any scroll reconciliation triggered while
+  // the Lightbox media subtree and body overflow state are being removed.
+  windowRef.requestAnimationFrame(() => {
+    restorePageScroll();
+    windowRef.requestAnimationFrame(restorePageScroll);
+  });
 }
 
 // Event Listeners for Lightbox Controls
