@@ -1275,11 +1275,8 @@ body.center-page {
   .skill-logo-frame { width: 48px; height: 48px; flex-basis: 48px; border-radius: 11px; }
   .skill-logo-frame::after { border-radius: 10px; }
   .skill-list.minimal-list li .skill-logo { max-width: 74%; max-height: 70%; }
-  
-  .lightbox-nav { width: 36px; height: 36px; font-size: 0.8rem; }
-  .lightbox-prev { left: 8px; }
-  .lightbox-next { right: 8px; }
-  
+
+
   .glass-info { transform: translateY(0); opacity: 1; padding: 20px 15px 15px; }
 
   /* =========================================
