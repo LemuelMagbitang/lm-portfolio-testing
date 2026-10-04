@@ -8,7 +8,7 @@
 
 export function mediaTypeFromSrc(src = '') {
   const clean = String(src).split('?')[0].split('#')[0].toLowerCase();
-  if (/\.(mp4|webm|mov|m4v)$/.test(clean)) return 'video';
+  if (/\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(clean)) return 'video';
   if (/\.json$/.test(clean)) return 'lottie';
   return 'image';
 }

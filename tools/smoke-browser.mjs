@@ -338,12 +338,29 @@ try {
 
       const mobileShowMore = page.locator('#showMoreBtn').first();
       if (await mobileShowMore.isVisible().catch(() => false)) {
+        const collapsedGeometry = await page.evaluate(() => {
+          const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
+          const wrapper = document.querySelector('#showMoreWrapper')?.getBoundingClientRect();
+          return grid && wrapper ? { gridTop: grid.top, wrapperTop: wrapper.top } : null;
+        });
+        if (!collapsedGeometry || collapsedGeometry.wrapperTop < collapsedGeometry.gridTop - 2) {
+          throw new Error('Mobile Show More control escaped above the gallery in its collapsed state.');
+        }
+
         await mobileShowMore.click();
         await page.waitForTimeout(350);
         const expanded = await page.locator('#portfolioGrid').evaluate(el => getComputedStyle(el).maxHeight === 'none');
         const expandedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
+        const expandedGeometry = await page.evaluate(() => {
+          const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
+          const wrapper = document.querySelector('#showMoreWrapper')?.getBoundingClientRect();
+          return grid && wrapper ? { gridBottom: grid.bottom, wrapperTop: wrapper.top } : null;
+        });
         if (!expanded || expandedLabel?.trim().toUpperCase() !== 'SHOW LESS') {
           throw new Error('Mobile Show More did not expand the full-bleed two-column gallery.');
+        }
+        if (!expandedGeometry || expandedGeometry.wrapperTop < expandedGeometry.gridBottom - 2) {
+          throw new Error('Expanded Show More control is still overlapping the gallery.');
         }
 
         await mobileShowMore.click();
@@ -510,6 +527,23 @@ try {
       const allFilter = page.locator('.filter-tabs [data-filter="all"]');
       if (await allFilter.count() !== 1) throw new Error('Tablet Works filter UI is missing ALL.');
     }, { width: 834, height: 900 });
+
+    await smokePage(browser, '/', async page => {
+      const cards = page.locator('#portfolioGrid .project-card');
+      const boxes = await cards.evaluateAll(items => items.slice(0, 3).map(card => {
+        const r = card.getBoundingClientRect();
+        return { x: r.x, y: r.y, width: r.width };
+      }));
+      if (
+        boxes.length < 3 ||
+        Math.abs(boxes[0].y - boxes[1].y) > 2 ||
+        Math.abs(boxes[1].y - boxes[2].y) > 2 ||
+        Math.abs(boxes[0].width - boxes[1].width) > 2 ||
+        Math.abs(boxes[1].width - boxes[2].width) > 2
+      ) {
+        throw new Error('768px breakpoint entered a hybrid layout instead of the tablet three-column grid.');
+      }
+    }, { width: 768, height: 900 });
 
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');

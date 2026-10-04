@@ -134,21 +134,22 @@
 
     <div class="portfolio-wrapper">
 
-      <div class="seamless-grid" id="portfolioGrid">
-        <div class="project-card archive">
-          <div class="glass-info">
-            <h3>Content is loading…</h3>
-            <p>If this doesn't change, data/projects.json may be unreachable — check the CMS.</p>
+      <!-- Grid viewport owns clipping/fade geometry. The Show More control
+           stays outside this viewport and therefore remains in document flow. -->
+      <div class="portfolio-grid-viewport">
+        <div class="seamless-grid" id="portfolioGrid">
+          <div class="project-card archive">
+            <div class="glass-info">
+              <h3>Content is loading…</h3>
+              <p>If this doesn't change, data/projects.json may be unreachable — check the CMS.</p>
+            </div>
+            <div class="card-thumbnail"></div>
           </div>
-          <div class="card-thumbnail"></div>
-        </div>
-      </div> <!-- End seamless-grid -->
+        </div> <!-- End seamless-grid -->
 
-
-      <!-- This gradient/blur layer creates the "there's more below" peek
-           effect. It's purely visual — JS just shows/hides it and never
-           needs to be edited. -->
-      <div class="grid-fade-overlay" id="gridFadeOverlay"></div>
+        <!-- Visual "there's more below" fade. JS only toggles is-hidden. -->
+        <div class="grid-fade-overlay" id="gridFadeOverlay"></div>
+      </div> <!-- End portfolio-grid-viewport -->
 
       <!-- SHOW MORE / SHOW LESS BUTTON CONTAINER -->
       <div class="show-more-wrapper" id="showMoreWrapper">
