@@ -538,7 +538,11 @@ try {
       await page.waitForTimeout(104);
       const scrollAfterLightboxClose = await page.evaluate(() => window.scrollY);
       if (Math.abs(scrollAfterLightboxClose - scrollBeforeLightboxClose) > 4) {
-        throw new Error(`Lightbox close changed document scroll position (${scrollBeforeLightboxClose} -> immediate ${scrollImmediatelyAfterLightboxClose} -> frame ${scrollAfterLightboxFrame} -> settled ${scrollAfterLightboxClose}).`);
+        const debug = await page.locator('#lightbox').evaluate(el => ({
+          saved: el.dataset.debugSavedPageScroll || '',
+          close: el.dataset.debugCloseScroll || ''
+        }));
+        throw new Error(`Lightbox close changed document scroll position (${scrollBeforeLightboxClose} -> immediate ${scrollImmediatelyAfterLightboxClose} -> frame ${scrollAfterLightboxFrame} -> settled ${scrollAfterLightboxClose}); debug saved=${debug.saved} close=${debug.close}.`);
       }
 
       // Simulate browser back/forward navigation so the gallery gets a
