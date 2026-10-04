@@ -15,7 +15,7 @@ import { initSiteSettings } from '../features/settings/index.js';
 
 import { initGallery } from '../features/gallery/index.js?v=20261004-03';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-03';
-import { initLightbox } from '../features/lightbox/index.js?v=20261004-09';
+import { initLightbox } from '../features/lightbox/index.js?v=20261004-10';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js';
 
 export async function createPortfolioApp({
@@ -41,7 +41,7 @@ export async function createPortfolioApp({
   // Three.js is optional infrastructure: do not make it part of the initial
   // module graph. Lightbox requests the viewer only when a 3D asset is opened.
   const loadModelViewerModule = async () => (
-    import('../infrastructure/three/model-viewer.js?v=20261004-04')
+    import('../infrastructure/three/model-viewer.js?v=20261004-05')
   );
 
   const mountModelViewer = async (...args) => {
