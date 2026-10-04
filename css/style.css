@@ -995,6 +995,8 @@ button.hamburger {
 }
 .lightbox-close:focus{outline:none;}
 .lightbox-close:focus-visible{outline:2px solid #fff;outline-offset:3px;}
+.lightbox-nav:focus{outline:none;}
+.lightbox-nav:focus-visible{outline:2px solid #fff;outline-offset:3px;}
 
 .lightbox-nav {
   mix-blend-mode:difference;
