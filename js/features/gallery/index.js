@@ -83,7 +83,6 @@ export async function initGallery(options = {}) {
   const fadeMs = Number.isFinite(options.fadeMs) ? options.fadeMs : 300;
   let currentFilter = 'all';
   let isExpanded = false;
-  let baseCount = getBaseCount();
   let filterPager = null;
   let filterPageDots = [];
   let filterScrollTimer = null;
@@ -366,14 +365,13 @@ export async function initGallery(options = {}) {
   bind(windowRef, 'resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = windowRef.setTimeout(() => {
-      baseCount = getBaseCount();
       ensureFilterEdges();
       const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
       if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
       updateFilterPager(filterBtns.indexOf(activeBtn));
-      // Re-render at every breakpoint change. render() preserves an expanded
-      // gallery when overflow still exists, while collapsing only when the
-      // resized layout can already show every active project.
+      // Re-render at breakpoint changes because card orientation and the
+      // collapsed viewport measurement depend on the current width. The
+      // user's expansion state itself is never changed by resize.
       render();
     }, 120);
   });
@@ -478,12 +476,9 @@ export async function initGallery(options = {}) {
   // the current viewport and card geometry instead of trusting the restored
   // max-height/state from the previous page instance.
   bind(windowRef, 'pageshow', () => {
-    // BFCache restoration should reconstruct geometry, not invent a new
-    // interaction state. Keeping isExpanded prevents the gallery from
-    // unexpectedly returning to SHOW MORE after the browser restores the
-    // page, while render() still rebuilds the correct collapsed/expanded
-    // measurement for the current viewport.
-    baseCount = getBaseCount();
+    // BFCache restoration should reconstruct geometry without inventing a new
+    // interaction state. The viewport is temporarily released before render()
+    // so its fresh measurement is based on the current card geometry.
     if (portfolioGridViewport) portfolioGridViewport.style.maxHeight = 'none';
     render();
   });
@@ -500,7 +495,7 @@ export async function initGallery(options = {}) {
     updateFilterPager(filterBtns.indexOf(activeBtn));
   }, windowRef);
   bind(windowRef, 'hashchange', applyHash);
-  bind(windowRef, 'load', () => { baseCount = getBaseCount(); ensureFilterEdges(); if (!isExpanded) render(); });
+  bind(windowRef, 'load', () => { ensureFilterEdges(); if (!isExpanded) render(); });
   return {
     render,
     getFilter: () => currentFilter,
