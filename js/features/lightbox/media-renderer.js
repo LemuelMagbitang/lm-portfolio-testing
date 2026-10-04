@@ -16,6 +16,8 @@ export function createLightboxMediaRenderer({
   lightbox = null,
   lightboxControls = null
 } = {}) {
+  let youtubeMessageCleanup = null;
+
   function buildImageMedia(imgUrl, altText = 'Project artwork', { eager = false } = {}) {
     const img = documentRef.createElement('img');
     img.alt = String(altText || 'Project artwork').trim() || 'Project artwork';
@@ -53,6 +55,61 @@ export function createLightboxMediaRenderer({
       if (iframe === activeElement) return;
       pauseYouTubeFrame(iframe);
     });
+  }
+
+  function parseYouTubeMessage(data) {
+    if (!data) return null;
+    if (typeof data === 'object') return data;
+    if (typeof data !== 'string') return null;
+    try { return JSON.parse(data); } catch (_) { return null; }
+  }
+
+  function isTrustedYouTubeOrigin(origin) {
+    try {
+      const hostname = new URL(origin).hostname.toLowerCase();
+      return hostname === 'youtube.com' ||
+        hostname.endsWith('.youtube.com') ||
+        hostname === 'youtube-nocookie.com' ||
+        hostname.endsWith('.youtube-nocookie.com');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function primeYouTubeFrame(iframe) {
+    if (!iframe?.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage(JSON.stringify({
+        event: 'command',
+        func: 'addEventListener',
+        args: ['onStateChange']
+      }), '*');
+      iframe.dataset.lmYoutubeApi = 'ready';
+    } catch (_) {}
+  }
+
+  function bindYouTubeStateHandoff(container) {
+    if (!container || !windowRef?.addEventListener) return;
+    youtubeMessageCleanup?.();
+    youtubeMessageCleanup = null;
+
+    const handler = event => {
+      if (!isTrustedYouTubeOrigin(event?.origin)) return;
+      const message = parseYouTubeMessage(event?.data);
+      if (message?.event !== 'onStateChange' || Number(message.info) !== 1) return;
+
+      const activeFrame = Array.from(
+        container.querySelectorAll('iframe[data-lm-youtube]')
+      ).find(frame => frame.contentWindow === event.source);
+
+      // Cross-origin pointer/focus events are not reliable enough to be the
+      // sole source of truth on mobile. YouTube's state message fires after
+      // the player actually starts, so the previous player is paused here.
+      if (activeFrame) pauseOtherPlayback(container, activeFrame);
+    };
+
+    windowRef.addEventListener('message', handler);
+    youtubeMessageCleanup = () => windowRef.removeEventListener('message', handler);
   }
 
   function bindPlaybackHandoff(container, mediaElement, type) {
@@ -189,6 +246,8 @@ export function createLightboxMediaRenderer({
     iframe.title = item.caption || item.description || project.title || 'Project video';
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    iframe.addEventListener('load', () => primeYouTubeFrame(iframe));
 
     const orientation = String(item.orientation || '').toLowerCase();
     if (orientation === 'portrait') iframe.classList.add('yt-portrait');
@@ -343,11 +402,20 @@ export function createLightboxMediaRenderer({
       if (youtube) bindPlaybackHandoff(container, youtube, "youtube");
       rendered += 1;
     });
+
+    const youtubeFrames = container.querySelectorAll('iframe[data-lm-youtube]');
+    if (youtubeFrames.length) {
+      bindYouTubeStateHandoff(container);
+      youtubeFrames.forEach(primeYouTubeFrame);
+    }
+
     return rendered;
   }
 
   function dispose(container) {
     if (!container) return;
+    youtubeMessageCleanup?.();
+    youtubeMessageCleanup = null;
     pauseOtherPlayback(container);
     container.querySelectorAll('.model-viewer-shell').forEach(shell => {
       try { shell.__modelViewerCleanup?.(); } catch (_) {}
