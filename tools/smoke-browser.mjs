@@ -255,6 +255,25 @@ try {
         throw new Error('3D interactive mode did not expose its Back control.');
       }
 
+      const focusedModelGeometry = await modelShell.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return { x: r.x, y: r.y, width: r.width, height: r.height };
+      });
+      const focusedViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+      if (
+        Math.abs(focusedModelGeometry.width - focusedViewport.width) > 2 ||
+        Math.abs(focusedModelGeometry.height - focusedViewport.height) > 2
+      ) {
+        throw new Error('Focused 3D viewer did not occupy the viewport.');
+      }
+
+      const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
+        el => getComputedStyle(el).backgroundColor
+      );
+      if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
+        throw new Error('Focused 3D Close control still has a visible background box.');
+      }
+
       const backFocused = await modelBack.evaluate(el => document.activeElement === el);
       if (!backFocused) throw new Error('3D activation did not move keyboard focus to the Back control.');
 
@@ -472,6 +491,14 @@ try {
 
       const artworkAlt = await firstArtwork.getAttribute('alt');
       if (!artworkAlt?.trim()) throw new Error('Mobile Lightbox image is missing accessible alt text.');
+
+      const artworkRatioVariable = await firstArtwork.evaluate(el => {
+        const surface = el.closest('.lightbox-artwork');
+        return surface ? getComputedStyle(surface).getPropertyValue('--lightbox-artwork-ratio').trim() : '';
+      });
+      if (!artworkRatioVariable) {
+        throw new Error('Lightbox artwork surface did not receive its intrinsic ratio token.');
+      }
 
       const lightboxControlStyles = await page.evaluate(() =>
         ['#lightboxClose', '.lightbox-prev', '.lightbox-next'].map(selector => {
