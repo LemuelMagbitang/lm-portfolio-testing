@@ -1375,43 +1375,35 @@ body.center-page {
   }
 }
 
-/* Responsive lightbox sizing. The media stack remains vertical, but
-   its usable width and media height scale with the device so the header,
-   description, artwork and controls keep a balanced frame. */
+/* ============================================================
+   LIGHTBOX MEDIA — single ownership layer
+   ------------------------------------------------------------
+   The Lightbox controller creates one .lightbox-media-item per asset and
+   one .lightbox-artwork surface around the actual media element. These rules
+   are intentionally scoped to that surface so gallery/card/hero CSS cannot
+   accidentally change Lightbox playback or aspect-ratio geometry.
+   ============================================================ */
+
 @media (min-width: 768px) and (max-width: 1099px){
   .lightbox-modal{padding:48px 24px;}
   .modal-interior{max-width:760px;gap:26px;}
   #lightboxMediaContainer img,
   #lightboxMediaContainer iframe,
-  #lightboxMediaContainer video{max-height:min(78vh,760px);}
-}
-@media (max-width:767px){
-  .modal-interior{max-width:100%;gap:24px;margin-top:8px;}
-  /* Mobile Lightbox is a full-width artwork gallery, not a framed preview.
-     Do not cap the artwork by viewport height: a portrait image must keep
-     its full device width even when that makes the page taller. Scrolling
-     belongs to the modal, so tall artwork remains fully accessible. */
-  #lightboxMediaContainer img,
-  #lightboxMediaContainer iframe,
   #lightboxMediaContainer video{
-    max-height:none;
+    max-height:min(78vh,760px);
   }
-  .media-caption{max-width:calc(100% - 40px);}
 }
 
-/* =========================================
-   2. LIGHTBOX MEDIA DYNAMIC SCALING
-   ========================================= */
-#lightboxMediaContainer {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  width: 100%;
-  height: auto;
-  min-height: 0;
-  overflow: visible;
-  padding: 1rem;
+#lightboxMediaContainer{
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:center;
+  width:100%;
+  height:auto;
+  min-height:0;
+  overflow:visible;
+  padding:1rem;
 }
 
 #lightboxMediaContainer .lightbox-media-item{
@@ -1433,7 +1425,11 @@ body.center-page {
 
 #lightboxMediaContainer .lightbox-artwork > img{
   display:block;
+  width:auto;
   max-width:100%;
+  max-height:85vh;
+  object-fit:contain;
+  border-radius:4px;
 }
 
 #lightboxMediaContainer .lightbox-artwork > iframe,
@@ -1446,20 +1442,25 @@ body.center-page {
   pointer-events:auto;
   touch-action:manipulation;
   -webkit-tap-highlight-color:transparent;
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
 }
 
-#lightboxMediaContainer .lightbox-artwork.yt-landscape{
+#lightboxMediaContainer .yt-landscape{
   aspect-ratio:16 / 9;
   max-width:1000px;
 }
-#lightboxMediaContainer .lightbox-artwork.yt-portrait{
+
+#lightboxMediaContainer .yt-portrait{
   aspect-ratio:9 / 16;
   max-width:45vh;
 }
-#lightboxMediaContainer .lightbox-artwork.yt-square{
+
+#lightboxMediaContainer .yt-square{
   aspect-ratio:1 / 1;
   max-width:70vh;
 }
+
 #lightboxMediaContainer .lightbox-artwork > lottie-player{
   display:block!important;
   width:100%!important;
@@ -1467,113 +1468,65 @@ body.center-page {
   min-width:0;
   min-height:0;
 }
-.model-viewer-shell:not(.is-interactive) .model-viewer-activate{
-  z-index:50;
-  opacity:1;
-  visibility:visible;
+
+.media-caption{
+  color:#aaa;
+  font-size:.9rem;
+  line-height:1.45;
+  text-align:center;
+  max-width:80%;
 }
 
-/* Artworks dynamically adjust and center (1:1, portrait, landscape) */
-#lightboxMediaContainer img {
-  max-width: 100%;
-  max-height: 85vh;
-  object-fit: contain; 
-  border-radius: 4px;
-}
+@media (max-width:767px){
+  .modal-interior{
+    max-width:100%;
+    gap:24px;
+    margin-top:8px;
+  }
 
-/* Base styling for YouTube Iframes AND local MP4 <video> elements —
-   same treatment so they sit consistently in the lightbox either way. */
-#lightboxMediaContainer iframe,
-#lightboxMediaContainer video {
-  width: 100%;
-  max-height: 85vh;
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
+  .lightbox-modal{
+    padding:60px 0;
+  }
 
-/* Groups one artwork/video with its optional caption (added via
-   data-description="..." on that media-item in index.html). Only
-   appears in the DOM at all when there's actual caption text —
-   script.js skips it entirely otherwise, so there's never an empty
-   gap under artworks that don't have one. */
-.lightbox-media-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
+  #lightboxMediaContainer{
+    padding:0;
+  }
 
-.media-caption {
-  color: #aaa;
-  font-size: 0.9rem;
-  text-align: center;
-  max-width: 80%;
-}
+  #lightboxMediaContainer .lightbox-media-item{
+    width:100%;
+  }
 
-@media (max-width: 767px) {
-  /* Mobile Lightbox is an artwork-first gallery. Portrait media such as
-     YouTube Shorts must be allowed to use the full device width instead of
-     inheriting the desktop 45vh width cap. */
+  #lightboxMediaContainer .lightbox-artwork{
+    width:100%;
+  }
+
+  #lightboxMediaContainer .yt-landscape,
   #lightboxMediaContainer .yt-portrait,
-  #lightboxMediaContainer .yt-square,
-  #lightboxMediaContainer .yt-landscape {
-    width: 100%;
-    max-width: 100%;
+  #lightboxMediaContainer .yt-square{
+    width:100%;
+    max-width:100%;
   }
 
-  /* Images go flush to the screen's edges on mobile — no side padding,
-     no rounded corners — while the modal keeps its own top/bottom
-     padding so the close button and scrolling still work normally. */
-  .lightbox-modal {
-    padding: 60px 0;
+  #lightboxMediaContainer .lightbox-artwork > img{
+    width:100%;
+    max-width:100%;
+    max-height:none;
+    border-radius:0;
   }
-  #lightboxMediaContainer {
-    padding: 0;
-    height: auto;
-    overflow: visible;
-  }
-  #lightboxMediaContainer .lightbox-media-item {
-    width: 100%;
-  }
-  #lightboxMediaContainer .lightbox-artwork {
-    width: 100%;
-  }
-  #lightboxMediaContainer .lightbox-artwork.yt-landscape,
-  #lightboxMediaContainer .lightbox-artwork.yt-portrait,
-  #lightboxMediaContainer .lightbox-artwork.yt-square {
-    width: 100%;
-    max-width: 100%;
-  }
-  #lightboxMediaContainer img {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 0;
-  }
-  /* Title/description text still needs its own side margin even though
-     the artwork above it doesn't. */
+
   .modal-header,
-  .modal-full-desc {
-    padding: 0 20px;
+  .modal-full-desc{
+    padding:0 20px;
+  }
+
+  .media-caption{
+    max-width:calc(100% - 40px);
   }
 }
 
-/* Landscape (standard YouTube uploads + local MP4s by default) */
-.yt-landscape {
-  aspect-ratio: 16 / 9;
-  max-width: 1000px; /* Prevents it from getting too massive on ultrawide monitors */
-}
-
-/* Portrait (YouTube Shorts, or any video/image tagged data-orientation="portrait") */
-.yt-portrait {
-  aspect-ratio: 9 / 16;
-  max-width: 45vh; /* Limits width based on screen height so it never overflows */
-}
-
-/* Square (1:1) */
-.yt-square {
-  aspect-ratio: 1 / 1;
-  max-width: 70vh;
-}
+/* Keep orientation-specific media out of the global cascade. The renderer
+   carries the class onto both the media node and its artwork surface so this
+   scoped layer remains the single source of truth for viewer geometry. */
 
 /* =========================================
    3. SHOW MORE / SHOW LESS: FADE "PEEK" EFFECT
