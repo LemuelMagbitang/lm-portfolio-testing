@@ -257,37 +257,14 @@ try {
 
       const focusedModelGeometry = await modelShell.evaluate(el => {
         const r = el.getBoundingClientRect();
-        const style = getComputedStyle(el);
-        const parent = el.parentElement;
-        const parentRect = parent?.getBoundingClientRect?.();
-        const parentStyle = parent ? getComputedStyle(parent) : null;
-        return {
-          x: r.x,
-          y: r.y,
-          width: r.width,
-          height: r.height,
-          position: style.position,
-          inset: style.inset,
-          widthStyle: style.width,
-          heightStyle: style.height,
-          parentClass: parent?.className || '',
-          parentRect: parentRect ? {
-            x: parentRect.x,
-            y: parentRect.y,
-            width: parentRect.width,
-            height: parentRect.height
-          } : null,
-          parentPosition: parentStyle?.position || '',
-          parentTransform: parentStyle?.transform || 'none',
-          parentFilter: parentStyle?.filter || 'none'
-        };
+        return { x: r.x, y: r.y, width: r.width, height: r.height };
       });
       const focusedViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
       if (
         Math.abs(focusedModelGeometry.width - focusedViewport.width) > 2 ||
         Math.abs(focusedModelGeometry.height - focusedViewport.height) > 2
       ) {
-        throw new Error('Focused 3D viewer did not occupy the viewport (' + JSON.stringify(focusedModelGeometry) + ' vs ' + JSON.stringify(focusedViewport) + ').');
+        throw new Error('Focused 3D viewer did not occupy the viewport.');
       }
 
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
