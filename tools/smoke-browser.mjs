@@ -257,7 +257,30 @@ try {
 
       const focusedModelGeometry = await modelShell.evaluate(el => {
         const r = el.getBoundingClientRect();
-        return { x: r.x, y: r.y, width: r.width, height: r.height };
+        const style = getComputedStyle(el);
+        const parent = el.parentElement;
+        const parentRect = parent?.getBoundingClientRect?.();
+        const parentStyle = parent ? getComputedStyle(parent) : null;
+        return {
+          x: r.x,
+          y: r.y,
+          width: r.width,
+          height: r.height,
+          position: style.position,
+          inset: style.inset,
+          widthStyle: style.width,
+          heightStyle: style.height,
+          parentClass: parent?.className || '',
+          parentRect: parentRect ? {
+            x: parentRect.x,
+            y: parentRect.y,
+            width: parentRect.width,
+            height: parentRect.height
+          } : null,
+          parentPosition: parentStyle?.position || '',
+          parentTransform: parentStyle?.transform || 'none',
+          parentFilter: parentStyle?.filter || 'none'
+        };
       });
       const focusedViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
       if (
