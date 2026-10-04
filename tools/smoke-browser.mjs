@@ -686,7 +686,8 @@ try {
       if (Math.abs(shortsGeometry.ratio - (9 / 16)) > 0.025) {
         throw new Error('Desktop Shorts surface is not portrait (ratio ' + shortsGeometry.ratio.toFixed(3) + ').');
       }
-      if (shortsGeometry.width >= window.innerWidth * 0.8) {
+      const viewportWidth = await page.evaluate(() => window.innerWidth);
+      if (shortsGeometry.width >= viewportWidth * 0.8) {
         throw new Error('Desktop Shorts surface is too wide for portrait media (' + Math.round(shortsGeometry.width) + 'px).');
       }
 
