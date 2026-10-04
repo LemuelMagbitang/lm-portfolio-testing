@@ -8,7 +8,7 @@ import {
   getRowAlignedCount,
   applyGalleryReveal,
   resetGalleryPresentation
-} from './presentation.js?v=20261004-04';
+} from './presentation.js?v=20261004-19';
 export async function initGallery(options = {}) {
   const documentRef = options.root?.getElementById ? options.root : globalThis.document;
   const windowRef = documentRef?.defaultView || globalThis.window;
