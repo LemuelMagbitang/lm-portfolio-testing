@@ -89,6 +89,23 @@ export function applyGalleryReveal({
     card.style.opacity = '0';
   });
 
+  const measureCollapsedHeight = () => {
+    if (!isCurrentRender(renderToken) || expanded) return;
+    if (filteredCards.length <= visibleCount || visibleCount <= 0) return;
+
+    const gridRect = grid.getBoundingClientRect();
+    const lastVisible = filteredCards[visibleCount - 1];
+    const cardRect = lastVisible?.getBoundingClientRect?.();
+    if (!cardRect || !Number.isFinite(cardRect.bottom) || !Number.isFinite(gridRect.top)) return;
+
+    // Clamp against zero so a transient navigation/viewport measurement can
+    // never collapse the whole gallery upward into the filter controls.
+    const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
+    const height = Math.max(1, cardRect.bottom - gridRect.top + peek);
+    grid.style.maxHeight = `${Math.round(height)}px`;
+    fadeOverlay?.classList.remove('is-hidden');
+  };
+
   const hideTimer = windowRef.setTimeout(() => {
     if (!isCurrentRender(renderToken)) return;
     filteredCards.forEach(card => { card.style.display = 'block'; });
@@ -96,20 +113,14 @@ export function applyGalleryReveal({
       if (!filteredSet.has(card)) card.style.display = 'none';
     });
 
-    // Re-measure after the outgoing filter cards leave layout. Otherwise a
-    // collapsed gallery can keep the previous filter's taller grid height
-    // even though those cards are now display:none.
-    if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
-      windowRef.requestAnimationFrame(() => {
-        if (!isCurrentRender(renderToken)) return;
-        const gridRect = grid.getBoundingClientRect();
-        const lastVisible = filteredCards[visibleCount - 1];
-        const cardRect = lastVisible?.getBoundingClientRect?.();
-        if (!cardRect || !Number.isFinite(cardRect.bottom)) return;
-        const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
-        grid.style.maxHeight = `${Math.round(cardRect.bottom - gridRect.top + peek)}px`;
-      });
-    }
+    // Re-measure after filter cards leave layout. A second frame handles
+    // browser-restored pages and media metadata that settle just after the
+    // first paint.
+    windowRef.requestAnimationFrame(() => {
+      if (!isCurrentRender(renderToken)) return;
+      measureCollapsedHeight();
+      windowRef.requestAnimationFrame(measureCollapsedHeight);
+    });
   }, Math.max(0, Number(fadeMs) || 0));
 
   filteredCards.forEach(card => {
@@ -122,24 +133,35 @@ export function applyGalleryReveal({
   });
 
   if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
-    const gridRect = grid.getBoundingClientRect();
-    const lastVisible = filteredCards[visibleCount - 1];
-    const cardRect = lastVisible?.getBoundingClientRect?.();
-
-    if (cardRect && Number.isFinite(cardRect.bottom)) {
-      const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
-      grid.style.maxHeight = `${Math.round(cardRect.bottom - gridRect.top + peek)}px`;
-      fadeOverlay?.classList.remove('is-hidden');
-    }
+    // Measure from the actual visible card, but defer once so navigation
+    // restoration and media dimensions have a chance to settle.
+    measureCollapsedHeight();
+    windowRef.requestAnimationFrame(measureCollapsedHeight);
   } else {
     grid.style.maxHeight = 'none';
     fadeOverlay?.classList.add('is-hidden');
   }
 
+  let resizeObserver = null;
+  if (
+    !expanded &&
+    filteredCards.length > visibleCount &&
+    visibleCount > 0 &&
+    typeof windowRef.ResizeObserver === 'function'
+  ) {
+    resizeObserver = new windowRef.ResizeObserver(() => measureCollapsedHeight());
+    filteredCards.forEach(card => resizeObserver.observe(card));
+  }
+
   // The timer belongs to the current render. Returning a cancel function lets
   // the Gallery lifecycle discard it during destroy() without owning the
   // presentation implementation.
-  if (!showMoreButton || !showMoreWrapper) return () => windowRef.clearTimeout(hideTimer);
+  if (!showMoreButton || !showMoreWrapper) {
+    return () => {
+      windowRef.clearTimeout(hideTimer);
+      resizeObserver?.disconnect();
+    };
+  }
 
   const label = showMoreButton.querySelector('.btn-text');
   if (filteredCards.length > visibleCount) {
@@ -151,7 +173,10 @@ export function applyGalleryReveal({
     showMoreWrapper.style.display = 'none';
   }
 
-  return () => windowRef.clearTimeout(hideTimer);
+  return () => {
+    windowRef.clearTimeout(hideTimer);
+    resizeObserver?.disconnect();
+  };
 }
 
 export function resetGalleryPresentation({
