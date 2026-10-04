@@ -2428,15 +2428,17 @@ body.center-page {
   background:transparent;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
-  position:absolute;
+  position:fixed;
   inset:0;
   z-index:20;
   display:grid;
   place-items:center;
-  width:100dvw;
-  height:100dvh;
+  width:auto;
+  height:auto;
+  min-width:0;
   min-height:0;
   max-width:none;
+  max-height:none;
   aspect-ratio:auto;
   border:0;
   border-radius:0;
