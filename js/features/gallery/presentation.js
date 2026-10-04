@@ -114,15 +114,26 @@ export function applyGalleryReveal({
     if (filteredCards.length <= visibleCount || visibleCount <= 0) return;
 
     const viewportRect = viewport.getBoundingClientRect();
-    const lastVisible = filteredCards[visibleCount - 1];
-    const cardRect = lastVisible?.getBoundingClientRect?.();
-    if (!cardRect || !Number.isFinite(cardRect.bottom) || !Number.isFinite(viewportRect.top)) return;
+    if (!Number.isFinite(viewportRect.top)) return;
+
+    // A CSS grid row takes the height of its tallest card. With media-aware
+    // card proportions, the last card in the visible set is not necessarily
+    // the tallest card in its final row. Measure every currently visible card
+    // and clip to the furthest bottom edge so a taller sibling can never be
+    // cut off by the Show More viewport.
+    const visibleCards = filteredCards.slice(0, visibleCount);
+    const furthestBottom = visibleCards.reduce((maxBottom, card) => {
+      const bottom = Number(card?.getBoundingClientRect?.().bottom);
+      return Number.isFinite(bottom) ? Math.max(maxBottom, bottom) : maxBottom;
+    }, Number.NEGATIVE_INFINITY);
+
+    if (!Number.isFinite(furthestBottom)) return;
 
     // Clip the dedicated viewport, never the grid itself. The grid keeps its
     // natural height, so lazy media/layout changes cannot rewrite the
     // gallery's interaction state while the visitor is scrolling.
     const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
-    const height = Math.max(1, cardRect.bottom - viewportRect.top + peek);
+    const height = Math.max(1, furthestBottom - viewportRect.top + peek);
     viewport.style.maxHeight = `${Math.round(height)}px`;
     fadeOverlay?.classList.remove('is-hidden');
   };

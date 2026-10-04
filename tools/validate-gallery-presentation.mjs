@@ -54,4 +54,45 @@ assert.equal(
   6
 );
 
+// Regression: media-aware card heights can differ inside the same CSS grid row.
+// Show More must include the tallest card in the visible set, not just the
+// final card's bottom edge.
+const revealCards = [
+  { style: {}, getBoundingClientRect: () => ({ bottom: 360 }) },
+  { style: {}, getBoundingClientRect: () => ({ bottom: 440 }) },
+  { style: {}, getBoundingClientRect: () => ({ bottom: 700 }) }
+];
+const revealViewport = {
+  style: {},
+  getBoundingClientRect: () => ({ top: 100 })
+};
+const revealGrid = {
+  style: {},
+  querySelectorAll: () => revealCards
+};
+const revealWindow = {
+  innerWidth: 1280,
+  setTimeout(fn) {
+    fn();
+    return 1;
+  },
+  clearTimeout() {},
+  requestAnimationFrame(fn) {
+    fn();
+    return 1;
+  }
+};
+
+applyGalleryReveal({
+  grid: revealGrid,
+  gridViewport: revealViewport,
+  filteredCards: revealCards,
+  visibleCount: 2,
+  expanded: false,
+  windowRef: revealWindow,
+  desktopPeek: 70
+});
+
+assert.equal(revealViewport.style.maxHeight, '410px');
+
 console.log('Gallery presentation boundary validated.');
