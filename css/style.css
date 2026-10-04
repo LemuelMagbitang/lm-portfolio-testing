@@ -1565,26 +1565,27 @@ body.center-page {
   }
 }
 
-/* Desktop YouTube media gets a deliberate viewing size instead of
-   inheriting the generic artwork surface's full available footprint.
-   Landscape, square, and Shorts remain true to their source ratio while
-   staying visually proportionate beside the project metadata. */
+/* Desktop YouTube media is intentionally contained rather than allowed
+   to dominate the Lightbox's vertical reading flow. The surface still owns
+   the source ratio, but its height is capped to 60% of the small viewport;
+   width follows that ratio and each orientation gets a conservative desktop
+   ceiling. Mobile intentionally overrides this below and remains full-bleed. */
 @media (min-width:768px){
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork{
-    width:min(100%,calc(72svh * var(--lightbox-artwork-ratio, 1)));
-    max-height:72svh;
+    width:min(100%,calc(60svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:60svh;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="landscape"]{
-    max-width:760px;
+    max-width:720px;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
-    max-width:405px;
+    max-width:360px;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="square"]{
-    max-width:640px;
+    max-width:540px;
   }
 }
 

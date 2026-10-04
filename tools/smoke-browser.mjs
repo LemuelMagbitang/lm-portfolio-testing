@@ -1178,9 +1178,12 @@ try {
         const r = el.getBoundingClientRect();
         return { width: r.width, height: r.height };
       });
-      if (shortsArtworkGeometry.height > 900) {
-        throw new Error('Desktop Shorts artwork surface is taking excessive vertical space: ' + Math.round(shortsArtworkGeometry.height) + 'px.');
+      const desktopViewportHeight = await page.evaluate(() => window.innerHeight);
+      const desktopYoutubeMaxHeight = desktopViewportHeight * 0.60 + 4;
+      if (shortsArtworkGeometry.height > desktopYoutubeMaxHeight) {
+        throw new Error('Desktop Shorts artwork surface is exceeding the 60svh presentation cap: ' + Math.round(shortsArtworkGeometry.height) + 'px.');
       }
+
       const youtubeFraming = await page.locator('#lightboxMediaContainer .lightbox-artwork.is-youtube-artwork').evaluateAll(els =>
         els.map(el => {
           const r = el.getBoundingClientRect();
@@ -1194,8 +1197,15 @@ try {
       youtubeFraming.forEach(({ orientation, width, height }) => {
         const ratio = width / Math.max(height, 1);
         const expected = orientation === 'portrait' ? 9 / 16 : orientation === 'square' ? 1 : 16 / 9;
+        const maxWidth = orientation === 'landscape' ? 720 : orientation === 'portrait' ? 360 : 540;
         if (Math.abs(ratio - expected) > 0.025) {
           throw new Error('Desktop YouTube ' + orientation + ' framing drifted: ratio=' + ratio.toFixed(3) + ', expected=' + expected.toFixed(3) + '.');
+        }
+        if (height > desktopYoutubeMaxHeight) {
+          throw new Error('Desktop YouTube ' + orientation + ' surface exceeds the 60svh presentation cap: ' + Math.round(height) + 'px.');
+        }
+        if (width > maxWidth + 2) {
+          throw new Error('Desktop YouTube ' + orientation + ' surface exceeds its width ceiling: ' + Math.round(width) + 'px.');
         }
       });
 
