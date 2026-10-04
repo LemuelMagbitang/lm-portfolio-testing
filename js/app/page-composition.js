@@ -22,8 +22,7 @@ export async function createPortfolioApp({
   root = globalThis.document,
   runtime,
   cms,
-  config,
-  onProgress = () => {}
+  config
 } = {}) {
   if (!root || !runtime || !cms || !config?.urls) throw new Error('Portfolio app dependencies are incomplete.');
 
@@ -103,24 +102,20 @@ export async function createPortfolioApp({
   ]);
 
   const settings = settingsFeature.getState();
-  onProgress('Building the portfolio…');
-
-  // Settings can resolve before CMS-backed cards are mounted. Re-apply the
-  // current DOM-dependent settings after all page content exists.
+  // The data dependencies above are now complete. Initialize independent
+  // presentation/features concurrently so Hero startup cannot block the
+  // gallery or Lightbox from becoming interactive.
   settingsFeature.applyDom();
 
   const projectModels = getProjects();
   if (projectModels.some(project => project?.capabilities?.hasLottie)) {
-    onProgress('Preparing animated artwork…');
     await ensureLottiePlayer();
   }
 
-  onProgress('Preparing the visual experience…');
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
-  let heroFeature = null;
-  if (hero) {
-    try {
-      heroFeature = await initHeroBannerV2({
+
+  const heroPromise = hero
+    ? initHeroBannerV2({
         heroLoopUrl: config.urls.heroLoop,
         heroMessagesUrl: config.urls.heroMessages,
         projectsUrl: config.urls.projects,
@@ -136,40 +131,43 @@ export async function createPortfolioApp({
         parseYouTubeUrl,
         getProjects,
         prefersReducedMotion: runtime.prefersReducedMotion
-      });
-    } catch (error) {
-      console.warn('Hero: initialization failed', error);
-    }
-  }
+      }).catch(error => {
+        console.warn('Hero: initialization failed', error);
+        return null;
+      })
+    : Promise.resolve(null);
 
   forms.setProjectEnabled(settings.formsEnabled.project);
   forms.setReviewEnabled(settings.formsEnabled.review);
 
-  const reviewsFeature = await reviewsPromise;
-  reviewsFeature.setVisible(settings.showReviews);
-
-  const aboutFeature = await aboutPromise;
-  aboutFeature.setSoftwareLogosVisible(settings.showSoftwareLogos);
-
-  let galleryFeature;
-
-  try {
-    galleryFeature = await initGallery({
-      root,
-      projectGrid: root.getElementById('portfolioGrid'),
-      filterUrl: config.urls.filters,
-      loadJson: loadCmsJson,
-      resolveAssetUrl: siteAssetUrl,
-      ensureLottiePlayer,
-      ensureMediaBackgroundHelper,
-      getProjects,
-      getCardForProject
-    });
-  } catch (error) {
+  const galleryPromise = initGallery({
+    root,
+    projectGrid: root.getElementById('portfolioGrid'),
+    filterUrl: config.urls.filters,
+    loadJson: loadCmsJson,
+    resolveAssetUrl: siteAssetUrl,
+    ensureLottiePlayer,
+    ensureMediaBackgroundHelper,
+    getProjects,
+    getCardForProject
+  }).catch(error => {
     console.warn('Gallery: initialization failed', error);
-  }
+    return null;
+  });
 
-  onProgress('Finalizing interactions…');
+  const [heroFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
+    heroPromise,
+    reviewsPromise.then(feature => {
+      feature.setVisible(settings.showReviews);
+      return feature;
+    }),
+    aboutPromise.then(feature => {
+      feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
+      return feature;
+    }),
+    galleryPromise
+  ]);
+
   try {
     lightboxFeature = await initLightbox({
       root,
@@ -185,8 +183,6 @@ export async function createPortfolioApp({
   } catch (error) {
     console.warn('Lightbox: initialization failed', error);
   }
-
-  onProgress('Finishing layout…');
 
   if (lightboxFeature?.openCard && pendingProjectOpen) {
     const pending = pendingProjectOpen;
