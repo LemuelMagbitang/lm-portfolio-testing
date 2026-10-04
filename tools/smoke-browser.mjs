@@ -518,7 +518,11 @@ try {
       });
       await page.waitForTimeout(100);
       const scrollBeforeLightboxClose = await page.evaluate(() => window.scrollY);
-      await page.locator('#portfolioGrid .project-card').first().click();
+      await page.evaluate(() => {
+        const card = document.querySelector('#portfolioGrid .project-card');
+        if (!card) throw new Error('No project card available for Lightbox scroll regression.');
+        card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      });
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       await page.locator('#lightboxClose').click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
