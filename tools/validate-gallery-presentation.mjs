@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {
   getResponsiveBaseCount,
-  getRowAlignedCount
+  getRowAlignedCount,
+  applyGalleryReveal
 } from '../js/features/gallery/presentation.js';
 
 assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 6 }), 6);
