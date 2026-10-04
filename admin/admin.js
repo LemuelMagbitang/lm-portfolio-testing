@@ -1739,7 +1739,7 @@ RENDERERS.projects = async function(data){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
-    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
+    thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, orientation:(p.thumbnail&&p.thumbnail.orientation)||'', background:(p.thumbnail&&p.thumbnail.background)||null },
     media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
   })));
   let filterDefs = [];
@@ -1800,7 +1800,7 @@ RENDERERS.projects = async function(data){
     });
 
     document.getElementById('addProj').addEventListener('click', ()=>{
-      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
+      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1,orientation:''},media:[],_uid:uid()};
       items.push(p);
       openUid = p._uid; flagUnsaved(); paint();
     });
@@ -1815,7 +1815,7 @@ RENDERERS.projects = async function(data){
       }
       return items.map(p=>({
         id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge, filters:p.filters, description:p.description,
-        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,...(p.thumbnail.background && typeof p.thumbnail.background==='object' ? {background:p.thumbnail.background} : {})},
+        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,orientation:p.thumbnail.orientation,...(p.thumbnail.background && typeof p.thumbnail.background==='object' ? {background:p.thumbnail.background} : {})},
         media:p.media.map(m => ({ type:m.type, src:m.src, caption:m.caption, orientation:m.orientation, ...(m.background && typeof m.background==='object' ? {background:m.background} : {}) }))
       }));
     }, 'projects', SECTIONS.projects.file);
@@ -1861,6 +1861,7 @@ RENDERERS.projects = async function(data){
               <div class="field"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
             </div>
             <div class="row">
+              <div class="field"><label class="field-label">Orientation</label><select data-f="thumb-orientation"><option value="" ${!p.thumbnail.orientation?'selected':''}>Auto</option><option value="landscape" ${p.thumbnail.orientation==='landscape'?'selected':''}>Landscape</option><option value="portrait" ${p.thumbnail.orientation==='portrait'?'selected':''}>Portrait</option><option value="square" ${p.thumbnail.orientation==='square'?'selected':''}>Square</option></select></div>
               <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
               <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
             </div>
@@ -1966,6 +1967,7 @@ RENDERERS.projects = async function(data){
         // the saved value was correct all along. Now every field that
         // touches the crop calls refreshThumbPreview() the same way
         // Profile Photo's equivalent fields already did.
+        else if(f==='thumb-orientation') { p.thumbnail.orientation = inp.value; refreshThumbPreview(); }
         else if(f==='thumb-zoom') { p.thumbnail.zoom = parseFloat(inp.value)||1; refreshThumbPreview(); }
         else if(f==='thumb-focus'){ p.thumbnail.focus = inp.value; setFromFocusStr(); refreshThumbPreview(); }
         else {
