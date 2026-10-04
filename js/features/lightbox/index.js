@@ -270,13 +270,12 @@ function closeLightbox() {
   // it was. The post-layout frames below catch mobile reconciliation.
   lightboxA11y.close({ afterFocus: restorePageScroll });
   restorePageScroll();
-  // Dispose any mounted 3D viewers before removing their DOM nodes. The
-  // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
-  // keydown listener, none of which are cleaned up by innerHTML alone.
-  modalMediaContainer.querySelectorAll('.model-viewer-shell').forEach(shell => {
-    try { shell.__modelViewerCleanup?.(); } catch (_) {}
-  });
-  modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background
+  // Let the renderer own media teardown so YouTube message listeners, playback
+  // state, cached iframes, and 3D viewer resources all follow one lifecycle.
+  // YouTube frames that loaded successfully can remain in the hidden preload
+  // root for instant reuse on the next open.
+  mediaRenderer.dispose(modalMediaContainer);
+  modalMediaContainer.replaceChildren();
   // Post-layout corrections catch any scroll reconciliation triggered while
   // the Lightbox media subtree and body overflow state are being removed.
   windowRef.requestAnimationFrame(() => {
