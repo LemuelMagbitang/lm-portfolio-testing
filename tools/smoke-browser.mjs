@@ -524,6 +524,9 @@ try {
       await page.evaluate(() => {
         const card = document.querySelector('#portfolioGrid .project-card');
         if (!card) throw new Error('No project card available for Lightbox scroll regression.');
+        // Model a real keyboard/mouse opener without letting the test runner
+        // auto-scroll the card into view.
+        card.focus({ preventScroll: true });
         card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       });
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
