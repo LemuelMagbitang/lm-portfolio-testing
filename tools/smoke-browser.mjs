@@ -143,9 +143,9 @@ try {
         };
       });
       if (
-        runtimeCacheChain.scriptVersion !== '20261005-10' ||
-        runtimeCacheChain.bootstrapVersion !== '20261005-10' ||
-        runtimeCacheChain.compositionVersion !== '20261005-10'
+        runtimeCacheChain.scriptVersion !== '20261005-13' ||
+        runtimeCacheChain.bootstrapVersion !== '20261005-13' ||
+        runtimeCacheChain.compositionVersion !== '20261005-13'
       ) {
         throw new Error(`Public runtime cache chain is stale: ${JSON.stringify(runtimeCacheChain)}`);
       }
