@@ -904,7 +904,7 @@ try {
       const thumbnail = fixtureCard.locator('.card-thumbnail').first();
       const activationTarget = thumbnail.locator('[data-lottie-thumb], lottie-player').first();
       if (await activationTarget.count() !== 1) throw new Error('Direct-media fixture thumbnail target is missing.');
-      await activationTarget.setAttribute('data-model-thumb', '');
+      await activationTarget.evaluate(element => element.setAttribute('data-model-thumb', ''));
       await activationTarget.click();
 
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
