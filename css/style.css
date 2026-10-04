@@ -539,8 +539,14 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
      the real cause of the "cropped title/subtitle", "card isn't square"
      and "thumbnail looks left-aligned" bugs — all three were the same
      card, just sliced down its right edge. */
-  grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
+  /* Desktop/tablet use an explicit three-track presentation. The phone
+     breakpoint below owns its two-column layout, so intrinsic media width
+     can never create or resize a grid track. */
+  grid-template-columns: 1fr;
+  grid-auto-rows: max-content;
   gap: 0;
+  width: 100%;
+  min-width: 0;
   border-radius: var(--lm-card-radius);
   overflow: hidden;
 }
@@ -553,17 +559,24 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   user-select: none;
   background: var(--lm-color-surface);
   aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  align-self: start;
+  contain: paint;
   /* Lets .glass-info's clamp(...cqw...) font sizes scale off the
      card's own width rather than the viewport's — so text keeps the
      same comfortable proportion whether the grid is showing 1, 2 or 4
      columns. */
   container-type: inline-size;
-  /* Lets script.js fade cards in/out on filter change instead of the
-     old instant display:none snap. Opacity only — never transform —
-     so the grid's own height/collapse measurements stay accurate while
-     a card is mid-fade. */
-  width: 100%;
-  transition: opacity var(--lm-motion-standard) var(--lm-motion-ease);
+  /* Filter transitions may transform the card visually, but the layout
+     footprint remains owned entirely by the bounded aspect-ratio box. */
+  transition:
+    opacity var(--lm-motion-standard) var(--lm-motion-ease),
+    transform var(--lm-motion-standard) var(--lm-motion-ease),
+    filter var(--lm-motion-standard) var(--lm-motion-ease);
 }
 
 .project-card:focus { outline: none; }
@@ -945,7 +958,9 @@ textarea { resize: vertical; }
 
 .lightbox-controls {
   position: relative;
-  z-index: 10000;
+  /* Avoid creating a stacking context here: the controls' difference blend
+     must sample the artwork backdrop, not an intermediate transparent layer. */
+  z-index: auto;
   display: block;
   visibility: hidden;
   pointer-events: none;
@@ -1017,6 +1032,13 @@ button.hamburger {
 .lightbox-close:focus-visible i,
 .lightbox-nav:focus-visible i{
   filter:drop-shadow(0 0 3px currentColor);
+}
+
+.lightbox-close i,
+.lightbox-nav i{
+  mix-blend-mode:difference;
+  color:currentColor;
+  pointer-events:none;
 }
 
 .lightbox-nav {
@@ -2648,41 +2670,43 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 
 #lightboxMediaContainer .lightbox-media-item{
   transition:
-    opacity 180ms var(--lm-motion-ease),
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 200ms var(--lm-motion-ease),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change:opacity,transform,filter;
+  transform-origin:center center;
 }
 
 .lightbox-modal.is-lightbox-navigating.is-navigation-next #lightboxMediaContainer .lightbox-media-item,
 .lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-header,
 .lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-full-desc{
   opacity:0;
-  transform:translate3d(-18px, 0, 0) scale(.985);
-  filter:blur(3px);
+  transform:translate3d(-26px, 0, 0) scale(.982);
+  filter:blur(4px);
 }
 
 .lightbox-modal.is-lightbox-navigating.is-navigation-prev #lightboxMediaContainer .lightbox-media-item,
 .lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-header,
 .lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-full-desc{
   opacity:0;
-  transform:translate3d(18px, 0, 0) scale(.985);
-  filter:blur(3px);
+  transform:translate3d(26px, 0, 0) scale(.982);
+  filter:blur(4px);
 }
 
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-next #lightboxMediaContainer .lightbox-media-item,
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-header,
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-full-desc{
   opacity:0;
-  transform:translate3d(18px, 0, 0) scale(.985);
-  filter:blur(3px);
+  transform:translate3d(26px, 0, 0) scale(.982);
+  filter:blur(4px);
 }
 
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev #lightboxMediaContainer .lightbox-media-item,
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-header,
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-full-desc{
   opacity:0;
-  transform:translate3d(-18px, 0, 0) scale(.985);
-  filter:blur(3px);
+  transform:translate3d(-26px, 0, 0) scale(.982);
+  filter:blur(4px);
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -2771,15 +2795,20 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
      place. */
   .seamless-grid .project-card {
     transition:
-      opacity var(--lm-motion-standard) var(--lm-motion-ease),
-      transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
-      filter 360ms cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 360ms var(--lm-motion-ease),
+      transform 440ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 440ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay:var(--gallery-entry-delay,0ms);
+    transform-origin:center center;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork {
-    /* YouTube portrait media should fit the device viewport by height,
-       while landscape media can still use the full available width. */
-    width: min(100%, calc(82svh * var(--lightbox-artwork-ratio, 1)));
+    /* Keep YouTube inside a stable mobile viewport box while preserving its
+       actual orientation. Portrait media becomes height-limited; landscape
+       media remains width-limited. */
+    width:min(calc(100vw - 24px), calc((100svh - 112px) * var(--lightbox-artwork-ratio, 1)));
+    max-width:calc(100vw - 24px);
+    max-height:calc(100svh - 112px);
   }
 
   @media (prefers-reduced-motion: reduce) {

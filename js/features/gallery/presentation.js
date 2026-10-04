@@ -173,12 +173,23 @@ export function applyGalleryReveal({
     });
   }, Math.max(0, Number(fadeMs) || 0));
 
-  filteredCards.forEach(card => {
+  filteredCards.forEach((card, index) => {
     card.style.display = 'block';
     if (animateTransition) {
-      card.style.opacity = '0';
-      card.style.transform = 'translate3d(0, 5px, 0) scale(.985)';
-      card.style.filter = 'blur(5px)';
+      const isMobile = Number(windowRef.innerWidth) < 768;
+      card.style.setProperty(
+        '--gallery-entry-delay',
+        isMobile ? (Math.min(index, 7) * 18) + 'ms' : '0ms'
+      );
+      card.style.willChange = 'opacity, transform, filter';
+      card.style.opacity = isMobile ? '0.24' : '0';
+      card.style.transform = isMobile
+        ? 'translate3d(0, 12px, 0) scale(.96)'
+        : 'translate3d(0, 5px, 0) scale(.985)';
+      card.style.filter = isMobile ? 'blur(7px)' : 'blur(5px)';
+    } else {
+      card.style.removeProperty('--gallery-entry-delay');
+      card.style.willChange = '';
     }
   });
 
@@ -214,10 +225,14 @@ export function applyGalleryReveal({
         filteredCards.forEach(card => {
           card.style.transform = '';
           card.style.filter = '';
+          card.style.removeProperty('--gallery-entry-delay');
+          card.style.willChange = '';
         });
         hiddenCards.forEach(card => {
           card.style.transform = '';
           card.style.filter = '';
+          card.style.removeProperty('--gallery-entry-delay');
+          card.style.willChange = '';
         });
       }
     };
