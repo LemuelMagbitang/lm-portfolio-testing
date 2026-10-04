@@ -1395,11 +1395,6 @@ body.center-page {
 @media (min-width: 768px) and (max-width: 1099px){
   .lightbox-modal{padding:48px 24px;}
   .modal-interior{max-width:760px;gap:26px;}
-  #lightboxMediaContainer img,
-  #lightboxMediaContainer iframe,
-  #lightboxMediaContainer video{
-    max-height:min(78vh,760px);
-  }
 }
 
 #lightboxMediaContainer{
