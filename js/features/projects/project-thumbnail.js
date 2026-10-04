@@ -26,12 +26,13 @@ export function buildProjectThumbnailMedia(
 
   if (type === 'video') {
     media = documentRef.createElement('video');
-    media.src = src;
     media.muted = true;
     media.loop = true;
     media.autoplay = true;
     media.playsInline = true;
     media.preload = priority ? 'auto' : 'metadata';
+    if (priority) media.fetchPriority = 'high';
+    media.src = src;
   } else if (type === 'lottie') {
     media = documentRef.createElement('lottie-player');
     media.setAttribute('src', src);
@@ -62,11 +63,11 @@ export function buildProjectThumbnailMedia(
     media.appendChild(content);
   } else {
     media = documentRef.createElement('img');
-    media.src = src;
     media.alt = altText;
     media.loading = priority ? 'eager' : 'lazy';
     media.decoding = 'async';
     if (priority) media.fetchPriority = 'high';
+    media.src = src;
   }
 
   media.classList.add('project-thumb-media');
