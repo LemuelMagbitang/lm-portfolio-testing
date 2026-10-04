@@ -5,6 +5,7 @@
 
 import { findProjectMediaBackground, projectHas3D } from './project-media.js?v=20261004-03';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261004-03';
+import { observeProjectCardOrientation } from './card-presentation.js?v=20261004-01';
 
 function getYouTubeId(src = '') {
   const value = String(src).trim();
@@ -122,6 +123,9 @@ export function buildProjectCardElement(
         media.setAttribute('data-model-thumb', '');
       }
       thumbnail.appendChild(media);
+      observeProjectCardOrientation(card, project, media, {
+        mediaType: t.type || mediaTypeFromSrc(t.src)
+      });
       if (background && typeof applyMediaBackground === 'function') {
         Promise.resolve(applyMediaBackground(thumbnail, background, resolveAssetUrl))
           .catch(error => console.warn('Project card: media background could not be applied.', error));

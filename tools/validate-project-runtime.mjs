@@ -172,6 +172,18 @@ assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
 assert.equal(capabilityCard.children[0]?.children[0]?.dataset?.modelThumb, 'models/test.glb');
 
+const presentationRegressionCard = buildProjectCardElement({
+  id: 'presentation-regression',
+  title: 'Presentation Regression',
+  thumbnail: { type: 'image', src: 'media/presentation.webp', orientation: 'landscape' },
+  media: [{ type: 'image', src: 'media/presentation.webp' }]
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value
+});
+assert.equal(presentationRegressionCard.dataset.cardOrientation, 'landscape');
+assert.equal(presentationRegressionCard.classList.values.has('card-orientation-landscape'), true);
+
 assert.equal(orientationFromAspectRatio(1000, 1000), 'square');
 assert.equal(orientationFromAspectRatio(1600, 1000), 'landscape');
 assert.equal(orientationFromAspectRatio(600, 1000), 'portrait');
