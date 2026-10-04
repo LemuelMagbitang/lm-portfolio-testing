@@ -939,7 +939,7 @@ function validateCmsRegressionContracts() {
   if (admin.includes("import('../js/model-viewer.js')") || /['"]js\/model-viewer\.js['"]/.test(admin)) {
     err('CMS 3D preview: retired js/model-viewer.js path must not be referenced.');
   }
-  if (!admin.includes("import('../js/infrastructure/three/model-viewer.js')")) {
+  if (!/import\(['"]\.\.\/js\/infrastructure\/three\/model-viewer\.js(?:\?[^'"]*)?['"]\)/.test(admin)) {
     err('CMS 3D preview: the Projects editor must import the infrastructure Three.js adapter.');
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
