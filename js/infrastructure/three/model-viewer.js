@@ -134,7 +134,7 @@ export async function mountModelViewer(container, src, options = {}) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
-  camera.position.set(0, 0.8, 3.2);
+  camera.position.set(0, 0, 3.2);
 
   let renderer = null;
   let controls = null;
@@ -248,7 +248,7 @@ export async function mountModelViewer(container, src, options = {}) {
         modelRadius * 1.5
       );
       const direction = camera.position.clone().sub(controls.target);
-      if (direction.lengthSq() < 0.000001) direction.set(0.85, 0.18, 1.05);
+      if (direction.lengthSq() < 0.000001) direction.set(0.85, 0, 1.05);
       direction.normalize();
       camera.position.copy(controls.target).add(direction.multiplyScalar(distance));
       camera.near = Math.max(distance / 100, 0.001);
