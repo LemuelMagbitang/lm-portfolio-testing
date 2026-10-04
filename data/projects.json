@@ -376,7 +376,7 @@
     "description": "An entry for the Gauntlet of Gods Render Challenge, bringing a long standing original character concept into full 3D execution. The design draws directly from Bakunawa, the iconic sea serpent of Visayan mythology in the Philippines — a primordial force responsible for eclipses, seismic storms, and swallowing the moon.",
     "thumbnail": {
       "type": "image",
-      "src": "assets/projects/gog-render-challenge/thumbnail.png",
+      "src": "assets/projects/gog-render-challenge/thumbnail.jpg",
       "focus": "50% 20%",
       "zoom": 1.05
     },
@@ -389,7 +389,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/gog-render-challenge/card-layout.png",
+        "src": "assets/projects/gog-render-challenge/card-layout.jpg",
         "caption": "Card Layout for the Gauntlet of Gods Physical Game Print",
         "orientation": ""
       },
