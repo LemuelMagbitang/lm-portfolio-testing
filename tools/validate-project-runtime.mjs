@@ -142,7 +142,6 @@ const capabilityCard = buildProjectCardElement({
   title: 'Capability Regression',
   filters: ['3d-motion'],
   mediaCount: 2,
-  thumbnail: { type: 'image', src: 'media/capability.webp', orientation: 'landscape' },
   capabilities: {
     hasImage: true,
     hasVideo: false,
@@ -164,8 +163,6 @@ assert.equal(capabilityCard.className, 'project-card');
 assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
-assert.equal(capabilityCard.dataset.cardOrientation, 'landscape');
-assert.equal(capabilityCard.classList.values.has('card-orientation-landscape'), true);
 
 // Regression: projects with no explicit thumbnail src still rely on thumbnail
 // focus/zoom/rotation when the first media item becomes the fallback artwork.
@@ -177,8 +174,7 @@ const normalizedFallback = normalizeProjects([{
     src: '',
     focus: '50% 30%',
     zoom: 1.25,
-    rotate: 2,
-    orientation: 'portrait'
+    rotate: 2
   },
   media: [{ type: 'image', src: 'media/fallback.webp' }]
 }])[0];
@@ -187,8 +183,7 @@ assert.deepEqual(normalizedFallback.thumbnail, {
   type: 'image',
   focus: '50% 30%',
   zoom: 1.25,
-  rotate: 2,
-  orientation: 'portrait'
+  rotate: 2
 });
 
 let backgroundCalls = 0;
