@@ -1207,6 +1207,39 @@ try {
       await page.waitForTimeout(100);
     }, { width: 390, height: 844 });
 
+    // A short/wide phone must still keep portrait YouTube artwork width-first.
+    // This catches regressions where a viewport-height cap quietly shrinks Shorts.
+    await smokePage(browser, '/', async page => {
+      const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      if (await shortsCard.count() !== 1) throw new Error('Short-phone Shorts fixture card is missing.');
+
+      await shortsCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const shorts = page.locator('#lightboxMediaContainer .lightbox-media-item iframe.yt-portrait').first();
+      if (await shorts.count() !== 1) throw new Error('Short-phone Lightbox did not render the Friends Gacha Short.');
+
+      const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+      const box = await shorts.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return { width: Math.round(rect.width), height: Math.round(rect.height) };
+      });
+
+      if (Math.abs(box.width - viewport.width) > 2) {
+        throw new Error(
+          `Short-phone Shorts lost width-first full-bleed presentation (${box.width}px vs ${viewport.width}px viewport).`
+        );
+      }
+      if (box.height < viewport.width * 1.6) {
+        throw new Error(
+          `Short-phone Shorts unexpectedly collapsed vertically (${box.height}px for a ${box.width}px-wide portrait surface).`
+        );
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 430, height: 700 });
+
     await smokePage(browser, '/', async page => {
       const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       if (await filters.count() < 2) throw new Error('Tablet Works filter UI did not render.');
