@@ -1,6 +1,15 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
-import { createLightboxMediaRenderer } from './media-renderer.js?v=20261004-20';
+import { createLightboxMediaRenderer } from './media-renderer.js?v=20261005-01';
+export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axisRatio = 1.2 } = {}) {
+  const x = Number(deltaX) || 0;
+  const y = Number(deltaY) || 0;
+  const absX = Math.abs(x);
+  const absY = Math.abs(y);
+  if (absX < threshold || absX <= absY * axisRatio) return 0;
+  return x < 0 ? 1 : -1;
+}
+
 function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
@@ -127,13 +136,20 @@ let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
 let previousPageScrollX = 0;
 let previousPageScrollY = 0;
+let navigationTimer = null;
+let swipeStart = null;
 
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
 
 
 function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } = {}) {
-  lightbox.classList.remove('is-3d-focused');
+  lightbox.classList.remove(
+    'is-3d-focused',
+    'is-lightbox-navigating',
+    'is-navigation-next',
+    'is-navigation-prev'
+  );
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
@@ -192,7 +208,9 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
-  lightboxA11y.open({ captureOpener: !preserveOpener });
+  if (!wasActive) {
+    lightboxA11y.open({ captureOpener: !preserveOpener });
+  }
 
   // Opening the modal can trigger several layout/asset reconciliation passes
   // on mobile Chromium. The document itself must remain stationary because
@@ -284,7 +302,19 @@ function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
 
 // Close Lightbox function
 function closeLightbox({ restoreFocus = true } = {}) {
-  lightbox.classList.remove('active', 'is-3d-focused');
+  if (navigationTimer) {
+    windowRef.clearTimeout(navigationTimer);
+    navigationTimer = null;
+  }
+  swipeStart = null;
+  lightbox.classList.remove(
+    'active',
+    'is-3d-focused',
+    'is-lightbox-navigating',
+    'is-navigation-next',
+    'is-navigation-prev',
+    'is-lightbox-navigation-enter'
+  );
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
@@ -332,22 +362,86 @@ function closeLightbox({ restoreFocus = true } = {}) {
 }
 
 // Event Listeners for Lightbox Controls
+function navigateLightbox(direction) {
+  const step = Number(direction) < 0 ? -1 : 1;
+  const total = activeLightboxCards.length;
+  if (!lightbox?.classList.contains('active') || total < 2 || navigationTimer) return;
+
+  const nextIndex = step > 0
+    ? (currentLightboxIndex + 1) % total
+    : (currentLightboxIndex - 1 + total) % total;
+
+  lightbox.classList.remove('is-navigation-next', 'is-navigation-prev');
+  lightbox.classList.add(
+    'is-lightbox-navigating',
+    step > 0 ? 'is-navigation-next' : 'is-navigation-prev'
+  );
+
+  navigationTimer = windowRef.setTimeout(() => {
+    navigationTimer = null;
+    if (!lightbox.classList.contains('active')) return;
+
+    openLightbox(nextIndex, -1, { preserveOpener: true });
+
+    lightbox.classList.add(
+      'is-lightbox-navigation-enter',
+      step > 0 ? 'is-navigation-next' : 'is-navigation-prev'
+    );
+    windowRef.requestAnimationFrame(() => {
+      if (!lightbox.classList.contains('active')) return;
+      windowRef.requestAnimationFrame(() => {
+        lightbox.classList.remove(
+          'is-lightbox-navigation-enter',
+          'is-navigation-next',
+          'is-navigation-prev'
+        );
+      });
+    });
+  }, 180);
+}
+
 const handlePrev = (event) => {
   event.stopPropagation();
-  if (currentLightboxIndex > 0) {
-    openLightbox(currentLightboxIndex - 1, -1, { preserveOpener: true });
-  } else {
-    openLightbox(activeLightboxCards.length - 1, -1, { preserveOpener: true }); // Loop to end
-  }
+  navigateLightbox(-1);
 };
 
 const handleNext = (event) => {
   event.stopPropagation();
-  if (currentLightboxIndex < activeLightboxCards.length - 1) {
-    openLightbox(currentLightboxIndex + 1, -1, { preserveOpener: true });
-  } else {
-    openLightbox(0, -1, { preserveOpener: true }); // Loop to start
+  navigateLightbox(1);
+};
+
+const handleSwipePointerDown = event => {
+  if (!lightbox?.classList.contains('active')) return;
+  if (event.pointerType === 'mouse') return;
+
+  const target = event.target;
+  if (
+    target?.closest?.('button, a, iframe, video, .model-viewer-shell')
+  ) {
+    swipeStart = null;
+    return;
   }
+
+  swipeStart = {
+    x: Number(event.clientX) || 0,
+    y: Number(event.clientY) || 0
+  };
+};
+
+const handleSwipePointerUp = event => {
+  if (!swipeStart || event.pointerType === 'mouse') return;
+
+  const start = swipeStart;
+  swipeStart = null;
+
+  const direction = getLightboxSwipeDirection(
+    (Number(event.clientX) || 0) - start.x,
+    (Number(event.clientY) || 0) - start.y
+  );
+  if (!direction) return;
+
+  event.preventDefault();
+  navigateLightbox(direction);
 };
 
 const handleBackdropClick = (event) => {
@@ -357,8 +451,22 @@ const handleBackdropClick = (event) => {
 };
 
 const handleDocumentKeydown = (event) => {
-  if (lightbox && event.key === 'Escape' && lightbox.classList.contains('active')) {
+  if (!lightbox?.classList.contains('active')) return;
+
+  if (event.key === 'Escape') {
     closeLightbox();
+    return;
+  }
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    navigateLightbox(-1);
+    return;
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    navigateLightbox(1);
   }
 };
 
@@ -399,6 +507,10 @@ return {
   openCard: openProjectCard,
   close: closeLightbox,
   destroy() {
+    if (navigationTimer) {
+      windowRef.clearTimeout(navigationTimer);
+      navigationTimer = null;
+    }
     closeLightbox({ restoreFocus: false });
     mediaRenderer.destroy();
     lifecycle.cleanup();
