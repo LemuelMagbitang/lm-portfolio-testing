@@ -132,6 +132,25 @@ try {
       const cards = await page.locator('#portfolioGrid .project-card').count();
       if (cards < 1) throw new Error(`Works page rendered no project cards (found ${cards}).`);
 
+      const interactionStyles = await page.evaluate(() => {
+        const card = document.querySelector('#portfolioGrid .project-card');
+        const filter = document.querySelector('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
+        const cardStyle = card ? getComputedStyle(card) : null;
+        const filterStyle = filter ? getComputedStyle(filter) : null;
+        return {
+          cardCursor: cardStyle?.cursor || '',
+          cardUserSelect: cardStyle?.userSelect || '',
+          filterCursor: filterStyle?.cursor || '',
+          filterUserSelect: filterStyle?.userSelect || ''
+        };
+      });
+      if (interactionStyles.cardCursor === 'text' || interactionStyles.cardUserSelect !== 'none') {
+        throw new Error('Project cards regressed into text-selection/caret behavior.');
+      }
+      if (interactionStyles.filterCursor === 'text' || interactionStyles.filterUserSelect !== 'none') {
+        throw new Error('Works filter controls regressed into text-selection/caret behavior.');
+      }
+
       const heroSlides = await page.locator('#heroBanner .slide').count();
       if (heroSlides < 1) throw new Error(`Works Hero rendered no artwork slides (found ${heroSlides}).`);
 
