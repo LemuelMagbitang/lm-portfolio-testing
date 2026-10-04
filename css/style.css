@@ -986,9 +986,6 @@ button.hamburger {
 }
 
 .lightbox-close {
-  color:var(--lm-color-text-primary);
-  background:transparent;
-  border:0;
   box-shadow:none;
   position: fixed;
   top: 18px;
@@ -999,8 +996,6 @@ button.hamburger {
   align-items:center;
   justify-content:center;
   border-radius:0;
-  background:transparent;
-  border:0;
   font-size:2.15rem;
   line-height:1;
   color:#fff;
@@ -1037,9 +1032,6 @@ button.hamburger {
 }
 
 .lightbox-nav {
-  color:var(--lm-color-text-primary);
-  background:transparent;
-  border:0;
   box-shadow:none;
   position: fixed;
   top: 50%;
@@ -1066,8 +1058,6 @@ button.hamburger {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: transparent;
-  border: 0;
   box-shadow: none;
   font-size: 1rem;
   color: #fff;
