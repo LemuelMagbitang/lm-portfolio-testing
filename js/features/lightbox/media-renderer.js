@@ -404,11 +404,20 @@ export function createLightboxMediaRenderer({
     // available, the actual dimensions own the final Lightbox surface ratio.
     // This prevents stale orientation metadata from forcing a portrait or
     // landscape box around media that was exported at a different ratio.
-    syncClasses(
-      orientation === 'portrait' || orientation === 'square' || orientation === 'landscape'
-        ? orientation
-        : 'square'
-    );
+    const cached = videoDimensionCache.get(video.src || resolveAssetUrl(video.currentSrc || ''));
+    if (cached) {
+      syncClasses(cached.width / cached.height < 0.85
+        ? 'portrait'
+        : cached.width / cached.height > 1.15 ? 'landscape' : 'square');
+      video.style.aspectRatio = cached.width + ' / ' + cached.height;
+      if (artwork) setAspectRatio(artwork, cached.width, cached.height);
+    } else {
+      syncClasses(
+        orientation === 'portrait' || orientation === 'square' || orientation === 'landscape'
+          ? orientation
+          : 'square'
+      );
+    }
     const syncIntrinsicRatio = () => {
       const width = Number(video.videoWidth);
       const height = Number(video.videoHeight);
