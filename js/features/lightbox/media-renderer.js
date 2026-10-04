@@ -16,12 +16,12 @@ export function createLightboxMediaRenderer({
   lightbox = null,
   lightboxControls = null
 } = {}) {
-  function buildImageMedia(imgUrl, altText = 'Project artwork') {
+  function buildImageMedia(imgUrl, altText = 'Project artwork', { eager = false } = {}) {
     const img = documentRef.createElement('img');
     img.alt = String(altText || 'Project artwork').trim() || 'Project artwork';
     img.src = imgUrl;
     img.draggable = false;
-    img.loading = 'lazy';
+    img.loading = eager ? 'eager' : 'lazy';
     img.decoding = 'async';
 
     if (protectionEnabled()) {
@@ -155,11 +155,12 @@ export function createLightboxMediaRenderer({
     video.addEventListener('loadedmetadata', syncIntrinsicRatio);
   }
 
-  function renderImage(item, project) {
+  function renderImage(item, project, index = 0) {
     return buildMediaEntry(
       buildImageMedia(
         resolveAssetUrl(item.src),
-        item.caption || item.description || project.title || 'Project artwork'
+        item.caption || item.description || project.title || 'Project artwork',
+        { eager: index === 0 }
       ),
       item.caption || item.description,
       item.background
@@ -312,11 +313,11 @@ export function createLightboxMediaRenderer({
     return buildMediaEntry(player, item.caption || item.description, item.background);
   }
 
-  function renderItem(item, project) {
+  function renderItem(item, project, index = 0) {
     if (!item?.src) return null;
 
     const type = String(item.type || 'image').toLowerCase();
-    if (type === 'image') return renderImage(item, project);
+    if (type === 'image') return renderImage(item, project, index);
     if (type === 'youtube') return renderYouTube(item, project);
     if (type === 'video') return renderVideo(item);
     if (type === 'model') return renderModel(item, project);
@@ -332,8 +333,8 @@ export function createLightboxMediaRenderer({
       : (project.thumbnail?.src ? [{ ...project.thumbnail }] : []);
 
     let rendered = 0;
-    mediaList.forEach(item => {
-      const entry = renderItem(item, project);
+    mediaList.forEach((item, index) => {
+      const entry = renderItem(item, project, index);
       if (!entry) return;
       container.appendChild(entry);
       const video = entry.querySelector("video");
