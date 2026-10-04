@@ -23,6 +23,25 @@ export function createLightboxMediaRenderer({
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
   let youtubePreloadRoot = null;
+  const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
+  const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS) => new Promise(resolve => {
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const timer = windowRef?.setTimeout?.(() => finish(false), timeoutMs);
+    Promise.resolve(promise)
+      .then(value => {
+        if (timer) windowRef?.clearTimeout?.(timer);
+        finish(value);
+      })
+      .catch(() => {
+        if (timer) windowRef?.clearTimeout?.(timer);
+        finish(false);
+      });
+  });
 
   function ensureYouTubePreloadRoot() {
     if (youtubePreloadRoot?.isConnected) return youtubePreloadRoot;
