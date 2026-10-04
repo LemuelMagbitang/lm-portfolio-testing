@@ -507,6 +507,11 @@ try {
         throw new Error(`Mobile Lightbox contains a non-full-bleed artwork width: ${renderedArtworkWidths.join(', ')} vs viewport ${lightboxViewportWidth}px.`);
       }
 
+      // Close the inspection Lightbox before starting the separate scroll
+      // restoration regression check below.
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(120);
+
       await page.evaluate(() => {
         const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
         window.scrollTo(0, Math.max(0, Math.min(max, Math.round(max * 0.55))));
