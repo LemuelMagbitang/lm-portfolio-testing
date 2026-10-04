@@ -518,6 +518,9 @@ export function createLightboxMediaRenderer({
           background: item.background || null,
           orientation,
           resolveUrl: resolveAssetUrl,
+          onAspectRatioDetected: (width, height) => {
+            setAspectRatio(modelEntry.querySelector('.lightbox-artwork'), width, height);
+          },
           onActivate: () => {
             const currentScroll = lightbox.scrollTop;
             lightbox.dataset.pre3dScrollTop = String(currentScroll);
