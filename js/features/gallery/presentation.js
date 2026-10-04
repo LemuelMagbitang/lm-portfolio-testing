@@ -155,6 +155,9 @@ export function applyGalleryReveal({
   }
 
   const label = showMoreButton.querySelector('.btn-text');
+  showMoreButton.setAttribute('aria-expanded', String(expanded));
+  showMoreWrapper.setAttribute('data-expanded', String(expanded));
+
   if (filteredCards.length > visibleCount) {
     showMoreWrapper.style.display = 'flex';
     showMoreWrapper.classList.toggle('expanded', expanded);
