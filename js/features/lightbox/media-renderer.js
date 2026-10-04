@@ -399,16 +399,15 @@ export function createLightboxMediaRenderer({
       }
     };
 
-    if (orientation === 'portrait' || orientation === 'square' || orientation === 'landscape') {
-      syncClasses(orientation);
-      return;
-    }
-
-    // Auto-orientation starts conservatively, then switches to the video's
-    // real intrinsic dimensions as soon as metadata is available. The exact
-    // ratio is applied to both the video and its artwork surface so portrait,
-    // square, and non-16:9 landscape MP4s keep their original proportions.
-    syncClasses('square');
+    // CMS orientation is an initial hint only. Once local video metadata is
+    // available, the actual dimensions own the final Lightbox surface ratio.
+    // This prevents stale orientation metadata from forcing a portrait or
+    // landscape box around media that was exported at a different ratio.
+    syncClasses(
+      orientation === 'portrait' || orientation === 'square' || orientation === 'landscape'
+        ? orientation
+        : 'square'
+    );
     const syncIntrinsicRatio = () => {
       const width = Number(video.videoWidth);
       const height = Number(video.videoHeight);
