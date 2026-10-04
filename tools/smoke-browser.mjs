@@ -250,6 +250,32 @@ try {
         throw new Error(`Unexpected 3D activation label: ${activationLabel}`);
       }
 
+      const layerOrder = await modelShell.evaluate(el => {
+        const read = selector => {
+          const node = el.querySelector(selector);
+          const style = node ? getComputedStyle(node) : null;
+          return style ? {
+            zIndex: style.zIndex,
+            position: style.position
+          } : null;
+        };
+        return {
+          background: read(':scope > .lm-media-background-layer'),
+          canvas: read(':scope > canvas'),
+          activation: read(':scope > .model-viewer-activate'),
+          ui: read(':scope > .model-viewer-ui')
+        };
+      });
+      if (layerOrder.background?.zIndex !== '0' ||
+          layerOrder.canvas?.zIndex !== '2' ||
+          layerOrder.activation?.zIndex !== '3' ||
+          layerOrder.ui?.zIndex !== '4') {
+        throw new Error(`Unexpected 3D layer order: ${JSON.stringify(layerOrder)}`);
+      }
+      if (layerOrder.activation?.position !== 'absolute' || layerOrder.canvas?.position !== 'absolute') {
+        throw new Error(`3D overlay/canvas positioning is not explicit: ${JSON.stringify(layerOrder)}`);
+      }
+
       await modelShell.click();
       await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
 
