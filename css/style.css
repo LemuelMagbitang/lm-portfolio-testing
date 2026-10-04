@@ -1424,11 +1424,11 @@ body.center-page {
 
 #lightboxMediaContainer .lightbox-artwork{
   position:relative;
-  width:100%;
+  width:min(100%, calc(85svh * var(--lightbox-artwork-ratio, 1)));
   max-width:100%;
-  aspect-ratio:1 / 1;
+  aspect-ratio:var(--lightbox-artwork-ratio, 1);
   height:auto;
-  max-height:85vh;
+  max-height:none;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -1492,6 +1492,8 @@ body.center-page {
 
 @media (max-width:767px){
   #lightboxMediaContainer .lightbox-artwork{
+    width:100%;
+    max-width:100%;
     max-height:none;
   }
 
@@ -2358,18 +2360,15 @@ body.center-page {
 /* Orientation drives the normal media-list presentation. Auto is square
    until the model viewer inspects the model bounds and refines it. */
 .lightbox-model-viewer{
-  width:min(100%,860px);
+  width:100%;
+  height:100%;
   min-width:0;
   min-height:0;
+  aspect-ratio:auto;
   margin:0 auto;
   border:1px solid rgba(255,255,255,.07);
   box-shadow:0 16px 40px rgba(0,0,0,.18);
 }
-.lightbox-model-viewer[data-orientation="portrait"]{aspect-ratio:9 / 16; width:min(100%,540px);}
-.lightbox-model-viewer[data-orientation="landscape"]{aspect-ratio:16 / 9; width:min(100%,900px);}
-.lightbox-model-viewer[data-orientation="square"],
-.lightbox-model-viewer:not([data-orientation]),
-.lightbox-model-viewer[data-orientation="auto"]{aspect-ratio:1 / 1; width:min(100%,760px);}
 .lightbox-media-item.is-3d-media-item{width:100%;}
 
 /* Focus mode keeps the 3D stack intentional:
@@ -2605,38 +2604,6 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   .seamless-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 }
 
-
-/* ============================================================
-   PROJECT CARD PRESENTATION — bounded, media-aware proportions
-   Keep the existing grid columns. Only the card's own footprint changes.
-   Phones intentionally remain equal two-column squares.
-   ============================================================ */
-@media (min-width: 768px) {
-  .seamless-grid {
-    align-items: start;
-  }
-
-  .project-card.card-orientation-square {
-    aspect-ratio: 1 / 1;
-  }
-
-  .project-card.card-orientation-landscape {
-    aspect-ratio: 4 / 3;
-  }
-
-  .project-card.card-orientation-portrait {
-    aspect-ratio: 3 / 4;
-  }
-}
-
-@media (max-width: 767px) {
-  .project-card,
-  .project-card.card-orientation-square,
-  .project-card.card-orientation-landscape,
-  .project-card.card-orientation-portrait {
-    aspect-ratio: 1 / 1;
-  }
-}
 
 /* ============================================================
    RESPONSIVE PROJECT THUMBNAIL SURFACE
