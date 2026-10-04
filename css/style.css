@@ -826,7 +826,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .skill-list.minimal-list li .skill-logo[data-logo-tone="dark"]{
   /* Never flatten a detailed wordmark to pure white. Grayscale + contrast
      preserves internal Adobe-style letters while keeping the mark neutral. */
-  filter: grayscale(1) contrast(1.18) brightness(1.12);
+  filter: grayscale(1) contrast(1.10) brightness(1.45);
 }
 .skill-list.minimal-list li .skill-logo[data-logo-tone="light"]{
   filter: grayscale(1) contrast(1.12) brightness(1.08);
