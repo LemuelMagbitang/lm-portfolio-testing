@@ -84,10 +84,16 @@ export function createLightboxMediaRenderer({
   function buildMediaEntry(mediaEl, captionText, background) {
     const wrap = documentRef.createElement('div');
     wrap.className = 'lightbox-media-item';
-    wrap.appendChild(mediaEl);
+
+    // Keep media backgrounds scoped to the artwork surface. The caption is a
+    // sibling of this surface, so fills never paint behind or tint captions.
+    const artwork = documentRef.createElement('div');
+    artwork.className = 'lightbox-artwork';
+    artwork.appendChild(mediaEl);
+    wrap.appendChild(artwork);
 
     if (background && applyMediaBackground) {
-      Promise.resolve(applyMediaBackground(wrap, background, resolveAssetUrl))
+      Promise.resolve(applyMediaBackground(artwork, background, resolveAssetUrl))
         .catch(error => console.warn('Lightbox: media background could not be applied.', error));
     }
 
@@ -179,7 +185,9 @@ export function createLightboxMediaRenderer({
     modelWrap.setAttribute('data-orientation', orientation);
     modelWrap.setAttribute('aria-label', `${project.title || 'Project'} — 3D artwork preview`);
 
-    const modelEntry = buildMediaEntry(modelWrap, item.caption || item.description, item.background);
+    // 3D owns its own background because the model shell becomes fixed
+    // during focus. The caption remains outside the full-screen model shell.
+    const modelEntry = buildMediaEntry(modelWrap, item.caption || item.description, null);
     modelEntry.classList.add('is-3d-media-item');
 
     if (typeof mountModelViewer !== 'function') {

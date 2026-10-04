@@ -232,7 +232,7 @@ export async function mountModelViewer(container, src, options = {}) {
     activate.className = 'model-viewer-activate';
     activate.setAttribute('aria-hidden', 'true');
     activate.setAttribute('role', 'presentation');
-    activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>VIEW 3D</strong></span>';
+    activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>CLICK FOR 3D VIEW</strong></span>';
     container.appendChild(activate);
 
     const ui = document.createElement('div');

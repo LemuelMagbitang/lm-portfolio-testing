@@ -10,10 +10,13 @@ export function getResponsiveBaseCount({
   width,
   height,
   total,
-  phoneCount = 2,
+  phoneCount = 6,
   tabletShortCount = 4,
   tabletTallCount = 6,
   desktopCount = 9,
+  phoneAllVisibleMax = 8,
+  tabletAllVisibleMax = 15,
+  desktopAllVisibleMax = 15,
   tabletBreakpoint = 1100,
   phoneBreakpoint = 768
 } = {}) {
@@ -21,11 +24,16 @@ export function getResponsiveBaseCount({
   const viewportWidth = Number(width) || 0;
   const viewportHeight = Number(height) || 0;
 
-  if (viewportWidth < phoneBreakpoint) return Math.min(phoneCount, count);
-  if (viewportWidth < tabletBreakpoint) {
-    return Math.min(viewportHeight < 820 ? tabletShortCount : tabletTallCount, count);
+  if (viewportWidth < phoneBreakpoint) {
+    return count <= phoneAllVisibleMax ? count : Math.min(phoneCount, count);
   }
-  return Math.min(desktopCount, count);
+
+  if (viewportWidth < tabletBreakpoint) {
+    const base = viewportHeight < 820 ? tabletShortCount : tabletTallCount;
+    return count <= tabletAllVisibleMax ? count : Math.min(base, count);
+  }
+
+  return count <= desktopAllVisibleMax ? count : Math.min(desktopCount, count);
 }
 
 export function getRowAlignedCount(

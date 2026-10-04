@@ -4,10 +4,18 @@ import {
   getRowAlignedCount
 } from '../js/features/gallery/presentation.js';
 
-assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 20 }), 2);
-assert.equal(getResponsiveBaseCount({ width: 834, height: 780, total: 20 }), 4);
-assert.equal(getResponsiveBaseCount({ width: 834, height: 900, total: 20 }), 6);
-assert.equal(getResponsiveBaseCount({ width: 1280, height: 900, total: 20 }), 9);
+assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 6 }), 6);
+assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 8 }), 8);
+assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 9 }), 6);
+
+assert.equal(getResponsiveBaseCount({ width: 834, height: 780, total: 15 }), 15);
+assert.equal(getResponsiveBaseCount({ width: 834, height: 780, total: 16 }), 4);
+assert.equal(getResponsiveBaseCount({ width: 834, height: 900, total: 15 }), 15);
+assert.equal(getResponsiveBaseCount({ width: 834, height: 900, total: 16 }), 6);
+
+assert.equal(getResponsiveBaseCount({ width: 1280, height: 900, total: 9 }), 9);
+assert.equal(getResponsiveBaseCount({ width: 1280, height: 900, total: 15 }), 15);
+assert.equal(getResponsiveBaseCount({ width: 1280, height: 900, total: 16 }), 9);
 
 const fakeWindow = { innerWidth: 1280 };
 const cards = [

@@ -73,7 +73,7 @@ export async function initGallery(options = {}) {
   if (initialProjects.length === 0 || initialCards.length === 0) return;
   const filterBtns = Array.from(documentRef.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
 
-  const phoneCount = Number.isFinite(options.phoneCount) ? options.phoneCount : 2;
+  const phoneCount = Number.isFinite(options.phoneCount) ? options.phoneCount : 6;
   const tabletShortCount = Number.isFinite(options.tabletShortCount) ? options.tabletShortCount : 4;
   const tabletTallCount = Number.isFinite(options.tabletTallCount) ? options.tabletTallCount : 6;
   const desktopCount = Number.isFinite(options.desktopCount) ? options.desktopCount : 9;
