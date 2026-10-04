@@ -132,11 +132,15 @@ export function createLightboxMediaRenderer({
   }
 
   async function preloadLottie(url) {
+    const timeoutPromise = new Promise(resolve => windowRef?.setTimeout?.(() => resolve(false), MEDIA_PRELOAD_TIMEOUT_MS));
     if (!url || typeof globalThis.fetch !== 'function') return false;
     try {
-      const response = await globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' });
-      if (!response.ok) return false;
-      const payload = await response.json();
+      const requestPromise = globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' }).then(async response => {
+        if (!response.ok) return false;
+        return response.json();
+      });
+      const payload = await Promise.race([requestPromise, timeoutPromise]);
+      if (!payload) return false;
       const width = Number(payload?.w);
       const height = Number(payload?.h);
       if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
