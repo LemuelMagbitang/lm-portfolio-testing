@@ -762,6 +762,22 @@ try {
       }
     }, { width: 768, height: 900 });
 
+    await smokePage(browser, '/', async page => {
+      const cards = page.locator('#portfolioGrid .project-card');
+      const boxes = await cards.evaluateAll(items => items.slice(0, 6).map(card => {
+        const r = card.getBoundingClientRect();
+        return { x: r.x, y: r.y, width: r.width, height: r.height };
+      }));
+      if (boxes.length < 3) throw new Error('Desktop Works gallery rendered too few cards for square-grid validation.');
+      const bad = boxes.find(box =>
+        Math.abs(box.width - box.height) > 2 ||
+        Math.abs(box.width - boxes[0].width) > 2
+      );
+      if (bad) {
+        throw new Error('Desktop Works project gallery is no longer a uniform square grid.');
+      }
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
