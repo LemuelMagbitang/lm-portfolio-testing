@@ -16,7 +16,7 @@ export function mediaTypeFromSrc(src = '') {
 export function buildProjectThumbnailMedia(
   source = {},
   altText = 'Project artwork',
-  { resolveAssetUrl, documentRef = globalThis.document } = {}
+  { resolveAssetUrl, documentRef = globalThis.document, priority = false } = {}
 ) {
   if (!source?.src || typeof resolveAssetUrl !== 'function') return null;
 
@@ -31,7 +31,7 @@ export function buildProjectThumbnailMedia(
     media.loop = true;
     media.autoplay = true;
     media.playsInline = true;
-    media.preload = 'metadata';
+    media.preload = priority ? 'auto' : 'metadata';
   } else if (type === 'lottie') {
     media = documentRef.createElement('lottie-player');
     media.setAttribute('src', src);
@@ -64,8 +64,9 @@ export function buildProjectThumbnailMedia(
     media = documentRef.createElement('img');
     media.src = src;
     media.alt = altText;
-    media.loading = 'lazy';
+    media.loading = priority ? 'eager' : 'lazy';
     media.decoding = 'async';
+    if (priority) media.fetchPriority = 'high';
   }
 
   media.classList.add('project-thumb-media');
