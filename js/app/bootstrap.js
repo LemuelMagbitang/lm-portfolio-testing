@@ -102,8 +102,8 @@ export async function bootstrapPortfolioApp({
       root,
       runtime,
       cms,
-      config,
-  
+      config
+    });
 
     await waitForReadyPaint();
     hideInitialPageTransition();
