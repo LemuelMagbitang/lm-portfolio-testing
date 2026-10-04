@@ -1099,13 +1099,11 @@ try {
         const r = card.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height };
       }));
-      if (boxes.length < 3) throw new Error('Desktop Works gallery rendered too few cards for square-grid validation.');
-      const bad = boxes.find(box =>
-        Math.abs(box.width - box.height) > 2 ||
-        Math.abs(box.width - boxes[0].width) > 2
-      );
+      if (boxes.length < 3) throw new Error('Desktop Works gallery rendered too few cards for column-geometry validation.');
+      const referenceWidth = boxes[0].width;
+      const bad = boxes.find(box => Math.abs(box.width - referenceWidth) > 2);
       if (bad) {
-        throw new Error('Desktop Works project gallery is no longer a uniform square grid.');
+        throw new Error('Desktop Works project gallery column widths drifted instead of staying aligned.');
       }
     }, { width: 1280, height: 900 });
 
