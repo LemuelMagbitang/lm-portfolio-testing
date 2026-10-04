@@ -385,6 +385,9 @@ function navigateLightbox(direction) {
     step > 0 ? 'is-navigation-next' : 'is-navigation-prev'
   );
 
+  const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const navigationDelay = reducedMotion ? 0 : 180;
+
   navigationTimer = windowRef.setTimeout(() => {
     navigationTimer = null;
     if (!lightbox.classList.contains('active')) return;
@@ -405,7 +408,7 @@ function navigateLightbox(direction) {
         );
       });
     });
-  }, 180);
+  }, navigationDelay);
 }
 
 const handlePrev = (event) => {
