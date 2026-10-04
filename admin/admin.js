@@ -2440,7 +2440,7 @@ RENDERERS.about = function(data){
   // admin.js is intentionally a classic script, so it loads the feature's
   // ES module through one cached dynamic import instead of duplicating the
   // provider map, aliases, scoring, and discovery logic here.
-  const SOFTWARE_LOGO_LOOKUP = import('../js/infrastructure/software-logo/lookup.js?v=20261004-01');
+  const SOFTWARE_LOGO_LOOKUP = import('../js/infrastructure/software-logo/lookup.js?v=20261004-02');
 
   async function findAutomaticSoftwareLogoCandidates(name){
     const lookup=await SOFTWARE_LOGO_LOOKUP;
