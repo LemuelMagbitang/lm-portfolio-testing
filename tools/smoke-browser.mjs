@@ -433,10 +433,26 @@ try {
       if (await shorts.count() !== 1) throw new Error('Lightbox did not render the Friends Gacha Short as portrait media.');
 
       const viewportWidth = await page.evaluate(() => window.innerWidth);
-      const shortsWidth = await shorts.evaluate(el => Math.round(el.getBoundingClientRect().width));
-      if (Math.abs(shortsWidth - viewportWidth) > 2) {
-        throw new Error(`Mobile Shorts media is not full-bleed (media ${shortsWidth}px vs viewport ${viewportWidth}px).`);
+      const shortsBox = await shorts.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return {
+          width: Math.round(r.width),
+          height: Math.round(r.height),
+          pointerEvents: getComputedStyle(el).pointerEvents
+        };
+      });
+      if (Math.abs(shortsBox.width - viewportWidth) > 2) {
+        throw new Error(`Mobile Shorts media is not full-bleed (media ${shortsBox.width}px vs viewport ${viewportWidth}px).`);
       }
+      if (shortsBox.height < 400) {
+        throw new Error(`Mobile Shorts iframe did not fill its portrait artwork surface (height ${shortsBox.height}px).`);
+      }
+      if (shortsBox.pointerEvents === 'none') {
+        throw new Error('Mobile Shorts iframe is not pointer-interactive.');
+      }
+
+      // The iframe itself must own the hit area so a tap reaches YouTube's
+      // native play controls instead of landing on an empty wrapper.
 
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);

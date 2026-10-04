@@ -1412,11 +1412,19 @@ body.center-page {
   overflow:hidden;
 }
 
-#lightboxMediaContainer .lightbox-artwork > img,
+#lightboxMediaContainer .lightbox-artwork > img{
+  display:block;
+  max-width:100%;
+}
+
 #lightboxMediaContainer .lightbox-artwork > iframe,
 #lightboxMediaContainer .lightbox-artwork > video{
   display:block;
+  width:100%;
+  height:100%;
   max-width:100%;
+  max-height:none;
+  pointer-events:auto;
 }
 
 #lightboxMediaContainer .lightbox-artwork.yt-landscape{
