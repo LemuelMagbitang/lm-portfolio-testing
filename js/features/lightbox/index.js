@@ -222,14 +222,22 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   if (modalDesc) modalDesc.textContent = project.subtitle || '';
   if (modalFullDesc) modalFullDesc.textContent = project.description || '';
 
+  const wasActive = lightbox.classList.contains('active');
+  if (!wasActive) {
+    // Capture the page's existing inline scroll policy before activating the
+    // modal. The previous implementation checked after .active was added,
+    // so this branch could never run and closing the viewer could clobber a
+    // caller-owned body overflow value.
+    previousBodyOverflow = documentRef.body.style.overflow;
+  }
+
   mediaRenderer.dispose(modalMediaContainer);
-  modalMediaContainer.innerHTML = '';
+  modalMediaContainer.replaceChildren();
   mediaRenderer.renderProjectMedia(modalMediaContainer, project);
 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
-  if (!lightbox.classList.contains('active')) previousBodyOverflow = documentRef.body.style.overflow;
   documentRef.body.style.overflow = 'hidden';
 
   windowRef.requestAnimationFrame(() => {
