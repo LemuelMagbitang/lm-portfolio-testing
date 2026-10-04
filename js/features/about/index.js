@@ -1,5 +1,71 @@
 import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from '../../infrastructure/software-logo/lookup.js?v=20261003-14';
 
+export async function preloadAboutAssets({
+  url,
+  loadJson,
+  resolveAssetUrl,
+  documentRef = globalThis.document
+} = {}) {
+  if (!url || typeof loadJson !== 'function' || !documentRef) return { total: 0, ready: 0 };
+
+  const preloadImage = value => new Promise(resolve => {
+    if (!value) return resolve(false);
+    const image = documentRef.createElement('img');
+    image.decoding = 'async';
+    image.fetchPriority = 'high';
+    image.onload = () => resolve(true);
+    image.onerror = () => resolve(false);
+    image.src = value;
+  });
+
+  try {
+    const about = await loadJson(url, null, { resolveUrl: resolveAssetUrl });
+    if (!about || typeof about !== 'object') return { total: 1, ready: 0 };
+
+    const jobs = [];
+    if (about.photo) {
+      const photoData = typeof about.photo === 'string' ? { src: about.photo } : about.photo;
+      if (photoData?.src) {
+        const resolved = typeof resolveAssetUrl === 'function' ? resolveAssetUrl(photoData.src) : photoData.src;
+        jobs.push(preloadImage(resolved));
+      }
+    }
+
+    const skills = Array.isArray(about.softwareSkills) ? about.softwareSkills : [];
+    const skillNames = skills
+      .map(skill => typeof skill === 'string' ? skill.trim() : String(skill?.name || '').trim())
+      .filter(Boolean);
+
+    for (const name of [...new Set(skillNames)]) {
+      const candidates = findSoftwareLogoCandidates(name);
+      const discovered = candidates.length
+        ? []
+        : await findSoftwareLogoDiscoveryCandidates(name);
+      const logoCandidates = [...new Set([...candidates, ...discovered])];
+      if (logoCandidates.length) {
+        jobs.push(
+          logoCandidates.reduce(
+            (chain, candidate) => chain.then(done => done || preloadImage(
+              /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
+                ? candidate
+                : (typeof resolveAssetUrl === 'function' ? resolveAssetUrl(candidate) : candidate)
+            )),
+            Promise.resolve(false)
+          )
+        );
+      }
+    }
+
+    const results = await Promise.allSettled(jobs);
+    return {
+      total: jobs.length,
+      ready: results.filter(result => result.status === 'fulfilled' && result.value === true).length
+    };
+  } catch (_) {
+    return { total: 1, ready: 0 };
+  }
+}
+
 export async function initAbout({
   url,
   root = globalThis.document,
