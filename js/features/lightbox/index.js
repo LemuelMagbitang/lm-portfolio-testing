@@ -157,14 +157,19 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   const wasActive = lightbox.classList.contains('active');
   if (!wasActive) {
-    // Capture the page's existing inline scroll policy before activating the
-    // modal. The previous implementation checked after .active was added,
-    // so this branch could never run and closing the viewer could clobber a
-    // caller-owned body overflow value.
+    // Freeze document scrolling before the modal changes the active layout.
+    // Locking the root scroller first prevents focus/layout reconciliation
+    // from moving window.scrollY while the fixed Lightbox is being attached.
     previousBodyOverflow = documentRef.body.style.overflow;
+    previousDocumentOverflow = documentRef.documentElement?.style.overflow || '';
     previousPageScrollX = Number(windowRef.scrollX) || 0;
     previousPageScrollY = Number(windowRef.scrollY) || 0;
     lightbox.dataset.debugSavedPageScroll = String(previousPageScrollY);
+
+    if (documentRef.documentElement) {
+      documentRef.documentElement.style.overflow = 'hidden';
+    }
+    documentRef.body.style.overflow = 'hidden';
   }
 
   mediaRenderer.dispose(modalMediaContainer);
@@ -174,12 +179,6 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
-
-  // Keep the page from scrolling behind the fixed Lightbox while it is open.
-  // The saved viewport position is restored explicitly on close.
-  if (!wasActive) {
-    documentRef.body.style.overflow = 'hidden';
-  }
 
   windowRef.requestAnimationFrame(() => {
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
@@ -250,7 +249,11 @@ function closeLightbox() {
   };
 
   documentRef.body.style.overflow = previousBodyOverflow;
+  if (documentRef.documentElement) {
+    documentRef.documentElement.style.overflow = previousDocumentOverflow;
+  }
   previousBodyOverflow = '';
+  previousDocumentOverflow = '';
   previousPageScrollX = 0;
   previousPageScrollY = 0;
 
