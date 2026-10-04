@@ -64,7 +64,7 @@ export async function loadProjects({
     const mountedPairs = [];
 
     projects.forEach(project => {
-      const card = buildCard(project);
+      const card = buildCard(project, mountedCount);
       if (!card) return;
       mountedPairs.push([card, project]);
       fragment.appendChild(card);
