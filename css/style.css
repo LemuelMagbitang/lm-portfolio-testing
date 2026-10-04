@@ -2187,29 +2187,6 @@ body.center-page {
 .project-thumb-model-content i{font-size:22px;}
 .project-thumb-model-content span{font-size:11px;letter-spacing:.16em;}
 .project-thumb-model-content small{font-size:9px;font-weight:600;letter-spacing:.08em;color:rgba(255,255,255,.52);text-transform:none;}
-.card-3d-indicator{
-  position:absolute;
-  left:14px;
-  bottom:14px;
-  z-index:6;
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  padding:7px 10px;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:999px;
-  background:rgba(8,8,8,.48);
-  color:rgba(255,255,255,.82);
-  box-shadow:0 8px 24px rgba(0,0,0,.18);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:.11em;
-  pointer-events:none;
-}
-.card-3d-indicator i{font-size:10px;}
-
 /* =====================================================
    INTERACTIVE 3D VIEWER — passive media preview → device-focused 3D
    ===================================================== */

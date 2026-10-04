@@ -29,7 +29,6 @@ export async function mountProjects({
   buildCard = (project, index = 0) => buildProjectCardElement(project, {
     resolveAssetUrl,
     applyMediaBackground,
-    show3DIndicator: true,
     documentRef,
     onActivate: onCardActivate,
     priority: index < 6

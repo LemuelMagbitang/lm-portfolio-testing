@@ -171,6 +171,7 @@ assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
 assert.equal(capabilityCard.children[0]?.children[0]?.dataset?.modelThumb, 'models/test.glb');
+assert.equal(capabilityCard.children[0]?.children?.length, 1);
 
 const presentationRegressionCard = buildProjectCardElement({
   id: 'presentation-regression',
@@ -259,7 +260,7 @@ const fallbackCard = buildProjectCardElement(normalizedFallback, {
   }
 });
 
-// No badge means the thumbnail is the first card child.
+// Gallery cards no longer render a separate 3D availability badge.
 const fallbackThumbnail = fallbackCard.children[0];
 const fallbackMedia = fallbackThumbnail.children[0];
 assert.equal(fallbackMedia.style.objectPosition, '50% 30%');

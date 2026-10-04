@@ -3,7 +3,7 @@
  * Owns card DOM construction only. It does not fetch data or manage filtering.
  */
 
-import { findProjectMediaBackground, projectHas3D } from './project-media.js?v=20261004-03';
+import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261004-03';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261004-01';
 
@@ -53,7 +53,6 @@ export function buildProjectCardElement(
   {
     resolveAssetUrl,
     applyMediaBackground,
-    show3DIndicator = true,
     documentRef = globalThis.document,
     onActivate,
     priority = false
@@ -139,14 +138,6 @@ export function buildProjectCardElement(
     if (t.focus) thumbnail.dataset.focus = String(t.focus);
     if (t.zoom && Number(t.zoom) !== 1) thumbnail.dataset.zoom = String(t.zoom);
     if (t.rotate) thumbnail.dataset.rotate = String(t.rotate);
-  }
-
-  if (show3DIndicator && projectHas3D(project)) {
-    thumbnail.classList.add('has-3d-view');
-    const indicator = documentRef.createElement('div');
-    indicator.className = 'card-3d-indicator';
-    indicator.innerHTML = '<i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D VIEW AVAILABLE</span>';
-    thumbnail.appendChild(indicator);
   }
   card.appendChild(thumbnail);
 
