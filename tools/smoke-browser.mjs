@@ -429,12 +429,12 @@ try {
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
         el => getComputedStyle(el).backgroundColor
       );
-      const focusedCloseBlend = await page.locator('#lightboxClose').evaluate(el => {
+      const focusedCloseContrast = await page.locator('#lightboxClose').evaluate(el => {
         const style = getComputedStyle(el);
-        return { mixBlendMode: style.mixBlendMode, boxShadow: style.boxShadow };
+        return { mixBlendMode: style.mixBlendMode, background: style.backgroundColor };
       });
-      if (focusedCloseBlend.mixBlendMode !== 'difference') {
-        throw new Error(`Lightbox Close control lost difference blending: ${focusedCloseBlend.mixBlendMode}`);
+      if (focusedCloseContrast.mixBlendMode !== 'normal') {
+        throw new Error(`Lightbox Close control still uses blend compositing: ${focusedCloseContrast.mixBlendMode}`);
       }
       if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
         throw new Error('Focused 3D Close control still has a visible background box.');
@@ -815,13 +815,12 @@ try {
             selector,
             blend: style.mixBlendMode,
             background: style.backgroundColor,
-            borderStyle: style.borderStyle,
-            boxShadow: style.boxShadow
+            borderStyle: style.borderStyle
           };
         }).filter(Boolean)
       );
       for (const control of lightboxControlStyles) {
-        if (control.blend !== 'difference') throw new Error(control.selector + ' is missing Lightbox blend-mode contrast.');
+        if (control.blend !== 'normal') throw new Error(control.selector + ' still uses Lightbox blend-mode contrast.');
         if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
           throw new Error(control.selector + ' still renders a visible control box over artwork.');
         }
