@@ -51,7 +51,7 @@ export function buildProjectCardElement(
     documentRef = globalThis.document,
     onActivate,
     priority = false,
-    parseYouTube = null
+    parseYouTubeUrl = null
   } = {}
 ) {
   const card = documentRef.createElement('div');
@@ -87,7 +87,7 @@ export function buildProjectCardElement(
   const explicitThumbnail = project.thumbnail || {};
   const fallbackThumbnail = explicitThumbnail.src
     ? null
-    : getFallbackThumbnailSource(project, explicitThumbnail, parseYouTube);
+    : getFallbackThumbnailSource(project, explicitThumbnail, parseYouTubeUrl);
   const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;

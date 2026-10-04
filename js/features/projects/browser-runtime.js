@@ -13,7 +13,7 @@
  */
 
 import { loadProjects } from './project-loader.js';
-import { buildProjectCardElement } from './project-card.js?v=20261005-02';
+import { buildProjectCardElement } from './project-card.js?v=20261005-03';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
@@ -27,14 +27,14 @@ export async function mountProjects({
   createFragment = () => documentRef?.createDocumentFragment(),
   onCardActivate,
   applyMediaBackground,
-  parseYouTube = parseYouTubeUrl,
   buildCard = (project, index = 0) => buildProjectCardElement(project, {
+    parseYouTubeUrl,
     resolveAssetUrl,
     applyMediaBackground,
     documentRef,
     onActivate: onCardActivate,
     priority: index < 6,
-    parseYouTube
+    parseYouTubeUrl
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;
