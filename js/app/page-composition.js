@@ -41,7 +41,7 @@ export async function createPortfolioApp({
   // Three.js is optional infrastructure: do not make it part of the initial
   // module graph. Lightbox requests the viewer only when a 3D asset is opened.
   const loadModelViewerModule = async () => (
-    import('../infrastructure/three/model-viewer.js?v=20261004-06')
+    import('../infrastructure/three/model-viewer.js?v=20261004-07')
   );
 
   const mountModelViewer = async (...args) => {
