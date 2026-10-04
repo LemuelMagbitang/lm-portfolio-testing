@@ -216,6 +216,14 @@ try {
       }
 
       const closeButton = page.locator('#lightboxClose');
+      const navigationBlend = await page.locator('.lightbox-next').evaluate(el => {
+        const style = getComputedStyle(el);
+        return { mixBlendMode: style.mixBlendMode, background: style.backgroundColor };
+      });
+      if (navigationBlend.mixBlendMode !== 'difference') {
+        throw new Error(`Lightbox navigation control lost difference blending: ${navigationBlend.mixBlendMode}`);
+      }
+
       if (await closeButton.count()) {
         await closeButton.click();
         await page.waitForTimeout(120);
@@ -364,6 +372,13 @@ try {
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
         el => getComputedStyle(el).backgroundColor
       );
+      const focusedCloseBlend = await page.locator('#lightboxClose').evaluate(el => {
+        const style = getComputedStyle(el);
+        return { mixBlendMode: style.mixBlendMode, boxShadow: style.boxShadow };
+      });
+      if (focusedCloseBlend.mixBlendMode !== 'difference') {
+        throw new Error(`Lightbox Close control lost difference blending: ${focusedCloseBlend.mixBlendMode}`);
+      }
       if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
         throw new Error('Focused 3D Close control still has a visible background box.');
       }
@@ -447,11 +462,59 @@ try {
         }
       });
 
+      const desktopGridGeometry = await page.locator('#portfolioGrid').evaluate(grid => {
+        const style = getComputedStyle(grid);
+        const cards = Array.from(grid.querySelectorAll('.project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .slice(0, 3)
+          .map(card => {
+            const rect = card.getBoundingClientRect();
+            return { x: rect.x, y: rect.y, width: rect.width };
+          });
+        return {
+          templateColumns: style.gridTemplateColumns,
+          cards,
+          width: grid.getBoundingClientRect().width
+        };
+      });
+      const desktopColumns = desktopGridGeometry.templateColumns.trim().split(/\s+/).filter(Boolean).length;
+      if (desktopColumns !== 3 || desktopGridGeometry.cards.length < 3) {
+        throw new Error(
+          `Desktop project grid no longer exposes three equal tracks: ${JSON.stringify(desktopGridGeometry)}`
+        );
+      }
+      const desktopWidths = desktopGridGeometry.cards.map(card => card.width);
+      if (Math.max(...desktopWidths) - Math.min(...desktopWidths) > 2) {
+        throw new Error(`Desktop project grid columns are not equal width: ${JSON.stringify(desktopGridGeometry)}`);
+      }
+
       // Current portfolio has 11 projects. The new presentation contract
       // intentionally shows 9–15 projects without Show More on desktop.
       const desktopShowMore = page.locator('#showMoreBtn').first();
       if (desktopCards <= 15 && await desktopShowMore.isVisible().catch(() => false)) {
         throw new Error('Desktop Show More appeared even though the project count is within the all-visible threshold.');
+      }
+
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await page.waitForTimeout(500);
+      const tabletGridGeometry = await page.locator('#portfolioGrid').evaluate(grid => {
+        const style = getComputedStyle(grid);
+        const cards = Array.from(grid.querySelectorAll('.project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .slice(0, 3)
+          .map(card => {
+            const rect = card.getBoundingClientRect();
+            return { x: rect.x, y: rect.y, width: rect.width };
+          });
+        return { templateColumns: style.gridTemplateColumns, cards };
+      });
+      const tabletColumns = tabletGridGeometry.templateColumns.trim().split(/\s+/).filter(Boolean).length;
+      if (tabletColumns !== 3 || tabletGridGeometry.cards.length < 3) {
+        throw new Error(`Tablet project grid did not preserve three tracks: ${JSON.stringify(tabletGridGeometry)}`);
+      }
+      const tabletWidths = tabletGridGeometry.cards.map(card => card.width);
+      if (Math.max(...tabletWidths) - Math.min(...tabletWidths) > 2) {
+        throw new Error(`Tablet project grid columns are not equal width: ${JSON.stringify(tabletGridGeometry)}`);
       }
 
       await page.setViewportSize({ width: 390, height: 844 });
@@ -547,6 +610,20 @@ try {
         Math.abs(firstRowBoxes[0].width - firstRowBoxes[1].width) > 2
       ) {
         throw new Error('Mobile Works gallery did not render its first row as two equal columns.');
+      }
+
+      const mobileFilterMotion = await filters.first().evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          tabTransition: style.transition,
+          userSelect: style.userSelect
+        };
+      });
+      if (!/transform/i.test(mobileFilterMotion.tabTransition) && mobileFilterMotion.userSelect === 'none') {
+        // The rail itself is native-scroll driven; this assertion only ensures
+        // its controls remain non-selectable while the settling animation is
+        // CSS-capable.
+        throw new Error('Mobile filter controls lost their interaction presentation contract.');
       }
 
       const mobileShowMore = page.locator('#showMoreBtn').first();
