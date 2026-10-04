@@ -214,9 +214,14 @@ export async function initGallery(options = {}) {
 
     filterBtns.forEach(item => item.classList.toggle('active', item === button));
     currentFilter = nextFilter;
-    isExpanded = false;
 
-    if (changed) render();
+    // Only a real filter change starts a new result set. Centering the
+    // currently selected button during resize/scroll settling must not reset
+    // the user's Show More state.
+    if (changed) {
+      isExpanded = false;
+      render();
+    }
     if (center && isFilterCarousel()) centerFilterButton(button);
     updateFilterPager(filterBtns.indexOf(button));
 
