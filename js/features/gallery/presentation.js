@@ -39,7 +39,8 @@ export function getResponsiveBaseCount({
 export function getRowAlignedCount(
   cards = [],
   requestedCount = 0,
-  windowRef = globalThis.window
+  windowRef = globalThis.window,
+  grid = null
 ) {
   const requested = Math.max(0, Number(requestedCount) || 0);
   if (!cards.length || requested <= 0) return 0;
@@ -49,14 +50,31 @@ export function getRowAlignedCount(
     return Math.min(requested, cards.length);
   }
 
-  const firstTop = cards[0]?.getBoundingClientRect?.().top;
-  if (!Number.isFinite(firstTop)) return Math.min(requested, cards.length);
-
   let columns = 0;
-  for (const card of cards) {
-    const top = card?.getBoundingClientRect?.().top;
-    if (!Number.isFinite(top) || Math.abs(top - firstTop) > 2) break;
-    columns += 1;
+
+  // Prefer the actual CSS grid track geometry. During a filter transition,
+  // cards from the previous result can still exist in the grid while fading
+  // out, so counting "how many filtered cards share the first row" can
+  // under-count the real column count and produce a bad Show More threshold.
+  const firstCard = cards[0];
+  const cardWidth = Number(firstCard?.getBoundingClientRect?.().width) || 0;
+  const gridWidth = Number(grid?.getBoundingClientRect?.().width) || 0;
+  if (cardWidth > 0 && gridWidth > 0) {
+    const computedGap = windowRef?.getComputedStyle?.(grid)?.columnGap || '0';
+    const gap = Number.parseFloat(computedGap) || 0;
+    columns = Math.round((gridWidth + gap) / (cardWidth + gap));
+  }
+
+  // Fall back to row-position inference when grid geometry is unavailable.
+  if (columns < 1) {
+    const firstTop = firstCard?.getBoundingClientRect?.().top;
+    if (!Number.isFinite(firstTop)) return Math.min(requested, cards.length);
+
+    for (const card of cards) {
+      const top = card?.getBoundingClientRect?.().top;
+      if (!Number.isFinite(top) || Math.abs(top - firstTop) > 2) break;
+      columns += 1;
+    }
   }
 
   const safeColumns = Math.max(1, columns);
