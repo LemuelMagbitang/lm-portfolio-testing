@@ -22,7 +22,8 @@ export async function createPortfolioApp({
   root = globalThis.document,
   runtime,
   cms,
-  config
+  config,
+  onProgress = () => {}
 } = {}) {
   if (!root || !runtime || !cms || !config?.urls) throw new Error('Portfolio app dependencies are incomplete.');
 
@@ -44,6 +45,8 @@ export async function createPortfolioApp({
     const module = await import('../infrastructure/three/model-viewer.js');
     return module.mountModelViewer(...args);
   };
+
+  onProgress('Loading portfolio data…');
 
   const settingsPromise = initSiteSettings({
     url: config.urls.settings,
@@ -100,6 +103,7 @@ export async function createPortfolioApp({
   ]);
 
   const settings = settingsFeature.getState();
+  onProgress('Building the portfolio…');
 
   // Settings can resolve before CMS-backed cards are mounted. Re-apply the
   // current DOM-dependent settings after all page content exists.
@@ -107,9 +111,11 @@ export async function createPortfolioApp({
 
   const projectModels = getProjects();
   if (projectModels.some(project => project?.capabilities?.hasLottie)) {
+    onProgress('Preparing animated artwork…');
     await ensureLottiePlayer();
   }
 
+  onProgress('Preparing the visual experience…');
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
   let heroFeature = null;
   if (hero) {
@@ -163,6 +169,7 @@ export async function createPortfolioApp({
     console.warn('Gallery: initialization failed', error);
   }
 
+  onProgress('Finalizing interactions…');
   try {
     lightboxFeature = await initLightbox({
       root,
@@ -178,6 +185,8 @@ export async function createPortfolioApp({
   } catch (error) {
     console.warn('Lightbox: initialization failed', error);
   }
+
+  onProgress('Finishing layout…');
 
   if (lightboxFeature?.openCard && pendingProjectOpen) {
     const pending = pendingProjectOpen;
