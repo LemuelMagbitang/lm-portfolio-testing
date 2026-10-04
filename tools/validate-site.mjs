@@ -593,8 +593,18 @@ function validateRuntimeCacheGraph() {
 }
 
 function parseCacheVersion(version) {
-  const match = String(version || '').match(/^(\\d{8})-(\\d+)$/);
-  return match ? { date: Number(match[1]), sequence: Number(match[2]) } : null;
+  const parts = String(version || '').split('-');
+  if (parts.length !== 2) return null;
+
+  const [datePart, sequencePart] = parts;
+  if (datePart.length !== 8 || !/^[0-9]+$/.test(datePart) || !/^[0-9]+$/.test(sequencePart)) {
+    return null;
+  }
+
+  return {
+    date: Number(datePart),
+    sequence: Number(sequencePart)
+  };
 }
 
 function validateFeatureModuleCacheGraph() {
@@ -605,15 +615,15 @@ function validateFeatureModuleCacheGraph() {
   const checks = [
     {
       name: 'Gallery',
-      importPattern: /from ['"]\\.\\.\/features\/gallery\/index\\.js\\?v=([^'"]+)/,
+      importPattern: /from ['"]\.\.\/features\/gallery\/index\.js\?v=([^'"]+)/,
       file: 'js/features/gallery/index.js',
-      nestedPattern: /from ['"](?:\\.\\.\/)+gallery\/presentation\\.js\\?v=([^'"]+)/
+      nestedPattern: /from ['"]\.\/presentation\.js\?v=([^'"]+)/g
     },
     {
       name: 'Lightbox',
-      importPattern: /from ['"]\\.\\.\/features\/lightbox\/index\\.js\\?v=([^'"]+)/,
+      importPattern: /from ['"]\.\.\/features\/lightbox\/index\.js\?v=([^'"]+)/,
       file: 'js/features/lightbox/index.js',
-      nestedPattern: /from ['"](?:\\.\\.\/)+lightbox\/media-renderer\\.js\\?v=([^'"]+)/
+      nestedPattern: /from ['"]\.\/media-renderer\.js\?v=([^'"]+)/g
     }
   ];
 
