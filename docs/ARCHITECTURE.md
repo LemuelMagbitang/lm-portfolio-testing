@@ -84,6 +84,19 @@ The public bootstrap has a top-level error boundary and contains Hero initializa
 
 The 3D viewer is lazy and disposes its renderer, controls, observers, animation resources, and document listeners during cleanup. Shared feature lifecycle primitives are used where multiple long-lived feature resources need the same teardown contract. Lightbox also disposes mounted 3D shells before replacing its media container.
 
+
+## Runtime stabilization contracts
+
+The initial portfolio transition is a readiness gate, not a fixed-duration animation. Bootstrap keeps the branded loading surface visible while application composition completes, document fonts settle, and media already entering the first viewport become measurable. The loading surface exposes progress/status and sets `body[aria-busy]` until the handoff completes.
+
+Gallery expansion is persistent UI state. Resize, `load`, and BFCache `pageshow` events recompute presentation geometry without silently reverting an already-expanded gallery unless the new viewport can show the complete active set without a reveal control.
+
+The Lightbox owns playback handoff. Native video uses the media play lifecycle; YouTube uses its cross-origin player state messages in addition to pointer/focus fallback behavior. All YouTube listeners are disposed with the current media container so navigation cannot accumulate global playback listeners.
+
+Lightbox media styling has one scoped ownership layer. Orientation classes live on the actual media and its `.lightbox-artwork` surface, while captions remain outside the artwork surface. Future responsive fixes should modify that ownership layer rather than reintroducing global `.yt-*` rules or duplicate media selectors.
+
+The CMS remains a separate application boundary. Provider failures in enhancement-only software-logo discovery are contained locally so editing and saving content remain usable. Repository writes continue through the existing optimistic branch-head check and atomic multi-file commit path.
+
 ## Validation
 
 `tools/validate-site.mjs` validates data relationships, local asset references, supported media, risky paths, CMS storage contracts, the ES-module bootstrap contract, feature lifecycle contracts, and JavaScript syntax.
