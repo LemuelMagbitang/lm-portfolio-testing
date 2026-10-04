@@ -41,10 +41,12 @@ console.log('Feature lifecycle boundary validated.');
 const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
 assert.match(lightboxSource, /bind\(windowRef, 'pagehide', handlePageHide\)/);
 assert.match(lightboxSource, /bind\(windowRef, 'pageshow', handlePageShow\)/);
+assert.match(lightboxSource, /setAttribute\('aria-hidden','false'\)/);
+assert.match(lightboxSource, /setAttribute\('aria-hidden','true'\)/);
 assert.match(lightboxSource, /closeLightbox\(\{ restoreFocus: false \}\)/);
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
 assert.match(modelViewerSource, /__modelViewerMountToken/);
-assert.match(modelViewerSource, /if \(!isCurrentMount\(\)\) return null;/);
+assert.match(modelViewerSource, /if \(!isCurrentMount\(\)\) \{[\s\S]*disposeObject\(loaded\.root\)[\s\S]*return null;/);
 
 console.log('Lightbox BFCache and 3D mount-race contracts validated.');
