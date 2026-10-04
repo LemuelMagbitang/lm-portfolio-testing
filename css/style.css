@@ -1642,9 +1642,6 @@ body.center-page {
 }
 
 @media (max-width: 767px) {
-  .grid-fade-overlay {
-    height: 130px;
-  }
   .show-more-wrapper {
     min-height: 64px;
     margin-top: -64px;
