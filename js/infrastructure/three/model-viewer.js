@@ -189,7 +189,10 @@ export async function mountModelViewer(container, src, options = {}) {
 
   try {
     const loaded = await loadModel(url, ext);
-    if (!isCurrentMount()) return null;
+    if (!isCurrentMount()) {
+      if (loaded?.root) disposeObject(loaded.root);
+      return null;
+    }
     if (!loaded?.root) throw new Error('3D model contains no scene.');
     root = loaded.root;
 
