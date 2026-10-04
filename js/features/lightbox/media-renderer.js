@@ -443,6 +443,7 @@ export function createLightboxMediaRenderer({
   function renderYouTube(item, project) {
     const { isShort } = parseYouTube(item.src);
     const embedSrc = buildYouTubeEmbedUrl(item.src);
+    if (!embedSrc) return null;
     let iframe = takeCachedYouTubeFrame(embedSrc);
 
     if (!iframe) {
@@ -458,7 +459,7 @@ export function createLightboxMediaRenderer({
       iframe.allowFullscreen = true;
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       iframe.addEventListener('load', () => primeYouTubeFrame(iframe), { once: true });
-      iframe.src = embedSrc || item.src;
+      iframe.src = embedSrc;
       if (embedSrc) youtubeFrameCache.set(embedSrc, iframe);
     } else {
       iframe.tabIndex = 0;
