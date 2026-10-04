@@ -24,12 +24,12 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
     const type = String(item.type || mediaTypeFromSrc(item.src)).toLowerCase();
     if (['image', 'video', 'lottie', 'model'].includes(type)) {
       return {
+        ...presentation,
         type,
         src: item.src,
         background: item.background && typeof item.background === 'object'
           ? item.background
-          : presentation.background,
-        ...presentation
+          : presentation.background
       };
     }
   }
