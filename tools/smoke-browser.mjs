@@ -717,6 +717,22 @@ try {
         }
       }
 
+      if (youtubeFrames.count && await youtubeFrames.count()) {
+        const cachedFrame = youtubeFrames.first();
+        await cachedFrame.evaluate(el => { el.dataset.smokeReuseToken = 'youtube-cache-reuse'; });
+
+        await page.locator('#lightboxClose').click();
+        await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+        await playbackCard.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+        const reopenedFrame = page.locator('#lightboxMediaContainer iframe[data-lm-youtube]').first();
+        const reuseToken = await reopenedFrame.getAttribute('data-smoke-reuse-token');
+        if (reuseToken !== 'youtube-cache-reuse') {
+          throw new Error('Closing and reopening the Lightbox did not reuse the successfully loaded YouTube iframe cache entry.');
+        }
+      }
+
       if (await videos.count()) {
         const preloadMode = await videos.first().getAttribute('preload');
         if (preloadMode !== 'auto') throw new Error('Lightbox local video is not preloaded for immediate playback.');
