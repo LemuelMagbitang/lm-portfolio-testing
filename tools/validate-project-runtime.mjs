@@ -172,6 +172,8 @@ assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
 assert.equal(capabilityCard.children[0]?.children[0]?.dataset?.modelThumb, 'models/test.glb');
 assert.equal(capabilityCard.children[0]?.children?.length, 1);
+assert.equal(capabilityCard.children[0]?.children[0]?.children[1]?.textContent, '3D ARTWORK');
+assert.equal(capabilityCard.children[0]?.children[0]?.children[2]?.textContent, 'View project');
 
 const presentationRegressionCard = buildProjectCardElement({
   id: 'presentation-regression',

@@ -44,7 +44,7 @@ export function buildProjectThumbnailMedia(
     media = documentRef.createElement('div');
     media.className = 'project-thumb-model';
     media.setAttribute('role', 'img');
-    media.setAttribute('aria-label', `${altText} — interactive 3D view available`);
+    media.setAttribute('aria-label', `${altText} — 3D artwork`);
 
     const content = documentRef.createElement('div');
     content.className = 'project-thumb-model-content';
@@ -54,10 +54,10 @@ export function buildProjectThumbnailMedia(
     icon.setAttribute('aria-hidden', 'true');
 
     const label = documentRef.createElement('span');
-    label.textContent = 'INTERACTIVE 3D';
+    label.textContent = '3D ARTWORK';
 
     const hint = documentRef.createElement('small');
-    hint.textContent = 'Open artwork to explore';
+    hint.textContent = 'View project';
 
     content.append(icon, label, hint);
     media.appendChild(content);
