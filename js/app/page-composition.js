@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js';
+import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js?v=20261004-03';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout } from '../features/about/index.js?v=20261003-12';
@@ -14,7 +14,7 @@ import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
 import { initGallery } from '../features/gallery/index.js?v=20261004-03';
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261003-12';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-03';
 import { initLightbox } from '../features/lightbox/index.js?v=20261004-03';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js';
 
