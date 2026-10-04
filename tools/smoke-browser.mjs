@@ -223,6 +223,25 @@ try {
       const modelShell = page.locator('#lightbox .lightbox-model-viewer').first();
       await modelShell.waitFor({ state: 'visible', timeout: 7000 });
       await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
+
+      const lottieCaption = page.locator('#lightboxMediaContainer .lightbox-media-item lottie-player').first()
+        .locator('xpath=..').locator('xpath=..').locator('.media-caption').first();
+      if (await lottieCaption.count() === 1) {
+        const captionBackground = await lottieCaption.evaluate(el => getComputedStyle(el).backgroundColor);
+        if (captionBackground !== 'rgba(0, 0, 0, 0)' && captionBackground !== 'transparent') {
+          throw new Error(`Lottie caption inherited an artwork background: ${captionBackground}`);
+        }
+      }
+
+      const modelActivate = modelShell.locator('.model-viewer-activate-content').first();
+      if (await modelActivate.count() !== 1 || !(await modelActivate.isVisible().catch(() => false))) {
+        throw new Error('3D Lightbox did not expose its Click for 3D View activation affordance.');
+      }
+      const activationLabel = await modelActivate.textContent();
+      if (activationLabel?.trim().toUpperCase() !== 'CLICK FOR 3D VIEW') {
+        throw new Error(`Unexpected 3D activation label: ${activationLabel}`);
+      }
+
       await modelShell.click();
       await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
 
@@ -245,12 +264,16 @@ try {
 
     await smokePage(browser, '/', async page => {
       const gridBeforeResize = page.locator('#portfolioGrid').first();
-      const initialCollapsedHeight = await gridBeforeResize.evaluate(el => {
-        const style = getComputedStyle(el);
-        return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
-      });
-      if (initialCollapsedHeight.maxHeight === 'none' || initialCollapsedHeight.scrollHeight <= initialCollapsedHeight.clientHeight) {
-        throw new Error('Resize smoke started without an active desktop collapsed gallery state.');
+      const desktopCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
+        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+      );
+      if (desktopCards < 9) throw new Error(`Desktop resize fixture rendered too few projects (found ${desktopCards}).`);
+
+      // Current portfolio has 11 projects. The new presentation contract
+      // intentionally shows 9–15 projects without Show More on desktop.
+      const desktopShowMore = page.locator('#showMoreBtn').first();
+      if (desktopCards <= 15 && await desktopShowMore.isVisible().catch(() => false)) {
+        throw new Error('Desktop Show More appeared even though the project count is within the all-visible threshold.');
       }
 
       await page.setViewportSize({ width: 390, height: 844 });
@@ -261,6 +284,10 @@ try {
         const style = getComputedStyle(el);
         return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
       });
+      const mobileCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
+        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+      );
+      if (mobileCards !== 6) throw new Error(`Mobile collapsed gallery should show 6 projects (found ${mobileCards}).`);
       if (mobileCollapsedState.maxHeight === 'none' || mobileCollapsedState.scrollHeight <= mobileCollapsedState.clientHeight) {
         throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed gallery state.');
       }
@@ -270,12 +297,14 @@ try {
 
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.waitForTimeout(500);
-      const desktopCollapsedState = await gridBeforeResize.evaluate(el => {
-        const style = getComputedStyle(el);
-        return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
-      });
-      if (desktopCollapsedState.maxHeight === 'none' || desktopCollapsedState.scrollHeight <= desktopCollapsedState.clientHeight) {
-        throw new Error('Mobile-to-desktop resize did not restore the desktop collapsed gallery state.');
+      const desktopRestoredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
+        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+      );
+      if (desktopRestoredCards !== 11) {
+        throw new Error(`Mobile-to-desktop resize should restore all 11 current projects (found ${desktopRestoredCards}).`);
+      }
+      if (await page.locator('#showMoreBtn').first().isVisible().catch(() => false)) {
+        throw new Error('Mobile-to-desktop resize incorrectly restored a desktop Show More control for 11 projects.');
       }
     }, { width: 1280, height: 900 });
 

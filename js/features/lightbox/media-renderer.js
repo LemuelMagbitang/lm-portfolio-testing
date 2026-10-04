@@ -89,6 +89,14 @@ export function createLightboxMediaRenderer({
     // sibling of this surface, so fills never paint behind or tint captions.
     const artwork = documentRef.createElement('div');
     artwork.className = 'lightbox-artwork';
+
+    // Carry the viewer's known orientation onto the artwork surface itself.
+    // This is especially important for Lottie because its custom element
+    // uses height:100%; the wrapper must own the aspect-ratio box.
+    const orientationClass = ['yt-landscape', 'yt-portrait', 'yt-square']
+      .find(className => mediaEl.classList?.contains?.(className));
+    if (orientationClass) artwork.classList.add(orientationClass);
+
     artwork.appendChild(mediaEl);
     wrap.appendChild(artwork);
 

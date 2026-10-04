@@ -1419,6 +1419,26 @@ body.center-page {
   max-width:100%;
 }
 
+#lightboxMediaContainer .lightbox-artwork.yt-landscape{
+  aspect-ratio:16 / 9;
+  max-width:1000px;
+}
+#lightboxMediaContainer .lightbox-artwork.yt-portrait{
+  aspect-ratio:9 / 16;
+  max-width:45vh;
+}
+#lightboxMediaContainer .lightbox-artwork.yt-square{
+  aspect-ratio:1 / 1;
+  max-width:70vh;
+}
+#lightboxMediaContainer .lightbox-artwork > lottie-player{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0;
+  min-height:0;
+}
+
 /* Artworks dynamically adjust and center (1:1, portrait, landscape) */
 #lightboxMediaContainer img {
   max-width: 100%;
