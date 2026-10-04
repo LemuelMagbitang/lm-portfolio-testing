@@ -313,6 +313,15 @@ export async function initGallery(options = {}) {
     filtered.forEach(card => { card.style.display = 'block'; });
 
     const effectiveBaseCount = getEffectiveBaseCount(filtered);
+
+    // Expansion is a presentation state, not a one-render side effect. When
+    // the viewport changes, recompute the available base count but preserve
+    // SHOW LESS while there is still content below it. Only drop the state
+    // when the new viewport has no overflow to reveal.
+    if (isExpanded && filtered.length <= effectiveBaseCount) {
+      isExpanded = false;
+    }
+
     cancelReveal?.();
     cancelReveal = applyGalleryReveal({
       grid: portfolioGrid,
@@ -354,7 +363,10 @@ export async function initGallery(options = {}) {
       const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
       if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
       updateFilterPager(filterBtns.indexOf(activeBtn));
-      if (!isExpanded) render();
+      // Re-render at every breakpoint change. render() preserves an expanded
+      // gallery when overflow still exists, while collapsing only when the
+      // resized layout can already show every active project.
+      render();
     }, 120);
   });
 
@@ -458,7 +470,11 @@ export async function initGallery(options = {}) {
   // the current viewport and card geometry instead of trusting the restored
   // max-height/state from the previous page instance.
   bind(windowRef, 'pageshow', () => {
-    isExpanded = false;
+    // BFCache restoration should reconstruct geometry, not invent a new
+    // interaction state. Keeping isExpanded prevents the gallery from
+    // unexpectedly returning to SHOW MORE after the browser restores the
+    // page, while render() still rebuilds the correct collapsed/expanded
+    // measurement for the current viewport.
     baseCount = getBaseCount();
     portfolioGrid.style.maxHeight = 'none';
     render();
