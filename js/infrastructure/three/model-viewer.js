@@ -3,6 +3,21 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const SUPPORTED = new Set(['obj','gltf','glb','fbx']);
 
+export async function preloadModelViewerModules(formats = []) {
+  const requested = new Set(
+    (Array.isArray(formats) ? formats : [])
+      .map(value => String(value || '').toLowerCase())
+      .filter(value => SUPPORTED.has(value))
+  );
+
+  const jobs = [];
+  if (requested.has('obj')) jobs.push(import('three/addons/loaders/OBJLoader.js'), import('three/addons/loaders/MTLLoader.js'));
+  if (requested.has('gltf') || requested.has('glb')) jobs.push(import('three/addons/loaders/GLTFLoader.js'));
+  if (requested.has('fbx')) jobs.push(import('three/addons/loaders/FBXLoader.js'));
+  await Promise.all(jobs);
+  return true;
+}
+
 function cleanExtension(src){
   const clean = (src || '').split('?')[0].split('#')[0].toLowerCase();
   return clean.includes('.') ? clean.split('.').pop() : '';
@@ -217,6 +232,7 @@ export async function mountModelViewer(container, src, options = {}) {
     }
     container.dataset.orientation = detectedOrientation;
     if (typeof options.onOrientationDetected === 'function') options.onOrientationDetected(detectedOrientation);
+    if (typeof options.onAspectRatioDetected === 'function') options.onAspectRatioDetected(Math.max(size.x, 0.001), Math.max(size.y, 0.001));
 
     fitToViewport = () => {
       if (!root) return;
@@ -232,7 +248,7 @@ export async function mountModelViewer(container, src, options = {}) {
         modelRadius * 1.5
       );
       const direction = camera.position.clone().sub(controls.target);
-      if (direction.lengthSq() < 0.000001) direction.set(0.85, 0.42, 1.05);
+      if (direction.lengthSq() < 0.000001) direction.set(0.85, 0.18, 1.05);
       direction.normalize();
       camera.position.copy(controls.target).add(direction.multiplyScalar(distance));
       camera.near = Math.max(distance / 100, 0.001);
