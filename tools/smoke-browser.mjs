@@ -898,6 +898,38 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      const fixtureCard = page.locator('#portfolioGrid .project-card[data-project-id="test-project"]').first();
+      if (await fixtureCard.count() !== 1) throw new Error('Direct-media smoke fixture card is missing.');
+
+      const thumbnail = fixtureCard.locator('.card-thumbnail').first();
+      await thumbnail.setAttribute('data-model-thumb', '');
+      await thumbnail.click();
+
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const mediaItems = page.locator('#lightboxMediaContainer .lightbox-media-item');
+      if (await mediaItems.count() < 2) {
+        throw new Error('Direct-media Lightbox fixture did not render the expected model media item.');
+      }
+
+      const modelItem = mediaItems.nth(1);
+      await modelItem.waitFor({ state: 'attached', timeout: 3000 });
+      if (await modelItem.count() !== 1) throw new Error('Direct model media target is missing.');
+
+      const scrollState = await page.evaluate(() => ({
+        lightboxTop: document.querySelector('#lightbox')?.scrollTop || 0,
+        targetTop: document.querySelectorAll('#lightboxMediaContainer .lightbox-media-item')[1]?.getBoundingClientRect().top || 0,
+        lightboxTopEdge: document.querySelector('#lightbox')?.getBoundingClientRect().top || 0
+      }));
+      if (scrollState.lightboxTop <= 0) {
+        throw new Error('Opening a project directly on its model media did not move the Lightbox to the requested media item.');
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts desktop smoke fixture card is missing.');
 
