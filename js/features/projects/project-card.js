@@ -120,10 +120,6 @@ export function buildProjectCardElement(
       if (fallbackThumbnail?.type === 'lottie') media.setAttribute('data-lottie-thumb', '');
       if (fallbackThumbnail?.type === 'model') media.setAttribute('data-model-thumb', '');
       thumbnail.appendChild(media);
-      observeProjectCardOrientation(card, project, media, {
-        mediaType: String(t.type || mediaTypeFromSrc(t.src)).toLowerCase()
-      });
-
       if (background && typeof applyMediaBackground === 'function') {
         Promise.resolve(applyMediaBackground(thumbnail, background, resolveAssetUrl))
           .catch(error => console.warn('Project card: media background could not be applied.', error));
