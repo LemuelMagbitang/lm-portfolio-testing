@@ -34,8 +34,17 @@ export function getProjectCardOrientation(
     mediaType = ''
   } = {}
 ) {
-  const thumbnailOrientation = normalizeCardOrientation(project?.thumbnail?.orientation);
+  const thumbnail = project?.thumbnail || {};
+  const thumbnailOrientation = normalizeCardOrientation(thumbnail.orientation);
   if (thumbnailOrientation !== 'auto') return thumbnailOrientation;
+
+  // An explicit thumbnail is the visual source for the card. Its automatic
+  // orientation must be resolved from that thumbnail's own intrinsic media
+  // dimensions rather than inherited from another project-media item.
+  if (thumbnail.src) {
+    if (String(mediaType).toLowerCase() === 'youtube') return 'square';
+    return orientationFromAspectRatio(width, height);
+  }
 
   const firstMedia = Array.isArray(project?.media)
     ? project.media.find(item => item?.src)
@@ -69,7 +78,7 @@ export function applyProjectCardOrientation(card, orientation = 'auto') {
 
 /**
  * Bind the card's presentation to the loaded thumbnail's intrinsic dimensions.
- * The listener is attached to the media node already owned by the card, so no
+ * The listener is attached to the card's resolved thumbnail media, so no
  * document-level observer or gallery state is required.
  */
 export function observeProjectCardOrientation(

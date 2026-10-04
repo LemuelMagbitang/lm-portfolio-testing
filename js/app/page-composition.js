@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js?v=20261004-05';
+import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js?v=20261004-06';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261004-15';

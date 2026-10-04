@@ -201,6 +201,15 @@ assert.equal(getProjectCardOrientation({
 }), 'landscape');
 
 assert.equal(getProjectCardOrientation({
+  thumbnail: { src: 'media/thumb.webp', orientation: 'auto' },
+  media: [{ type: 'image', src: 'media/test.webp', orientation: 'portrait' }]
+}, {
+  width: 1600,
+  height: 1000,
+  mediaType: 'image'
+}), 'landscape');
+
+assert.equal(getProjectCardOrientation({
   thumbnail: { orientation: 'auto' },
   media: [{ type: 'youtube', src: 'https://www.youtube.com/shorts/test' }]
 }, {
