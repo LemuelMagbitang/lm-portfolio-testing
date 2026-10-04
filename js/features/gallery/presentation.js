@@ -95,6 +95,7 @@ export function applyGalleryReveal({
   fadeMs = 300,
   mobilePeek = 40,
   desktopPeek = 70,
+  animateTransition = false,
   renderToken = 0,
   isCurrentRender = () => true
 } = {}) {
@@ -107,6 +108,10 @@ export function applyGalleryReveal({
 
   hiddenCards.forEach(card => {
     card.style.opacity = '0';
+    if (animateTransition) {
+      card.style.transform = 'translate3d(0, 5px, 0) scale(.985)';
+      card.style.filter = 'blur(5px)';
+    }
   });
 
   const measureCollapsedHeight = () => {
@@ -170,11 +175,22 @@ export function applyGalleryReveal({
 
   filteredCards.forEach(card => {
     card.style.display = 'block';
+    if (animateTransition) {
+      card.style.opacity = '0';
+      card.style.transform = 'translate3d(0, 5px, 0) scale(.985)';
+      card.style.filter = 'blur(5px)';
+    }
   });
 
   windowRef.requestAnimationFrame(() => {
     if (!isCurrentRender(renderToken)) return;
-    filteredCards.forEach(card => { card.style.opacity = '1'; });
+    filteredCards.forEach(card => {
+      card.style.opacity = '1';
+      if (animateTransition) {
+        card.style.transform = 'translate3d(0, 0, 0) scale(1)';
+        card.style.filter = 'blur(0)';
+      }
+    });
   });
 
   if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
@@ -194,6 +210,16 @@ export function applyGalleryReveal({
     return () => {
       windowRef.clearTimeout(hideTimer);
       resizeObserver?.disconnect();
+      if (animateTransition) {
+        filteredCards.forEach(card => {
+          card.style.transform = '';
+          card.style.filter = '';
+        });
+        hiddenCards.forEach(card => {
+          card.style.transform = '';
+          card.style.filter = '';
+        });
+      }
     };
   }
 
@@ -213,6 +239,16 @@ export function applyGalleryReveal({
   return () => {
     windowRef.clearTimeout(hideTimer);
     resizeObserver?.disconnect();
+    if (animateTransition) {
+      filteredCards.forEach(card => {
+        card.style.transform = '';
+        card.style.filter = '';
+      });
+      hiddenCards.forEach(card => {
+        card.style.transform = '';
+        card.style.filter = '';
+      });
+    }
   };
 }
 
@@ -227,6 +263,8 @@ export function resetGalleryPresentation({
     Array.from(grid.querySelectorAll('.project-card')).forEach(card => {
       card.style.opacity = '';
       card.style.display = '';
+      card.style.transform = '';
+      card.style.filter = '';
     });
   }
 
