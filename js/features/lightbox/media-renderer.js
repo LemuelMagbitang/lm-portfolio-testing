@@ -111,23 +111,48 @@ export function createLightboxMediaRenderer({
     return wrap;
   }
 
-  function applyVideoOrientation(video, orientation) {
-    if (orientation === 'portrait') video.classList.add('yt-portrait');
-    else if (orientation === 'square') video.classList.add('yt-square');
-    else if (orientation === 'landscape') video.classList.add('yt-landscape');
-    else {
-      video.classList.add('yt-landscape');
-      video.addEventListener('loadedmetadata', () => {
-        const ratio = video.videoWidth / video.videoHeight;
-        if (!Number.isFinite(ratio) || ratio <= 0) return;
+  function applyVideoOrientation(video, orientation, artwork = null) {
+    const syncClasses = resolved => {
+      video.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
+      artwork?.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
 
-        video.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
-        if (ratio > 1.15) video.classList.add('yt-landscape');
-        else if (ratio < 0.85) video.classList.add('yt-portrait');
-        else video.classList.add('yt-square');
-        video.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
-      });
+      if (resolved === 'portrait') {
+        video.classList.add('yt-portrait');
+        artwork?.classList.add('yt-portrait');
+      } else if (resolved === 'square') {
+        video.classList.add('yt-square');
+        artwork?.classList.add('yt-square');
+      } else {
+        video.classList.add('yt-landscape');
+        artwork?.classList.add('yt-landscape');
+      }
+    };
+
+    if (orientation === 'portrait' || orientation === 'square' || orientation === 'landscape') {
+      syncClasses(orientation);
+      return;
     }
+
+    // Auto-orientation starts conservatively, then switches to the video's
+    // real intrinsic dimensions as soon as metadata is available. The exact
+    // ratio is applied to both the video and its artwork surface so portrait,
+    // square, and non-16:9 landscape MP4s keep their original proportions.
+    syncClasses('landscape');
+    const syncIntrinsicRatio = () => {
+      const width = Number(video.videoWidth);
+      const height = Number(video.videoHeight);
+      const ratio = width / height;
+      if (!Number.isFinite(ratio) || ratio <= 0) return;
+
+      const resolved = ratio < 0.85 ? 'portrait' : ratio > 1.15 ? 'landscape' : 'square';
+      syncClasses(resolved);
+      const exactRatio = `${width} / ${height}`;
+      video.style.aspectRatio = exactRatio;
+      if (artwork) artwork.style.aspectRatio = exactRatio;
+    };
+
+    syncIntrinsicRatio();
+    video.addEventListener('loadedmetadata', syncIntrinsicRatio);
   }
 
   function renderImage(item, project) {
@@ -155,7 +180,11 @@ export function createLightboxMediaRenderer({
     }
     iframe.src = embedSrc;
     iframe.frameBorder = '0';
-    iframe.loading = 'lazy';
+    // Lightbox media should be immediately interactive on touch and mouse
+    // devices. Lazy-loading can leave the first tap landing while the
+    // cross-origin player is still attaching its controls.
+    iframe.loading = 'eager';
+    iframe.tabIndex = 0;
     iframe.title = item.caption || item.description || project.title || 'Project video';
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen = true;
@@ -182,8 +211,13 @@ export function createLightboxMediaRenderer({
       video.addEventListener('contextmenu', event => event.preventDefault());
     }
 
-    applyVideoOrientation(video, String(item.orientation || '').toLowerCase());
-    return buildMediaEntry(video, item.caption || item.description, item.background);
+    const entry = buildMediaEntry(video, item.caption || item.description, item.background);
+    applyVideoOrientation(
+      video,
+      String(item.orientation || '').toLowerCase(),
+      entry.querySelector('.lightbox-artwork')
+    );
+    return entry;
   }
 
   function renderModel(item, project) {
