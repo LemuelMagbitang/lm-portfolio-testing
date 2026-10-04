@@ -5,6 +5,8 @@
  * and project selection remain in the Lightbox controller.
  */
 
+const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
+
 export function createLightboxMediaRenderer({
   documentRef = globalThis.document,
   windowRef = globalThis.window,
@@ -276,7 +278,7 @@ export function createLightboxMediaRenderer({
     if (!iframe?.contentWindow) return;
     iframe.dataset.lmYoutubePauseRequested = String(Date.now());
     try {
-      iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), "*");
+      iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), YOUTUBE_PLAYER_ORIGIN);
     } catch (_) {}
   }
 
@@ -321,7 +323,7 @@ export function createLightboxMediaRenderer({
         event: 'command',
         func: 'addEventListener',
         args: ['onStateChange']
-      }), '*');
+      }), YOUTUBE_PLAYER_ORIGIN);
       iframe.dataset.lmYoutubeApi = 'ready';
     } catch (_) {}
   }
