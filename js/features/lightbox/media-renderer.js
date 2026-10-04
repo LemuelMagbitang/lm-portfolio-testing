@@ -23,8 +23,9 @@ export function createLightboxMediaRenderer({
     img.alt = String(altText || 'Project artwork').trim() || 'Project artwork';
     img.src = imgUrl;
     img.draggable = false;
-    img.loading = eager ? 'eager' : 'lazy';
+    img.loading = 'eager';
     img.decoding = 'async';
+    if (eager) img.fetchPriority = 'high';
 
     if (protectionEnabled()) {
       img.classList.add('no-save');
@@ -124,11 +125,11 @@ export function createLightboxMediaRenderer({
       return;
     }
     if (type === "youtube") {
-      /* YouTube is cross-origin, so its play event cannot bubble into the page.
-         A pointer/focus handoff pauses every other player before the new
-         iframe receives the user's gesture. */
-      mediaElement.addEventListener("pointerdown", () => pauseOtherPlayback(container, mediaElement), { capture: true });
-      mediaElement.addEventListener("focus", () => pauseOtherPlayback(container, mediaElement));
+      // Do not intercept the user's gesture here. The iframe must receive the
+      // first tap/click directly so YouTube's native play control activates on
+      // the first interaction. Cross-player cleanup is handled from the
+      // authoritative YouTube playing-state message instead.
+      return;
     }
   }
 
@@ -240,7 +241,6 @@ export function createLightboxMediaRenderer({
       if (windowRef?.location?.origin) params.set("origin", windowRef.location.origin);
       embedSrc = "https://www.youtube.com/embed/" + id + "?" + params.toString();
     }
-    iframe.src = embedSrc;
     iframe.frameBorder = '0';
     // Lightbox media should be immediately interactive on touch and mouse
     // devices. Lazy-loading can leave the first tap landing while the
@@ -252,6 +252,7 @@ export function createLightboxMediaRenderer({
     iframe.allowFullscreen = true;
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     iframe.addEventListener('load', () => primeYouTubeFrame(iframe));
+    iframe.src = embedSrc;
 
     const orientation = String(item.orientation || '').toLowerCase();
     if (orientation === 'portrait') iframe.classList.add('yt-portrait');
@@ -267,6 +268,7 @@ export function createLightboxMediaRenderer({
     video.src = resolveAssetUrl(item.src);
     video.controls = true;
     video.playsInline = true;
+    video.preload = 'auto';
     video.controlsList = 'nodownload';
     video.disablePictureInPicture = true;
 
@@ -410,7 +412,6 @@ export function createLightboxMediaRenderer({
     const youtubeFrames = container.querySelectorAll('iframe[data-lm-youtube]');
     if (youtubeFrames.length) {
       bindYouTubeStateHandoff(container);
-      youtubeFrames.forEach(primeYouTubeFrame);
     }
 
     return rendered;
