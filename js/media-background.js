@@ -196,9 +196,7 @@
       if (!child.style.position && (!computed || computed.position === 'static')) {
         child.style.position = 'relative';
       }
-      if (!host.classList?.contains('model-viewer-shell')) {
-        child.style.zIndex = child.style.zIndex || '2';
-      }
+      child.style.zIndex = child.style.zIndex || '2';
     });
 
     const overlay = document.createElement('div');
