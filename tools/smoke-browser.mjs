@@ -383,6 +383,20 @@ try {
 
       await page.locator('#lightboxClose').click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
+
+      // Simulate browser back/forward navigation so the gallery gets a
+      // pageshow event with potentially restored layout state.
+      await page.goto('/about/');
+      await page.goBack();
+      await page.locator('#portfolioGrid .project-card').first().waitFor({ state: 'visible', timeout: 3000 });
+      const reentryBox = await page.locator('#portfolioGrid').boundingBox();
+      const reentryHeight = await page.locator('#portfolioGrid').evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        return { height: rect.height, maxHeight: getComputedStyle(el).maxHeight };
+      });
+      if (!reentryBox || reentryHeight.height < 150) {
+        throw new Error('Works gallery collapsed on page re-entry.');
+      }
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
@@ -415,6 +429,29 @@ try {
         const src = await youtubeFrames.first().getAttribute('src');
         if (!src?.includes('enablejsapi=1')) {
           throw new Error('YouTube Lightbox embeds are missing the JS API needed for playback handoff.');
+        }
+        const youtubePointerEvents = await youtubeFrames.first().evaluate(el => getComputedStyle(el).pointerEvents);
+        if (youtubePointerEvents === 'none') {
+          throw new Error('Desktop YouTube Lightbox iframe is not pointer-interactive.');
+        }
+      }
+
+      if (await videos.count()) {
+        const firstVideo = videos.first();
+        const intrinsicRatio = await firstVideo.evaluate(video => {
+          Object.defineProperty(video, 'videoWidth', { configurable: true, get: () => 720 });
+          Object.defineProperty(video, 'videoHeight', { configurable: true, get: () => 1280 });
+          video.dispatchEvent(new Event('loadedmetadata'));
+          return {
+            videoRatio: video.style.aspectRatio,
+            artworkRatio: video.closest('.lightbox-media-item')?.querySelector('.lightbox-artwork')?.style.aspectRatio || ''
+          };
+        });
+        if (!intrinsicRatio.videoRatio.includes('720') || !intrinsicRatio.videoRatio.includes('1280')) {
+          throw new Error('Local video did not preserve its intrinsic aspect ratio.');
+        }
+        if (!intrinsicRatio.artworkRatio.includes('720') || !intrinsicRatio.artworkRatio.includes('1280')) {
+          throw new Error('Local video artwork surface did not preserve its intrinsic aspect ratio.');
         }
       }
 
@@ -449,6 +486,14 @@ try {
       }
       if (shortsBox.pointerEvents === 'none') {
         throw new Error('Mobile Shorts iframe is not pointer-interactive.');
+      }
+      const shortsLoading = await shorts.getAttribute('loading');
+      if (shortsLoading === 'lazy') {
+        throw new Error('Mobile Shorts iframe still uses lazy loading, which can delay the first tap.');
+      }
+      const shortsTouchAction = await shorts.evaluate(el => getComputedStyle(el).touchAction);
+      if (shortsTouchAction === 'none') {
+        throw new Error('Mobile Shorts iframe touch interaction is disabled.');
       }
 
       // The iframe itself must own the hit area so a tap reaches YouTube's
