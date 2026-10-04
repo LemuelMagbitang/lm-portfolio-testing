@@ -126,6 +126,7 @@ const mediaRenderer = createLightboxMediaRenderer({
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
 let previousBodyOverflow = '';
+let previousDocumentOverflow = '';
 let previousPageScrollX = 0;
 let previousPageScrollY = 0;
 
