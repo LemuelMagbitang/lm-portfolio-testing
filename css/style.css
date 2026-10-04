@@ -549,6 +549,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
   background: var(--lm-color-surface);
   aspect-ratio: 1 / 1;
   /* Lets .glass-info's clamp(...cqw...) font sizes scale off the
