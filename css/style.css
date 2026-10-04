@@ -532,13 +532,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .seamless-grid {
   display: grid;
   overflow-anchor: none;
-  /* min(400px, 100%) instead of a bare 400px: on any viewport narrower
-     than 400px, the track shrinks to exactly the container's width
-     rather than forcing a 400px-wide card into a smaller box. That
-     forced overflow (silently clipped by body's overflow-x: hidden) was
-     the real cause of the "cropped title/subtitle", "card isn't square"
-     and "thumbnail looks left-aligned" bugs — all three were the same
-     card, just sliced down its right edge. */
   /* Desktop/tablet use an explicit three-track presentation. The phone
      breakpoint below owns its two-column layout, so intrinsic media width
      can never create or resize a grid track. */
