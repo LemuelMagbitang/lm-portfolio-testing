@@ -434,7 +434,15 @@ export function createLightboxMediaRenderer({
     );
     const entry = buildMediaEntry(image, item.caption || item.description, item.background);
     const artwork = entry.querySelector('.lightbox-artwork');
-    const applyIntrinsicRatio = () => setAspectRatio(artwork, image.naturalWidth, image.naturalHeight);
+    const sourceUrl = resolveAssetUrl(item.src);
+    const applyIntrinsicRatio = () => {
+      const cached = imageDimensionCache.get(sourceUrl);
+      setAspectRatio(
+        artwork,
+        cached?.width || image.naturalWidth,
+        cached?.height || image.naturalHeight
+      );
+    };
     applyIntrinsicRatio();
     image.addEventListener('load', applyIntrinsicRatio, { once: true });
     return entry;
