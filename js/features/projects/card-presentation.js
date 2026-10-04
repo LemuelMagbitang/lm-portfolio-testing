@@ -92,28 +92,36 @@ export function observeProjectCardOrientation(
   if (!card) return () => {};
 
   const update = () => {
-    const elementType = String(mediaElement?.tagName || mediaType || '').toLowerCase();
+    const elementTag = String(mediaElement?.tagName || '').toLowerCase();
+    const declaredType = normalizeCardOrientation(mediaType) === 'auto'
+      ? ''
+      : String(mediaType).trim().toLowerCase();
+    const effectiveType = declaredType || elementTag;
 
-    if (elementType === 'img') {
+    if (elementTag === 'img') {
       applyProjectCardOrientation(card, getProjectCardOrientation(project, {
         width: mediaElement?.naturalWidth,
         height: mediaElement?.naturalHeight,
-        mediaType: elementType
+        // Prefer the renderer's declared source type over the concrete DOM
+        // element. A YouTube fallback is rendered as an <img>, but it must
+        // retain YouTube's square classification instead of being inferred
+        // from YouTube's generic 16:9 thumbnail pixels (particularly for Shorts).
+        mediaType: effectiveType
       }));
       return;
     }
 
-    if (elementType === 'video') {
+    if (elementTag === 'video') {
       applyProjectCardOrientation(card, getProjectCardOrientation(project, {
         width: mediaElement?.videoWidth,
         height: mediaElement?.videoHeight,
-        mediaType: elementType
+        mediaType: effectiveType
       }));
       return;
     }
 
     applyProjectCardOrientation(card, getProjectCardOrientation(project, {
-      mediaType: elementType
+      mediaType: effectiveType
     }));
   };
 
