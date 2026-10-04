@@ -365,7 +365,15 @@ function closeLightbox({ restoreFocus = true } = {}) {
 function navigateLightbox(direction) {
   const step = Number(direction) < 0 ? -1 : 1;
   const total = activeLightboxCards.length;
-  if (!lightbox?.classList.contains('active') || total < 2 || navigationTimer) return;
+  if (!lightbox?.classList.contains('active') || total < 2) return;
+
+  // A new navigation gesture supersedes an in-flight transition. This keeps
+  // quick opposite swipes/taps responsive instead of silently dropping the
+  // second gesture while the previous 180ms transition is pending.
+  if (navigationTimer) {
+    windowRef.clearTimeout(navigationTimer);
+    navigationTimer = null;
+  }
 
   const nextIndex = step > 0
     ? (currentLightboxIndex + 1) % total
