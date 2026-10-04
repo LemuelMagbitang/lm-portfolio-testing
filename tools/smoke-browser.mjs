@@ -482,30 +482,19 @@ try {
       );
       if (desktopCards < 9) throw new Error(`Desktop resize fixture rendered too few projects (found ${desktopCards}).`);
 
-      // The card's presentation ratio must own the grid geometry. This
-      // catches regressions where intrinsic thumbnail dimensions pull the
-      // CSS grid row height away from the bounded card orientation tiers.
-      const desktopCardGeometry = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+      // Every project card is intentionally square. Intrinsic thumbnail
+      // dimensions must never change the grid row or card footprint.
+      const desktopCardRatios = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
         cards
           .filter(card => getComputedStyle(card).display !== 'none')
           .map(card => {
             const rect = card.getBoundingClientRect();
-            const orientation = card.dataset.cardOrientation || 'square';
-            const expected = orientation === 'landscape'
-              ? 4 / 3
-              : orientation === 'portrait' ? 3 / 4 : 1;
-            return {
-              orientation,
-              ratio: rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 0,
-              expected
-            };
+            return rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 0;
           })
       );
-      desktopCardGeometry.forEach(({ orientation, ratio, expected }) => {
-        if (!ratio || Math.abs(ratio - expected) > 0.035) {
-          throw new Error(
-            `Desktop project card geometry drifted for ${orientation}: ratio=${ratio.toFixed(3)}, expected=${expected.toFixed(3)}.`
-          );
+      desktopCardRatios.forEach(ratio => {
+        if (!ratio || Math.abs(ratio - 1) > 0.035) {
+          throw new Error('Desktop project card is not square: ratio=' + ratio.toFixed(3) + '.');
         }
       });
 
@@ -563,6 +552,20 @@ try {
       if (Math.max(...tabletWidths) - Math.min(...tabletWidths) > 2) {
         throw new Error(`Tablet project grid columns are not equal width: ${JSON.stringify(tabletGridGeometry)}`);
       }
+
+      const tabletCardRatios = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+        cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .map(card => {
+            const rect = card.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 0;
+          })
+      );
+      tabletCardRatios.forEach(ratio => {
+        if (!ratio || Math.abs(ratio - 1) > 0.035) {
+          throw new Error('Tablet project card is not square: ratio=' + ratio.toFixed(3) + '.');
+        }
+      });
 
       await page.setViewportSize({ width: 390, height: 844 });
       await page.waitForTimeout(500);
