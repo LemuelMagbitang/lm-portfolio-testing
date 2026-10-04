@@ -1438,6 +1438,11 @@ body.center-page {
   min-width:0;
   min-height:0;
 }
+.model-viewer-shell:not(.is-interactive) .model-viewer-activate{
+  z-index:50;
+  opacity:1;
+  visibility:visible;
+}
 
 /* Artworks dynamically adjust and center (1:1, portrait, landscape) */
 #lightboxMediaContainer img {
@@ -1503,6 +1508,12 @@ body.center-page {
   }
   #lightboxMediaContainer .lightbox-artwork {
     width: 100%;
+  }
+  #lightboxMediaContainer .lightbox-artwork.yt-landscape,
+  #lightboxMediaContainer .lightbox-artwork.yt-portrait,
+  #lightboxMediaContainer .lightbox-artwork.yt-square {
+    width: 100%;
+    max-width: 100%;
   }
   #lightboxMediaContainer img {
     width: 100%;

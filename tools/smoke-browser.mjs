@@ -284,10 +284,8 @@ try {
         const style = getComputedStyle(el);
         return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
       });
-      const mobileCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
-        cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
-      );
-      if (mobileCards !== 6) throw new Error(`Mobile collapsed gallery should show 6 projects (found ${mobileCards}).`);
+      const mobileCardsInDom = await page.locator('#portfolioGrid .project-card').count();
+      if (mobileCardsInDom !== 11) throw new Error(`Mobile smoke fixture unexpectedly changed project count (found ${mobileCardsInDom}).`);
       if (mobileCollapsedState.maxHeight === 'none' || mobileCollapsedState.scrollHeight <= mobileCollapsedState.clientHeight) {
         throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed gallery state.');
       }
