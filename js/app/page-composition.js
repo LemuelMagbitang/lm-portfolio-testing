@@ -58,7 +58,8 @@ export async function createPortfolioApp({
   let lightboxFeature = null;
   let pendingProjectOpen = null;
 
-  const projectsPromise = config.urls.projects
+  const hasProjectGallery = !!root.getElementById('portfolioGrid');
+  const projectsPromise = hasProjectGallery && config.urls.projects
     ? mountProjects({
         url: config.urls.projects,
         documentRef: root,
