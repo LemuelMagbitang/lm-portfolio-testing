@@ -169,7 +169,7 @@ export function createLightboxMediaRenderer({
     }
   }
 
-  function preloadYouTube(src, title = 'Project video') {
+  function preloadYouTube(src, title = 'Project video', index = 0) {
     const embedSrc = buildYouTubeEmbedUrl(src);
     if (!embedSrc) return Promise.resolve(false);
     if (youtubeFrameCache.has(embedSrc)) return Promise.resolve(true);
@@ -509,8 +509,8 @@ export function createLightboxMediaRenderer({
       iframe.dataset.lmYoutube = 'true';
       iframe.dataset.lmYoutubeCacheKey = embedSrc;
       iframe.frameBorder = '0';
-      iframe.loading = 'eager';
-      iframe.fetchPriority = 'high';
+      iframe.loading = index === 0 ? 'eager' : 'lazy';
+      if (index === 0) iframe.fetchPriority = 'high';
       iframe.tabIndex = 0;
       iframe.title = item.caption || item.description || project.title || 'Project video';
       iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
