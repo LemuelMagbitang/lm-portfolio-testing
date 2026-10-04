@@ -204,6 +204,9 @@ try {
 
       const restoredFocus = await firstCard.evaluate(el => document.activeElement === el);
       if (!restoredFocus) throw new Error('Lightbox close did not restore focus to the project card that opened it.');
+      const lightboxA11yClosed = await page.locator('#lightbox').getAttribute('aria-hidden');
+      if (lightboxA11yClosed !== 'true') throw new Error('Closed Lightbox is not aria-hidden.');
+
 
       const showMore = page.locator('#showMoreBtn').first();
       if (await showMore.isVisible().catch(() => false)) {
