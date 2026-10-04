@@ -302,7 +302,7 @@ export async function initGallery(options = {}) {
   }
 
   function getEffectiveBaseCount(filtered) {
-    return getRowAlignedCount(filtered, getBaseCount(), windowRef);
+    return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
   function render() {
