@@ -19,6 +19,8 @@ export function createLightboxMediaRenderer({
   let youtubeMessageCleanup = null;
   const youtubeFrameCache = new Map();
   const youtubeFramePending = new Map();
+  const imageDimensionCache = new Map();
+  const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
   let youtubePreloadRoot = null;
 
@@ -456,7 +458,7 @@ export function createLightboxMediaRenderer({
     }
 
     const orientation = String(item.orientation || '').toLowerCase();
-    const resolvedOrientation = orientation || (isShort ? 'portrait' : 'landscape');
+    const resolvedOrientation = isShort ? 'portrait' : (orientation || 'landscape');
     if (resolvedOrientation === 'portrait') iframe.classList.add('yt-portrait');
     else if (resolvedOrientation === 'square') iframe.classList.add('yt-square');
     else iframe.classList.add('yt-landscape');
