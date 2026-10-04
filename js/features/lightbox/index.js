@@ -158,19 +158,11 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   const wasActive = lightbox.classList.contains('active');
   if (!wasActive) {
-    // Freeze document scrolling before the modal changes the active layout.
-    // Locking the root scroller first prevents focus/layout reconciliation
-    // from moving window.scrollY while the fixed Lightbox is being attached.
-    previousBodyOverflow = documentRef.body.style.overflow;
-    previousDocumentOverflow = documentRef.documentElement?.style.overflow || '';
+    // Capture the page position before the fixed Lightbox takes over the
+    // viewport. The modal itself owns scrolling, so the document does not need
+    // an overflow lock that can trigger mobile scroll reconciliation.
     previousPageScrollX = Number(windowRef.scrollX) || 0;
     previousPageScrollY = Number(windowRef.scrollY) || 0;
-    lightbox.dataset.debugSavedPageScroll = String(previousPageScrollY);
-
-    if (documentRef.documentElement) {
-      documentRef.documentElement.style.overflow = 'hidden';
-    }
-    documentRef.body.style.overflow = 'hidden';
   }
 
   mediaRenderer.dispose(modalMediaContainer);
@@ -234,7 +226,6 @@ function closeLightbox() {
 
   const pageScrollX = previousPageScrollX;
   const pageScrollY = previousPageScrollY;
-  lightbox.dataset.debugCloseScroll = String(pageScrollY) + '|' + String(windowRef.scrollY);
   const restorePageScroll = () => {
     try {
       documentRef.documentElement.scrollLeft = pageScrollX;
@@ -249,12 +240,6 @@ function closeLightbox() {
     });
   };
 
-  documentRef.body.style.overflow = previousBodyOverflow;
-  if (documentRef.documentElement) {
-    documentRef.documentElement.style.overflow = previousDocumentOverflow;
-  }
-  previousBodyOverflow = '';
-  previousDocumentOverflow = '';
   previousPageScrollX = 0;
   previousPageScrollY = 0;
 
