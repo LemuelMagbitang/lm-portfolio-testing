@@ -5,7 +5,7 @@
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261004-03';
-import { observeProjectCardOrientation } from './card-presentation.js?v=20261004-02';
+import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-01';
 
 function getYouTubeId(src = '') {
   const value = String(src).trim();
