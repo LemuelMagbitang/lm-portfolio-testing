@@ -592,6 +592,56 @@ function validateRuntimeCacheGraph() {
   }
 }
 
+function parseCacheVersion(version) {
+  const match = String(version || '').match(/^(\\d{8})-(\\d+)$/);
+  return match ? { date: Number(match[1]), sequence: Number(match[2]) } : null;
+}
+
+function validateFeatureModuleCacheGraph() {
+  const composition = exists('js/app/page-composition.js')
+    ? readText('js/app/page-composition.js')
+    : '';
+
+  const checks = [
+    {
+      name: 'Gallery',
+      importPattern: /from ['"]\\.\\.\/features\/gallery\/index\\.js\\?v=([^'"]+)/,
+      file: 'js/features/gallery/index.js',
+      nestedPattern: /from ['"](?:\\.\\.\/)+gallery\/presentation\\.js\\?v=([^'"]+)/
+    },
+    {
+      name: 'Lightbox',
+      importPattern: /from ['"]\\.\\.\/features\/lightbox\/index\\.js\\?v=([^'"]+)/,
+      file: 'js/features/lightbox/index.js',
+      nestedPattern: /from ['"](?:\\.\\.\/)+lightbox\/media-renderer\\.js\\?v=([^'"]+)/
+    }
+  ];
+
+  for (const check of checks) {
+    const directVersion = composition.match(check.importPattern)?.[1] || '';
+    const module = exists(check.file) ? readText(check.file) : '';
+    const nestedVersions = [...module.matchAll(check.nestedPattern)].map(match => match[1]);
+
+    if (!directVersion || !nestedVersions.length) continue;
+
+    const direct = parseCacheVersion(directVersion);
+    const nested = nestedVersions
+      .map(parseCacheVersion)
+      .filter(Boolean)
+      .sort((a, b) => (a.date - b.date) || (a.sequence - b.sequence));
+
+    if (!direct || !nested.length) continue;
+
+    const newestNested = nested.at(-1);
+    if (
+      newestNested.date > direct.date ||
+      (newestNested.date === direct.date && newestNested.sequence > direct.sequence)
+    ) {
+      err(`Cache graph: ${check.name} feature import key ${directVersion} is older than its nested module key ${newestNested.date}-${newestNested.sequence}.`);
+    }
+  }
+}
+
 function validateBootstrapHardening() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
   const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
@@ -941,6 +991,7 @@ function validateCmsRegressionContracts() {
 
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
+validateFeatureModuleCacheGraph();
 validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
