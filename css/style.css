@@ -1028,8 +1028,11 @@ button.hamburger {
 .lightbox-close i,
 .lightbox-nav i{
   color:var(--lm-color-text-primary);
-  -webkit-text-stroke:1px var(--lm-color-background);
-  paint-order:stroke fill;
+  text-shadow:
+    -1px -1px 0 var(--lm-color-background),
+     1px -1px 0 var(--lm-color-background),
+    -1px  1px 0 var(--lm-color-background),
+     1px  1px 0 var(--lm-color-background);
   pointer-events:none;
 }
 

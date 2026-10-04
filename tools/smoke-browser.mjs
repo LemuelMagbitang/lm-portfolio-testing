@@ -261,22 +261,22 @@ try {
       }
 
       const closeButton = page.locator('#lightboxClose');
-      const navigationContrast = await page.locator('.lightbox-next').evaluate(el => {
+      const navigationContrast = await page.locator('.lightbox-next i').evaluate(el => {
         const style = getComputedStyle(el);
         return {
           mixBlendMode: style.mixBlendMode,
           color: style.color,
-          strokeColor: style.webkitTextStrokeColor
+          textShadow: style.textShadow
         };
       });
       if (navigationContrast.mixBlendMode !== 'normal') {
-        throw new Error(`Lightbox navigation control still uses blend compositing: ${navigationContrast.mixBlendMode}`);
+        throw new Error('Lightbox navigation icon still uses blend compositing: ' + navigationContrast.mixBlendMode);
       }
       if (navigationContrast.color !== 'rgb(255, 255, 255)') {
-        throw new Error(`Lightbox navigation control is not brand white: ${navigationContrast.color}`);
+        throw new Error('Lightbox navigation icon is not brand white: ' + navigationContrast.color);
       }
-      if (navigationContrast.strokeColor !== 'rgb(18, 18, 18)') {
-        throw new Error(`Lightbox navigation control is not outlined in brand dark: ${navigationContrast.strokeColor}`);
+      if (!navigationContrast.textShadow.includes('18px') && !navigationContrast.textShadow.includes('18, 18, 18')) {
+        throw new Error('Lightbox navigation icon lost the brand-dark contrast edge: ' + navigationContrast.textShadow);
       }
 
       if (await closeButton.count()) {
