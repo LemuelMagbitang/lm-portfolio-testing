@@ -556,6 +556,42 @@ function validateModuleScriptContract() {
   }
 }
 
+
+function validateRuntimeCacheGraph() {
+  const pages = [
+    ['index.html', /js\\/script\\.js\\?v=([^"\\s>]+)/, /js\\/app\\/bootstrap\\.js\\?v=([^"\\s>]+)/, /js\\/app\\/page-composition\\.js\\?v=([^"\\s>]+)/],
+    ['about/index.html', /\\.\\.\\/js\\/script\\.js\\?v=([^"\\s>]+)/, /\\.\\.\\/js\\/app\\/bootstrap\\.js\\?v=([^"\\s>]+)/, /\\.\\.\\/js\\/app\\/page-composition\\.js\\?v=([^"\\s>]+)/]
+  ];
+
+  for (const [file, scriptPattern, bootstrapPattern, compositionPattern] of pages) {
+    if (!exists(file)) continue;
+    const html = readText(file);
+    const scriptVersion = html.match(scriptPattern)?.[1] || '';
+    const bootstrapVersion = html.match(bootstrapPattern)?.[1] || '';
+    const compositionVersion = html.match(compositionPattern)?.[1] || '';
+
+    if (!scriptVersion || !bootstrapVersion || !compositionVersion) {
+      err(file + ': runtime module cache versions are incomplete.');
+      continue;
+    }
+    if (scriptVersion !== bootstrapVersion || scriptVersion !== compositionVersion) {
+      err(file + ': script.js, bootstrap.js, and page-composition.js cache versions must match.');
+    }
+  }
+
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const entryVersion = entry.match(/bootstrap\\.js\\?v=([^'"]+)/)?.[1] || '';
+  const bootstrapVersion = bootstrap.match(/cacheVersion\\s*=\\s*'([^']+)'/)?.[1] || '';
+
+  if (!entryVersion || !bootstrapVersion || entryVersion !== bootstrapVersion) {
+    err('Bootstrap cache graph: js/script.js and bootstrap cache versions differ.');
+  }
+  if (!/page-composition\\.js\\?v=\\$\\{cacheVersion\\}/.test(bootstrap)) {
+    err('Bootstrap cache graph: page-composition must use the same runtime cacheVersion.');
+  }
+}
+
 function validateBootstrapHardening() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
   const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
@@ -904,6 +940,7 @@ function validateCmsRegressionContracts() {
 }
 
 validateCmsRegressionContracts();
+validateRuntimeCacheGraph();
 validateLightboxLifecycle();
 validateGalleryContract();
 checkLargeAssets();
