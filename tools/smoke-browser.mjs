@@ -223,6 +223,12 @@ try {
 
       const modelShell = page.locator('#lightbox .lightbox-model-viewer').first();
       await modelShell.waitFor({ state: 'visible', timeout: 7000 });
+
+      const activationBeforeReady = modelShell.locator('.model-viewer-activate-content').first();
+      if (await activationBeforeReady.count() !== 1 || !(await activationBeforeReady.isVisible().catch(() => false))) {
+        throw new Error('3D Lightbox did not expose its activation affordance while the model was still loading.');
+      }
+
       await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
 
       const lottieCaption = page.locator('#lightboxMediaContainer .lightbox-media-item lottie-player').first()
@@ -461,6 +467,27 @@ try {
       const artworkAlt = await firstArtwork.getAttribute('alt');
       if (!artworkAlt?.trim()) throw new Error('Mobile Lightbox image is missing accessible alt text.');
 
+      const lightboxControlStyles = await page.evaluate(() =>
+        ['#lightboxClose', '.lightbox-prev', '.lightbox-next'].map(selector => {
+          const el = document.querySelector(selector);
+          if (!el) return null;
+          const style = getComputedStyle(el);
+          return {
+            selector,
+            blend: style.mixBlendMode,
+            background: style.backgroundColor,
+            borderStyle: style.borderStyle,
+            boxShadow: style.boxShadow
+          };
+        }).filter(Boolean)
+      );
+      for (const control of lightboxControlStyles) {
+        if (control.blend !== 'difference') throw new Error(control.selector + ' is missing Lightbox blend-mode contrast.');
+        if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
+          throw new Error(control.selector + ' still renders a visible control box over artwork.');
+        }
+      }
+
       const lightboxViewportWidth = await page.evaluate(() => window.innerWidth);
       const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
       if (Math.abs(artworkWidth - lightboxViewportWidth) > 2) {
@@ -554,6 +581,8 @@ try {
       }
 
       if (await videos.count()) {
+        const preloadMode = await videos.first().getAttribute('preload');
+        if (preloadMode !== 'auto') throw new Error('Lightbox local video is not preloaded for immediate playback.');
         const firstVideo = videos.first();
         const intrinsicRatio = await firstVideo.evaluate(video => {
           Object.defineProperty(video, 'videoWidth', { configurable: true, get: () => 720 });
