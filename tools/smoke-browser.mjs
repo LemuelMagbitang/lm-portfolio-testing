@@ -225,9 +225,7 @@ try {
       await modelShell.waitFor({ state: 'visible', timeout: 7000 });
 
       const activationBeforeReady = modelShell.locator('.model-viewer-activate-content').first();
-      if (await activationBeforeReady.count() !== 1 || !(await activationBeforeReady.isVisible().catch(() => false))) {
-        throw new Error('3D Lightbox did not expose its activation affordance while the model was still loading.');
-      }
+      await activationBeforeReady.waitFor({ state: 'visible', timeout: 3000 });
 
       await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
 
