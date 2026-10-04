@@ -240,6 +240,10 @@ export async function createPortfolioApp({
       })
     : Promise.resolve({ total: 0, ready: 0 });
 
+  // Warm the Lightbox media cache in the background. Opening the site must
+  // never wait for every project asset to download before the Lightbox itself
+  // becomes interactive; the first opened media item still loads eagerly from
+  // the Lightbox renderer when needed.
   const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
     ? lightboxFeature.preloadProjectsMedia(projectModels, {
         preloadModelModule
@@ -249,10 +253,11 @@ export async function createPortfolioApp({
       })
     : Promise.resolve({ total: 0, ready: 0 });
 
+  void projectMediaPreloadPromise;
+
   await Promise.all([
     aboutPagePrefetchPromise,
-    aboutAssetPreloadPromise,
-    projectMediaPreloadPromise
+    aboutAssetPreloadPromise
   ]);
 
   if (lightboxFeature?.openCard && pendingProjectOpen) {
