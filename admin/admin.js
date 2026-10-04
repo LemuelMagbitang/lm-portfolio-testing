@@ -2519,18 +2519,29 @@ RENDERERS.about = function(data){
         const host=pill.querySelector('[data-iconbtn]');
 
         async function discoverAfterDirectFails(){
-          const discovered=await findAutomaticSoftwareLogoDiscovery(skill.name);
-          if(!pill.isConnected || host.querySelector('img.skill-logo')) return;
-          preloadCandidates(host,skill.name,discovered);
+          try {
+            const discovered=await findAutomaticSoftwareLogoDiscovery(skill.name);
+            if(!pill.isConnected || host.querySelector('img.skill-logo')) return;
+            preloadCandidates(host,skill.name,discovered);
+          } catch (error) {
+            // Logo discovery is enhancement-only. A provider/network failure
+            // must leave the editable skill row usable instead of creating an
+            // unhandled promise rejection in the CMS.
+            console.warn('CMS: automatic software-logo discovery failed.', error);
+          }
         }
 
         const showAutomatic=async()=>{
-          const direct=await findAutomaticSoftwareLogoCandidates(skill.name);
-          if(!pill.isConnected) return;
-          if(direct.length){
-            preloadCandidates(host,skill.name,direct,0,discoverAfterDirectFails);
-          }else{
-            discoverAfterDirectFails();
+          try {
+            const direct=await findAutomaticSoftwareLogoCandidates(skill.name);
+            if(!pill.isConnected) return;
+            if(direct.length){
+              preloadCandidates(host,skill.name,direct,0,discoverAfterDirectFails);
+            }else{
+              await discoverAfterDirectFails();
+            }
+          } catch (error) {
+            console.warn('CMS: automatic software-logo lookup failed.', error);
           }
         };
 
