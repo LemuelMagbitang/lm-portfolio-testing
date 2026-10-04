@@ -2643,23 +2643,10 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 
 
 /* ============================================================
-   PROJECT CARD PRESENTATION — bounded, media-aware proportions
-   Keep the existing grid columns. Only the card's own footprint changes.
-   Phones intentionally remain equal two-column squares.
-   ============================================================ */
-/* ============================================================
    PROJECT CARD PRESENTATION — fixed square geometry
    The gallery always owns a 1:1 card footprint. Thumbnail intrinsic
    dimensions affect only the crop inside the card, never the grid row.
    ============================================================ */
-.project-card,
-.project-card.card-orientation-square,
-.project-card.card-orientation-landscape,
-.project-card.card-orientation-portrait {
-  aspect-ratio: 1 / 1;
-  height: auto;
-  min-height: 0;
-}
 
 @media (min-width: 768px) {
   .seamless-grid {
