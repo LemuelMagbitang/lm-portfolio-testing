@@ -653,6 +653,21 @@ export function createLightboxMediaRenderer({
     return rendered;
   }
 
+  function destroy() {
+    youtubeMessageCleanup?.();
+    youtubeMessageCleanup = null;
+
+    if (youtubePreloadRoot?.isConnected) {
+      youtubePreloadRoot.remove();
+    }
+    youtubePreloadRoot = null;
+
+    youtubeFrameCache.clear();
+    imageDimensionCache.clear();
+    videoDimensionCache.clear();
+    lottieDimensionCache.clear();
+  }
+
   function dispose(container) {
     if (!container) return;
     youtubeMessageCleanup?.();
@@ -681,6 +696,7 @@ export function createLightboxMediaRenderer({
   return {
     renderProjectMedia,
     preloadProjectsMedia,
-    dispose
+    dispose,
+    destroy
   };
 }

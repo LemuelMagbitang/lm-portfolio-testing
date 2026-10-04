@@ -375,7 +375,8 @@ return {
   openCard: openProjectCard,
   close: closeLightbox,
   destroy() {
-    closeLightbox();
+    closeLightbox({ restoreFocus: false });
+    mediaRenderer.destroy();
     lifecycle.cleanup();
     activeLightboxCards = [];
   }

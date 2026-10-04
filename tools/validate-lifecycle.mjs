@@ -44,6 +44,10 @@ assert.match(lightboxSource, /bind\(windowRef, 'pageshow', handlePageShow\)/);
 assert.match(lightboxSource, /setAttribute\('aria-hidden','false'\)/);
 assert.match(lightboxSource, /setAttribute\('aria-hidden','true'\)/);
 assert.match(lightboxSource, /closeLightbox\(\{ restoreFocus: false \}\)/);
+assert.match(lightboxSource, /mediaRenderer\.destroy\(\)/);
+
+const mediaRendererSource = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
+assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
 assert.match(modelViewerSource, /__modelViewerMountToken/);
