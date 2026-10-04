@@ -180,7 +180,6 @@ export function resetGalleryPresentation({
   showMoreWrapper
 } = {}) {
   if (grid) {
-    grid.style.maxHeight = '';
     Array.from(grid.querySelectorAll('.project-card')).forEach(card => {
       card.style.opacity = '';
       card.style.display = '';
