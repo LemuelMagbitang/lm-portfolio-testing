@@ -255,6 +255,14 @@ try {
         throw new Error('3D interactive mode did not expose its Back control.');
       }
 
+      await page.waitForFunction(() => {
+        const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return Math.abs(r.width - innerWidth) <= 2 &&
+          Math.abs(r.height - innerHeight) <= 2;
+      }, null, { timeout: 1500 });
+
       const focusedModelGeometry = await modelShell.evaluate(el => {
         const r = el.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height };
@@ -264,7 +272,9 @@ try {
         Math.abs(focusedModelGeometry.width - focusedViewport.width) > 2 ||
         Math.abs(focusedModelGeometry.height - focusedViewport.height) > 2
       ) {
-        throw new Error('Focused 3D viewer did not occupy the viewport.');
+        throw new Error(
+          `Focused 3D viewer did not occupy the viewport (${focusedModelGeometry.width}x${focusedModelGeometry.height} vs ${focusedViewport.width}x${focusedViewport.height}).`
+        );
       }
 
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
