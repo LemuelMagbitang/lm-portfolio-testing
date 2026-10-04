@@ -20,7 +20,6 @@ export function createLightboxMediaRenderer({
 } = {}) {
   let youtubeMessageCleanup = null;
   const youtubeFrameCache = new Map();
-  const youtubeFramePending = new Map();
   const imageDimensionCache = new Map();
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
@@ -153,59 +152,6 @@ export function createLightboxMediaRenderer({
     } catch (_) {
       return false;
     }
-  }
-
-  async function preloadModel(url) {
-    if (!url || typeof globalThis.fetch !== 'function') return false;
-    try {
-      const response = await withPreloadTimeout(
-        globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' })
-      );
-      if (!response || !response.ok) return false;
-      const bytes = await withPreloadTimeout(response.arrayBuffer());
-      return bytes instanceof ArrayBuffer;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function preloadYouTube(src, title = 'Project video', index = 0) {
-    const embedSrc = buildYouTubeEmbedUrl(src);
-    if (!embedSrc) return Promise.resolve(false);
-    if (youtubeFrameCache.has(embedSrc)) return Promise.resolve(true);
-    if (youtubeFramePending.has(embedSrc)) return youtubeFramePending.get(embedSrc);
-
-    const promise = withPreloadTimeout(new Promise(resolve => {
-      const iframe = documentRef.createElement('iframe');
-      iframe.dataset.lmYoutube = 'true';
-      iframe.dataset.lmYoutubeCacheKey = embedSrc;
-      iframe.frameBorder = '0';
-      iframe.loading = index === 0 ? 'eager' : 'lazy';
-      if (index === 0) iframe.fetchPriority = 'high';
-      iframe.tabIndex = -1;
-      iframe.title = title || 'Project video';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
-      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-      let done = false;
-      const finish = value => {
-        if (done) return;
-        done = true;
-        if (value) youtubeFrameCache.set(embedSrc, iframe);
-        iframe.removeEventListener('load', onLoad);
-        iframe.removeEventListener('error', onError);
-        resolve(value);
-      };
-      const onLoad = () => { primeYouTubeFrame(iframe); finish(true); };
-      const onError = () => finish(false);
-      iframe.addEventListener('load', onLoad, { once: true });
-      iframe.addEventListener('error', onError, { once: true });
-      iframe.src = embedSrc;
-      ensureYouTubePreloadRoot().appendChild(iframe);
-    }));
-
-    youtubeFramePending.set(embedSrc, promise);
-    return promise.finally(() => youtubeFramePending.delete(embedSrc));
   }
 
   async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
