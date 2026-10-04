@@ -558,7 +558,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   height: auto;
   min-height: 0;
   align-self: start;
-  contain: paint;
   /* Lets .glass-info's clamp(...cqw...) font sizes scale off the
      card's own width rather than the viewport's — so text keeps the
      same comfortable proportion whether the grid is showing 1, 2 or 4
