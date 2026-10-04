@@ -432,6 +432,14 @@ try {
           throw new Error('Show More did not enter the stable expanded state before Lightbox regression test.');
         }
 
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.waitForTimeout(250);
+        const afterPlainScrollViewport = await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight);
+        const afterPlainScrollLabel = (await mobileShowMore.locator('.btn-text').textContent()).trim().toUpperCase();
+        if (afterPlainScrollViewport !== 'none' || afterPlainScrollLabel !== 'SHOW LESS') {
+          throw new Error('Show Less reverted or re-clipped while scrolling through the expanded gallery.');
+        }
+
         await page.locator('#portfolioGrid .project-card').first().click();
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
         await page.locator('#lightboxClose').click();
