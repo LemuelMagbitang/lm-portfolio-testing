@@ -43,7 +43,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       ? lifecycle.animationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }, windowRef)
       : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }); return () => windowRef.cancelAnimationFrame?.(id); })();
   }
-  function close() {
+  function close({ afterFocus } = {}) {
     keydownCleanup?.();
     keydownCleanup = null;
     focusCleanup?.();
@@ -53,6 +53,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       const restoreFocus = () => {
         try { target.focus({ preventScroll: true }); }
         catch (_) { target.focus(); }
+        afterFocus?.();
       };
       focusCleanup = lifecycle?.animationFrame
         ? lifecycle.animationFrame(restoreFocus, windowRef)
@@ -237,8 +238,21 @@ function closeLightbox() {
   documentRef.documentElement.classList.remove('lm-3d-focus-open');
   documentRef.body.classList.remove('lm-3d-focus-open');
   if (lightboxControls) lightboxControls.classList.remove('active');
-  lightboxA11y.close();
   delete lightbox.dataset.pre3dScrollTop;
+
+  const pageScrollX = previousPageScrollX;
+  const pageScrollY = previousPageScrollY;
+  const restorePageScroll = () => {
+    windowRef.scrollTo({
+      left: pageScrollX,
+      top: pageScrollY,
+      behavior: 'auto'
+    });
+  };
+
+  // Release the fixed-body lock before restoring focus. The focus callback
+  // restores the saved viewport immediately after focus, so a browser that
+  // scrolls the opener as part of focus cannot win the race.
   documentRef.body.style.overflow = previousBodyOverflow;
   documentRef.body.style.position = previousBodyPosition;
   documentRef.body.style.top = previousBodyTop;
@@ -251,20 +265,13 @@ function closeLightbox() {
   previousBodyLeft = '';
   previousBodyRight = '';
   previousBodyWidth = '';
+  previousPageScrollX = 0;
+  previousPageScrollY = 0;
 
-  // Restore the exact page position after the modal releases body scrolling.
-  // Some mobile browsers reconcile the fixed Lightbox, scrollbar state, and
-  // restored focus in separate layout passes; an explicit viewport restore
-  // keeps closing the viewer visually stationary.
-  const restorePageScroll = () => {
-    windowRef.scrollTo({
-      left: previousPageScrollX,
-      top: previousPageScrollY,
-      behavior: 'auto'
-    });
-  };
-  windowRef.requestAnimationFrame(restorePageScroll);
-  windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(restorePageScroll));
+  lightboxA11y.close({ afterFocus: restorePageScroll });
+  windowRef.requestAnimationFrame(() => {
+    windowRef.requestAnimationFrame(restorePageScroll);
+  });
   // Dispose any mounted 3D viewers before removing their DOM nodes. The
   // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
   // keydown listener, none of which are cleaned up by innerHTML alone.
