@@ -386,7 +386,7 @@ try {
 
       // Simulate browser back/forward navigation so the gallery gets a
       // pageshow event with potentially restored layout state.
-      await page.goto('/about/');
+      await page.goto(`${BASE_URL}/about/`);
       await page.goBack();
       await page.locator('#portfolioGrid .project-card').first().waitFor({ state: 'visible', timeout: 3000 });
       const reentryBox = await page.locator('#portfolioGrid').boundingBox();
