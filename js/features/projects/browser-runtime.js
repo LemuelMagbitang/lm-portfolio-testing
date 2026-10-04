@@ -26,12 +26,13 @@ export async function mountProjects({
   createFragment = () => documentRef?.createDocumentFragment(),
   onCardActivate,
   applyMediaBackground,
-  buildCard = project => buildProjectCardElement(project, {
+  buildCard = (project, index = 0) => buildProjectCardElement(project, {
     resolveAssetUrl,
     applyMediaBackground,
     show3DIndicator: true,
     documentRef,
-    onActivate: onCardActivate
+    onActivate: onCardActivate,
+    priority: index < 6
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;
