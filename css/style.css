@@ -2428,7 +2428,6 @@ body.center-page {
   padding:0;
   transform:none;
   will-change:transform,opacity;
-  display:block;
   filter:none;
   opacity:1;
   background:transparent;
