@@ -201,15 +201,32 @@ export async function createPortfolioApp({
     console.warn('Lightbox: initialization failed', error);
   }
 
+  const ABOUT_PAGE_PREFETCH_TIMEOUT_MS = 5000;
   const aboutPagePrefetchPromise = !root.body?.classList.contains('about-page')
     ? Promise.resolve().then(() => {
         const aboutPageUrl = siteAssetUrl('about/');
         if (!aboutPageUrl || typeof globalThis.fetch !== 'function') return false;
+
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        let timer = null;
+        if (controller && typeof root.defaultView?.setTimeout === 'function') {
+          timer = root.defaultView.setTimeout(
+            () => controller.abort(),
+            ABOUT_PAGE_PREFETCH_TIMEOUT_MS
+          );
+        }
+
         return globalThis.fetch(aboutPageUrl, {
           method: 'GET',
           credentials: 'omit',
-          cache: 'force-cache'
-        }).then(response => response.ok).catch(() => false);
+          cache: 'force-cache',
+          signal: controller?.signal
+        })
+          .then(response => response.ok)
+          .catch(() => false)
+          .finally(() => {
+            if (timer !== null) root.defaultView.clearTimeout(timer);
+          });
       })
     : Promise.resolve(true);
 
