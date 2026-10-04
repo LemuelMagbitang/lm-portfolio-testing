@@ -233,7 +233,8 @@ const youtubeFallbackCard = buildProjectCardElement({
   media: [{ type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefgh' }]
 }, {
   documentRef: cardDocument,
-  resolveAssetUrl: value => value
+  resolveAssetUrl: value => value,
+  parseYouTubeUrl
 });
 assert.equal(youtubeFallbackCard.children[0]?.dataset?.thumbnailType, 'youtube');
 assert.equal(youtubeFallbackCard.dataset.cardOrientation, 'square');

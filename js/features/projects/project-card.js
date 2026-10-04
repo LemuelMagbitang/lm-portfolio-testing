@@ -7,13 +7,7 @@ import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261004-03';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
-function getYouTubeId(src = '') {
-  const value = String(src).trim();
-  const match = value.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
-  return match ? match[1] : '';
-}
-
-function getFallbackThumbnailSource(project = {}, thumbnail = {}) {
+function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
   const media = Array.isArray(project.media) ? project.media : [];
   const presentation = {
     focus: thumbnail.focus || '',
@@ -36,7 +30,8 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}) {
   }
 
   const youtube = media.find(item => String(item?.type || '').toLowerCase() === 'youtube' && item?.src);
-  const id = youtube ? getYouTubeId(youtube.src) : '';
+  const parsed = youtube && typeof parseYouTube === 'function' ? parseYouTube(youtube.src) : null;
+  const id = parsed?.id || '';
   return id ? {
     // Keep the source type as YouTube even though the visible fallback is an
     // image. The card-presentation contract uses this metadata to avoid
@@ -91,7 +86,7 @@ export function buildProjectCardElement(
   const explicitThumbnail = project.thumbnail || {};
   const fallbackThumbnail = explicitThumbnail.src
     ? null
-    : getFallbackThumbnailSource(project, explicitThumbnail);
+    : getFallbackThumbnailSource(project, explicitThumbnail, parseYouTubeUrl);
   const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
