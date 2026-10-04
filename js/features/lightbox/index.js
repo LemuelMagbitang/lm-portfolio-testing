@@ -43,19 +43,17 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       ? lifecycle.animationFrame(() => { const items=getFocusable(); try { (items[0]||lightboxEl).focus({ preventScroll: true }); } catch (_) { (items[0]||lightboxEl).focus?.(); } }, windowRef)
       : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); const target = items[0] || lightboxEl; try { target.focus?.({ preventScroll: true }); } catch (_) { target.focus?.(); } }); return () => windowRef.cancelAnimationFrame?.(id); })();
   }
-  function close({ afterFocus } = {}) {
+  function close({ afterFocus, restoreFocus = true } = {}) {
     keydownCleanup?.();
     keydownCleanup = null;
     focusCleanup?.();
     focusCleanup = null;
     const target=opener; opener=null;
-    if(target?.isConnected) {
+    if (restoreFocus && target?.isConnected) {
       try { target.focus({ preventScroll: true }); }
       catch (_) { target.focus(); }
-      afterFocus?.();
-    } else {
-      afterFocus?.();
     }
+    afterFocus?.();
   }
   return {open,close};
 }
@@ -236,7 +234,7 @@ function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
 }
 
 // Close Lightbox function
-function closeLightbox() {
+function closeLightbox({ restoreFocus = true } = {}) {
   lightbox.classList.remove('active', 'is-3d-focused');
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
@@ -268,7 +266,7 @@ function closeLightbox() {
 
   // Restore focus synchronously and immediately put the viewport back where
   // it was. The post-layout frames below catch mobile reconciliation.
-  lightboxA11y.close({ afterFocus: restorePageScroll });
+  lightboxA11y.close({ afterFocus: restorePageScroll, restoreFocus });
   restorePageScroll();
   // Let the renderer own media teardown so YouTube message listeners, playback
   // state, cached iframes, and 3D viewer resources all follow one lifecycle.
@@ -315,6 +313,23 @@ const handleDocumentKeydown = (event) => {
   }
 };
 
+const handlePageHide = event => {
+  // A BFCache snapshot must not preserve a live modal, WebGL viewer, or
+  // third-party playback state. Do not steal focus while the document is
+  // transitioning away.
+  if (event?.persisted && lightbox?.classList.contains('active')) {
+    closeLightbox({ restoreFocus: false });
+  }
+};
+
+const handlePageShow = event => {
+  // Defensive fallback for browsers that restore the snapshot before the
+  // pagehide cleanup has completed.
+  if (event?.persisted && lightbox?.classList.contains('active')) {
+    closeLightbox();
+  }
+};
+
 // Lightbox controls have custom activation behavior. Suppress the browser
 // button default on the click capture phase so activation cannot scroll the
 // underlying document before our custom close/navigation handler runs.
@@ -328,6 +343,8 @@ bind(lightboxPrev, 'click', handlePrev);
 bind(lightboxNext, 'click', handleNext);
 bind(lightbox, 'click', handleBackdropClick);
 bind(documentRef, 'keydown', handleDocumentKeydown);
+bind(windowRef, 'pagehide', handlePageHide);
+bind(windowRef, 'pageshow', handlePageShow);
 
 return {
   openCard: openProjectCard,
