@@ -2130,7 +2130,7 @@ body.center-page {
 .lm-media-background-host{isolation:isolate;}
 .lm-media-background-host > .lm-media-background-layer{z-index:0!important;}
 .lm-media-background-host > .lm-media-background-overlay{z-index:1!important;}
-.lm-media-background-host > :not(.lm-media-background-layer):not(.lm-media-background-overlay){z-index:2;}
+.lm-media-background-host > :not(.lm-media-background-layer):not(.lm-media-background-overlay):not(canvas):not(.model-viewer-activate):not(.model-viewer-ui){z-index:2;}
 .lm-media-background-shader{background-size:160% 160%;animation:lm-bg-shader-drift 14s ease-in-out infinite alternate;}
 .lm-media-background-shader.shader-mesh{animation-duration:18s;}
 @keyframes lm-bg-shader-drift{
