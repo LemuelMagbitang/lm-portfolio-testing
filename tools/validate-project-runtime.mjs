@@ -408,7 +408,37 @@ buildProjectCardElement(normalizedBackground, {
     return Promise.resolve(true);
   }
 });
-assert.equal(backgroundCalls, 1);
+assert.equal(backgroundCalls, 2);
+
+const normalizedBackgroundPrecedence = normalizeProjects([{
+  id: 'fallback-background-precedence',
+  title: 'Fallback Background Precedence',
+  thumbnail: {
+    src: '',
+    background: { type: 'color', color: '#111111' }
+  },
+  media: [{
+    type: 'image',
+    src: 'media/background-precedence.webp',
+    background: { type: 'color', color: '#222222' }
+  }]
+}])[0];
+
+let precedenceBackground = null;
+buildProjectCardElement(normalizedBackgroundPrecedence, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value,
+  applyMediaBackground: (element, background) => {
+    precedenceBackground = background;
+    return Promise.resolve(true);
+  }
+});
+
+assert.deepEqual(
+  precedenceBackground,
+  { type: 'color', color: '#222222' },
+  'Media background should override thumbnail background when the media item is the fallback source'
+);
 
 assert.deepEqual(parseYouTubeUrl('https://www.youtube.com/watch?v=abcdefgh'), {
   id: 'abcdefgh',
