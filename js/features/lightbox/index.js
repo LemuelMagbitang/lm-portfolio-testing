@@ -41,7 +41,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     focusCleanup?.();
     focusCleanup = lifecycle?.animationFrame
       ? lifecycle.animationFrame(() => { const items=getFocusable(); try { (items[0]||lightboxEl).focus({ preventScroll: true }); } catch (_) { (items[0]||lightboxEl).focus?.(); } }, windowRef)
-      : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); (items[0]||lightboxEl).focus?.(); }); return () => windowRef.cancelAnimationFrame?.(id); })();
+      : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); const target = items[0] || lightboxEl; try { target.focus?.({ preventScroll: true }); } catch (_) { target.focus?.(); } }); return () => windowRef.cancelAnimationFrame?.(id); })();
   }
   function close({ afterFocus } = {}) {
     keydownCleanup?.();
@@ -125,8 +125,6 @@ const mediaRenderer = createLightboxMediaRenderer({
 
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
-let previousBodyOverflow = '';
-let previousDocumentOverflow = '';
 let previousPageScrollX = 0;
 let previousPageScrollY = 0;
 
