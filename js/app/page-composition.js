@@ -15,7 +15,7 @@ import { initSiteSettings } from '../features/settings/index.js';
 
 import { initGallery } from '../features/gallery/index.js?v=20261004-04';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
-import { initLightbox } from '../features/lightbox/index.js?v=20261004-17';
+import { initLightbox } from '../features/lightbox/index.js?v=20261004-18';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js';
 
 export async function createPortfolioApp({
