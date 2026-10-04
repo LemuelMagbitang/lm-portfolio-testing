@@ -87,13 +87,13 @@ The 3D viewer is lazy and disposes its renderer, controls, observers, animation 
 
 ## Runtime stabilization contracts
 
-The initial portfolio transition is a readiness gate, not a fixed-duration animation. Bootstrap keeps the branded loading surface visible while application composition completes, document fonts settle, and media already entering the first viewport become measurable. The loading surface exposes progress/status and sets `body[aria-busy]` until the handoff completes.
+The initial portfolio transition is a readiness gate, not a progress UI. Bootstrap keeps the original logo-only loading surface visible while application composition completes and the browser gets two paint opportunities to commit the finished DOM. The page uses `body[aria-busy]` during that handoff and clears it only after the application is ready.
 
-Gallery expansion is persistent UI state. Resize, `load`, and BFCache `pageshow` events recompute presentation geometry without silently reverting an already-expanded gallery unless the new viewport can show the complete active set without a reveal control.
+Gallery expansion is user-owned UI state. Resize and BFCache `pageshow` events may recompute the clipping geometry, but they never toggle `isExpanded`. Only a Show More/Show Less click or an explicit filter change is allowed to change that state. The dedicated `#portfolioGridViewport` owns clipping; the grid itself keeps its natural height.
 
-The Lightbox owns playback handoff. Native video uses the media play lifecycle; YouTube uses its cross-origin player state messages in addition to pointer/focus fallback behavior. All YouTube listeners are disposed with the current media container so navigation cannot accumulate global playback listeners.
+The Lightbox owns playback handoff. Native video uses the media play lifecycle; YouTube receives the user's gesture directly and uses its cross-origin playing-state message only for cross-player cleanup. Pointer/focus handlers do not intercept YouTube taps. All YouTube listeners are disposed with the current media container so navigation cannot accumulate global playback listeners.
 
-Lightbox media styling has one scoped ownership layer. Orientation classes live on the actual media and its `.lightbox-artwork` surface, while captions remain outside the artwork surface. Future responsive fixes should modify that ownership layer rather than reintroducing global `.yt-*` rules or duplicate media selectors.
+Lightbox media styling has one scoped ownership layer. Orientation classes live on the actual media and its `.lightbox-artwork` surface, while captions remain outside the artwork surface. Lightbox navigation controls use `mix-blend-mode: difference` with transparent backgrounds/borders, so their contrast follows the pixels immediately underneath without a canvas-based luminance sampler or bright control box. Future responsive fixes should modify that ownership layer rather than reintroducing global `.yt-*` rules or duplicate media selectors.
 
 The CMS remains a separate application boundary. Provider failures in enhancement-only software-logo discovery are contained locally so editing and saving content remain usable. Repository writes continue through the existing optimistic branch-head check and atomic multi-file commit path.
 
