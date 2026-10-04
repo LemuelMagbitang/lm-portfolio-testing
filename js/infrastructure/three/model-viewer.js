@@ -160,6 +160,34 @@ export async function mountModelViewer(container, src, options = {}) {
   let lastSize = { width: 0, height: 0 };
   let renderLoopActive = false;
 
+  const activate = document.createElement('div');
+  activate.className = 'model-viewer-activate';
+  activate.setAttribute('aria-hidden', 'true');
+  activate.setAttribute('role', 'presentation');
+  activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>CLICK FOR 3D VIEW</strong></span>';
+  container.appendChild(activate);
+
+  const ui = document.createElement('div');
+  ui.className = 'model-viewer-ui';
+
+  let hint = null;
+  if (options.hint !== false) {
+    hint = document.createElement('div');
+    hint.className = 'model-viewer-hint';
+    hint.textContent = 'Drag to orbit · pinch / wheel to zoom · two-finger / right-drag to pan';
+    hint.hidden = true;
+    ui.appendChild(hint);
+  }
+
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'model-viewer-back';
+  back.setAttribute('aria-label', 'Exit interactive 3D view');
+  back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>BACK TO MEDIA</span>';
+  back.hidden = true;
+  ui.appendChild(back);
+  container.appendChild(ui);
+
   try {
     const loaded = await loadModel(url, ext);
     if (!loaded?.root) throw new Error('3D model contains no scene.');
@@ -227,34 +255,6 @@ export async function mountModelViewer(container, src, options = {}) {
     container.setAttribute('tabindex', '0');
     container.setAttribute('aria-label', 'Open interactive 3D view');
     container.setAttribute('aria-expanded', 'false');
-
-    const activate = document.createElement('div');
-    activate.className = 'model-viewer-activate';
-    activate.setAttribute('aria-hidden', 'true');
-    activate.setAttribute('role', 'presentation');
-    activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>CLICK FOR 3D VIEW</strong></span>';
-    container.appendChild(activate);
-
-    const ui = document.createElement('div');
-    ui.className = 'model-viewer-ui';
-
-    let hint = null;
-    if (options.hint !== false) {
-      hint = document.createElement('div');
-      hint.className = 'model-viewer-hint';
-      hint.textContent = 'Drag to orbit · pinch / wheel to zoom · two-finger / right-drag to pan';
-      hint.hidden = true;
-      ui.appendChild(hint);
-    }
-
-    const back = document.createElement('button');
-    back.type = 'button';
-    back.className = 'model-viewer-back';
-    back.setAttribute('aria-label', 'Exit interactive 3D view');
-    back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>BACK TO MEDIA</span>';
-    back.hidden = true;
-    ui.appendChild(back);
-    container.appendChild(ui);
 
     const setInteractive = (active) => {
       if (disposed) return;
@@ -378,7 +378,11 @@ export async function mountModelViewer(container, src, options = {}) {
   } catch (err) {
     container.dataset.ready = 'false';
     container.setAttribute('aria-busy', 'false');
-    renderer.dispose();
+    const label = activate.querySelector('strong');
+    if (label) label.textContent = '3D VIEW UNAVAILABLE';
+    const backUi = back;
+    if (backUi) backUi.hidden = true;
+    renderer?.dispose?.();
     throw err;
   }
 
