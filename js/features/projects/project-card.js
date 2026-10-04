@@ -3,9 +3,9 @@
  * Owns card DOM construction only. It does not fetch data or manage filtering.
  */
 
-import { findProjectMediaBackground, projectHas3D } from './project-media.js';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js';
-import { observeProjectCardOrientation } from './card-presentation.js';
+import { findProjectMediaBackground, projectHas3D } from './project-media.js?v=20261004-03';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261004-03';
+import { observeProjectCardOrientation } from './card-presentation.js?v=20261004-03';
 
 function getYouTubeId(src = '') {
   const value = String(src).trim();
