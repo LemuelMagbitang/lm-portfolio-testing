@@ -503,9 +503,16 @@ export function createLightboxMediaRenderer({
       iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
       iframe.allowFullscreen = true;
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-      iframe.addEventListener('load', () => primeYouTubeFrame(iframe), { once: true });
+      iframe.addEventListener('load', () => {
+        primeYouTubeFrame(iframe);
+        // A newly created frame is cached only after a successful load. This
+        // prevents a failed player from becoming a poisoned cache entry.
+        youtubeFrameCache.set(embedSrc, iframe);
+      }, { once: true });
+      iframe.addEventListener('error', () => {
+        if (youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
+      }, { once: true });
       iframe.src = embedSrc;
-      if (embedSrc) youtubeFrameCache.set(embedSrc, iframe);
     } else {
       iframe.tabIndex = 0;
       iframe.title = item.caption || item.description || project.title || 'Project video';
@@ -692,11 +699,14 @@ export function createLightboxMediaRenderer({
     youtubeMessageCleanup = null;
     pauseOtherPlayback(container);
 
-    const preloadRoot = ensureYouTubePreloadRoot();
-    container.querySelectorAll('iframe[data-lm-youtube]').forEach(iframe => {
-      const key = iframe.dataset.lmYoutubeCacheKey;
-      if (key && youtubeFrameCache.get(key) === iframe) preloadRoot.appendChild(iframe);
-    });
+    const youtubeFrames = Array.from(container.querySelectorAll('iframe[data-lm-youtube]'));
+    if (youtubeFrames.length) {
+      const preloadRoot = ensureYouTubePreloadRoot();
+      youtubeFrames.forEach(iframe => {
+        const key = iframe.dataset.lmYoutubeCacheKey;
+        if (key && youtubeFrameCache.get(key) === iframe) preloadRoot.appendChild(iframe);
+      });
+    }
 
     container.querySelectorAll('.model-viewer-shell').forEach(shell => {
       try { shell.__modelViewerCleanup?.(); } catch (_) {}
