@@ -255,13 +255,49 @@ try {
         throw new Error('3D interactive mode did not expose its Back control.');
       }
 
-      await page.waitForFunction(() => {
-        const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
-        if (!el) return false;
-        const r = el.getBoundingClientRect();
-        return Math.abs(r.width - innerWidth) <= 2 &&
-          Math.abs(r.height - innerHeight) <= 2;
-      }, null, { timeout: 1500 });
+      try {
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+          if (!el) return false;
+          const r = el.getBoundingClientRect();
+          return Math.abs(r.width - innerWidth) <= 2 &&
+            Math.abs(r.height - innerHeight) <= 2;
+        }, null, { timeout: 1500 });
+      } catch (error) {
+        const debug = await page.evaluate(() => {
+          const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+          const chain = [];
+          let node = el;
+          while (node && chain.length < 8) {
+            const style = getComputedStyle(node);
+            const rect = node.getBoundingClientRect();
+            chain.push({
+              tag: node.tagName,
+              id: node.id || '',
+              className: node.className || '',
+              position: style.position,
+              transform: style.transform,
+              filter: style.filter,
+              backdropFilter: style.backdropFilter,
+              contain: style.contain,
+              willChange: style.willChange,
+              overflow: style.overflow,
+              rect: {
+                x: Math.round(rect.x * 100) / 100,
+                y: Math.round(rect.y * 100) / 100,
+                width: Math.round(rect.width * 100) / 100,
+                height: Math.round(rect.height * 100) / 100
+              }
+            });
+            node = node.parentElement;
+          }
+          const viewport = { width: innerWidth, height: innerHeight };
+          return { viewport, chain };
+        });
+        throw new Error(
+          `Focused 3D geometry did not settle to viewport: ${JSON.stringify(debug)}; original=${error.message}`
+        );
+      }
 
       const focusedModelGeometry = await modelShell.evaluate(el => {
         const r = el.getBoundingClientRect();
