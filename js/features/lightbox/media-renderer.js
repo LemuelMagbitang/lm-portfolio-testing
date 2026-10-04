@@ -69,6 +69,9 @@ export function createLightboxMediaRenderer({
       image.fetchPriority = 'high';
       image.onload = async () => {
         try { await image.decode?.(); } catch (_) {}
+        const width = Number(image.naturalWidth);
+        const height = Number(image.naturalHeight);
+        if (width > 0 && height > 0) imageDimensionCache.set(url, { width, height });
         resolve(true);
       };
       image.onerror = () => resolve(false);
@@ -93,7 +96,12 @@ export function createLightboxMediaRenderer({
         video.removeEventListener('error', onError);
         resolve(value);
       };
-      const onReady = () => finish(true);
+      const onReady = () => {
+        const width = Number(video.videoWidth);
+        const height = Number(video.videoHeight);
+        if (width > 0 && height > 0) videoDimensionCache.set(url, { width, height });
+        finish(true);
+      };
       const onError = () => finish(false);
       video.addEventListener('loadedmetadata', onReady, { once: true });
       video.addEventListener('canplay', onReady, { once: true });
