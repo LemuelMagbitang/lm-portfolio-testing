@@ -524,15 +524,22 @@ try {
       await page.evaluate(() => {
         const card = document.querySelector('#portfolioGrid .project-card');
         if (!card) throw new Error('No project card available for Lightbox scroll regression.');
-        // Model a real keyboard/mouse opener without letting the test runner
-        // auto-scroll the card into view.
         card.focus({ preventScroll: true });
         card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       });
+      const scrollImmediatelyAfterOpen = await page.evaluate(() => window.scrollY);
+      await page.waitForTimeout(16);
+      const scrollAfterOpenFrame = await page.evaluate(() => window.scrollY);
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       const scrollWhileLightboxOpen = await page.evaluate(() => window.scrollY);
-      if (Math.abs(scrollWhileLightboxOpen - scrollBeforeLightboxClose) > 4) {
-        throw new Error(`Opening Lightbox changed document scroll position (${scrollBeforeLightboxClose} -> ${scrollWhileLightboxOpen}).`);
+      await page.waitForTimeout(104);
+      const scrollAfterOpenSettled = await page.evaluate(() => window.scrollY);
+      if (Math.abs(scrollAfterOpenSettled - scrollBeforeLightboxClose) > 4) {
+        const debug = await page.locator('#lightbox').evaluate(el => ({
+          saved: el.dataset.debugSavedPageScroll || '',
+          active: el.classList.contains('active')
+        }));
+        throw new Error(`Opening Lightbox changed document scroll position (${scrollBeforeLightboxClose} -> immediate ${scrollImmediatelyAfterOpen} -> frame ${scrollAfterOpenFrame} -> visible ${scrollWhileLightboxOpen} -> settled ${scrollAfterOpenSettled}); debug saved=${debug.saved} active=${debug.active}.`);
       }
       await page.evaluate(() => {
         const close = document.querySelector('#lightboxClose');
