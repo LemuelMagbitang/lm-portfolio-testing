@@ -612,18 +612,16 @@ try {
         throw new Error('Mobile Works gallery did not render its first row as two equal columns.');
       }
 
-      const mobileFilterMotion = await filters.first().evaluate(el => {
+      const mobileCardMotion = await page.locator('#portfolioGrid .project-card').first().evaluate(el => {
         const style = getComputedStyle(el);
         return {
-          tabTransition: style.transition,
-          userSelect: style.userSelect
+          transition: style.transition,
+          filter: style.filter,
+          transform: style.transform
         };
       });
-      if (!/transform/i.test(mobileFilterMotion.tabTransition) && mobileFilterMotion.userSelect === 'none') {
-        // The rail itself is native-scroll driven; this assertion only ensures
-        // its controls remain non-selectable while the settling animation is
-        // CSS-capable.
-        throw new Error('Mobile filter controls lost their interaction presentation contract.');
+      if (!/transform/i.test(mobileCardMotion.transition) || !/filter/i.test(mobileCardMotion.transition)) {
+        throw new Error(`Mobile project cards lost the depth/blur filter transition contract: ${mobileCardMotion.transition}`);
       }
 
       const mobileShowMore = page.locator('#showMoreBtn').first();
