@@ -51,7 +51,8 @@ export function buildProjectCardElement(
     applyMediaBackground,
     show3DIndicator = true,
     documentRef = globalThis.document,
-    onActivate
+    onActivate,
+    priority = false
   } = {}
 ) {
   const card = documentRef.createElement('div');
@@ -98,7 +99,7 @@ export function buildProjectCardElement(
     const media = buildProjectThumbnailMedia(
       { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
       project.title || 'Project artwork',
-      { resolveAssetUrl, documentRef }
+      { resolveAssetUrl, documentRef, priority }
     );
     if (media) {
       // Apply CMS crop/zoom/rotation directly at card-build time. The old
