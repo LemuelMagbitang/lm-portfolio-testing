@@ -121,35 +121,8 @@ export async function mountModelViewer(container, src, options = {}) {
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
   camera.position.set(0, 0.8, 3.2);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1;
-  renderer.setClearColor(0x000000, 0);
-  container.appendChild(renderer.domElement);
-
-  const ambient = new THREE.HemisphereLight(0xffffff, 0x222222, 2.2);
-  scene.add(ambient);
-  const key = new THREE.DirectionalLight(0xffffff, 3.2);
-  key.position.set(3, 5, 4);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffffff, 1.25);
-  fill.position.set(-4, 2, -3);
-  scene.add(fill);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.075;
-  controls.enablePan = options.enablePan !== false;
-  controls.enableZoom = options.enableZoom !== false;
-  controls.minDistance = 0.01;
-  controls.maxDistance = 100;
-  controls.target.set(0, 0, 0);
-  controls.touches.ONE = THREE.TOUCH.ROTATE;
-  controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
-  controls.enabled = false;
-
+  let renderer = null;
+  let controls = null;
   let root;
   let mixers = [];
   let frameHandle = 0;
@@ -179,9 +152,7 @@ export async function mountModelViewer(container, src, options = {}) {
     ui.appendChild(hint);
   }
 
-  let renderer = null;
-
-    const back = document.createElement('button');
+  const back = document.createElement('button');
   back.type = 'button';
   back.className = 'model-viewer-back';
   back.setAttribute('aria-label', 'Exit interactive 3D view');
@@ -194,6 +165,36 @@ export async function mountModelViewer(container, src, options = {}) {
     const loaded = await loadModel(url, ext);
     if (!loaded?.root) throw new Error('3D model contains no scene.');
     root = loaded.root;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    const ambient = new THREE.HemisphereLight(0xffffff, 0x222222, 2.2);
+    scene.add(ambient);
+    const key = new THREE.DirectionalLight(0xffffff, 3.2);
+    key.position.set(3, 5, 4);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xffffff, 1.25);
+    fill.position.set(-4, 2, -3);
+    scene.add(fill);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.075;
+    controls.enablePan = options.enablePan !== false;
+    controls.enableZoom = options.enableZoom !== false;
+    controls.minDistance = 0.01;
+    controls.maxDistance = 100;
+    controls.target.set(0, 0, 0);
+    controls.touches.ONE = THREE.TOUCH.ROTATE;
+    controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+    controls.enabled = false;
+
     scene.add(root);
 
     // Center the asset once. Its camera framing is recalculated whenever the
