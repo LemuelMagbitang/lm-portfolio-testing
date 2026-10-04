@@ -66,6 +66,7 @@ export function getRowAlignedCount(
 
 export function applyGalleryReveal({
   grid,
+  gridViewport,
   fadeOverlay,
   showMoreButton,
   showMoreWrapper,
@@ -79,7 +80,8 @@ export function applyGalleryReveal({
   renderToken = 0,
   isCurrentRender = () => true
 } = {}) {
-  if (!grid) return;
+  const viewport = gridViewport || grid;
+  if (!grid || !viewport) return;
 
   const filteredSet = new Set(filteredCards);
   const allCards = Array.from(grid.querySelectorAll('.project-card'));
@@ -93,16 +95,17 @@ export function applyGalleryReveal({
     if (!isCurrentRender(renderToken) || expanded) return;
     if (filteredCards.length <= visibleCount || visibleCount <= 0) return;
 
-    const gridRect = grid.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
     const lastVisible = filteredCards[visibleCount - 1];
     const cardRect = lastVisible?.getBoundingClientRect?.();
-    if (!cardRect || !Number.isFinite(cardRect.bottom) || !Number.isFinite(gridRect.top)) return;
+    if (!cardRect || !Number.isFinite(cardRect.bottom) || !Number.isFinite(viewportRect.top)) return;
 
-    // Clamp against zero so a transient navigation/viewport measurement can
-    // never collapse the whole gallery upward into the filter controls.
+    // Clip the dedicated viewport, never the grid itself. The grid keeps its
+    // natural height, so lazy media/layout changes cannot rewrite the
+    // gallery's interaction state while the visitor is scrolling.
     const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
-    const height = Math.max(1, cardRect.bottom - gridRect.top + peek);
-    grid.style.maxHeight = `${Math.round(height)}px`;
+    const height = Math.max(1, cardRect.bottom - viewportRect.top + peek);
+    viewport.style.maxHeight = `${Math.round(height)}px`;
     fadeOverlay?.classList.remove('is-hidden');
   };
 
@@ -138,19 +141,8 @@ export function applyGalleryReveal({
     measureCollapsedHeight();
     windowRef.requestAnimationFrame(measureCollapsedHeight);
   } else {
-    grid.style.maxHeight = 'none';
+    viewport.style.maxHeight = 'none';
     fadeOverlay?.classList.add('is-hidden');
-  }
-
-  let resizeObserver = null;
-  if (
-    !expanded &&
-    filteredCards.length > visibleCount &&
-    visibleCount > 0 &&
-    typeof windowRef.ResizeObserver === 'function'
-  ) {
-    resizeObserver = new windowRef.ResizeObserver(() => measureCollapsedHeight());
-    filteredCards.forEach(card => resizeObserver.observe(card));
   }
 
   // The timer belongs to the current render. Returning a cancel function lets
@@ -159,7 +151,6 @@ export function applyGalleryReveal({
   if (!showMoreButton || !showMoreWrapper) {
     return () => {
       windowRef.clearTimeout(hideTimer);
-      resizeObserver?.disconnect();
     };
   }
 
@@ -175,12 +166,12 @@ export function applyGalleryReveal({
 
   return () => {
     windowRef.clearTimeout(hideTimer);
-    resizeObserver?.disconnect();
   };
 }
 
 export function resetGalleryPresentation({
   grid,
+  gridViewport,
   fadeOverlay,
   showMoreButton,
   showMoreWrapper
@@ -192,6 +183,8 @@ export function resetGalleryPresentation({
       card.style.display = '';
     });
   }
+
+  if (gridViewport) gridViewport.style.maxHeight = '';
 
   fadeOverlay?.classList.add('is-hidden');
 
