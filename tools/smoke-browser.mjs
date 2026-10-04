@@ -641,6 +641,41 @@ try {
         throw new Error(`Lightbox close changed document scroll position (${scrollBeforeLightboxClose} -> immediate ${scrollImmediatelyAfterLightboxClose} -> frame ${scrollAfterLightboxFrame} -> settled ${scrollAfterLightboxClose}); debug saved=${debug.saved} close=${debug.close}.`);
       }
 
+      // A persisted history snapshot must not resurrect the Lightbox with
+      // stale WebGL/YouTube state. Exercise both lifecycle edges explicitly;
+      // browser back/forward coverage below also exercises real navigation.
+      await page.evaluate(() => {
+        const card = document.querySelector('#portfolioGrid .project-card');
+        if (!card) throw new Error('No project card available for BFCache Lightbox regression.');
+        card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      });
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      await page.evaluate(() => {
+        const event = new Event('pagehide');
+        Object.defineProperty(event, 'persisted', { value: true });
+        window.dispatchEvent(event);
+      });
+      await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+      if (await page.locator('#lightbox.active').count() !== 0) {
+        throw new Error('Persisted pagehide did not close the active Lightbox.');
+      }
+
+      await page.evaluate(() => {
+        const card = document.querySelector('#portfolioGrid .project-card');
+        if (!card) throw new Error('No project card available after BFCache pagehide cleanup.');
+        card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      });
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      await page.evaluate(() => {
+        const event = new Event('pageshow');
+        Object.defineProperty(event, 'persisted', { value: true });
+        window.dispatchEvent(event);
+      });
+      await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+      if (await page.locator('#lightbox.active').count() !== 0) {
+        throw new Error('Persisted pageshow did not close a resurrected Lightbox.');
+      }
+
       // Simulate browser back/forward navigation so the gallery gets a
       // pageshow event with potentially restored layout state.
       await page.goto(`${BASE_URL}/about/`);
