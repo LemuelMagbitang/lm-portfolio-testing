@@ -132,14 +132,15 @@ export function createLightboxMediaRenderer({
   }
 
   async function preloadLottie(url) {
-    const timeoutPromise = new Promise(resolve => windowRef?.setTimeout?.(() => resolve(false), MEDIA_PRELOAD_TIMEOUT_MS));
     if (!url || typeof globalThis.fetch !== 'function') return false;
     try {
-      const requestPromise = globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' }).then(async response => {
-        if (!response.ok) return false;
-        return response.json();
-      });
-      const payload = await Promise.race([requestPromise, timeoutPromise]);
+      const payload = await withPreloadTimeout(
+        globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' })
+          .then(async response => {
+            if (!response.ok) return false;
+            return response.json();
+          })
+      );
       if (!payload) return false;
       const width = Number(payload?.w);
       const height = Number(payload?.h);
@@ -155,10 +156,12 @@ export function createLightboxMediaRenderer({
   async function preloadModel(url) {
     if (!url || typeof globalThis.fetch !== 'function') return false;
     try {
-      const response = await globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' });
-      if (!response.ok) return false;
-      await response.arrayBuffer();
-      return true;
+      const response = await withPreloadTimeout(
+        globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' })
+      );
+      if (!response || !response.ok) return false;
+      const bytes = await withPreloadTimeout(response.arrayBuffer());
+      return bytes instanceof ArrayBuffer;
     } catch (_) {
       return false;
     }
