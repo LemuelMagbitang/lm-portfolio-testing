@@ -164,6 +164,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     previousBodyOverflow = documentRef.body.style.overflow;
     previousPageScrollX = Number(windowRef.scrollX) || 0;
     previousPageScrollY = Number(windowRef.scrollY) || 0;
+    lightbox.dataset.debugSavedPageScroll = String(previousPageScrollY);
   }
 
   mediaRenderer.dispose(modalMediaContainer);
@@ -222,6 +223,7 @@ function closeLightbox() {
 
   const pageScrollX = previousPageScrollX;
   const pageScrollY = previousPageScrollY;
+  lightbox.dataset.debugCloseScroll = String(pageScrollY) + '|' + String(windowRef.scrollY);
   const restorePageScroll = () => {
     try {
       documentRef.documentElement.scrollLeft = pageScrollX;
