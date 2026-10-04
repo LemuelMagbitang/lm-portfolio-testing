@@ -206,6 +206,18 @@ assert.equal(getProjectCardOrientation({
   mediaType: 'youtube'
 }), 'square');
 
+const youtubeFallbackCard = buildProjectCardElement({
+  id: 'youtube-fallback-regression',
+  title: 'YouTube Fallback Regression',
+  thumbnail: { type: 'image', src: '' },
+  media: [{ type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefgh' }]
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => value
+});
+assert.equal(youtubeFallbackCard.children[0]?.dataset?.thumbnailType, 'youtube');
+assert.equal(youtubeFallbackCard.dataset.cardOrientation, 'square');
+
 const presentationCard = makeElement();
 assert.equal(applyProjectCardOrientation(presentationCard, 'landscape'), 'landscape');
 assert.equal(presentationCard.dataset.cardOrientation, 'landscape');

@@ -38,7 +38,11 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}) {
   const youtube = media.find(item => String(item?.type || '').toLowerCase() === 'youtube' && item?.src);
   const id = youtube ? getYouTubeId(youtube.src) : '';
   return id ? {
-    type: 'image',
+    // Keep the source type as YouTube even though the visible fallback is an
+    // image. The card-presentation contract uses this metadata to avoid
+    // classifying a generated YouTube preview by its unreliable thumbnail
+    // aspect ratio (especially for Shorts).
+    type: 'youtube',
     src: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
     ...presentation
   } : null;
