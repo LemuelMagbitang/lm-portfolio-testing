@@ -22,8 +22,6 @@ export async function bootstrapPortfolioApp({
   cacheVersion = '20261004-01'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
-  const pageTransitionStatus = root?.getElementById('pageTransitionStatus');
-  const pageTransitionProgress = root?.getElementById('pageTransitionProgress');
   const windowRef = root?.defaultView || globalThis.window;
   const loadingStartedAt = typeof windowRef?.performance?.now === 'function'
     ? windowRef.performance.now()
@@ -31,13 +29,6 @@ export async function bootstrapPortfolioApp({
   const MIN_LOADING_SCREEN_MS = 450;
   let initialTransitionFrame = null;
 
-  function setInitialPageTransitionStatus(message, progress = null) {
-    if (pageTransitionStatus && message) pageTransitionStatus.textContent = message;
-    if (pageTransitionProgress && Number.isFinite(progress)) {
-      pageTransitionProgress.style.setProperty('--loading-progress', Math.max(0, Math.min(100, progress)) + '%');
-      pageTransitionProgress.setAttribute('aria-valuenow', String(Math.round(progress)));
-    }
-  }
 
   function showInitialPageTransition() {
     if (!pageTransition) return;
@@ -45,7 +36,6 @@ export async function bootstrapPortfolioApp({
     pageTransition.setAttribute('aria-hidden', 'false');
     pageTransition.dataset.loading = 'active';
     root.body?.setAttribute('aria-busy', 'true');
-    setInitialPageTransitionStatus('Loading portfolio…', 8);
     initialTransitionFrame = windowRef?.requestAnimationFrame?.(() => {
       pageTransition.classList.add('is-entering');
     });
@@ -113,22 +103,9 @@ export async function bootstrapPortfolioApp({
       runtime,
       cms,
       config,
-      onProgress(message) {
-        const map = {
-          'Loading portfolio data…': 12,
-          'Building the portfolio…': 38,
-          'Preparing animated artwork…': 56,
-          'Preparing the visual experience…': 66,
-          'Finalizing interactions…': 82,
-          'Finishing layout…': 92
-        };
-        setInitialPageTransitionStatus(message, map[message] ?? 72);
-      }
-    });
+  
 
-    setInitialPageTransitionStatus('Finishing layout…', 92);
     await waitForReadyPaint();
-    setInitialPageTransitionStatus('Ready', 100);
     hideInitialPageTransition();
     if (initialTransitionFrame) windowRef.cancelAnimationFrame?.(initialTransitionFrame);
   } catch (error) {
@@ -138,7 +115,6 @@ export async function bootstrapPortfolioApp({
       pageTransition.classList.add('is-error', 'is-entering');
       pageTransition.dataset.loading = 'error';
       pageTransition.setAttribute('aria-hidden', 'false');
-      setInitialPageTransitionStatus('Portfolio could not finish loading. Please refresh.', 100);
     }
     root.body?.setAttribute('aria-busy', 'true');
   }
