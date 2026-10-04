@@ -62,7 +62,7 @@ async function configureLogoRoutes(page) {
   });
 }
 
-async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null) {
+async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   const page = await browser.newPage({ viewport });
   await configureLogoRoutes(page);
 
@@ -78,6 +78,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     timeout: 15000
   });
 
+  if (typeof beforeReady === 'function') await beforeReady(page);
   await page.waitForTimeout(1800);
   await assertions(page);
 
@@ -307,6 +308,36 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      const transition = page.locator('#pageTransition').first();
+      const status = page.locator('#pageTransitionStatus').first();
+      const loadingState = await transition.getAttribute('data-loading');
+      if (loadingState !== 'ready' || await transition.isVisible().catch(() => true)) {
+        throw new Error('Portfolio loading screen did not hand off cleanly after startup readiness.');
+      }
+      const statusText = await status.textContent().catch(() => '');
+      if (!statusText?.trim()) throw new Error('Portfolio loading screen has no useful status text.');
+      const bodyBusy = await page.locator('body').getAttribute('aria-busy');
+      if (bodyBusy !== 'false') throw new Error('Portfolio body did not clear aria-busy after startup readiness.');
+    }, { width: 1280, height: 900 }, async page => {
+      await page.route('**/data/projects.json', async route => {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        await route.continue();
+      });
+    }, async page => {
+      const transition = page.locator('#pageTransition').first();
+      const status = page.locator('#pageTransitionStatus').first();
+      if (await transition.getAttribute('data-loading') === 'ready') {
+        throw new Error('Portfolio loading screen disappeared before delayed CMS content finished composing.');
+      }
+      if (!(await transition.isVisible().catch(() => false))) {
+        throw new Error('Portfolio loading screen was not holding the user on screen during initial composition.');
+      }
+      if (!(await status.textContent()).trim()) {
+        throw new Error('Portfolio loading screen did not expose an active loading status.');
+      }
+    });
+
+    await smokePage(browser, '/', async page => {
       await assertMobileNavigation(page, 'Works page');
       const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       if (await filters.count() < 2) throw new Error('Mobile/tablet Works filter UI did not render.');
@@ -361,6 +392,30 @@ try {
         }
         if (!expandedGeometry || expandedGeometry.wrapperTop < expandedGeometry.gridBottom - 2) {
           throw new Error('Expanded Show More control is still overlapping the gallery.');
+        }
+
+        await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+        await page.waitForTimeout(150);
+        const preservedAfterPageShow = await page.locator('#portfolioGrid').evaluate(el => ({
+          maxHeight: getComputedStyle(el).maxHeight,
+          clientHeight: el.clientHeight,
+          scrollHeight: el.scrollHeight
+        }));
+        const preservedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
+        if (
+          preservedAfterPageShow.maxHeight !== 'none' ||
+          preservedAfterPageShow.clientHeight < preservedAfterPageShow.scrollHeight ||
+          preservedLabel?.trim().toUpperCase() !== 'SHOW LESS'
+        ) {
+          throw new Error('Mobile Show More collapsed unexpectedly after a pageshow lifecycle event.');
+        }
+
+        await page.setViewportSize({ width: 375, height: 844 });
+        await page.waitForTimeout(250);
+        const preservedAfterResize = await page.locator('#portfolioGrid').evaluate(el => getComputedStyle(el).maxHeight);
+        const resizeLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
+        if (preservedAfterResize !== 'none' || resizeLabel?.trim().toUpperCase() !== 'SHOW LESS') {
+          throw new Error('Mobile Show More collapsed unexpectedly while remaining in an overflowing viewport.');
         }
 
         await mobileShowMore.click();
@@ -453,6 +508,30 @@ try {
         const youtubePointerEvents = await youtubeFrames.first().evaluate(el => getComputedStyle(el).pointerEvents);
         if (youtubePointerEvents === 'none') {
           throw new Error('Desktop YouTube Lightbox iframe is not pointer-interactive.');
+        }
+
+        const youtubeApiReady = await youtubeFrames.first().getAttribute('data-lm-youtube-api');
+        if (youtubeApiReady !== 'ready') {
+          throw new Error('YouTube Lightbox did not initialize its playback-state handoff listener.');
+        }
+
+        if (await youtubeFrames.count() >= 2) {
+          const handoff = await page.evaluate(() => {
+            const frames = Array.from(document.querySelectorAll('#lightboxMediaContainer iframe[data-lm-youtube]'));
+            const active = frames[1];
+            window.dispatchEvent(new MessageEvent('message', {
+              origin: 'https://www.youtube.com',
+              source: active.contentWindow,
+              data: JSON.stringify({ event: 'onStateChange', info: 1 })
+            }));
+            return {
+              activeState: active.dataset.lmYoutubeState || '',
+              previousPauseRequested: frames[0].dataset.lmYoutubePauseRequested || ''
+            };
+          });
+          if (handoff.activeState !== 'playing' || !handoff.previousPauseRequested) {
+            throw new Error('YouTube playing-state handoff did not pause the previous player after repeated playback.');
+          }
         }
       }
 
