@@ -20,6 +20,7 @@ export async function initGallery(options = {}) {
   const showMoreBtn = documentRef.getElementById('showMoreBtn');
   const showMoreWrapper = documentRef.getElementById('showMoreWrapper');
   const portfolioGrid = documentRef.getElementById('portfolioGrid');
+  const portfolioGridViewport = documentRef.getElementById('portfolioGridViewport');
   const gridFadeOverlay = documentRef.getElementById('gridFadeOverlay');
   if (!portfolioGrid) return;
   portfolioGrid.dataset.component = 'project-gallery';
@@ -325,6 +326,7 @@ export async function initGallery(options = {}) {
     cancelReveal?.();
     cancelReveal = applyGalleryReveal({
       grid: portfolioGrid,
+      gridViewport: portfolioGridViewport,
       fadeOverlay: gridFadeOverlay,
       showMoreButton: showMoreBtn,
       showMoreWrapper,
@@ -347,10 +349,24 @@ export async function initGallery(options = {}) {
     activateFilterButton(btn, { center: true, updateUrl: true });
   }));
 
-  bind(showMoreBtn, 'click', () => {
-    isExpanded = !isExpanded;
+  bind(showMoreBtn, 'click', event => {
+    event.preventDefault();
+    const nextExpanded = !isExpanded;
+    isExpanded = nextExpanded;
     render();
-    if (!isExpanded) documentRef.querySelector('.filter-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Keep the button's semantic state synchronized immediately. The visual
+    // reveal may animate, but its state must never depend on a later scroll,
+    // resize, or media-load callback.
+    showMoreBtn?.setAttribute('aria-expanded', String(isExpanded));
+    showMoreWrapper?.setAttribute('data-expanded', String(isExpanded));
+
+    if (!isExpanded) {
+      documentRef.querySelector('.filter-tabs')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
   });
 
   let resizeTimer = null;
@@ -476,11 +492,13 @@ export async function initGallery(options = {}) {
     // page, while render() still rebuilds the correct collapsed/expanded
     // measurement for the current viewport.
     baseCount = getBaseCount();
-    portfolioGrid.style.maxHeight = 'none';
+    if (portfolioGridViewport) portfolioGridViewport.style.maxHeight = 'none';
     render();
   });
 
   buildFilterPager();
+  showMoreBtn?.setAttribute('aria-expanded', 'false');
+  showMoreWrapper?.setAttribute('data-expanded', 'false');
   render();
   applyHash();
   ensureFilterEdges();
@@ -508,6 +526,7 @@ export async function initGallery(options = {}) {
       filterTabs?.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
       resetGalleryPresentation({
         grid: portfolioGrid,
+        gridViewport: portfolioGridViewport,
         fadeOverlay: gridFadeOverlay,
         showMoreButton: showMoreBtn,
         showMoreWrapper
