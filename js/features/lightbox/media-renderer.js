@@ -475,10 +475,13 @@ export function createLightboxMediaRenderer({
     } else {
       iframe.tabIndex = 0;
       iframe.title = item.caption || item.description || project.title || 'Project video';
+      iframe.loading = index === 0 ? 'eager' : 'lazy';
+      iframe.fetchPriority = index === 0 ? 'high' : 'auto';
     }
 
     const orientation = String(item.orientation || '').toLowerCase();
     const resolvedOrientation = isShort ? 'portrait' : (orientation || 'landscape');
+    iframe.classList.remove('yt-landscape', 'yt-portrait', 'yt-square');
     if (resolvedOrientation === 'portrait') iframe.classList.add('yt-portrait');
     else if (resolvedOrientation === 'square') iframe.classList.add('yt-square');
     else iframe.classList.add('yt-landscape');

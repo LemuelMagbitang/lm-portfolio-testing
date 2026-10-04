@@ -986,8 +986,7 @@ button.hamburger {
 }
 
 .lightbox-close {
-  mix-blend-mode:difference;
-  color:#fff;
+  color:var(--lm-color-text-primary);
   background:transparent;
   border:0;
   box-shadow:none;
@@ -1028,14 +1027,14 @@ button.hamburger {
 
 .lightbox-close i,
 .lightbox-nav i{
-  mix-blend-mode:difference;
-  color:currentColor;
+  color:var(--lm-color-text-primary);
+  -webkit-text-stroke:1px var(--lm-color-background);
+  paint-order:stroke fill;
   pointer-events:none;
 }
 
 .lightbox-nav {
-  mix-blend-mode:difference;
-  color:#fff;
+  color:var(--lm-color-text-primary);
   background:transparent;
   border:0;
   box-shadow:none;
@@ -1560,6 +1559,29 @@ body.center-page {
 
   .media-caption{
     max-width:calc(100% - 40px);
+  }
+}
+
+/* Desktop YouTube media gets a deliberate viewing size instead of
+   inheriting the generic artwork surface's full available footprint.
+   Landscape, square, and Shorts remain true to their source ratio while
+   staying visually proportionate beside the project metadata. */
+@media (min-width:768px){
+  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork{
+    width:min(100%,calc(72svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:72svh;
+  }
+
+  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="landscape"]{
+    max-width:760px;
+  }
+
+  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
+    max-width:405px;
+  }
+
+  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="square"]{
+    max-width:640px;
   }
 }
 
@@ -2490,7 +2512,6 @@ body.center-page {
   pointer-events:none;
 }
 .lightbox-modal.is-3d-focused .lightbox-nav{
-  mix-blend-mode:difference;
   background:transparent;
   border:0;
   box-shadow:none;
@@ -2498,7 +2519,6 @@ body.center-page {
 }
 
 .lightbox-modal.is-3d-focused .lightbox-close{
-  mix-blend-mode:difference;
   background:transparent;
   border:0;
   box-shadow:none;

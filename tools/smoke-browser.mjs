@@ -261,12 +261,22 @@ try {
       }
 
       const closeButton = page.locator('#lightboxClose');
-      const navigationBlend = await page.locator('.lightbox-next').evaluate(el => {
+      const navigationContrast = await page.locator('.lightbox-next').evaluate(el => {
         const style = getComputedStyle(el);
-        return { mixBlendMode: style.mixBlendMode, background: style.backgroundColor };
+        return {
+          mixBlendMode: style.mixBlendMode,
+          color: style.color,
+          strokeColor: style.webkitTextStrokeColor
+        };
       });
-      if (navigationBlend.mixBlendMode !== 'difference') {
-        throw new Error(`Lightbox navigation control lost difference blending: ${navigationBlend.mixBlendMode}`);
+      if (navigationContrast.mixBlendMode !== 'normal') {
+        throw new Error(`Lightbox navigation control still uses blend compositing: ${navigationContrast.mixBlendMode}`);
+      }
+      if (navigationContrast.color !== 'rgb(255, 255, 255)') {
+        throw new Error(`Lightbox navigation control is not brand white: ${navigationContrast.color}`);
+      }
+      if (navigationContrast.strokeColor !== 'rgb(18, 18, 18)') {
+        throw new Error(`Lightbox navigation control is not outlined in brand dark: ${navigationContrast.strokeColor}`);
       }
 
       if (await closeButton.count()) {
@@ -1164,6 +1174,31 @@ try {
       if (shortsGeometry.width >= viewportWidth * 0.8) {
         throw new Error('Desktop Shorts surface is too wide for portrait media (' + Math.round(shortsGeometry.width) + 'px).');
       }
+      const shortsArtwork = page.locator('#lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]').first();
+      const shortsArtworkGeometry = await shortsArtwork.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return { width: r.width, height: r.height };
+      });
+      if (shortsArtworkGeometry.height > 900) {
+        throw new Error('Desktop Shorts artwork surface is taking excessive vertical space: ' + Math.round(shortsArtworkGeometry.height) + 'px.');
+      }
+      const youtubeFraming = await page.locator('#lightboxMediaContainer .lightbox-artwork.is-youtube-artwork').evaluateAll(els =>
+        els.map(el => {
+          const r = el.getBoundingClientRect();
+          return {
+            orientation: el.getAttribute('data-youtube-orientation'),
+            width: r.width,
+            height: r.height
+          };
+        })
+      );
+      youtubeFraming.forEach(({ orientation, width, height }) => {
+        const ratio = width / Math.max(height, 1);
+        const expected = orientation === 'portrait' ? 9 / 16 : orientation === 'square' ? 1 : 16 / 9;
+        if (Math.abs(ratio - expected) > 0.025) {
+          throw new Error('Desktop YouTube ' + orientation + ' framing drifted: ratio=' + ratio.toFixed(3) + ', expected=' + expected.toFixed(3) + '.');
+        }
+      });
 
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
