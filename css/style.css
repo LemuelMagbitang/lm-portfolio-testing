@@ -2427,7 +2427,9 @@ body.center-page {
   background:transparent;
 }
 .lightbox-modal.is-3d-focused .lightbox-model-viewer.is-interactive{
-  position:fixed;
+  /* Shared media backgrounds add an inline position:relative.
+     Focus mode must override that local presentation positioning. */
+  position:fixed!important;
   inset:0;
   z-index:20;
   display:grid;
@@ -2444,7 +2446,7 @@ body.center-page {
   box-shadow:none;
 }
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{
-  position:fixed;
+  position:fixed!important;
   inset:0;
   z-index:20;
   display:grid;
