@@ -265,7 +265,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     windowRef.requestAnimationFrame(() => positionInitialMedia());
   } else {
     lightbox.scrollTop = 0;
-  });
+  }
 }
 
 
