@@ -64,6 +64,7 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       catch (_) { target.focus(); }
     }
     lightboxEl.setAttribute('aria-hidden','true');
+    lightboxEl.removeAttribute('aria-modal');
     afterFocus?.();
   }
   return {open,close};

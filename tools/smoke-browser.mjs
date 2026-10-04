@@ -277,7 +277,9 @@ try {
       const restoredFocus = await firstCard.evaluate(el => document.activeElement === el);
       if (!restoredFocus) throw new Error('Lightbox close did not restore focus to the project card that opened it.');
       const lightboxA11yClosed = await page.locator('#lightbox').getAttribute('aria-hidden');
+      const lightboxAriaModalClosed = await page.locator('#lightbox').getAttribute('aria-modal');
       if (lightboxA11yClosed !== 'true') throw new Error('Closed Lightbox is not aria-hidden.');
+      if (lightboxAriaModalClosed !== null) throw new Error('Closed Lightbox still exposes aria-modal.');
 
 
       const showMore = page.locator('#showMoreBtn').first();
