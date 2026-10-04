@@ -2779,6 +2779,12 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
        while landscape media can still use the full available width. */
     width: min(100%, calc(82svh * var(--lightbox-artwork-ratio, 1)));
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .seamless-grid .project-card {
+      transition: none;
+    }
+  }
 }
 
 @media (min-width: 768px) {
