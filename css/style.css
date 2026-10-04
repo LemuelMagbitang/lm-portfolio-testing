@@ -526,7 +526,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   max-height: none;
   overflow: hidden;
   overflow-anchor: none;
-  transition: max-height .45s ease;
+  transition: none;
 }
 
 .seamless-grid {
