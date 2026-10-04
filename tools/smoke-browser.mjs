@@ -264,7 +264,7 @@ try {
         Math.abs(focusedModelGeometry.width - focusedViewport.width) > 2 ||
         Math.abs(focusedModelGeometry.height - focusedViewport.height) > 2
       ) {
-        throw new Error('Focused 3D viewer did not occupy the viewport.');
+        throw new Error('Focused 3D viewer did not occupy the viewport (' + JSON.stringify(focusedModelGeometry) + ' vs ' + JSON.stringify(focusedViewport) + ').');
       }
 
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
