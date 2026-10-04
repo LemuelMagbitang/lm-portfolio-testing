@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { createLifecycle } from '../js/core/lifecycle.js';
 
 const lifecycle = createLifecycle();
@@ -35,3 +36,15 @@ assert.equal(target.handlers.size, 0);
 afterDispose();
 
 console.log('Feature lifecycle boundary validated.');
+
+
+const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
+assert.match(lightboxSource, /bind\\(windowRef, 'pagehide', handlePageHide\\)/);
+assert.match(lightboxSource, /bind\\(windowRef, 'pageshow', handlePageShow\\)/);
+assert.match(lightboxSource, /closeLightbox\\(\\{ restoreFocus: false \\}\\)/);
+
+const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
+assert.match(modelViewerSource, /__modelViewerMountToken/);
+assert.match(modelViewerSource, /if \\(!isCurrentMount\\(\\)\\) return null;/);
+
+console.log('Lightbox BFCache and 3D mount-race contracts validated.');
