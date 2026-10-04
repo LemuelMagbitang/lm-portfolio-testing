@@ -180,8 +180,8 @@ export function createLightboxMediaRenderer({
       iframe.dataset.lmYoutube = 'true';
       iframe.dataset.lmYoutubeCacheKey = embedSrc;
       iframe.frameBorder = '0';
-      iframe.loading = 'eager';
-      iframe.fetchPriority = 'high';
+      iframe.loading = index === 0 ? 'eager' : 'lazy';
+      if (index === 0) iframe.fetchPriority = 'high';
       iframe.tabIndex = -1;
       iframe.title = title || 'Project video';
       iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
@@ -260,7 +260,7 @@ export function createLightboxMediaRenderer({
     const img = documentRef.createElement('img');
     img.alt = String(altText || 'Project artwork').trim() || 'Project artwork';
     img.draggable = false;
-    img.loading = 'eager';
+    img.loading = eager ? 'eager' : 'lazy';
     img.decoding = 'async';
     if (eager) img.fetchPriority = 'high';
     img.src = imgUrl;
@@ -485,7 +485,7 @@ export function createLightboxMediaRenderer({
     return entry;
   }
 
-  function renderYouTube(item, project) {
+  function renderYouTube(item, project, index = 0) {
     const { isShort } = parseYouTube(item.src);
     const embedSrc = buildYouTubeEmbedUrl(item.src);
     if (!embedSrc) return null;
@@ -532,11 +532,12 @@ export function createLightboxMediaRenderer({
     return entry;
   }
 
-  function renderVideo(item) {
+  function renderVideo(item, index = 0) {
     const video = documentRef.createElement('video');
     video.controls = true;
     video.playsInline = true;
-    video.preload = 'auto';
+    video.preload = index === 0 ? 'auto' : 'metadata';
+    if (index === 0) video.fetchPriority = 'high';
     video.controlsList = 'nodownload';
     video.disablePictureInPicture = true;
     video.src = resolveAssetUrl(item.src);
@@ -659,8 +660,8 @@ export function createLightboxMediaRenderer({
 
     const type = String(item.type || 'image').toLowerCase();
     if (type === 'image') return renderImage(item, project, index);
-    if (type === 'youtube') return renderYouTube(item, project);
-    if (type === 'video') return renderVideo(item);
+    if (type === 'youtube') return renderYouTube(item, project, index);
+    if (type === 'video') return renderVideo(item, index);
     if (type === 'model') return renderModel(item, project);
     if (type === 'lottie') return renderLottie(item);
     return null;
