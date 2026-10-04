@@ -220,7 +220,7 @@ export async function initGallery(options = {}) {
     // the user's Show More state.
     if (changed) {
       isExpanded = false;
-      render();
+      render({ animateTransition: true });
     }
     if (center && isFilterCarousel()) centerFilterButton(button);
     updateFilterPager(filterBtns.indexOf(button));
@@ -305,7 +305,7 @@ export async function initGallery(options = {}) {
     return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
-  function render() {
+  function render({ animateTransition = false } = {}) {
     const filteredProjects = getFilteredProjects();
     const filtered = getCardsForProjects(filteredProjects);
     renderToken += 1;
@@ -329,6 +329,7 @@ export async function initGallery(options = {}) {
       filteredCards: filtered,
       visibleCount: effectiveBaseCount,
       expanded: isExpanded,
+      animateTransition,
       windowRef,
       fadeMs,
       renderToken: token,
