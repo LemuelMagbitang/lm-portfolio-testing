@@ -764,6 +764,55 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      const navigationCard = page.locator('#portfolioGrid .project-card[data-project-id="haeru"]').first();
+      if (await navigationCard.count() !== 1) throw new Error('Lightbox rapid-navigation fixture card is missing.');
+
+      await navigationCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      const previous = page.locator('.lightbox-prev').first();
+      const next = page.locator('.lightbox-next').first();
+      const close = page.locator('#lightboxClose').first();
+
+      for (let i = 0; i < 4; i += 1) {
+        await next.click();
+        await page.waitForTimeout(80);
+        await previous.click();
+        await page.waitForTimeout(80);
+      }
+
+      const mediaItems = await page.locator('#lightboxMediaContainer .lightbox-media-item').count();
+      if (mediaItems !== 11) {
+        throw new Error(`Rapid Lightbox navigation produced ${mediaItems} media entries instead of the 11-item Haeru project.`);
+      }
+
+      const youtubePlayers = await page.locator('#lightboxMediaContainer iframe[data-lm-youtube]').count();
+      if (youtubePlayers !== 0) {
+        throw new Error('Rapid navigation left YouTube players mounted in a project that contains no YouTube media.');
+      }
+
+      const imageCount = await page.locator('#lightboxMediaContainer img').count();
+      if (imageCount !== 9) {
+        throw new Error(`Rapid navigation left an unexpected image count in Haeru (${imageCount}).`);
+      }
+
+      await close.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+
+      const mediaAfterClose = await page.locator('#lightboxMediaContainer .lightbox-media-item').count();
+      if (mediaAfterClose !== 0) throw new Error('Lightbox media container retained stale entries after rapid navigation and close.');
+
+      await navigationCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      const reopenedItems = await page.locator('#lightboxMediaContainer .lightbox-media-item').count();
+      if (reopenedItems !== 11) {
+        throw new Error(`Lightbox reopen after rapid navigation rendered ${reopenedItems} entries instead of 11.`);
+      }
+
+      await close.click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts desktop smoke fixture card is missing.');
 
