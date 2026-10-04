@@ -354,6 +354,35 @@ assert.equal(fallbackMedia.style['--thumb-zoom'], '1.25');
 assert.equal(fallbackMedia.style['--thumb-rotate'], '2deg');
 assert.equal(backgroundCalls, 0);
 
+const normalizedThumbnailBackground = normalizeProjects([{
+  id: 'fallback-thumbnail-background',
+  title: 'Fallback Thumbnail Background',
+  thumbnail: {
+    src: '',
+    background: { type: 'color', color: '#111111' }
+  },
+  media: [{
+    type: 'image',
+    src: 'media/fallback-thumbnail-background.webp'
+  }]
+}])[0];
+
+buildProjectCardElement(normalizedThumbnailBackground, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value,
+  applyMediaBackground: (element, background) => {
+    backgroundCalls += 1;
+    assert.equal(element.className, 'card-thumbnail');
+    assert.deepEqual(background, { type: 'color', color: '#111111' });
+  }
+});
+
+assert.equal(
+  backgroundCalls,
+  1,
+  'Thumbnail background should survive when the first media item supplies the fallback thumbnail'
+);
+
 const normalizedBackground = normalizeProjects([{
   id: 'fallback-background',
   title: 'Fallback Background',
