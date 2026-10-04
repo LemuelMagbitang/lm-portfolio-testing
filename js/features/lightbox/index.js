@@ -128,6 +128,11 @@ const mediaRenderer = createLightboxMediaRenderer({
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
 let previousBodyOverflow = '';
+let previousBodyPosition = '';
+let previousBodyTop = '';
+let previousBodyLeft = '';
+let previousBodyRight = '';
+let previousBodyWidth = '';
 let previousPageScrollX = 0;
 let previousPageScrollY = 0;
 
@@ -164,6 +169,11 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     // so this branch could never run and closing the viewer could clobber a
     // caller-owned body overflow value.
     previousBodyOverflow = documentRef.body.style.overflow;
+    previousBodyPosition = documentRef.body.style.position;
+    previousBodyTop = documentRef.body.style.top;
+    previousBodyLeft = documentRef.body.style.left;
+    previousBodyRight = documentRef.body.style.right;
+    previousBodyWidth = documentRef.body.style.width;
     previousPageScrollX = Number(windowRef.scrollX) || 0;
     previousPageScrollY = Number(windowRef.scrollY) || 0;
   }
@@ -175,7 +185,19 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
-  documentRef.body.style.overflow = 'hidden';
+
+  // Freeze the page itself at the exact scroll offset while the fixed
+  // Lightbox owns the viewport. Overflow-only locking allows mobile browsers
+  // to reconcile late image/layout changes and scroll anchoring underneath the
+  // modal, which can produce a large jump when the viewer closes.
+  if (!wasActive) {
+    documentRef.body.style.position = 'fixed';
+    documentRef.body.style.top = '-' + previousPageScrollY + 'px';
+    documentRef.body.style.left = '0';
+    documentRef.body.style.right = '0';
+    documentRef.body.style.width = '100%';
+    documentRef.body.style.overflow = 'hidden';
+  }
 
   windowRef.requestAnimationFrame(() => {
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
@@ -218,7 +240,17 @@ function closeLightbox() {
   lightboxA11y.close();
   delete lightbox.dataset.pre3dScrollTop;
   documentRef.body.style.overflow = previousBodyOverflow;
+  documentRef.body.style.position = previousBodyPosition;
+  documentRef.body.style.top = previousBodyTop;
+  documentRef.body.style.left = previousBodyLeft;
+  documentRef.body.style.right = previousBodyRight;
+  documentRef.body.style.width = previousBodyWidth;
   previousBodyOverflow = '';
+  previousBodyPosition = '';
+  previousBodyTop = '';
+  previousBodyLeft = '';
+  previousBodyRight = '';
+  previousBodyWidth = '';
 
   // Restore the exact page position after the modal releases body scrolling.
   // Some mobile browsers reconcile the fixed Lightbox, scrollbar state, and
