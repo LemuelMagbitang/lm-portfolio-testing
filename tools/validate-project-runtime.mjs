@@ -170,6 +170,7 @@ assert.equal(capabilityCard.className, 'project-card');
 assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
+assert.equal(capabilityCard.children[0]?.children[0]?.dataset?.modelThumb, 'models/test.glb');
 
 assert.equal(orientationFromAspectRatio(1000, 1000), 'square');
 assert.equal(orientationFromAspectRatio(1600, 1000), 'landscape');
