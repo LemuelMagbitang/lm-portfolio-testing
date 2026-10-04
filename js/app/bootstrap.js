@@ -5,7 +5,7 @@
  * application has no dependency on legacy root facades.
  */
 
-import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js';
+import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js?v=20261004-01';
 import { prefersReducedMotion } from '../infrastructure/browser/reduced-motion.js';
 import { loadScriptOnce } from '../infrastructure/browser/script-loader.js';
 import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
