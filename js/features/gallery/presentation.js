@@ -188,7 +188,7 @@ export function applyGalleryReveal({
         : 'translate3d(0, 5px, 0) scale(.985)';
       card.style.filter = isMobile ? 'blur(7px)' : 'blur(5px)';
     } else {
-      card.style.removeProperty('--gallery-entry-delay');
+      card.style.setProperty('--gallery-entry-delay', '');
       card.style.willChange = '';
     }
   });
@@ -225,13 +225,13 @@ export function applyGalleryReveal({
         filteredCards.forEach(card => {
           card.style.transform = '';
           card.style.filter = '';
-          card.style.removeProperty('--gallery-entry-delay');
+          card.style.setProperty('--gallery-entry-delay', '');
           card.style.willChange = '';
         });
         hiddenCards.forEach(card => {
           card.style.transform = '';
           card.style.filter = '';
-          card.style.removeProperty('--gallery-entry-delay');
+          card.style.setProperty('--gallery-entry-delay', '');
           card.style.willChange = '';
         });
       }
