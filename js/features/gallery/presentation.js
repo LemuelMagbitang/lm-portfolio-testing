@@ -6,6 +6,11 @@
  * look on each viewport.
  */
 
+function setGalleryEntryDelay(card, value = '') {
+  if (typeof card?.style?.setProperty !== 'function') return;
+  card.style.setProperty('--gallery-entry-delay', value);
+}
+
 export function getResponsiveBaseCount({
   width,
   height,
@@ -188,7 +193,7 @@ export function applyGalleryReveal({
         : 'translate3d(0, 5px, 0) scale(.985)';
       card.style.filter = isMobile ? 'blur(7px)' : 'blur(5px)';
     } else {
-      card.style.setProperty('--gallery-entry-delay', '');
+      setGalleryEntryDelay(card);
       card.style.willChange = '';
     }
   });
@@ -225,13 +230,13 @@ export function applyGalleryReveal({
         filteredCards.forEach(card => {
           card.style.transform = '';
           card.style.filter = '';
-          card.style.setProperty('--gallery-entry-delay', '');
+          setGalleryEntryDelay(card);
           card.style.willChange = '';
         });
         hiddenCards.forEach(card => {
           card.style.transform = '';
           card.style.filter = '';
-          card.style.setProperty('--gallery-entry-delay', '');
+          setGalleryEntryDelay(card);
           card.style.willChange = '';
         });
       }
