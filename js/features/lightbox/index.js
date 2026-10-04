@@ -193,6 +193,7 @@ const mediaRenderer = createLightboxMediaRenderer({
 
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
+let previousBodyOverflow = '';
 
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
@@ -228,6 +229,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   lightboxA11y.open({ captureOpener: !preserveOpener });
+  if (!lightbox.classList.contains('active')) previousBodyOverflow = documentRef.body.style.overflow;
   documentRef.body.style.overflow = 'hidden';
 
   windowRef.requestAnimationFrame(() => {
@@ -276,7 +278,8 @@ function closeLightbox() {
   if (lightboxControls) lightboxControls.classList.remove('active');
   lightboxA11y.close();
   delete lightbox.dataset.pre3dScrollTop;
-  documentRef.body.style.overflow = ''; // Restore body scroll
+  documentRef.body.style.overflow = previousBodyOverflow;
+  previousBodyOverflow = '';
   // Dispose any mounted 3D viewers before removing their DOM nodes. The
   // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
   // keydown listener, none of which are cleaned up by innerHTML alone.
