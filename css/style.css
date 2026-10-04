@@ -2636,6 +2636,62 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 
 
 /* ============================================================
+   LIGHTBOX NAVIGATION MOTION
+   Simple directional movement keeps project-to-project navigation
+   tactile without turning the viewer into a carousel framework.
+   ============================================================ */
+.lightbox-modal{
+  touch-action:pan-y;
+}
+
+#lightboxMediaContainer .lightbox-media-item{
+  transition:
+    opacity 180ms var(--lm-motion-ease),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lightbox-modal.is-lightbox-navigating.is-navigation-next #lightboxMediaContainer .lightbox-media-item,
+.lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-header,
+.lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-full-desc{
+  opacity:0;
+  transform:translate3d(-18px, 0, 0) scale(.985);
+  filter:blur(3px);
+}
+
+.lightbox-modal.is-lightbox-navigating.is-navigation-prev #lightboxMediaContainer .lightbox-media-item,
+.lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-header,
+.lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-full-desc{
+  opacity:0;
+  transform:translate3d(18px, 0, 0) scale(.985);
+  filter:blur(3px);
+}
+
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next #lightboxMediaContainer .lightbox-media-item,
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-header,
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-full-desc{
+  opacity:0;
+  transform:translate3d(18px, 0, 0) scale(.985);
+  filter:blur(3px);
+}
+
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev #lightboxMediaContainer .lightbox-media-item,
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-header,
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-full-desc{
+  opacity:0;
+  transform:translate3d(-18px, 0, 0) scale(.985);
+  filter:blur(3px);
+}
+
+@media (prefers-reduced-motion: reduce){
+  #lightboxMediaContainer .lightbox-media-item,
+  .lightbox-modal.is-lightbox-navigating .modal-header,
+  .lightbox-modal.is-lightbox-navigating .modal-full-desc{
+    transition:none;
+  }
+}
+
+/* ============================================================
    RESPONSIVE PROJECT THUMBNAIL SURFACE
    Pin media to the card box so responsive aspect-ratio changes cannot
    leave an intrinsic image/Lottie/model size behind. CMS focus remains
