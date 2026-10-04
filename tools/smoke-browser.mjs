@@ -381,6 +381,9 @@ try {
 
       const firstArtwork = page.locator('#lightboxMediaContainer .lightbox-media-item img').first();
       if (await firstArtwork.count() !== 1) throw new Error('Mobile Lightbox did not render the first artwork as an image.');
+      if (await firstArtwork.getAttribute('loading') !== 'eager') {
+        throw new Error('First Lightbox artwork should load eagerly to avoid a blank opening state.');
+      }
 
       const artworkAlt = await firstArtwork.getAttribute('alt');
       if (!artworkAlt?.trim()) throw new Error('Mobile Lightbox image is missing accessible alt text.');
