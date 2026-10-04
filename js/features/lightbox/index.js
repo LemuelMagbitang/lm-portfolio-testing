@@ -50,14 +50,11 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     focusCleanup = null;
     const target=opener; opener=null;
     if(target?.isConnected) {
-      const restoreFocus = () => {
-        try { target.focus({ preventScroll: true }); }
-        catch (_) { target.focus(); }
-        afterFocus?.();
-      };
-      focusCleanup = lifecycle?.animationFrame
-        ? lifecycle.animationFrame(restoreFocus, windowRef)
-        : (() => { const id=windowRef.requestAnimationFrame(restoreFocus); return () => windowRef.cancelAnimationFrame?.(id); })();
+      try { target.focus({ preventScroll: true }); }
+      catch (_) { target.focus(); }
+      afterFocus?.();
+    } else {
+      afterFocus?.();
     }
   }
   return {open,close};
@@ -269,9 +266,6 @@ function closeLightbox() {
   previousPageScrollY = 0;
 
   lightboxA11y.close({ afterFocus: restorePageScroll });
-  windowRef.requestAnimationFrame(() => {
-    windowRef.requestAnimationFrame(restorePageScroll);
-  });
   // Dispose any mounted 3D viewers before removing their DOM nodes. The
   // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
   // keydown listener, none of which are cleaned up by innerHTML alone.
@@ -279,6 +273,9 @@ function closeLightbox() {
     try { shell.__modelViewerCleanup?.(); } catch (_) {}
   });
   modalMediaContainer.innerHTML = ''; // Destroys iframes to stop audio playing in background
+  // One final post-layout correction handles browsers that reconcile the
+  // restored body styles after this fixed modal subtree is removed.
+  windowRef.requestAnimationFrame(() => restorePageScroll?.());
 }
 
 // Event Listeners for Lightbox Controls
