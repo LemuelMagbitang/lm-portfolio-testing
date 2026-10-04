@@ -566,8 +566,11 @@ try {
         throw new Error('First Lightbox artwork should load eagerly to avoid a blank opening state.');
       }
       const imageLoadingModes = await page.locator('#lightboxMediaContainer img').evaluateAll(images => images.map(image => image.loading));
-      if (imageLoadingModes.some(mode => mode !== 'eager')) {
-        throw new Error('Lightbox artwork must load eagerly once the visitor intentionally opens the viewer.');
+      if (imageLoadingModes[0] !== 'eager') {
+        throw new Error('First Lightbox artwork must load eagerly to avoid a blank opening state.');
+      }
+      if (imageLoadingModes.slice(1).some(mode => mode !== 'lazy')) {
+        throw new Error('Secondary Lightbox images must remain deferred to preserve progressive loading.');
       }
 
       const artworkAlt = await firstArtwork.getAttribute('alt');
