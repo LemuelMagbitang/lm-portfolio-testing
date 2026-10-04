@@ -2498,6 +2498,38 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 }
 
 
+/* ============================================================
+   PROJECT CARD PRESENTATION — bounded, media-aware proportions
+   Keep the existing grid columns. Only the card's own footprint changes.
+   Phones intentionally remain equal two-column squares.
+   ============================================================ */
+@media (min-width: 768px) {
+  .seamless-grid {
+    align-items: start;
+  }
+
+  .project-card.card-orientation-square {
+    aspect-ratio: 1 / 1;
+  }
+
+  .project-card.card-orientation-landscape {
+    aspect-ratio: 4 / 3;
+  }
+
+  .project-card.card-orientation-portrait {
+    aspect-ratio: 3 / 4;
+  }
+}
+
+@media (max-width: 767px) {
+  .project-card,
+  .project-card.card-orientation-square,
+  .project-card.card-orientation-landscape,
+  .project-card.card-orientation-portrait {
+    aspect-ratio: 1 / 1;
+  }
+}
+
 /* =========================================
    ACCESSIBILITY — REDUCED MOTION
    ========================================= */
