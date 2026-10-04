@@ -569,9 +569,10 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 
 .card-thumbnail {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  position: relative;
 }
 
 .card-thumbnail img,
@@ -2704,6 +2705,23 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
      assistive technology through the card's aria-label. */
   .project-card .glass-info {
     display: none;
+  }
+
+  /* Filter changes get a restrained depth/blur motion on touch layouts.
+     Transform and filter do not participate in grid sizing, so the gallery
+     geometry remains deterministic while the incoming result settles into
+     place. */
+  .seamless-grid .project-card {
+    transition:
+      opacity var(--lm-motion-standard) var(--lm-motion-ease),
+      transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork {
+    /* YouTube portrait media should fit the device viewport by height,
+       while landscape media can still use the full available width. */
+    width: min(100%, calc(82svh * var(--lightbox-artwork-ratio, 1)));
   }
 }
 
