@@ -513,13 +513,16 @@ try {
       await page.waitForTimeout(120);
 
       await page.evaluate(() => {
-        const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const root = document.documentElement;
+        root.dataset.smokePreviousScrollBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
+        const max = Math.max(0, root.scrollHeight - window.innerHeight);
         window.scrollTo({
           top: Math.max(0, Math.min(max, Math.round(max * 0.55))),
           behavior: 'auto'
         });
       });
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(80);
       const scrollBeforeLightboxClose = await page.evaluate(() => window.scrollY);
       await page.evaluate(() => {
         const card = document.querySelector('#portfolioGrid .project-card');
@@ -546,7 +549,12 @@ try {
         if (!close) throw new Error('Lightbox close control is missing.');
         close.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       });
-      await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
+      await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+      await page.evaluate(() => {
+        const root = document.documentElement;
+        root.style.scrollBehavior = root.dataset.smokePreviousScrollBehavior || '';
+        delete root.dataset.smokePreviousScrollBehavior;
+      });
       const scrollImmediatelyAfterLightboxClose = await page.evaluate(() => window.scrollY);
       await page.waitForTimeout(16);
       const scrollAfterLightboxFrame = await page.evaluate(() => window.scrollY);
