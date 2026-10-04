@@ -82,7 +82,7 @@ export function createLightboxMediaRenderer({
   }
 
   function preloadImage(url) {
-    return new Promise(resolve => {
+    return withPreloadTimeout(new Promise(resolve => {
       if (!url) return resolve(false);
       const image = new Image();
       image.decoding = 'async';
@@ -96,11 +96,11 @@ export function createLightboxMediaRenderer({
       };
       image.onerror = () => resolve(false);
       image.src = url;
-    });
+    }));
   }
 
   function preloadVideo(url) {
-    return new Promise(resolve => {
+    return withPreloadTimeout(new Promise(resolve => {
       if (!url) return resolve(false);
       const video = documentRef.createElement('video');
       video.preload = 'auto';
@@ -128,7 +128,7 @@ export function createLightboxMediaRenderer({
       video.addEventListener('error', onError, { once: true });
       video.src = url;
       video.load();
-    });
+    }));
   }
 
   async function preloadLottie(url) {
