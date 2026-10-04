@@ -121,7 +121,7 @@ export async function mountModelViewer(container, src, options = {}) {
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
   camera.position.set(0, 0.8, 3.2);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -179,7 +179,9 @@ export async function mountModelViewer(container, src, options = {}) {
     ui.appendChild(hint);
   }
 
-  const back = document.createElement('button');
+  let renderer = null;
+
+    const back = document.createElement('button');
   back.type = 'button';
   back.className = 'model-viewer-back';
   back.setAttribute('aria-label', 'Exit interactive 3D view');
@@ -380,8 +382,7 @@ export async function mountModelViewer(container, src, options = {}) {
     container.setAttribute('aria-busy', 'false');
     const label = activate.querySelector('strong');
     if (label) label.textContent = '3D VIEW UNAVAILABLE';
-    const backUi = back;
-    if (backUi) backUi.hidden = true;
+    back.hidden = true;
     renderer?.dispose?.();
     throw err;
   }
