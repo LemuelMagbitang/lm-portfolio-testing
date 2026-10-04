@@ -130,9 +130,13 @@ export function observeProjectCardOrientation(
   if (!mediaElement?.addEventListener) return () => {};
 
   const events = [];
-  const elementType = String(mediaType || mediaElement?.tagName || '').toLowerCase();
-  if (elementType === 'img') events.push('load');
-  if (elementType === 'video') events.push('loadedmetadata');
+  // Event selection follows the concrete DOM element, while orientation
+  // classification above still honors the renderer's declared media type.
+  // This matters for explicit image thumbnails whose intrinsic dimensions
+  // are unavailable until the <img> finishes loading.
+  const elementTag = String(mediaElement?.tagName || '').toLowerCase();
+  if (elementTag === 'img') events.push('load');
+  if (elementTag === 'video') events.push('loadedmetadata');
 
   events.forEach(eventName => mediaElement.addEventListener(eventName, update));
 
