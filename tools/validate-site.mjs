@@ -582,7 +582,7 @@ function validateRuntimeCacheGraph() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
   const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
   const entryVersion = entry.match(/bootstrap\.js\?v=([^'"]+)/)?.[1] || '';
-  const bootstrapVersion = bootstrap.match(/cacheVersion\\s*=\\s*'([^']+)'/)?.[1] || '';
+  const bootstrapVersion = bootstrap.match(/cacheVersion\s*=\s*'([^']+)'/)?.[1] || '';
 
   if (!entryVersion || !bootstrapVersion || entryVersion !== bootstrapVersion) {
     err('Bootstrap cache graph: js/script.js and bootstrap cache versions differ.');
