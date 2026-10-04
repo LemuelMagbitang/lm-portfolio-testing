@@ -453,6 +453,17 @@ export async function initGallery(options = {}) {
   lifecycle.add(() => windowRef.clearTimeout(filterSettleTimer));
   lifecycle.add(() => windowRef.cancelAnimationFrame?.(filterScrollFrame));
 
+  // Re-entry through browser back/forward can restore the page with a stale
+  // collapsed gallery measurement. Rebuild the collapsed presentation from
+  // the current viewport and card geometry instead of trusting the restored
+  // max-height/state from the previous page instance.
+  bind(windowRef, 'pageshow', () => {
+    isExpanded = false;
+    baseCount = getBaseCount();
+    portfolioGrid.style.maxHeight = 'none';
+    render();
+  });
+
   buildFilterPager();
   render();
   applyHash();
