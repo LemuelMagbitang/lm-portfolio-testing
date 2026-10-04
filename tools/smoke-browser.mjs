@@ -514,7 +514,10 @@ try {
 
       await page.evaluate(() => {
         const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        window.scrollTo(0, Math.max(0, Math.min(max, Math.round(max * 0.55))));
+        window.scrollTo({
+          top: Math.max(0, Math.min(max, Math.round(max * 0.55))),
+          behavior: 'auto'
+        });
       });
       await page.waitForTimeout(100);
       const scrollBeforeLightboxClose = await page.evaluate(() => window.scrollY);
