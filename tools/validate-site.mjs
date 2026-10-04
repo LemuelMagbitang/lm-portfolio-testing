@@ -559,8 +559,8 @@ function validateModuleScriptContract() {
 
 function validateRuntimeCacheGraph() {
   const pages = [
-    ['index.html', /js\\/script\\.js\\?v=([^"\\s>]+)/, /js\\/app\\/bootstrap\\.js\\?v=([^"\\s>]+)/, /js\\/app\\/page-composition\\.js\\?v=([^"\\s>]+)/],
-    ['about/index.html', /\\.\\.\\/js\\/script\\.js\\?v=([^"\\s>]+)/, /\\.\\.\\/js\\/app\\/bootstrap\\.js\\?v=([^"\\s>]+)/, /\\.\\.\\/js\\/app\\/page-composition\\.js\\?v=([^"\\s>]+)/]
+    ['index.html', /js\/script\.js\?v=([^"\s>]+)/, /js\/app\/bootstrap\.js\?v=([^"\s>]+)/, /js\/app\/page-composition\.js\?v=([^"\s>]+)/],
+    ['about/index.html', /\.\.\/js\/script\.js\?v=([^"\s>]+)/, /\.\.\/js\/app\/bootstrap\.js\?v=([^"\s>]+)/, /\.\.\/js\/app\/page-composition\.js\?v=([^"\s>]+)/]
   ];
 
   for (const [file, scriptPattern, bootstrapPattern, compositionPattern] of pages) {
@@ -581,13 +581,13 @@ function validateRuntimeCacheGraph() {
 
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
   const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
-  const entryVersion = entry.match(/bootstrap\\.js\\?v=([^'"]+)/)?.[1] || '';
+  const entryVersion = entry.match(/bootstrap\.js\?v=([^'"]+)/)?.[1] || '';
   const bootstrapVersion = bootstrap.match(/cacheVersion\\s*=\\s*'([^']+)'/)?.[1] || '';
 
   if (!entryVersion || !bootstrapVersion || entryVersion !== bootstrapVersion) {
     err('Bootstrap cache graph: js/script.js and bootstrap cache versions differ.');
   }
-  if (!/page-composition\\.js\\?v=\\$\\{cacheVersion\\}/.test(bootstrap)) {
+  if (!/page-composition\.js\?v=\$\{cacheVersion\}/.test(bootstrap)) {
     err('Bootstrap cache graph: page-composition must use the same runtime cacheVersion.');
   }
 }
