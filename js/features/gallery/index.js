@@ -357,12 +357,9 @@ export async function initGallery(options = {}) {
     showMoreBtn?.setAttribute('aria-expanded', String(isExpanded));
     showMoreWrapper?.setAttribute('data-expanded', String(isExpanded));
 
-    if (!isExpanded) {
-      documentRef.querySelector('.filter-tabs')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
+    // Collapsing the gallery does not scroll the document. Keeping the
+    // visitor's current position avoids a background smooth-scroll animation
+    // competing with Lightbox, resize, or subsequent gallery interaction.
   });
 
   let resizeTimer = null;
