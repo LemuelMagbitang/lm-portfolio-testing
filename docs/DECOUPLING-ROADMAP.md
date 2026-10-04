@@ -23,6 +23,7 @@ As of October 4, 2026, the branch has completed the composition/data-boundary cu
 - Lightbox now consumes normalized project models through the Projects public API instead of reading project-card markup.
 - Lightbox startup no longer waits for the full-project media warm-up; media preloading runs as a background cache warm-up.
 - Lightbox media loading is progressive: the first image/video/YouTube item is prioritized while later media is deferred.
+- Background Lightbox warm-up is intentionally limited to the first local image/video/Lottie item per project; full 3D binaries and YouTube iframes are loaded on demand.
 - Lightbox navigation controls remain transparent and blend-based, with the rectangular focus/tap artifact removed.
 - Gallery row-alignment now derives its column count from the actual grid geometry, avoiding incorrect Show More thresholds while previous-filter cards are still fading out.
 - Cache-version references were refreshed for the changed public CSS/bootstrap/Gallery/Lightbox modules.
