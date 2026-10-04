@@ -58,6 +58,7 @@ export function createLightboxMediaRenderer({
     const w = Number(width);
     const h = Number(height);
     if (!surface || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+    surface.style.setProperty('--lightbox-artwork-ratio', String(w / h));
     surface.style.aspectRatio = String(w) + ' / ' + String(h);
   }
 
