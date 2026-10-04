@@ -426,7 +426,7 @@ const handleNext = (event) => {
 
 const handleSwipePointerDown = event => {
   if (!lightbox?.classList.contains('active')) return;
-  if (event.pointerType === 'mouse') return;
+  if (event.pointerType === 'mouse' || event.isPrimary === false) return;
 
   const target = event.target;
   if (
@@ -438,12 +438,15 @@ const handleSwipePointerDown = event => {
 
   swipeStart = {
     x: Number(event.clientX) || 0,
-    y: Number(event.clientY) || 0
+    y: Number(event.clientY) || 0,
+    pointerId: event.pointerId
   };
+
+  try { lightbox.setPointerCapture?.(event.pointerId); } catch (_) {}
 };
 
 const handleSwipePointerUp = event => {
-  if (!swipeStart || event.pointerType === 'mouse') return;
+  if (!swipeStart || event.pointerType === 'mouse' || event.isPrimary === false) return;
 
   const start = swipeStart;
   swipeStart = null;
@@ -452,10 +455,18 @@ const handleSwipePointerUp = event => {
     (Number(event.clientX) || 0) - start.x,
     (Number(event.clientY) || 0) - start.y
   );
+  try { lightbox.releasePointerCapture?.(event.pointerId); } catch (_) {}
   if (!direction) return;
 
   event.preventDefault();
   navigateLightbox(direction);
+};
+
+const handleSwipePointerCancel = event => {
+  if (!swipeStart) return;
+  if (event?.pointerId !== undefined && event.pointerId !== swipeStart.pointerId) return;
+  try { lightbox.releasePointerCapture?.(event.pointerId); } catch (_) {}
+  swipeStart = null;
 };
 
 const handleBackdropClick = (event) => {
@@ -513,6 +524,9 @@ bind(lightboxClose, 'click', closeLightbox);
 bind(lightboxPrev, 'click', handlePrev);
 bind(lightboxNext, 'click', handleNext);
 bind(lightbox, 'click', handleBackdropClick);
+bind(lightbox, 'pointerdown', handleSwipePointerDown, { passive: true });
+bind(lightbox, 'pointerup', handleSwipePointerUp);
+bind(lightbox, 'pointercancel', handleSwipePointerCancel);
 bind(documentRef, 'keydown', handleDocumentKeydown);
 bind(windowRef, 'pagehide', handlePageHide);
 bind(windowRef, 'pageshow', handlePageShow);

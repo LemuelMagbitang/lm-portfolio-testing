@@ -215,6 +215,30 @@ try {
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       }
 
+      // Exercise the real DOM swipe path, not only the exported direction helper.
+      // Dispatch a touch-style horizontal gesture against the Lightbox shell so a
+      // regression that forgets to bind the pointer handlers cannot pass the smoke suite.
+      const swipeTitleBefore = await page.locator('#modalTitle').textContent();
+      await page.locator('#lightbox').dispatchEvent('pointerdown', {
+        pointerType: 'touch',
+        isPrimary: true,
+        pointerId: 71,
+        clientX: 320,
+        clientY: 420
+      });
+      await page.locator('#lightbox').dispatchEvent('pointerup', {
+        pointerType: 'touch',
+        isPrimary: true,
+        pointerId: 71,
+        clientX: 170,
+        clientY: 420
+      });
+      await page.waitForTimeout(340);
+      const swipeTitleAfter = await page.locator('#modalTitle').textContent();
+      if (!swipeTitleBefore || swipeTitleAfter === swipeTitleBefore) {
+        throw new Error('Lightbox touch swipe did not navigate between projects.');
+      }
+
       const closeButton = page.locator('#lightboxClose');
       const navigationBlend = await page.locator('.lightbox-next').evaluate(el => {
         const style = getComputedStyle(el);
