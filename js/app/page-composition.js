@@ -6,16 +6,16 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js?v=20261004-03';
+import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js?v=20261004-04';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
-import { initAbout } from '../features/about/index.js?v=20261003-12';
+import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261004-13';
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
 import { initGallery } from '../features/gallery/index.js?v=20261004-03';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-03';
-import { initLightbox } from '../features/lightbox/index.js?v=20261004-07';
+import { initLightbox } from '../features/lightbox/index.js?v=20261004-08';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js';
 
 export async function createPortfolioApp({
@@ -40,8 +40,12 @@ export async function createPortfolioApp({
 
   // Three.js is optional infrastructure: do not make it part of the initial
   // module graph. Lightbox requests the viewer only when a 3D asset is opened.
+  const loadModelViewerModule = async () => (
+    import('../infrastructure/three/model-viewer.js?v=20261004-04')
+  );
+
   const mountModelViewer = async (...args) => {
-    const module = await import('../infrastructure/three/model-viewer.js?v=20261004-03');
+    const module = await loadModelViewerModule();
     return module.mountModelViewer(...args);
   };
 
@@ -110,6 +114,20 @@ export async function createPortfolioApp({
   if (projectModels.some(project => project?.capabilities?.hasLottie)) {
     await ensureLottiePlayer();
   }
+
+  const hasModelMedia = projectModels.some(project => project?.capabilities?.hasModel);
+  const preloadModelModule = hasModelMedia
+    ? async () => {
+        const module = await loadModelViewerModule();
+        const formats = projectModels.flatMap(project =>
+          (Array.isArray(project?.media) ? project.media : [])
+            .filter(item => String(item?.type || '').toLowerCase() === 'model')
+            .map(item => String(item?.src || '').split('?')[0].split('#')[0].split('.').pop() || '')
+        );
+        await module.preloadModelViewerModules?.(formats);
+        return true;
+      }
+    : null;
 
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
 
@@ -182,6 +200,43 @@ export async function createPortfolioApp({
   } catch (error) {
     console.warn('Lightbox: initialization failed', error);
   }
+
+  const aboutPagePrefetchPromise = !root.body?.classList.contains('about-page')
+    ? Promise.resolve().then(() => {
+        const aboutPageUrl = siteAssetUrl('about/');
+        if (!aboutPageUrl || typeof globalThis.fetch !== 'function') return false;
+        return globalThis.fetch(aboutPageUrl, {
+          method: 'GET',
+          credentials: 'omit',
+          cache: 'force-cache'
+        }).then(response => response.ok).catch(() => false);
+      })
+    : Promise.resolve(true);
+
+  const aboutAssetPreloadPromise = !root.body?.classList.contains('about-page')
+    ? preloadAboutAssets({
+        url: config.urls.about,
+        root,
+        documentRef: root,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl
+      })
+    : Promise.resolve({ total: 0, ready: 0 });
+
+  const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
+    ? lightboxFeature.preloadProjectsMedia(projectModels, {
+        preloadModelModule
+      }).catch(error => {
+        console.warn('Lightbox media preload failed:', error);
+        return { total: 0, ready: 0 };
+      })
+    : Promise.resolve({ total: 0, ready: 0 });
+
+  await Promise.all([
+    aboutPagePrefetchPromise,
+    aboutAssetPreloadPromise,
+    projectMediaPreloadPromise
+  ]);
 
   if (lightboxFeature?.openCard && pendingProjectOpen) {
     const pending = pendingProjectOpen;
