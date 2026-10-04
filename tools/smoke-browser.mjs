@@ -326,6 +326,38 @@ try {
       const backFocused = await modelBack.evaluate(el => document.activeElement === el);
       if (!backFocused) throw new Error('3D activation did not move keyboard focus to the Back control.');
 
+      // Focused 3D mode must remain viewport-bound when a responsive browser
+      // changes dimensions while the viewer is already active. This catches
+      // fixed-position/ResizeObserver regressions without altering the grid.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForFunction(() => {
+        const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return Math.abs(r.width - innerWidth) <= 2 && Math.abs(r.height - innerHeight) <= 2;
+      }, null, { timeout: 1500 });
+      const focusedMobileGeometry = await modelShell.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return { width: r.width, height: r.height };
+      });
+      const focusedMobileViewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+      if (
+        Math.abs(focusedMobileGeometry.width - focusedMobileViewport.width) > 2 ||
+        Math.abs(focusedMobileGeometry.height - focusedMobileViewport.height) > 2
+      ) {
+        throw new Error(
+          `Focused 3D viewer broke across desktop-to-mobile resize (${focusedMobileGeometry.width}x${focusedMobileGeometry.height} vs ${focusedMobileViewport.width}x${focusedMobileViewport.height}).`
+        );
+      }
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.waitForFunction(() => {
+        const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return Math.abs(r.width - innerWidth) <= 2 && Math.abs(r.height - innerHeight) <= 2;
+      }, null, { timeout: 1500 });
+
       await page.keyboard.press('Escape');
       await page.waitForTimeout(100);
       const interactiveAfterEscape = await modelShell.evaluate(el => el.classList.contains('is-interactive'));
