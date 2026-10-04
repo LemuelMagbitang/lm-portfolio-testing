@@ -219,16 +219,32 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     });
   }
 
-  windowRef.requestAnimationFrame(() => {
+  // A directly requested media item can still be changing size while its
+  // renderer loads (notably 3D models). Reconcile the Lightbox-owned scroll
+  // position for a bounded number of animation frames so an early measurement
+  // cannot be clamped before the target's final artwork height exists.
+  const positionInitialMedia = (frame = 0) => {
+    if (!lightbox.classList.contains('active') || currentLightboxIndex !== index) return;
+
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
     const target = initialMediaIndex >= 0 ? items[initialMediaIndex] : null;
 
-    if (target) {
-      // Never call Element.scrollIntoView() here. The target lives inside the
-      // fixed Lightbox scroller, but scrollIntoView() can reconcile every
-      // scrollable ancestor and move the document underneath the modal.
-      const lightboxRect = lightbox.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
+    if (!target) {
+      if (initialMediaIndex >= 0 && frame < 18) {
+        windowRef.requestAnimationFrame(() => positionInitialMedia(frame + 1));
+      }
+      return;
+    }
+
+    // Never call Element.scrollIntoView() here. The target lives inside the
+    // fixed Lightbox scroller, but scrollIntoView() can reconcile every
+    // scrollable ancestor and move the document underneath the modal.
+    const lightboxRect = lightbox.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const hasGeometry = targetRect.width > 0 && targetRect.height > 0 &&
+      lightbox.clientHeight > 0;
+
+    if (hasGeometry) {
       const centeredTop =
         lightbox.scrollTop +
         (targetRect.top - lightboxRect.top) -
@@ -238,9 +254,17 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
         top: Math.max(0, centeredTop),
         behavior: 'auto'
       });
-    } else {
-      lightbox.scrollTop = 0;
     }
+
+    if (frame < 18) {
+      windowRef.requestAnimationFrame(() => positionInitialMedia(frame + 1));
+    }
+  };
+
+  if (initialMediaIndex >= 0) {
+    windowRef.requestAnimationFrame(() => positionInitialMedia());
+  } else {
+    lightbox.scrollTop = 0;
   });
 }
 
