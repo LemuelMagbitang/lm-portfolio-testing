@@ -265,6 +265,7 @@ try {
 
     await smokePage(browser, '/', async page => {
       const gridBeforeResize = page.locator('#portfolioGrid').first();
+      const galleryViewport = page.locator('#portfolioGridViewport').first();
       const desktopCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
         cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
       );
@@ -281,14 +282,14 @@ try {
       await page.waitForTimeout(500);
 
       const showMoreAfterResize = page.locator('#showMoreBtn').first();
-      const mobileCollapsedState = await gridBeforeResize.evaluate(el => {
+      const mobileCollapsedState = await galleryViewport.evaluate(el => {
         const style = getComputedStyle(el);
         return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
       });
       const mobileCardsInDom = await page.locator('#portfolioGrid .project-card').count();
       if (mobileCardsInDom !== 11) throw new Error(`Mobile smoke fixture unexpectedly changed project count (found ${mobileCardsInDom}).`);
       if (mobileCollapsedState.maxHeight === 'none' || mobileCollapsedState.scrollHeight <= mobileCollapsedState.clientHeight) {
-        throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed gallery state.');
+        throw new Error('Desktop-to-mobile resize did not restore the mobile collapsed gallery viewport.');
       }
       if (!(await showMoreAfterResize.isVisible().catch(() => false))) {
         throw new Error('Desktop-to-mobile resize did not restore the mobile Show More control.');
@@ -309,33 +310,23 @@ try {
 
     await smokePage(browser, '/', async page => {
       const transition = page.locator('#pageTransition').first();
-      const status = page.locator('#pageTransitionStatus').first();
+      const logo = page.locator('#pageTransition .page-transition-logo').first();
+      if (await transition.count() !== 1 || await logo.count() !== 1) {
+        throw new Error('Portfolio loading screen is missing its original branded logo surface.');
+      }
+      if (await page.locator('#pageTransitionStatus').count() !== 0) {
+        throw new Error('Portfolio loading screen still exposes status text.');
+      }
+      if (await page.locator('#pageTransitionProgress').count() !== 0) {
+        throw new Error('Portfolio loading screen still exposes a progress bar.');
+      }
       const loadingState = await transition.getAttribute('data-loading');
       if (loadingState !== 'ready' || await transition.isVisible().catch(() => true)) {
-        throw new Error('Portfolio loading screen did not hand off cleanly after startup readiness.');
+        throw new Error('Portfolio loading screen did not hand off cleanly after application readiness.');
       }
-      const statusText = await status.textContent().catch(() => '');
-      if (!statusText?.trim()) throw new Error('Portfolio loading screen has no useful status text.');
       const bodyBusy = await page.locator('body').getAttribute('aria-busy');
       if (bodyBusy !== 'false') throw new Error('Portfolio body did not clear aria-busy after startup readiness.');
-    }, { width: 1280, height: 900 }, async page => {
-      await page.route('**/data/projects.json', async route => {
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        await route.continue();
-      });
-    }, async page => {
-      const transition = page.locator('#pageTransition').first();
-      const status = page.locator('#pageTransitionStatus').first();
-      if (await transition.getAttribute('data-loading') === 'ready') {
-        throw new Error('Portfolio loading screen disappeared before delayed CMS content finished composing.');
-      }
-      if (!(await transition.isVisible().catch(() => false))) {
-        throw new Error('Portfolio loading screen was not holding the user on screen during initial composition.');
-      }
-      if (!(await status.textContent()).trim()) {
-        throw new Error('Portfolio loading screen did not expose an active loading status.');
-      }
-    });
+    }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
       await assertMobileNavigation(page, 'Works page');
@@ -380,7 +371,7 @@ try {
 
         await mobileShowMore.click();
         await page.waitForTimeout(350);
-        const expanded = await page.locator('#portfolioGrid').evaluate(el => getComputedStyle(el).maxHeight === 'none');
+        const expanded = await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight === 'none');
         const expandedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
         const expandedGeometry = await page.evaluate(() => {
           const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
@@ -396,7 +387,7 @@ try {
 
         await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
         await page.waitForTimeout(150);
-        const preservedAfterPageShow = await page.locator('#portfolioGrid').evaluate(el => ({
+        const preservedAfterPageShow = await page.locator('#portfolioGridViewport').evaluate(el => ({
           maxHeight: getComputedStyle(el).maxHeight,
           clientHeight: el.clientHeight,
           scrollHeight: el.scrollHeight
@@ -412,7 +403,7 @@ try {
 
         await page.setViewportSize({ width: 375, height: 844 });
         await page.waitForTimeout(250);
-        const preservedAfterResize = await page.locator('#portfolioGrid').evaluate(el => getComputedStyle(el).maxHeight);
+        const preservedAfterResize = await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight);
         const resizeLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
         if (preservedAfterResize !== 'none' || resizeLabel?.trim().toUpperCase() !== 'SHOW LESS') {
           throw new Error('Mobile Show More collapsed unexpectedly while remaining in an overflowing viewport.');
@@ -420,13 +411,36 @@ try {
 
         await mobileShowMore.click();
         await page.waitForTimeout(350);
-        const collapsed = await page.locator('#portfolioGrid').evaluate(el => {
+        const collapsed = await page.locator('#portfolioGridViewport').evaluate(el => {
           const style = getComputedStyle(el);
           return style.maxHeight !== 'none' && el.scrollHeight > el.clientHeight;
         });
         const collapsedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
         if (!collapsed || collapsedLabel?.trim().toUpperCase() !== 'SHOW MORE') {
           throw new Error('Mobile Show Less did not restore the collapsed gallery state.');
+        }
+
+        await mobileShowMore.click();
+        await page.waitForTimeout(350);
+        if ((await mobileShowMore.locator('.btn-text').textContent()).trim().toUpperCase() !== 'SHOW LESS') {
+          throw new Error('Show More did not enter the stable expanded state before Lightbox regression test.');
+        }
+
+        await page.locator('#portfolioGrid .project-card').first().click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+        await page.locator('#lightboxClose').click();
+        await page.waitForTimeout(150);
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.waitForTimeout(250);
+
+        const afterLightboxClose = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          maxHeight: getComputedStyle(el).maxHeight,
+          clientHeight: el.clientHeight,
+          scrollHeight: el.scrollHeight
+        }));
+        const afterLightboxLabel = (await mobileShowMore.locator('.btn-text').textContent()).trim().toUpperCase();
+        if (afterLightboxClose.maxHeight !== 'none' || afterLightboxLabel !== 'SHOW LESS') {
+          throw new Error('Show Less reverted to Show More after closing Lightbox and scrolling.');
         }
       }
 
@@ -438,6 +452,10 @@ try {
       if (await firstArtwork.count() !== 1) throw new Error('Mobile Lightbox did not render the first artwork as an image.');
       if (await firstArtwork.getAttribute('loading') !== 'eager') {
         throw new Error('First Lightbox artwork should load eagerly to avoid a blank opening state.');
+      }
+      const imageLoadingModes = await page.locator('#lightboxMediaContainer img').evaluateAll(images => images.map(image => image.loading));
+      if (imageLoadingModes.some(mode => mode !== 'eager')) {
+        throw new Error('Lightbox artwork must load eagerly once the visitor intentionally opens the viewer.');
       }
 
       const artworkAlt = await firstArtwork.getAttribute('alt');
