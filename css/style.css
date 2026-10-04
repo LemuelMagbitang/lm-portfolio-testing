@@ -1404,11 +1404,13 @@ body.center-page {
    ========================================= */
 #lightboxMediaContainer {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
-  height: 100%;
-  overflow: hidden; /* Prevents anything from spilling out */
+  height: auto;
+  min-height: 0;
+  overflow: visible;
   padding: 1rem;
 }
 
