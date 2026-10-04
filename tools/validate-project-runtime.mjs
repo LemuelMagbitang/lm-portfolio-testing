@@ -408,7 +408,7 @@ buildProjectCardElement(normalizedBackground, {
     return Promise.resolve(true);
   }
 });
-assert.equal(backgroundCalls, 2);
+assert.equal(backgroundCalls, 3);
 
 const normalizedBackgroundPrecedence = normalizeProjects([{
   id: 'fallback-background-precedence',
