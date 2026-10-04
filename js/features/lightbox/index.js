@@ -183,11 +183,22 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   windowRef.requestAnimationFrame(() => {
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
-    if (initialMediaIndex >= 0 && items[initialMediaIndex]) {
-      items[initialMediaIndex].scrollIntoView({
-        behavior: 'auto',
-        block: 'center',
-        inline: 'nearest'
+    const target = initialMediaIndex >= 0 ? items[initialMediaIndex] : null;
+
+    if (target) {
+      // Never call Element.scrollIntoView() here. The target lives inside the
+      // fixed Lightbox scroller, but scrollIntoView() can reconcile every
+      // scrollable ancestor and move the document underneath the modal.
+      const lightboxRect = lightbox.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const centeredTop =
+        lightbox.scrollTop +
+        (targetRect.top - lightboxRect.top) -
+        Math.max(0, (lightbox.clientHeight - targetRect.height) / 2);
+
+      lightbox.scrollTo({
+        top: Math.max(0, centeredTop),
+        behavior: 'auto'
       });
     } else {
       lightbox.scrollTop = 0;
