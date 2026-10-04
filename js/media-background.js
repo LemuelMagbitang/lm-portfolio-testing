@@ -184,12 +184,18 @@
 
     host.insertBefore(layer, host.firstChild || null);
 
-    // Keep actual artwork above both the background and tint layer. This is
-    // especially important for transparent Lottie and the alpha WebGL canvas
-    // used by the interactive 3D viewer.
+    // Keep actual artwork above both the background and tint layer without
+    // overriding the artwork's own positioning. The 3D viewer creates its
+    // canvas/UI after the background layer, so a generic position:relative
+    // rule here would move those controls out of their intended overlay.
     Array.from(host.children).forEach(child => {
       if (child === layer) return;
-      child.style.position = child.style.position || 'relative';
+      const computed = typeof global.getComputedStyle === 'function'
+        ? global.getComputedStyle(child)
+        : null;
+      if (!child.style.position && (!computed || computed.position === 'static')) {
+        child.style.position = 'relative';
+      }
       child.style.zIndex = child.style.zIndex || '2';
     });
 

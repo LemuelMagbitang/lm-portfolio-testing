@@ -182,7 +182,7 @@ export async function mountModelViewer(container, src, options = {}) {
   back.type = 'button';
   back.className = 'model-viewer-back';
   back.setAttribute('aria-label', 'Exit interactive 3D view');
-  back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>BACK TO MEDIA</span>';
+  back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>';
   back.hidden = true;
   ui.appendChild(back);
   container.appendChild(ui);

@@ -2110,7 +2110,7 @@ RENDERERS.projects = async function(data){
           }
           if (m.type === 'model' && m.src) {
             try {
-              const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js');
+              const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261004-08');
               const host = previewEl.querySelector('[data-model-preview]');
               if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), {
                 background: m.background || null,
