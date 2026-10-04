@@ -5,7 +5,8 @@ import { buildProjectCardElement } from '../js/features/projects/project-card.js
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
-  orientationFromAspectRatio
+  orientationFromAspectRatio,
+  observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
 import { normalizeProjects } from '../js/data/project-normalizer.js';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
@@ -229,6 +230,28 @@ const youtubeFallbackCard = buildProjectCardElement({
 });
 assert.equal(youtubeFallbackCard.children[0]?.dataset?.thumbnailType, 'youtube');
 assert.equal(youtubeFallbackCard.dataset.cardOrientation, 'square');
+
+const youtubeIntrinsicMedia = makeElement();
+youtubeIntrinsicMedia.tagName = 'IMG';
+youtubeIntrinsicMedia.naturalWidth = 1280;
+youtubeIntrinsicMedia.naturalHeight = 720;
+const youtubeIntrinsicCard = makeElement();
+
+observeProjectCardOrientation(
+  youtubeIntrinsicCard,
+  {
+    thumbnail: { src: '', orientation: 'auto' },
+    media: [{ type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefgh' }]
+  },
+  youtubeIntrinsicMedia,
+  { mediaType: 'youtube' }
+);
+
+assert.equal(
+  youtubeIntrinsicCard.dataset.cardOrientation,
+  'square',
+  'YouTube fallback thumbnails must stay square even when the fallback image is 16:9'
+);
 
 const presentationCard = makeElement();
 assert.equal(applyProjectCardOrientation(presentationCard, 'landscape'), 'landscape');
