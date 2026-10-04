@@ -113,7 +113,6 @@ export async function mountModelViewer(container, src, options = {}) {
   if (!SUPPORTED.has(ext)) throw new Error(`Unsupported 3D model format: .${ext || 'unknown'}`);
 
   container.innerHTML = '';
-  container.style.position = 'relative';
   container.dataset.ready = 'false';
   container.setAttribute('aria-busy', 'true');
 
