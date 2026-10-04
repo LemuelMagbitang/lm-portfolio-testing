@@ -27,7 +27,7 @@ As of October 5, 2026, the branch has completed the composition/data-boundary cu
 - Lightbox navigation controls remain transparent and use normal compositing with a restrained text-shadow contrast edge; the rectangular focus/tap artifact has been removed.
 - Gallery row-alignment now derives its column count from the actual grid geometry, avoiding incorrect Show More thresholds while previous-filter cards are still fading out.
 - Desktop YouTube artwork is presentation-capped while mobile YouTube remains width-first/full-bleed; the regression suite covers both behaviors.
-- Cache-version references were refreshed for the changed public CSS/bootstrap/Projects modules, and the edited public modules were structurally syntax-checked after the latest changes.
+- Public stylesheet references are currently on `20261005-14`, while the JavaScript runtime cache chain (`script.js` → `bootstrap.js` → `page-composition.js`) remains on `20261005-13`; the Chromium smoke gate asserts the JS chain explicitly so CSS cache-busting can evolve independently.
 
 Phase 3A has therefore started: the architecture is being shaped specifically to support major UI/UX changes without rewriting CMS data, project transport, or media infrastructure. The immediate work remains targeted hardening and presentation ownership, not a visual redesign by itself.
 
