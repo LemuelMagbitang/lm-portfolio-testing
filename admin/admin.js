@@ -1898,7 +1898,7 @@ RENDERERS.projects = async function(data){
       const oldSourceError = picker.querySelector('[data-thumb-source-error]');
       if (oldSourceError) oldSourceError.remove();
       const explicit = p.thumbnail.src;
-      const fallback = explicit ? null : computeFallbackThumb(p.media);
+      const fallback = explicit ? null : computeFallbackThumb(p.media, p.thumbnail);
       const src = explicit ? {type:p.thumbnail.type||'image',src:explicit,background:p.thumbnail.background||null} : fallback;
       if(!src || !src.src){ if(note) note.style.display='none'; return; }
       const sourceError = validateMediaSource(src.type, src.src);
@@ -3140,16 +3140,26 @@ function wirePreviewAspect(boxEl, m){
    writes anything into thumbnail.src itself, same as the live site
    only ever fills in the rendered preview, never the underlying data. 3D fallbacks
    also carry the CMS-selected thumbnail ratio so the editor mirrors the live media list. */
-function computeFallbackThumb(media){
+function computeFallbackThumb(media, thumbnail = {}){
+  const thumbnailBackground = thumbnail?.background && typeof thumbnail.background === 'object'
+    ? thumbnail.background
+    : null;
   const firstUsable=(media||[]).find(m=>m&&m.src&&['image','video','lottie','model'].includes(m.type));
   if(firstUsable) return {
     type:firstUsable.type,
     src:firstUsable.src,
-    background:firstUsable.background||null,
+    background:firstUsable.background || thumbnailBackground,
     orientation:firstUsable.orientation||''
   };
   const yt=(media||[]).find(m=>m&&m.type==='youtube'&&m.src);
-  if(yt){ const id=extractYouTubeId(yt.src); if(id) return {type:'image',src:`https://img.youtube.com/vi/${id}/hqdefault.jpg`}; }
+  if(yt){
+    const id=extractYouTubeId(yt.src);
+    if(id) return {
+      type:'image',
+      src:`https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+      background:thumbnailBackground
+    };
+  }
   return null;
 }
 function computeFallbackThumbSrc(media){ const x=computeFallbackThumb(media); return x?x.src:''; }
