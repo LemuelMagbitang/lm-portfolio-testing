@@ -6,8 +6,14 @@
  */
 
 const loadedScripts = new Map();
+const SCRIPT_LOAD_TIMEOUT_MS = 8000;
 
-export function loadScriptOnce(src, test = () => true, documentRef = globalThis.document) {
+export function loadScriptOnce(
+  src,
+  test = () => true,
+  documentRef = globalThis.document,
+  timeoutMs = SCRIPT_LOAD_TIMEOUT_MS
+) {
   const url = String(src || '');
   if (!url) return Promise.resolve(false);
   if (test()) return Promise.resolve(true);
@@ -15,17 +21,33 @@ export function loadScriptOnce(src, test = () => true, documentRef = globalThis.
   if (loadedScripts.has(url)) return loadedScripts.get(url);
 
   const promise = new Promise(resolve => {
+    let settled = false;
+    let timer = null;
+
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) {
+        (documentRef.defaultView || globalThis).clearTimeout?.(timer);
+      }
+      resolve(value);
+    };
+
+    const boundedTimeout = Math.max(1000, Number(timeoutMs) || SCRIPT_LOAD_TIMEOUT_MS);
+    const timeout = () => finish(test());
+
     const existing = Array.from(documentRef.scripts || [])
       .find(node => node.dataset.lmRuntimeSrc === url);
 
     if (existing) {
       if (test()) {
-        resolve(true);
+        finish(true);
         return;
       }
 
-      existing.addEventListener('load', () => resolve(test()), { once: true });
-      existing.addEventListener('error', () => resolve(false), { once: true });
+      existing.addEventListener('load', () => finish(test()), { once: true });
+      existing.addEventListener('error', () => finish(false), { once: true });
+      timer = (documentRef.defaultView || globalThis).setTimeout?.(timeout, boundedTimeout) ?? null;
       return;
     }
 
@@ -33,8 +55,9 @@ export function loadScriptOnce(src, test = () => true, documentRef = globalThis.
     script.src = url;
     script.async = true;
     script.dataset.lmRuntimeSrc = url;
-    script.onload = () => resolve(test());
-    script.onerror = () => resolve(false);
+    script.onload = () => finish(test());
+    script.onerror = () => finish(false);
+    timer = (documentRef.defaultView || globalThis).setTimeout?.(timeout, boundedTimeout) ?? null;
     documentRef.head.appendChild(script);
   });
 
