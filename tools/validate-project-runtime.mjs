@@ -8,6 +8,7 @@ import {
   orientationFromAspectRatio
 } from '../js/features/projects/card-presentation.js';
 import { normalizeProjects } from '../js/data/project-normalizer.js';
+import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 
 const calls = [];
 const children = [];
@@ -267,5 +268,26 @@ buildProjectCardElement(normalizedBackground, {
   }
 });
 assert.equal(backgroundCalls, 1);
+
+assert.deepEqual(parseYouTubeUrl('https://www.youtube.com/watch?v=abcdefgh'), {
+  id: 'abcdefgh',
+  isShort: false
+});
+assert.deepEqual(parseYouTubeUrl('https://www.youtube.com/shorts/abcdefgh?si=test'), {
+  id: 'abcdefgh',
+  isShort: true
+});
+assert.deepEqual(parseYouTubeUrl('https://youtu.be/abcdefgh'), {
+  id: 'abcdefgh',
+  isShort: false
+});
+assert.deepEqual(parseYouTubeUrl('https://example.com/watch?v=abcdefgh'), {
+  id: null,
+  isShort: false
+});
+assert.deepEqual(parseYouTubeUrl('not-a-url'), {
+  id: null,
+  isShort: false
+});
 
 console.log('Projects runtime boundary validation passed.');
