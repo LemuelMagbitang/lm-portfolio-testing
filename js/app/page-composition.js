@@ -19,9 +19,9 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
-import { initGallery } from '../features/gallery/index.js?v=20261005-01';
+import { initGallery } from '../features/gallery/index.js?v=20261005-02';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
-import { initLightbox } from '../features/lightbox/index.js?v=20261005-04';
+import { initLightbox } from '../features/lightbox/index.js?v=20261005-05';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261004-05';
 
 export async function createPortfolioApp({
