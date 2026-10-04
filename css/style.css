@@ -1027,14 +1027,15 @@ button.hamburger {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(10, 10, 10, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   font-size: 1rem;
   color: #fff;
   cursor: pointer;
   z-index: 10000;
   pointer-events:auto;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: opacity .2s ease, transform .2s ease;
 }
 
 /* Hover-only — see the note above .tab-btn:hover for why this must not
@@ -1530,7 +1531,6 @@ body.center-page {
    just needs to clip whatever spills past that and animate smoothly. */
 .seamless-grid {
   overflow: hidden;
-  transition: max-height 0.5s ease;
 }
 
 /* The "there's more below" band. It's pinned to the exact bottom edge
@@ -2450,11 +2450,19 @@ body.center-page {
   pointer-events:none;
 }
 .lightbox-modal.is-3d-focused .lightbox-nav{
-  background:rgba(8,8,8,.18);
-  border-color:rgba(255,255,255,.05);
+  mix-blend-mode:difference;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  color:#fff;
 }
 
 .lightbox-modal.is-3d-focused .lightbox-close{
+  mix-blend-mode:difference;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  color:#fff;
   top:calc(env(safe-area-inset-top, 0px) + clamp(14px, 2.5vw, 28px));
   right:calc(env(safe-area-inset-right, 0px) + clamp(14px, 2.5vw, 28px));
   width:clamp(46px, 10vw, 54px);
