@@ -419,7 +419,7 @@ export function createLightboxMediaRenderer({
       syncClasses(resolved);
       const exactRatio = `${width} / ${height}`;
       video.style.aspectRatio = exactRatio;
-      if (artwork) artwork.style.aspectRatio = exactRatio;
+      if (artwork) setAspectRatio(artwork, width, height);
     };
 
     syncIntrinsicRatio();
