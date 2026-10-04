@@ -128,6 +128,8 @@ const mediaRenderer = createLightboxMediaRenderer({
 let currentLightboxIndex = 0;
 let activeLightboxCards = []; // Only navigate through currently filtered items
 let previousBodyOverflow = '';
+let previousPageScrollX = 0;
+let previousPageScrollY = 0;
 
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
@@ -162,6 +164,8 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     // so this branch could never run and closing the viewer could clobber a
     // caller-owned body overflow value.
     previousBodyOverflow = documentRef.body.style.overflow;
+    previousPageScrollX = Number(windowRef.scrollX) || 0;
+    previousPageScrollY = Number(windowRef.scrollY) || 0;
   }
 
   mediaRenderer.dispose(modalMediaContainer);
@@ -215,6 +219,20 @@ function closeLightbox() {
   delete lightbox.dataset.pre3dScrollTop;
   documentRef.body.style.overflow = previousBodyOverflow;
   previousBodyOverflow = '';
+
+  // Restore the exact page position after the modal releases body scrolling.
+  // Some mobile browsers reconcile the fixed Lightbox, scrollbar state, and
+  // restored focus in separate layout passes; an explicit viewport restore
+  // keeps closing the viewer visually stationary.
+  const restorePageScroll = () => {
+    windowRef.scrollTo({
+      left: previousPageScrollX,
+      top: previousPageScrollY,
+      behavior: 'auto'
+    });
+  };
+  windowRef.requestAnimationFrame(restorePageScroll);
+  windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(restorePageScroll));
   // Dispose any mounted 3D viewers before removing their DOM nodes. The
   // viewer owns OrbitControls, ResizeObserver, WebGL renderer and a document
   // keydown listener, none of which are cleaned up by innerHTML alone.
