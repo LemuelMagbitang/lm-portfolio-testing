@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 3, 2026, the branch has completed the first composition/data-boundary slice of the migration without changing the public visual baseline:
+As of October 4, 2026, the branch has completed the composition/data-boundary cutover and is in Phase 3A presentation hardening without intentionally changing the public visual baseline:
 
 - `js/script.js` is a 19-line browser entrypoint.
 - `js/app/bootstrap.js` owns startup/error containment and passes normalized application configuration into the composition root.
@@ -21,10 +21,16 @@ As of October 3, 2026, the branch has completed the first composition/data-bound
 - Shared feature lifecycle management now centralizes listener/timer/animation cleanup without introducing cross-feature state.
 - Project normalization now exposes media capabilities and preserves thumbnail orientation as part of the stable application model.
 - Lightbox now consumes normalized project models through the Projects public API instead of reading project-card markup.
+- Lightbox startup no longer waits for the full-project media warm-up; media preloading runs as a background cache warm-up.
+- Lightbox media loading is progressive: the first image/video/YouTube item is prioritized while later media is deferred.
+- Lightbox navigation controls remain transparent and blend-based, with the rectangular focus/tap artifact removed.
+- Gallery row-alignment now derives its column count from the actual grid geometry, avoiding incorrect Show More thresholds while previous-filter cards are still fading out.
+- Cache-version references were refreshed for the changed public CSS/bootstrap/Gallery/Lightbox modules.
+- The edited public modules were structurally syntax-checked after the latest changes.
 
 Phase 3A has therefore started: the architecture is being shaped specifically to support major UI/UX changes without rewriting CMS data, project transport, or media infrastructure. The immediate work remains targeted hardening and presentation ownership, not a visual redesign by itself.
 
-The current deployment gate is intentionally separate from architectural completion: the public pages must load `js/script.js` as an ES module, and each page must provide the import map required by optional vendor infrastructure before this branch can be treated as testable.
+The deployment gate is intentionally separate from architectural completion: the public pages must load `js/script.js` as an ES module, each page must provide the import map required by optional vendor infrastructure, and the latest branch commits still require GitHub Actions/browser deployment verification before merge toward `main`.
 
 ## Target architecture
 
@@ -188,7 +194,7 @@ admin/
 
 The CMS and public portfolio are two applications sharing repository content—not one application with two pages.
 
-### Phase 3A — UI foundation
+### Phase 3A — UI foundation / presentation hardening
 
 Before changing the portfolio's visual language, stabilize the contracts that future presentation work will sit on:
 
