@@ -37,6 +37,7 @@ export function createLightboxMediaRenderer({
 
   function pauseYouTubeFrame(iframe) {
     if (!iframe?.contentWindow) return;
+    iframe.dataset.lmYoutubePauseRequested = String(Date.now());
     try {
       iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), "*");
     } catch (_) {}
@@ -105,7 +106,10 @@ export function createLightboxMediaRenderer({
       // Cross-origin pointer/focus events are not reliable enough to be the
       // sole source of truth on mobile. YouTube's state message fires after
       // the player actually starts, so the previous player is paused here.
-      if (activeFrame) pauseOtherPlayback(container, activeFrame);
+      if (activeFrame) {
+        activeFrame.dataset.lmYoutubeState = 'playing';
+        pauseOtherPlayback(container, activeFrame);
+      }
     };
 
     windowRef.addEventListener('message', handler);
