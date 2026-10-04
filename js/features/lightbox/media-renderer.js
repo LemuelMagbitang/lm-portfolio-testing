@@ -214,24 +214,37 @@ export function createLightboxMediaRenderer({
     let hasModel = false;
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
-      (Array.isArray(project?.media) ? project.media : []).forEach(item => {
-        const type = String(item?.type || '').toLowerCase();
-        if (!item?.src) return;
-        const url = resolveAssetUrl(item.src);
-        const key = type + ':' + url;
-        if (seen.has(key)) return;
-        seen.add(key);
+      const media = Array.isArray(project?.media) ? project.media : [];
+      if (!media.length) return;
 
-        if (type === 'image') jobs.push(preloadImage(url));
-        else if (type === 'video') jobs.push(preloadVideo(url));
-        else if (type === 'lottie') jobs.push(preloadLottie(url));
-        else if (type === 'model') {
+      // Warm only the first local media item for each project. The project
+      // cards already establish the primary visual, so preloading every
+      // Lightbox asset here wastes bandwidth and can compete with the asset the
+      // visitor is actually opening.
+      const firstLocal = media.find(item => {
+        const type = String(item?.type || '').toLowerCase();
+        return item?.src && ['image', 'video', 'lottie'].includes(type);
+      });
+
+      media.forEach(item => {
+        if (String(item?.type || '').toLowerCase() === 'model' && item?.src) {
           hasModel = true;
-          jobs.push(preloadModel(url));
-        } else if (type === 'youtube') {
-          jobs.push(preloadYouTube(item.src, item.caption || item.description || project.title || 'Project video'));
         }
       });
+
+      if (!firstLocal?.src) return;
+
+      const type = String(firstLocal.type || '').toLowerCase();
+      const url = resolveAssetUrl(firstLocal.src);
+      const key = type + ':' + url;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      if (type === 'image') jobs.push(preloadImage(url));
+      else if (type === 'video') jobs.push(preloadVideo(url));
+      else if (type === 'lottie') jobs.push(preloadLottie(url));
+      // YouTube embeds and 3D binaries are intentionally not prefetched here.
+      // Their actual viewer is eager only when the visitor opens that media.
     });
 
     if (hasModel && typeof preloadModelModule === 'function') {
