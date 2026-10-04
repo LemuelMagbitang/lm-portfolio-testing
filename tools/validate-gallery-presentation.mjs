@@ -71,8 +71,21 @@ const revealGrid = {
   style: {},
   querySelectorAll: () => revealCards
 };
+let resizeObserverCallback = null;
+let resizeObserverDisconnected = false;
 const revealWindow = {
   innerWidth: 1280,
+  ResizeObserver: class {
+    constructor(callback) {
+      resizeObserverCallback = callback;
+    }
+    observe(target) {
+      assert.equal(target, revealGrid);
+    }
+    disconnect() {
+      resizeObserverDisconnected = true;
+    }
+  },
   setTimeout(fn) {
     fn();
     return 1;
@@ -95,5 +108,25 @@ applyGalleryReveal({
 });
 
 assert.equal(revealViewport.style.maxHeight, '410px');
+
+// Regression: late media/layout changes must remeasure the collapsed viewport
+// while the gallery remains collapsed.
+revealCards[1].getBoundingClientRect = () => ({ bottom: 520 });
+resizeObserverCallback?.();
+assert.equal(revealViewport.style.maxHeight, '490px');
+assert.equal(resizeObserverDisconnected, false);
+
+// The returned cleanup hook must release the observer.
+const cleanup = applyGalleryReveal({
+  grid: revealGrid,
+  gridViewport: revealViewport,
+  filteredCards: revealCards,
+  visibleCount: 2,
+  expanded: false,
+  windowRef: revealWindow,
+  desktopPeek: 70
+});
+cleanup?.();
+assert.equal(resizeObserverDisconnected, true);
 
 console.log('Gallery presentation boundary validated.');

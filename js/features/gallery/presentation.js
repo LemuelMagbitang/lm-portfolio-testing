@@ -138,6 +138,19 @@ export function applyGalleryReveal({
     fadeOverlay?.classList.remove('is-hidden');
   };
 
+  // Media dimensions can settle after the initial render (image decode,
+  // video metadata, Lottie layout, responsive font/layout changes). While the
+  // gallery is collapsed, observe the grid so the dedicated viewport clip
+  // follows the latest visible-card geometry.
+  const resizeObserver = typeof windowRef.ResizeObserver === 'function'
+    ? new windowRef.ResizeObserver(() => {
+        if (!expanded && isCurrentRender(renderToken)) {
+          measureCollapsedHeight();
+        }
+      })
+    : null;
+  resizeObserver?.observe(grid);
+
   const hideTimer = windowRef.setTimeout(() => {
     if (!isCurrentRender(renderToken)) return;
     filteredCards.forEach(card => { card.style.display = 'block'; });
@@ -198,6 +211,7 @@ export function applyGalleryReveal({
 
   return () => {
     windowRef.clearTimeout(hideTimer);
+    resizeObserver?.disconnect();
   };
 }
 
