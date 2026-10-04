@@ -88,6 +88,21 @@ export function buildProjectCardElement(
     ? null
     : getFallbackThumbnailSource(project, explicitThumbnail);
   const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
+  // Phase 3B presentation contract: the card gets one stable orientation
+  // signal, preferring its explicit thumbnail orientation and otherwise
+  // inheriting orientation from the resolved fallback media. "auto" means
+  // the presentation layer should retain the baseline grid behavior.
+  const cardOrientation = String(
+    t.orientation ||
+    project.media?.find(media => media?.src && media?.orientation)?.orientation ||
+    'auto'
+  ).toLowerCase();
+  const safeCardOrientation = ['auto', 'landscape', 'portrait', 'square'].includes(cardOrientation)
+    ? cardOrientation
+    : 'auto';
+  card.dataset.cardOrientation = safeCardOrientation;
+  card.classList.add(`card-orientation-${safeCardOrientation}`);
+
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
 
