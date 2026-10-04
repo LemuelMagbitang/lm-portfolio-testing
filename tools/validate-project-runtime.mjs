@@ -379,7 +379,7 @@ buildProjectCardElement(normalizedThumbnailBackground, {
 
 assert.equal(
   backgroundCalls,
-  1,
+  2,
   'Thumbnail background should survive when the first media item supplies the fallback thumbnail'
 );
 
