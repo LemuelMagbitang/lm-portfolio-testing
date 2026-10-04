@@ -723,6 +723,11 @@ try {
 
         await page.locator('#lightboxClose').click();
         await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+        const preloadTabIndex = await page.locator('.lightbox-youtube-preload-root iframe[data-lm-youtube]').first()
+          .getAttribute('tabindex');
+        if (preloadTabIndex !== '-1') {
+          throw new Error('Hidden cached YouTube iframe remained keyboard-focusable after closing the Lightbox.');
+        }
         await playbackCard.click();
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
 

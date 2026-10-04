@@ -1,6 +1,6 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
-import { createLightboxMediaRenderer } from './media-renderer.js?v=20261004-15';
+import { createLightboxMediaRenderer } from './media-renderer.js?v=20261004-16';
 function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;

@@ -704,7 +704,12 @@ export function createLightboxMediaRenderer({
       const preloadRoot = ensureYouTubePreloadRoot();
       youtubeFrames.forEach(iframe => {
         const key = iframe.dataset.lmYoutubeCacheKey;
-        if (key && youtubeFrameCache.get(key) === iframe) preloadRoot.appendChild(iframe);
+        if (key && youtubeFrameCache.get(key) === iframe) {
+          // Hidden preload frames must never remain keyboard-focusable while
+          // they sit outside the active Lightbox artwork surface.
+          iframe.tabIndex = -1;
+          preloadRoot.appendChild(iframe);
+        }
       });
     }
 
