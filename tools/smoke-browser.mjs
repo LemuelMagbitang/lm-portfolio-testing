@@ -128,6 +128,27 @@ try {
     await smokePage(browser, '/', async page => {
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('Works page is missing its module bootstrap script.');
+      const runtimeCacheChain = await page.evaluate(() => {
+        const script = document.querySelector('script[type="module"][src*="script.js"]');
+        const preloads = Array.from(document.querySelectorAll('link[rel="modulepreload"]'))
+          .map(link => link.getAttribute('href') || '');
+        const readVersion = marker => {
+          const src = preloads.find(value => value.includes(marker));
+          return src ? new URL(src, location.href).searchParams.get('v') : '';
+        };
+        return {
+          scriptVersion: script ? new URL(script.src, location.href).searchParams.get('v') : '',
+          bootstrapVersion: readVersion('app/bootstrap.js'),
+          compositionVersion: readVersion('app/page-composition.js')
+        };
+      });
+      if (
+        runtimeCacheChain.scriptVersion !== '20261005-10' ||
+        runtimeCacheChain.bootstrapVersion !== '20261005-10' ||
+        runtimeCacheChain.compositionVersion !== '20261005-10'
+      ) {
+        throw new Error(`Public runtime cache chain is stale: ${JSON.stringify(runtimeCacheChain)}`);
+      }
 
       const cards = await page.locator('#portfolioGrid .project-card').count();
       if (cards < 1) throw new Error(`Works page rendered no project cards (found ${cards}).`);
