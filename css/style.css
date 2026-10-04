@@ -1425,6 +1425,8 @@ body.center-page {
   max-width:100%;
   max-height:none;
   pointer-events:auto;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
 }
 
 #lightboxMediaContainer .lightbox-artwork.yt-landscape{
