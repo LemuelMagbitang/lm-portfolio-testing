@@ -530,7 +530,15 @@ try {
         card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       });
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-      await page.locator('#lightboxClose').click();
+      const scrollWhileLightboxOpen = await page.evaluate(() => window.scrollY);
+      if (Math.abs(scrollWhileLightboxOpen - scrollBeforeLightboxClose) > 4) {
+        throw new Error(`Opening Lightbox changed document scroll position (${scrollBeforeLightboxClose} -> ${scrollWhileLightboxOpen}).`);
+      }
+      await page.evaluate(() => {
+        const close = document.querySelector('#lightboxClose');
+        if (!close) throw new Error('Lightbox close control is missing.');
+        close.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      });
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
       const scrollImmediatelyAfterLightboxClose = await page.evaluate(() => window.scrollY);
       await page.waitForTimeout(16);
