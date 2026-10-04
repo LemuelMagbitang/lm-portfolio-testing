@@ -881,8 +881,12 @@ textarea { resize: vertical; }
   height: 100dvh;
   min-height: 100svh;
   background: rgba(10, 10, 10, 0.95);
-  display: none;
+  display: flex;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
   flex-direction: column;
+  transition: opacity .18s ease, visibility 0s linear .18s;
   align-items: center;
   overflow-y: auto;
   /* Stops this box's scroll from chaining into the page behind it once
@@ -895,7 +899,10 @@ textarea { resize: vertical; }
 }
 
 .lightbox-modal.active {
-  display: flex;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity .18s ease;
 }
 
 .modal-interior {
@@ -936,12 +943,13 @@ textarea { resize: vertical; }
 .lightbox-controls {
   position: relative;
   z-index: 10000;
-  display: none;
+  display: block;
+  visibility: hidden;
   pointer-events: none;
 }
 
 .lightbox-controls.active {
-  display: block;
+  visibility: visible;
 }
 
 button.lightbox-close,
