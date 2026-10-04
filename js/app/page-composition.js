@@ -255,7 +255,10 @@ export async function createPortfolioApp({
 
   void projectMediaPreloadPromise;
 
-  await Promise.all([
+  // About-page prefetching and image/logo warm-up are non-critical navigation
+  // optimizations. Run them in the background so they cannot delay the initial
+  // page transition or Lightbox interactivity.
+  void Promise.all([
     aboutPagePrefetchPromise,
     aboutAssetPreloadPromise
   ]);
