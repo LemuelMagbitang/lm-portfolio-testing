@@ -333,12 +333,12 @@ assert.deepEqual(normalizedFallback.thumbnail, {
   rotate: 2
 });
 
-let backgroundCalls = 0;
+let fallbackBackgroundCalls = 0;
 const fallbackCard = buildProjectCardElement(normalizedFallback, {
   documentRef: cardDocument,
   resolveAssetUrl: value => '/assets/' + value,
   applyMediaBackground: (element, background) => {
-    backgroundCalls += 1;
+    fallbackBackgroundCalls += 1;
     assert.equal(element.className, 'card-thumbnail');
     assert.deepEqual(background, { type: 'color', color: '#222222' });
     return Promise.resolve(true);
@@ -352,7 +352,7 @@ assert.equal(fallbackMedia.style.objectPosition, '50% 30%');
 assert.equal(fallbackMedia.style.transformOrigin, '50% 30%');
 assert.equal(fallbackMedia.style['--thumb-zoom'], '1.25');
 assert.equal(fallbackMedia.style['--thumb-rotate'], '2deg');
-assert.equal(backgroundCalls, 0);
+assert.equal(fallbackBackgroundCalls, 0);
 
 const normalizedThumbnailBackground = normalizeProjects([{
   id: 'fallback-thumbnail-background',
@@ -367,19 +367,20 @@ const normalizedThumbnailBackground = normalizeProjects([{
   }]
 }])[0];
 
+let thumbnailBackgroundCalls = 0;
 buildProjectCardElement(normalizedThumbnailBackground, {
   documentRef: cardDocument,
   resolveAssetUrl: value => '/assets/' + value,
   applyMediaBackground: (element, background) => {
-    backgroundCalls += 1;
+    thumbnailBackgroundCalls += 1;
     assert.equal(element.className, 'card-thumbnail');
     assert.deepEqual(background, { type: 'color', color: '#111111' });
   }
 });
 
 assert.equal(
-  backgroundCalls,
-  2,
+  thumbnailBackgroundCalls,
+  1,
   'Thumbnail background should survive when the first media item supplies the fallback thumbnail'
 );
 
@@ -398,17 +399,18 @@ const normalizedBackground = normalizeProjects([{
   }]
 }])[0];
 
+let mediaBackgroundCalls = 0;
 buildProjectCardElement(normalizedBackground, {
   documentRef: cardDocument,
   resolveAssetUrl: value => '/assets/' + value,
   applyMediaBackground: (element, background) => {
-    backgroundCalls += 1;
+    mediaBackgroundCalls += 1;
     assert.equal(element.className, 'card-thumbnail');
     assert.deepEqual(background, { type: 'color', color: '#222222' });
     return Promise.resolve(true);
   }
 });
-assert.equal(backgroundCalls, 3);
+assert.equal(mediaBackgroundCalls, 1);
 
 const normalizedBackgroundPrecedence = normalizeProjects([{
   id: 'fallback-background-precedence',
