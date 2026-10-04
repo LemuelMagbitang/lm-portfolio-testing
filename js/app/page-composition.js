@@ -13,7 +13,7 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
-import { initGallery } from '../features/gallery/index.js?v=20261004-21';
+import { initGallery } from '../features/gallery/index.js?v=20261004-22';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
 import { initLightbox } from '../features/lightbox/index.js?v=20261004-21';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261004-05';

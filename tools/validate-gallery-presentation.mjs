@@ -97,7 +97,7 @@ const revealWindow = {
   }
 };
 
-applyGalleryReveal({
+const revealCleanup = applyGalleryReveal({
   grid: revealGrid,
   gridViewport: revealViewport,
   filteredCards: revealCards,
@@ -117,16 +117,7 @@ assert.equal(revealViewport.style.maxHeight, '490px');
 assert.equal(resizeObserverDisconnected, false);
 
 // The returned cleanup hook must release the observer.
-const cleanup = applyGalleryReveal({
-  grid: revealGrid,
-  gridViewport: revealViewport,
-  filteredCards: revealCards,
-  visibleCount: 2,
-  expanded: false,
-  windowRef: revealWindow,
-  desktopPeek: 70
-});
-cleanup?.();
+revealCleanup?.();
 assert.equal(resizeObserverDisconnected, true);
 
 console.log('Gallery presentation boundary validated.');

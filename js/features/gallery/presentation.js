@@ -193,6 +193,7 @@ export function applyGalleryReveal({
   if (!showMoreButton || !showMoreWrapper) {
     return () => {
       windowRef.clearTimeout(hideTimer);
+      resizeObserver?.disconnect();
     };
   }
 
