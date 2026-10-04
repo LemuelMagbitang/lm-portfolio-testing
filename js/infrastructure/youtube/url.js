@@ -6,20 +6,40 @@
  */
 
 export function parseYouTubeUrl(url) {
-  const value = String(url || '');
+  const value = String(url || '').trim();
+  if (!value) return { id: null, isShort: false };
+
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch (_) {
+    return { id: null, isShort: false };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const hostAllowed = hostname === 'youtube.com'
+    || hostname.endsWith('.youtube.com')
+    || hostname === 'youtu.be';
+  if (!hostAllowed) return { id: null, isShort: false };
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
   let id = null;
   let isShort = false;
 
-  if (value.includes('/shorts/')) {
-    id = value.split('/shorts/')[1].split(/[?&]/)[0];
+  if (hostname === 'youtu.be') {
+    [id] = segments;
+  } else if (segments[0] === 'shorts') {
+    id = segments[1] || null;
     isShort = true;
-  } else if (value.includes('youtu.be/')) {
-    id = value.split('youtu.be/')[1].split(/[?&]/)[0];
-  } else if (value.includes('watch?v=')) {
-    id = value.split('watch?v=')[1].split('&')[0];
-  } else if (value.includes('/embed/')) {
-    id = value.split('/embed/')[1].split(/[?&]/)[0];
+  } else if (segments[0] === 'embed') {
+    id = segments[1] || null;
+  } else if (segments[0] === 'watch') {
+    id = parsed.searchParams.get('v');
   }
 
-  return { id, isShort };
+  const cleanId = typeof id === 'string' && /^[A-Za-z0-9_-]{6,}$/.test(id)
+    ? id
+    : null;
+
+  return { id: cleanId, isShort: Boolean(cleanId && isShort) };
 }
