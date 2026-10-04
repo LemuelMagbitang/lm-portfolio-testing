@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js';
+import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
@@ -192,6 +193,12 @@ assert.equal(orientationFromAspectRatio(1000, 1000), 'square');
 assert.equal(orientationFromAspectRatio(1600, 1000), 'landscape');
 assert.equal(orientationFromAspectRatio(600, 1000), 'portrait');
 assert.equal(orientationFromAspectRatio(0, 1000), 'auto');
+
+assert.equal(getLightboxSwipeDirection(-120, 18), 1);
+assert.equal(getLightboxSwipeDirection(120, -14), -1);
+assert.equal(getLightboxSwipeDirection(40, 4), 0);
+assert.equal(getLightboxSwipeDirection(-120, 110), 0);
+assert.equal(getLightboxSwipeDirection(-120, 18, { threshold: 140 }), 0);
 
 assert.equal(getProjectCardOrientation({
   thumbnail: { orientation: 'portrait' },
