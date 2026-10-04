@@ -386,7 +386,10 @@ function navigateLightbox(direction) {
   );
 
   const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const navigationDelay = reducedMotion ? 0 : 180;
+  // Match the CSS exit transition so the previous project fully settles out
+  // before the next project is mounted. Keeping this equal to the transform/
+  // blur duration prevents the navigation from looking like a hard cut.
+  const navigationDelay = reducedMotion ? 0 : 280;
 
   navigationTimer = windowRef.setTimeout(() => {
     navigationTimer = null;
