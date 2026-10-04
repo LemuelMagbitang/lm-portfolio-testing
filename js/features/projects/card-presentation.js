@@ -83,7 +83,7 @@ export function observeProjectCardOrientation(
   if (!card) return () => {};
 
   const update = () => {
-    const elementType = String(mediaType || mediaElement?.tagName || '').toLowerCase();
+    const elementType = String(mediaElement?.tagName || mediaType || '').toLowerCase();
 
     if (elementType === 'img') {
       applyProjectCardOrientation(card, getProjectCardOrientation(project, {
