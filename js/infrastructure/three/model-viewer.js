@@ -106,7 +106,19 @@ async function loadModel(url, ext){
 export async function mountModelViewer(container, src, options = {}) {
   if (!container) throw new Error('3D viewer container is missing.');
   if (container.__modelViewerCleanup) container.__modelViewerCleanup();
-  if (!src) throw new Error('3D model source is empty.');
+
+  // Invalidate any still-pending mount for this same shell. A previous
+  // loader can remain asynchronous even after a new render has reused the
+  // container; without a generation token it could append a second renderer
+  // after the newer viewer has already taken ownership of the DOM.
+  const mountToken = Symbol('model-viewer-mount');
+  container.__modelViewerMountToken = mountToken;
+  const isCurrentMount = () => container.__modelViewerMountToken === mountToken;
+
+  if (!src) {
+    if (isCurrentMount()) delete container.__modelViewerMountToken;
+    throw new Error('3D model source is empty.');
+  }
 
   const url = src;
   const ext = cleanExtension(url);
@@ -177,6 +189,7 @@ export async function mountModelViewer(container, src, options = {}) {
 
   try {
     const loaded = await loadModel(url, ext);
+    if (!isCurrentMount()) return null;
     if (!loaded?.root) throw new Error('3D model contains no scene.');
     root = loaded.root;
 
@@ -394,6 +407,7 @@ export async function mountModelViewer(container, src, options = {}) {
     container.dataset.ready = 'true';
     container.setAttribute('aria-busy', 'false');
   } catch (err) {
+    if (!isCurrentMount()) return null;
     container.dataset.ready = 'false';
     container.setAttribute('aria-busy', 'false');
     const label = activate.querySelector('strong');
@@ -473,6 +487,9 @@ export async function mountModelViewer(container, src, options = {}) {
     const bgLayer=container.querySelector(':scope > .lm-media-background-layer'); if(bgLayer) bgLayer.remove();
     const bgOverlay=container.querySelector(':scope > .lm-media-background-overlay'); if(bgOverlay) bgOverlay.remove();
     delete container.__modelViewerCleanup;
+    if (container.__modelViewerMountToken === mountToken) {
+      delete container.__modelViewerMountToken;
+    }
   };
   container.__modelViewerCleanup = cleanup;
   return cleanup;
