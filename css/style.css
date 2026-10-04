@@ -2795,12 +2795,14 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork {
-    /* YouTube uses the device width edge-to-edge on phones. The height cap
-       prevents portrait Shorts from exceeding the visible viewport while
-       the ratio variable keeps landscape, square, and portrait media exact. */
-    width:min(100vw, calc((100svh - 112px) * var(--lightbox-artwork-ratio, 1)));
+    /* Width is the mobile Lightbox contract: YouTube artwork reaches both
+       viewport edges, including portrait Shorts on short/wide phones.
+       The Lightbox itself is the scroll container, so a tall 9:16 surface
+       may extend vertically rather than becoming a narrow letterboxed card. */
+    width:100vw;
     max-width:100vw;
-    max-height:calc(100svh - 112px);
+    height:auto;
+    max-height:none;
   }
 
   @media (prefers-reduced-motion: reduce) {
