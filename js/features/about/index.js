@@ -37,11 +37,20 @@ export async function preloadAboutAssets({
       .filter(Boolean);
 
     for (const name of [...new Set(skillNames)]) {
+      const skillEntry = skills.find(skill => (
+        typeof skill === 'string'
+          ? skill.trim() === name
+          : String(skill?.name || '').trim() === name
+      ));
+      const manualIcon = typeof skillEntry === 'object' ? String(skillEntry?.icon || skillEntry?.logo || '').trim() : '';
+      const manualCandidates = manualIcon
+        ? [typeof resolveAssetUrl === 'function' ? resolveAssetUrl(manualIcon) : manualIcon]
+        : [];
       const candidates = findSoftwareLogoCandidates(name);
       const discovered = candidates.length
         ? []
         : await findSoftwareLogoDiscoveryCandidates(name);
-      const logoCandidates = [...new Set([...candidates, ...discovered])];
+      const logoCandidates = [...new Set([...manualCandidates, ...candidates, ...discovered])];
       if (logoCandidates.length) {
         jobs.push(
           logoCandidates.reduce(
