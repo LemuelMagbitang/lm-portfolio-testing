@@ -304,6 +304,49 @@ assert.equal(
 disposeDeferredImage();
 assert.equal(deferredImageListeners.load, undefined);
 
+const fallbackImageListeners = {};
+const fallbackImage = {
+  tagName: 'IMG',
+  naturalWidth: 0,
+  naturalHeight: 0,
+  addEventListener(name, callback) {
+    fallbackImageListeners[name] = callback;
+  },
+  removeEventListener(name) {
+    delete fallbackImageListeners[name];
+  }
+};
+const fallbackImageCard = makeElement();
+const disposeFallbackImage = observeProjectCardOrientation(
+  fallbackImageCard,
+  {
+    thumbnail: { src: '', orientation: 'auto' },
+    media: [{ type: 'image', src: 'media/fallback-intrinsic.webp' }]
+  },
+  fallbackImage,
+  { mediaType: 'image' }
+);
+
+assert.equal(
+  fallbackImageCard.dataset.cardOrientation,
+  'square',
+  'Fallback image thumbnails should receive a stable square tier before dimensions are available'
+);
+assert.equal(typeof fallbackImageListeners.load, 'function');
+
+fallbackImage.naturalWidth = 1600;
+fallbackImage.naturalHeight = 900;
+fallbackImageListeners.load();
+
+assert.equal(
+  fallbackImageCard.dataset.cardOrientation,
+  'landscape',
+  'Fallback image thumbnails must refine to the first media item intrinsic landscape tier after load'
+);
+
+disposeFallbackImage();
+assert.equal(fallbackImageListeners.load, undefined);
+
 const presentationCard = makeElement();
 assert.equal(applyProjectCardOrientation(presentationCard, 'landscape'), 'landscape');
 assert.equal(presentationCard.dataset.cardOrientation, 'landscape');
