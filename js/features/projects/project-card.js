@@ -13,7 +13,10 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
     focus: thumbnail.focus || '',
     zoom: thumbnail.zoom,
     rotate: thumbnail.rotate,
-    orientation: thumbnail.orientation || ''
+    orientation: thumbnail.orientation || '',
+    background: thumbnail.background && typeof thumbnail.background === 'object'
+      ? thumbnail.background
+      : null
   };
 
   for (const item of media) {
@@ -23,7 +26,9 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
       return {
         type,
         src: item.src,
-        background: item.background && typeof item.background === 'object' ? item.background : null,
+        background: item.background && typeof item.background === 'object'
+          ? item.background
+          : presentation.background,
         ...presentation
       };
     }
