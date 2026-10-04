@@ -8,13 +8,24 @@ export async function preloadAboutAssets({
 } = {}) {
   if (!url || typeof loadJson !== 'function' || !documentRef) return { total: 0, ready: 0 };
 
+  const ABOUT_IMAGE_PRELOAD_TIMEOUT_MS = 4500;
   const preloadImage = value => new Promise(resolve => {
     if (!value) return resolve(false);
     const image = documentRef.createElement('img');
     image.decoding = 'async';
     image.fetchPriority = 'high';
-    image.onload = () => resolve(true);
-    image.onerror = () => resolve(false);
+    let settled = false;
+    const finish = ready => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) clearTimeout(timer);
+      resolve(ready);
+    };
+    const timer = typeof globalThis.setTimeout === 'function'
+      ? globalThis.setTimeout(() => finish(false), ABOUT_IMAGE_PRELOAD_TIMEOUT_MS)
+      : null;
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
     image.src = value;
   });
 
