@@ -485,6 +485,7 @@ export function createLightboxMediaRenderer({
 
     const entry = buildMediaEntry(iframe, item.caption || item.description, item.background);
     const artwork = entry.querySelector('.lightbox-artwork');
+    artwork?.classList.add('is-youtube-artwork');
     if (resolvedOrientation === 'portrait') setAspectRatio(artwork, 9, 16);
     else if (resolvedOrientation === 'square') setAspectRatio(artwork, 1, 1);
     else setAspectRatio(artwork, 16, 9);
