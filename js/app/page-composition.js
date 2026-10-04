@@ -6,7 +6,13 @@
  * explicit dependencies between them.
  */
 
-import { mountProjects, getProjectForCard, getProjects, getCardForProject } from '../features/projects/index.js?v=20261005-03';
+import {
+  mountProjects,
+  getProjectForCard,
+  getProjects,
+  getCardForProject,
+  destroyProjects
+} from '../features/projects/index.js?v=20261005-04';
 import { initNavigation } from '../features/navigation/index.js';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261004-15';
@@ -284,8 +290,10 @@ export async function createPortfolioApp({
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
       galleryFeature?.destroy?.();
+      destroyProjects();
       navigation.destroy?.();
       reviewsFeature.cleanup?.();
+      aboutFeature?.cleanup?.();
       forms.cleanup?.();
     }
   };

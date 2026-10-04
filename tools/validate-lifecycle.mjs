@@ -38,6 +38,16 @@ afterDispose();
 console.log('Feature lifecycle boundary validated.');
 
 
+const projectLoaderSource = await readFile(new URL('../js/features/projects/project-loader.js', import.meta.url), 'utf8');
+assert.match(projectLoaderSource, /export function destroyProjects\(\)/);
+assert.match(projectLoaderSource, /projectCardMap\.clear\(\);/);
+assert.match(projectLoaderSource, /projectModels = \[\];/);
+
+const pageCompositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
+assert.match(pageCompositionSource, /destroyProjects/);
+assert.match(pageCompositionSource, /destroyProjects\(\);/);
+assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
+
 const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
 assert.match(lightboxSource, /bind\(windowRef, 'pagehide', handlePageHide\)/);
 assert.match(lightboxSource, /bind\(windowRef, 'pageshow', handlePageShow\)/);

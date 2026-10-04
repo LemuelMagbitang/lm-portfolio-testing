@@ -32,6 +32,19 @@ export function getCardForProject(projectId) {
   return key ? projectCardMap.get(key) || null : null;
 }
 
+/**
+ * Release the Projects feature's strong card index and normalized models.
+ *
+ * The card -> project relation uses a WeakMap, but the projectId -> card
+ * index is intentionally strong for fast Gallery/Lightbox lookup. Clear that
+ * index when the application is destroyed so detached card nodes can be
+ * garbage-collected cleanly on remounts and in long-lived preview/test hosts.
+ */
+export function destroyProjects() {
+  projectCardMap.clear();
+  projectModels = [];
+}
+
 export async function loadProjects({
   url,
   loadJson,
