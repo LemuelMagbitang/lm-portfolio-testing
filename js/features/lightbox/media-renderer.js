@@ -17,6 +17,205 @@ export function createLightboxMediaRenderer({
   lightboxControls = null
 } = {}) {
   let youtubeMessageCleanup = null;
+  const youtubeFrameCache = new Map();
+  const youtubeFramePending = new Map();
+  const lottieDimensionCache = new Map();
+  let youtubePreloadRoot = null;
+
+  function ensureYouTubePreloadRoot() {
+    if (youtubePreloadRoot?.isConnected) return youtubePreloadRoot;
+    youtubePreloadRoot = documentRef.createElement('div');
+    youtubePreloadRoot.className = 'lightbox-youtube-preload-root';
+    youtubePreloadRoot.setAttribute('aria-hidden', 'true');
+    Object.assign(youtubePreloadRoot.style, {
+      position: 'fixed',
+      left: '-10000px',
+      top: '-10000px',
+      width: '320px',
+      height: '180px',
+      overflow: 'hidden',
+      opacity: '0.001',
+      pointerEvents: 'none',
+      contain: 'strict'
+    });
+    (documentRef.body || documentRef.documentElement)?.appendChild(youtubePreloadRoot);
+    return youtubePreloadRoot;
+  }
+
+  function buildYouTubeEmbedUrl(src) {
+    const parsed = parseYouTube(src);
+    if (!parsed?.id) return '';
+    const params = new URLSearchParams();
+    params.set('enablejsapi', '1');
+    params.set('playsinline', '1');
+    if (windowRef?.location?.origin) params.set('origin', windowRef.location.origin);
+    return 'https://www.youtube.com/embed/' + parsed.id + '?' + params.toString();
+  }
+
+  function setAspectRatio(surface, width, height) {
+    const w = Number(width);
+    const h = Number(height);
+    if (!surface || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+    surface.style.aspectRatio = String(w) + ' / ' + String(h);
+  }
+
+  function preloadImage(url) {
+    return new Promise(resolve => {
+      if (!url) return resolve(false);
+      const image = new Image();
+      image.decoding = 'async';
+      image.fetchPriority = 'high';
+      image.onload = async () => {
+        try { await image.decode?.(); } catch (_) {}
+        resolve(true);
+      };
+      image.onerror = () => resolve(false);
+      image.src = url;
+    });
+  }
+
+  function preloadVideo(url) {
+    return new Promise(resolve => {
+      if (!url) return resolve(false);
+      const video = documentRef.createElement('video');
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      video.fetchPriority = 'high';
+      let done = false;
+      const finish = value => {
+        if (done) return;
+        done = true;
+        video.removeEventListener('loadedmetadata', onReady);
+        video.removeEventListener('canplay', onReady);
+        video.removeEventListener('error', onError);
+        resolve(value);
+      };
+      const onReady = () => finish(true);
+      const onError = () => finish(false);
+      video.addEventListener('loadedmetadata', onReady, { once: true });
+      video.addEventListener('canplay', onReady, { once: true });
+      video.addEventListener('error', onError, { once: true });
+      video.src = url;
+      video.load();
+    });
+  }
+
+  async function preloadLottie(url) {
+    if (!url || typeof globalThis.fetch !== 'function') return false;
+    try {
+      const response = await globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' });
+      if (!response.ok) return false;
+      const payload = await response.json();
+      const width = Number(payload?.w);
+      const height = Number(payload?.h);
+      if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+        lottieDimensionCache.set(url, { width, height });
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function preloadModel(url) {
+    if (!url || typeof globalThis.fetch !== 'function') return false;
+    try {
+      const response = await globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' });
+      if (!response.ok) return false;
+      await response.arrayBuffer();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function preloadYouTube(src, title = 'Project video') {
+    const embedSrc = buildYouTubeEmbedUrl(src);
+    if (!embedSrc) return Promise.resolve(false);
+    if (youtubeFrameCache.has(embedSrc)) return Promise.resolve(true);
+    if (youtubeFramePending.has(embedSrc)) return youtubeFramePending.get(embedSrc);
+
+    const promise = new Promise(resolve => {
+      const iframe = documentRef.createElement('iframe');
+      iframe.dataset.lmYoutube = 'true';
+      iframe.dataset.lmYoutubeCacheKey = embedSrc;
+      iframe.frameBorder = '0';
+      iframe.loading = 'eager';
+      iframe.fetchPriority = 'high';
+      iframe.tabIndex = -1;
+      iframe.title = title || 'Project video';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      let done = false;
+      const finish = value => {
+        if (done) return;
+        done = true;
+        if (value) youtubeFrameCache.set(embedSrc, iframe);
+        iframe.removeEventListener('load', onLoad);
+        iframe.removeEventListener('error', onError);
+        resolve(value);
+      };
+      const onLoad = () => { primeYouTubeFrame(iframe); finish(true); };
+      const onError = () => finish(false);
+      iframe.addEventListener('load', onLoad, { once: true });
+      iframe.addEventListener('error', onError, { once: true });
+      iframe.src = embedSrc;
+      ensureYouTubePreloadRoot().appendChild(iframe);
+    });
+
+    youtubeFramePending.set(embedSrc, promise);
+    return promise.finally(() => youtubeFramePending.delete(embedSrc));
+  }
+
+  async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
+    const jobs = [];
+    const seen = new Set();
+    let hasModel = false;
+
+    (Array.isArray(projects) ? projects : []).forEach(project => {
+      (Array.isArray(project?.media) ? project.media : []).forEach(item => {
+        const type = String(item?.type || '').toLowerCase();
+        if (!item?.src) return;
+        const url = resolveAssetUrl(item.src);
+        const key = type + ':' + url;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        if (type === 'image') jobs.push(preloadImage(url));
+        else if (type === 'video') jobs.push(preloadVideo(url));
+        else if (type === 'lottie') jobs.push(preloadLottie(url));
+        else if (type === 'model') {
+          hasModel = true;
+          jobs.push(preloadModel(url));
+        } else if (type === 'youtube') {
+          jobs.push(preloadYouTube(item.src, item.caption || item.description || project.title || 'Project video'));
+        }
+      });
+    });
+
+    if (hasModel && typeof preloadModelModule === 'function') {
+      jobs.push(Promise.resolve().then(preloadModelModule));
+    }
+
+    const results = await Promise.allSettled(jobs);
+    return {
+      total: jobs.length,
+      ready: results.filter(result => result.status === 'fulfilled' && result.value !== false).length
+    };
+  }
+
+  function takeCachedYouTubeFrame(embedSrc) {
+    const frame = youtubeFrameCache.get(embedSrc);
+    if (!frame) return null;
+    if (!frame.isConnected) {
+      youtubeFrameCache.delete(embedSrc);
+      return null;
+    }
+    return frame;
+  }
+
 
   function buildImageMedia(imgUrl, altText = 'Project artwork', { eager = false } = {}) {
     const img = documentRef.createElement('img');
@@ -199,7 +398,7 @@ export function createLightboxMediaRenderer({
     // real intrinsic dimensions as soon as metadata is available. The exact
     // ratio is applied to both the video and its artwork surface so portrait,
     // square, and non-16:9 landscape MP4s keep their original proportions.
-    syncClasses('landscape');
+    syncClasses('square');
     const syncIntrinsicRatio = () => {
       const width = Number(video.videoWidth);
       const height = Number(video.videoHeight);
@@ -218,49 +417,56 @@ export function createLightboxMediaRenderer({
   }
 
   function renderImage(item, project, index = 0) {
-    return buildMediaEntry(
-      buildImageMedia(
-        resolveAssetUrl(item.src),
-        item.caption || item.description || project.title || 'Project artwork',
-        { eager: index === 0 }
-      ),
-      item.caption || item.description,
-      item.background
+    const image = buildImageMedia(
+      resolveAssetUrl(item.src),
+      item.caption || item.description || project.title || 'Project artwork',
+      { eager: index === 0 }
     );
+    const entry = buildMediaEntry(image, item.caption || item.description, item.background);
+    const artwork = entry.querySelector('.lightbox-artwork');
+    const applyIntrinsicRatio = () => setAspectRatio(artwork, image.naturalWidth, image.naturalHeight);
+    applyIntrinsicRatio();
+    image.addEventListener('load', applyIntrinsicRatio, { once: true });
+    return entry;
   }
 
   function renderYouTube(item, project) {
-    const { id, isShort } = parseYouTube(item.src);
-    const iframe = documentRef.createElement("iframe");
-    iframe.dataset.lmYoutube = "true";
-    let embedSrc = item.src;
-    if (id) {
-      const params = new URLSearchParams();
-      params.set("enablejsapi", "1");
-      params.set("playsinline", "1");
-      if (windowRef?.location?.origin) params.set("origin", windowRef.location.origin);
-      embedSrc = "https://www.youtube.com/embed/" + id + "?" + params.toString();
+    const { isShort } = parseYouTube(item.src);
+    const embedSrc = buildYouTubeEmbedUrl(item.src);
+    let iframe = takeCachedYouTubeFrame(embedSrc);
+
+    if (!iframe) {
+      iframe = documentRef.createElement('iframe');
+      iframe.dataset.lmYoutube = 'true';
+      iframe.dataset.lmYoutubeCacheKey = embedSrc;
+      iframe.frameBorder = '0';
+      iframe.loading = 'eager';
+      iframe.fetchPriority = 'high';
+      iframe.tabIndex = 0;
+      iframe.title = item.caption || item.description || project.title || 'Project video';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.addEventListener('load', () => primeYouTubeFrame(iframe), { once: true });
+      iframe.src = embedSrc || item.src;
+      if (embedSrc) youtubeFrameCache.set(embedSrc, iframe);
+    } else {
+      iframe.tabIndex = 0;
+      iframe.title = item.caption || item.description || project.title || 'Project video';
     }
-    iframe.frameBorder = '0';
-    // Lightbox media should be immediately interactive on touch and mouse
-    // devices. Lazy-loading can leave the first tap landing while the
-    // cross-origin player is still attaching its controls.
-    iframe.loading = 'eager';
-    iframe.tabIndex = 0;
-    iframe.title = item.caption || item.description || project.title || 'Project video';
-    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-    iframe.allowFullscreen = true;
-    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-    iframe.addEventListener('load', () => primeYouTubeFrame(iframe));
-    iframe.src = embedSrc;
 
     const orientation = String(item.orientation || '').toLowerCase();
-    if (orientation === 'portrait') iframe.classList.add('yt-portrait');
-    else if (orientation === 'square') iframe.classList.add('yt-square');
-    else if (orientation === 'landscape') iframe.classList.add('yt-landscape');
-    else iframe.classList.add(isShort ? 'yt-portrait' : 'yt-landscape');
+    const resolvedOrientation = orientation || (isShort ? 'portrait' : 'landscape');
+    if (resolvedOrientation === 'portrait') iframe.classList.add('yt-portrait');
+    else if (resolvedOrientation === 'square') iframe.classList.add('yt-square');
+    else iframe.classList.add('yt-landscape');
 
-    return buildMediaEntry(iframe, item.caption || item.description, item.background);
+    const entry = buildMediaEntry(iframe, item.caption || item.description, item.background);
+    const artwork = entry.querySelector('.lightbox-artwork');
+    if (resolvedOrientation === 'portrait') setAspectRatio(artwork, 9, 16);
+    else if (resolvedOrientation === 'square') setAspectRatio(artwork, 1, 1);
+    else setAspectRatio(artwork, 16, 9);
+    return entry;
   }
 
   function renderVideo(item) {
@@ -362,8 +568,9 @@ export function createLightboxMediaRenderer({
   }
 
   function renderLottie(item) {
+    const resolvedSrc = resolveAssetUrl(item.src);
     const player = documentRef.createElement('lottie-player');
-    player.setAttribute('src', resolveAssetUrl(item.src));
+    player.setAttribute('src', resolvedSrc);
     player.setAttribute('autoplay', '');
     player.setAttribute('loop', '');
     player.setAttribute('background', 'transparent');
@@ -375,7 +582,10 @@ export function createLightboxMediaRenderer({
 
     player.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     player.preserveAspectRatio = 'xMidYMid slice';
-    return buildMediaEntry(player, item.caption || item.description, item.background);
+    const entry = buildMediaEntry(player, item.caption || item.description, item.background);
+    const dimensions = lottieDimensionCache.get(resolvedSrc);
+    if (dimensions) setAspectRatio(entry.querySelector('.lightbox-artwork'), dimensions.width, dimensions.height);
+    return entry;
   }
 
   function renderItem(item, project, index = 0) {
@@ -422,6 +632,13 @@ export function createLightboxMediaRenderer({
     youtubeMessageCleanup?.();
     youtubeMessageCleanup = null;
     pauseOtherPlayback(container);
+
+    const preloadRoot = ensureYouTubePreloadRoot();
+    container.querySelectorAll('iframe[data-lm-youtube]').forEach(iframe => {
+      const key = iframe.dataset.lmYoutubeCacheKey;
+      if (key && youtubeFrameCache.get(key) === iframe) preloadRoot.appendChild(iframe);
+    });
+
     container.querySelectorAll('.model-viewer-shell').forEach(shell => {
       try { shell.__modelViewerCleanup?.(); } catch (_) {}
     });
@@ -429,6 +646,7 @@ export function createLightboxMediaRenderer({
 
   return {
     renderProjectMedia,
+    preloadProjectsMedia,
     dispose
   };
 }
