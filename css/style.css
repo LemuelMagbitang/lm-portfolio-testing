@@ -965,6 +965,11 @@ button.hamburger {
 }
 
 .lightbox-close {
+  mix-blend-mode:difference;
+  color:#fff;
+  background:transparent;
+  border:0;
+  box-shadow:none;
   position: fixed;
   top: 18px;
   right: 22px;
@@ -986,12 +991,17 @@ button.hamburger {
 }
 
 @media (hover:hover) and (pointer:fine){
-  .lightbox-close:hover { opacity:.7; transform:scale(1.04); }
+  .lightbox-close:hover { opacity:.72; transform:scale(1.04); }
 }
 .lightbox-close:focus{outline:none;}
 .lightbox-close:focus-visible{outline:2px solid #fff;outline-offset:3px;}
 
 .lightbox-nav {
+  mix-blend-mode:difference;
+  color:#fff;
+  background:transparent;
+  border:0;
+  box-shadow:none;
   position: fixed;
   top: 50%;
   /* On mobile, the browser's own address bar retracts as you scroll,
@@ -1032,8 +1042,7 @@ button.hamburger {
    permanently "clicked" (stuck white) after tapping it on mobile. */
 @media (hover: hover) and (pointer: fine) {
   .lightbox-nav:hover {
-    background: #fff;
-    color: #000;
+    opacity:.72;
   }
 }
 
@@ -1052,24 +1061,7 @@ button.hamburger {
 .lightbox-prev { left: 10px; }
 .lightbox-next { right: 10px; }
 
-/* Bright artwork gets a dark lightbox control treatment automatically. */
-.lightbox-modal.has-bright-media .lightbox-close,
-.lightbox-modal.has-bright-media .lightbox-nav{
-  color:#111;
-  background:rgba(255,255,255,.78);
-  border-color:rgba(0,0,0,.14);
-  box-shadow:0 8px 24px rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.12);
-}
-.lightbox-modal.has-bright-media .lightbox-close:focus-visible,
-.lightbox-modal.has-bright-media .lightbox-nav:focus-visible{outline-color:#111;}
-@media (hover:hover) and (pointer:fine){
-  .lightbox-modal.has-bright-media .lightbox-close:hover,
-  .lightbox-modal.has-bright-media .lightbox-nav:hover{
-    background:#111;
-    color:#fff;
-    border-color:rgba(0,0,0,.42);
-  }
-}
+
 
 /* Easy Touch Target Back to Top */
 footer a[href="#"] {
@@ -2238,7 +2230,7 @@ body.center-page {
 .model-viewer-activate{
   position:absolute;
   inset:0;
-  z-index:5;
+  z-index:100;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -2280,7 +2272,7 @@ body.center-page {
   position:absolute;
   left:50%;
   bottom:max(calc(env(safe-area-inset-bottom, 0px) + 14px), clamp(14px,2.8vh,30px));
-  z-index:40;
+  z-index:100;
   transform:translateX(-50%);
   display:flex;
   flex-direction:column;
