@@ -977,7 +977,7 @@ function validateCmsRegressionContracts() {
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
   if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
-  if (!/async function updateBranch\(commitSha\)/.test(admin) ||
+  if (!/async\s+(?:function\s+)?updateBranch\(commitSha\)/.test(admin) ||
       !/body:JSON\.stringify\(\{sha:commitSha,force:false\}\)/.test(admin) ||
       !/await GH\.updateBranch\(newCommit\.sha\)/.test(admin)) {
     err('CMS save: atomic Git writes must use a non-forced branch ref update.');
