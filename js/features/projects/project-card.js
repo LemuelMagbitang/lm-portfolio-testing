@@ -164,10 +164,37 @@ export function buildProjectCardElement(
     }
 
     let initialMediaIndex = -1;
-    if (event.target?.closest?.('.card-thumbnail [data-model-thumb]')) {
-      initialMediaIndex = Array.isArray(project.media)
-        ? project.media.findIndex(item => item?.type === 'model' && item?.src)
-        : -1;
+    const eventPath = typeof event.composedPath === 'function'
+      ? event.composedPath()
+      : [];
+    const clickedInsideThumbnail =
+      eventPath.includes(thumbnail) ||
+      event.target?.closest?.('.card-thumbnail') === thumbnail;
+
+    // The clicked node can be a custom element (for example <lottie-player>)
+    // or a child inside its shadow/light DOM. Resolve the semantic model target
+    // from the thumbnail itself instead of relying only on event.target.closest().
+    // This keeps direct-open media intent stable across browser/custom-element
+    // event retargeting and also supports multiple model assets by source.
+    const modelTarget = clickedInsideThumbnail
+      ? thumbnail.querySelector('[data-model-thumb]')
+      : null;
+
+    if (modelTarget) {
+      const modelSource = String(
+        modelTarget.getAttribute('data-model-thumb') || ''
+      ).trim();
+      const media = Array.isArray(project.media) ? project.media : [];
+      initialMediaIndex = media.findIndex(item =>
+        String(item?.type || '').toLowerCase() === 'model' &&
+        item?.src &&
+        (!modelSource || String(item.src).trim() === modelSource)
+      );
+      if (initialMediaIndex < 0) {
+        initialMediaIndex = media.findIndex(item =>
+          String(item?.type || '').toLowerCase() === 'model' && item?.src
+        );
+      }
     }
 
     onActivate?.({ card, project, event, initialMediaIndex });
