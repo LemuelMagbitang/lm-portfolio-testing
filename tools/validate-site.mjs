@@ -977,10 +977,10 @@ function validateCmsRegressionContracts() {
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
   if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
-  if (!/async function updateBranch\(commitSha, expectedSha\)/.test(admin) ||
-      !/expected_sha:expectedSha/.test(admin) ||
-      !/await GH\.updateBranch\(newCommit\.sha, parentSha\)/.test(admin)) {
-    err('CMS save: atomic Git writes must lease the branch head during the final ref update.');
+  if (!/async function updateBranch\(commitSha\)/.test(admin) ||
+      !/body:JSON\.stringify\(\{sha:commitSha,force:false\}\)/.test(admin) ||
+      !/await GH\.updateBranch\(newCommit\.sha\)/.test(admin)) {
+    err('CMS save: atomic Git writes must use a non-forced branch ref update.');
   }
   if (!admin.includes('await onCollect()')) err('CMS save: save collectors must support asynchronous cross-file validation/migrations.');
   if (!admin.includes('filtersWithProjects')) err('CMS filters: filter/project relationship saves must be atomic.');
