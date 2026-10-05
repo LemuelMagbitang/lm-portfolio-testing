@@ -791,7 +791,9 @@ async function trackDeployStatus(sha){
 
 document.getElementById('btnSaveTop').addEventListener('click', async () => {
   if (!currentSave) return;
-  const { onCollect, name, filePath } = currentSave;
+  const saveContext = currentSave;
+  const saveStartedVersion = renderVersion;
+  const { onCollect, name, filePath } = saveContext;
   let obj;
   try{ obj = await onCollect(); }
   catch(err){ toast(err.message, true); return; }
@@ -802,13 +804,13 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>&nbsp; <span>Saving…</span>';
   try{
     let commitSha;
-    if(currentSave && currentSave.combined==='filtersWithProjects' && name==='filters'){
+    if(saveContext.combined==='filtersWithProjects' && name==='filters'){
       commitSha=await saveSectionsAtomic([
         {name:'filters',path:SECTIONS.filters.file,content:JSON.stringify(obj,null,2)+'\n',encoding:'utf-8'},
         {name:'projects',path:SECTIONS.projects.file,content:JSON.stringify(currentSave.extraData(),null,2)+'\n',encoding:'utf-8'}
       ],'CMS: delete filter and clear project tags');
       toast(`Saved — filter changes and project tag cleanup committed to ${conn.branch}.`);
-    }else if(currentSave && currentSave.combined && name==='heroLoop'){
+    }else if(saveContext.combined && name==='heroLoop'){
       const sr=await loadSection('settings');
       const next={...(sr.json||{}),heroTiming:{...(sr.json?.heroTiming||{}),loopMode:obj.mode,transitionStyle:obj.transition,crossfadeMs:obj.interval}};
       commitSha=await saveSectionsAtomic([
@@ -820,7 +822,11 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
       commitSha=await saveSection(name,obj,`CMS: update ${filePath}`);
       toast(`Saved — ${filePath} committed to ${conn.branch}.`);
     }
-    btn.disabled=false;btn.innerHTML=orig;trackDeployStatus(commitSha);
+    btn.disabled=false;btn.innerHTML=orig;
+    // The commit belongs to the section that initiated this save. Do not
+    // update the status bar or begin deployment polling on a different
+    // section the user navigated to while the GitHub request was in flight.
+    if(renderVersion === saveStartedVersion && currentSave === saveContext) trackDeployStatus(commitSha);
   }catch(err){
     toast(err.message, true);
     btn.disabled = false; btn.innerHTML = orig;
