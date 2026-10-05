@@ -550,7 +550,11 @@ function enterApp(){
   branchIcon.setAttribute('aria-hidden', 'true');
   repoLabel.appendChild(branchIcon);
   repoLabel.appendChild(document.createTextNode(' ' + conn.owner + '/' + conn.repo + ' · ' + conn.branch));
-  goToSection('hero');
+  // Do not overwrite a section selected during the tiny window between
+  // exposing the app shell and finishing the async restore/connect flow.
+  // Hero is only the fallback initial destination when nothing else has
+  // already been selected.
+  if (currentSection === 'hero') goToSection('hero');
 }
 
 (function boot(){
