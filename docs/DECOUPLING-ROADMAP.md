@@ -16,16 +16,29 @@ As of October 5, 2026, the projects-runtime-cutover branch has completed the com
 - Gallery presentation owns responsive density, row-aware Show More/Show Less reveal, collapsed viewport geometry, and reset behavior rather than Gallery state owning CSS/layout decisions.
 - Lightbox now handles progressive media loading, image/video/YouTube/Lottie/3D rendering, playback handoff, orientation, focus restoration, swipe navigation, and scoped artwork backgrounds.
 - The browser smoke suite covers the ES-module boot path, Works/About, mobile navigation, filters/ALL, Show More state across pageshow/resize/Lightbox close, local-video pause handoff, YouTube handoff/cache reuse, intrinsic video ratios, Shorts framing, 3D focus mode, software logos, and CMS editor fixtures.
-- Current CI for `89b5041eb637d5a76fd686cac18a1e7051a9d602` is green: the Validate portfolio job passed architecture, data/project contracts, Projects runtime, Gallery presentation, lifecycle, JavaScript/CMS syntax, smoke syntax, and Chromium browser smoke; the Pages build and deployment also succeeded.
+- Latest verified CI is green at `a2df35d6dd276340ff0c23407a44a9708e2e1939` (`Sync About runtime cache after model preload contract clarification`, October 5, 2026 22:47 PHT). The `Validate portfolio` job passed site/data/path validation, architecture boundaries, project data contracts, Projects runtime, Gallery presentation, lifecycle, all JavaScript/CMS/smoke syntax checks, and Chromium browser smoke. The Pages build and deployment run for the same commit also succeeded. An earlier YouTube-footprint smoke run on `be63fae28150746ba474deb8e026b5bd4410b55f` failed; the current head is the subsequent green validation state.
 - The CMS now has a **Curated Views** editor. It can create unlisted view records, reference Main Portfolio projects, create view-owned projects, reorder entries, and preserve ownership boundaries. Public Curated View hash routing is intentionally **not** enabled yet.
-- The current public runtime cache chain is on `20261005-14`; feature modules may use their own cache keys, so those keys must be bumped whenever their source changes.
+- Runtime cache-busting is intentionally feature-local rather than globally synchronized. The latest composition/page cache key is `20261005-28`; feature modules carry their own query versions. Any source change must bump every affected public import/preload reference so GitHub Pages cannot serve a stale module.
 
 ### Current focus
 
 Phase 3B/3C is now about hardening the behavior that users actually exercise: Show More state stability, media playback lifecycle, intrinsic media sizing, Lightbox layering/contrast, 3D/Lottie isolation, public navigation, and remaining About/CMS edge cases. Curated Views is being hardened as a CMS boundary without coupling it into the public Gallery until its runtime contract is ready.
 
 The deployment gate remains separate from architectural completion: each public-page runtime commit must pass the GitHub Actions validation/Chromium gate before it is considered a safe cutover candidate for the eventual replacement of the legacy deployed site.
-## Target architecture
+
+### R/W/E audit checkpoint — October 5, 2026
+
+The current implementation is no longer in structural migration. The remaining risk is concentrated in runtime edge cases and presentation ownership, not in the basic decoupling model.
+
+- **Architecture:** validated at the current head; legacy root controllers are removed and the browser entrypoint remains thin.
+- **Gallery:** the state contract is correct in code and covered by browser regressions for resize, pageshow, scrolling, collapse/expand, and Lightbox return. The remaining requirement is real-device confirmation that no browser-specific layout restoration regression remains.
+- **Lightbox/media:** image, local video, YouTube, Lottie, and 3D paths are structurally separated. Playback handoff and intrinsic sizing are covered by smoke tests. Mobile YouTube first-tap behavior remains a real-device QA item because third-party iframe behavior cannot be fully certified by a mocked Chromium test.
+- **3D/Lottie:** artwork backgrounds are scoped to the artwork surface; 3D focus uses an explicit stacking model and a dedicated Back control. The remaining work is visual/interaction QA across actual devices and model assets.
+- **CSS:** the ownership layer is substantially established, but the stylesheet still contains historical duplicate/override regions. Consolidation is a polish/hardening task, not a prerequisite for the current runtime contract.
+- **About/CMS:** software-logo lookup has contained fallbacks and the Curated Views CMS boundary is active. Public Curated View routing remains intentionally disabled until its resolver contract is complete.
+
+The immediate next engineering stage is **runtime hardening + cross-device verification**, followed by the full content-independent responsive pass. Final visual polish should begin only after those gates are stable.
+## Current architecture shape and target direction
 
 ```text
 js/
@@ -67,7 +80,7 @@ js/
     └── web3forms/
 ```
 
-The exact split may change during implementation. The dependency boundaries are more important than the folder names.
+The tree above is the current architectural shape at the branch checkpoint, not a requirement that every historical target filename exist verbatim. The dependency boundaries are more important than folder names. Where the implementation uses a different concrete module name (for example `project-normalizer.js` or `infrastructure/cms`), the boundary is considered satisfied by ownership rather than by filename.
 
 ## Migration strategy
 
@@ -80,7 +93,7 @@ The exact split may change during implementation. The dependency boundaries are 
 - Add the validator to CI.
 - Create a recovery branch before structural migration.
 
-### Stage 1 — composition root
+### Stage 1 — composition root — completed
 
 Reduce `js/script.js` to bootstrap/composition responsibilities only.
 
@@ -105,7 +118,7 @@ const app = createPortfolioApp({
 await app.start();
 ```
 
-### Stage 2 — data boundary
+### Stage 2 — data boundary — completed
 
 Normalize CMS JSON before it reaches UI features.
 
@@ -125,7 +138,7 @@ feature modules
 
 Features should not need to know whether content came from GitHub, a local fallback, or a future backend.
 
-### Stage 3 — infrastructure adapters
+### Stage 3 — infrastructure adapters — completed
 
 Move vendor-specific code behind adapters.
 
@@ -142,7 +155,7 @@ Storage API   -> browser-storage adapter
 
 This permits replacement or removal of a vendor without changing the feature's public contract.
 
-### Stage 4 — feature ownership
+### Stage 4 — feature ownership — completed
 
 Each feature receives:
 
@@ -154,19 +167,19 @@ Each feature receives:
 
 A feature must not search the whole page for unrelated elements as an implicit dependency.
 
-### Stage 5 — state isolation
+### Stage 5 — state isolation — completed
 
 Remove shared mutable state from the global/root controller.
 
 Each feature owns its own state. Cross-feature communication uses explicit events or callbacks.
 
-### Stage 6 — CSS ownership
+### Stage 6 — CSS ownership — in progress
 
 Replace historical override layers with component-owned styles.
 
 The objective is not more CSS files. The objective is that a component's responsive, interactive, and visual states live together and can be replaced without fighting unrelated selectors.
 
-### Stage 7 — CMS application boundary
+### Stage 7 — CMS application boundary — in progress
 
 The public site must never import CMS implementation code.
 
@@ -187,7 +200,7 @@ admin/
 
 The CMS and public portfolio are two applications sharing repository content—not one application with two pages.
 
-### Phase 3A — UI foundation / presentation hardening
+### Phase 3A — UI foundation / presentation hardening — contract achieved; CSS consolidation remains
 
 Before changing the portfolio's visual language, stabilize the contracts that future presentation work will sit on:
 
@@ -197,15 +210,15 @@ Before changing the portfolio's visual language, stabilize the contracts that fu
 4. Project media capabilities must be part of the stable model, not inferred repeatedly by UI components.
 5. CSS duplication and override layers should be reduced before introducing a new presentation system.
 
-### Phase 3B — dynamic project cards
+### Phase 3B — dynamic project cards — active hardening phase
 
 Once the presentation boundary is stable, make cards media-capability aware while keeping the CMS/project data contract unchanged.
 
-### Phase 3C — lightbox media viewer
+### Phase 3C — lightbox media viewer — active hardening phase
 
 Treat the Lightbox as a media-viewer product surface with independent presentation, navigation, orientation, and media capability handling.
 
-### Phase 3D — content-independent responsive UX
+### Phase 3D — content-independent responsive UX — pending full validation pass
 
 Viewport behavior should be presentation configuration, not a storage or content concern.
 
