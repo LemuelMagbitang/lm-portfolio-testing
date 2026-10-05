@@ -365,11 +365,12 @@ export function createLightboxMediaRenderer({
         } else if (type === 'video') {
           pushMediaJob(() => preloadVideo(url), { critical });
         } else if (type === 'youtube') {
-          // Third-party iframe boot is substantially more expensive than a
-          // local asset. On constrained connections, let the real Lightbox
-          // request it on demand rather than competing with the user's page.
+          // A YouTube iframe is never startup-critical. Its iframe/player boot
+          // is much more expensive than the local first-view assets, and the
+          // embed does not guarantee that the actual video bytes are ready.
+          // Queue it only after the local critical tier has completed.
           if (!constrainedNetwork) {
-            pushMediaJob(() => preloadYouTube(url), { critical });
+            pushMediaJob(() => preloadYouTube(url), { critical: false });
           }
         } else {
           // Future media types still get a cache warm-up when they expose a
