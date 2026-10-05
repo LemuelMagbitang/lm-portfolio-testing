@@ -1382,7 +1382,19 @@ try {
       const curatedNav = page.locator('.nav-item[data-section="curatedViews"]');
       if (await curatedNav.count() !== 1) throw new Error('CMS Curated Views navigation item is missing.');
       await curatedNav.click();
-      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+      try {
+        await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+      } catch (error) {
+        const diagnostic = await page.evaluate(() => ({
+          activeSection: document.querySelector('.nav-item.active')?.dataset.section || '',
+          topbarSection: document.querySelector('#topbarSection')?.textContent?.trim() || '',
+          contentText: document.querySelector('#content')?.innerText?.slice(0, 1200) || '',
+          contentHtml: document.querySelector('#content')?.innerHTML?.slice(0, 2400) || '',
+          curatedButtonCount: document.querySelectorAll('#content #addCuratedView').length,
+          resources: performance.getEntriesByType('resource').map(entry => entry.name).filter(name => /api\.github\.com|curated-views\.json|projects\.json/.test(name)).slice(-20)
+        }));
+        throw new Error('Curated Views render diagnostic: ' + JSON.stringify(diagnostic) + ' | original: ' + (error?.message || error));
+      }
 
       page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
       await page.locator('#content #addCuratedView').click();
