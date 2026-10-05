@@ -249,7 +249,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
     const target = initialMediaIndex >= 0 ? items[initialMediaIndex] : null;
 
     if (!target) {
-      if (initialMediaIndex >= 0 && frame < 18) {
+      if (initialMediaIndex >= 0 && frame < 60) {
         windowRef.requestAnimationFrame(() => positionInitialMedia(frame + 1));
       }
       return;
@@ -275,7 +275,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
       });
     }
 
-    if (frame < 18) {
+    if (frame < 60) {
       windowRef.requestAnimationFrame(() => positionInitialMedia(frame + 1));
     }
   };
