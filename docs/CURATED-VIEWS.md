@@ -33,34 +33,49 @@ Curated View: #3d               │
 
 A curated-only project must never be inserted into the main Projects dataset merely because it uses the same editor. It is visible only through the Curated View that owns it.
 
-## Data model direction
+## Persisted data contract
 
-The Curated View record should contain stable view identity plus an ordered list of project entries. Entries should distinguish ownership explicitly rather than duplicating main project records.
+The first persisted registry is `data/curated-views.json`, an array of view records. Each view has stable identity plus an ordered list of project entries. Entries distinguish ownership explicitly rather than duplicating Main Portfolio records.
 
-Conceptual shape:
+The contract is:
 
 ```json
-{
-  "id": "anime-illustration",
-  "name": "Anime Illustration",
-  "slug": "anime-illustration",
-  "projects": [
-    { "source": "main", "projectId": "friends-gacha" },
-    {
-      "source": "curated",
-      "project": {
-        "id": "anime-illustration-character-study",
-        "title": "Character Study",
-        "subtitle": "...",
-        "filters": [],
-        "media": []
+[
+  {
+    "id": "anime-illustration",
+    "name": "Anime Illustration",
+    "slug": "anime-illustration",
+    "projects": [
+      { "source": "main", "projectId": "friends-gacha" },
+      {
+        "source": "curated",
+        "project": {
+          "id": "character-study",
+          "title": "Character Study",
+          "subtitle": "...",
+          "filters": [],
+          "thumbnail": {},
+          "media": []
+        }
       }
-    }
-  ]
-}
+    ]
+  }
+]
 ```
 
-The exact persisted schema remains subject to the implementation audit. The important contract is that main references stay references and curated-only projects remain owned by the view.
+Contract rules:
+
+- `id` and `slug` are stable URL identity and must match a lowercase hyphenated slug.
+- View IDs and slugs are unique.
+- `projects[]` order is the Curated View presentation order.
+- `source: "main"` stores only a `projectId`; Main Portfolio remains the source of truth.
+- `source: "curated"` stores a complete project object owned by that view.
+- Curated-only project IDs must not collide with Main Portfolio project IDs and must be unique within their owning view.
+- Curated-only projects must keep `filters: []`; they are not members of the Main Gallery filter taxonomy.
+- Both project kinds use the same normalized project/media contract. The distinction is ownership, not rendering format.
+- The validator checks local media/background references and supported media types for curated-owned projects.
+
+This registry is intentionally initialized empty until the CMS editor and runtime resolver are implemented. Main Portfolio behavior is unchanged.
 
 ## CMS behavior
 
