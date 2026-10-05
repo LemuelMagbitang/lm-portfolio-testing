@@ -1379,8 +1379,37 @@ try {
 
       const projectsNav = page.locator('.nav-item[data-section="projects"]');
       if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
+      const mediaNav = page.locator('.nav-item[data-section="media"]');
+      if (await mediaNav.count() !== 1) throw new Error('CMS Media Library navigation item is missing.');
       const curatedNav = page.locator('.nav-item[data-section="curatedViews"]');
       if (await curatedNav.count() !== 1) throw new Error('CMS Curated Views navigation item is missing.');
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+
+      // A Curated-only action also depends on Main Portfolio IDs. It must not
+      // open a prompt or mutate a stale view after navigation starts while
+      // that dependency is still resolving.
+      page.once('dialog', dialog => dialog.accept('Smoke Early View'));
+      await page.locator('#content #addCuratedView').click();
+      await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Early View' }).waitFor({ state: 'visible', timeout: 5000 });
+
+      let staleCreateDialog = false;
+      const staleDialogHandler = dialog => {
+        staleCreateDialog = true;
+        dialog.dismiss().catch(() => {});
+      };
+      page.on('dialog', staleDialogHandler);
+      await page.locator('#content [data-create]').click();
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      page.off('dialog', staleDialogHandler);
+      if (staleCreateDialog) throw new Error('Curated-only Create Project opened a prompt after its section became stale.');
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS stale Curated-only action navigation did not remain on About.');
+      }
+
       await curatedNav.click();
       await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
 
@@ -1396,6 +1425,19 @@ try {
       }
       await curatedNav.click();
       await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+
+      // Media Library loads the Git tree outside loadSection(), so it needs
+      // the same navigation guard as the JSON-backed CMS sections.
+      await mediaNav.click();
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS stale Media Library hydration overwrote the selected About section.');
+      }
+      await mediaNav.click();
+      await page.locator('#content #mediaGrid').waitFor({ state: 'visible', timeout: 5000 });
 
       page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
       await page.locator('#content #addCuratedView').click();
@@ -1532,6 +1574,23 @@ try {
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
+        if (url.pathname === '/repos/Smoke/TestRepo/git/trees/main') {
+          // Make Media Library tree hydration cross a deliberate section
+          // navigation boundary in the smoke test.
+          await new Promise(resolve => setTimeout(resolve, 250));
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              tree: [
+                { type: 'tree', path: 'assets', sha: 'smoke-assets' },
+                { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
+                { type: 'blob', path: 'assets/projects/smoke.jpg', sha: 'smoke-jpg', size: 12 }
+              ]
+            })
+          });
+          return;
+        }
         const genericDataMatch = url.pathname.match(/^\/repos\/Smoke\/TestRepo\/contents\/data\/([^/]+\.json)$/);
         if (url.pathname === aboutPath) {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: encoded, sha: 'smoke-about-sha' }) });
