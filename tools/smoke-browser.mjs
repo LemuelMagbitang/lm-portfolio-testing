@@ -770,6 +770,20 @@ try {
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
       if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
 
+      const viewportTier = await page.evaluate(() => window.innerWidth < 768 ? 6 : 9);
+      const thumbnailReadiness = await page.locator('#portfolioGrid .project-card').evaluateAll((cards, limit) =>
+        cards.slice(0, limit).map(card => {
+          const media = card.querySelector('.card-thumbnail img, .card-thumbnail video');
+          if (!media) return true;
+          if (media.tagName === 'IMG') return media.complete && media.naturalWidth > 0;
+          if (media.tagName === 'VIDEO') return media.readyState >= 2;
+          return true;
+        }), viewportTier
+      );
+      if (thumbnailReadiness.some(ready => !ready)) {
+        throw new Error('Initial gallery thumbnail tier still had loading media after the startup gate.');
+      }
+
       const galleryBox = await page.locator('#portfolioGrid').boundingBox();
       const viewportWidth = await page.evaluate(() => window.innerWidth);
       if (!galleryBox || Math.abs(galleryBox.x) > 2 || Math.abs(galleryBox.width - viewportWidth) > 2) {
@@ -863,7 +877,7 @@ try {
         await page.waitForTimeout(100);
 
         await mobileShowMore.click();
-        await page.waitForTimeout(450);
+        await page.waitForTimeout(1625);
 
         const showLessAnchorAfter = await page.locator('#showMoreWrapper').boundingBox();
         const collapsed = await page.locator('#portfolioGridViewport').evaluate(el => {
@@ -955,7 +969,7 @@ try {
         }).filter(Boolean)
       );
       for (const control of lightboxControlStyles) {
-        if (control.blend !== 'normal') throw new Error(control.selector + ' still uses Lightbox blend-mode contrast.');
+        if (control.blend !== 'difference') throw new Error(control.selector + ' is not using artwork-aware difference-mode contrast.');
         if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
           throw new Error(control.selector + ' still renders a visible control box over artwork.');
         }
@@ -1197,6 +1211,16 @@ try {
         }
         if (!intrinsicRatio.artworkRatio.includes('720') || !intrinsicRatio.artworkRatio.includes('1280')) {
           throw new Error('Local video artwork surface did not preserve its intrinsic aspect ratio.');
+        }
+        const localVideoGeometry = await firstVideo.locator('xpath=..').evaluate(el => {
+          const r = el.getBoundingClientRect();
+          return { height: r.height, viewportHeight: innerHeight };
+        });
+        if (localVideoGeometry.height > localVideoGeometry.viewportHeight * 0.73) {
+          throw new Error(
+            'Desktop local video is still oversized and can force unnecessary Lightbox scrolling: ' +
+            JSON.stringify(localVideoGeometry)
+          );
         }
       }
 

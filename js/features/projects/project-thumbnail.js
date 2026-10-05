@@ -78,3 +78,72 @@ export function buildProjectThumbnailMedia(
 
   return media;
 }
+
+
+/**
+ * Wait for the actual initial gallery thumbnail tier to have usable browser
+ * media metadata. This keeps startup responsibility at the Projects boundary
+ * instead of coupling the global loading gate to visual implementation details.
+ */
+export async function waitForProjectThumbnailReadiness(
+  cards = [],
+  {
+    count = 6,
+    timeoutMs = 2200,
+    windowRef = globalThis.window
+  } = {}
+) {
+  const targets = (Array.isArray(cards) ? cards : [])
+    .slice(0, Math.max(0, Number(count) || 0))
+    .map(card => card?.querySelector?.('.card-thumbnail img, .card-thumbnail video'))
+    .filter(Boolean);
+
+  if (!targets.length) return true;
+
+  const waitForTarget = target => new Promise(resolve => {
+    let settled = false;
+    let timer = null;
+
+    const finish = ready => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) windowRef?.clearTimeout?.(timer);
+      target.removeEventListener?.('load', onReady);
+      target.removeEventListener?.('loadeddata', onReady);
+      target.removeEventListener?.('canplay', onReady);
+      target.removeEventListener?.('error', onFailure);
+      resolve(ready);
+    };
+
+    const onReady = () => finish(true);
+    const onFailure = () => finish(false);
+
+    if (target.tagName === 'IMG') {
+      if (target.complete) {
+        finish(Number(target.naturalWidth) > 0);
+        return;
+      }
+      target.addEventListener?.('load', onReady, { once: true });
+      target.addEventListener?.('error', onFailure, { once: true });
+    } else if (target.tagName === 'VIDEO') {
+      if (Number(target.readyState) >= 2) {
+        finish(true);
+        return;
+      }
+      target.addEventListener?.('loadeddata', onReady, { once: true });
+      target.addEventListener?.('canplay', onReady, { once: true });
+      target.addEventListener?.('error', onFailure, { once: true });
+    } else {
+      finish(true);
+      return;
+    }
+
+    const setTimer = typeof windowRef?.setTimeout === 'function'
+      ? windowRef.setTimeout.bind(windowRef)
+      : globalThis.setTimeout;
+    timer = setTimer(() => finish(false), Math.max(0, Number(timeoutMs) || 0));
+  });
+
+  await Promise.allSettled(targets.map(waitForTarget));
+  return true;
+}

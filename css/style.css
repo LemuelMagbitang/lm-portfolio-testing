@@ -1023,11 +1023,10 @@ button.hamburger {
 .lightbox-close i,
 .lightbox-nav i{
   color:var(--lm-color-text-primary);
-  text-shadow:
-    -1px -1px 0 var(--lm-color-background),
-     1px -1px 0 var(--lm-color-background),
-    -1px  1px 0 var(--lm-color-background),
-     1px  1px 0 var(--lm-color-background);
+  /* Artwork-aware contrast: white remains white on dark art and flips to
+     black where bright/white artwork passes behind the icon. */
+  mix-blend-mode: difference;
+  text-shadow: none;
   pointer-events:none;
 }
 
@@ -1560,33 +1559,41 @@ body.center-page {
    32svh / 300px ceiling. Mobile intentionally overrides this below and remains
    full-bleed. */
 @media (min-width:768px){
+  /* Desktop sizing follows the available viewport instead of a fixed tiny
+     portrait box. A Shorts ratio therefore grows naturally with the screen. */
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork{
-    width:min(100%,calc(40svh * var(--lightbox-artwork-ratio, 1)));
-    max-height:360px;
+    width:min(100%,calc(78svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:min(78svh,720px);
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="landscape"]{
-    max-width:720px;
+    max-width:1000px;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
-    max-width:360px;
+    max-width:420px;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="square"]{
-    max-width:540px;
+    max-width:760px;
   }
 
-  /* Several-media projects should remain media-gallery-first, not a stack of
-     near-full-height video players. Single-media YouTube projects keep the
-     larger presentation above. */
+  /* Several-media projects remain media-gallery-first while keeping their
+     YouTube items responsive instead of allowing them to dominate the stack. */
   #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork{
-    width:min(100%,calc(32svh * var(--lightbox-artwork-ratio, 1)));
-    max-height:min(32svh,300px);
+    width:min(100%,calc(58svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:min(58svh,520px);
   }
 
   #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
-    max-width:320px;
+    max-width:360px;
+  }
+
+  /* Local video gets a tighter desktop height ceiling so portrait exports do
+     not consume the whole modal and lose their edges above the fold. */
+  #lightboxMediaContainer .lightbox-artwork.is-local-video-artwork{
+    width:min(100%,calc(68svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:min(68svh,680px);
   }
 }
 
@@ -2822,4 +2829,13 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* Mobile artwork images do not need direct pointer interaction: the card or
+   Lightbox parent owns activation/swipe gestures. Removing image hit-testing
+   also blocks the browser's long-press save/download affordance. */
+img.no-save{
+  -webkit-user-drag:none;
+  user-drag:none;
+  pointer-events:none;
 }
