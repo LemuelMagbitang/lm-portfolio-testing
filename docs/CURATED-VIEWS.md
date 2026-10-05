@@ -77,6 +77,19 @@ Contract rules:
 
 This registry is intentionally initialized empty until the CMS editor and runtime resolver are implemented. Main Portfolio behavior is unchanged.
 
+## Shared project editor boundary
+
+The CMS should use one project editor for both ownership scopes. The editor writes the same project contract in either context; the save policy decides whether Main Portfolio filters are required and whether the result is persisted to `data/projects.json` or embedded as a Curated View-owned project.
+
+The current CMS now isolates two reusable editor operations:
+
+- `validateProjectEditorModel(project, { requireFilters })`
+- `serializeProjectEditorModel(project)`
+
+Main Portfolio currently calls the validator with `requireFilters: true`. Curated Views can later call the same editor with filters disabled without creating a second project schema or serializer.
+
+This is an editor/persistence boundary only. No Curated View UI or runtime routing is enabled by this step.
+
 ## CMS behavior
 
 The CMS gets a dedicated **Curated Views** tab. It uses the existing compact expandable card/editor pattern.
