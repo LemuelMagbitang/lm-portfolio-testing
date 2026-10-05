@@ -123,7 +123,7 @@ assert.equal(resizeObserverDisconnected, true);
 const styleSource = await (await import('node:fs/promises')).readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const mediaRendererForDensity = await (await import('node:fs/promises')).readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaList\.length > 2 \? 'multi' : 'single'/);
-assert.match(mediaRendererForDensity, /container\.dataset\.hasYouTube = mediaList\.some/);
+assert.match(mediaRendererForDensity, /container\.setAttribute\(\s*'data-has-youtube'/);
 assert.match(styleSource, /data-media-density="multi"\]\[data-has-youtube="true"\]/);
 assert.match(styleSource, /calc\(48svh \* var\(--lightbox-artwork-ratio/);
 
