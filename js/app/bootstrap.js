@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261005-14'
+  cacheVersion = '20261005-15'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -77,6 +77,42 @@ export async function bootstrapPortfolioApp({
     if (remaining) await new Promise(resolve => windowRef.setTimeout(resolve, remaining));
   }
 
+  function settleInitialHashTarget() {
+    const rawHash = String(windowRef?.location?.hash || '').replace(/^#/, '');
+    if (!rawHash) return;
+
+    let id = rawHash;
+    try { id = decodeURIComponent(rawHash); } catch (_) {}
+    const target = root.getElementById(id);
+    if (!target) return;
+
+    // Native cross-document hash restoration can happen before CMS-backed
+    // layout has settled. Re-apply it after the startup paint so About -> Works
+    // Contact lands on the actual anchor rather than the pre-hydration offset.
+    windowRef.requestAnimationFrame(() => {
+      const rect = target.getBoundingClientRect();
+      const currentY = Number(windowRef.scrollY) || 0;
+      const navbarHeight = Number(
+        root.querySelector('.navbar')?.getBoundingClientRect?.().height
+      ) || 0;
+      const offset = Math.max(navbarHeight + 12, 24);
+      const documentHeight = Math.max(
+        root.documentElement?.scrollHeight || 0,
+        root.body?.scrollHeight || 0
+      );
+      const maxScrollY = Math.max(0, documentHeight - windowRef.innerHeight);
+      const targetY = Math.min(
+        maxScrollY,
+        Math.max(0, currentY + rect.top - offset)
+      );
+
+      windowRef.scrollTo({
+        top: targetY,
+        behavior: 'auto'
+      });
+    });
+  }
+
   showInitialPageTransition();
 
   try {
@@ -117,6 +153,7 @@ export async function bootstrapPortfolioApp({
     });
 
     await waitForReadyPaint();
+    settleInitialHashTarget();
     hideInitialPageTransition();
     if (initialTransitionFrame) windowRef.cancelAnimationFrame?.(initialTransitionFrame);
   } catch (error) {
