@@ -1787,9 +1787,12 @@ function serializeProjectEditorModel(project){
 
 RENDERERS.curatedViews = async function(data){
   const raw=Array.isArray(data.json)?data.json:[];
-  const pResult=await loadSection('projects');
-  const mains=Array.isArray(pResult.json)?pResult.json:[];
-  const mainById=new Map(mains.map(p=>[String(p.id||slugify(p.title||'')),p]));
+  // The Curated Views editor can render from its own file immediately. Main
+  // Portfolio projects are secondary hydration data used for labels and the
+  // Add Project picker, so a slow/unavailable projects request must never
+  // block the primary Curated Views editor shell.
+  let mains=[];
+  let mainById=new Map();
   let views=withUids(raw.map(v=>({
     id:String(v.id||slugify(v.name||'')),name:String(v.name||''),slug:String(v.slug||v.id||slugify(v.name||'')),
     projects:withUids((Array.isArray(v.projects)?v.projects:[]).map(e=>{
@@ -1875,6 +1878,25 @@ RENDERERS.curatedViews = async function(data){
     el.querySelector('[data-create]').onclick=()=>{const title=prompt('Curated-only project title:');if(!title?.trim())return;v.projects.push({source:'curated',project:{id:uniqueProjectId(v,title.trim()),title:title.trim(),subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()},_uid:uid()});markDirty();repaint();};
     repaint();
   }
+
+  // Hydrate Main Portfolio references after the editor is already usable.
+  // Updating labels in place preserves the open view and any unsaved edits.
+  loadSection('projects').then(pResult=>{
+    mains=Array.isArray(pResult.json)?pResult.json:[];
+    mainById=new Map(mains.map(p=>[String(p.id||slugify(p.title||'')),p]));
+    views.forEach(v=>{
+      const card=list.querySelector(`.card-item[data-uid="${v._uid}"]`);
+      if(!card) return;
+      v.projects.forEach(e=>{
+        if(e.source!=='main') return;
+        const row=card.querySelector(`.card-item[data-uid="${e._uid}"]`);
+        const title=row?.querySelector('.item-title');
+        if(title) title.textContent=label(e);
+      });
+    });
+  }).catch(()=>{});
+
+  return Promise.resolve();
 }
 
 RENDERERS.projects = async function(data){
