@@ -811,8 +811,18 @@ try {
           throw new Error('Mobile Show More collapsed unexpectedly while remaining in an overflowing viewport.');
         }
 
+        await page.evaluate(() => {
+          document.querySelector('#showMoreWrapper')?.scrollIntoView({ block: 'center', behavior: 'auto' });
+        });
+        await page.waitForTimeout(100);
+
+        const showLessAnchorBefore = await page.locator('#showMoreWrapper').boundingBox();
+        if (!showLessAnchorBefore) throw new Error('Show Less control was not measurable before collapse.');
+
         await mobileShowMore.click();
-        await page.waitForTimeout(350);
+        await page.waitForTimeout(400);
+
+        const showLessAnchorAfter = await page.locator('#showMoreWrapper').boundingBox();
         const collapsed = await page.locator('#portfolioGridViewport').evaluate(el => {
           const style = getComputedStyle(el);
           return style.maxHeight !== 'none' && el.scrollHeight > el.clientHeight;
@@ -820,6 +830,11 @@ try {
         const collapsedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
         if (!collapsed || collapsedLabel?.trim().toUpperCase() !== 'SHOW MORE') {
           throw new Error('Mobile Show Less did not restore the collapsed gallery state.');
+        }
+        if (!showLessAnchorAfter || Math.abs(showLessAnchorAfter.y - showLessAnchorBefore.y) > 48) {
+          throw new Error(
+            `Mobile Show Less did not follow the control to its collapsed location: before=${showLessAnchorBefore?.y}, after=${showLessAnchorAfter?.y}`
+          );
         }
 
         await mobileShowMore.click();
