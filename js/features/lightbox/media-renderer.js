@@ -188,6 +188,7 @@ export function createLightboxMediaRenderer({
     video.playsInline = true;
     video.preload = 'auto';
     video.controls = false;
+    video.fetchPriority = 'low';
     video.setAttribute('aria-hidden', 'true');
     video.setAttribute('tabindex', '-1');
     video.style.position = 'absolute';
