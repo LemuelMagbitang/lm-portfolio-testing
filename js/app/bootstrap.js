@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261005-15'
+  cacheVersion = '20261005-16'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -29,6 +29,15 @@ export async function bootstrapPortfolioApp({
   const MIN_LOADING_SCREEN_MS = 450;
   let initialTransitionFrame = null;
   let initialTransitionTimer = null;
+  const hasInitialHash = Boolean(String(windowRef?.location?.hash || ''));
+
+  // Prevent the browser's pre-hydration fragment restoration from jumping to
+  // a stale layout. We restore the expected native behavior after the exact
+  // anchor has been settled by the composed page.
+  if (hasInitialHash && windowRef?.history) {
+    try { windowRef.history.scrollRestoration = 'manual'; } catch (_) {}
+    windowRef.scrollTo?.(0, 0);
+  }
 
 
   function showInitialPageTransition() {
@@ -92,10 +101,9 @@ export async function bootstrapPortfolioApp({
     }
     if (!target) return;
 
-    // Native cross-document hash restoration can happen before CMS-backed
-    // layout has settled. Re-apply it after the startup paint so About -> Works
-    // Contact lands on the actual anchor rather than the pre-hydration offset.
-    windowRef.requestAnimationFrame(() => {
+    const applyTarget = () => {
+      if (!target.isConnected) return false;
+
       const rect = target.getBoundingClientRect();
       const currentY = Number(windowRef.scrollY) || 0;
       const navbarHeight = Number(
@@ -107,14 +115,32 @@ export async function bootstrapPortfolioApp({
         root.body?.scrollHeight || 0
       );
       const maxScrollY = Math.max(0, documentHeight - windowRef.innerHeight);
+      const documentTargetY = currentY + rect.top;
       const targetY = Math.min(
         maxScrollY,
-        Math.max(0, currentY + rect.top - offset)
+        Math.max(0, documentTargetY - offset)
       );
 
       windowRef.scrollTo({
         top: targetY,
         behavior: 'auto'
+      });
+      return true;
+    };
+
+    // Apply after the composed DOM is ready, then re-apply across two more
+    // frames. This absorbs final font/layout commits without relying on the
+    // browser's early fragment position.
+    windowRef.requestAnimationFrame(() => {
+      if (!applyTarget()) return;
+      windowRef.requestAnimationFrame(() => {
+        applyTarget();
+        windowRef.requestAnimationFrame(() => {
+          applyTarget();
+          if (hasInitialHash && windowRef?.history) {
+            try { windowRef.history.scrollRestoration = 'auto'; } catch (_) {}
+          }
+        });
       });
     });
   }
