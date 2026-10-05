@@ -72,6 +72,7 @@ assert.deepEqual(getProjectForCard(children[0]), {
   subtitle: '',
   description: '',
   badge: '',
+  badges: [],
   filters: ['3d-motion'],
   thumbnail: {},
   mediaCount: 1,
