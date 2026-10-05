@@ -1458,6 +1458,8 @@ try {
         throw new Error('CMS Media Library Refresh hydration overwrote the selected About section.');
       }
 
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
       page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
       await page.locator('#content #addCuratedView').click();
       await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Curated View' }).waitFor({ state: 'visible', timeout: 5000 });
