@@ -118,7 +118,7 @@ export function createLightboxMediaRenderer({
     surface.style.aspectRatio = String(w) + ' / ' + String(h);
   }
 
-  function preloadImage(url) {
+  function preloadImage(url, { fetchPriority = 'low' } = {}) {
     if (!url) return Promise.resolve(false);
     let image = null;
     let finishPreload = () => {};
@@ -127,7 +127,7 @@ export function createLightboxMediaRenderer({
       image = new Image();
       image.decoding = 'async';
       // Background warm-up yields to critical first-screen media.
-      image.fetchPriority = 'low';
+      image.fetchPriority = fetchPriority === 'high' ? 'high' : 'low';
       image.onload = async () => {
         try { await image.decode?.(); } catch (_) {}
         const width = Number(image.naturalWidth);
@@ -181,7 +181,7 @@ export function createLightboxMediaRenderer({
     }
   }
 
-  async function preloadVideo(url) {
+  async function preloadVideo(url, { fetchPriority = 'low' } = {}) {
     if (!url) return false;
     const root = ensureMediaPreloadRoot();
     const video = documentRef.createElement('video');
@@ -189,7 +189,7 @@ export function createLightboxMediaRenderer({
     video.playsInline = true;
     video.preload = 'auto';
     video.controls = false;
-    video.fetchPriority = 'low';
+    video.fetchPriority = fetchPriority === 'high' ? 'high' : 'low';
     video.setAttribute('aria-hidden', 'true');
     video.setAttribute('tabindex', '-1');
     video.style.position = 'absolute';
@@ -359,15 +359,17 @@ export function createLightboxMediaRenderer({
 
         const critical = media.indexOf(item) === criticalIndex;
 
+        const fetchPriority = critical ? 'high' : 'low';
+
         if (type === 'model') {
           hasModel = true;
           pushMediaJob(() => preloadFetch(url), { critical });
         } else if (type === 'image') {
-          pushMediaJob(() => preloadImage(url), { critical });
+          pushMediaJob(() => preloadImage(url, { fetchPriority }), { critical });
         } else if (type === 'lottie') {
           pushMediaJob(() => preloadLottie(url), { critical });
         } else if (type === 'video') {
-          pushMediaJob(() => preloadVideo(url), { critical });
+          pushMediaJob(() => preloadVideo(url, { fetchPriority }), { critical });
         } else if (type === 'youtube') {
           // A YouTube iframe is never startup-critical. Its iframe/player boot
           // is much more expensive than the local first-view assets, and the
@@ -393,7 +395,9 @@ export function createLightboxMediaRenderer({
         if (!seen.has(key)) {
           seen.add(key);
           pushMediaJob(
-            () => type === 'video' ? preloadVideo(url) : preloadImage(url),
+            () => type === 'video'
+              ? preloadVideo(url, { fetchPriority: 'high' })
+              : preloadImage(url, { fetchPriority: 'high' }),
             { critical: true }
           );
         }
