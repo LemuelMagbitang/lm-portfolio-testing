@@ -1525,6 +1525,16 @@ try {
       }
       await pickerOption.click();
       await page.locator('.curated-project-picker-dialog').waitFor({ state: 'detached', timeout: 5000 });
+      if (!(await addProjectButton.evaluate(el => el === document.activeElement))) {
+        throw new Error('Closing the Curated Views Add Project picker did not restore focus to the opener.');
+      }
+      await addProjectButton.click();
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('.curated-project-picker-dialog [data-search]').press('Escape');
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'detached', timeout: 5000 });
+      if (!(await addProjectButton.evaluate(el => el === document.activeElement))) {
+        throw new Error('Escape did not close the Curated Views picker and restore focus to its opener.');
+      }
       const addedMainRow = page.locator('#content [data-list] .card-item').filter({ hasText: 'Test Project' }).first();
       await addedMainRow.waitFor({ state: 'visible', timeout: 5000 });
 
