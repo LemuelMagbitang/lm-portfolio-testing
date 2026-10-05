@@ -1820,6 +1820,387 @@ function serializeProjectEditorModel(project){
   };
 }
 
+function buildProjectBody(el, p, options = {}){
+  const markChanged = typeof options.onChanged === 'function' ? options.onChanged : flagUnsaved;
+  const filterDefs = Array.isArray(options.filterDefs) ? options.filterDefs : [];
+  // Which artwork cards are expanded, by _uid. Starts empty (every
+  // artwork loads collapsed to just its title bar) so opening a
+  // project with a dozen images doesn't dump a dozen full editors
+  // on screen at once — newly-added artworks are the one exception,
+  // added straight into this set so they open ready to fill in.
+  const openMediaUids = new Set();
+  el.innerHTML = `
+    <div class="row">
+      <div class="field"><label class="field-label">Title</label><input data-f="title" value="${attr(p.title)}"></div>
+      <div class="field"><label class="field-label">Subtitle</label><input data-f="subtitle" value="${attr(p.subtitle)}"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Badge <span style="opacity:.5">(one only — the final output, not the software)</span></label>
+      <select data-f="badge"><option value="">— none —</option>${badgeOptions(p.badge)}</select>
+    </div>
+
+    <div class="field" style="${options.showFilters === false ? 'display:none' : ''}">
+      <label class="field-label">Filter tabs this shows under</label>
+      <div class="chip-select" data-filters>
+        ${filterDefs.map(f=>`<button type="button" class="chip ${p.filters.includes(f.id)?'selected':''}" data-fid="${attr(f.id)}">${esc(f.label)}</button>`).join('') || '<span class="hint">No filters defined yet — add some under Filters & Badges.</span>'}
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Description <span style="opacity:.5">(optional — shown when the card opens)</span></label>
+      <textarea data-f="description" rows="4">${esc(p.description)}</textarea>
+    </div>
+
+    <div class="panel" style="background:#141414;">
+      <h3 style="font-size:.85rem">Thumbnail</h3>
+      <p class="panel-sub">Leave the image blank and the site uses the first media item instead.</p>
+      <div class="two-col">
+        <div>
+          <div class="row">
+            <div class="field" style="max-width:180px"><label class="field-label">Thumbnail type</label><select data-f="thumb-type"><option value="image" ${p.thumbnail.type==='image'?'selected':''}>Image</option><option value="video" ${p.thumbnail.type==='video'?'selected':''}>Video</option><option value="lottie" ${p.thumbnail.type==='lottie'?'selected':''}>Lottie (JSON animation)</option><option value="model" ${p.thumbnail.type==='model'?'selected':''}>3D model</option></select></div>
+            <div class="field"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
+            <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
+          </div>
+          ${backgroundControlHtml(p.thumbnail.background)}
+        </div>
+        <div>
+          <label class="field-label">Drag to set focus point</label>
+          <div class="focus-picker" data-focuspicker>
+            <img data-thumb-img style="display:none" onerror="handleMissingFile(this,'thumbnail')">
+            <div class="focus-crosshair" data-crosshair></div>
+          </div>
+          <p class="hint" data-thumb-fallback-note style="display:none">Preview is the project's first media item — no thumbnail file is set, same as the live site.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="background:#141414;">
+      <h3 style="font-size:.85rem">Media (lightbox gallery)</h3>
+      <p class="panel-sub">Order here is the order in the lightbox. Drag the handle to reorder.</p>
+      <div data-medialist></div>
+      <button class="add-btn" data-addmedia type="button"><i class="fa-solid fa-plus"></i> Add media item</button>
+    </div>
+  `;
+
+  // Thumbnail preview: an explicit thumbnail.src always wins; empty,
+  // and it falls back to the project's first image/YouTube media item
+  // — exactly what the live site's fillMissingThumbnails() does, so
+  // what you see while dragging the focus point is what visitors see,
+  // not a blank box that only appears once you type a path by hand.
+  function refreshThumbPreview(){
+    const picker = el.querySelector('[data-focuspicker]');
+    const note = el.querySelector('[data-thumb-fallback-note]');
+    if(!picker) return;
+    const old = picker.querySelector('[data-thumb-media]'); if(old) old.remove();
+    const oldSourceError = picker.querySelector('[data-thumb-source-error]');
+    if (oldSourceError) oldSourceError.remove();
+    const explicit = p.thumbnail.src;
+    const fallback = explicit ? null : computeFallbackThumb(p.media, p.thumbnail);
+    const src = explicit ? {type:p.thumbnail.type||'image',src:explicit,background:p.thumbnail.background||null} : fallback;
+    if(!src || !src.src){ if(note) note.style.display='none'; return; }
+    const sourceError = validateMediaSource(src.type, src.src);
+    if (sourceError) {
+      const error = document.createElement('div');
+      error.className = 'source-type-error source-type-error-inline';
+      error.dataset.thumbSourceError = '';
+      error.setAttribute('role','alert');
+      error.innerHTML = '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>Source type error</strong><p>' + esc(sourceError) + '</p></div>';
+      picker.appendChild(error);
+      if(note) note.style.display='none';
+      return;
+    }
+    let media;
+    if(src.type==='video'){
+      media=document.createElement('video'); media.src=ghRawUrl(src.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true;
+    }else if(src.type==='lottie'){
+      media=document.createElement('lottie-player'); media.setAttribute('src',ghRawUrl(src.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent');
+    }else if(src.type==='model'){
+      media=document.createElement('div'); media.className='admin-model-thumb-placeholder'; media.innerHTML='<i class="fa-solid fa-cube" aria-hidden="true"></i><strong>3D VIEW</strong><small>Uses the first 3D artwork</small>';
+    }else{
+      media=document.createElement('img'); media.src=ghRawUrl(src.src); media.alt=p.title||'Project thumbnail';
+    }
+    media.setAttribute('data-thumb-media',''); media.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
+    const focus=p.thumbnail.focus||'50% 50%'; media.style.objectPosition=focus; media.style.transformOrigin=focus; media.style.transform=`scale(${p.thumbnail.zoom||1})`;
+    const sourceBackground = src.background && typeof src.background === 'object' ? src.background : null;
+    if (sourceBackground) picker.setAttribute('data-background', JSON.stringify(sourceBackground)); else picker.removeAttribute('data-background');
+    picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
+    if (globalThis.LMMediaBackground) {
+      const pickerBackground = ['lottie','model'].includes(src.type) && sourceBackground ? sourceBackground : {type:'none'};
+      globalThis.LMMediaBackground.apply(picker, pickerBackground, ghRawUrl);
+    }
+    if(note) note.style.display=fallback?'':'none';
+  }
+  wireBackgroundControl(
+    el,
+    () => p.thumbnail.type,
+    () => p.thumbnail.background,
+    value => { p.thumbnail.background = value; refreshThumbPreview(); },
+    () => { refreshThumbPreview(); markChanged(); }
+  );
+
+  attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview(), () => ({
+    kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : p.thumbnail.type === 'model' ? 'model' : 'image',
+    title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : p.thumbnail.type === 'model' ? 'Choose a 3D model' : 'Choose an image file'
+  }));
+
+  // simple fields
+  el.querySelectorAll('[data-f]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const f = inp.dataset.f;
+      if(f==='thumb-src'){
+        p.thumbnail.src = inp.value;
+        refreshThumbPreview();
+      } else if(f==='thumb-type'){
+        p.thumbnail.type = inp.value;
+        refreshThumbPreview();
+      }
+      // THE FIX: typing a new zoom or focus value used to update
+      // p.thumbnail but never re-render refreshThumbPreview() —
+      // only loading a new image (thumb-src, above) did that. So
+      // the preview looked frozen on whatever it last showed while
+      // you adjusted the very things it's supposed to demonstrate,
+      // which read as "zoom isn't doing what I typed" even though
+      // the saved value was correct all along. Now every field that
+      // touches the crop calls refreshThumbPreview() the same way
+      // Profile Photo's equivalent fields already did.
+      else if(f==='thumb-zoom') { p.thumbnail.zoom = parseFloat(inp.value)||1; refreshThumbPreview(); }
+      else if(f==='thumb-focus'){ p.thumbnail.focus = inp.value; setFromFocusStr(); refreshThumbPreview(); }
+      else {
+        p[f] = inp.value;
+        if (f==='title' || f==='badge') {
+          const titleEl = el.closest('.card-item').querySelector('.item-title');
+          titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}`;
+        }
+      }
+      markChanged();
+    });
+  });
+  el.querySelector('select[data-f="badge"]').addEventListener('change', function(){
+    const titleEl = el.closest('.card-item').querySelector('.item-title');
+    titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}`;
+  });
+
+  // filter chips
+  el.querySelectorAll('[data-fid]').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const id = chip.dataset.fid;
+      if(p.filters.includes(id)) p.filters = p.filters.filter(x=>x!==id);
+      else p.filters.push(id);
+      chip.classList.toggle('selected');
+      markChanged();
+    });
+  });
+
+  // focus picker
+  const picker = el.querySelector('[data-focuspicker]');
+  const crosshair = el.querySelector('[data-crosshair]');
+  function setFromFocusStr(){
+    const parts = (p.thumbnail.focus||'50% 50%').split(' ').map(s=>parseFloat(s)||50);
+    crosshair.style.left = parts[0] + '%';
+    crosshair.style.top = parts[1] + '%';
+  }
+  setFromFocusStr();
+  refreshThumbPreview();
+  function pointerToFocus(e){
+    const rect = picker.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const x = Math.max(0, Math.min(100, (cx/rect.width)*100));
+    const y = Math.max(0, Math.min(100, (cy/rect.height)*100));
+    p.thumbnail.focus = `${x.toFixed(0)}% ${y.toFixed(0)}%`;
+    crosshair.style.left = x+'%'; crosshair.style.top = y+'%';
+    el.querySelector('[data-f="thumb-focus"]').value = p.thumbnail.focus;
+    // THE FIX: this updated the crosshair dot's own position and the
+    // text field beside it, but never touched the actual preview
+    // image — so dragging looked like it worked (the dot moved) while
+    // the crop/zoom shown never changed to match. Same gap the Zoom
+    // and Focus text fields just above had, and the same fix: call
+    // the one function that actually re-renders the image with the
+    // current zoom + focus + rotate, on every change, not just once
+    // when the project is first opened.
+    refreshThumbPreview();
+    markChanged();
+  }
+  let dragging=false;
+  picker.style.touchAction='none';
+  picker.addEventListener('pointerdown', e=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    dragging=true;
+    picker.setPointerCapture?.(e.pointerId);
+    pointerToFocus(e);
+  });
+  picker.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    e.preventDefault();
+    pointerToFocus(e);
+  });
+  picker.addEventListener('pointerup', e=>{
+    dragging=false;
+    try { picker.releasePointerCapture?.(e.pointerId); } catch (_) {}
+  });
+  picker.addEventListener('pointercancel', ()=>{ dragging=false; });
+
+  // media list
+  let medWrap = el.querySelector('[data-medialist]');
+  function paintMedia(){
+    const freshWrap = document.createElement('div');
+    freshWrap.setAttribute('data-medialist', '');
+    p.media.forEach((m)=>{
+      const isOpen = openMediaUids.has(m._uid);
+      const row = document.createElement('div');
+      row.className = 'card-item';
+      row.style.background = '#191919';
+      row.dataset.uid = m._uid;
+      row.innerHTML = `
+        <div class="card-item-head collapsible-head" data-toggle-open>
+          <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
+          <span class="item-title">${m.caption ? esc(m.caption) : '(' + esc(m.type) + ')'}</span>
+          <div class="card-item-actions">
+            <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
+            <button class="icon-btn" data-mact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
+            <button class="icon-btn" data-mact="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button>
+            <button class="icon-btn" data-mact="toggle"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
+          </div>
+        </div>
+        <div class="collapsible-body" style="display:${isOpen?'block':'none'};margin-top:16px;" data-mbody>
+          <div class="row media-editor-row">
+            <div class="field" style="max-width:140px"><label class="field-label">Type</label>
+              <select data-mf="type">
+                <option value="image" ${m.type==='image'?'selected':''}>Image</option>
+                <option value="video" ${m.type==='video'?'selected':''}>Video</option>
+                <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube</option>
+                <option value="lottie" ${m.type==='lottie'?'selected':''}>Lottie (JSON animation)</option>
+                <option value="model" ${m.type==='model'?'selected':''}>3D model</option>
+              </select>
+            </div>
+            <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
+          </div>
+          <div class="row media-editor-row media-editor-meta">
+            <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
+            <div class="field" style="max-width:180px"><label class="field-label">Orientation</label>
+              <select data-mf="orientation">
+                <option value="" ${!m.orientation?'selected':''}>Auto</option>
+                <option value="landscape" ${m.orientation==='landscape'?'selected':''}>Landscape</option>
+                <option value="portrait" ${m.orientation==='portrait'?'selected':''}>Portrait</option>
+                <option value="square" ${m.orientation==='square'?'selected':''}>Square</option>
+              </select>
+            </div>
+          </div>
+          <div data-mediapreview></div>
+           ${backgroundControlHtml(m.background)}
+        </div>
+      `;
+      row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
+        if (e.target.closest('[data-mact]') && e.target.closest('[data-mact]').dataset.mact !== 'toggle') return;
+        if (isOpen) openMediaUids.delete(m._uid); else openMediaUids.add(m._uid);
+        paintMedia();
+      });
+      const previewEl = row.querySelector('[data-mediapreview]');
+      let modelViewerCleanup = null;
+      async function refreshPreview(){
+        if (modelViewerCleanup) { modelViewerCleanup(); modelViewerCleanup = null; }
+        previewEl.innerHTML = buildMediaPreviewHtml(m);
+        wirePreviewAspect(previewEl.firstElementChild, m);
+        const previewBox = previewEl.firstElementChild;
+        if (previewBox && m.type === 'lottie' && m.background && globalThis.LMMediaBackground) {
+          globalThis.LMMediaBackground.apply(previewBox, m.background, ghRawUrl);
+        }
+        if (m.type === 'model' && m.src) {
+          try {
+            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261004-08');
+            const host = previewEl.querySelector('[data-model-preview]');
+            if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), {
+              background: m.background || null,
+              orientation: m.orientation || 'auto',
+              onOrientationDetected: (detected) => {
+                const box = previewEl.firstElementChild;
+                if (box) {
+                  box.dataset.orientation = detected;
+                  fitPreviewAspect(box, detected === 'landscape' ? 16/9 : detected === 'portrait' ? 9/16 : 1);
+                }
+              },
+              resolveUrl: ghRawUrl
+            });
+          } catch (err) {
+            const host = previewEl.querySelector('[data-model-preview]');
+            if (host) host.innerHTML = `<div class="model-viewer-error"><strong>Couldn't load this 3D source.</strong><br><span>Check that the file exists and is a supported OBJ, GLTF, GLB, or FBX file.</span></div>`;
+          }
+        }
+        // If this is (or might become) the project's fallback
+        // thumbnail — first image/YouTube item, thumbnail.src left
+        // blank — the focus-picker preview needs to follow along too.
+        if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
+      }
+      wireBackgroundControl(
+        row,
+        () => m.type,
+        () => m.background,
+        value => { m.background = value; refreshPreview(); },
+        () => { refreshPreview(); markChanged(); }
+      );
+      refreshPreview();
+      attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
+        kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
+        title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : 'Choose media'
+      }));
+
+      row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
+        m[inp.dataset.mf]=inp.value;
+        if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
+        if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') {
+          refreshPreview();
+          row.__bgEditorSync?.();
+        }
+        markChanged();
+      }));
+      row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
+        if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')'; refreshPreview(); }
+      }));
+      row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
+        const idx = p.media.findIndex(x=>x._uid===m._uid);
+        if (idx > -1) p.media.splice(idx, 1);
+        markChanged(); paintMedia();
+      });
+      row.querySelector('[data-mact="up"]').addEventListener('click', ()=>{
+        const mi = p.media.indexOf(m); if(mi===0)return;
+        animateReorder(() => el.querySelector('[data-medialist]'), () => { [p.media[mi-1],p.media[mi]]=[p.media[mi],p.media[mi-1]]; markChanged(); paintMedia(); });
+      });
+      row.querySelector('[data-mact="down"]').addEventListener('click', ()=>{
+        const mi = p.media.indexOf(m); if(mi===p.media.length-1)return;
+        animateReorder(() => el.querySelector('[data-medialist]'), () => { [p.media[mi+1],p.media[mi]]=[p.media[mi],p.media[mi+1]]; markChanged(); paintMedia(); });
+      });
+      freshWrap.appendChild(row);
+    });
+    medWrap.replaceWith(freshWrap);
+    medWrap = freshWrap;
+    enableDragReorder(() => el.querySelector('[data-medialist]'), p.media, markChanged, paintMedia);
+    // Covers add/delete/reorder even when the list is empty (each
+    // row's own refreshPreview() already covers edits to that row).
+    refreshThumbPreview();
+  }
+  paintMedia();
+  el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
+    const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,_uid:uid()};
+    p.media.push(fresh);
+    openMediaUids.add(fresh._uid); // new artwork opens straight into edit mode
+    markChanged(); paintMedia();
+  });
+}
+
+function badgeOptions(current){
+  const suggested=['2D Illustration','3D Design','Motion Graphics','UI/UX Design','Brand Design'];
+  let configured=[];
+  const raw=cache.filters?.json;
+  if(raw && !Array.isArray(raw)) configured=raw.badges||[];
+  const set=new Set([...suggested,...configured].filter(Boolean));
+  if(current)set.add(current);
+  return [...set].map(b=>`<option value="${attr(b)}" ${b===current?'selected':''}>${esc(b)}</option>`).join('');
+}
+
 RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
   const raw=Array.isArray(data.json)?data.json:[];
   // The Curated Views editor can render from its own file immediately. Main
@@ -1898,7 +2279,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
         row.querySelector('[data-remove]').onclick=()=>{if(e.source==='curated'&&!confirm(`Delete curated-only project "${e.project?.title||'this project'}"? It belongs only to this view.`))return;v.projects.splice(v.projects.indexOf(e),1);markDirty();repaint();};
         row.querySelector('[data-up]').onclick=()=>{const i=v.projects.indexOf(e);if(i===0)return;[v.projects[i-1],v.projects[i]]=[v.projects[i],v.projects[i-1]];markDirty();repaint();};
         row.querySelector('[data-down]').onclick=()=>{const i=v.projects.indexOf(e);if(i===v.projects.length-1)return;[v.projects[i+1],v.projects[i]]=[v.projects[i],v.projects[i+1]];markDirty();repaint();};
-        if(e.source==='curated')buildProjectBody(row.querySelector('[data-editor]'),e.project,{showFilters:false,onChanged:markDirty});
+        if(e.source==='curated')buildProjectBody(row.querySelector('[data-editor]'),e.project,{showFilters:false,onChanged:markDirty,filterDefs:[]});
         host.appendChild(row);
       });
       if(!v.projects.length)host.innerHTML='<div class="banner muted">No projects in this view yet.</div>';
@@ -1906,11 +2287,43 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
     el.querySelector('[data-add]').onclick=async()=>{
       await mainProjectsReady;
       if(!isCurrent()) return;
-      const overlay=document.createElement('div');overlay.className='media-picker-overlay';
-      overlay.innerHTML=`<div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Add Main Portfolio projects"><div class="media-picker-head"><div><strong>Add Project</strong><span class="media-picker-sub">Choose existing Main Portfolio projects</span></div><button class="icon-btn" data-close type="button"><i class="fa-solid fa-xmark"></i></button></div><div class="media-picker-toolbar"><input class="picker-search" data-search type="search" placeholder="Search projects…"></div><div class="media-picker-scroll"><div class="media-grid" data-grid></div></div></div>`;
+      const overlay=document.createElement('div');overlay.className='media-picker-overlay curated-project-picker-overlay';
+      overlay.innerHTML=`<div class="media-picker-dialog curated-project-picker-dialog" role="dialog" aria-modal="true" aria-label="Add Main Portfolio projects"><div class="media-picker-head"><div><strong>Add Project</strong><span class="media-picker-sub">Choose an existing Main Portfolio project to add to this view.</span></div><button class="icon-btn" data-close type="button"><i class="fa-solid fa-xmark"></i></button></div><div class="media-picker-toolbar curated-project-picker-toolbar"><div class="curated-picker-help">Only projects not already in this Curated View are shown.</div><input class="picker-search" data-search type="search" placeholder="Search by project title or subtitle…" aria-label="Search Main Portfolio projects"></div><div class="media-picker-scroll curated-project-picker-scroll"><div class="curated-project-grid" data-grid></div></div></div>`;
       document.body.appendChild(overlay);const grid=overlay.querySelector('[data-grid]'),search=overlay.querySelector('[data-search]'),close=()=>overlay.remove();
       overlay.querySelector('[data-close]').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close();};
-      function draw(){const q=search.value.trim().toLowerCase(),used=new Set(v.projects.filter(x=>x.source==='main').map(x=>x.projectId));grid.innerHTML='';mains.filter(p=>{const id=String(p.id||slugify(p.title||''));return !used.has(id)&&(!q||`${p.title||''} ${p.subtitle||''}`.toLowerCase().includes(q));}).forEach(p=>{const id=String(p.id||slugify(p.title||'')),b=document.createElement('button');b.type='button';b.className='card-item';b.style.cssText='text-align:left;cursor:pointer';b.innerHTML=`<strong>${esc(p.title||'(untitled)')}</strong><span class="project-preview-text">${esc(p.subtitle||'')}</span>`;b.onclick=()=>{v.projects.push({source:'main',projectId:id,_uid:uid()});markDirty();close();repaint();};grid.appendChild(b);});if(!grid.children.length)grid.innerHTML='<div class="banner muted" style="grid-column:1/-1">No available Main Portfolio projects match this search.</div>';};
+      function draw(){
+        const q=search.value.trim().toLowerCase();
+        const used=new Set(v.projects.filter(x=>x.source==='main').map(x=>x.projectId));
+        grid.innerHTML='';
+        const available=mains.filter(p=>{
+          const id=String(p.id||slugify(p.title||''));
+          return !used.has(id) && (!q || `${p.title||''} ${p.subtitle||''}`.toLowerCase().includes(q));
+        });
+        available.forEach(p=>{
+          const id=String(p.id||slugify(p.title||''));
+          const b=document.createElement('button');
+          b.type='button';
+          b.className='curated-project-option';
+          b.setAttribute('aria-label',`Add ${p.title||'untitled project'} to this Curated View`);
+          const thumb=p.thumbnail?.src
+            ? {type:p.thumbnail.type||'image',src:p.thumbnail.src,background:p.thumbnail.background||null,orientation:''}
+            : computeFallbackThumb(p.media,p.thumbnail);
+          let preview='';
+          if(thumb?.src){
+            if(thumb.type==='image') preview=`<img src="${attr(ghRawUrl(thumb.src))}" alt="" loading="lazy">`;
+            else if(thumb.type==='video') preview=`<video src="${attr(ghRawUrl(thumb.src))}" muted playsinline preload="metadata"></video>`;
+            else if(thumb.type==='lottie') preview=`<lottie-player src="${attr(ghRawUrl(thumb.src))}" autoplay loop background="transparent"></lottie-player>`;
+          }
+          if(!preview){
+            const icon=thumb?.type==='model'?'fa-cube':'fa-image';
+            preview=`<span class="curated-project-placeholder"><i class="fa-solid ${icon}" aria-hidden="true"></i><span>No thumbnail preview</span></span>`;
+          }
+          b.innerHTML=`<span class="curated-project-preview">${preview}<span class="curated-project-type">${esc(thumb?.type||'project')}</span></span><span class="curated-project-meta"><span class="curated-project-title">${esc(p.title||'(untitled project)')}</span><span class="curated-project-subtitle">${esc(p.subtitle||'No subtitle')}</span></span>`;
+          b.onclick=()=>{v.projects.push({source:'main',projectId:id,_uid:uid()});markDirty();close();repaint();};
+          grid.appendChild(b);
+        });
+        if(!grid.children.length)grid.innerHTML='<div class="banner muted curated-project-empty">No available Main Portfolio projects match this search.</div>';
+      };
       search.oninput=draw;draw();
     };
     el.querySelector('[data-create]').onclick=async()=>{
@@ -2013,7 +2426,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
         animateReorder(() => document.getElementById('projList'), () => { [items[i+1],items[i]]=[items[i],items[i+1]]; flagUnsaved(); paint(); });
       });
 
-      if(isOpen) buildProjectBody(wrap.querySelector('[data-body]'), p);
+      if(isOpen) buildProjectBody(wrap.querySelector('[data-body]'), p, {filterDefs});
       list.appendChild(wrap);
     });
 
@@ -2028,383 +2441,6 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
       items.forEach(p => validateProjectEditorModel(p));
       return items.map(serializeProjectEditorModel);
     }, 'projects', SECTIONS.projects.file);
-  }
-
-  function buildProjectBody(el, p, options = {}){
-    const markChanged = options.onChanged || flagUnsaved;
-    // Which artwork cards are expanded, by _uid. Starts empty (every
-    // artwork loads collapsed to just its title bar) so opening a
-    // project with a dozen images doesn't dump a dozen full editors
-    // on screen at once — newly-added artworks are the one exception,
-    // added straight into this set so they open ready to fill in.
-    const openMediaUids = new Set();
-    el.innerHTML = `
-      <div class="row">
-        <div class="field"><label class="field-label">Title</label><input data-f="title" value="${attr(p.title)}"></div>
-        <div class="field"><label class="field-label">Subtitle</label><input data-f="subtitle" value="${attr(p.subtitle)}"></div>
-      </div>
-
-      <div class="field">
-        <label class="field-label">Badge <span style="opacity:.5">(one only — the final output, not the software)</span></label>
-        <select data-f="badge"><option value="">— none —</option>${badgeOptions(p.badge)}</select>
-      </div>
-
-      <div class="field" style="${options.showFilters === false ? 'display:none' : ''}">
-        <label class="field-label">Filter tabs this shows under</label>
-        <div class="chip-select" data-filters>
-          ${filterDefs.map(f=>`<button type="button" class="chip ${p.filters.includes(f.id)?'selected':''}" data-fid="${attr(f.id)}">${esc(f.label)}</button>`).join('') || '<span class="hint">No filters defined yet — add some under Filters & Badges.</span>'}
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="field-label">Description <span style="opacity:.5">(optional — shown when the card opens)</span></label>
-        <textarea data-f="description" rows="4">${esc(p.description)}</textarea>
-      </div>
-
-      <div class="panel" style="background:#141414;">
-        <h3 style="font-size:.85rem">Thumbnail</h3>
-        <p class="panel-sub">Leave the image blank and the site uses the first media item instead.</p>
-        <div class="two-col">
-          <div>
-            <div class="row">
-              <div class="field" style="max-width:180px"><label class="field-label">Thumbnail type</label><select data-f="thumb-type"><option value="image" ${p.thumbnail.type==='image'?'selected':''}>Image</option><option value="video" ${p.thumbnail.type==='video'?'selected':''}>Video</option><option value="lottie" ${p.thumbnail.type==='lottie'?'selected':''}>Lottie (JSON animation)</option><option value="model" ${p.thumbnail.type==='model'?'selected':''}>3D model</option></select></div>
-              <div class="field"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
-            </div>
-            <div class="row">
-              <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
-              <div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="thumb-focus" value="${attr(p.thumbnail.focus)}"></div>
-            </div>
-            ${backgroundControlHtml(p.thumbnail.background)}
-          </div>
-          <div>
-            <label class="field-label">Drag to set focus point</label>
-            <div class="focus-picker" data-focuspicker>
-              <img data-thumb-img style="display:none" onerror="handleMissingFile(this,'thumbnail')">
-              <div class="focus-crosshair" data-crosshair></div>
-            </div>
-            <p class="hint" data-thumb-fallback-note style="display:none">Preview is the project's first media item — no thumbnail file is set, same as the live site.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="background:#141414;">
-        <h3 style="font-size:.85rem">Media (lightbox gallery)</h3>
-        <p class="panel-sub">Order here is the order in the lightbox. Drag the handle to reorder.</p>
-        <div data-medialist></div>
-        <button class="add-btn" data-addmedia type="button"><i class="fa-solid fa-plus"></i> Add media item</button>
-      </div>
-    `;
-
-    // Thumbnail preview: an explicit thumbnail.src always wins; empty,
-    // and it falls back to the project's first image/YouTube media item
-    // — exactly what the live site's fillMissingThumbnails() does, so
-    // what you see while dragging the focus point is what visitors see,
-    // not a blank box that only appears once you type a path by hand.
-    function refreshThumbPreview(){
-      const picker = el.querySelector('[data-focuspicker]');
-      const note = el.querySelector('[data-thumb-fallback-note]');
-      if(!picker) return;
-      const old = picker.querySelector('[data-thumb-media]'); if(old) old.remove();
-      const oldSourceError = picker.querySelector('[data-thumb-source-error]');
-      if (oldSourceError) oldSourceError.remove();
-      const explicit = p.thumbnail.src;
-      const fallback = explicit ? null : computeFallbackThumb(p.media, p.thumbnail);
-      const src = explicit ? {type:p.thumbnail.type||'image',src:explicit,background:p.thumbnail.background||null} : fallback;
-      if(!src || !src.src){ if(note) note.style.display='none'; return; }
-      const sourceError = validateMediaSource(src.type, src.src);
-      if (sourceError) {
-        const error = document.createElement('div');
-        error.className = 'source-type-error source-type-error-inline';
-        error.dataset.thumbSourceError = '';
-        error.setAttribute('role','alert');
-        error.innerHTML = '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div><strong>Source type error</strong><p>' + esc(sourceError) + '</p></div>';
-        picker.appendChild(error);
-        if(note) note.style.display='none';
-        return;
-      }
-      let media;
-      if(src.type==='video'){
-        media=document.createElement('video'); media.src=ghRawUrl(src.src); media.muted=true; media.loop=true; media.autoplay=true; media.playsInline=true;
-      }else if(src.type==='lottie'){
-        media=document.createElement('lottie-player'); media.setAttribute('src',ghRawUrl(src.src)); media.setAttribute('autoplay',''); media.setAttribute('loop',''); media.setAttribute('background','transparent');
-      }else if(src.type==='model'){
-        media=document.createElement('div'); media.className='admin-model-thumb-placeholder'; media.innerHTML='<i class="fa-solid fa-cube" aria-hidden="true"></i><strong>3D VIEW</strong><small>Uses the first 3D artwork</small>';
-      }else{
-        media=document.createElement('img'); media.src=ghRawUrl(src.src); media.alt=p.title||'Project thumbnail';
-      }
-      media.setAttribute('data-thumb-media',''); media.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
-      const focus=p.thumbnail.focus||'50% 50%'; media.style.objectPosition=focus; media.style.transformOrigin=focus; media.style.transform=`scale(${p.thumbnail.zoom||1})`;
-      const sourceBackground = src.background && typeof src.background === 'object' ? src.background : null;
-      if (sourceBackground) picker.setAttribute('data-background', JSON.stringify(sourceBackground)); else picker.removeAttribute('data-background');
-      picker.insertBefore(media,picker.querySelector('[data-crosshair]'));
-      if (globalThis.LMMediaBackground) {
-        const pickerBackground = ['lottie','model'].includes(src.type) && sourceBackground ? sourceBackground : {type:'none'};
-        globalThis.LMMediaBackground.apply(picker, pickerBackground, ghRawUrl);
-      }
-      if(note) note.style.display=fallback?'':'none';
-    }
-    wireBackgroundControl(
-      el,
-      () => p.thumbnail.type,
-      () => p.thumbnail.background,
-      value => { p.thumbnail.background = value; refreshThumbPreview(); },
-      () => { refreshThumbPreview(); markChanged(); }
-    );
-
-    attachMediaBrowseButton(el.querySelector('[data-f="thumb-src"]'), () => refreshThumbPreview(), () => ({
-      kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : p.thumbnail.type === 'model' ? 'model' : 'image',
-      title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : p.thumbnail.type === 'model' ? 'Choose a 3D model' : 'Choose an image file'
-    }));
-
-    // simple fields
-    el.querySelectorAll('[data-f]').forEach(inp=>{
-      inp.addEventListener('input', ()=>{
-        const f = inp.dataset.f;
-        if(f==='thumb-src'){
-          p.thumbnail.src = inp.value;
-          refreshThumbPreview();
-        } else if(f==='thumb-type'){
-          p.thumbnail.type = inp.value;
-          refreshThumbPreview();
-        }
-        // THE FIX: typing a new zoom or focus value used to update
-        // p.thumbnail but never re-render refreshThumbPreview() —
-        // only loading a new image (thumb-src, above) did that. So
-        // the preview looked frozen on whatever it last showed while
-        // you adjusted the very things it's supposed to demonstrate,
-        // which read as "zoom isn't doing what I typed" even though
-        // the saved value was correct all along. Now every field that
-        // touches the crop calls refreshThumbPreview() the same way
-        // Profile Photo's equivalent fields already did.
-        else if(f==='thumb-zoom') { p.thumbnail.zoom = parseFloat(inp.value)||1; refreshThumbPreview(); }
-        else if(f==='thumb-focus'){ p.thumbnail.focus = inp.value; setFromFocusStr(); refreshThumbPreview(); }
-        else {
-          p[f] = inp.value;
-          if (f==='title' || f==='badge') {
-            const titleEl = el.closest('.card-item').querySelector('.item-title');
-            titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}`;
-          }
-        }
-        markChanged();
-      });
-    });
-    el.querySelector('select[data-f="badge"]').addEventListener('change', function(){
-      const titleEl = el.closest('.card-item').querySelector('.item-title');
-      titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}`;
-    });
-
-    // filter chips
-    el.querySelectorAll('[data-fid]').forEach(chip=>{
-      chip.addEventListener('click', ()=>{
-        const id = chip.dataset.fid;
-        if(p.filters.includes(id)) p.filters = p.filters.filter(x=>x!==id);
-        else p.filters.push(id);
-        chip.classList.toggle('selected');
-        markChanged();
-      });
-    });
-
-    // focus picker
-    const picker = el.querySelector('[data-focuspicker]');
-    const crosshair = el.querySelector('[data-crosshair]');
-    function setFromFocusStr(){
-      const parts = (p.thumbnail.focus||'50% 50%').split(' ').map(s=>parseFloat(s)||50);
-      crosshair.style.left = parts[0] + '%';
-      crosshair.style.top = parts[1] + '%';
-    }
-    setFromFocusStr();
-    refreshThumbPreview();
-    function pointerToFocus(e){
-      const rect = picker.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-      const x = Math.max(0, Math.min(100, (cx/rect.width)*100));
-      const y = Math.max(0, Math.min(100, (cy/rect.height)*100));
-      p.thumbnail.focus = `${x.toFixed(0)}% ${y.toFixed(0)}%`;
-      crosshair.style.left = x+'%'; crosshair.style.top = y+'%';
-      el.querySelector('[data-f="thumb-focus"]').value = p.thumbnail.focus;
-      // THE FIX: this updated the crosshair dot's own position and the
-      // text field beside it, but never touched the actual preview
-      // image — so dragging looked like it worked (the dot moved) while
-      // the crop/zoom shown never changed to match. Same gap the Zoom
-      // and Focus text fields just above had, and the same fix: call
-      // the one function that actually re-renders the image with the
-      // current zoom + focus + rotate, on every change, not just once
-      // when the project is first opened.
-      refreshThumbPreview();
-      markChanged();
-    }
-    let dragging=false;
-    picker.style.touchAction='none';
-    picker.addEventListener('pointerdown', e=>{
-      if(e.pointerType==='mouse' && e.button!==0) return;
-      dragging=true;
-      picker.setPointerCapture?.(e.pointerId);
-      pointerToFocus(e);
-    });
-    picker.addEventListener('pointermove', e=>{
-      if(!dragging) return;
-      e.preventDefault();
-      pointerToFocus(e);
-    });
-    picker.addEventListener('pointerup', e=>{
-      dragging=false;
-      try { picker.releasePointerCapture?.(e.pointerId); } catch (_) {}
-    });
-    picker.addEventListener('pointercancel', ()=>{ dragging=false; });
-
-    // media list
-    let medWrap = el.querySelector('[data-medialist]');
-    function paintMedia(){
-      const freshWrap = document.createElement('div');
-      freshWrap.setAttribute('data-medialist', '');
-      p.media.forEach((m)=>{
-        const isOpen = openMediaUids.has(m._uid);
-        const row = document.createElement('div');
-        row.className = 'card-item';
-        row.style.background = '#191919';
-        row.dataset.uid = m._uid;
-        row.innerHTML = `
-          <div class="card-item-head collapsible-head" data-toggle-open>
-            <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-            <span class="item-title">${m.caption ? esc(m.caption) : '(' + esc(m.type) + ')'}</span>
-            <div class="card-item-actions">
-              <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
-              <button class="icon-btn" data-mact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
-              <button class="icon-btn" data-mact="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button>
-              <button class="icon-btn" data-mact="toggle"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
-            </div>
-          </div>
-          <div class="collapsible-body" style="display:${isOpen?'block':'none'};margin-top:16px;" data-mbody>
-            <div class="row media-editor-row">
-              <div class="field" style="max-width:140px"><label class="field-label">Type</label>
-                <select data-mf="type">
-                  <option value="image" ${m.type==='image'?'selected':''}>Image</option>
-                  <option value="video" ${m.type==='video'?'selected':''}>Video</option>
-                  <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube</option>
-                  <option value="lottie" ${m.type==='lottie'?'selected':''}>Lottie (JSON animation)</option>
-                  <option value="model" ${m.type==='model'?'selected':''}>3D model</option>
-                </select>
-              </div>
-              <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
-            </div>
-            <div class="row media-editor-row media-editor-meta">
-              <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
-              <div class="field" style="max-width:180px"><label class="field-label">Orientation</label>
-                <select data-mf="orientation">
-                  <option value="" ${!m.orientation?'selected':''}>Auto</option>
-                  <option value="landscape" ${m.orientation==='landscape'?'selected':''}>Landscape</option>
-                  <option value="portrait" ${m.orientation==='portrait'?'selected':''}>Portrait</option>
-                  <option value="square" ${m.orientation==='square'?'selected':''}>Square</option>
-                </select>
-              </div>
-            </div>
-            <div data-mediapreview></div>
-             ${backgroundControlHtml(m.background)}
-          </div>
-        `;
-        row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
-          if (e.target.closest('[data-mact]') && e.target.closest('[data-mact]').dataset.mact !== 'toggle') return;
-          if (isOpen) openMediaUids.delete(m._uid); else openMediaUids.add(m._uid);
-          paintMedia();
-        });
-        const previewEl = row.querySelector('[data-mediapreview]');
-        let modelViewerCleanup = null;
-        async function refreshPreview(){
-          if (modelViewerCleanup) { modelViewerCleanup(); modelViewerCleanup = null; }
-          previewEl.innerHTML = buildMediaPreviewHtml(m);
-          wirePreviewAspect(previewEl.firstElementChild, m);
-          const previewBox = previewEl.firstElementChild;
-          if (previewBox && m.type === 'lottie' && m.background && globalThis.LMMediaBackground) {
-            globalThis.LMMediaBackground.apply(previewBox, m.background, ghRawUrl);
-          }
-          if (m.type === 'model' && m.src) {
-            try {
-              const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261004-08');
-              const host = previewEl.querySelector('[data-model-preview]');
-              if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), {
-                background: m.background || null,
-                orientation: m.orientation || 'auto',
-                onOrientationDetected: (detected) => {
-                  const box = previewEl.firstElementChild;
-                  if (box) {
-                    box.dataset.orientation = detected;
-                    fitPreviewAspect(box, detected === 'landscape' ? 16/9 : detected === 'portrait' ? 9/16 : 1);
-                  }
-                },
-                resolveUrl: ghRawUrl
-              });
-            } catch (err) {
-              const host = previewEl.querySelector('[data-model-preview]');
-              if (host) host.innerHTML = `<div class="model-viewer-error"><strong>Couldn't load this 3D source.</strong><br><span>Check that the file exists and is a supported OBJ, GLTF, GLB, or FBX file.</span></div>`;
-            }
-          }
-          // If this is (or might become) the project's fallback
-          // thumbnail — first image/YouTube item, thumbnail.src left
-          // blank — the focus-picker preview needs to follow along too.
-          if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
-        }
-        wireBackgroundControl(
-          row,
-          () => m.type,
-          () => m.background,
-          value => { m.background = value; refreshPreview(); },
-          () => { refreshPreview(); markChanged(); }
-        );
-        refreshPreview();
-        attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
-          kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
-          title: m.type === 'model' ? 'Choose a 3D model' : m.type === 'lottie' ? 'Choose a Lottie JSON file' : 'Choose media'
-        }));
-
-        row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
-          m[inp.dataset.mf]=inp.value;
-          if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
-          if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') {
-            refreshPreview();
-            row.__bgEditorSync?.();
-          }
-          markChanged();
-        }));
-        row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
-          if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')'; refreshPreview(); }
-        }));
-        row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
-          const idx = p.media.findIndex(x=>x._uid===m._uid);
-          if (idx > -1) p.media.splice(idx, 1);
-          markChanged(); paintMedia();
-        });
-        row.querySelector('[data-mact="up"]').addEventListener('click', ()=>{
-          const mi = p.media.indexOf(m); if(mi===0)return;
-          animateReorder(() => el.querySelector('[data-medialist]'), () => { [p.media[mi-1],p.media[mi]]=[p.media[mi],p.media[mi-1]]; markChanged(); paintMedia(); });
-        });
-        row.querySelector('[data-mact="down"]').addEventListener('click', ()=>{
-          const mi = p.media.indexOf(m); if(mi===p.media.length-1)return;
-          animateReorder(() => el.querySelector('[data-medialist]'), () => { [p.media[mi+1],p.media[mi]]=[p.media[mi],p.media[mi+1]]; markChanged(); paintMedia(); });
-        });
-        freshWrap.appendChild(row);
-      });
-      medWrap.replaceWith(freshWrap);
-      medWrap = freshWrap;
-      enableDragReorder(() => el.querySelector('[data-medialist]'), p.media, flagUnsaved, paintMedia);
-      // Covers add/delete/reorder even when the list is empty (each
-      // row's own refreshPreview() already covers edits to that row).
-      refreshThumbPreview();
-    }
-    paintMedia();
-    el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
-      const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,_uid:uid()};
-      p.media.push(fresh);
-      openMediaUids.add(fresh._uid); // new artwork opens straight into edit mode
-      markChanged(); paintMedia();
-    });
-  }
-
-  function badgeOptions(current){
-    const suggested=['2D Illustration','3D Design','Motion Graphics','UI/UX Design','Brand Design'];
-    let configured=[]; const raw=cache.filters?.json; if(raw && !Array.isArray(raw)) configured=raw.badges||[];
-    const set=new Set([...suggested,...configured].filter(Boolean)); if(current)set.add(current);
-    return [...set].map(b=>`<option value="${attr(b)}" ${b===current?'selected':''}>${esc(b)}</option>`).join('');
   }
 
   paint();
