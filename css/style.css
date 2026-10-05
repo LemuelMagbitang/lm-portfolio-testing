@@ -1574,6 +1574,18 @@ body.center-page {
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="square"]{
     max-width:540px;
   }
+
+  /* Several-media projects should remain media-gallery-first, not a stack of
+     near-full-height video players. Single-media YouTube projects keep the
+     larger presentation above. */
+  #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork{
+    width:min(100%,calc(48svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:min(48svh,480px);
+  }
+
+  #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
+    max-width:320px;
+  }
 }
 
 /* Keep orientation-specific media out of the global cascade. The renderer
