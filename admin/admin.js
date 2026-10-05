@@ -807,7 +807,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
     if(saveContext.combined==='filtersWithProjects' && name==='filters'){
       commitSha=await saveSectionsAtomic([
         {name:'filters',path:SECTIONS.filters.file,content:JSON.stringify(obj,null,2)+'\n',encoding:'utf-8'},
-        {name:'projects',path:SECTIONS.projects.file,content:JSON.stringify(currentSave.extraData(),null,2)+'\n',encoding:'utf-8'}
+        {name:'projects',path:SECTIONS.projects.file,content:JSON.stringify(saveContext.extraData(),null,2)+'\n',encoding:'utf-8'}
       ],'CMS: delete filter and clear project tags');
       toast(`Saved — filter changes and project tag cleanup committed to ${conn.branch}.`);
     }else if(saveContext.combined && name==='heroLoop'){
@@ -1103,13 +1103,16 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
   }
 
   async function buildProjectsAfterFilterChanges(){
+    const saveContext= currentSave;
+    if(!saveContext) return null;
     if(!hasProjectFilterImpact()){
-      delete currentSave.combined;
-      delete currentSave.extraData;
+      delete saveContext.combined;
+      delete saveContext.extraData;
       return null;
     }
 
     const result=await loadSection('projects');
+    if(currentSave !== saveContext) return null;
     const source=Array.isArray(result.json)?result.json:[];
     const projects=cloneProjects(source);
     const renames=getFilterRenameMap();
@@ -1134,9 +1137,10 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
       project.filters=next;
     });
 
-    currentSave.combined='filtersWithProjects';
-    currentSave.extraData=()=>projects;
-    currentSave.projectFilterChangeCount=changed;
+    if(currentSave !== saveContext) return null;
+    saveContext.combined='filtersWithProjects';
+    saveContext.extraData=()=>projects;
+    saveContext.projectFilterChangeCount=changed;
     return {projects,changed};
   }
 
