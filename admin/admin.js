@@ -1739,6 +1739,47 @@ function buildMediaPreviewHtml(m){
   return `<div class="media-preview"><img src="${attr(ghRawUrl(m.src))}" alt="" onerror="handleMissingFile(this,'image')"></div>`;
 }
 
+function validateProjectEditorModel(project, { requireFilters = true } = {}){
+  if (!project || typeof project !== 'object') throw new Error('Project data is invalid.');
+  if (!String(project.title || '').trim()) throw new Error('Every project needs a title.');
+  if (!String(project.subtitle || '').trim()) throw new Error(`"${project.title}" needs a subtitle.`);
+  if (requireFilters && (!Array.isArray(project.filters) || !project.filters.length)) {
+    throw new Error(`"${project.title}" needs at least one filter tab.`);
+  }
+  if (!project.id) project.id = slugify(project.title);
+  return project;
+}
+
+function serializeProjectEditorModel(project){
+  return {
+    id:project.id,
+    title:project.title,
+    subtitle:project.subtitle,
+    badge:project.badge,
+    ...(Array.isArray(project.badges) ? {badges:[...project.badges]} : {}),
+    filters:Array.isArray(project.filters) ? [...project.filters] : [],
+    description:project.description,
+    thumbnail:{
+      type:project.thumbnail?.type || 'image',
+      src:project.thumbnail?.src || '',
+      focus:project.thumbnail?.focus,
+      zoom:project.thumbnail?.zoom,
+      ...(project.thumbnail?.background && typeof project.thumbnail.background === 'object'
+        ? {background:project.thumbnail.background}
+        : {})
+    },
+    media:(Array.isArray(project.media) ? project.media : []).map(media => ({
+      type:media.type,
+      src:media.src,
+      caption:media.caption,
+      orientation:media.orientation,
+      ...(media.background && typeof media.background === 'object'
+        ? {background:media.background}
+        : {})
+    }))
+  };
+}
+
 RENDERERS.projects = async function(data){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
@@ -1816,19 +1857,8 @@ RENDERERS.projects = async function(data){
     enableDragReorder(() => document.getElementById('projList'), items, flagUnsaved, paint);
 
     wireSave(()=>{
-      for(const p of items){
-        if(!p.title.trim()) throw new Error('Every project needs a title.');
-        if(!p.subtitle.trim()) throw new Error(`"${p.title}" needs a subtitle.`);
-        if(!p.filters.length) throw new Error(`"${p.title}" needs at least one filter tab.`);
-        if(!p.id) p.id = slugify(p.title);
-      }
-      return items.map(p=>({
-        id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge,
-        ...(Array.isArray(p.badges) ? {badges:[...p.badges]} : {}),
-        filters:p.filters, description:p.description,
-        thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,...(p.thumbnail.background && typeof p.thumbnail.background==='object' ? {background:p.thumbnail.background} : {})},
-        media:p.media.map(m => ({ type:m.type, src:m.src, caption:m.caption, orientation:m.orientation, ...(m.background && typeof m.background==='object' ? {background:m.background} : {}) }))
-      }));
+      items.forEach(p => validateProjectEditorModel(p));
+      return items.map(serializeProjectEditorModel);
     }, 'projects', SECTIONS.projects.file);
   }
 
