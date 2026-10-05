@@ -69,6 +69,7 @@ assert.match(mediaRendererSource, /Array\.from\(activePreloadCleanups\)\.reverse
 assert.match(mediaRendererSource, /destroyed = true;/);
 assert.match(mediaRendererSource, /\['image', 'lottie'\]\.includes\(type\)/);
 assert.doesNotMatch(mediaRendererSource, /\['image', 'video', 'lottie'\]\.includes\(type\)/);
+assert.doesNotMatch(mediaRendererSource, /preloadVideo\s*\(/);
 assert.match(mediaRendererSource, /videoDimensionCache\.set\(cacheKey, \{ width, height \}\)/);
 assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
 
