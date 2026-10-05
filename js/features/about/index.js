@@ -22,7 +22,12 @@ export async function preloadAboutAssets({
       resolve(ready);
     };
     const timer = typeof globalThis.setTimeout === 'function'
-      ? globalThis.setTimeout(() => finish(false), ABOUT_IMAGE_PRELOAD_TIMEOUT_MS)
+      ? globalThis.setTimeout(() => {
+          image.onload = null;
+          image.onerror = null;
+          image.src = '';
+          finish(false);
+        }, ABOUT_IMAGE_PRELOAD_TIMEOUT_MS)
       : null;
     image.onload = () => finish(true);
     image.onerror = () => finish(false);
