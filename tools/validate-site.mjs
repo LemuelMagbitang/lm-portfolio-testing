@@ -614,6 +614,25 @@ function validateRuntimeCacheGraph() {
   if (!/page-composition\.js\?v=\$\{cacheVersion\}/.test(bootstrap)) {
     err('Bootstrap cache graph: page-composition must use the same runtime cacheVersion.');
   }
+
+  // The HTML entrypoints are the final cache owners. Matching each other is
+  // not enough: they must also match the canonical runtime version declared
+  // by script.js/bootstrap.js, otherwise a stale-but-consistent HTML pair can
+  // load an older runtime graph and bypass the source-level cache contract.
+  if (bootstrapVersion) {
+    for (const [file] of pages) {
+      if (!exists(file)) continue;
+      const html = readText(file);
+      const scriptVersion = html.match(
+        file === 'index.html'
+          ? /js\/script\.js\?v=([^"\s>]+)/
+          : /\.\.\/js\/script\.js\?v=([^"\s>]+)/
+      )?.[1] || '';
+      if (scriptVersion && scriptVersion !== bootstrapVersion) {
+        err(file + ': HTML runtime cache version must match the canonical bootstrap cacheVersion.');
+      }
+    }
+  }
 }
 
 function parseCacheVersion(version) {
