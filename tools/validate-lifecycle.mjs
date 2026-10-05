@@ -93,5 +93,9 @@ assert.match(adminSource, /buildProjectBody\(row\.querySelector\('\[data-editor\
 assert.match(adminSource, /buildProjectBody\(wrap\.querySelector\('\[data-body\]'\), p, \{filterDefs\}\)/);
 assert.match(adminSource, /className='curated-project-option'/);
 assert.match(adminSource, /class="curated-project-preview"/);
+const navigationGuardIndex = adminSource.indexOf('function goToSection(name){');
+const navigationConfirmIndex = adminSource.indexOf("if(dirty[currentSection] && name !== currentSection){", navigationGuardIndex);
+const navigationTrackerIndex = adminSource.indexOf('deployTrackVersion++;', navigationGuardIndex);
+assert.ok(navigationGuardIndex >= 0 && navigationConfirmIndex > navigationGuardIndex && navigationTrackerIndex > navigationConfirmIndex);
 
 console.log('Lightbox BFCache and 3D mount-race contracts validated.');
