@@ -71,21 +71,8 @@ const revealGrid = {
   style: {},
   querySelectorAll: () => revealCards
 };
-let resizeObserverCallback = null;
-let resizeObserverDisconnected = false;
 const revealWindow = {
   innerWidth: 1280,
-  ResizeObserver: class {
-    constructor(callback) {
-      resizeObserverCallback = callback;
-    }
-    observe(target) {
-      assert.equal(target, revealGrid);
-    }
-    disconnect() {
-      resizeObserverDisconnected = true;
-    }
-  },
   setTimeout(fn) {
     fn();
     return 1;
@@ -109,16 +96,23 @@ const revealCleanup = applyGalleryReveal({
 
 assert.equal(revealViewport.style.maxHeight, '410px');
 
-// Regression: late media/layout changes must remeasure the collapsed viewport
-// while the gallery remains collapsed.
+// The returned cleanup hook remains valid even though the collapsed
+// measurement no longer depends on a persistent layout observer.
 revealCards[1].getBoundingClientRect = () => ({ bottom: 520 });
-resizeObserverCallback?.();
-assert.equal(revealViewport.style.maxHeight, '490px');
-assert.equal(resizeObserverDisconnected, false);
-
-// The returned cleanup hook must release the observer.
 revealCleanup?.();
-assert.equal(resizeObserverDisconnected, true);
+
+const revealViewportLate = { style: {}, getBoundingClientRect: () => ({ top: 100 }) };
+const lateMeasureWindow = { ...revealWindow };
+applyGalleryReveal({
+  grid: revealGrid,
+  gridViewport: revealViewportLate,
+  filteredCards: revealCards,
+  visibleCount: 2,
+  expanded: false,
+  windowRef: lateMeasureWindow,
+  desktopPeek: 70
+});
+assert.equal(revealViewportLate.style.maxHeight, '490px');
 
 const styleSource = await (await import('node:fs/promises')).readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const mediaRendererForDensity = await (await import('node:fs/promises')).readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
