@@ -1439,6 +1439,18 @@ try {
       await mediaNav.click();
       await page.locator('#content #mediaGrid').waitFor({ state: 'visible', timeout: 5000 });
 
+      // Refresh uses the same asynchronous tree request after the Media
+      // Library is already mounted; navigating away during it must not repaint
+      // the old Media screen.
+      await page.locator('#content #btnRefresh').click();
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS Media Library Refresh hydration overwrote the selected About section.');
+      }
+
       page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
       await page.locator('#content #addCuratedView').click();
       await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Curated View' }).waitFor({ state: 'visible', timeout: 5000 });
