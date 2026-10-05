@@ -1598,3 +1598,362 @@ try {
       await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
 
       // A Curated-only action also depends on Main Portfolio IDs. It must not
+      // open a prompt or mutate a stale view after navigation starts while
+      // that dependency is still resolving.
+      page.once('dialog', dialog => dialog.accept('Smoke Early View'));
+      await page.locator('#content #addCuratedView').click();
+      await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Early View' }).waitFor({ state: 'visible', timeout: 5000 });
+
+      let staleCreateDialog = false;
+      const staleDialogHandler = dialog => {
+        if(dialog.type() === 'prompt'){
+          staleCreateDialog = true;
+          dialog.dismiss().catch(() => {});
+          return;
+        }
+        // The Curated View is deliberately dirty here, so leaving it opens
+        // the CMS's normal unsaved-changes confirmation. Accept that
+        // navigation confirmation while keeping prompt handling observable.
+        dialog.accept().catch(() => {});
+      };
+      page.on('dialog', staleDialogHandler);
+      await page.locator('#content [data-create]').click();
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      page.off('dialog', staleDialogHandler);
+      if (staleCreateDialog) throw new Error('Curated-only Create Project opened a prompt after its section became stale.');
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS stale Curated-only action navigation did not remain on About.');
+      }
+
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+
+      // Curated Views hydrate Main Portfolio references asynchronously. Leave
+      // the section before that secondary request resolves and verify the
+      // response cannot paint stale content over the newly selected section.
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS async Curated Views hydration overwrote the selected About section.');
+      }
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+
+      // Media Library loads the Git tree outside loadSection(), so it needs
+      // the same navigation guard as the JSON-backed CMS sections.
+      await mediaNav.click();
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS stale Media Library hydration overwrote the selected About section.');
+      }
+      await mediaNav.click();
+      await page.locator('#content #mediaGrid').waitFor({ state: 'visible', timeout: 5000 });
+
+      // Refresh uses the same asynchronous tree request after the Media
+      // Library is already mounted; navigating away during it must not repaint
+      // the old Media screen.
+      await page.locator('#content #btnRefresh').click();
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS Media Library Refresh hydration overwrote the selected About section.');
+      }
+
+      // Complete a save while staying on its originating section so deployment
+      // tracking starts, then navigate away. The old deployment poll must not
+      // continue owning the new section's status bar.
+      const heroNav = page.locator('.nav-item[data-section="hero"]');
+      await heroNav.click();
+      await page.locator('#content #heroList, #content #addHero').first().waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('#content #addHero').click();
+      await page.locator('#btnSaveTop').click();
+      await page.waitForTimeout(400);
+      const savingStatus = (await page.locator('#saveStatusText').textContent()).trim();
+      if (savingStatus !== 'Deploying…') {
+        throw new Error(`CMS save did not enter deployment tracking state (found "${savingStatus}").`);
+      }
+      await mediaNav.click();
+      if ((await page.locator('#saveStatusText').textContent()).trim() === 'Deploying…') {
+        throw new Error('CMS deployment polling continued to own the Save status after navigation.');
+      }
+
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+      page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
+      await page.locator('#content #addCuratedView').click();
+      await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Curated View' }).waitFor({ state: 'visible', timeout: 5000 });
+      const curatedDirty = await page.locator('#dirty-curatedViews').evaluate(el => getComputedStyle(el).display);
+      if (curatedDirty === 'none') throw new Error('Creating a Curated View did not mark the Curated Views editor dirty.');
+
+      // Curated Views has its own Main Portfolio picker. Exercise the actual
+      // dialog rather than relying on generic Media Library picker coverage:
+      // every project option needs a real visual preview plus isolated title /
+      // subtitle blocks with no geometry overlap.
+      const addProjectButton = page.locator('#content [data-add]').first();
+      await addProjectButton.click();
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'visible', timeout: 5000 });
+      const pickerOption = page.locator('.curated-project-option').filter({ hasText: 'Test Project' }).first();
+      if (await pickerOption.count() !== 1) throw new Error('Curated Views Add Project picker did not show the Main Portfolio fixture.');
+      if (await pickerOption.locator('.curated-project-preview img').count() !== 1) throw new Error('Curated Views Add Project picker is missing the project thumbnail preview.');
+      const optionGeometry = await pickerOption.evaluate((el) => {
+        const preview = el.querySelector('.curated-project-preview')?.getBoundingClientRect();
+        const meta = el.querySelector('.curated-project-meta')?.getBoundingClientRect();
+        const title = el.querySelector('.curated-project-title')?.getBoundingClientRect();
+        const subtitle = el.querySelector('.curated-project-subtitle')?.getBoundingClientRect();
+        if (!preview || !meta || !title || !subtitle) return null;
+        return { previewBottom: preview.bottom, metaTop: meta.top, titleBottom: title.bottom, subtitleTop: subtitle.top };
+      });
+      if (!optionGeometry || optionGeometry.previewBottom > optionGeometry.metaTop + 1 || optionGeometry.titleBottom > optionGeometry.subtitleTop + 1) {
+        throw new Error('Curated Views Add Project picker text blocks overlap the preview or each other.');
+      }
+      await pickerOption.click();
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'detached', timeout: 5000 });
+      if (!(await addProjectButton.evaluate(el => el === document.activeElement))) {
+        throw new Error('Closing the Curated Views Add Project picker did not restore focus to the opener.');
+      }
+      await addProjectButton.click();
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('.curated-project-picker-dialog [data-search]').press('Escape');
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'detached', timeout: 5000 });
+      if (!(await addProjectButton.evaluate(el => el === document.activeElement))) {
+        throw new Error('Escape did not close the Curated Views picker and restore focus to its opener.');
+      }
+      const addedMainRow = page.locator('#content [data-list] .card-item').filter({ hasText: 'Test Project' }).first();
+      await addedMainRow.waitFor({ state: 'visible', timeout: 5000 });
+
+      // Create Project must use the shared project editor. This specifically
+      // catches regressions where buildProjectBody is accidentally scoped
+      // inside the Main Projects renderer and becomes undefined here.
+      page.once('dialog', dialog => dialog.accept('Smoke Curated-only Project'));
+      await page.locator('#content [data-create]').click();
+      const curatedOnlyRow = page.locator('#content [data-list] .card-item').filter({ hasText: 'Smoke Curated-only Project' }).first();
+      await curatedOnlyRow.waitFor({ state: 'visible', timeout: 5000 });
+      const curatedTitle = curatedOnlyRow.locator('[data-f="title"]').first();
+      if (await curatedTitle.count() !== 1 || (await curatedTitle.inputValue()) !== 'Smoke Curated-only Project') {
+        throw new Error('Curated Views Create Project did not mount the shared project editor.');
+      }
+
+      page.once('dialog', dialog => dialog.accept());
+      await projectsNav.click();
+      await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
+      const curatedDirtyAfterLeave = await page.locator('#dirty-curatedViews').evaluate(el => getComputedStyle(el).display);
+      if (curatedDirtyAfterLeave !== 'none') throw new Error('Curated Views dirty state leaked across CMS section navigation.');
+      await projectsNav.click();
+      await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
+
+      const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
+      if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
+      const testBody = testProject.locator('[data-body]').first();
+      const bodyStyle = await testBody.getAttribute('style');
+      if (!bodyStyle?.includes('display:block')) await testProject.locator('[data-toggle-open]').click();
+
+      const lottieMedia = testProject.locator('[data-medialist] .card-item').first();
+      if (await lottieMedia.count() !== 1) throw new Error('CMS test-project Lottie media row is missing.');
+      const mediaToggle = lottieMedia.locator('[data-mact="toggle"]');
+      if (await mediaToggle.count()) {
+        const mediaBody = lottieMedia.locator('[data-mbody]').first();
+        const mediaStyle = await mediaBody.getAttribute('style');
+        if (!mediaStyle?.includes('display:block')) await mediaToggle.click();
+      }
+
+      const bgControl = lottieMedia.locator('[data-bg-control]');
+      if (await bgControl.count() !== 1) throw new Error('CMS Lottie media row is missing the background color control.');
+      if (!(await bgControl.isVisible())) throw new Error('CMS Lottie background color control should be visible.');
+
+      const bgColorInput = bgControl.locator('[data-bg-color]').first();
+      const bgSwatch = bgControl.locator('[data-bg-swatch]').first();
+      const bgEnableInput = bgControl.locator('[data-bg-enabled]').first();
+      if (await bgColorInput.count() !== 1 || await bgSwatch.count() !== 1 || await bgEnableInput.count() !== 1) {
+        throw new Error('CMS Lottie background control is missing its compact color picker surface.');
+      }
+      if (!(await bgColorInput.isDisabled())) throw new Error('CMS Lottie color picker should start disabled until its background is enabled.');
+
+      await bgEnableInput.check();
+      if (await bgColorInput.isDisabled()) throw new Error('CMS Lottie color picker did not enable after turning on its background.');
+
+      await bgColorInput.evaluate((input) => {
+        input.value = '#336699';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      const bgHex = await bgControl.locator('[data-bg-hex]').textContent().catch(() => '');
+      if (bgHex?.trim().toUpperCase() !== '#336699') {
+        throw new Error('CMS background color picker did not update its displayed value.');
+      }
+
+      page.once('dialog', dialog => dialog.accept());
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+
+      const softwareRows = await page.locator('#tags_software .skill-editor-row').count();
+      if (softwareRows < 1) throw new Error('CMS About editor rendered no software skill rows.');
+
+      const kritaRow = page.locator('#tags_software .skill-editor-row').filter({ hasText: 'Krita' }).first();
+      if (await kritaRow.count() !== 1) throw new Error('CMS About editor did not render the stubbed Krita skill.');
+
+      const logo = kritaRow.locator('img').first();
+      await logo.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+      if (await logo.count() !== 1) throw new Error('CMS About editor did not render a Krita logo preview.');
+    }, { width: 1280, height: 900 }, async page => {
+      const about = {
+        headline: 'CMS Smoke Test',
+        subhead: 'Software logo lookup',
+        bio: 'Browser smoke fixture.',
+        photo: { src: '', zoom: 1, focus: '50% 50%', rotate: 0 },
+        softwareSkills: [{ name: 'Krita', icon: '' }],
+        multimediaSkills: [],
+        experience: [{ role: 'Test Role', company: 'Test Company', startDate: '2026', endDate: '', bullets: [] }],
+        education: [{ school: 'Test School', degree: 'Test Degree', graduationDate: '2026', title: '', detail: '' }],
+        awards: [{ title: 'Test Award', detail: '2026' }]
+      };
+      const projectsFixture = [{
+        id: 'test-project',
+        title: 'Test Project',
+        subtitle: 'CMS fixture',
+        badge: '',
+        filters: [],
+        description: '',
+        thumbnail: { type: 'image', src: 'assets/projects/test/thumb.svg', focus: '50% 50%', zoom: 1 },
+        media: [
+          { type: 'lottie', src: 'assets/projects/test/Sample.json', caption: 'Lottie fixture', orientation: 'square' },
+          { type: 'model', src: 'assets/projects/test/Female base.obj', caption: '3D fixture', orientation: '' }
+        ]
+      }];
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(about))));
+      const encodedProjects = btoa(unescape(encodeURIComponent(JSON.stringify(projectsFixture))));
+      await page.addInitScript(({ encodedAbout }) => {
+        sessionStorage.setItem('lm_cms_session_v1', JSON.stringify({
+          owner: 'Smoke',
+          repo: 'TestRepo',
+          branch: 'main',
+          token: 'github_' + 'pat_smoke_test_token'
+        }));
+        window.__LM_CMS_SMOKE_ABOUT__ = encodedAbout;
+      }, { encodedAbout: encoded });
+
+      await page.route('https://raw.githubusercontent.com/Smoke/TestRepo/**', async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname.endsWith('Sample.json')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 100, h: 100, nm: 'Smoke', ddd: 0, assets: [], layers: [] })
+          });
+          return;
+        }
+        if (url.pathname.endsWith('.obj')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'text/plain',
+            body: 'o Smoke\nv 0 0 0\nv 0 1 0\nv 1 0 0\nf 1 2 3\n'
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#fff"/></svg>'
+        });
+      });
+
+      await page.route('https://api.github.com/**', async route => {
+        const url = new URL(route.request().url());
+        if (url.pathname === '/repos/Smoke/TestRepo') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ full_name: 'Smoke/TestRepo', default_branch: 'main' }) });
+          return;
+        }
+        const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
+        if (url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method() === 'PUT') {
+          // Delay a normal content save so the browser smoke test can
+          // navigate away before its completion callback runs.
+          await new Promise(resolve => setTimeout(resolve, 250));
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              content: { sha: 'smoke-saved-content' },
+              commit: { sha: 'smoke-save-commit' }
+            })
+          });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/commits/smoke-save-commit/check-runs') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              check_runs: [
+                { name: 'pages build and deployment', status: 'in_progress', conclusion: null, html_url: 'https://github.com/Smoke/TestRepo/actions' }
+              ]
+            })
+          });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/git/trees/main') {
+          // Make Media Library tree hydration cross a deliberate section
+          // navigation boundary in the smoke test.
+          await new Promise(resolve => setTimeout(resolve, 250));
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              tree: [
+                { type: 'tree', path: 'assets', sha: 'smoke-assets' },
+                { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
+                { type: 'blob', path: 'assets/projects/smoke.jpg', sha: 'smoke-jpg', size: 12 }
+              ]
+            })
+          });
+          return;
+        }
+        const genericDataMatch = url.pathname.match(/^\/repos\/Smoke\/TestRepo\/contents\/data\/([^/]+\.json)$/);
+        if (url.pathname === aboutPath) {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: encoded, sha: 'smoke-about-sha' }) });
+          return;
+        }
+        if (genericDataMatch) {
+          const filename = genericDataMatch[1];
+          if (filename === 'projects.json') {
+            // Make the Curated Views secondary hydration request slow enough
+            // to cross a deliberate navigation boundary in the smoke test.
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
+          const fixture =
+            filename === 'hero.json' ? [] :
+            filename === 'projects.json' ? JSON.parse(decodeURIComponent(escape(atob(encodedProjects)))) :
+            filename === 'settings.json' ? {} :
+            [];
+          // Return the already-encoded Projects fixture directly. Re-decoding
+          // and re-encoding it inside the route handler can leave the mocked
+          // fetch unresolved on a runner, which makes the CMS renderer appear
+          // to hang forever on "Loading…".
+          const content = filename === 'projects.json'
+            ? encodedProjects
+            : btoa(unescape(encodeURIComponent(JSON.stringify(fixture))));
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content, sha: `smoke-${filename}-sha` }) });
+          return;
+        }
+        await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Not found' }) });
+      });
+    });
+    console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
+  } finally {
+    await browser.close();
+  }
+} catch (error) {
+  const serverErrors = getStderr().trim();
+  if (serverErrors) console.error(serverErrors);
+  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  process.exitCode = 1;
+} finally {
+  stopServer(server);
+}
