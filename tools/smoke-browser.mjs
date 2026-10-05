@@ -1455,6 +1455,7 @@ try {
       if (await aboutContact.count() !== 1) {
         throw new Error('About page Contact navigation does not target the exact Start a Project anchor.');
       }
+      await page.locator('.hamburger').first().click();
       await aboutContact.click();
       await page.waitForTimeout(300);
       const contactHeading = page.locator('#contact-start').first();
