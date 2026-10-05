@@ -127,50 +127,6 @@ export function createLightboxMediaRenderer({
     return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
   }
 
-  function preloadVideo(url) {
-    if (!url) return Promise.resolve(false);
-    let video = null;
-    let cleanup = () => {};
-    const preload = new Promise(resolve => {
-      video = documentRef.createElement('video');
-      video.preload = 'auto';
-      video.muted = true;
-      video.playsInline = true;
-      video.fetchPriority = 'high';
-      let done = false;
-      const finish = value => {
-        if (done) return;
-        done = true;
-        video.removeEventListener('loadedmetadata', onReady);
-        video.removeEventListener('canplay', onReady);
-        video.removeEventListener('error', onError);
-        resolve(value);
-      };
-      const onReady = () => {
-        const width = Number(video.videoWidth);
-        const height = Number(video.videoHeight);
-        if (width > 0 && height > 0) videoDimensionCache.set(url, { width, height });
-        finish(true);
-      };
-      const onError = () => finish(false);
-      cleanup = () => {
-        video.removeEventListener('loadedmetadata', onReady);
-        video.removeEventListener('canplay', onReady);
-        video.removeEventListener('error', onError);
-        try { video.pause(); } catch (_) {}
-        try { video.removeAttribute('src'); video.load(); } catch (_) {}
-        finish(false);
-      };
-      video.addEventListener('loadedmetadata', onReady, { once: true });
-      video.addEventListener('canplay', onReady, { once: true });
-      video.addEventListener('error', onError, { once: true });
-      video.src = url;
-      video.load();
-    });
-    const unregister = registerPreloadCleanup(cleanup);
-    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
-  }
-
   async function preloadLottie(url) {
     if (!url || typeof globalThis.fetch !== 'function') return false;
     const controller = typeof globalThis.AbortController === 'function'
@@ -213,13 +169,13 @@ export function createLightboxMediaRenderer({
       const media = Array.isArray(project?.media) ? project.media : [];
       if (!media.length) return;
 
-      // Warm only the first local media item for each project. The project
-      // cards already establish the primary visual, so preloading every
-      // Lightbox asset here wastes bandwidth and can compete with the asset the
-      // visitor is actually opening.
+      // Warm only the first lightweight local media item for each project.
+      // Project cards already establish the primary visual, and local video
+      // should not be downloaded in the background before the visitor asks to
+      // play it. Its metadata is cached when the viewer actually opens it.
       const firstLocal = media.find(item => {
         const type = String(item?.type || '').toLowerCase();
-        return item?.src && ['image', 'video', 'lottie'].includes(type);
+        return item?.src && ['image', 'lottie'].includes(type);
       });
 
       media.forEach(item => {
@@ -239,8 +195,9 @@ export function createLightboxMediaRenderer({
       if (type === 'image') jobs.push(preloadImage(url));
       else if (type === 'video') jobs.push(preloadVideo(url));
       else if (type === 'lottie') jobs.push(preloadLottie(url));
-      // YouTube embeds and 3D binaries are intentionally not prefetched here.
-      // Their actual viewer is eager only when the visitor opens that media.
+      // YouTube embeds, local video, and 3D binaries are intentionally not
+      // prefetched here. Their actual viewer is eager only when the visitor
+      // opens that media.
     });
 
     if (hasModel && typeof preloadModelModule === 'function') {
@@ -461,6 +418,8 @@ export function createLightboxMediaRenderer({
       const ratio = width / height;
       if (!Number.isFinite(ratio) || ratio <= 0) return;
 
+      const cacheKey = video.currentSrc || video.src || resolveAssetUrl('');
+      if (cacheKey) videoDimensionCache.set(cacheKey, { width, height });
       const resolved = ratio < 0.85 ? 'portrait' : ratio > 1.15 ? 'landscape' : 'square';
       syncClasses(resolved);
       const exactRatio = `${width} / ${height}`;
