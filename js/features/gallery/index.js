@@ -352,10 +352,7 @@ export async function initGallery(options = {}) {
   bind(showMoreBtn, 'click', event => {
     event.preventDefault();
     const nextExpanded = !isExpanded;
-    const collapseAnchor = !nextExpanded && showMoreWrapper
-      ? showMoreWrapper.getBoundingClientRect()
-      : null;
-    const pageScrollYBeforeCollapse = Number(windowRef.scrollY) || 0;
+    const shouldFollowCollapsedControl = !nextExpanded;
 
     isExpanded = nextExpanded;
     render();
@@ -366,31 +363,20 @@ export async function initGallery(options = {}) {
     showMoreBtn?.setAttribute('aria-expanded', String(isExpanded));
     showMoreWrapper?.setAttribute('data-expanded', String(isExpanded));
 
-    // When collapsing, preserve the Show More/Show Less control's viewport
-    // position instead of leaving the visitor stranded in the old expanded
-    // document height. This is an anchor-style scroll correction: it follows
-    // the control to its new location and naturally clamps at the document
-    // bounds when the old position is no longer reachable.
-    if (collapseAnchor) {
+    // When Show Less collapses the gallery, explicitly follow the control to
+    // its new position. This avoids leaving the visitor at a document location
+    // that only existed in the expanded gallery and makes the collapse feel
+    // anchored to the control they just activated.
+    if (shouldFollowCollapsedControl) {
       windowRef.clearTimeout(collapseScrollTimer);
       collapseScrollTimer = windowRef.setTimeout(() => {
         windowRef.requestAnimationFrame(() => {
           if (isExpanded || !showMoreWrapper) return;
-
-          const nextRect = showMoreWrapper.getBoundingClientRect();
-          const documentHeight = Math.max(
-            documentRef.documentElement?.scrollHeight || 0,
-            documentRef.body?.scrollHeight || 0
-          );
-          const maxScrollY = Math.max(0, documentHeight - windowRef.innerHeight);
-          const desiredScrollY = Math.min(
-            maxScrollY,
-            Math.max(0, pageScrollYBeforeCollapse + (nextRect.top - collapseAnchor.top))
-          );
-
-          if (Math.abs((Number(windowRef.scrollY) || 0) - desiredScrollY) > 1) {
-            windowRef.scrollTo({ top: desiredScrollY, behavior: 'auto' });
-          }
+          showMoreWrapper.scrollIntoView?.({
+            behavior: 'auto',
+            block: 'center',
+            inline: 'nearest'
+          });
         });
       }, Math.max(0, fadeMs) + 16);
     }
