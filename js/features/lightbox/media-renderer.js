@@ -357,7 +357,13 @@ export function createLightboxMediaRenderer({
         if (seen.has(key)) return;
         seen.add(key);
 
-        const critical = media.indexOf(item) === criticalIndex;
+        // Keep the first local-renderable item critical for every project.
+        // Models are an intentional exception: the 3D viewer is a distinct
+        // interaction surface, and preloading its binary removes the remaining
+        // first-open fetch after the viewer module graph is already warm.
+        const critical =
+          media.indexOf(item) === criticalIndex ||
+          type === 'model';
 
         const fetchPriority = critical ? 'high' : 'low';
 
