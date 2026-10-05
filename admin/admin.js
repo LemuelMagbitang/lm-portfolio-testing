@@ -240,6 +240,7 @@ const CMS_WRITABLE_PATHS = new Set([
   'data/hero-loop.json',
   'data/hero.json',
   'data/projects.json',
+  'data/curated-views.json',
   'data/reviews.json',
   'data/settings.json',
   'index.html',
