@@ -103,24 +103,19 @@ export async function createPortfolioApp({
 
   const forms = initForms({ root });
 
+  // Settings and project data are the minimum dependencies needed to
+  // start media warm-up. Reviews/About/Gallery/Hero continue in parallel so
+  // the branded loading screen can overlap their work instead of putting media
+  // behind the entire feature-initialization queue.
   const [settingsFeature] = await Promise.all([
     settingsPromise,
-    projectsPromise,
-    reviewsPromise,
-    aboutPromise,
+    projectsPromise
   ]);
 
   const settings = settingsFeature.getState();
-  // The data dependencies above are now complete. Initialize independent
-  // presentation/features concurrently so Hero startup cannot block the
-  // gallery or Lightbox from becoming interactive.
   settingsFeature.applyDom();
 
   const projectModels = getProjects();
-  if (projectModels.some(project => project?.capabilities?.hasLottie)) {
-    await ensureLottiePlayer();
-  }
-
   const hasModelMedia = projectModels.some(project => project?.capabilities?.hasModel);
   const preloadModelModule = hasModelMedia
     ? async () => {
@@ -135,7 +130,42 @@ export async function createPortfolioApp({
       }
     : null;
 
+  // Initialize the Lightbox before the remaining page features finish. It can
+  // safely wait for the Gallery's active-card API at interaction time while
+  // exposing its media renderer immediately for startup warm-up.
+  try {
+    lightboxFeature = await initLightbox({
+      root,
+      protectionEnabled: () => settings.protectionEnabled,
+      ensureMediaBackgroundHelper,
+      applyMediaBackground,
+      parseYouTubeUrl,
+      resolveAssetUrl: siteAssetUrl,
+      mountModelViewer,
+      getActiveCards: () => Array.from(root.querySelectorAll('.project-card')),
+      getProjectForCard
+    });
+  } catch (error) {
+    console.warn('Lightbox: initialization failed', error);
+  }
+
+  // Start project-media warm-up as soon as project data and the Lightbox
+  // renderer exist. This is deliberately before Hero/Gallery completion.
+  const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
+    ? lightboxFeature.preloadProjectsMedia(projectModels, {
+        preloadModelModule
+      }).catch(error => {
+        console.warn('Lightbox media preload failed:', error);
+        return { total: 0, ready: 0 };
+      })
+    : Promise.resolve({ total: 0, ready: 0 });
+
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
+  if (projectModels.some(project => project?.capabilities?.hasLottie)) {
+    void Promise.resolve().then(() => ensureLottiePlayer()).catch(error => {
+      console.warn('Lottie player warm-up failed:', error);
+    });
+  }
 
   const heroPromise = hero
     ? initHeroBannerV2({
@@ -191,22 +221,6 @@ export async function createPortfolioApp({
     galleryPromise
   ]);
 
-  try {
-    lightboxFeature = await initLightbox({
-      root,
-      protectionEnabled: () => settings.protectionEnabled,
-      ensureMediaBackgroundHelper,
-      applyMediaBackground,
-      parseYouTubeUrl,
-      resolveAssetUrl: siteAssetUrl,
-      mountModelViewer,
-      getActiveCards: () => galleryFeature?.getActiveCards?.() || Array.from(root.querySelectorAll('.project-card')),
-      getProjectForCard
-    });
-  } catch (error) {
-    console.warn('Lightbox: initialization failed', error);
-  }
-
   const ABOUT_PAGE_PREFETCH_TIMEOUT_MS = 5000;
   const aboutPagePrefetchPromise = !root.body?.classList.contains('about-page')
     ? Promise.resolve().then(() => {
@@ -246,19 +260,9 @@ export async function createPortfolioApp({
       })
     : Promise.resolve({ total: 0, ready: 0 });
 
-  // Start the full project-media warm-up before the branded loading gate is
-  // released. The renderer keeps YouTube/video/model resources warm in browser
-  // cache while the remaining page paint work completes, without making startup
-  // wait indefinitely on slow or blocked third-party media.
-  const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
-    ? lightboxFeature.preloadProjectsMedia(projectModels, {
-        preloadModelModule
-      }).catch(error => {
-        console.warn('Lightbox media preload failed:', error);
-        return { total: 0, ready: 0 };
-      })
-    : Promise.resolve({ total: 0, ready: 0 });
-
+  // Project-media warm-up started as soon as its minimum dependencies were
+  // available. The branded loading gate below only waits on its critical tier,
+  // while the remaining secondary media continues in the background.
   const PROJECT_MEDIA_STARTUP_GATE_MS = 6000;
   let projectMediaGateTimer = null;
   const projectMediaGateTimeout = new Promise(resolve => {
