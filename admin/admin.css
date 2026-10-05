@@ -418,6 +418,56 @@
 .media-picker-scroll .media-grid{min-height:100%;}
 .media-select-tile:hover{border-color:#555;transform:translateY(-1px);}
 .media-select-tile{transition:border-color .15s,transform .15s;}
+
+/* ---------- Curated View project picker ----------
+   This picker is visually distinct from Media Library tiles. The whole
+   option is a real button with a fixed preview surface and separately
+   measured text blocks, so browser button defaults cannot collapse or
+   overlap the title/subtitle underneath the preview. */
+.curated-project-picker-dialog{width:min(920px,100%);height:min(88vh,820px);}
+.curated-project-picker-toolbar{gap:7px;}
+.curated-picker-help{font-size:11px;color:var(--text-dim);line-height:1.45;}
+.curated-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;align-content:start;}
+.curated-project-option{
+  appearance:none;-webkit-appearance:none;
+  display:flex;flex-direction:column;align-items:stretch;
+  width:100%;min-width:0;padding:0;margin:0;
+  overflow:hidden;text-align:left;font:inherit;color:inherit;
+  background:var(--panel-2);border:1px solid var(--line-soft);border-radius:12px;
+  cursor:pointer;transition:border-color .15s ease,transform .15s ease,background .15s ease;
+}
+.curated-project-option:hover,.curated-project-option:focus-visible{border-color:rgba(255,255,255,.35);transform:translateY(-1px);outline:none;}
+.curated-project-option:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,.12);}
+.curated-project-preview{
+  position:relative;display:block;width:100%;aspect-ratio:16/10;
+  min-height:0;overflow:hidden;background:#0a0a0a;border-bottom:1px solid var(--line-soft);
+}
+.curated-project-preview>img,.curated-project-preview>video,.curated-project-preview>lottie-player{
+  display:block;width:100%;height:100%;border:0;
+}
+.curated-project-preview>img,.curated-project-preview>video{object-fit:cover;}
+.curated-project-preview>lottie-player{object-fit:contain;}
+.curated-project-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;width:100%;height:100%;color:#777;font-size:11px;line-height:1.3;text-align:center;padding:12px;}
+.curated-project-placeholder i{font-size:22px;color:#555;}
+.curated-project-type{position:absolute;left:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:rgba(8,8,8,.78);border:1px solid rgba(255,255,255,.1);color:#ddd;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1;pointer-events:none;}
+.curated-project-meta{display:flex;flex-direction:column;gap:4px;min-width:0;padding:11px 12px 12px;}
+.curated-project-title,.curated-project-subtitle{display:-webkit-box;min-width:0;overflow:hidden;-webkit-box-orient:vertical;}
+.curated-project-title{color:#f1f1f1;font-size:13px;font-weight:700;line-height:1.3;-webkit-line-clamp:2;}
+.curated-project-subtitle{color:#898989;font-size:11px;line-height:1.4;-webkit-line-clamp:2;}
+.curated-project-empty{grid-column:1/-1;margin:0;}
+
+@media (max-width:720px){
+  .curated-project-picker-dialog{width:100%;height:100%;}
+  .curated-project-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .curated-project-meta{padding:9px 10px 10px;}
+  .curated-project-title{font-size:12px;}
+  .curated-project-subtitle{font-size:10.5px;}
+}
+
+@media (max-width:380px){
+  .curated-project-grid{grid-template-columns:1fr;}
+}
+
 /* Folder management */
 .media-toolbar-actions{display:flex;gap:8px;align-items:flex-end;}
 .folder-actions{padding:0 10px 10px;display:flex;}
