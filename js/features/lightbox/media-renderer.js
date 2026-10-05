@@ -195,38 +195,39 @@ export function createLightboxMediaRenderer({
     video.style.height = '1px';
     video.style.opacity = '0.001';
     video.style.pointerEvents = 'none';
+
     let settled = false;
-    let timer = null;
-    let cleanup = () => {};
-    const finish = ready => {
-      if (settled) return;
-      settled = true;
-      if (timer !== null) windowRef.clearTimeout(timer);
-      video.removeEventListener('loadeddata', onReady);
-      video.removeEventListener('canplay', onReady);
-      video.removeEventListener('error', onError);
-      if (!ready && video.parentNode) video.remove();
-    };
-    const onReady = () => finish(true);
-    const onError = () => finish(false);
-    video.addEventListener('loadeddata', onReady, { once: true });
-    video.addEventListener('canplay', onReady, { once: true });
-    video.addEventListener('error', onError, { once: true });
-    cleanup = () => finish(false);
+    let resolveResult = null;
+    const preload = new Promise(resolve => {
+      resolveResult = resolve;
+      const finish = ready => {
+        if (settled) return;
+        settled = true;
+        video.removeEventListener('loadeddata', onReady);
+        video.removeEventListener('canplay', onReady);
+        video.removeEventListener('error', onError);
+        if (!ready && video.parentNode) video.remove();
+        resolve(ready);
+      };
+      const onReady = () => finish(true);
+      const onError = () => finish(false);
+      video.addEventListener('loadeddata', onReady, { once: true });
+      video.addEventListener('canplay', onReady, { once: true });
+      video.addEventListener('error', onError, { once: true });
+    });
+
+    const cleanup = () => resolveResult?.(false);
     const unregister = registerPreloadCleanup(cleanup);
     root.appendChild(video);
     video.src = url;
     video.load();
+
     const result = await withPreloadTimeout(
-      new Promise(resolve => {
-        const resolveReady = value => resolve(value);
-        video.addEventListener('loadeddata', () => resolveReady(true), { once: true });
-        video.addEventListener('canplay', () => resolveReady(true), { once: true });
-        video.addEventListener('error', () => resolveReady(false), { once: true });
-      }),
+      preload,
       MEDIA_PRELOAD_TIMEOUT_MS,
       cleanup
     ).finally(unregister);
+
     if (!result && video.parentNode) video.remove();
     return result;
   }
