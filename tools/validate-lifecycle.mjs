@@ -60,7 +60,7 @@ assert.match(lightboxSource, /const openToken = \+\+openRenderToken;/);
 assert.match(lightboxSource, /openRenderToken !== openToken/);
 assert.match(lightboxSource, /openRenderToken \+= 1;/);
 const mediaRendererSource = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
-assert.match(mediaRendererSource, /withPreloadTimeout\(promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null\)/);
+assert.match(mediaRendererSource, /const withPreloadTimeout = \(promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null\)/);
 assert.match(mediaRendererSource, /image\.src = ''/);
 assert.match(mediaRendererSource, /video\.removeAttribute\('src'\)/);
 assert.match(mediaRendererSource, /controller\?\.abort\(\)/);
