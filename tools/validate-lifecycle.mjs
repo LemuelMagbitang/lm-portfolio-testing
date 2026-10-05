@@ -75,6 +75,9 @@ assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadR
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
 assert.match(modelViewerSource, /__modelViewerMountToken/);
+assert.match(modelViewerSource, /const containerCleanup = \[\]/);
+assert.match(modelViewerSource, /containerCleanup\.splice\(0\)\.reverse\(\)/);
+assert.doesNotMatch(modelViewerSource, /container\.addEventListener\('(?:pointerdown|pointermove|pointercancel|click|keydown|wheel)'/);
 assert.match(modelViewerSource, /if \(!isCurrentMount\(\)\) \{[\s\S]*disposeObject\(loaded\.root\)[\s\S]*return null;/);
 
 const aboutSource = await readFile(new URL('../js/features/about/index.js', import.meta.url), 'utf8');
