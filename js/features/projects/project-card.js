@@ -4,7 +4,7 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261004-03';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261005-04';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {

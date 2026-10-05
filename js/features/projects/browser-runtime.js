@@ -13,7 +13,8 @@
  */
 
 import { loadProjects } from './project-loader.js';
-import { buildProjectCardElement } from './project-card.js?v=20261005-05';
+import { buildProjectCardElement } from './project-card.js?v=20261005-06';
+import { waitForProjectThumbnailReadiness } from './project-thumbnail.js?v=20261005-04';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
 import { parseYouTubeUrl as defaultParseYouTubeUrl } from '../../infrastructure/youtube/url.js';
@@ -33,13 +34,13 @@ export async function mountProjects({
     applyMediaBackground,
     documentRef,
     onActivate: onCardActivate,
-    priority: index < 6,
+    priority: index < (Number(documentRef?.defaultView?.innerWidth) < 768 ? 6 : 9),
     parseYouTubeUrl
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;
 
-  return loadProjects({
+  const mounted = await loadProjects({
     url,
     loadJson,
     resolveUrl: resolveAssetUrl,
@@ -47,4 +48,23 @@ export async function mountProjects({
     createFragment,
     buildCard
   });
+  if (!mounted) return false;
+
+  try {
+    const grid = getGrid?.();
+    const cards = Array.from(grid?.querySelectorAll?.('.project-card') || []);
+    const viewportWidth = Number(documentRef?.defaultView?.innerWidth) || 1280;
+    const initialPriorityCount = viewportWidth < 768 ? 6 : 9;
+    await waitForProjectThumbnailReadiness(cards, {
+      count: initialPriorityCount,
+      timeoutMs: 2200,
+      windowRef: documentRef?.defaultView || globalThis.window
+    });
+  } catch (error) {
+    // Thumbnail readiness is a startup optimization, not a reason to discard
+    // an otherwise valid Projects mount.
+    console.warn('Projects: thumbnail readiness wait failed.', error);
+  }
+
+  return true;
 }

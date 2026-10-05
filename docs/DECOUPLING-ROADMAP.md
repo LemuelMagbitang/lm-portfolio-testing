@@ -18,7 +18,7 @@ As of October 5, 2026, the projects-runtime-cutover branch has completed the com
 - The browser smoke suite covers the ES-module boot path, Works/About, mobile navigation, filters/ALL, Show More state across pageshow/resize/Lightbox close, local-video pause handoff, YouTube handoff/cache reuse, intrinsic video ratios, Shorts framing, 3D focus mode, software logos, and CMS editor fixtures.
 - Latest verified CI is green at `a2df35d6dd276340ff0c23407a44a9708e2e1939` (`Sync About runtime cache after model preload contract clarification`, October 5, 2026 22:47 PHT). The `Validate portfolio` job passed site/data/path validation, architecture boundaries, project data contracts, Projects runtime, Gallery presentation, lifecycle, all JavaScript/CMS/smoke syntax checks, and Chromium browser smoke. The Pages build and deployment run for the same commit also succeeded. An earlier YouTube-footprint smoke run on `be63fae28150746ba474deb8e026b5bd4410b55f` failed; the current head is the subsequent green validation state.
 - The CMS now has a **Curated Views** editor. It can create unlisted view records, reference Main Portfolio projects, create view-owned projects, reorder entries, and preserve ownership boundaries. Public Curated View hash routing is intentionally **not** enabled yet.
-- Runtime cache-busting is intentionally feature-local rather than globally synchronized. The latest composition/page cache key is `20261005-28`; feature modules carry their own query versions. Any source change must bump every affected public import/preload reference so GitHub Pages cannot serve a stale module.
+- Runtime cache-busting is intentionally feature-local rather than globally synchronized. The latest composition/page cache key is `20261005-29`; feature modules carry their own query versions. Any source change must bump every affected public import/preload reference so GitHub Pages cannot serve a stale module.
 
 ### Current focus
 
@@ -38,6 +38,10 @@ The current implementation is no longer in structural migration. The remaining r
 - **About/CMS:** software-logo lookup has contained fallbacks and the Curated Views CMS boundary is active. Public Curated View routing remains intentionally disabled until its resolver contract is complete.
 
 The immediate next engineering stage is **runtime hardening + cross-device verification**, followed by the full content-independent responsive pass. Final visual polish should begin only after those gates are stable.
+
+### October 5 runtime follow-up
+
+The latest hardening pass keeps Show Less snapping deterministic with a cancellable 1500ms document-scroll animation, waits for the initial Projects thumbnail tier before startup handoff, warms first-media YouTube projects for faster Lightbox entry, scales desktop YouTube artwork from the available viewport, tightens desktop local-video height, and uses image hit-testing suppression plus native-drag prevention for mobile artwork save protection.
 ## Current architecture shape and target direction
 
 ```text

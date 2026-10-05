@@ -355,6 +355,13 @@ export function createLightboxMediaRenderer({
         const type = String(item?.type || '').toLowerCase();
         return ['image', 'video', 'lottie', 'model'].includes(type) && item?.src;
       });
+      const firstMediaIndex = media.findIndex(item => item?.src);
+      const firstMediaType = firstMediaIndex >= 0
+        ? String(media[firstMediaIndex]?.type || '').toLowerCase()
+        : '';
+      const primaryIndex = !constrainedNetwork && firstMediaType === 'youtube'
+        ? firstMediaIndex
+        : criticalIndex;
       media.forEach(item => {
         if (!item?.src) return;
         const type = String(item.type || '').toLowerCase();
@@ -366,7 +373,7 @@ export function createLightboxMediaRenderer({
         // interaction surface, and preloading its binary removes the remaining
         // first-open fetch after the viewer module graph is already warm.
         const critical =
-          media.indexOf(item) === criticalIndex ||
+          media.indexOf(item) === primaryIndex ||
           type === 'model';
 
         const fetchPriority = critical ? 'high' : 'low';
@@ -763,6 +770,7 @@ export function createLightboxMediaRenderer({
     }
 
     const entry = buildMediaEntry(video, item.caption || item.description, item.background);
+    entry.querySelector('.lightbox-artwork')?.classList.add('is-local-video-artwork');
     applyVideoOrientation(
       video,
       String(item.orientation || '').toLowerCase(),

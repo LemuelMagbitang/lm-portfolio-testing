@@ -347,7 +347,65 @@ export async function initGallery(options = {}) {
   }));
 
   let collapseScrollTimer = null;
-  lifecycle.add(() => windowRef.clearTimeout(collapseScrollTimer));
+  let collapseScrollFrame = null;
+
+  function cancelCollapseScrollAnimation() {
+    if (collapseScrollFrame === null) return;
+    windowRef.cancelAnimationFrame?.(collapseScrollFrame);
+    collapseScrollFrame = null;
+  }
+
+  function animateWindowScrollToShowMore(durationMs = 1500) {
+    cancelCollapseScrollAnimation();
+    if (!showMoreWrapper) return;
+
+    const startY = Number(windowRef.scrollY) || 0;
+    const rect = showMoreWrapper.getBoundingClientRect();
+    const viewportHeight = Number(windowRef.innerHeight) || 0;
+    const targetY = startY + rect.top + (rect.height / 2) - (viewportHeight / 2);
+    const documentHeight = Math.max(
+      Number(documentRef.documentElement?.scrollHeight) || 0,
+      Number(documentRef.body?.scrollHeight) || 0
+    );
+    const maxY = Math.max(0, documentHeight - viewportHeight);
+    const destination = Math.max(0, Math.min(maxY, targetY));
+
+    if (Math.abs(destination - startY) < 1) {
+      windowRef.scrollTo({ top: destination, behavior: 'auto' });
+      return;
+    }
+
+    const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion || typeof windowRef.requestAnimationFrame !== 'function') {
+      windowRef.scrollTo({ top: destination, behavior: 'auto' });
+      return;
+    }
+
+    const startedAt = typeof windowRef.performance?.now === 'function'
+      ? windowRef.performance.now()
+      : Date.now();
+    const distance = destination - startY;
+
+    const step = nowValue => {
+      const now = Number(nowValue) || Date.now();
+      const progress = Math.min(1, Math.max(0, (now - startedAt) / durationMs));
+      const eased = 1 - Math.pow(1 - progress, 3);
+      windowRef.scrollTo({ top: startY + distance * eased, behavior: 'auto' });
+      if (progress < 1) {
+        collapseScrollFrame = windowRef.requestAnimationFrame(step);
+      } else {
+        collapseScrollFrame = null;
+        windowRef.scrollTo({ top: destination, behavior: 'auto' });
+      }
+    };
+
+    collapseScrollFrame = windowRef.requestAnimationFrame(step);
+  }
+
+  lifecycle.add(() => {
+    windowRef.clearTimeout(collapseScrollTimer);
+    cancelCollapseScrollAnimation();
+  });
 
   bind(showMoreBtn, 'click', event => {
     event.preventDefault();
@@ -372,11 +430,7 @@ export async function initGallery(options = {}) {
       collapseScrollTimer = windowRef.setTimeout(() => {
         windowRef.requestAnimationFrame(() => {
           if (isExpanded || !showMoreWrapper) return;
-          showMoreWrapper.scrollIntoView?.({
-            behavior: 'auto',
-            block: 'center',
-            inline: 'nearest'
-          });
+          animateWindowScrollToShowMore(1500);
         });
       }, Math.max(0, fadeMs) + 16);
     }
