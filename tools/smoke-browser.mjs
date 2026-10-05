@@ -471,11 +471,16 @@ try {
         el => getComputedStyle(el).backgroundColor
       );
       const focusedCloseContrast = await page.locator('#lightboxClose').evaluate(el => {
-        const style = getComputedStyle(el);
-        return { mixBlendMode: style.mixBlendMode, background: style.backgroundColor };
+        const buttonStyle = getComputedStyle(el);
+        const icon = el.querySelector('i');
+        const iconStyle = icon ? getComputedStyle(icon) : null;
+        return {
+          mixBlendMode: iconStyle?.mixBlendMode || '',
+          background: buttonStyle.backgroundColor
+        };
       });
-      if (focusedCloseContrast.mixBlendMode !== 'normal') {
-        throw new Error(`Lightbox Close control still uses blend compositing: ${focusedCloseContrast.mixBlendMode}`);
+      if (focusedCloseContrast.mixBlendMode !== 'difference') {
+        throw new Error(`Focused 3D Close icon lost artwork-aware difference-mode contrast: ${focusedCloseContrast.mixBlendMode}`);
       }
       if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
         throw new Error('Focused 3D Close control still has a visible background box.');
@@ -959,17 +964,19 @@ try {
         ['#lightboxClose', '.lightbox-prev', '.lightbox-next'].map(selector => {
           const el = document.querySelector(selector);
           if (!el) return null;
-          const style = getComputedStyle(el);
+          const buttonStyle = getComputedStyle(el);
+          const icon = el.querySelector('i');
+          const iconStyle = icon ? getComputedStyle(icon) : null;
           return {
             selector,
-            blend: style.mixBlendMode,
-            background: style.backgroundColor,
-            borderStyle: style.borderStyle
+            blend: iconStyle?.mixBlendMode || '',
+            background: buttonStyle.backgroundColor,
+            borderStyle: buttonStyle.borderStyle
           };
         }).filter(Boolean)
       );
       for (const control of lightboxControlStyles) {
-        if (control.blend !== 'difference') throw new Error(control.selector + ' is not using artwork-aware difference-mode contrast.');
+        if (control.blend !== 'difference') throw new Error(control.selector + ' icon is not using artwork-aware difference-mode contrast.');
         if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
           throw new Error(control.selector + ' still renders a visible control box over artwork.');
         }
