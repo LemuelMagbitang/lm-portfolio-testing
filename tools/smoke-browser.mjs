@@ -1384,6 +1384,19 @@ try {
       await curatedNav.click();
       await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
 
+      // Curated Views hydrate Main Portfolio references asynchronously. Leave
+      // the section before that secondary request resolves and verify the
+      // response cannot paint stale content over the newly selected section.
+      await page.waitForTimeout(50);
+      await nav.click();
+      await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'About Page') {
+        throw new Error('CMS async Curated Views hydration overwrote the selected About section.');
+      }
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+
       page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
       await page.locator('#content #addCuratedView').click();
       await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Curated View' }).waitFor({ state: 'visible', timeout: 5000 });
@@ -1526,6 +1539,11 @@ try {
         }
         if (genericDataMatch) {
           const filename = genericDataMatch[1];
+          if (filename === 'projects.json') {
+            // Make the Curated Views secondary hydration request slow enough
+            // to cross a deliberate navigation boundary in the smoke test.
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
           const fixture =
             filename === 'hero.json' ? [] :
             filename === 'projects.json' ? JSON.parse(decodeURIComponent(escape(atob(encodedProjects)))) :
