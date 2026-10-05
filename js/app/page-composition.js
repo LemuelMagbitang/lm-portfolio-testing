@@ -259,7 +259,29 @@ export async function createPortfolioApp({
       })
     : Promise.resolve({ total: 0, ready: 0 });
 
-  await projectMediaPreloadPromise;
+  const PROJECT_MEDIA_STARTUP_GATE_MS = 6000;
+  let projectMediaGateTimer = null;
+  const projectMediaGateTimeout = new Promise(resolve => {
+    if (typeof root.defaultView?.setTimeout !== 'function') {
+      resolve({ timeout: true });
+      return;
+    }
+    projectMediaGateTimer = root.defaultView.setTimeout(
+      () => resolve({ timeout: true }),
+      PROJECT_MEDIA_STARTUP_GATE_MS
+    );
+  });
+
+  // Hold the branded loading gate for the critical local-media tier, but never
+  // indefinitely. The renderer continues its remaining background warm-up after
+  // this ceiling, so a stalled asset cannot block the visitor from the page.
+  await Promise.race([
+    projectMediaPreloadPromise,
+    projectMediaGateTimeout
+  ]);
+  if (projectMediaGateTimer !== null) {
+    root.defaultView?.clearTimeout?.(projectMediaGateTimer);
+  }
 
   // About-page prefetching and image/logo warm-up are non-critical navigation
   // optimizations. Run them in the background so they cannot delay the initial
