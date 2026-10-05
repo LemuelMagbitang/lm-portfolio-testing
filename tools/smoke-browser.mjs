@@ -1543,7 +1543,13 @@ try {
             filename === 'projects.json' ? JSON.parse(decodeURIComponent(escape(atob(encodedProjects)))) :
             filename === 'settings.json' ? {} :
             [];
-          const content = btoa(unescape(encodeURIComponent(JSON.stringify(fixture))));
+          // Return the already-encoded Projects fixture directly. Re-decoding
+          // and re-encoding it inside the route handler can leave the mocked
+          // fetch unresolved on a runner, which makes the CMS renderer appear
+          // to hang forever on "Loading…".
+          const content = filename === 'projects.json'
+            ? encodedProjects
+            : btoa(unescape(encodeURIComponent(JSON.stringify(fixture))));
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content, sha: `smoke-${filename}-sha` }) });
           return;
         }
