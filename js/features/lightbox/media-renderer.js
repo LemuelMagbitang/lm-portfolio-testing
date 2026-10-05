@@ -418,7 +418,7 @@ export function createLightboxMediaRenderer({
       const ratio = width / height;
       if (!Number.isFinite(ratio) || ratio <= 0) return;
 
-      const cacheKey = video.currentSrc || video.src || resolveAssetUrl('');
+      const cacheKey = video.currentSrc || video.src;
       if (cacheKey) videoDimensionCache.set(cacheKey, { width, height });
       const resolved = ratio < 0.85 ? 'portrait' : ratio > 1.15 ? 'landscape' : 'square';
       syncClasses(resolved);
