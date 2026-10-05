@@ -591,16 +591,6 @@ document.getElementById('mobileMenuBtn')?.addEventListener('click', () => setDra
 document.getElementById('sidebarBackdrop')?.addEventListener('click', () => setDrawerOpen(false));
 
 function goToSection(name){
-  // Leaving a section invalidates any deployment tracker owned by the
-  // previous render. Clear its transient status now; otherwise non-savable
-  // sections such as Media Library/Guide would inherit a stale “Deploying…”
-  // label after navigation.
-  deployTrackVersion++;
-  const deployStatus = document.getElementById('saveStatus');
-  const deployStatusText = document.getElementById('saveStatusText');
-  if (deployStatus) deployStatus.classList.remove('deploying', 'deploy-failed');
-  if (deployStatusText) deployStatusText.textContent = '';
-  setDrawerOpen(false); // picking a section is done with the drawer, same as tapping outside it
   if(dirty[currentSection] && name !== currentSection){
     if(!confirm('You have unsaved changes in ' + (SECTIONS[currentSection]?.label||currentSection) + '. Leave without saving?')){
       return;
@@ -608,6 +598,16 @@ function goToSection(name){
     dirty[currentSection] = false;
     updateDirtyDots();
   }
+
+  // Only invalidate the previous section's deployment tracker after
+  // navigation has actually been approved. Cancelling the unsaved-change
+  // confirmation must leave the current section's “Deploying…” state intact.
+  deployTrackVersion++;
+  const deployStatus = document.getElementById('saveStatus');
+  const deployStatusText = document.getElementById('saveStatusText');
+  if (deployStatus) deployStatus.classList.remove('deploying', 'deploy-failed');
+  if (deployStatusText) deployStatusText.textContent = '';
+  setDrawerOpen(false); // picking a section is done with the drawer, same as tapping outside it
   currentSection = name;
   document.querySelectorAll('.nav-item[data-section]').forEach(el=>{
     el.classList.toggle('active', el.dataset.section === name);
