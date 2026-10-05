@@ -326,9 +326,22 @@ export function createLightboxMediaRenderer({
   async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
     if (destroyed) return { total: 0, ready: 0 };
 
-    const jobs = [];
+    const criticalJobs = [];
+    const secondaryJobs = [];
     const seen = new Set();
     let hasModel = false;
+
+    const connection = globalThis.navigator?.connection ||
+      globalThis.navigator?.mozConnection ||
+      globalThis.navigator?.webkitConnection;
+    const constrainedNetwork = Boolean(
+      connection?.saveData ||
+      /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
+    );
+
+    const pushMediaJob = (job, { critical = false } = {}) => {
+      (critical ? criticalJobs : secondaryJobs).push(job);
+    };
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
       const media = Array.isArray(project?.media) ? project.media : [];
@@ -340,23 +353,30 @@ export function createLightboxMediaRenderer({
         if (seen.has(key)) return;
         seen.add(key);
 
+        const critical = media.indexOf(item) === 0;
+
         if (type === 'model') {
           hasModel = true;
-          jobs.push(() => preloadFetch(url));
+          pushMediaJob(() => preloadFetch(url), { critical });
         } else if (type === 'image') {
-          jobs.push(() => preloadImage(url));
+          pushMediaJob(() => preloadImage(url), { critical });
         } else if (type === 'lottie') {
-          jobs.push(() => preloadLottie(url));
+          pushMediaJob(() => preloadLottie(url), { critical });
         } else if (type === 'video') {
-          jobs.push(() => preloadVideo(url));
+          pushMediaJob(() => preloadVideo(url), { critical });
         } else if (type === 'youtube') {
-          jobs.push(() => preloadYouTube(url));
+          // Third-party iframe boot is substantially more expensive than a
+          // local asset. On constrained connections, let the real Lightbox
+          // request it on demand rather than competing with the user's page.
+          if (!constrainedNetwork) {
+            pushMediaJob(() => preloadYouTube(url), { critical });
+          }
         } else {
           // Future media types still get a cache warm-up when they expose a
           // repository/network source. Unsupported renderers can therefore
           // benefit from the same startup loading phase without coupling this
           // preloader to their eventual viewer implementation.
-          jobs.push(() => preloadFetch(url));
+          pushMediaJob(() => preloadFetch(url), { critical });
         }
       });
 
@@ -367,7 +387,10 @@ export function createLightboxMediaRenderer({
         const key = 'background:' + type + ':' + url;
         if (!seen.has(key)) {
           seen.add(key);
-          jobs.push(() => type === 'video' ? preloadVideo(url) : preloadImage(url));
+          pushMediaJob(
+            () => type === 'video' ? preloadVideo(url) : preloadImage(url),
+            { critical: true }
+          );
         }
       }
     });
@@ -375,20 +398,25 @@ export function createLightboxMediaRenderer({
     // Import Three.js + the format loaders while the loading screen is up so
     // opening the first 3D item does not pay the module-download cost again.
     if (hasModel && typeof preloadModelModule === 'function') {
-      jobs.push(() => Promise.resolve().then(preloadModelModule));
+      secondaryJobs.push(() => Promise.resolve().then(preloadModelModule));
     }
 
-    const connection = globalThis.navigator?.connection ||
-      globalThis.navigator?.mozConnection ||
-      globalThis.navigator?.webkitConnection;
-    const constrainedNetwork = Boolean(
-      connection?.saveData ||
-      /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
+    // First warm one primary media item per project plus project-level
+    // backgrounds. Secondary artwork then drains behind that queue. This keeps
+    // the loading phase useful for first-open interactions without allowing a
+    // large multi-image project to monopolize the preload workers.
+    const criticalResults = await runPreloadPool(
+      criticalJobs,
+      constrainedNetwork ? 3 : 6
     );
-    const results = await runPreloadPool(jobs, constrainedNetwork ? 4 : 8);
+    const secondaryResults = await runPreloadPool(
+      secondaryJobs,
+      constrainedNetwork ? 2 : 6
+    );
+    const results = criticalResults.concat(secondaryResults);
 
     return {
-      total: jobs.length,
+      total: results.length,
       ready: results.filter(Boolean).length
     };
   }
