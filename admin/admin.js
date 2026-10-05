@@ -250,7 +250,7 @@ const CMS_WRITABLE_PATHS = new Set([
   'success/index.html',
   'css/style.css',
   'js/script.js',
-  'js/media-background.js'
+  'js/infrastructure/media-background/engine.js'
 ]);
 function isCmsWritablePath(filePath){
   const value = String(filePath || '').replace(/^\/+|\/+$/g, '');
@@ -3125,7 +3125,7 @@ const MEDIA_REFERENCE_FILES = [
   'success/index.html',
   'css/style.css',
   'js/script.js',
-  'js/media-background.js',
+  'js/infrastructure/media-background/engine.js',
   'data/about.json',
   'data/filters.json',
   'data/hero-loop.json',
