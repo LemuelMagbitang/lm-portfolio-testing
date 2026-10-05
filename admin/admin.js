@@ -681,8 +681,8 @@ async function render(){
   const section = currentSection;
   const isCurrentRender = () => version === renderVersion && section === currentSection;
 
-  if(section === 'guide'){ renderGuide(); return; }
-  if(section === 'media'){ RENDERERS.media(); return; }
+  if(section === 'guide'){ if(isCurrentRender()) renderGuide(); return; }
+  if(section === 'media'){ await RENDERERS.media(null, isCurrentRender); return; }
 
   content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading ${SECTIONS[section].label.toLowerCase()}…</div>`;
   try{
@@ -1813,6 +1813,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
     }))
   })));
   let openUid=null;
+  let mainProjectsReady=Promise.resolve();
   const uniqueSlug=name=>{
     const base=slugify(name)||'curated-view';let s=base,n=2;
     while(views.some(v=>v.slug===s))s=`${base}-${n++}`;return s;
@@ -1871,7 +1872,9 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
       });
       if(!v.projects.length)host.innerHTML='<div class="banner muted">No projects in this view yet.</div>';
     }
-    el.querySelector('[data-add]').onclick=()=>{
+    el.querySelector('[data-add]').onclick=async()=>{
+      await mainProjectsReady;
+      if(!isCurrent()) return;
       const overlay=document.createElement('div');overlay.className='media-picker-overlay';
       overlay.innerHTML=`<div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Add Main Portfolio projects"><div class="media-picker-head"><div><strong>Add Project</strong><span class="media-picker-sub">Choose existing Main Portfolio projects</span></div><button class="icon-btn" data-close type="button"><i class="fa-solid fa-xmark"></i></button></div><div class="media-picker-toolbar"><input class="picker-search" data-search type="search" placeholder="Search projects…"></div><div class="media-picker-scroll"><div class="media-grid" data-grid></div></div></div>`;
       document.body.appendChild(overlay);const grid=overlay.querySelector('[data-grid]'),search=overlay.querySelector('[data-search]'),close=()=>overlay.remove();
@@ -1879,7 +1882,14 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
       function draw(){const q=search.value.trim().toLowerCase(),used=new Set(v.projects.filter(x=>x.source==='main').map(x=>x.projectId));grid.innerHTML='';mains.filter(p=>{const id=String(p.id||slugify(p.title||''));return !used.has(id)&&(!q||`${p.title||''} ${p.subtitle||''}`.toLowerCase().includes(q));}).forEach(p=>{const id=String(p.id||slugify(p.title||'')),b=document.createElement('button');b.type='button';b.className='card-item';b.style.cssText='text-align:left;cursor:pointer';b.innerHTML=`<strong>${esc(p.title||'(untitled)')}</strong><span class="project-preview-text">${esc(p.subtitle||'')}</span>`;b.onclick=()=>{v.projects.push({source:'main',projectId:id,_uid:uid()});markDirty();close();repaint();};grid.appendChild(b);});if(!grid.children.length)grid.innerHTML='<div class="banner muted" style="grid-column:1/-1">No available Main Portfolio projects match this search.</div>';};
       search.oninput=draw;draw();
     };
-    el.querySelector('[data-create]').onclick=()=>{const title=prompt('Curated-only project title:');if(!title?.trim())return;v.projects.push({source:'curated',project:{id:uniqueProjectId(v,title.trim()),title:title.trim(),subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()},_uid:uid()});markDirty();repaint();};
+    el.querySelector('[data-create]').onclick=async()=>{
+      await mainProjectsReady;
+      if(!isCurrent()) return;
+      const title=prompt('Curated-only project title:');
+      if(!title?.trim())return;
+      v.projects.push({source:'curated',project:{id:uniqueProjectId(v,title.trim()),title:title.trim(),subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()},_uid:uid()});
+      markDirty();repaint();
+    };
     repaint();
   }
 
@@ -1887,7 +1897,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
 
   // Hydrate Main Portfolio references after the editor is already usable.
   // Updating labels in place preserves the open view and any unsaved edits.
-  loadSection('projects').then(pResult=>{
+  mainProjectsReady=loadSection('projects').then(pResult=>{
     if(!isCurrent()) return;
     mains=Array.isArray(pResult.json)?pResult.json:[];
     mainById=new Map(mains.map(p=>[String(p.id||slugify(p.title||'')),p]));
