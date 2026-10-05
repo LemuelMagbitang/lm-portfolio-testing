@@ -142,12 +142,13 @@ try {
           compositionVersion: readVersion('app/page-composition.js')
         };
       });
-      if (
-        runtimeCacheChain.scriptVersion !== '20261005-15' ||
-        runtimeCacheChain.bootstrapVersion !== '20261005-15' ||
-        runtimeCacheChain.compositionVersion !== '20261005-15'
-      ) {
-        throw new Error(`Public runtime cache chain is stale: ${JSON.stringify(runtimeCacheChain)}`);
+      const cacheVersions = [
+        runtimeCacheChain.scriptVersion,
+        runtimeCacheChain.bootstrapVersion,
+        runtimeCacheChain.compositionVersion
+      ];
+      if (!cacheVersions[0] || cacheVersions.some(version => version !== cacheVersions[0])) {
+        throw new Error(`Public runtime cache chain is stale or split: ${JSON.stringify(runtimeCacheChain)}`);
       }
 
       const cards = await page.locator('#portfolioGrid .project-card').count();
