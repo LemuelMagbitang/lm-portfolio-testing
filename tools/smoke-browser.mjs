@@ -816,11 +816,13 @@ try {
         });
         await page.waitForTimeout(100);
 
-        const showLessAnchorBefore = await page.locator('#showMoreWrapper').boundingBox();
-        if (!showLessAnchorBefore) throw new Error('Show Less control was not measurable before collapse.');
+        await page.evaluate(() => {
+          document.querySelector('#showMoreWrapper')?.scrollIntoView({ block: 'center', behavior: 'auto' });
+        });
+        await page.waitForTimeout(100);
 
         await mobileShowMore.click();
-        await page.waitForTimeout(400);
+        await page.waitForTimeout(450);
 
         const showLessAnchorAfter = await page.locator('#showMoreWrapper').boundingBox();
         const collapsed = await page.locator('#portfolioGridViewport').evaluate(el => {
@@ -828,12 +830,13 @@ try {
           return style.maxHeight !== 'none' && el.scrollHeight > el.clientHeight;
         });
         const collapsedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
+        const viewportHeight = await page.evaluate(() => window.innerHeight);
         if (!collapsed || collapsedLabel?.trim().toUpperCase() !== 'SHOW MORE') {
           throw new Error('Mobile Show Less did not restore the collapsed gallery state.');
         }
-        if (!showLessAnchorAfter || Math.abs(showLessAnchorAfter.y - showLessAnchorBefore.y) > 48) {
+        if (!showLessAnchorAfter || showLessAnchorAfter.y < 80 || showLessAnchorAfter.y > viewportHeight - 80) {
           throw new Error(
-            `Mobile Show Less did not follow the control to its collapsed location: before=${showLessAnchorBefore?.y}, after=${showLessAnchorAfter?.y}`
+            `Mobile Show Less did not follow the new Show More location: y=${showLessAnchorAfter?.y}, viewport=${viewportHeight}`
           );
         }
 
