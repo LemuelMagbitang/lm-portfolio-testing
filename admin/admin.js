@@ -737,9 +737,9 @@ function wireSave(onCollect, name, filePath){
    quietly falls back to the plain "committed" message rather than
    hanging in a "deploying" state forever. */
 let deployTrackVersion = 0;
-async function trackDeployStatus(sha){
+async function trackDeployStatus(sha, isCurrent=()=>true){
   const trackVersion = ++deployTrackVersion;
-  if (!sha) return;
+  if (!sha || !isCurrent()) return;
   const status = document.getElementById('saveStatus');
   const statusText = document.getElementById('saveStatusText');
   if (!status) return;
@@ -751,11 +751,11 @@ async function trackDeployStatus(sha){
   const deadline = Date.now() + 120000; // 2 minutes
   let sawAnyCheck = false;
 
-  while (Date.now() < deadline && trackVersion === deployTrackVersion) {
+  while (Date.now() < deadline && trackVersion === deployTrackVersion && isCurrent()) {
     let runs;
     try { runs = await GH.getCheckRuns(sha); }
     catch(err){ runs = []; }
-    if(trackVersion !== deployTrackVersion) return;
+    if(trackVersion !== deployTrackVersion || !isCurrent()) return;
 
     const pagesRuns = runs.filter(r => /pages/i.test(r.name || ''));
     const relevant = pagesRuns.length ? pagesRuns : runs;
@@ -836,7 +836,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
     if(renderVersion === saveStartedVersion && currentSave === saveContext){
       btn.disabled = false;
       btn.innerHTML = orig;
-      trackDeployStatus(commitSha);
+      trackDeployStatus(commitSha, () => renderVersion === saveStartedVersion && currentSave === saveContext);
     }
   }catch(err){
     toast(err.message, true);
