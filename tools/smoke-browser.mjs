@@ -1363,12 +1363,16 @@ try {
 
     await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
-      // GitHub before the application shell is exposed. Do not start section
-      // interaction until the real app shell is active; otherwise a fast
-      // runner can click a sidebar item while enterApp() is still redirecting
-      // the initial section back to Hero.
+      // GitHub before the application shell is exposed. The shell becomes
+      // active slightly before enterApp() calls its initial Hero navigation,
+      // so waiting on the active class alone still leaves a small race where
+      // this click can be overwritten by goToSection('hero'). Wait for the
+      // first real section render too; that proves the boot transition has
+      // completed before the smoke test starts driving navigation.
       await page.locator('#app.active').waitFor({ state: 'visible', timeout: 10000 });
       await page.locator('#topbar.active').waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator('.nav-item[data-section="hero"].active').waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator('#content #heroList, #content #addHero').first().waitFor({ state: 'visible', timeout: 10000 });
 
       const nav = page.locator('.nav-item[data-section="about"]');
       if (await nav.count() !== 1) throw new Error('CMS About navigation item is missing.');
