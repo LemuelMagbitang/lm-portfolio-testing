@@ -328,9 +328,17 @@ export function createLightboxMediaRenderer({
   async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
     if (destroyed) return { total: 0, ready: 0 };
 
-    const criticalJobs = [];
-    const secondaryJobs = [];
-    const seen = new Set();
+    // De-duplicate by media identity without losing priority semantics.
+    // A shared asset may be secondary in one project but critical in another;
+    // the critical use must promote the shared job rather than being discarded.
+    const scheduledJobs = new Map();
+    const scheduleJob = (key, job, critical = false) => {
+      if (!key || typeof job !== 'function') return;
+      const existing = scheduledJobs.get(key);
+      if (!existing || (critical && !existing.critical)) {
+        scheduledJobs.set(key, { job, critical });
+      }
+    };
     let hasModel = false;
 
     const connection = globalThis.navigator?.connection ||
@@ -340,10 +348,6 @@ export function createLightboxMediaRenderer({
       connection?.saveData ||
       /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
     );
-
-    const pushMediaJob = (job, { critical = false } = {}) => {
-      (critical ? criticalJobs : secondaryJobs).push(job);
-    };
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
       const media = Array.isArray(project?.media) ? project.media : [];
@@ -356,8 +360,6 @@ export function createLightboxMediaRenderer({
         const type = String(item.type || '').toLowerCase();
         const url = resolveAssetUrl(item.src);
         const key = type + ':' + url;
-        if (seen.has(key)) return;
-        seen.add(key);
 
         // Keep the first local-renderable item critical for every project.
         // Models are an intentional exception: the 3D viewer is a distinct
@@ -371,27 +373,27 @@ export function createLightboxMediaRenderer({
 
         if (type === 'model') {
           hasModel = true;
-          pushMediaJob(() => preloadFetch(url, { fetchPriority }), { critical });
+          scheduleJob(key, () => preloadFetch(url, { fetchPriority }), critical);
         } else if (type === 'image') {
-          pushMediaJob(() => preloadImage(url, { fetchPriority }), { critical });
+          scheduleJob(key, () => preloadImage(url, { fetchPriority }), critical);
         } else if (type === 'lottie') {
-          pushMediaJob(() => preloadLottie(url, { fetchPriority }), { critical });
+          scheduleJob(key, () => preloadLottie(url, { fetchPriority }), critical);
         } else if (type === 'video') {
-          pushMediaJob(() => preloadVideo(url, { fetchPriority }), { critical });
+          scheduleJob(key, () => preloadVideo(url, { fetchPriority }), critical);
         } else if (type === 'youtube') {
           // A YouTube iframe is never startup-critical. Its iframe/player boot
           // is much more expensive than the local first-view assets, and the
           // embed does not guarantee that the actual video bytes are ready.
-          // Queue it only after the local critical tier has completed.
+          // Queue it as low-priority warm-up alongside the critical tier.
           if (!constrainedNetwork) {
-            pushMediaJob(() => preloadYouTube(url), { critical: false });
+            scheduleJob(key, () => preloadYouTube(url), false);
           }
         } else {
           // Future media types still get a cache warm-up when they expose a
           // repository/network source. Unsupported renderers can therefore
           // benefit from the same startup loading phase without coupling this
           // preloader to their eventual viewer implementation.
-          pushMediaJob(() => preloadFetch(url), { critical });
+          scheduleJob(key, () => preloadFetch(url, { fetchPriority }), critical);
         }
       });
 
@@ -400,15 +402,13 @@ export function createLightboxMediaRenderer({
         const type = String(background.type || '').toLowerCase();
         const url = resolveAssetUrl(background.src);
         const key = 'background:' + type + ':' + url;
-        if (!seen.has(key)) {
-          seen.add(key);
-          pushMediaJob(
-            () => type === 'video'
-              ? preloadVideo(url, { fetchPriority: 'high' })
-              : preloadImage(url, { fetchPriority: 'high' }),
-            { critical: true }
-          );
-        }
+        scheduleJob(
+          key,
+          () => type === 'video'
+            ? preloadVideo(url, { fetchPriority: 'high' })
+            : preloadImage(url, { fetchPriority: 'high' }),
+          true
+        );
       }
     });
 
@@ -416,23 +416,34 @@ export function createLightboxMediaRenderer({
     // document also modulepreloads it, so this closes the remaining race where
     // the first 3D open beats the module graph.
     if (hasModel && typeof preloadModelModule === 'function') {
-      pushMediaJob(() => Promise.resolve().then(preloadModelModule), { critical: true });
+      scheduleJob('viewer-module', () => Promise.resolve().then(preloadModelModule), true);
+    }
+
+    const criticalJobs = [];
+    const secondaryJobs = [];
+    for (const { job, critical } of scheduledJobs.values()) {
+      (critical ? criticalJobs : secondaryJobs).push(job);
     }
 
     // The critical tier is what the branded LM loading gate waits for:
     // one primary media item per project plus project-level backgrounds and,
     // when present, the 3D viewer module graph.
+    // Launch secondary warm-up immediately at lower concurrency. Browser fetch
+    // priorities keep critical work favored while the visitor is still on the
+    // branded loading screen, so more of the gallery can be ready by first use.
+    const secondaryPromise = runPreloadPool(
+      secondaryJobs,
+      constrainedNetwork ? 1 : 2
+    );
+
     const criticalResults = await runPreloadPool(
       criticalJobs,
       constrainedNetwork ? 3 : 6
     );
 
-    // Secondary artwork continues in the background after the critical tier
-    // is ready. Its completion must never hold the first paint hostage.
-    void runPreloadPool(
-      secondaryJobs,
-      constrainedNetwork ? 2 : 6
-    ).catch(() => {});
+    // Secondary media is intentionally fire-and-forget after the critical gate;
+    // its completion must never hold the first paint hostage.
+    void secondaryPromise.catch(() => {});
 
     return {
       total: criticalJobs.length + secondaryJobs.length,
