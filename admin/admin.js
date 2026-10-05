@@ -2289,8 +2289,23 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
       if(!isCurrent()) return;
       const overlay=document.createElement('div');overlay.className='media-picker-overlay curated-project-picker-overlay';
       overlay.innerHTML=`<div class="media-picker-dialog curated-project-picker-dialog" role="dialog" aria-modal="true" aria-label="Add Main Portfolio projects"><div class="media-picker-head"><div><strong>Add Project</strong><span class="media-picker-sub">Choose an existing Main Portfolio project to add to this view.</span></div><button class="icon-btn" data-close type="button"><i class="fa-solid fa-xmark"></i></button></div><div class="media-picker-toolbar curated-project-picker-toolbar"><div class="curated-picker-help">Only projects not already in this Curated View are shown.</div><input class="picker-search" data-search type="search" placeholder="Search by project title or subtitle…" aria-label="Search Main Portfolio projects"></div><div class="media-picker-scroll curated-project-picker-scroll"><div class="curated-project-grid" data-grid></div></div></div>`;
-      document.body.appendChild(overlay);const grid=overlay.querySelector('[data-grid]'),search=overlay.querySelector('[data-search]'),close=()=>overlay.remove();
-      overlay.querySelector('[data-close]').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close();};
+      const opener=document.activeElement;
+      let closed=false;
+      document.body.appendChild(overlay);
+      const grid=overlay.querySelector('[data-grid]');
+      const search=overlay.querySelector('[data-search]');
+      const close=()=>{
+        if(closed)return;
+        closed=true;
+        document.removeEventListener('keydown',escHandler);
+        overlay.remove();
+        if(opener && typeof opener.focus==='function') opener.focus({preventScroll:true});
+      };
+      function escHandler(e){ if(e.key==='Escape') close(); }
+      overlay.querySelector('[data-close]').onclick=close;
+      overlay.onclick=e=>{if(e.target===overlay)close();};
+      document.addEventListener('keydown',escHandler);
+      search.focus({preventScroll:true});
       function draw(){
         const q=search.value.trim().toLowerCase();
         const used=new Set(v.projects.filter(x=>x.source==='main').map(x=>x.projectId));
