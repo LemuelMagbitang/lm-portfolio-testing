@@ -1,5 +1,9 @@
 # Curated Views
 
+## Current implementation status
+
+The Curated Views CMS editor is now enabled on the projects-runtime-cutover branch. Public Curated View hash routing/rendering is intentionally not enabled yet; the CMS and persistence contract are being hardened first.
+
 ## Purpose
 
 Curated Views are saved, unlisted presentations of the same portfolio application. They do not create another website, another gallery system, or another copy of the main project database.
@@ -75,7 +79,7 @@ Contract rules:
 - Both project kinds use the same normalized project/media contract. The distinction is ownership, not rendering format.
 - The validator checks local media/background references and supported media types for curated-owned projects.
 
-This registry is intentionally initialized empty until the CMS editor and runtime resolver are implemented. Main Portfolio behavior is unchanged.
+The registry is intentionally initialized empty until an author creates a view. The CMS editor and persistence path are now implemented; the public runtime resolver remains a later phase. Main Portfolio behavior is unchanged.
 
 ## Shared project editor boundary
 
@@ -88,7 +92,7 @@ The current CMS now isolates two reusable editor operations:
 
 Main Portfolio currently calls the validator with `requireFilters: true`. Curated Views can later call the same editor with filters disabled without creating a second project schema or serializer.
 
-This is an editor/persistence boundary only. No Curated View UI or runtime routing is enabled by this step.
+This is currently an editor/persistence boundary. The Curated Views CMS UI is enabled, while public Curated View runtime routing is intentionally deferred until its resolver contract is implemented.
 
 ## CMS behavior
 
