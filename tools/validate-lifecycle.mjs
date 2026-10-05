@@ -64,6 +64,10 @@ assert.match(mediaRendererSource, /const withPreloadTimeout = \(promise, timeout
 assert.match(mediaRendererSource, /image\.src = ''/);
 assert.match(mediaRendererSource, /video\.removeAttribute\('src'\)/);
 assert.match(mediaRendererSource, /controller\?\.abort\(\)/);
+assert.match(mediaRendererSource, /const activePreloadCleanups = new Set\(\)/);
+assert.match(mediaRendererSource, /function registerPreloadCleanup\(cleanup\)/);
+assert.match(mediaRendererSource, /Array\.from\(activePreloadCleanups\)\.reverse\(\)/);
+assert.match(mediaRendererSource, /destroyed = true;/);
 assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
