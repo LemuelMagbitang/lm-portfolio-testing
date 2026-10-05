@@ -433,11 +433,13 @@ const projects = parseJson('data/projects.json', []);
 const settings = parseJson('data/settings.json', {});
 const about = parseJson('data/about.json', {});
 const heroLoop = parseJson('data/hero-loop.json', []);
+const curatedViews = parseJson('data/curated-views.json', []);
 parseJson('data/hero.json', []);
 parseJson('data/reviews.json', []);
 
 validateFilters(filters);
 validateProjects(projects, filters);
+validateCuratedViews(curatedViews, projects, filters);
 validateHeroLoop(heroLoop);
 validateAbout(about);
 validateCssDeclarations();
