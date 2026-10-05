@@ -1401,6 +1401,7 @@ try {
       page.on('dialog', staleDialogHandler);
       await page.locator('#content [data-create]').click();
       await page.waitForTimeout(50);
+      page.once('dialog', dialog => dialog.accept());
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
       await page.waitForTimeout(350);
