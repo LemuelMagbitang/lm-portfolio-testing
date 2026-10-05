@@ -301,16 +301,23 @@ export function createLightboxMediaRenderer({
   async function runPreloadPool(jobs, concurrency = 8) {
     const queue = Array.isArray(jobs) ? jobs : [];
     let cursor = 0;
+    const results = new Array(queue.length).fill(false);
     const workers = Array.from(
       { length: Math.min(Math.max(1, concurrency), queue.length) },
       async () => {
         while (cursor < queue.length) {
-          const job = queue[cursor++];
-          try { await job(); } catch (_) {}
+          const index = cursor++;
+          const job = queue[index];
+          try {
+            results[index] = (await job()) !== false;
+          } catch (_) {
+            results[index] = false;
+          }
         }
       }
     );
     await Promise.all(workers);
+    return results;
   }
 
   async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
@@ -368,16 +375,18 @@ export function createLightboxMediaRenderer({
       jobs.push(() => Promise.resolve().then(preloadModelModule));
     }
 
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const connection = globalThis.navigator?.connection ||
+      globalThis.navigator?.mozConnection ||
+      globalThis.navigator?.webkitConnection;
     const constrainedNetwork = Boolean(
       connection?.saveData ||
       /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
     );
-    await runPreloadPool(jobs, constrainedNetwork ? 4 : 8);
+    const results = await runPreloadPool(jobs, constrainedNetwork ? 4 : 8);
 
     return {
       total: jobs.length,
-      ready: jobs.length
+      ready: results.filter(Boolean).length
     };
   }
 
