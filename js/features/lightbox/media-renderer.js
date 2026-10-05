@@ -149,7 +149,7 @@ export function createLightboxMediaRenderer({
     return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
   }
 
-  async function preloadLottie(url) {
+  async function preloadLottie(url, { fetchPriority = 'low' } = {}) {
     if (!url || typeof globalThis.fetch !== 'function') return false;
     const controller = typeof globalThis.AbortController === 'function'
       ? new globalThis.AbortController()
@@ -161,6 +161,7 @@ export function createLightboxMediaRenderer({
         globalThis.fetch(url, {
           credentials: 'omit',
           cache: 'force-cache',
+          ...(fetchPriority === 'high' ? { priority: 'high' } : {}),
           signal: controller?.signal
         }).then(async response => {
           if (!response.ok) return false;
@@ -273,7 +274,7 @@ export function createLightboxMediaRenderer({
     return result;
   }
 
-  async function preloadFetch(url) {
+  async function preloadFetch(url, { fetchPriority = 'low' } = {}) {
     if (!url || typeof globalThis.fetch !== 'function') return false;
     const controller = typeof globalThis.AbortController === 'function'
       ? new globalThis.AbortController()
@@ -286,6 +287,7 @@ export function createLightboxMediaRenderer({
           method: 'GET',
           credentials: 'omit',
           cache: 'force-cache',
+          ...(fetchPriority === 'high' ? { priority: 'high' } : {}),
           signal: controller?.signal
         }),
         MEDIA_PRELOAD_TIMEOUT_MS,
@@ -369,11 +371,11 @@ export function createLightboxMediaRenderer({
 
         if (type === 'model') {
           hasModel = true;
-          pushMediaJob(() => preloadFetch(url), { critical });
+          pushMediaJob(() => preloadFetch(url, { fetchPriority }), { critical });
         } else if (type === 'image') {
           pushMediaJob(() => preloadImage(url, { fetchPriority }), { critical });
         } else if (type === 'lottie') {
-          pushMediaJob(() => preloadLottie(url), { critical });
+          pushMediaJob(() => preloadLottie(url, { fetchPriority }), { critical });
         } else if (type === 'video') {
           pushMediaJob(() => preloadVideo(url, { fetchPriority }), { critical });
         } else if (type === 'youtube') {
