@@ -1554,13 +1554,15 @@ body.center-page {
 
 /* Desktop YouTube media is intentionally contained rather than allowed
    to dominate the Lightbox's vertical reading flow. The surface still owns
-   the source ratio, but its height is capped to 60% of the small viewport;
-   width follows that ratio and each orientation gets a conservative desktop
-   ceiling. Mobile intentionally overrides this below and remains full-bleed. */
+   the source ratio, but its height is capped to about 40% of the small viewport
+   and 360px maximum; width follows that ratio and each orientation gets a
+   conservative desktop ceiling. Multi-media projects use an even smaller
+   32svh / 300px ceiling. Mobile intentionally overrides this below and remains
+   full-bleed. */
 @media (min-width:768px){
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork{
-    width:min(100%,calc(60svh * var(--lightbox-artwork-ratio, 1)));
-    max-height:60svh;
+    width:min(100%,calc(40svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:360px;
   }
 
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="landscape"]{
@@ -1579,8 +1581,8 @@ body.center-page {
      near-full-height video players. Single-media YouTube projects keep the
      larger presentation above. */
   #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork{
-    width:min(100%,calc(48svh * var(--lightbox-artwork-ratio, 1)));
-    max-height:min(48svh,480px);
+    width:min(100%,calc(32svh * var(--lightbox-artwork-ratio, 1)));
+    max-height:min(32svh,300px);
   }
 
   #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
