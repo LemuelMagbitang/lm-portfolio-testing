@@ -623,6 +623,82 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      const card = page.locator('#portfolioGrid .project-card[data-project-id="youtube-multi-smoke"]').first();
+      if (await card.count() !== 1) throw new Error('Multi-media YouTube smoke fixture card is missing.');
+      await card.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+      const container = page.locator('#lightboxMediaContainer').first();
+      const density = await container.getAttribute('data-media-density');
+      const hasYouTube = await container.getAttribute('data-has-youtube');
+      if (density !== 'multi' || hasYouTube !== 'true') {
+        throw new Error(`Multi-media YouTube Lightbox contract is wrong: density=${density}, hasYouTube=${hasYouTube}`);
+      }
+
+      const mediaItems = page.locator('#lightboxMediaContainer .lightbox-media-item');
+      if (await mediaItems.count() !== 3) throw new Error('Multi-media YouTube fixture did not render all three media items.');
+
+      const youtubeArtworks = page.locator('#lightboxMediaContainer .lightbox-artwork.is-youtube-artwork');
+      if (await youtubeArtworks.count() !== 2) throw new Error('Multi-media YouTube fixture did not render two YouTube artwork surfaces.');
+
+      const youtubeGeometry = await youtubeArtworks.evaluateAll(nodes => nodes.map(el => {
+        const rect = el.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          orientation: el.getAttribute('data-youtube-orientation'),
+          ratio: parseFloat(getComputedStyle(el).aspectRatio || '0')
+        };
+      }));
+      if (youtubeGeometry.some(item => item.height > 482 || item.width <= 0 || item.height <= 0)) {
+        throw new Error(`Multi-media YouTube artwork was allowed to dominate desktop height: ${JSON.stringify(youtubeGeometry)}`);
+      }
+      const portrait = youtubeGeometry.find(item => item.orientation === 'portrait');
+      const landscape = youtubeGeometry.find(item => item.orientation === 'landscape');
+      if (!portrait || !landscape) throw new Error(`YouTube orientation classification is incomplete: ${JSON.stringify(youtubeGeometry)}`);
+      if (portrait.width >= landscape.width) {
+        throw new Error(`YouTube Shorts did not retain portrait geometry: ${JSON.stringify(youtubeGeometry)}`);
+      }
+
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 }, async page => {
+      const fixture = [{
+        id: 'youtube-multi-smoke',
+        title: 'YouTube Multi Smoke',
+        subtitle: 'Desktop composition fixture',
+        badge: '',
+        filters: [],
+        description: '',
+        thumbnail: {
+          type: 'image',
+          src: 'assets/projects/site/favicon.png',
+          focus: '50% 50%',
+          zoom: 1
+        },
+        media: [
+          { type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefghijk', caption: 'Short fixture', orientation: '' },
+          { type: 'youtube', src: 'https://www.youtube.com/watch?v=lmnopqrstuv', caption: 'Landscape fixture', orientation: 'landscape' },
+          { type: 'image', src: 'assets/projects/site/favicon.png', caption: 'Image fixture', orientation: 'square' }
+        ]
+      }];
+      await page.route(`${BASE_URL}/data/projects.json**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(fixture)
+        });
+      });
+      await page.route('https://www.youtube.com/embed/**', async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/html',
+          body: '<!doctype html><html><body><div id="player">YouTube smoke player</div></body></html>'
+        });
+      });
+    });
+
+    await smokePage(browser, '/', async page => {
       const transition = page.locator('#pageTransition').first();
       const logo = page.locator('#pageTransition .page-transition-logo').first();
       if (await transition.count() !== 1 || await logo.count() !== 1) {
