@@ -810,8 +810,6 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
     toast(err.message, true);
     return;
   }
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>&nbsp; <span>Saving…</span>';
   try{
     let commitSha;
     if(saveContext.combined==='filtersWithProjects' && name==='filters'){
