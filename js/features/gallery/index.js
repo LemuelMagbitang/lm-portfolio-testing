@@ -306,6 +306,7 @@ export async function initGallery(options = {}) {
   }
 
   function render({ animateTransition = false } = {}) {
+    cancelCollapseScrollAnimation();
     const filteredProjects = getFilteredProjects();
     const filtered = getCardsForProjects(filteredProjects);
     renderToken += 1;
