@@ -159,6 +159,15 @@ export async function mountModelViewer(container, src, options = {}) {
   let lastSize = { width: 0, height: 0 };
   let renderLoopActive = false;
 
+  // Container-level interaction listeners belong to this mount instance.
+  // Keeping explicit removers prevents duplicate gesture/wheel/activation
+  // handlers when the same Lightbox model shell is mounted more than once.
+  const containerCleanup = [];
+  const bindContainer = (target, type, handler, options) => {
+    target?.addEventListener?.(type, handler, options);
+    containerCleanup.push(() => target?.removeEventListener?.(type, handler, options));
+  };
+
   const activate = document.createElement('div');
   activate.className = 'model-viewer-activate';
   activate.setAttribute('aria-hidden', 'true');
@@ -333,18 +342,18 @@ export async function mountModelViewer(container, src, options = {}) {
     let gestureStartX = 0;
     let gestureStartY = 0;
     let gestureMoved = false;
-    container.addEventListener('pointerdown', (event) => {
+    bindContainer(container, 'pointerdown', (event) => {
       if (controls.enabled || event.button > 0) return;
       gestureStartX = event.clientX;
       gestureStartY = event.clientY;
       gestureMoved = false;
     }, { passive: true });
-    container.addEventListener('pointermove', (event) => {
+    bindContainer(container, 'pointermove', (event) => {
       if (controls.enabled) return;
       if (Math.hypot(event.clientX - gestureStartX, event.clientY - gestureStartY) > 10) gestureMoved = true;
     }, { passive: true });
-    container.addEventListener('pointercancel', () => { gestureMoved = true; }, { passive: true });
-    container.addEventListener('click', (event) => {
+    bindContainer(container, 'pointercancel', () => { gestureMoved = true; }, { passive: true });
+    bindContainer(container, 'click', (event) => {
       if (controls.enabled || event.target.closest('.model-viewer-ui')) return;
       if (gestureMoved) {
         gestureMoved = false;
@@ -353,7 +362,7 @@ export async function mountModelViewer(container, src, options = {}) {
       event.preventDefault();
       setInteractive(true);
     });
-    container.addEventListener('keydown', (event) => {
+    bindContainer(container, 'keydown', (event) => {
       if (!controls.enabled && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
         setInteractive(true);
@@ -378,7 +387,7 @@ export async function mountModelViewer(container, src, options = {}) {
     // Explicitly pass wheel movement to the lightbox scroller while passive.
     // This makes scrolling dependable even in browsers that treat a WebGL
     // region as a wheel/gesture boundary. The 3D canvas remains uninvolved.
-    container.addEventListener('wheel', (event) => {
+    bindContainer(container, 'wheel', (event) => {
       if (controls.enabled) return;
       const scroller = container.closest('.lightbox-modal');
       if (!scroller) return;
@@ -482,6 +491,9 @@ export async function mountModelViewer(container, src, options = {}) {
     resizeObserver?.disconnect();
     controls.dispose();
     container.__modelViewerKeydownCleanup?.();
+    containerCleanup.splice(0).reverse().forEach(remove => {
+      try { remove(); } catch (_) {}
+    });
     delete container.__modelViewerKeydownCleanup;
     disposeObject(root);
     scene.clear();
