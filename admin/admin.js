@@ -2220,7 +2220,7 @@ RENDERERS.projects = async function(data){
         row.innerHTML = `
           <div class="card-item-head collapsible-head" data-toggle-open>
             <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-            <span class="item-title">${m.caption ? esc(m.caption) : '(' + m.type + ')'}</span>
+            <span class="item-title">${m.caption ? esc(m.caption) : '(' + esc(m.type) + ')'}</span>
             <div class="card-item-actions">
               <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
               <button class="icon-btn" data-mact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
@@ -3332,7 +3332,7 @@ RENDERERS.media = async function(){
   let tree;
   try{ tree = await loadMediaTree(false); }
   catch(err){
-    content.innerHTML = `<div class="content-head"><div><h2>Media Library</h2></div></div><div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn't load your files.</strong><br>${err.message}</div></div>`;
+    content.innerHTML = `<div class="content-head"><div><h2>Media Library</h2></div></div><div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn't load your files.</strong><br>${esc(err.message)}</div></div>`;
     return;
   }
   paint();
