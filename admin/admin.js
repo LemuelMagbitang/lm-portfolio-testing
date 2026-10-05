@@ -713,7 +713,8 @@ function sectionHead(title, desc, extraBtns){
 let currentSave = null; // { onCollect, name, filePath }
 
 function wireSave(onCollect, name, filePath){
-  currentSave = { onCollect, name, filePath };
+  const saveContext = { onCollect, name, filePath };
+  currentSave = saveContext;
   const saveBtn = document.getElementById('btnSaveTop');
   if (saveBtn) saveBtn.disabled = false;
   const status = document.getElementById('saveStatus');
@@ -725,6 +726,7 @@ function wireSave(onCollect, name, filePath){
     status.classList.add('saved');
     statusText.textContent = 'All changes saved';
   }
+  return saveContext;
 }
 
 /* Polls GitHub's own Pages-deploy check runs for a commit, so "saved"
@@ -1102,8 +1104,7 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
     try{return structuredClone(projects);}catch(e){return JSON.parse(JSON.stringify(projects));}
   }
 
-  async function buildProjectsAfterFilterChanges(){
-    const saveContext= currentSave;
+  async function buildProjectsAfterFilterChanges(saveContext){
     if(!saveContext) return null;
     if(!hasProjectFilterImpact()){
       delete saveContext.combined;
@@ -1112,7 +1113,6 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
     }
 
     const result=await loadSection('projects');
-    if(currentSave !== saveContext) return null;
     const source=Array.isArray(result.json)?result.json:[];
     const projects=cloneProjects(source);
     const renames=getFilterRenameMap();
@@ -1137,7 +1137,6 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
       project.filters=next;
     });
 
-    if(currentSave !== saveContext) return null;
     saveContext.combined='filtersWithProjects';
     saveContext.extraData=()=>projects;
     saveContext.projectFilterChangeCount=changed;
@@ -1225,7 +1224,8 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
     document.getElementById('addFilter').addEventListener('click', ()=>{ items.push({id:'',label:'',_uid:uid()}); flagUnsaved(); paint(); });
     document.getElementById('addBadge').addEventListener('click', ()=>{ badgeItems.push('New Badge'); flagUnsaved(); paint(); });
     enableDragReorder(() => document.getElementById('filterList'), items, flagUnsaved, paint);
-    wireSave(async()=>{
+    let saveContext=null;
+    saveContext=wireSave(async()=>{
       const seen=new Set();
       for(const it of items){
         const id=it.id.trim();
@@ -1236,7 +1236,7 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
         seen.add(id);
       }
       const payload={filters:items.map(x=>({id:x.id.trim(),label:x.label.trim()})),badges:badgeItems.map(x=>x.trim()).filter(Boolean)};
-      await buildProjectsAfterFilterChanges();
+      await buildProjectsAfterFilterChanges(saveContext);
       return payload;
     }, 'filters', SECTIONS.filters.file);
   }
