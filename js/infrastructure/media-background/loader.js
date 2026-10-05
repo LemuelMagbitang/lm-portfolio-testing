@@ -15,7 +15,7 @@ export function ensureMediaBackgroundHelper() {
   if (mediaBackgroundPromise) return mediaBackgroundPromise;
 
   mediaBackgroundPromise = loadScriptOnce(
-    new URL('js/media-background.js?v=20261004-05', getSiteRootUrl()).href,
+    new URL('js/infrastructure/media-background/engine.js?v=20261005-01', getSiteRootUrl()).href,
     () => !!window.LMMediaBackground
   );
 
