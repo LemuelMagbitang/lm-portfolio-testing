@@ -649,7 +649,10 @@ export function createLightboxMediaRenderer({
 
     let rendered = 0;
     container.dataset.mediaDensity = mediaList.length > 2 ? 'multi' : 'single';
-    container.dataset.hasYouTube = mediaList.some(item => String(item?.type || '').toLowerCase() === 'youtube') ? 'true' : 'false';
+    container.setAttribute(
+      'data-has-youtube',
+      mediaList.some(item => String(item?.type || '').toLowerCase() === 'youtube') ? 'true' : 'false'
+    );
     mediaList.forEach((item, index) => {
       const entry = renderItem(item, project, index);
       if (!entry) return;
