@@ -796,12 +796,20 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   const saveContext = currentSave;
   const saveStartedVersion = renderVersion;
   const { onCollect, name, filePath } = saveContext;
+  const btn = document.getElementById('btnSaveTop');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>&nbsp; <span>Saving…</span>';
   let obj;
   try{ obj = await onCollect(); }
-  catch(err){ toast(err.message, true); return; }
-
-  const btn = document.getElementById('btnSaveTop');
-  btn.disabled = true;
+  catch(err){
+    if(renderVersion === saveStartedVersion && currentSave === saveContext){
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+    toast(err.message, true);
+    return;
+  }
   const orig = btn.innerHTML;
   btn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i>&nbsp; <span>Saving…</span>';
   try{
@@ -824,14 +832,20 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
       commitSha=await saveSection(name,obj,`CMS: update ${filePath}`);
       toast(`Saved — ${filePath} committed to ${conn.branch}.`);
     }
-    btn.disabled=false;btn.innerHTML=orig;
     // The commit belongs to the section that initiated this save. Do not
     // update the status bar or begin deployment polling on a different
     // section the user navigated to while the GitHub request was in flight.
-    if(renderVersion === saveStartedVersion && currentSave === saveContext) trackDeployStatus(commitSha);
+    if(renderVersion === saveStartedVersion && currentSave === saveContext){
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      trackDeployStatus(commitSha);
+    }
   }catch(err){
     toast(err.message, true);
-    btn.disabled = false; btn.innerHTML = orig;
+    if(renderVersion === saveStartedVersion && currentSave === saveContext){
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
   }
 });
 
