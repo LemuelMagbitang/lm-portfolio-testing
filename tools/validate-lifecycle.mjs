@@ -76,7 +76,7 @@ assert.match(mediaRendererSource, /type === 'image'/);
 assert.match(mediaRendererSource, /type === 'video'/);
 assert.match(mediaRendererSource, /type === 'youtube'/);
 assert.match(mediaRendererSource, /const criticalIndex = media\.findIndex\(item => \{/);
-assert.match(mediaRendererSource, /const critical = media\.indexOf\(item\) === criticalIndex/);
+assert.match(mediaRendererSource, /const critical =\s*media\.indexOf\(item\) === criticalIndex\s*\|\|\s*type === 'model'/);
 assert.match(mediaRendererSource, /type === 'youtube'[\s\S]*critical: false/);
 assert.match(mediaRendererSource, /void runPreloadPool\(/);
 assert.match(mediaRendererSource, /type === 'lottie'/);
