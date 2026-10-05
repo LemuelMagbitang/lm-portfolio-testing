@@ -19,9 +19,9 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js';
 
-import { initGallery } from '../features/gallery/index.js?v=20261005-03';
+import { initGallery } from '../features/gallery/index.js?v=20261005-04';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
-import { initLightbox } from '../features/lightbox/index.js?v=20261005-08';
+import { initLightbox } from '../features/lightbox/index.js?v=20261005-09';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261004-05';
 
 export async function createPortfolioApp({
@@ -246,10 +246,10 @@ export async function createPortfolioApp({
       })
     : Promise.resolve({ total: 0, ready: 0 });
 
-  // Warm the Lightbox media cache in the background. Opening the site must
-  // never wait for every project asset to download before the Lightbox itself
-  // becomes interactive; the first opened media item still loads eagerly from
-  // the Lightbox renderer when needed.
+  // Start the full project-media warm-up before the branded loading gate is
+  // released. The renderer keeps YouTube/video/model resources warm in browser
+  // cache while the remaining page paint work completes, without making startup
+  // wait indefinitely on slow or blocked third-party media.
   const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
     ? lightboxFeature.preloadProjectsMedia(projectModels, {
         preloadModelModule
