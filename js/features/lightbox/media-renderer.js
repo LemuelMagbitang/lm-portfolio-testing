@@ -24,6 +24,8 @@ export function createLightboxMediaRenderer({
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
   let youtubePreloadRoot = null;
+  let destroyed = false;
+  const activePreloadCleanups = new Set();
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
     let settled = false;
@@ -46,6 +48,16 @@ export function createLightboxMediaRenderer({
         finish(false);
       });
   });
+
+  function registerPreloadCleanup(cleanup) {
+    if (typeof cleanup !== 'function') return () => {};
+    if (destroyed) {
+      try { cleanup(); } catch (_) {}
+      return () => {};
+    }
+    activePreloadCleanups.add(cleanup);
+    return () => activePreloadCleanups.delete(cleanup);
+  }
 
   function ensureYouTubePreloadRoot() {
     if (youtubePreloadRoot?.isConnected) return youtubePreloadRoot;
@@ -104,13 +116,15 @@ export function createLightboxMediaRenderer({
       image.onerror = () => resolve(false);
       image.src = url;
     });
-    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, () => {
+    const cleanup = () => {
       if (!image) return;
       image.onload = null;
       image.onerror = null;
       image.src = '';
       finishPreload(false);
-    });
+    };
+    const unregister = registerPreloadCleanup(cleanup);
+    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
   }
 
   function preloadVideo(url) {
@@ -153,7 +167,8 @@ export function createLightboxMediaRenderer({
       video.src = url;
       video.load();
     });
-    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup);
+    const unregister = registerPreloadCleanup(cleanup);
+    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
   }
 
   async function preloadLottie(url) {
@@ -162,6 +177,8 @@ export function createLightboxMediaRenderer({
       ? new globalThis.AbortController()
       : null;
     try {
+      const cleanup = () => controller?.abort();
+      const unregister = registerPreloadCleanup(cleanup);
       const payload = await withPreloadTimeout(
         globalThis.fetch(url, {
           credentials: 'omit',
@@ -172,8 +189,8 @@ export function createLightboxMediaRenderer({
           return response.json();
         }),
         MEDIA_PRELOAD_TIMEOUT_MS,
-        () => controller?.abort()
-      );
+        cleanup
+      ).finally(unregister);
       if (!payload) return false;
       const width = Number(payload?.w);
       const height = Number(payload?.h);
@@ -187,6 +204,7 @@ export function createLightboxMediaRenderer({
   }
 
   async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
+    if (destroyed) return { total: 0, ready: 0 };
     const jobs = [];
     const seen = new Set();
     let hasModel = false;
@@ -691,6 +709,12 @@ export function createLightboxMediaRenderer({
   }
 
   function destroy() {
+    destroyed = true;
+    Array.from(activePreloadCleanups).reverse().forEach(cleanup => {
+      try { cleanup(); } catch (_) {}
+    });
+    activePreloadCleanups.clear();
+
     youtubeMessageCleanup?.();
     youtubeMessageCleanup = null;
 
