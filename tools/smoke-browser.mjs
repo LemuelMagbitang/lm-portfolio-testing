@@ -1466,6 +1466,23 @@ try {
       await page.locator('#content #addHero').click();
       await page.locator('#btnSaveTop').click();
       await page.waitForTimeout(50);
+
+      // Cancelling an unsaved-change navigation must leave the originating
+      // section and its active deployment tracker untouched.
+      let cancelledNavigationDialogSeen = false;
+      page.once('dialog', dialog => {
+        cancelledNavigationDialogSeen = true;
+        dialog.dismiss();
+      });
+      await mediaNav.click();
+      if (!cancelledNavigationDialogSeen) throw new Error('CMS did not ask before leaving a dirty section.');
+      if ((await page.locator('#topbarSection').textContent()).trim() !== 'Hero Messages') {
+        throw new Error('Cancelling dirty CMS navigation unexpectedly changed sections.');
+      }
+      if ((await page.locator('#saveStatusText').textContent()).trim() !== 'Deploying…') {
+        throw new Error('Cancelling dirty CMS navigation incorrectly cleared the active deployment status.');
+      }
+
       page.once('dialog', dialog => dialog.accept());
       await mediaNav.click();
       if (!(await page.locator('#btnSaveTop').isDisabled())) {
