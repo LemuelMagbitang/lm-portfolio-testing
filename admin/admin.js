@@ -1738,6 +1738,11 @@ function buildMediaPreviewHtml(m){
 RENDERERS.projects = async function(data){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
+    // Preserve the forward-compatible multi-badge field even while the
+    // current editor still exposes the legacy single-badge control.
+    // This prevents an older CMS session from silently erasing badges[]
+    // created by a newer editor/runtime.
+    badges:Array.isArray(p.badges)?[...p.badges]:null,
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
     media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
@@ -1814,7 +1819,9 @@ RENDERERS.projects = async function(data){
         if(!p.id) p.id = slugify(p.title);
       }
       return items.map(p=>({
-        id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge, filters:p.filters, description:p.description,
+        id:p.id, title:p.title, subtitle:p.subtitle, badge:p.badge,
+        ...(Array.isArray(p.badges) ? {badges:[...p.badges]} : {}),
+        filters:p.filters, description:p.description,
         thumbnail:{type:p.thumbnail.type||'image',src:p.thumbnail.src,focus:p.thumbnail.focus,zoom:p.thumbnail.zoom,...(p.thumbnail.background && typeof p.thumbnail.background==='object' ? {background:p.thumbnail.background} : {})},
         media:p.media.map(m => ({ type:m.type, src:m.src, caption:m.caption, orientation:m.orientation, ...(m.background && typeof m.background==='object' ? {background:m.background} : {}) }))
       }));
