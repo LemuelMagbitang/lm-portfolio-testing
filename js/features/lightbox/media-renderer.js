@@ -345,6 +345,10 @@ export function createLightboxMediaRenderer({
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
       const media = Array.isArray(project?.media) ? project.media : [];
+      const criticalIndex = media.findIndex(item => {
+        const type = String(item?.type || '').toLowerCase();
+        return ['image', 'video', 'lottie', 'model'].includes(type) && item?.src;
+      });
       media.forEach(item => {
         if (!item?.src) return;
         const type = String(item.type || '').toLowerCase();
@@ -353,7 +357,7 @@ export function createLightboxMediaRenderer({
         if (seen.has(key)) return;
         seen.add(key);
 
-        const critical = media.indexOf(item) === 0;
+        const critical = media.indexOf(item) === criticalIndex;
 
         if (type === 'model') {
           hasModel = true;
