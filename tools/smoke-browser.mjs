@@ -1367,6 +1367,22 @@ try {
 
       const projectsNav = page.locator('.nav-item[data-section="projects"]');
       if (await projectsNav.count() !== 1) throw new Error('CMS Projects navigation item is missing.');
+      const curatedNav = page.locator('.nav-item[data-section="curatedViews"]');
+      if (await curatedNav.count() !== 1) throw new Error('CMS Curated Views navigation item is missing.');
+      await curatedNav.click();
+      await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
+
+      page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
+      await page.locator('#content #addCuratedView').click();
+      await page.locator('#content #curatedViewList .card-item').filter({ hasText: 'Smoke Curated View' }).waitFor({ state: 'visible', timeout: 5000 });
+      const curatedDirty = await page.locator('#dirty-curatedViews').evaluate(el => getComputedStyle(el).display);
+      if (curatedDirty === 'none') throw new Error('Creating a Curated View did not mark the Curated Views editor dirty.');
+
+      page.once('dialog', dialog => dialog.accept());
+      await projectsNav.click();
+      await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
+      const curatedDirtyAfterLeave = await page.locator('#dirty-curatedViews').evaluate(el => getComputedStyle(el).display);
+      if (curatedDirtyAfterLeave !== 'none') throw new Error('Curated Views dirty state leaked across CMS section navigation.');
       await projectsNav.click();
       await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
 
