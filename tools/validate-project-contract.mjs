@@ -32,6 +32,7 @@ assert.deepEqual(project, {
   subtitle: '',
   description: '',
   badge: '',
+  badges: [],
   filters: ['3d', 'motion'],
   thumbnail: {
     src: 'media/demo.glb',
@@ -54,6 +55,21 @@ assert.deepEqual(project, {
     hasModel: false
   }
 });
+
+const multiBadge = normalizeProject({
+  id: 'multi-badge',
+  badges: [' UI Design ', 'Branding', 'UI Design', ''],
+  media: [{ type: 'image', src: 'badge-test.jpg' }]
+});
+assert.deepEqual(multiBadge.badges, ['UI Design', 'Branding']);
+assert.equal(multiBadge.badge, '');
+
+const legacyBadge = normalizeProject({
+  id: 'legacy-badge',
+  badge: '3D Design',
+  media: [{ type: 'image', src: 'legacy-badge.jpg' }]
+});
+assert.deepEqual(legacyBadge.badges, ['3D Design']);
 
 assert.equal(normalizeProjectMedia({ type: 'youtube', src: 'abc' }).type, 'youtube');
 assert.equal(normalizeProjectMedia({ type: 'model', src: 'scene.glb' }).type, 'model');
