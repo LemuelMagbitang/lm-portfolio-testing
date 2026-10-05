@@ -162,6 +162,7 @@ function validateProjects(projects, filters) {
   if (!Array.isArray(projects)) return;
   const ids = new Set();
   const filterIds = new Set((filters?.filters || []).map(f => f?.id).filter(Boolean));
+  const badgeNames = new Set((filters?.badges || []).map(badge => String(badge || '').trim()).filter(Boolean));
 
   projects.forEach((project, i) => {
     const where = `data/projects.json project ${i + 1}`;
@@ -175,6 +176,26 @@ function validateProjects(projects, filters) {
       if (!filterIds.has(filter)) err(`${where}: filter "${filter}" is not defined in data/filters.json.`);
     });
 
+    if (project.badges !== undefined && !Array.isArray(project.badges)) {
+      err(`${where}: badges must be an array when present.`);
+    }
+    const projectBadges = Array.isArray(project.badges) ? project.badges : [];
+    const seenBadges = new Set();
+    projectBadges.forEach(badge => {
+      const value = String(badge || '').trim();
+      if (!value) err(`${where}: badges cannot contain empty values.`);
+      else if (seenBadges.has(value)) err(`${where}: duplicate badge "${value}".`);
+      else {
+        seenBadges.add(value);
+        if (!badgeNames.has(value)) err(`${where}: badge "${value}" is not defined in data/filters.json.`);
+      }
+    });
+    if (project.badge !== undefined && project.badge !== null) {
+      const legacyBadge = String(project.badge || '').trim();
+      if (legacyBadge && !badgeNames.has(legacyBadge)) {
+        err(`${where}: badge "${legacyBadge}" is not defined in data/filters.json.`);
+      }
+    }
     const thumb = project.thumbnail;
     if (thumb?.src) {
       checkLocalRef(thumb.src, `${where} thumbnail.src`);
