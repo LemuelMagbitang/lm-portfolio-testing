@@ -1460,7 +1460,13 @@ try {
       }
       await page.locator('.hamburger').first().click();
       await aboutContact.click();
-      await page.waitForTimeout(300);
+      // Cross-page bootstrap must finish its branded loading gate and exact
+      // hash settlement before we evaluate the final viewport position.
+      await page.locator('#pageTransition[data-loading="ready"]').waitFor({
+        state: 'attached',
+        timeout: 6000
+      });
+      await page.waitForTimeout(120);
       const contactHeading = page.locator('#contact-start').first();
       const contactBox = await contactHeading.boundingBox();
       const navbarHeight = await page.locator('.navbar').boundingBox().then(box => box?.height || 0);
