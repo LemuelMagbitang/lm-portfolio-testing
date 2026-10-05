@@ -81,4 +81,17 @@ assert.match(aboutSource, /image\.src = ''/);
 assert.match(aboutSource, /image\.onload = null/);
 assert.match(aboutSource, /image\.onerror = null/);
 
+
+const adminSource = await readFile(new URL('../admin/admin.js', import.meta.url), 'utf8');
+assert.equal((adminSource.match(/function buildProjectBody\(el, p, options = \{\}\)/g) || []).length, 1);
+const sharedProjectEditorIndex = adminSource.indexOf('function buildProjectBody(el, p, options = {})');
+const curatedRendererIndex = adminSource.indexOf('RENDERERS.curatedViews');
+const projectsRendererIndex = adminSource.indexOf('RENDERERS.projects');
+assert.ok(sharedProjectEditorIndex >= 0 && sharedProjectEditorIndex < curatedRendererIndex);
+assert.ok(sharedProjectEditorIndex < projectsRendererIndex);
+assert.match(adminSource, /buildProjectBody\(row\.querySelector\('\[data-editor\]'\),e\.project,\{showFilters:false,onChanged:markDirty,filterDefs:\[\]\}\)/);
+assert.match(adminSource, /buildProjectBody\(wrap\.querySelector\('\[data-body\]'\), p, \{filterDefs\}\)/);
+assert.match(adminSource, /className='curated-project-option'/);
+assert.match(adminSource, /class="curated-project-preview"/);
+
 console.log('Lightbox BFCache and 3D mount-race contracts validated.');
