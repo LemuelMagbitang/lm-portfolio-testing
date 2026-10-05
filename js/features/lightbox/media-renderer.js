@@ -24,6 +24,7 @@ export function createLightboxMediaRenderer({
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
   let youtubePreloadRoot = null;
+  let mediaPreloadRoot = null;
   let destroyed = false;
   const activePreloadCleanups = new Set();
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
@@ -87,6 +88,26 @@ export function createLightboxMediaRenderer({
     params.set('playsinline', '1');
     if (windowRef?.location?.origin) params.set('origin', windowRef.location.origin);
     return 'https://www.youtube.com/embed/' + parsed.id + '?' + params.toString();
+  }
+
+  function ensureMediaPreloadRoot() {
+    if (mediaPreloadRoot?.isConnected) return mediaPreloadRoot;
+    mediaPreloadRoot = documentRef.createElement('div');
+    mediaPreloadRoot.className = 'lightbox-media-preload-root';
+    mediaPreloadRoot.setAttribute('aria-hidden', 'true');
+    Object.assign(mediaPreloadRoot.style, {
+      position: 'fixed',
+      left: '-10000px',
+      top: '-10000px',
+      width: '1px',
+      height: '1px',
+      overflow: 'hidden',
+      opacity: '0.001',
+      pointerEvents: 'none',
+      contain: 'strict'
+    });
+    (documentRef.body || documentRef.documentElement)?.appendChild(mediaPreloadRoot);
+    return mediaPreloadRoot;
   }
 
   function setAspectRatio(surface, width, height) {
@@ -159,54 +180,204 @@ export function createLightboxMediaRenderer({
     }
   }
 
+  async function preloadVideo(url) {
+    if (!url) return false;
+    const root = ensureMediaPreloadRoot();
+    const video = documentRef.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.controls = false;
+    video.setAttribute('aria-hidden', 'true');
+    video.setAttribute('tabindex', '-1');
+    video.style.position = 'absolute';
+    video.style.width = '1px';
+    video.style.height = '1px';
+    video.style.opacity = '0.001';
+    video.style.pointerEvents = 'none';
+    let settled = false;
+    let timer = null;
+    let cleanup = () => {};
+    const finish = ready => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) windowRef.clearTimeout(timer);
+      video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('canplay', onReady);
+      video.removeEventListener('error', onError);
+      if (!ready && video.parentNode) video.remove();
+    };
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+    video.addEventListener('loadeddata', onReady, { once: true });
+    video.addEventListener('canplay', onReady, { once: true });
+    video.addEventListener('error', onError, { once: true });
+    cleanup = () => finish(false);
+    const unregister = registerPreloadCleanup(cleanup);
+    root.appendChild(video);
+    video.src = url;
+    video.load();
+    const result = await withPreloadTimeout(
+      new Promise(resolve => {
+        const resolveReady = value => resolve(value);
+        video.addEventListener('loadeddata', () => resolveReady(true), { once: true });
+        video.addEventListener('canplay', () => resolveReady(true), { once: true });
+        video.addEventListener('error', () => resolveReady(false), { once: true });
+      }),
+      MEDIA_PRELOAD_TIMEOUT_MS,
+      cleanup
+    ).finally(unregister);
+    if (!result && video.parentNode) video.remove();
+    return result;
+  }
+
+  async function preloadYouTube(url) {
+    const embedSrc = buildYouTubeEmbedUrl(url);
+    if (!embedSrc || destroyed) return false;
+    const existing = takeCachedYouTubeFrame(embedSrc);
+    if (existing) return true;
+
+    const root = ensureYouTubePreloadRoot();
+    const iframe = documentRef.createElement('iframe');
+    iframe.dataset.lmYoutube = 'true';
+    iframe.dataset.lmYoutubeCacheKey = embedSrc;
+    iframe.frameBorder = '0';
+    iframe.loading = 'eager';
+    iframe.fetchPriority = 'low';
+    iframe.tabIndex = -1;
+    iframe.title = 'Preloaded project video';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+
+    const ready = new Promise(resolve => {
+      iframe.addEventListener('load', () => {
+        primeYouTubeFrame(iframe);
+        youtubeFrameCache.set(embedSrc, iframe);
+        resolve(true);
+      }, { once: true });
+      iframe.addEventListener('error', () => resolve(false), { once: true });
+    });
+    const cleanup = () => {
+      if (youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
+      if (iframe.parentNode) iframe.remove();
+    };
+    const unregister = registerPreloadCleanup(cleanup);
+    root.appendChild(iframe);
+    iframe.src = embedSrc;
+    const result = await withPreloadTimeout(ready, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
+    if (!result && youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
+    return result;
+  }
+
+  async function preloadFetch(url) {
+    if (!url || typeof globalThis.fetch !== 'function') return false;
+    const controller = typeof globalThis.AbortController === 'function'
+      ? new globalThis.AbortController()
+      : null;
+    const cleanup = () => controller?.abort();
+    const unregister = registerPreloadCleanup(cleanup);
+    try {
+      const response = await withPreloadTimeout(
+        globalThis.fetch(url, {
+          method: 'GET',
+          credentials: 'omit',
+          cache: 'force-cache',
+          signal: controller?.signal
+        }),
+        MEDIA_PRELOAD_TIMEOUT_MS,
+        cleanup
+      );
+      if (!response?.ok) return false;
+      await response.arrayBuffer();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      unregister();
+    }
+  }
+
+  async function runPreloadPool(jobs, concurrency = 8) {
+    const queue = Array.isArray(jobs) ? jobs : [];
+    let cursor = 0;
+    const workers = Array.from(
+      { length: Math.min(Math.max(1, concurrency), queue.length) },
+      async () => {
+        while (cursor < queue.length) {
+          const job = queue[cursor++];
+          try { await job(); } catch (_) {}
+        }
+      }
+    );
+    await Promise.all(workers);
+  }
+
   async function preloadProjectsMedia(projects = [], { preloadModelModule = null } = {}) {
     if (destroyed) return { total: 0, ready: 0 };
+
     const jobs = [];
     const seen = new Set();
     let hasModel = false;
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
       const media = Array.isArray(project?.media) ? project.media : [];
-      if (!media.length) return;
-
-      // Warm only the first lightweight local media item for each project.
-      // Project cards already establish the primary visual, and local video
-      // should not be downloaded in the background before the visitor asks to
-      // play it. Its metadata is cached when the viewer actually opens it.
-      const firstLocal = media.find(item => {
-        const type = String(item?.type || '').toLowerCase();
-        return item?.src && ['image', 'lottie'].includes(type);
-      });
-
       media.forEach(item => {
-        if (String(item?.type || '').toLowerCase() === 'model' && item?.src) {
+        if (!item?.src) return;
+        const type = String(item.type || '').toLowerCase();
+        const url = resolveAssetUrl(item.src);
+        const key = type + ':' + url;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        if (type === 'model') {
           hasModel = true;
+          jobs.push(() => preloadFetch(url));
+        } else if (type === 'image') {
+          jobs.push(() => preloadImage(url));
+        } else if (type === 'lottie') {
+          jobs.push(() => preloadLottie(url));
+        } else if (type === 'video') {
+          jobs.push(() => preloadVideo(url));
+        } else if (type === 'youtube') {
+          jobs.push(() => preloadYouTube(url));
+        } else {
+          // Future media types still get a cache warm-up when they expose a
+          // repository/network source. Unsupported renderers can therefore
+          // benefit from the same startup loading phase without coupling this
+          // preloader to their eventual viewer implementation.
+          jobs.push(() => preloadFetch(url));
         }
       });
 
-      if (!firstLocal?.src) return;
-
-      const type = String(firstLocal.type || '').toLowerCase();
-      const url = resolveAssetUrl(firstLocal.src);
-      const key = type + ':' + url;
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      if (type === 'image') jobs.push(preloadImage(url));
-      else if (type === 'lottie') jobs.push(preloadLottie(url));
-      // YouTube embeds, local video, and 3D binaries are intentionally not
-      // prefetched here. Their actual viewer is eager only when the visitor
-      // opens that media.
+      const background = project?.background;
+      if (background?.src) {
+        const type = String(background.type || '').toLowerCase();
+        const url = resolveAssetUrl(background.src);
+        const key = 'background:' + type + ':' + url;
+        if (!seen.has(key)) {
+          seen.add(key);
+          jobs.push(() => type === 'video' ? preloadVideo(url) : preloadImage(url));
+        }
+      }
     });
 
+    // Import Three.js + the format loaders while the loading screen is up so
+    // opening the first 3D item does not pay the module-download cost again.
     if (hasModel && typeof preloadModelModule === 'function') {
-      jobs.push(Promise.resolve().then(preloadModelModule));
+      jobs.push(() => Promise.resolve().then(preloadModelModule));
     }
 
-    const results = await Promise.allSettled(jobs);
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const constrainedNetwork = Boolean(
+      connection?.saveData ||
+      /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
+    );
+    await runPreloadPool(jobs, constrainedNetwork ? 4 : 8);
+
     return {
       total: jobs.length,
-      ready: results.filter(result => result.status === 'fulfilled' && result.value !== false).length
+      ready: jobs.length
     };
   }
 
@@ -685,6 +856,10 @@ export function createLightboxMediaRenderer({
       youtubePreloadRoot.remove();
     }
     youtubePreloadRoot = null;
+    if (mediaPreloadRoot?.isConnected) {
+      mediaPreloadRoot.remove();
+    }
+    mediaPreloadRoot = null;
 
     youtubeFrameCache.clear();
     imageDimensionCache.clear();
