@@ -689,6 +689,8 @@ export function createLightboxMediaRenderer({
       : (project.thumbnail?.src ? [{ ...project.thumbnail }] : []);
 
     let rendered = 0;
+    container.dataset.mediaDensity = mediaList.length > 2 ? 'multi' : 'single';
+    container.dataset.hasYouTube = mediaList.some(item => String(item?.type || '').toLowerCase() === 'youtube') ? 'true' : 'false';
     mediaList.forEach((item, index) => {
       const entry = renderItem(item, project, index);
       if (!entry) return;
