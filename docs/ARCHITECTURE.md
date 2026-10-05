@@ -78,6 +78,16 @@ branch head
 
 The public site and CMS are separate application surfaces that share repository content; the public runtime does not import CMS implementation code.
 
+## Curated View architecture
+
+Curated Views are a separate presentation context layered over the existing project architecture. They are not additional main-gallery filters and do not require a second renderer or a second project schema.
+
+A Curated View can contain either references to projects owned by the Main Portfolio or projects owned only by that Curated View. Main projects remain the source of truth when referenced; Curated-only projects reuse the same normalized project contract but are stored under Curated View ownership and never enter the Main Portfolio dataset unless explicitly promoted later.
+
+The CMS will expose Curated Views as a separate tab using the existing compact expandable editor pattern. Adding an existing project selects from the Main Portfolio project registry. Creating a project inside a Curated View uses the same project-editor capabilities but persists the new project only within that view. Removing or deleting from a Curated View must never mutate a Main Portfolio project. See `docs/CURATED-VIEWS.md` for the ownership and navigation contract.
+
+At runtime, Curated View resolution must happen before Gallery and Lightbox receive their project sets. The active hash identifies the presentation context, so refresh, Work navigation, About -> Work, logo navigation, and Lightbox navigation preserve the active Curated View. Curated View names must never be added to the main Gallery filter taxonomy.
+
 ## Failure containment
 
 The public bootstrap has a top-level error boundary and contains Hero initialization so a hero-specific failure does not blank the rest of the page.
