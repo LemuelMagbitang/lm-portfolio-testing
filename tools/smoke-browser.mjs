@@ -1476,6 +1476,25 @@ try {
         throw new Error('CMS Media Library Refresh hydration overwrote the selected About section.');
       }
 
+      // Complete a save while staying on its originating section so deployment
+      // tracking starts, then navigate away. The old deployment poll must not
+      // continue owning the new section's status bar.
+      const heroNav = page.locator('.nav-item[data-section="hero"]');
+      await heroNav.click();
+      await page.locator('#content #heroList, #content #addHero').first().waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('#content #addHero').click();
+      await page.locator('#btnSaveTop').click();
+      await page.waitForTimeout(400);
+      const savingStatus = (await page.locator('#saveStatusText').textContent()).trim();
+      if (savingStatus !== 'Deploying…') {
+        throw new Error(`CMS save did not enter deployment tracking state (found "${savingStatus}").`);
+      }
+      page.once('dialog', dialog => dialog.accept());
+      await mediaNav.click();
+      if ((await page.locator('#saveStatusText').textContent()).trim() === 'Deploying…') {
+        throw new Error('CMS deployment polling continued to own the Save status after navigation.');
+      }
+
       await curatedNav.click();
       await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
       page.once('dialog', dialog => dialog.accept('Smoke Curated View'));
@@ -1623,6 +1642,18 @@ try {
             body: JSON.stringify({
               content: { sha: 'smoke-saved-content' },
               commit: { sha: 'smoke-save-commit' }
+            })
+          });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/commits/smoke-save-commit/check-runs') {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              check_runs: [
+                { name: 'pages build and deployment', status: 'in_progress', conclusion: null, html_url: 'https://github.com/Smoke/TestRepo/actions' }
+              ]
             })
           });
           return;
