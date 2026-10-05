@@ -1489,7 +1489,6 @@ try {
       if (savingStatus !== 'Deploying…') {
         throw new Error(`CMS save did not enter deployment tracking state (found "${savingStatus}").`);
       }
-      page.once('dialog', dialog => dialog.accept());
       await mediaNav.click();
       if ((await page.locator('#saveStatusText').textContent()).trim() === 'Deploying…') {
         throw new Error('CMS deployment polling continued to own the Save status after navigation.');
