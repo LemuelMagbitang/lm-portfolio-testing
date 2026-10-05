@@ -207,6 +207,46 @@ try {
       if (filteredCards < 1) throw new Error('Works filter interaction hid every project unexpectedly.');
       if (await secondaryFilter.getAttribute('data-filter') === 'all') throw new Error('Works secondary filter fixture is unexpectedly ALL.');
 
+      const visibleFilteredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+        cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .map(card => ({
+            id: card.getAttribute('data-project-id') || '',
+            title: card.querySelector('.glass-info h3')?.textContent?.trim() || ''
+          }))
+      );
+
+      // The Lightbox is initialized before Gallery completes startup so its
+      // media warm-up can begin early. Once Gallery is ready, navigation must
+      // still use Gallery's filtered-card contract rather than every DOM card.
+      if (filteredCards > 0 && filteredCards < 11) {
+        const filteredIds = new Set(visibleFilteredCards.map(item => item.id).filter(Boolean));
+        const filteredFirst = page.locator('#portfolioGrid .project-card:visible').first();
+        await filteredFirst.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+        if (filteredCards > 1) {
+          await page.locator('.lightbox-next').first().click();
+          await page.waitForTimeout(340);
+          const navigatedTitle = (await page.locator('#modalTitle').textContent() || '').trim();
+          const navigatedId = await page.locator('#portfolioGrid .project-card').evaluateAll(cards => {
+            const title = document.querySelector('#modalTitle')?.textContent?.trim() || '';
+            const match = cards.find(card =>
+              getComputedStyle(card).display !== 'none' &&
+              card.querySelector('.glass-info h3')?.textContent?.trim() === title
+            );
+            return match?.getAttribute('data-project-id') || '';
+          });
+          if (!navigatedId || !filteredIds.has(navigatedId)) {
+            throw new Error(
+              'Filtered Lightbox navigation escaped Gallery active set: title=' +
+              JSON.stringify(navigatedTitle) + ', id=' + JSON.stringify(navigatedId)
+            );
+          }
+        }
+        await page.locator('#lightboxClose').click();
+        await page.waitForTimeout(120);
+      }
+
       const activeFilterCount = await page.locator('.filter-tabs .tab-btn.active, .filter-tabs .filter-btn.active').count();
       if (activeFilterCount !== 1) throw new Error(`Works filter interaction produced ${activeFilterCount} active filters.`);
 
