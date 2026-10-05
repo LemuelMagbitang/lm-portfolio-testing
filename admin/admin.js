@@ -372,12 +372,12 @@ const GH = {
     }
     return await res.json();
   },
-  async updateBranch(commitSha){
+  async updateBranch(commitSha, expectedSha){
     const branchPath = conn.branch.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/refs/heads/${branchPath}`;
     const res = await githubFetch(url, {
       method:'PATCH', headers:{...authHeaders(),'Content-Type':'application/json'},
-      body:JSON.stringify({sha:commitSha,force:false})
+      body:JSON.stringify({sha:commitSha,force:false, ...(expectedSha ? {expected_sha:expectedSha} : {})})
     });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -388,6 +388,9 @@ const GH = {
     }
     return await res.json();
   },
+  // The branch-head check above prevents starting from a stale parent.
+  // The lease below closes the final race between that check and the ref update:
+  // another CMS session cannot advance the branch and be silently overwritten.
   async commitFiles(files, message){
     if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
     files.forEach(file => assertCmsWritablePath(file?.path));
@@ -413,7 +416,7 @@ const GH = {
     if(!entries.length) throw new Error('Nothing to commit.');
     const newTreeSha = await GH.createTree(commitData.tree.sha, entries);
     const newCommit = await GH.createCommit(message, newTreeSha, parentSha);
-    await GH.updateBranch(newCommit.sha);
+    await GH.updateBranch(newCommit.sha, parentSha);
     return newCommit;
   },
   async uploadBinary(path, dataUrl, message, existingSha){
