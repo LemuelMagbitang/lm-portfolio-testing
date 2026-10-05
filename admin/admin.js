@@ -1879,6 +1879,8 @@ RENDERERS.curatedViews = async function(data){
     repaint();
   }
 
+  paint();
+
   // Hydrate Main Portfolio references after the editor is already usable.
   // Updating labels in place preserves the open view and any unsaved edits.
   loadSection('projects').then(pResult=>{
