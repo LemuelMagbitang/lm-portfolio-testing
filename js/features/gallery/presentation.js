@@ -148,18 +148,12 @@ export function applyGalleryReveal({
     fadeOverlay?.classList.remove('is-hidden');
   };
 
-  // Media dimensions can settle after the initial render (image decode,
-  // video metadata, Lottie layout, responsive font/layout changes). While the
-  // gallery is collapsed, observe the grid so the dedicated viewport clip
-  // follows the latest visible-card geometry.
-  const resizeObserver = typeof windowRef.ResizeObserver === 'function'
-    ? new windowRef.ResizeObserver(() => {
-        if (!expanded && isCurrentRender(renderToken)) {
-          measureCollapsedHeight();
-        }
-      })
-    : null;
-  resizeObserver?.observe(grid);
+  // Project-card geometry is presentation-locked by the CSS card contract
+  // (the card owns a fixed 1:1 footprint). Keep collapse measurement
+  // deterministic instead of continuously rewriting max-height from a
+  // ResizeObserver while the visitor scrolls. Late asset loads can still be
+  // covered by the bounded post-render measurements below without letting a
+  // layout observer move the Show More control underneath the user.
 
   const hideTimer = windowRef.setTimeout(() => {
     if (!isCurrentRender(renderToken)) return;
@@ -225,7 +219,6 @@ export function applyGalleryReveal({
   if (!showMoreButton || !showMoreWrapper) {
     return () => {
       windowRef.clearTimeout(hideTimer);
-      resizeObserver?.disconnect();
       if (animateTransition) {
         filteredCards.forEach(card => {
           card.style.transform = '';
@@ -258,7 +251,6 @@ export function applyGalleryReveal({
 
   return () => {
     windowRef.clearTimeout(hideTimer);
-    resizeObserver?.disconnect();
     if (animateTransition) {
       filteredCards.forEach(card => {
         card.style.transform = '';
