@@ -83,7 +83,13 @@ export async function bootstrapPortfolioApp({
 
     let id = rawHash;
     try { id = decodeURIComponent(rawHash); } catch (_) {}
-    const target = root.getElementById(id);
+
+    let target = root.getElementById(id);
+    // Keep old inbound #contact-section links working, but align them to the
+    // exact Start a Project heading rather than the outer section top.
+    if (id === 'contact-section') {
+      target = root.querySelector('#contact-section .start-project-title') || target;
+    }
     if (!target) return;
 
     // Native cross-document hash restoration can happen before CMS-backed
