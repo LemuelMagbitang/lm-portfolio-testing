@@ -2839,3 +2839,12 @@ img.no-save{
   user-drag:none;
   pointer-events:none;
 }
+
+/* Gallery cards also own the artwork hit area. Keep the actual image out of
+   the browser's long-press save gesture while the parent card remains fully
+   clickable/keyboard accessible. */
+.card-thumbnail > img.project-thumb-media{
+  -webkit-user-drag:none;
+  user-drag:none;
+  pointer-events:none;
+}

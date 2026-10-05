@@ -119,6 +119,6 @@ const mediaRendererForDensity = await (await import('node:fs/promises')).readFil
 assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaList\.length > 2 \? 'multi' : 'single'/);
 assert.match(mediaRendererForDensity, /container\.setAttribute\(\s*'data-has-youtube'/);
 assert.match(styleSource, /data-media-density="multi"\]\[data-has-youtube="true"\]/);
-assert.match(styleSource, /calc\(32svh \* var\(--lightbox-artwork-ratio/);
+assert.match(styleSource, /calc\(58svh \* var\(--lightbox-artwork-ratio/);
 
 console.log('Gallery presentation boundary validated.');
