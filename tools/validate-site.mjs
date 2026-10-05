@@ -195,6 +195,9 @@ function validateProjects(projects, filters) {
       if (legacyBadge && !badgeNames.has(legacyBadge)) {
         err(`${where}: badge "${legacyBadge}" is not defined in data/filters.json.`);
       }
+      if (legacyBadge && Array.isArray(project.badges) && !seenBadges.has(legacyBadge)) {
+        err(`${where}: legacy badge "${legacyBadge}" must also be present in badges while both fields are stored.`);
+      }
     }
     const thumb = project.thumbnail;
     if (thumb?.src) {
