@@ -1502,6 +1502,44 @@ try {
       const curatedDirty = await page.locator('#dirty-curatedViews').evaluate(el => getComputedStyle(el).display);
       if (curatedDirty === 'none') throw new Error('Creating a Curated View did not mark the Curated Views editor dirty.');
 
+      // Curated Views has its own Main Portfolio picker. Exercise the actual
+      // dialog rather than relying on generic Media Library picker coverage:
+      // every project option needs a real visual preview plus isolated title /
+      // subtitle blocks with no geometry overlap.
+      const addProjectButton = page.locator('#content [data-add]').first();
+      await addProjectButton.click();
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'visible', timeout: 5000 });
+      const pickerOption = page.locator('.curated-project-option').filter({ hasText: 'Test Project' }).first();
+      if (await pickerOption.count() !== 1) throw new Error('Curated Views Add Project picker did not show the Main Portfolio fixture.');
+      if (await pickerOption.locator('.curated-project-preview img').count() !== 1) throw new Error('Curated Views Add Project picker is missing the project thumbnail preview.');
+      const optionGeometry = await pickerOption.evaluate((el) => {
+        const preview = el.querySelector('.curated-project-preview')?.getBoundingClientRect();
+        const meta = el.querySelector('.curated-project-meta')?.getBoundingClientRect();
+        const title = el.querySelector('.curated-project-title')?.getBoundingClientRect();
+        const subtitle = el.querySelector('.curated-project-subtitle')?.getBoundingClientRect();
+        if (!preview || !meta || !title || !subtitle) return null;
+        return { previewBottom: preview.bottom, metaTop: meta.top, titleBottom: title.bottom, subtitleTop: subtitle.top };
+      });
+      if (!optionGeometry || optionGeometry.previewBottom > optionGeometry.metaTop + 1 || optionGeometry.titleBottom > optionGeometry.subtitleTop + 1) {
+        throw new Error('Curated Views Add Project picker text blocks overlap the preview or each other.');
+      }
+      await pickerOption.click();
+      await page.locator('.curated-project-picker-dialog').waitFor({ state: 'detached', timeout: 5000 });
+      const addedMainRow = page.locator('#content [data-list] .card-item').filter({ hasText: 'Test Project' }).first();
+      await addedMainRow.waitFor({ state: 'visible', timeout: 5000 });
+
+      // Create Project must use the shared project editor. This specifically
+      // catches regressions where buildProjectBody is accidentally scoped
+      // inside the Main Projects renderer and becomes undefined here.
+      page.once('dialog', dialog => dialog.accept('Smoke Curated-only Project'));
+      await page.locator('#content [data-create]').click();
+      const curatedOnlyRow = page.locator('#content [data-list] .card-item').filter({ hasText: 'Smoke Curated-only Project' }).first();
+      await curatedOnlyRow.waitFor({ state: 'visible', timeout: 5000 });
+      const curatedTitle = curatedOnlyRow.locator('[data-f="title"]').first();
+      if (await curatedTitle.count() !== 1 || (await curatedTitle.inputValue()) !== 'Smoke Curated-only Project') {
+        throw new Error('Curated Views Create Project did not mount the shared project editor.');
+      }
+
       page.once('dialog', dialog => dialog.accept());
       await projectsNav.click();
       await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
@@ -1581,7 +1619,7 @@ try {
         badge: '',
         filters: [],
         description: '',
-        thumbnail: { type: 'image', src: '', focus: '50% 50%', zoom: 1 },
+        thumbnail: { type: 'image', src: 'assets/projects/test/thumb.svg', focus: '50% 50%', zoom: 1 },
         media: [
           { type: 'lottie', src: 'assets/projects/test/Sample.json', caption: 'Lottie fixture', orientation: 'square' },
           { type: 'model', src: 'assets/projects/test/Female base.obj', caption: '3D fixture', orientation: '' }
