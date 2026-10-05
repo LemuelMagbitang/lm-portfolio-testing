@@ -310,14 +310,14 @@ try {
           textShadow: style.textShadow
         };
       });
-      if (navigationContrast.mixBlendMode !== 'normal') {
-        throw new Error('Lightbox navigation icon still uses blend compositing: ' + navigationContrast.mixBlendMode);
+      if (navigationContrast.mixBlendMode !== 'difference') {
+        throw new Error('Lightbox navigation icon lost artwork-aware difference compositing: ' + navigationContrast.mixBlendMode);
       }
       if (navigationContrast.color !== 'rgb(255, 255, 255)') {
         throw new Error('Lightbox navigation icon is not brand white: ' + navigationContrast.color);
       }
-      if (!navigationContrast.textShadow.includes('18px') && !navigationContrast.textShadow.includes('18, 18, 18')) {
-        throw new Error('Lightbox navigation icon lost the brand-dark contrast edge: ' + navigationContrast.textShadow);
+      if (navigationContrast.textShadow !== 'none') {
+        throw new Error('Lightbox navigation icon still carries a legacy outline shadow: ' + navigationContrast.textShadow);
       }
 
       if (await closeButton.count()) {
