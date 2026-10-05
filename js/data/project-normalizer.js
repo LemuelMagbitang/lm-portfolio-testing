@@ -18,6 +18,11 @@ function normalizeFilters(filters) {
   return [...new Set(filters.map(normalizeString).filter(Boolean))];
 }
 
+function normalizeBadges(badges, legacyBadge = '') {
+  const source = Array.isArray(badges) ? badges : (legacyBadge ? [legacyBadge] : []);
+  return [...new Set(source.map(normalizeString).filter(Boolean))];
+}
+
 function normalizeBackground(background) {
   if (!background || typeof background !== 'object' || Array.isArray(background)) return undefined;
 
@@ -81,6 +86,7 @@ export function normalizeProject(project = {}) {
     subtitle: normalizeString(project.subtitle),
     description: normalizeString(project.description),
     badge: normalizeString(project.badge),
+    badges: normalizeBadges(project.badges, project.badge),
     filters: normalizeFilters(project.filters),
     thumbnail: {},
     mediaCount: media.length,
