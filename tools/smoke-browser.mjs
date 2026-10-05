@@ -1495,7 +1495,10 @@ try {
         { timeout: 2000 }
       );
 
-      page.once('dialog', dialog => dialog.accept());
+      // The delayed save has completed and cleared the originating dirty
+      // state before this approved navigation. Do not leave a dialog handler
+      // armed here: the next section intentionally uses a prompt, and a stale
+      // one-shot listener would consume that prompt and double-handle it.
       await mediaNav.click();
       if (!(await page.locator('#btnSaveTop').isDisabled())) {
         throw new Error('CMS Save control remained enabled immediately after navigation to Media Library.');
