@@ -1450,6 +1450,25 @@ try {
           throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
         }
       }
+
+      const aboutContact = page.locator('.nav-links a[href="../#contact-start"]').first();
+      if (await aboutContact.count() !== 1) {
+        throw new Error('About page Contact navigation does not target the exact Start a Project anchor.');
+      }
+      await aboutContact.click();
+      await page.waitForTimeout(300);
+      const contactHeading = page.locator('#contact-start').first();
+      const contactBox = await contactHeading.boundingBox();
+      const navbarHeight = await page.locator('.navbar').boundingBox().then(box => box?.height || 0);
+      if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Start a Project heading.');
+      if (contactBox.y < navbarHeight - 8 || contactBox.y > navbarHeight + 60) {
+        throw new Error(
+          `Cross-page Contact navigation landed at the wrong vertical offset: headingY=${contactBox.y}, navbarH=${navbarHeight}`
+        );
+      }
+      if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
+        throw new Error('Cross-page Contact navigation did not preserve the exact contact-start hash.');
+      }
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/admin/', async page => {
