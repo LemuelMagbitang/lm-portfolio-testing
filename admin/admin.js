@@ -1782,293 +1782,94 @@ function serializeProjectEditorModel(project){
 }
 
 RENDERERS.curatedViews = async function(data){
-  const rawViews = Array.isArray(data.json) ? data.json : [];
-  let mainProjects = [];
-  try {
-    const result = await loadSection('projects');
-    mainProjects = Array.isArray(result.json) ? result.json : [];
-  } catch (e) {
-    mainProjects = [];
-  }
-  const mainById = new Map(mainProjects.map(p => [String(p.id || slugify(p.title || '')), p]));
-  let views = withUids(rawViews.map(view => ({
-    id: String(view.id || slugify(view.name || '')),
-    name: String(view.name || ''),
-    slug: String(view.slug || view.id || slugify(view.name || '')),
-    projects: withUids((Array.isArray(view.projects) ? view.projects : []).map(entry => {
-      if (entry && entry.source === 'curated' && entry.project) {
-        const project = {
-          id: String(entry.project.id || slugify(entry.project.title || '')),
-          title: entry.project.title || '',
-          subtitle: entry.project.subtitle || '',
-          badge: entry.project.badge || '',
-          badges: Array.isArray(entry.project.badges) ? [...entry.project.badges] : null,
-          filters: [],
-          description: entry.project.description || '',
-          thumbnail: {
-            type: entry.project.thumbnail?.type || 'image',
-            src: entry.project.thumbnail?.src || '',
-            focus: entry.project.thumbnail?.focus || '50% 50%',
-            zoom: entry.project.thumbnail?.zoom || 1,
-            background: entry.project.thumbnail?.background || null
-          },
-          media: withUids(Array.isArray(entry.project.media) ? entry.project.media.map(m => ({
-            type:m.type || 'image', src:m.src || '', caption:m.caption || '',
-            orientation:m.orientation || '', background:m.background || null
-          })) : [])
-        };
-        return { source:'curated', project, _uid:uid() };
+  const raw=Array.isArray(data.json)?data.json:[];
+  const pResult=await loadSection('projects');
+  const mains=Array.isArray(pResult.json)?pResult.json:[];
+  const mainById=new Map(mains.map(p=>[String(p.id||slugify(p.title||'')),p]));
+  let views=withUids(raw.map(v=>({
+    id:String(v.id||slugify(v.name||'')),name:String(v.name||''),slug:String(v.slug||v.id||slugify(v.name||'')),
+    projects:withUids((Array.isArray(v.projects)?v.projects:[]).map(e=>{
+      if(e?.source==='curated'&&e.project){
+        const p=e.project;
+        return {source:'curated',_uid:uid(),project:{
+          id:String(p.id||slugify(p.title||'')),title:p.title||'',subtitle:p.subtitle||'',badge:p.badge||'',
+          badges:Array.isArray(p.badges)?[...p.badges]:null,filters:[],description:p.description||'',
+          thumbnail:{type:p.thumbnail?.type||'image',src:p.thumbnail?.src||'',focus:p.thumbnail?.focus||'50% 50%',zoom:p.thumbnail?.zoom||1,background:p.thumbnail?.background||null},
+          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
+        }};
       }
-      return { source:'main', projectId:String(entry?.projectId || ''), _uid:uid() };
+      return {source:'main',projectId:String(e?.projectId||''),_uid:uid()};
     }))
   })));
-  let openUid = null;
-
-  function makeUniqueViewSlug(name, exceptUid = null){
-    const base = slugify(name) || 'curated-view';
-    let candidate = base, n = 2;
-    while (views.some(v => v._uid !== exceptUid && v.slug === candidate)) candidate = `${base}-${n++}`;
-    return candidate;
-  }
-  function makeUniqueCuratedProjectId(view, title, exceptEntryUid = null){
-    const mainIds = new Set(mainProjects.map(p => String(p.id || slugify(p.title || ''))));
-    const base = slugify(title) || 'curated-project';
-    let candidate = base, n = 2;
-    while (mainIds.has(candidate) || view.projects.some(e => e._uid !== exceptEntryUid && e.source === 'curated' && e.project?.id === candidate)) candidate = `${base}-${n++}`;
-    return candidate;
-  }
-  function publicViewUrl(view){
-    const base = new URL('../', location.href).href;
-    return `${base}#${encodeURIComponent(view.slug)}`;
-  }
-  async function copyViewLink(view){
-    const url = publicViewUrl(view);
-    try { await navigator.clipboard.writeText(url); toast('Curated View link copied.'); }
-    catch (e) { prompt('Copy this Curated View link:', url); }
-  }
-  function entryLabel(entry){
-    if (entry.source === 'curated') return entry.project?.title || '(untitled curated project)';
-    const project = mainById.get(entry.projectId);
-    return project?.title || `(missing main project: ${entry.projectId || 'unknown'})`;
-  }
-  function serializeView(view){
-    return {
-      id:view.id, name:view.name, slug:view.slug,
-      projects:view.projects.map(entry => {
-        if (entry.source === 'main') return {source:'main', projectId:entry.projectId};
-        const project = validateProjectEditorModel(entry.project, {requireFilters:false});
-        project.filters = [];
-        return {source:'curated', project:serializeProjectEditorModel(project)};
-      })
-    };
-  }
+  let openUid=null;
+  const uniqueSlug=name=>{
+    const base=slugify(name)||'curated-view';let s=base,n=2;
+    while(views.some(v=>v.slug===s))s=`${base}-${n++}`;return s;
+  };
+  const uniqueProjectId=(view,title)=>{
+    const used=new Set(mains.map(p=>String(p.id||slugify(p.title||''))));
+    view.projects.forEach(e=>{if(e.source==='curated'&&e.project?.id)used.add(e.project.id);});
+    const base=slugify(title)||'curated-project';let id=base,n=2;
+    while(used.has(id))id=`${base}-${n++}`;return id;
+  };
+  const viewUrl=v=>`${new URL('../',location.href).href}#${encodeURIComponent(v.slug)}`;
+  const copyLink=async v=>{const u=viewUrl(v);try{await navigator.clipboard.writeText(u);toast('Curated View link copied.');}catch(e){prompt('Copy this Curated View link:',u);}};
+  const label=e=>e.source==='curated'?e.project?.title||'(untitled curated project)':mainById.get(e.projectId)?.title||`(missing main project: ${e.projectId||'unknown'})`;
+  const serialize=v=>({id:v.id,name:v.name,slug:v.slug,projects:v.projects.map(e=>{
+    if(e.source==='main')return {source:'main',projectId:e.projectId};
+    const p=validateProjectEditorModel(e.project,{requireFilters:false});p.filters=[];
+    return {source:'curated',project:serializeProjectEditorModel(p)};
+  })});
 
   function paint(){
-    content.innerHTML = sectionHead(
-      'Curated Views',
-      'Unlisted presentations built from the same portfolio projects. Main projects stay referenced; curated-only projects belong only to the view that owns them.'
-    ) + `
-      <div class="banner info"><i class="fa-solid fa-link"></i><div>
-        A Curated View is not a separate website or a copy of your portfolio. Anyone with its link can open it, and changes here never reorder or delete Main Portfolio projects.
-      </div></div>
-      <div id="curatedViewList"></div>
-      <button class="add-btn" id="addCuratedView"><i class="fa-solid fa-plus"></i> Create Curated View</button>
-    `;
-    const list = document.getElementById('curatedViewList');
-    if (!views.length) list.innerHTML = `<div class="banner muted">No Curated Views yet — create one below.</div>`;
-
-    views.forEach(view => {
-      const isOpen = view._uid === openUid;
-      const card = document.createElement('div');
-      card.className = 'card-item'; card.dataset.uid = view._uid;
-      card.innerHTML = `
-        <div class="card-item-head collapsible-head" data-toggle-open>
-          <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-          <span class="project-item-label">
-            <span class="item-title">${esc(view.name) || '(untitled Curated View)'}</span>
-            <span class="project-preview-text">#${esc(view.slug || '')} · ${view.projects.length} project${view.projects.length===1?'':'s'}</span>
-          </span>
-          <div class="card-item-actions">
-            <button class="icon-btn" data-act="copy" title="Copy link"><i class="fa-solid fa-link"></i></button>
-            <button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
-            <button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
-            <button class="icon-btn" data-act="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button>
-            <button class="icon-btn" data-act="toggle" title="Expand"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
-          </div>
-        </div>
-        <div class="collapsible-body" style="display:${isOpen?'block':'none'};margin-top:16px;" data-body></div>
-      `;
-      card.querySelector('[data-toggle-open]').addEventListener('click', e => {
-        if (e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
-        openUid = isOpen ? null : view._uid; paint();
-      });
-      card.querySelector('[data-act="copy"]').addEventListener('click', e => { e.stopPropagation(); copyViewLink(view); });
-      card.querySelector('[data-act="del"]').addEventListener('click', e => {
-        e.stopPropagation();
-        if (!confirm(`Delete "${view.name || 'this Curated View'}"? Main Portfolio projects will not be deleted.`)) return;
-        views = views.filter(v => v._uid !== view._uid);
-        if (openUid === view._uid) openUid = null;
-        markDirty(); paint();
-      });
-      card.querySelector('[data-act="up"]').addEventListener('click', e => {
-        e.stopPropagation(); const i=views.indexOf(view); if(i===0)return;
-        animateReorder(() => document.getElementById('curatedViewList'), () => {
-          [views[i-1],views[i]]=[views[i],views[i-1]]; markDirty(); paint();
-        });
-      });
-      card.querySelector('[data-act="down"]').addEventListener('click', e => {
-        e.stopPropagation(); const i=views.indexOf(view); if(i===views.length-1)return;
-        animateReorder(() => document.getElementById('curatedViewList'), () => {
-          [views[i+1],views[i]]=[views[i],views[i+1]]; markDirty(); paint();
-        });
-      });
-      if (isOpen) buildCuratedViewBody(card.querySelector('[data-body]'), view);
+    content.innerHTML=sectionHead('Curated Views','Unlisted presentations built from the same portfolio projects. Main projects stay referenced; curated-only projects belong only to the view that owns them.')+`
+      <div class="banner info"><i class="fa-solid fa-link"></i><div>A Curated View is not a separate website or a copy of your portfolio. Anyone with its link can open it, and changes here never reorder or delete Main Portfolio projects.</div></div>
+      <div id="curatedViewList"></div><button class="add-btn" id="addCuratedView"><i class="fa-solid fa-plus"></i> Create Curated View</button>`;
+    const list=document.getElementById('curatedViewList');
+    if(!views.length)list.innerHTML='<div class="banner muted">No Curated Views yet — create one below.</div>';
+    views.forEach(v=>{
+      const open=v._uid===openUid,card=document.createElement('div');card.className='card-item';card.dataset.uid=v._uid;
+      card.innerHTML=`<div class="card-item-head collapsible-head" data-toggle-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="project-item-label"><span class="item-title">${esc(v.name)||'(untitled Curated View)'}</span><span class="project-preview-text">#${esc(v.slug)} · ${v.projects.length} project${v.projects.length===1?'':'s'}</span></span><div class="card-item-actions"><button class="icon-btn" data-act="copy" title="Copy link"><i class="fa-solid fa-link"></i></button><button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-act="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-act="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px" data-body></div>`;
+      card.querySelector('[data-toggle-open]').onclick=e=>{if(e.target.closest('[data-act]')?.dataset.act!=='toggle'&&e.target.closest('[data-act]'))return;openUid=open?null:v._uid;paint();};
+      card.querySelector('[data-act="copy"]').onclick=e=>{e.stopPropagation();copyLink(v);};
+      card.querySelector('[data-act="del"]').onclick=e=>{e.stopPropagation();if(!confirm(`Delete "${v.name||'this Curated View'}"? Main Portfolio projects will not be deleted.`))return;views=views.filter(x=>x!==v);if(openUid===v._uid)openUid=null;markDirty();paint();};
+      card.querySelector('[data-act="up"]').onclick=e=>{e.stopPropagation();const i=views.indexOf(v);if(i===0)return;[views[i-1],views[i]]=[views[i],views[i-1]];markDirty();paint();};
+      card.querySelector('[data-act="down"]').onclick=e=>{e.stopPropagation();const i=views.indexOf(v);if(i===views.length-1)return;[views[i+1],views[i]]=[views[i],views[i+1]];markDirty();paint();};
+      if(open)buildBody(card.querySelector('[data-body]'),v);
       list.appendChild(card);
     });
-
-    document.getElementById('addCuratedView').addEventListener('click', () => {
-      const name = prompt('Curated View name:');
-      if (!name || !name.trim()) return;
-      const slug = makeUniqueViewSlug(name.trim());
-      const view = {id:slug,name:name.trim(),slug,projects:[],_uid:uid()};
-      views.push(view); openUid = view._uid; markDirty(); paint();
-    });
-    enableDragReorder(() => document.getElementById('curatedViewList'), views, markDirty, paint);
-    wireSave(() => views.map(serializeView), 'curatedViews', SECTIONS.curatedViews.file);
+    document.getElementById('addCuratedView').onclick=()=>{const name=prompt('Curated View name:');if(!name?.trim())return;const s=uniqueSlug(name.trim()),v={id:s,name:name.trim(),slug:s,projects:[],_uid:uid()};views.push(v);openUid=v._uid;markDirty();paint();};
+    wireSave(()=>views.map(serialize),'curatedViews',SECTIONS.curatedViews.file);
   }
 
-  function buildCuratedViewBody(el, view){
-    el.innerHTML = `
-      <div class="row">
-        <div class="field">
-          <label class="field-label">Name</label>
-          <input data-view-name value="${attr(view.name)}" placeholder="e.g. Anime Illustration">
-        </div>
-        <div class="field">
-          <label class="field-label">Unlisted link</label>
-          <div class="browse-row">
-            <input value="#${attr(view.slug)}" readonly>
-            <button type="button" class="icon-btn" data-copy-view title="Copy link"><i class="fa-solid fa-copy"></i></button>
-          </div>
-        </div>
-      </div>
-      <div class="panel" style="background:#141414;">
-        <h3 style="font-size:.85rem">Projects in this view</h3>
-        <p class="panel-sub">Add existing Main Portfolio projects or create a Curated-only project. Order here does not affect the Main Portfolio.</p>
-        <div data-view-projects></div>
-        <div class="row" style="margin-top:12px;">
-          <button class="add-btn" type="button" data-add-existing><i class="fa-solid fa-plus"></i> Add Project</button>
-          <button class="ghost" type="button" data-create-curated><i class="fa-solid fa-file-circle-plus"></i> Create Project</button>
-        </div>
-      </div>
-    `;
-    const nameInput=el.querySelector('[data-view-name]');
-    nameInput.addEventListener('input', () => { view.name=nameInput.value; markDirty(); });
-    el.querySelector('[data-copy-view]').addEventListener('click', () => copyViewLink(view));
-    const projectsHost=el.querySelector('[data-view-projects]');
-
-    function paintEntries(){
-      projectsHost.innerHTML='';
-      if(!view.projects.length){
-        projectsHost.innerHTML='<div class="banner muted">No projects in this view yet.</div>'; return;
-      }
-      view.projects.forEach(entry => {
-        const row=document.createElement('div');
-        row.className='card-item'; row.dataset.uid=entry._uid;
-        row.innerHTML=`
-          <div class="card-item-head">
-            <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-            <span class="project-item-label">
-              <span class="item-title">${esc(entryLabel(entry))}</span>
-              <span class="project-preview-text">${entry.source==='main'?'Main Portfolio reference':'Curated-only project'}</span>
-            </span>
-            <div class="card-item-actions">
-              <button class="icon-btn" data-eact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
-              <button class="icon-btn" data-eact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
-              <button class="icon-btn" data-eact="del" title="Remove from view" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button>
-            </div>
-          </div>
-          ${entry.source==='curated'?`<div data-curated-editor style="margin-top:14px;"></div>`:''}
-        `;
-        row.querySelector('[data-eact="del"]').addEventListener('click',()=>{
-          const i=view.projects.indexOf(entry);
-          if(entry.source==='curated' && !confirm(`Delete curated-only project "${entry.project?.title||'this project'}"? It belongs only to this view.`)) return;
-          view.projects.splice(i,1); markDirty(); paintEntries();
-        });
-        row.querySelector('[data-eact="up"]').addEventListener('click',()=>{
-          const i=view.projects.indexOf(entry); if(i===0)return;
-          [view.projects[i-1],view.projects[i]]=[view.projects[i],view.projects[i-1]]; markDirty(); paintEntries();
-        });
-        row.querySelector('[data-eact="down"]').addEventListener('click',()=>{
-          const i=view.projects.indexOf(entry); if(i===view.projects.length-1)return;
-          [view.projects[i+1],view.projects[i]]=[view.projects[i],view.projects[i+1]]; markDirty(); paintEntries();
-        });
-        if(entry.source==='curated'){
-          buildProjectBody(row.querySelector('[data-curated-editor]'), entry.project, {
-            showFilters:false, onChanged:markDirty
-          });
-        }
-        projectsHost.appendChild(row);
+  function buildBody(el,v){
+    el.innerHTML=`<div class="row"><div class="field"><label class="field-label">Name</label><input data-name value="${attr(v.name)}"></div><div class="field"><label class="field-label">Unlisted link</label><div class="browse-row"><input value="#${attr(v.slug)}" readonly><button type="button" class="icon-btn" data-copy title="Copy link"><i class="fa-solid fa-copy"></i></button></div></div></div><div class="panel" style="background:#141414"><h3 style="font-size:.85rem">Projects in this view</h3><p class="panel-sub">Add existing Main Portfolio projects or create a Curated-only project. Order here does not affect the Main Portfolio.</p><div data-list></div><div class="row" style="margin-top:12px"><button class="add-btn" type="button" data-add><i class="fa-solid fa-plus"></i> Add Project</button><button class="ghost" type="button" data-create><i class="fa-solid fa-file-circle-plus"></i> Create Project</button></div></div>`;
+    el.querySelector('[data-name]').oninput=e=>{v.name=e.target.value;markDirty();};
+    el.querySelector('[data-copy]').onclick=()=>copyLink(v);
+    const host=el.querySelector('[data-list]');
+    function repaint(){
+      host.innerHTML='';
+      v.projects.forEach(e=>{
+        const row=document.createElement('div');row.className='card-item';row.dataset.uid=e._uid;
+        row.innerHTML=`<div class="card-item-head"><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="project-item-label"><span class="item-title">${esc(label(e))}</span><span class="project-preview-text">${e.source==='main'?'Main Portfolio reference':'Curated-only project'}</span></span><div class="card-item-actions"><button class="icon-btn" data-up><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-down><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-remove style="color:#e0584f"><i class="fa-solid fa-trash"></i></button></div></div>${e.source==='curated'?'<div data-editor style="margin-top:14px"></div>':''}`;
+        row.querySelector('[data-remove]').onclick=()=>{if(e.source==='curated'&&!confirm(`Delete curated-only project "${e.project?.title||'this project'}"? It belongs only to this view.`))return;v.projects.splice(v.projects.indexOf(e),1);markDirty();repaint();};
+        row.querySelector('[data-up]').onclick=()=>{const i=v.projects.indexOf(e);if(i===0)return;[v.projects[i-1],v.projects[i]]=[v.projects[i],v.projects[i-1]];markDirty();repaint();};
+        row.querySelector('[data-down]').onclick=()=>{const i=v.projects.indexOf(e);if(i===v.projects.length-1)return;[v.projects[i+1],v.projects[i]]=[v.projects[i],v.projects[i+1]];markDirty();repaint();};
+        if(e.source==='curated')buildProjectBody(row.querySelector('[data-editor]'),e.project,{showFilters:false,onChanged:markDirty});
+        host.appendChild(row);
       });
-      enableDragReorder(() => projectsHost, view.projects, markDirty, paintEntries);
+      if(!v.projects.length)host.innerHTML='<div class="banner muted">No projects in this view yet.</div>';
     }
-
-    function showProjectPicker(){
-      const overlay=document.createElement('div');
-      overlay.className='media-picker-overlay';
-      overlay.innerHTML=`
-        <div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Add Main Portfolio projects">
-          <div class="media-picker-head"><div><strong>Add Project</strong><span class="media-picker-sub">Choose existing Main Portfolio projects</span></div><button class="icon-btn" data-close type="button"><i class="fa-solid fa-xmark"></i></button></div>
-          <div class="media-picker-toolbar">
-            <input class="picker-search" data-search type="search" placeholder="Search projects…" autocomplete="off">
-          </div>
-          <div class="media-picker-scroll"><div class="media-grid" data-project-picker></div></div>
-        </div>`;
-      document.body.appendChild(overlay);
-      const grid=overlay.querySelector('[data-project-picker]');
-      const search=overlay.querySelector('[data-search]');
-      const close=()=>overlay.remove();
-      overlay.querySelector('[data-close]').addEventListener('click',close);
-      overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
-      function paintPicker(){
-        const q=search.value.trim().toLowerCase();
-        grid.innerHTML='';
-        const selected=new Set(view.projects.filter(e=>e.source==='main').map(e=>e.projectId));
-        const available=mainProjects.filter(p=>{
-          const id=String(p.id||slugify(p.title||''));
-          return !selected.has(id) && (!q || `${p.title||''} ${p.subtitle||''}`.toLowerCase().includes(q));
-        });
-        if(!available.length){
-          grid.innerHTML='<div class="banner muted" style="grid-column:1/-1">No available Main Portfolio projects match this search.</div>'; return;
-        }
-        available.forEach(p=>{
-          const id=String(p.id||slugify(p.title||''));
-          const tile=document.createElement('button');
-          tile.type='button'; tile.className='card-item'; tile.style.cssText='text-align:left;cursor:pointer;';
-          tile.innerHTML=`<strong>${esc(p.title||'(untitled)')}</strong><span class="project-preview-text">${esc(p.subtitle||'')}</span>`;
-          tile.addEventListener('click',()=>{
-            view.projects.push({source:'main',projectId:id,_uid:uid()});
-            markDirty(); close(); paintEntries();
-          });
-          grid.appendChild(tile);
-        });
-      }
-      search.addEventListener('input',paintPicker); paintPicker();
-    }
-
-    el.querySelector('[data-add-existing]').addEventListener('click',showProjectPicker);
-    el.querySelector('[data-create-curated]').addEventListener('click',()=>{
-      const title=prompt('Curated-only project title:');
-      if(!title || !title.trim()) return;
-      const project={
-        id:makeUniqueCuratedProjectId(view,title.trim()), title:title.trim(), subtitle:'',
-        badge:'', filters:[], description:'',
-        thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1}, media:[], _uid:uid()
-      };
-      view.projects.push({source:'curated',project,_uid:uid()});
-      markDirty(); paintEntries();
-    });
-    paintEntries();
+    el.querySelector('[data-add]').onclick=()=>{
+      const overlay=document.createElement('div');overlay.className='media-picker-overlay';
+      overlay.innerHTML=`<div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Add Main Portfolio projects"><div class="media-picker-head"><div><strong>Add Project</strong><span class="media-picker-sub">Choose existing Main Portfolio projects</span></div><button class="icon-btn" data-close type="button"><i class="fa-solid fa-xmark"></i></button></div><div class="media-picker-toolbar"><input class="picker-search" data-search type="search" placeholder="Search projects…"></div><div class="media-picker-scroll"><div class="media-grid" data-grid></div></div></div>`;
+      document.body.appendChild(overlay);const grid=overlay.querySelector('[data-grid]'),search=overlay.querySelector('[data-search]'),close=()=>overlay.remove();
+      overlay.querySelector('[data-close]').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close();};
+      function draw(){const q=search.value.trim().toLowerCase(),used=new Set(v.projects.filter(x=>x.source==='main').map(x=>x.projectId));grid.innerHTML='';mains.filter(p=>{const id=String(p.id||slugify(p.title||''));return !used.has(id)&&(!q||`${p.title||''} ${p.subtitle||''}`.toLowerCase().includes(q));}).forEach(p=>{const id=String(p.id||slugify(p.title||'')),b=document.createElement('button');b.type='button';b.className='card-item';b.style.cssText='text-align:left;cursor:pointer';b.innerHTML=`<strong>${esc(p.title||'(untitled)')}</strong><span class="project-preview-text">${esc(p.subtitle||'')}</span>`;b.onclick=()=>{v.projects.push({source:'main',projectId:id,_uid:uid()});markDirty();close();repaint();};grid.appendChild(b);});if(!grid.children.length)grid.innerHTML='<div class="banner muted" style="grid-column:1/-1">No available Main Portfolio projects match this search.</div>';};
+      search.oninput=draw;draw();
+    };
+    el.querySelector('[data-create]').onclick=()=>{const title=prompt('Curated-only project title:');if(!title?.trim())return;v.projects.push({source:'curated',project:{id:uniqueProjectId(v,title.trim()),title:title.trim(),subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()},_uid:uid()});markDirty();repaint();};
+    repaint();
   }
 }
 
@@ -2667,11 +2468,11 @@ RENDERERS.about = function(data){
     setPhotoCrosshairFromFocusStr();
     refreshPhotoPreview();
 
-    photoInput.addEventListener('input', () => { a.photo.src = photoInput.value; markChanged(); refreshPhotoPreview(); });
-    attachMediaBrowseButton(photoInput, () => { a.photo.src = photoInput.value; markChanged(); refreshPhotoPreview(); });
-    photoZoomInput.addEventListener('input', () => { a.photo.zoom = parseFloat(photoZoomInput.value) || 1; markChanged(); refreshPhotoPreview(); });
-    photoRotateInput.addEventListener('input', () => { a.photo.rotate = parseFloat(photoRotateInput.value) || 0; markChanged(); refreshPhotoPreview(); });
-    photoFocusInput.addEventListener('input', () => { a.photo.focus = photoFocusInput.value; setPhotoCrosshairFromFocusStr(); markChanged(); refreshPhotoPreview(); });
+    photoInput.addEventListener('input', () => { a.photo.src = photoInput.value; flagUnsaved(); refreshPhotoPreview(); });
+    attachMediaBrowseButton(photoInput, () => { a.photo.src = photoInput.value; flagUnsaved(); refreshPhotoPreview(); });
+    photoZoomInput.addEventListener('input', () => { a.photo.zoom = parseFloat(photoZoomInput.value) || 1; flagUnsaved(); refreshPhotoPreview(); });
+    photoRotateInput.addEventListener('input', () => { a.photo.rotate = parseFloat(photoRotateInput.value) || 0; flagUnsaved(); refreshPhotoPreview(); });
+    photoFocusInput.addEventListener('input', () => { a.photo.focus = photoFocusInput.value; setPhotoCrosshairFromFocusStr(); flagUnsaved(); refreshPhotoPreview(); });
 
     function pointerToPhotoFocus(e){
       const rect = photoPicker.getBoundingClientRect();
@@ -2682,7 +2483,7 @@ RENDERERS.about = function(data){
       a.photo.focus = `${x.toFixed(0)}% ${y.toFixed(0)}%`;
       photoCrosshair.style.left = x+'%'; photoCrosshair.style.top = y+'%';
       photoFocusInput.value = a.photo.focus;
-      markChanged();
+      flagUnsaved();
       refreshPhotoPreview();
     }
     let draggingPhotoFocus = false;
@@ -2736,14 +2537,14 @@ RENDERERS.about = function(data){
         const pill = document.createElement('span');
         pill.className = 'tag-pill';
         pill.innerHTML = `${esc(tag)} <button type="button">&times;</button>`;
-        pill.querySelector('button').addEventListener('click', ()=>{ arr.splice(i,1); markChanged(); repaint(); });
+        pill.querySelector('button').addEventListener('click', ()=>{ arr.splice(i,1); flagUnsaved(); repaint(); });
         box.appendChild(pill);
       });
       const inp = document.createElement('input');
       inp.placeholder = placeholder;
       inp.addEventListener('keydown', e=>{
         if(e.key==='Enter' && inp.value.trim()){
-          e.preventDefault(); arr.push(inp.value.trim()); markChanged(); repaint();
+          e.preventDefault(); arr.push(inp.value.trim()); flagUnsaved(); repaint();
         }
       });
       box.appendChild(inp);
@@ -2894,7 +2695,7 @@ RENDERERS.about = function(data){
         host.addEventListener('click',()=>{
           openMediaPicker(path=>{
             skill.icon=path;
-            markChanged();
+            flagUnsaved();
             repaint();
           });
         });
@@ -2903,13 +2704,13 @@ RENDERERS.about = function(data){
         if(clearBtn) clearBtn.addEventListener('click',e=>{
           e.stopPropagation();
           skill.icon='';
-          markChanged();
+          flagUnsaved();
           repaint();
         });
 
         pill.querySelector('[data-removeskill]').addEventListener('click',()=>{
           arr.splice(i,1);
-          markChanged();
+          flagUnsaved();
           repaint();
         });
 
@@ -2945,16 +2746,16 @@ RENDERERS.about = function(data){
         row.querySelectorAll('[data-f]').forEach(inp=> inp.addEventListener('input', ()=>{
           item[inp.dataset.f]=inp.value;
           if (inp.dataset.f === fields[0].f) row.querySelector('.item-title').textContent = item[fields[0].f] || ('Entry ' + (i+1));
-          markChanged();
+          flagUnsaved();
         }));
-        row.querySelector('[data-act="del"]').addEventListener('click', ()=>{ arr.splice(i,1); markChanged(); repaint(); });
-        row.querySelector('[data-act="up"]').addEventListener('click', ()=>{ if(i===0)return; animateReorder(() => document.getElementById(listId), () => { [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; markChanged(); repaint(); }); });
-        row.querySelector('[data-act="down"]').addEventListener('click', ()=>{ if(i===arr.length-1)return; animateReorder(() => document.getElementById(listId), () => { [arr[i+1],arr[i]]=[arr[i],arr[i+1]]; markChanged(); repaint(); }); });
+        row.querySelector('[data-act="del"]').addEventListener('click', ()=>{ arr.splice(i,1); flagUnsaved(); repaint(); });
+        row.querySelector('[data-act="up"]').addEventListener('click', ()=>{ if(i===0)return; animateReorder(() => document.getElementById(listId), () => { [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; flagUnsaved(); repaint(); }); });
+        row.querySelector('[data-act="down"]').addEventListener('click', ()=>{ if(i===arr.length-1)return; animateReorder(() => document.getElementById(listId), () => { [arr[i+1],arr[i]]=[arr[i],arr[i+1]]; flagUnsaved(); repaint(); }); });
         list.appendChild(row);
       });
     }
     document.getElementById(addBtnId).addEventListener('click', ()=>{
-      const blank = { _uid: uid() }; fields.forEach(f=>blank[f.f]=''); arr.push(blank); markChanged(); repaint();
+      const blank = { _uid: uid() }; fields.forEach(f=>blank[f.f]=''); arr.push(blank); flagUnsaved(); repaint();
     });
     repaint();
     // Attached once, not inside repaint(): unlike the full-screen
@@ -2975,15 +2776,15 @@ RENDERERS.about = function(data){
         const open=openUids.has(edu._uid), row=document.createElement('div'); row.className='card-item'; row.dataset.uid=edu._uid;
         row.innerHTML=`<div class="card-item-head collapsible-head" data-toggle-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(edu.school||edu.title||'New education entry')}${edu.degree?' — '+esc(edu.degree):''}${edu.graduationDate?' · '+esc(edu.graduationDate):''}</span><div class="card-item-actions"><button class="icon-btn" data-act="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-act="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-act="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-act="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px;"><div class="row"><div class="field"><label class="field-label">School name</label><input data-f="school" value="${attr(edu.school||'')}" placeholder="University, college, school, or training provider"></div><div class="field"><label class="field-label">Degree or other <span style="opacity:.5">(optional)</span></label><input data-f="degree" value="${attr(edu.degree||'')}" placeholder="Degree, certificate, diploma, course, etc."></div></div><div class="field"><label class="field-label">Graduation / completion date <span style="opacity:.5">(optional)</span></label><div class="row"><input data-date-for="graduationDate" type="month" value="${/^\d{4}-\d{2}$/.test(edu.graduationDate||'')?edu.graduationDate:''}" style="max-width:150px"><input data-f="graduationDate" type="text" value="${attr(edu.graduationDate||'')}" placeholder="YYYY-MM or text such as Mid-2025"></div></div></div>`;
         row.querySelector('[data-toggle-open]').addEventListener('click',e=>{if(e.target.closest('[data-act]')&&e.target.closest('[data-act]').dataset.act!=='toggle')return;open?openUids.delete(edu._uid):openUids.add(edu._uid);repaint();});
-        row.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{edu[inp.dataset.f]=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');markChanged();}));
-        row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{const f=inp.dataset.dateFor;edu[f]=inp.value;const text=row.querySelector('[data-f="'+f+'"]');if(text)text.value=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');markChanged();}));
-        row.querySelector('[data-act=del]').addEventListener('click',e=>{e.stopPropagation();a.education.splice(i,1);markChanged();repaint();});
-        row.querySelector('[data-act=up]').addEventListener('click',e=>{e.stopPropagation();if(i===0)return;animateReorder(()=>document.getElementById('eduList'),()=>{[a.education[i-1],a.education[i]]=[a.education[i],a.education[i-1]];markChanged();repaint();});});
-        row.querySelector('[data-act=down]').addEventListener('click',e=>{e.stopPropagation();if(i===a.education.length-1)return;animateReorder(()=>document.getElementById('eduList'),()=>{[a.education[i+1],a.education[i]]=[a.education[i],a.education[i+1]];markChanged();repaint();});});
+        row.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{edu[inp.dataset.f]=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');flagUnsaved();}));
+        row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{const f=inp.dataset.dateFor;edu[f]=inp.value;const text=row.querySelector('[data-f="'+f+'"]');if(text)text.value=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');flagUnsaved();}));
+        row.querySelector('[data-act=del]').addEventListener('click',e=>{e.stopPropagation();a.education.splice(i,1);flagUnsaved();repaint();});
+        row.querySelector('[data-act=up]').addEventListener('click',e=>{e.stopPropagation();if(i===0)return;animateReorder(()=>document.getElementById('eduList'),()=>{[a.education[i-1],a.education[i]]=[a.education[i],a.education[i-1]];flagUnsaved();repaint();});});
+        row.querySelector('[data-act=down]').addEventListener('click',e=>{e.stopPropagation();if(i===a.education.length-1)return;animateReorder(()=>document.getElementById('eduList'),()=>{[a.education[i+1],a.education[i]]=[a.education[i],a.education[i+1]];flagUnsaved();repaint();});});
         list.appendChild(row);
       });
     }
-    document.getElementById('addEdu').addEventListener('click',()=>{const fresh={school:'',degree:'',graduationDate:'',_uid:uid()};a.education.push(fresh);openUids.add(fresh._uid);markChanged();repaint();});
+    document.getElementById('addEdu').addEventListener('click',()=>{const fresh={school:'',degree:'',graduationDate:'',_uid:uid()};a.education.push(fresh);openUids.add(fresh._uid);flagUnsaved();repaint();});
     repaint(); enableDragReorder(()=>document.getElementById('eduList'),a.education,flagUnsaved,repaint);
   }
 
@@ -3036,12 +2837,12 @@ RENDERERS.about = function(data){
         row.querySelectorAll('[data-f]').forEach(inp=> inp.addEventListener('input', ()=>{
           exp[inp.dataset.f]=inp.value;
           row.querySelector('.preview-line').textContent = (exp.role||'New role') + (exp.company?' — '+exp.company:'');
-          markChanged();
+          flagUnsaved();
         }));
-        row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{ const f=inp.dataset.dateFor; exp[f]=inp.value; const text=row.querySelector('[data-f="'+f+'"]'); if(text) text.value=inp.value; row.querySelector('.preview-line').textContent=(exp.role||'New role')+(exp.company?' — '+exp.company:'')+((exp.startDate||exp.endDate)?' · '+(exp.startDate||'')+'–'+(exp.endDate||''):''); markChanged(); }));
-        row.querySelector('[data-act="del"]').addEventListener('click', (e)=>{ e.stopPropagation(); a.experience.splice(i,1); markChanged(); repaint(); });
-        row.querySelector('[data-act="up"]').addEventListener('click', (e)=>{ e.stopPropagation(); if(i===0)return; animateReorder(() => document.getElementById('expList'), () => { [a.experience[i-1],a.experience[i]]=[a.experience[i],a.experience[i-1]]; markChanged(); repaint(); }); });
-        row.querySelector('[data-act="down"]').addEventListener('click', (e)=>{ e.stopPropagation(); if(i===a.experience.length-1)return; animateReorder(() => document.getElementById('expList'), () => { [a.experience[i+1],a.experience[i]]=[a.experience[i],a.experience[i+1]]; markChanged(); repaint(); }); });
+        row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{ const f=inp.dataset.dateFor; exp[f]=inp.value; const text=row.querySelector('[data-f="'+f+'"]'); if(text) text.value=inp.value; row.querySelector('.preview-line').textContent=(exp.role||'New role')+(exp.company?' — '+exp.company:'')+((exp.startDate||exp.endDate)?' · '+(exp.startDate||'')+'–'+(exp.endDate||''):''); flagUnsaved(); }));
+        row.querySelector('[data-act="del"]').addEventListener('click', (e)=>{ e.stopPropagation(); a.experience.splice(i,1); flagUnsaved(); repaint(); });
+        row.querySelector('[data-act="up"]').addEventListener('click', (e)=>{ e.stopPropagation(); if(i===0)return; animateReorder(() => document.getElementById('expList'), () => { [a.experience[i-1],a.experience[i]]=[a.experience[i],a.experience[i-1]]; flagUnsaved(); repaint(); }); });
+        row.querySelector('[data-act="down"]').addEventListener('click', (e)=>{ e.stopPropagation(); if(i===a.experience.length-1)return; animateReorder(() => document.getElementById('expList'), () => { [a.experience[i+1],a.experience[i]]=[a.experience[i],a.experience[i+1]]; flagUnsaved(); repaint(); }); });
 
         const bWrap = row.querySelector('[data-bullets]');
         function repaintBullets(){
@@ -3050,13 +2851,13 @@ RENDERERS.about = function(data){
             const brow = document.createElement('div');
             brow.style.display='flex'; brow.style.gap='8px'; brow.style.marginBottom='8px';
             brow.innerHTML = `<textarea rows="2" style="flex:1">${esc(b)}</textarea><button class="icon-btn" style="color:#e0584f;flex-shrink:0"><i class="fa-solid fa-trash"></i></button>`;
-            brow.querySelector('textarea').addEventListener('input', (e)=>{ exp.bullets[bi]=e.target.value; markChanged(); });
-            brow.querySelector('button').addEventListener('click', ()=>{ exp.bullets.splice(bi,1); markChanged(); repaintBullets(); });
+            brow.querySelector('textarea').addEventListener('input', (e)=>{ exp.bullets[bi]=e.target.value; flagUnsaved(); });
+            brow.querySelector('button').addEventListener('click', ()=>{ exp.bullets.splice(bi,1); flagUnsaved(); repaintBullets(); });
             bWrap.appendChild(brow);
           });
         }
         repaintBullets();
-        row.querySelector('[data-addbullet]').addEventListener('click', ()=>{ exp.bullets.push(''); markChanged(); repaintBullets(); });
+        row.querySelector('[data-addbullet]').addEventListener('click', ()=>{ exp.bullets.push(''); flagUnsaved(); repaintBullets(); });
         list.appendChild(row);
       });
     }
@@ -3064,7 +2865,7 @@ RENDERERS.about = function(data){
       const fresh = {role:'',company:'',startDate:'',endDate:'',bullets:[''],_uid:uid()};
       a.experience.push(fresh);
       openUids.add(fresh._uid);
-      markChanged(); repaint();
+      flagUnsaved(); repaint();
     });
     repaint();
     // Same reasoning as buildSimpleRepeater above: #expList's own node
