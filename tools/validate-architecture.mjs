@@ -20,6 +20,12 @@ const legacyRootModules = new Set([
   'media-background.js'
 ]);
 
+for (const legacy of legacyRootModules) {
+  if (fs.existsSync(path.join(jsRoot, legacy))) {
+    errors.push(`Legacy root runtime js/${legacy} must be removed; use the decoupled feature/infrastructure module instead.`);
+  }
+}
+
 function walk(dir) {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
