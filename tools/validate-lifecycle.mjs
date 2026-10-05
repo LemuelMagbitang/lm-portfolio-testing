@@ -59,16 +59,20 @@ assert.match(lightboxSource, /let openRenderToken = 0;/);
 assert.match(lightboxSource, /const openToken = \+\+openRenderToken;/);
 assert.match(lightboxSource, /openRenderToken !== openToken/);
 assert.match(lightboxSource, /openRenderToken \+= 1;/);
+const mediaRendererSource = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 assert.match(mediaRendererSource, /withPreloadTimeout\(promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null\)/);
 assert.match(mediaRendererSource, /image\.src = ''/);
 assert.match(mediaRendererSource, /video\.removeAttribute\('src'\)/);
 assert.match(mediaRendererSource, /controller\?\.abort\(\)/);
-
-const mediaRendererSource = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
 assert.match(modelViewerSource, /__modelViewerMountToken/);
 assert.match(modelViewerSource, /if \(!isCurrentMount\(\)\) \{[\s\S]*disposeObject\(loaded\.root\)[\s\S]*return null;/);
+
+const aboutSource = await readFile(new URL('../js/features/about/index.js', import.meta.url), 'utf8');
+assert.match(aboutSource, /image\.src = ''/);
+assert.match(aboutSource, /image\.onload = null/);
+assert.match(aboutSource, /image\.onerror = null/);
 
 console.log('Lightbox BFCache and 3D mount-race contracts validated.');
