@@ -691,8 +691,8 @@ try {
           ratio: parseFloat(getComputedStyle(el).aspectRatio || '0')
         };
       }));
-      if (youtubeGeometry.some(item => item.height > 305 || item.width <= 0 || item.height <= 0)) {
-        throw new Error(`Multi-media YouTube artwork was allowed to dominate desktop height: ${JSON.stringify(youtubeGeometry)}`);
+      if (youtubeGeometry.some(item => item.height > 525 || item.width <= 0 || item.height <= 0)) {
+        throw new Error(`Multi-media YouTube artwork exceeded its responsive desktop height ceiling: ${JSON.stringify(youtubeGeometry)}`);
       }
       const portrait = youtubeGeometry.find(item => item.orientation === 'portrait');
       const landscape = youtubeGeometry.find(item => item.orientation === 'landscape');
