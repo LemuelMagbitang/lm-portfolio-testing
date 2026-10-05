@@ -3374,6 +3374,7 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
   }
 
   function paint(){
+    if(!isCurrent()) return;
     const { folders, files } = childrenOf(mediaCurrentPath);
     const crumbs = mediaCurrentPath.split('/');
 
@@ -3423,7 +3424,11 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       const folderPath = mediaCurrentPath + '/' + f;
       tile.innerHTML = folderTileHtml(f, findFolderPreviewImage(tree, folderPath));
       tile.addEventListener('click', () => { mediaCurrentPath = folderPath; paint(); });
-      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => { e.stopPropagation(); try { await renameMediaFolder(folderPath, async p => { mediaCurrentPath=p; await paint(); }); } catch(err){ toast(err.message,true); } });
+      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => { e.stopPropagation(); try { await renameMediaFolder(folderPath, async p => {
+            if(!isCurrent()) return;
+            mediaCurrentPath=p;
+            paint();
+          }); } catch(err){ toast(err.message,true); } });
       grid.appendChild(tile);
     });
     files.forEach(item => {
@@ -3445,6 +3450,7 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
           await GH.deleteFile(item.path, item.sha, `CMS: delete ${item.path}`);
           toast(`Deleted ${name}.`);
           tree = await loadMediaTree(true);
+          if(!isCurrent()) return;
           paint();
         } catch(err){ toast(err.message, true); }
       });
@@ -3452,15 +3458,24 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
     });
 
     document.getElementById('btnNewFolder').addEventListener('click', async () => {
-      try { await createMediaFolder(mediaCurrentPath || 'assets', async p => { mediaCurrentPath=p; await paint(); }); } catch(err){ toast(err.message,true); }
+      try { await createMediaFolder(mediaCurrentPath || 'assets', async p => {
+          if(!isCurrent()) return;
+          mediaCurrentPath=p;
+          paint();
+        }); } catch(err){ toast(err.message,true); }
     });
     document.getElementById('btnRenameFolder').disabled = mediaCurrentPath==='assets';
     document.getElementById('btnRenameFolder').addEventListener('click', async () => {
-      try { await renameMediaFolder(mediaCurrentPath, async p => { mediaCurrentPath=p; await paint(); }); } catch(err){ toast(err.message,true); }
+      try { await renameMediaFolder(mediaCurrentPath, async p => {
+          if(!isCurrent()) return;
+          mediaCurrentPath=p;
+          paint();
+        }); } catch(err){ toast(err.message,true); }
     });
 
     document.getElementById('btnRefresh').addEventListener('click', async () => {
       tree = await loadMediaTree(true);
+      if(!isCurrent()) return;
       paint();
       toast('Refreshed.');
     });
@@ -3478,10 +3493,12 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       const folder = document.getElementById('uploadPath').value.trim().replace(/^\/+|\/+$/g,'') || 'assets';
       const grid = document.getElementById('mediaGrid');
       await uploadFilesToFolder(fileList, folder, grid, tree);
+      if(!isCurrent()) return;
       // Full refresh once the batch settles — this is what replaces the
       // temporary tiles above with the real, permanent ones (with their
       // Copy path / Delete buttons) sourced from the actual repo state.
       tree = await loadMediaTree(true);
+      if(!isCurrent()) return;
       mediaCurrentPath = folder;
       paint();
     }
