@@ -4,35 +4,27 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 5, 2026, the branch has completed the composition/data-boundary cutover and is in Phase 3A presentation hardening without intentionally changing the public visual baseline:
+As of October 5, 2026, the projects-runtime-cutover branch has completed the composition/data-boundary cutover and the core feature extraction. It is currently in **Phase 3B/3C hardening** while the CMS application boundary continues to be tightened. This work intentionally preserves the existing visual language rather than redesigning it.
 
-- `js/script.js` is a 19-line browser entrypoint.
-- `js/app/bootstrap.js` owns startup/error containment and passes normalized application configuration into the composition root.
-- `js/app/page-composition.js` is the explicit wiring layer for page features and infrastructure.
-- Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings now have feature entry points.
-- CMS project data and site settings are normalized before presentation.
-- Three.js, media-background, YouTube parsing, Lottie loading, site paths, and reduced-motion are isolated behind infrastructure modules.
-- The obsolete `cms-data.js` and `site-runtime.js` runtime facades have been removed.
-- Gallery is the single owner of project-filter state; Lightbox consumes Gallery's active-project contract rather than maintaining a second filter model.
-- Architecture and site validators were updated to enforce the new boundaries.
-- The validation workflow now includes a real Chromium smoke test covering Works, About, Hero rendering/looping, CMS filters/ALL, and About resume/software content at desktop, phone, and tablet sizes.
-- The browser smoke gate has passed on the current runtime cutover after fixing the public ES-module boot path, Hero initialization, CMS filter reconstruction, About CMS rendering, and the CMS 3D preview adapter path.
-- Gallery state now consumes a separate presentation boundary for responsive density, row-aware reveal/collapse, and reset behavior.
-- Shared feature lifecycle management now centralizes listener/timer/animation cleanup without introducing cross-feature state.
-- Project normalization now exposes media capabilities and preserves thumbnail orientation as part of the stable application model.
-- Lightbox now consumes normalized project models through the Projects public API instead of reading project-card markup.
-- Lightbox startup no longer waits for the full-project media warm-up; media preloading runs as a background cache warm-up.
-- Lightbox media loading is progressive: the first image/video/YouTube item is prioritized while later media is deferred.
-- Background Lightbox warm-up is intentionally limited to the first local image/video/Lottie item per project; full 3D binaries and YouTube iframes are loaded on demand.
-- Lightbox navigation controls remain transparent and use normal compositing with a restrained text-shadow contrast edge; the rectangular focus/tap artifact has been removed.
-- Gallery row-alignment now derives its column count from the actual grid geometry, avoiding incorrect Show More thresholds while previous-filter cards are still fading out.
-- Desktop YouTube artwork is presentation-capped while mobile YouTube remains width-first/full-bleed; the regression suite covers both behaviors.
-- Public stylesheet references are currently on `20261005-14`, while the JavaScript runtime cache chain (`script.js` → `bootstrap.js` → `page-composition.js`) remains on `20261005-13`; the Chromium smoke gate asserts the JS chain explicitly so CSS cache-busting can evolve independently.
+- `js/script.js` is a 19-line browser entrypoint; startup and page wiring live in `js/app/bootstrap.js` and `js/app/page-composition.js`.
+- Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings have explicit feature entry points.
+- CMS JSON is normalized before it reaches public presentation features; project media capabilities and thumbnail orientation are part of the runtime project model.
+- Vendor-specific concerns are isolated behind infrastructure adapters for Three.js, Lottie, YouTube parsing, media backgrounds, site paths, reduced motion, and CMS loading.
+- The obsolete `cms-data.js` and `site-runtime.js` facades and the old monolithic `gallery.js`, `hero.js`, and `lightbox.js` runtime implementations have been removed from the active architecture.
+- Gallery owns filter state and exposes the active-project contract; Lightbox consumes that contract instead of maintaining a second gallery/filter model.
+- Shared feature lifecycle cleanup now centralizes listener, timer, and animation disposal without making features share mutable state.
+- Gallery presentation owns responsive density, row-aware Show More/Show Less reveal, collapsed viewport geometry, and reset behavior rather than Gallery state owning CSS/layout decisions.
+- Lightbox now handles progressive media loading, image/video/YouTube/Lottie/3D rendering, playback handoff, orientation, focus restoration, swipe navigation, and scoped artwork backgrounds.
+- The browser smoke suite covers the ES-module boot path, Works/About, mobile navigation, filters/ALL, Show More state across pageshow/resize/Lightbox close, local-video pause handoff, YouTube handoff/cache reuse, intrinsic video ratios, Shorts framing, 3D focus mode, software logos, and CMS editor fixtures.
+- Current CI for `4432fc668b8248f2fc4f706d5cfb04b38b9d01ba` is green: the Validate portfolio job passed architecture, data/project contracts, Projects runtime, Gallery presentation, lifecycle, JavaScript/CMS syntax, smoke syntax, and Chromium browser smoke; the Pages build also succeeded.
+- The CMS now has a **Curated Views** editor. It can create unlisted view records, reference Main Portfolio projects, create view-owned projects, reorder entries, and preserve ownership boundaries. Public Curated View hash routing is intentionally **not** enabled yet.
+- The current public runtime cache chain is on `20261005-14`; feature modules may use their own cache keys, so those keys must be bumped whenever their source changes.
 
-Phase 3A has therefore started: the architecture is being shaped specifically to support major UI/UX changes without rewriting CMS data, project transport, or media infrastructure. The immediate work remains targeted hardening and presentation ownership, not a visual redesign by itself.
+### Current focus
 
-The deployment gate is intentionally separate from architectural completion: the public pages must load `js/script.js` as an ES module, each page must provide the import map required by optional vendor infrastructure, and the latest branch commits still require GitHub Actions/browser deployment verification before merge toward `main`.
+Phase 3B/3C is now about hardening the behavior that users actually exercise: Show More state stability, media playback lifecycle, intrinsic media sizing, Lightbox layering/contrast, 3D/Lottie isolation, public navigation, and remaining About/CMS edge cases. Curated Views is being hardened as a CMS boundary without coupling it into the public Gallery until its runtime contract is ready.
 
+The deployment gate remains separate from architectural completion: each public-page runtime commit must pass the GitHub Actions validation/Chromium gate before it is considered a safe cutover candidate for the eventual replacement of the legacy deployed site.
 ## Target architecture
 
 ```text
