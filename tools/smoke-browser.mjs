@@ -1383,6 +1383,24 @@ try {
       if (await mediaNav.count() !== 1) throw new Error('CMS Media Library navigation item is missing.');
       const curatedNav = page.locator('.nav-item[data-section="curatedViews"]');
       if (await curatedNav.count() !== 1) throw new Error('CMS Curated Views navigation item is missing.');
+
+      // Start a real CMS save and leave the section before the mocked GitHub
+      // response resolves. The stale save completion must not re-enable or
+      // overwrite the Save button state of the newly selected Media Library.
+      await page.locator('#content #addHero').click();
+      await page.locator('#btnSaveTop').click();
+      await page.waitForTimeout(50);
+      page.once('dialog', dialog => dialog.accept());
+      await mediaNav.click();
+      if (!(await page.locator('#btnSaveTop').isDisabled())) {
+        throw new Error('CMS Save control remained enabled immediately after navigation to Media Library.');
+      }
+      await page.locator('#content #mediaGrid').waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(350);
+      if (!(await page.locator('#btnSaveTop').isDisabled())) {
+        throw new Error('Stale CMS save completion re-enabled the Save control on Media Library.');
+      }
+
       await curatedNav.click();
       await page.locator('#content #addCuratedView').waitFor({ state: 'visible', timeout: 5000 });
 
@@ -1595,6 +1613,20 @@ try {
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
+        if (url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method() === 'PUT') {
+          // Delay a normal content save so the browser smoke test can
+          // navigate away before its completion callback runs.
+          await new Promise(resolve => setTimeout(resolve, 250));
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              content: { sha: 'smoke-saved-content' },
+              commit: { sha: 'smoke-save-commit' }
+            })
+          });
+          return;
+        }
         if (url.pathname === '/repos/Smoke/TestRepo/git/trees/main') {
           // Make Media Library tree hydration cross a deliberate section
           // navigation boundary in the smoke test.
