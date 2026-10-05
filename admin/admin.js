@@ -679,6 +679,7 @@ let renderVersion = 0;
 async function render(){
   const version = ++renderVersion;
   const section = currentSection;
+  const isCurrentRender = () => version === renderVersion && section === currentSection;
 
   if(section === 'guide'){ renderGuide(); return; }
   if(section === 'media'){ RENDERERS.media(); return; }
@@ -689,7 +690,8 @@ async function render(){
     // Navigation can change while GitHub is responding. Never let an older
     // section request paint into the section the user selected afterward.
     if(version !== renderVersion || section !== currentSection) return;
-    if(RENDERERS[section]) await RENDERERS[section](data);
+    if(RENDERERS[section]) await RENDERERS[section](data, isCurrentRender);
+    if(!isCurrentRender()) return;
   }catch(err){
     if(version !== renderVersion || section !== currentSection) return;
     content.innerHTML = '<div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn\'t load this file.</strong><br><span data-error-message></span></div></div>';
@@ -972,8 +974,9 @@ RENDERERS.hero = function(data){
 /* =====================================================================
    8. SECTION: HERO LOOP ANIMATION
    ===================================================================== */
-RENDERERS.heroLoop=async function(data){
+RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
   let settingsResult; try{ settingsResult=await loadSection('settings'); }catch(e){ settingsResult={json:{}}; }
+  if(!isCurrent()) return;
   const timing=(settingsResult.json||{}).heroTiming||{};
   let mode=['latest','manual','mixed'].includes(timing.loopMode)?timing.loopMode:'latest';
   let transition=['kenburns','fade','none'].includes(timing.transitionStyle)?timing.transitionStyle:'kenburns';
@@ -1065,7 +1068,7 @@ RENDERERS.heroLoop=async function(data){
 /* =====================================================================
    8. SECTION: FILTERS & BADGES
    ===================================================================== */
-RENDERERS.filters = async function(data){
+RENDERERS.filters = async function(data, isCurrent=()=>true){
   const raw=data.json||[];
   const filterItems=Array.isArray(raw)?raw:(raw.filters||[]);
   let badgeItems=Array.isArray(raw)?[]:(raw.badges||[]);
@@ -1494,11 +1497,12 @@ RENDERERS.settings = function(data){
 /* =====================================================================
    10. SECTION: REVIEWS
    ===================================================================== */
-RENDERERS.reviews = async function(data){
+RENDERERS.reviews = async function(data, isCurrent=()=>true){
   let items = withUids((data.json||[]).map(x=>({stars:x.stars||5, quote:x.quote||'', author:x.author||''})));
   let showReviews = true;
   let openUid = null;
   try{ const set = await loadSection('settings'); showReviews = !!(set.json && set.json.showReviews); }catch(e){}
+  if(!isCurrent()) return;
 
   function paint(){
     content.innerHTML = sectionHead('Reviews','Client testimonials in the scrolling strip above the footer. Drag the handle to reorder, or click a card to expand it.') +
@@ -1785,7 +1789,7 @@ function serializeProjectEditorModel(project){
   };
 }
 
-RENDERERS.curatedViews = async function(data){
+RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
   const raw=Array.isArray(data.json)?data.json:[];
   // The Curated Views editor can render from its own file immediately. Main
   // Portfolio projects are secondary hydration data used for labels and the
@@ -1884,6 +1888,7 @@ RENDERERS.curatedViews = async function(data){
   // Hydrate Main Portfolio references after the editor is already usable.
   // Updating labels in place preserves the open view and any unsaved edits.
   loadSection('projects').then(pResult=>{
+    if(!isCurrent()) return;
     mains=Array.isArray(pResult.json)?pResult.json:[];
     mainById=new Map(mains.map(p=>[String(p.id||slugify(p.title||'')),p]));
     views.forEach(v=>{
@@ -1901,7 +1906,7 @@ RENDERERS.curatedViews = async function(data){
   return Promise.resolve();
 }
 
-RENDERERS.projects = async function(data){
+RENDERERS.projects = async function(data, isCurrent=()=>true){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
     // Preserve the forward-compatible multi-badge field even while the
@@ -1915,6 +1920,7 @@ RENDERERS.projects = async function(data){
   })));
   let filterDefs = [];
   try{ const f = await loadSection('filters'); const raw=f.json||[]; filterDefs=Array.isArray(raw)?raw:(raw.filters||[]); }catch(e){}
+  if(!isCurrent()) return;
   let openUid = items.length ? items[0]._uid : null;
 
   function paint(){
@@ -3327,14 +3333,16 @@ function computeFallbackThumb(media, thumbnail = {}){
 }
 function computeFallbackThumbSrc(media){ const x=computeFallbackThumb(media); return x?x.src:''; }
 
-RENDERERS.media = async function(){
+RENDERERS.media = async function(data, isCurrent=()=>true){
   content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading your files…</div>`;
   let tree;
   try{ tree = await loadMediaTree(false); }
   catch(err){
+    if(!isCurrent()) return;
     content.innerHTML = `<div class="content-head"><div><h2>Media Library</h2></div></div><div class="banner info" style="border-color:rgba(224,88,79,.4)"><i class="fa-solid fa-triangle-exclamation" style="color:#e0584f"></i><div><strong>Couldn't load your files.</strong><br>${esc(err.message)}</div></div>`;
     return;
   }
+  if(!isCurrent()) return;
   paint();
 
   function childrenOf(path){
