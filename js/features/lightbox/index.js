@@ -139,6 +139,7 @@ let previousPageScrollX = 0;
 let previousPageScrollY = 0;
 let navigationTimer = null;
 let swipeStart = null;
+let openRenderToken = 0;
 
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
@@ -159,6 +160,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   documentRef.body.classList.remove('lm-3d-focus-open');
   currentLightboxIndex = index;
 
+  const openToken = ++openRenderToken;
   const card = activeLightboxCards[currentLightboxIndex];
   const project = getProjectForCard(card);
 
@@ -223,7 +225,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   const capturedPageScrollY = previousPageScrollY;
   for (let frame = 0; frame < 10; frame += 1) {
     windowRef.requestAnimationFrame(() => {
-      if (!lightbox.classList.contains('active')) return;
+      if (!lightbox.classList.contains('active') || openRenderToken !== openToken) return;
       try {
         documentRef.documentElement.scrollLeft = capturedPageScrollX;
         documentRef.documentElement.scrollTop = capturedPageScrollY;
@@ -243,7 +245,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   // position for a bounded number of animation frames so an early measurement
   // cannot be clamped before the target's final artwork height exists.
   const positionInitialMedia = (frame = 0) => {
-    if (!lightbox.classList.contains('active') || currentLightboxIndex !== index) return;
+    if (!lightbox.classList.contains('active') || currentLightboxIndex !== index || openRenderToken !== openToken) return;
 
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
     const target = initialMediaIndex >= 0 ? items[initialMediaIndex] : null;
@@ -303,6 +305,10 @@ function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
 
 // Close Lightbox function
 function closeLightbox({ restoreFocus = true } = {}) {
+  // Invalidate any queued document/media positioning frames from the
+  // previous open. A rapid close/reopen or navigate/back sequence must not
+  // let an older request move the new Lightbox to a stale media target.
+  openRenderToken += 1;
   if (navigationTimer) {
     windowRef.clearTimeout(navigationTimer);
     navigationTimer = null;
