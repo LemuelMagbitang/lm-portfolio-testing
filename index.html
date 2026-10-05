@@ -65,9 +65,9 @@
 <body>
 
   <!-- PAGE TRANSITION — brief branded flourish on real page navigation
-       (Works <-> About), handled by script.js. Deliberately just a
-       logo, deliberately fast — see script.js section 8 for exactly
-       when this does and doesn't fire. -->
+       (Works <-> About). Startup/transition state is owned by the
+       application bootstrap/composition layer; keep this element as the
+       presentation hook only. -->
   <div class="page-transition" id="pageTransition" aria-hidden="false">
     <div class="page-transition-inner">
       <img src="assets/projects/site/portfolio-logo.png" alt="" class="page-transition-logo">
@@ -102,15 +102,14 @@
 
   <!-- HERO SECTION -->
   <header class="hero-section hero-section--message">
-  <!-- Rotating artwork backdrop — unchanged, still auto-filled by script.js -->
+  <!-- Rotating artwork backdrop — populated by the Hero feature from CMS data. -->
   <div class="hero-banner" id="heroBanner"></div>
  
   <div class="hero-overlay quote-overlay">
-    <!-- Intentionally empty. script.js builds the label, statement
-         and credit line inside here on page load, then fades the
-         block in. Don't type text in here — edit HERO_MESSAGES in
-         js/script.js instead, or you'll end up with two versions
-         of the same line that disagree with each other. -->
+    <!-- Intentionally empty. The Hero feature mounts the label, statement
+         and credit line here from the normalized hero/message data.
+         Edit the source content through the CMS/data files rather than
+         duplicating the rendered text in this HTML. -->
     <div class="hero-quote" id="heroQuote"></div>
   </div>
 </header>
@@ -120,22 +119,19 @@
     
     <!-- FILTER TABS -->
     <div class="filter-tabs">
-      <!-- Rebuilt from data/filters.json by script.js on every load.
-           This ALL button is the only permanent one — everything else
-           here is a fallback shown only if that fetch fails. Edit
-           filter tabs through admin/, not here. -->
+      <!-- Rebuilt from data/filters.json by the Gallery feature on every
+           load. This ALL button is the permanent fallback shown before
+           CMS filter data is hydrated. Edit filter tabs through admin/,
+           not here. -->
       <button class="tab-btn active" data-filter="all">ALL</button>
     </div>
 
     <!-- Project cards now live in data/projects.json and are edited
-         through admin/ — see /README-CMS-SETUP.md. Everything
-         inside #portfolioGrid below is rebuilt on every page load by
-         script.js's loadProjectsFromCMS(). The single card kept here
-         is a fallback only: it's what a visitor sees if that fetch
-         ever fails (e.g. data/projects.json is offline or malformed),
-         so the grid is never completely empty. Don't add real
-         projects here — they'll be replaced the instant the fetch
-         succeeds, which is effectively always. -->
+         through admin/. The Projects feature rebuilds #portfolioGrid
+         from normalized project data on load. The single card kept
+         here is a presentation fallback so the grid is not structurally
+         empty if CMS data cannot be hydrated. Do not add real projects
+         here — edit project content through the CMS/data source. -->
 
     <div class="portfolio-wrapper">
 
@@ -174,10 +170,9 @@
       <!-- PRIMARY: Start a Project (the main call-to-action) -->
       <div class="contact-block contact-primary">
         <h2 class="section-title start-project-title hello-heading">START A PROJECT WITH LM.</h2>
-        <!-- To pause the project form (e.g. you're near your Web3Forms
-             monthly limit), open js/script.js and set
-             FORMS_ENABLED.project to false. It'll automatically show an
-             "Email Me" button here instead — no HTML editing needed. -->
+        <!-- To pause the project form, change the Forms setting in the
+             CMS/site settings. The Forms feature will switch this surface
+             to the configured direct-contact fallback without HTML edits. -->
         <div class="form-container" id="projectFormContainer">
           <form class="simple-form" id="projectForm" action="https://api.web3forms.com/submit" method="POST">
             <input type="hidden" name="apikey" value="15822b98-f9a5-42fe-86f0-149ed102f521">
@@ -197,8 +192,8 @@
       <!-- SECONDARY: Leave a Review (lighter visual weight) -->
       <div class="contact-block contact-secondary">
         <h2 class="section-title">LEAVE A REVIEW</h2>
-        <!-- Same idea here: set FORMS_ENABLED.review to false in
-             js/script.js to swap this form for an Email Me button. -->
+        <!-- The Review form is controlled by the site settings/CMS.
+             The Forms feature owns the enabled/disabled fallback state. -->
         <div class="form-container" id="reviewFormContainer">
           <form class="simple-form" id="reviewForm" action="https://api.web3forms.com/submit" method="POST">
             <input type="hidden" name="apikey" value="b0a32379-4abd-4770-a9eb-c9f39b45e7d3">
@@ -229,11 +224,10 @@
   <!-- CLIENT REVIEWS CAROUSEL -->
   <section class="container page-spacing reviews-section" style="border-top: 1px solid #222;">
     <!-- Reviews now live in data/reviews.json and are edited through
-         admin/ — see /README-CMS-SETUP.md. script.js rebuilds
-         #reviewsTrack from that file (and duplicates it to build the
-         seamless scroll loop) before this section ever becomes
-         visible. The one card kept here is a fallback only, shown if
-         that fetch ever fails — don't add real reviews here. -->
+         admin/. The Reviews feature builds #reviewsTrack from the
+         normalized review data before this section becomes visible.
+         The one card kept here is a fallback only, shown if the data
+         fetch fails. Do not add real reviews here. -->
     <div class="reviews-marquee">
       <div class="reviews-track" id="reviewsTrack">
         <div class="review-card">
@@ -280,14 +274,11 @@
     </div>
   </footer>
 
-  <!-- CMS HOOK — points the hero at data/hero.json, site-wide
-       toggles/forms/socials/contact-email at data/settings.json, the
-       whole project grid at data/projects.json, the client reviews
-       strip at data/reviews.json, and the filter tabs + nav dropdown
-       at data/filters.json (all edited via admin/). script.js
-       keeps its hardcoded values/cards as an offline fallback, so
-       nothing on the page is ever blank if these files are missing or
-       you're previewing from file://. -->
+  <!-- APP CONFIG HOOK — public-page startup receives these CMS source
+       locations through the composition/bootstrap layer. The features
+       own their own loading and presentation behavior; keep these values
+       limited to source configuration rather than embedding feature logic
+       in the HTML. -->
   <script>
     window.HERO_MESSAGES_URL = 'data/hero.json';
     window.SETTINGS_URL = 'data/settings.json';
