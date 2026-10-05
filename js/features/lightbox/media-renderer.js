@@ -126,7 +126,8 @@ export function createLightboxMediaRenderer({
       finishPreload = resolve;
       image = new Image();
       image.decoding = 'async';
-      image.fetchPriority = 'high';
+      // Background warm-up yields to critical first-screen media.
+      image.fetchPriority = 'low';
       image.onload = async () => {
         try { await image.decode?.(); } catch (_) {}
         const width = Number(image.naturalWidth);
