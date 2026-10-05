@@ -218,6 +218,129 @@ function validateProjects(projects, filters) {
   });
 }
 
+function validateCuratedViews(views, mainProjects, filters) {
+  if (!Array.isArray(views)) {
+    err('data/curated-views.json must contain an array.');
+    return;
+  }
+
+  const mainIds = new Set((Array.isArray(mainProjects) ? mainProjects : []).map(project => String(project?.id || '').trim()).filter(Boolean));
+  const filterIds = new Set((filters?.filters || []).map(filter => String(filter?.id || '').trim()).filter(Boolean));
+  const viewIds = new Set();
+  const viewSlugs = new Set();
+  const curatedIds = new Set();
+
+  views.forEach((view, i) => {
+    const where = `data/curated-views.json view ${i + 1}`;
+    if (!view || typeof view !== 'object') {
+      err(`${where}: view must be an object.`);
+      return;
+    }
+
+    const id = String(view.id || '').trim();
+    const name = String(view.name || '').trim();
+    const slug = String(view.slug || '').trim();
+
+    if (!id) err(`${where}: missing id.`);
+    else if (viewIds.has(id)) err(`${where}: duplicate view id "${id}".`);
+    else viewIds.add(id);
+
+    if (!name) err(`${where}: missing name.`);
+    if (!slug) err(`${where}: missing slug.`);
+    else {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+        err(`${where}: slug "${slug}" must use lowercase letters, numbers, and hyphens only.`);
+      }
+      if (viewSlugs.has(slug)) err(`${where}: duplicate slug "${slug}".`);
+      else viewSlugs.add(slug);
+      if (id && slug !== id) err(`${where}: id and slug must match to keep the URL identity stable.`);
+    }
+
+    if (!Array.isArray(view.projects)) {
+      err(`${where}: projects must be an ordered array.`);
+      return;
+    }
+
+    const seenMainRefs = new Set();
+    const seenCuratedIds = new Set();
+
+    view.projects.forEach((entry, j) => {
+      const entryWhere = `${where} project entry ${j + 1}`;
+      if (!entry || typeof entry !== 'object') {
+        err(`${entryWhere}: entry must be an object.`);
+        return;
+      }
+
+      const source = String(entry.source || '').trim();
+      if (source === 'main') {
+        const projectId = String(entry.projectId || '').trim();
+        if (!projectId) err(`${entryWhere}: main entry is missing projectId.`);
+        else {
+          if (!mainIds.has(projectId)) err(`${entryWhere}: main project "${projectId}" does not exist in data/projects.json.`);
+          if (seenMainRefs.has(projectId)) err(`${entryWhere}: duplicate main project reference "${projectId}".`);
+          seenMainRefs.add(projectId);
+        }
+        return;
+      }
+
+      if (source !== 'curated') {
+        err(`${entryWhere}: source must be "main" or "curated".`);
+        return;
+      }
+
+      const project = entry.project;
+      if (!project || typeof project !== 'object') {
+        err(`${entryWhere}: curated entry must contain a complete project object.`);
+        return;
+      }
+
+      const projectId = String(project.id || '').trim();
+      if (!projectId) err(`${entryWhere}: curated project is missing id.`);
+      else {
+        const scopedId = `${id}::${projectId}`;
+        if (mainIds.has(projectId)) {
+          err(`${entryWhere}: curated project id "${projectId}" collides with a Main Portfolio project id.`);
+        }
+        if (seenCuratedIds.has(projectId)) err(`${entryWhere}: duplicate curated project id "${projectId}" within this view.`);
+        if (curatedIds.has(scopedId)) err(`${entryWhere}: duplicate scoped curated project id "${projectId}".`);
+        seenCuratedIds.add(projectId);
+        curatedIds.add(scopedId);
+      }
+
+      if (!String(project.title || '').trim()) err(`${entryWhere}: curated project needs a title.`);
+      if (!String(project.subtitle || '').trim()) err(`${entryWhere}: curated project needs a subtitle.`);
+
+      if (project.filters !== undefined && !Array.isArray(project.filters)) {
+        err(`${entryWhere}: curated project filters must be an array when present.`);
+      }
+      if (Array.isArray(project.filters) && project.filters.length) {
+        err(`${entryWhere}: curated-only projects must not use Main Portfolio filters.`);
+      }
+
+      if (project.badges !== undefined && !Array.isArray(project.badges)) {
+        err(`${entryWhere}: curated project badges must be an array when present.`);
+      }
+
+      const thumb = project.thumbnail;
+      if (thumb?.src) {
+        checkLocalRef(thumb.src, `${entryWhere} thumbnail.src`);
+        const thumbExt = extension(thumb.src);
+        if (thumb.type === 'model' && !SUPPORTED_MODEL_EXT.has(thumbExt) && !isExternal(thumb.src)) {
+          err(`${entryWhere}: thumbnail declared as model but source extension is .${thumbExt || 'none'}.`);
+        }
+        if (thumb.orientation !== undefined && !ORIENTATIONS.has(String(thumb.orientation))) {
+          err(`${entryWhere}: invalid thumbnail orientation "${thumb.orientation}".`);
+        }
+      }
+      checkBackground(thumb?.background, `${entryWhere} thumbnail`);
+
+      const media = Array.isArray(project.media) ? project.media : [];
+      if (!media.length) warn(`${entryWhere}: curated project has no media items.`);
+      media.forEach((item, k) => validateMedia(item, `${entryWhere} media ${k + 1}`));
+    });
+  });
+}
+
 function validateHeroLoop(heroLoop) {
   if (!Array.isArray(heroLoop)) return;
   heroLoop.forEach((item, i) => {
