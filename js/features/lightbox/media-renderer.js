@@ -25,21 +25,24 @@ export function createLightboxMediaRenderer({
   const lottieDimensionCache = new Map();
   let youtubePreloadRoot = null;
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
-  const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS) => new Promise(resolve => {
+  const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
     let settled = false;
     const finish = value => {
       if (settled) return;
       settled = true;
       resolve(value);
     };
-    const timer = windowRef?.setTimeout?.(() => finish(false), timeoutMs);
+    const timer = windowRef?.setTimeout?.(() => {
+      try { onTimeout?.(); } catch (_) {}
+      finish(false);
+    }, timeoutMs);
     Promise.resolve(promise)
       .then(value => {
-        if (timer) windowRef?.clearTimeout?.(timer);
+        if (timer !== undefined && timer !== null) windowRef?.clearTimeout?.(timer);
         finish(value);
       })
       .catch(() => {
-        if (timer) windowRef?.clearTimeout?.(timer);
+        if (timer !== undefined && timer !== null) windowRef?.clearTimeout?.(timer);
         finish(false);
       });
   });
@@ -83,9 +86,10 @@ export function createLightboxMediaRenderer({
   }
 
   function preloadImage(url) {
-    return withPreloadTimeout(new Promise(resolve => {
-      if (!url) return resolve(false);
-      const image = new Image();
+    if (!url) return Promise.resolve(false);
+    let image = null;
+    const preload = new Promise(resolve => {
+      image = new Image();
       image.decoding = 'async';
       image.fetchPriority = 'high';
       image.onload = async () => {
@@ -97,13 +101,21 @@ export function createLightboxMediaRenderer({
       };
       image.onerror = () => resolve(false);
       image.src = url;
-    }));
+    });
+    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, () => {
+      if (!image) return;
+      image.onload = null;
+      image.onerror = null;
+      image.src = '';
+    });
   }
 
   function preloadVideo(url) {
-    return withPreloadTimeout(new Promise(resolve => {
-      if (!url) return resolve(false);
-      const video = documentRef.createElement('video');
+    if (!url) return Promise.resolve(false);
+    let video = null;
+    let cleanup = () => {};
+    const preload = new Promise(resolve => {
+      video = documentRef.createElement('video');
       video.preload = 'auto';
       video.muted = true;
       video.playsInline = true;
@@ -124,23 +136,39 @@ export function createLightboxMediaRenderer({
         finish(true);
       };
       const onError = () => finish(false);
+      cleanup = () => {
+        video.removeEventListener('loadedmetadata', onReady);
+        video.removeEventListener('canplay', onReady);
+        video.removeEventListener('error', onError);
+        try { video.pause(); } catch (_) {}
+        try { video.removeAttribute('src'); video.load(); } catch (_) {}
+      };
       video.addEventListener('loadedmetadata', onReady, { once: true });
       video.addEventListener('canplay', onReady, { once: true });
       video.addEventListener('error', onError, { once: true });
       video.src = url;
       video.load();
-    }));
+    });
+    return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup);
   }
 
   async function preloadLottie(url) {
     if (!url || typeof globalThis.fetch !== 'function') return false;
+    const controller = typeof globalThis.AbortController === 'function'
+      ? new globalThis.AbortController()
+      : null;
     try {
       const payload = await withPreloadTimeout(
-        globalThis.fetch(url, { credentials: 'omit', cache: 'force-cache' })
-          .then(async response => {
-            if (!response.ok) return false;
-            return response.json();
-          })
+        globalThis.fetch(url, {
+          credentials: 'omit',
+          cache: 'force-cache',
+          signal: controller?.signal
+        }).then(async response => {
+          if (!response.ok) return false;
+          return response.json();
+        }),
+        MEDIA_PRELOAD_TIMEOUT_MS,
+        () => controller?.abort()
       );
       if (!payload) return false;
       const width = Number(payload?.w);
