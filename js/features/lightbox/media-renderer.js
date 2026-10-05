@@ -193,7 +193,6 @@ export function createLightboxMediaRenderer({
       seen.add(key);
 
       if (type === 'image') jobs.push(preloadImage(url));
-      else if (type === 'video') jobs.push(preloadVideo(url));
       else if (type === 'lottie') jobs.push(preloadLottie(url));
       // YouTube embeds, local video, and 3D binaries are intentionally not
       // prefetched here. Their actual viewer is eager only when the visitor
