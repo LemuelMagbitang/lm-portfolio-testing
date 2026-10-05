@@ -3460,15 +3460,17 @@ function renderGuide(){
         Projects → <code class="k">data/projects.json</code><br>
         About Page → <code class="k">data/about.json</code><br>
         Reviews → <code class="k">data/reviews.json</code><br>
+        Curated Views → <code class="k">data/curated-views.json</code><br>
         Settings & Toggles → <code class="k">data/settings.json</code>
       </div>
     </div>
 
     <div class="panel">
-      <h3>All six are live</h3>
+      <h3>Public content sections are live</h3>
       <p class="panel-sub">Every screen above is read directly by the site — <code class="k">index.html</code> and <code class="k">about/index.html</code>
-      fetch each JSON file on load and rebuild that part of the page from it. Editing here and saving is the whole workflow now;
-      nothing needs a follow-up code change.</p>
+      fetch each JSON file on load and rebuild that part of the page from it. Curated Views is currently a CMS-only authoring surface;
+      its public hash-based runtime is intentionally deferred. Editing the live-backed sections here and saving is the whole workflow now;
+      nothing needs a follow-up code change for those sections.</p>
     </div>
 
     <div class="panel">
