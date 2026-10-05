@@ -79,7 +79,7 @@ assert.match(mediaRendererSource, /type === 'image'/);
 assert.match(mediaRendererSource, /type === 'video'/);
 assert.match(mediaRendererSource, /type === 'youtube'/);
 assert.match(mediaRendererSource, /const criticalIndex = media\.findIndex\(item => \{/);
-assert.match(mediaRendererSource, /const critical =\s*media\.indexOf\(item\) === criticalIndex\s*\|\|\s*type === 'model'/);
+assert.match(mediaRendererSource, /const critical =\s*media\.indexOf\(item\) === primaryIndex\s*\|\|\s*type === 'model'/);
 assert.match(mediaRendererSource, /type === 'youtube'[\s\S]*scheduleJob\(key, \(\) => preloadYouTube\(url\), false\)/);
 assert.match(mediaRendererSource, /const secondaryPromise = runPreloadPool\(/);
 assert.match(mediaRendererSource, /type === 'lottie'/);
