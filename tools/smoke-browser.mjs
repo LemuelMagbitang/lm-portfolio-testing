@@ -1362,6 +1362,14 @@ try {
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/admin/', async page => {
+      // CMS boot is asynchronous because the connection is validated against
+      // GitHub before the application shell is exposed. Do not start section
+      // interaction until the real app shell is active; otherwise a fast
+      // runner can click a sidebar item while enterApp() is still redirecting
+      // the initial section back to Hero.
+      await page.locator('#app.active').waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator('#topbar.active').waitFor({ state: 'visible', timeout: 10000 });
+
       const nav = page.locator('.nav-item[data-section="about"]');
       if (await nav.count() !== 1) throw new Error('CMS About navigation item is missing.');
 
