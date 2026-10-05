@@ -395,29 +395,33 @@ export function createLightboxMediaRenderer({
       }
     });
 
-    // Import Three.js + the format loaders while the loading screen is up so
-    // opening the first 3D item does not pay the module-download cost again.
+    // Keep the 3D viewer module in the startup-critical tier too. The Works
+    // document also modulepreloads it, so this closes the remaining race where
+    // the first 3D open beats the module graph.
     if (hasModel && typeof preloadModelModule === 'function') {
-      secondaryJobs.push(() => Promise.resolve().then(preloadModelModule));
+      pushMediaJob(() => Promise.resolve().then(preloadModelModule), { critical: true });
     }
 
-    // First warm one primary media item per project plus project-level
-    // backgrounds. Secondary artwork then drains behind that queue. This keeps
-    // the loading phase useful for first-open interactions without allowing a
-    // large multi-image project to monopolize the preload workers.
+    // The critical tier is what the branded LM loading gate waits for:
+    // one primary media item per project plus project-level backgrounds and,
+    // when present, the 3D viewer module graph.
     const criticalResults = await runPreloadPool(
       criticalJobs,
       constrainedNetwork ? 3 : 6
     );
-    const secondaryResults = await runPreloadPool(
+
+    // Secondary artwork continues in the background after the critical tier
+    // is ready. Its completion must never hold the first paint hostage.
+    void runPreloadPool(
       secondaryJobs,
       constrainedNetwork ? 2 : 6
-    );
-    const results = criticalResults.concat(secondaryResults);
+    ).catch(() => {});
 
     return {
-      total: results.length,
-      ready: results.filter(Boolean).length
+      total: criticalJobs.length + secondaryJobs.length,
+      ready: criticalResults.filter(Boolean).length,
+      criticalTotal: criticalJobs.length,
+      criticalReady: criticalResults.filter(Boolean).length
     };
   }
 
