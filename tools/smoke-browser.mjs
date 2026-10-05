@@ -1467,8 +1467,10 @@ try {
       await page.locator('#btnSaveTop').click();
       await page.waitForTimeout(50);
 
-      // Cancelling an unsaved-change navigation must leave the originating
-      // section and its active deployment tracker untouched.
+      // Cancelling an unsaved-change navigation happens while the intentionally
+      // delayed save is still in flight. The originating section must remain
+      // active, and the in-flight save must not be mistaken for deployment
+      // tracking yet.
       let cancelledNavigationDialogSeen = false;
       page.once('dialog', dialog => {
         cancelledNavigationDialogSeen = true;
@@ -1479,9 +1481,19 @@ try {
       if ((await page.locator('#topbarSection').textContent()).trim() !== 'Hero Messages') {
         throw new Error('Cancelling dirty CMS navigation unexpectedly changed sections.');
       }
-      if ((await page.locator('#saveStatusText').textContent()).trim() !== 'Deploying…') {
-        throw new Error('Cancelling dirty CMS navigation incorrectly cleared the active deployment status.');
+      const statusWhileSaveIsInFlight = (await page.locator('#saveStatusText').textContent()).trim();
+      if (!statusWhileSaveIsInFlight) {
+        throw new Error('Cancelling dirty CMS navigation cleared the originating Save status while the save was still in flight.');
       }
+
+      // The delayed save should then complete on the still-current section and
+      // transition into deployment tracking. This verifies the cancellation
+      // did not invalidate the tracker that belongs to the approved save.
+      await page.waitForFunction(
+        () => document.querySelector('#saveStatusText')?.textContent?.trim() === 'Deploying…',
+        null,
+        { timeout: 2000 }
+      );
 
       page.once('dialog', dialog => dialog.accept());
       await mediaNav.click();
