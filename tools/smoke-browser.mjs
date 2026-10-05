@@ -1395,13 +1395,19 @@ try {
 
       let staleCreateDialog = false;
       const staleDialogHandler = dialog => {
-        staleCreateDialog = true;
-        dialog.dismiss().catch(() => {});
+        if(dialog.type() === 'prompt'){
+          staleCreateDialog = true;
+          dialog.dismiss().catch(() => {});
+          return;
+        }
+        // The Curated View is deliberately dirty here, so leaving it opens
+        // the CMS's normal unsaved-changes confirmation. Accept that
+        // navigation confirmation while keeping prompt handling observable.
+        dialog.accept().catch(() => {});
       };
       page.on('dialog', staleDialogHandler);
       await page.locator('#content [data-create]').click();
       await page.waitForTimeout(50);
-      page.once('dialog', dialog => dialog.accept());
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
       await page.waitForTimeout(350);
