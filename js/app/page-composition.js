@@ -66,6 +66,7 @@ export async function createPortfolioApp({
   const navigation = initNavigation({ root });
 
   let lightboxFeature = null;
+  let galleryFeatureRef = null;
   let pendingProjectOpen = null;
 
   const hasProjectGallery = !!root.getElementById('portfolioGrid');
@@ -142,7 +143,9 @@ export async function createPortfolioApp({
       parseYouTubeUrl,
       resolveAssetUrl: siteAssetUrl,
       mountModelViewer,
-      getActiveCards: () => Array.from(root.querySelectorAll('.project-card')),
+      getActiveCards: () =>
+        galleryFeatureRef?.getActiveCards?.() ||
+        Array.from(root.querySelectorAll('.project-card')),
       getProjectForCard
     });
   } catch (error) {
@@ -220,6 +223,11 @@ export async function createPortfolioApp({
     }),
     galleryPromise
   ]);
+
+  // The Gallery owns the active-card contract. Assign it as soon as the
+  // Gallery finishes initialization so the already-created Lightbox switches
+  // from its safe DOM fallback to filtered project navigation.
+  galleryFeatureRef = galleryFeature;
 
   const ABOUT_PAGE_PREFETCH_TIMEOUT_MS = 5000;
   const aboutPagePrefetchPromise = !root.body?.classList.contains('about-page')
@@ -315,6 +323,7 @@ export async function createPortfolioApp({
     destroy() {
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
+      galleryFeatureRef = null;
       galleryFeature?.destroy?.();
       destroyProjects();
       navigation.destroy?.();
