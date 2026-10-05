@@ -68,6 +68,9 @@ assert.match(mediaRendererSource, /const activePreloadCleanups = new Set\(\)/);
 assert.match(mediaRendererSource, /function registerPreloadCleanup\(cleanup\)/);
 assert.match(mediaRendererSource, /Array\.from\(activePreloadCleanups\)\.reverse\(\)/);
 assert.match(mediaRendererSource, /destroyed = true;/);
+assert.match(mediaRendererSource, /\['image', 'lottie'\]\.includes\(type\)/);
+assert.doesNotMatch(mediaRendererSource, /\['image', 'video', 'lottie'\]\.includes\(type\)/);
+assert.match(mediaRendererSource, /videoDimensionCache\.set\(cacheKey, \{ width, height \}\)/);
 assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
