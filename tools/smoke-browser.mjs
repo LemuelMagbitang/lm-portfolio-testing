@@ -68,9 +68,23 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     throw new Error(`${label} filter navigation link is missing: ${href}`);
   }
 
-  // Exercise the real Playwright click path. This includes the mobile
-  // navigation's link listener and closes the menu before Gallery settles the
-  // target filter/scroll state.
+  // The filter links live inside the Works dropdown on desktop, so reveal
+  // that real interactive surface before clicking. On mobile the hamburger
+  // test opens the same .nav-links surface and the links are already visible.
+  const viewport = page.viewportSize();
+  if ((viewport?.width || 0) >= 768) {
+    const dropdown = page.locator('.nav-item-dropdown').first();
+    if (await dropdown.count() !== 1) {
+      throw new Error(`${label} Works dropdown is missing.`);
+    }
+    await dropdown.hover();
+    if (!(await link.isVisible())) {
+      throw new Error(`${label} filter navigation link did not become visible after opening the desktop dropdown.`);
+    }
+  } else if (!(await link.isVisible())) {
+    throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
+  }
+
   await link.click();
   await page.waitForFunction(hash => window.location.hash === hash, expectedHash, { timeout: 3000 });
   await page.waitForFunction(() => {
