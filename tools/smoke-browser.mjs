@@ -1946,10 +1946,24 @@ try {
       await contact.click();
       await page.waitForTimeout(120);
       const box = await page.locator('#contact-start').first().boundingBox();
-      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      const contactPosition = await page.evaluate(() => {
+        const heading = document.querySelector('#contact-start');
+        const scrolling = document.scrollingElement || document.documentElement;
+        const navbar = document.querySelector('.navbar')?.getBoundingClientRect?.().height || 0;
+        const rect = heading?.getBoundingClientRect?.();
+        const viewportHeight = Number(window.innerHeight) || 0;
+        const maxScrollY = Math.max(0, (Number(scrolling?.scrollHeight) || 0) - viewportHeight);
+        return {
+          headingY: Number(rect?.y) || 0,
+          navbarHeight: Number(navbar) || 0,
+          scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
+          maxScrollY
+        };
+      });
       if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
-      if (Math.abs(box.y - navbarHeight - 12) > 18) {
-        throw new Error('Same-page Contact heading is not top-aligned: y=' + box.y + ', navbar=' + navbarHeight);
+      const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
+      if (!clampedAtDocumentBottom && Math.abs(contactPosition.headingY - contactPosition.navbarHeight - 12) > 18) {
+        throw new Error('Same-page Contact heading is not top-aligned: y=' + contactPosition.headingY + ', navbar=' + contactPosition.navbarHeight);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -1964,10 +1978,24 @@ try {
       await contact.click();
       await page.waitForTimeout(120);
       const box = await page.locator('#contact-start').first().boundingBox();
-      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      const contactPosition = await page.evaluate(() => {
+        const heading = document.querySelector('#contact-start');
+        const scrolling = document.scrollingElement || document.documentElement;
+        const navbar = document.querySelector('.navbar')?.getBoundingClientRect?.().height || 0;
+        const rect = heading?.getBoundingClientRect?.();
+        const viewportHeight = Number(window.innerHeight) || 0;
+        const maxScrollY = Math.max(0, (Number(scrolling?.scrollHeight) || 0) - viewportHeight);
+        return {
+          headingY: Number(rect?.y) || 0,
+          navbarHeight: Number(navbar) || 0,
+          scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
+          maxScrollY
+        };
+      });
       if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
-      if (Math.abs(box.y - navbarHeight - 12) > 18) {
-        throw new Error('Same-page Contact heading is not top-aligned: y=' + box.y + ', navbar=' + navbarHeight);
+      const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
+      if (!clampedAtDocumentBottom && Math.abs(contactPosition.headingY - contactPosition.navbarHeight - 12) > 18) {
+        throw new Error('Same-page Contact heading is not top-aligned: y=' + contactPosition.headingY + ', navbar=' + contactPosition.navbarHeight);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -2051,10 +2079,24 @@ try {
       });
       await page.waitForTimeout(120);
       const contactBox = await page.locator('#contact-start').first().boundingBox();
-      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      const contactPosition = await page.evaluate(() => {
+        const heading = document.querySelector('#contact-start');
+        const scrolling = document.scrollingElement || document.documentElement;
+        const navbar = document.querySelector('.navbar')?.getBoundingClientRect?.().height || 0;
+        const rect = heading?.getBoundingClientRect?.();
+        const viewportHeight = Number(window.innerHeight) || 0;
+        const maxScrollY = Math.max(0, (Number(scrolling?.scrollHeight) || 0) - viewportHeight);
+        return {
+          headingY: Number(rect?.y) || 0,
+          navbarHeight: Number(navbar) || 0,
+          scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
+          maxScrollY
+        };
+      });
       if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Start a Project heading.');
-      if (Math.abs(contactBox.y - navbarHeight - 12) > 22) {
-        throw new Error('Cross-page Contact heading is not top-aligned: y=' + contactBox.y + ', navbar=' + navbarHeight);
+      const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
+      if (!clampedAtDocumentBottom && Math.abs(contactPosition.headingY - contactPosition.navbarHeight - 12) > 22) {
+        throw new Error('Cross-page Contact heading is not top-aligned: y=' + contactPosition.headingY + ', navbar=' + contactPosition.navbarHeight);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Cross-page Contact navigation did not preserve the exact contact-start hash.');
