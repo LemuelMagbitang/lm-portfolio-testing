@@ -1864,6 +1864,28 @@ try {
       }
     }, { width: 1280, height: 900 });
 
+    await smokePage(browser, '/', async page => {
+      const contact = page.locator('.nav-links a[href="#contact-start"]').first();
+      if (await contact.count() !== 1) {
+        throw new Error('Works page Contact navigation does not target the exact Start a Project anchor.');
+      }
+      await contact.click();
+      await page.waitForTimeout(120);
+      const box = await page.locator('#contact-start').first().boundingBox();
+      const viewport = await page.evaluate(() => ({
+        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
+        top: Number(window.visualViewport?.offsetTop) || 0
+      }));
+      if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
+      if (centerDelta > 32) {
+        throw new Error('Same-page Contact navigation is not centered: delta=' + centerDelta);
+      }
+      if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
+        throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
+      }
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
@@ -1942,11 +1964,17 @@ try {
       await page.waitForTimeout(120);
       const contactHeading = page.locator('#contact-start').first();
       const contactBox = await contactHeading.boundingBox();
-      const navbarHeight = await page.locator('.navbar').boundingBox().then(box => box?.height || 0);
+      const contactViewport = await page.evaluate(() => ({
+        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
+        top: Number(window.visualViewport?.offsetTop) || 0
+      }));
       if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Start a Project heading.');
-      if (contactBox.y < navbarHeight - 8 || contactBox.y > navbarHeight + 60) {
+      const headingCenter = contactBox.y + contactBox.height / 2;
+      const viewportCenter = contactViewport.top + contactViewport.height / 2;
+      if (Math.abs(headingCenter - viewportCenter) > 32) {
         throw new Error(
-          `Cross-page Contact navigation landed at the wrong vertical offset: headingY=${contactBox.y}, navbarH=${navbarHeight}`
+          'Cross-page Contact navigation is not visually centered: headingCenter=' +
+          headingCenter + ', viewportCenter=' + viewportCenter
         );
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
