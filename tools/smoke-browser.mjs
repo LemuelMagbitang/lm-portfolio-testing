@@ -762,6 +762,42 @@ try {
         );
       }
 
+      const focused3DScrollContract = await page.evaluate(() => {
+        const modal = document.querySelector('#lightbox.is-3d-focused');
+        if (!modal) return null;
+        const style = getComputedStyle(modal);
+        const scrollTopBeforeWheel = modal.scrollTop;
+        modal.scrollTop = 96;
+        const event = new WheelEvent('wheel', {
+          bubbles: true,
+          cancelable: true,
+          deltaY: 260
+        });
+        modal.dispatchEvent(event);
+        const scrollTopAfterWheel = modal.scrollTop;
+        modal.scrollTop = scrollTopBeforeWheel;
+        return {
+          position: style.position,
+          overflowY: style.overflowY,
+          overflowX: style.overflowX,
+          touchAction: style.touchAction,
+          overscrollBehavior: style.overscrollBehavior,
+          scrollTopBeforeWheel,
+          scrollTopAfterWheel,
+          wheelDefaultPrevented: event.defaultPrevented
+        };
+      });
+      if (!focused3DScrollContract ||
+          focused3DScrollContract.position !== 'fixed' ||
+          focused3DScrollContract.overflowY !== 'hidden' ||
+          focused3DScrollContract.overflowX !== 'hidden' ||
+          focused3DScrollContract.touchAction !== 'none' ||
+          focused3DScrollContract.overscrollBehavior !== 'none' ||
+          focused3DScrollContract.scrollTopAfterWheel !== 96 ||
+          !focused3DScrollContract.wheelDefaultPrevented) {
+        throw new Error('Focused 3D environment is not scroll-locked: ' + JSON.stringify(focused3DScrollContract));
+      }
+
       const focusedModelGeometry = await modelShell.evaluate(el => {
         const r = el.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height };
