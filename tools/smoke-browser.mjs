@@ -1500,6 +1500,39 @@ try {
             throw new Error('YouTube playing-state handoff did not pause the previous player after repeated playback.');
           }
         }
+
+        // Project navigation must also stop the currently playing YouTube
+        // player before the old media subtree is replaced. Mark one frame so
+        // its pause command can be observed after the navigation moves it to
+        // the hidden cache root.
+        if (await youtubeFrames.count() >= 1) {
+          await youtubeFrames.first().evaluate(el => {
+            el.dataset.smokeCrossProject = 'true';
+          });
+          await page.evaluate(() => {
+            const active = document.querySelector('#lightboxMediaContainer iframe[data-lm-youtube][data-smoke-cross-project="true"]');
+            if (!active) return;
+            window.dispatchEvent(new MessageEvent('message', {
+              origin: 'https://www.youtube.com',
+              source: active.contentWindow,
+              data: JSON.stringify({ event: 'onStateChange', info: 1 })
+            }));
+          });
+          await page.locator('.lightbox-next').first().click();
+          await page.waitForTimeout(360);
+
+          const crossProjectPause = await page.locator(
+            'iframe[data-lm-youtube][data-smoke-cross-project="true"]'
+          ).first().getAttribute('data-lm-youtube-pause-requested');
+          if (!crossProjectPause) {
+            throw new Error('Project-to-project Lightbox navigation did not pause the previous YouTube player.');
+          }
+        }
+
+        await page.locator('#lightboxClose').click();
+        await page.waitForTimeout(100);
+        await playbackCard.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       }
 
       if (youtubeFrames.count && await youtubeFrames.count()) {
