@@ -1224,10 +1224,10 @@ try {
         const filterScrollImmediately = await page.evaluate(() => window.scrollY);
         await page.waitForTimeout(850);
         const filterScrollAfterTimerWindow = await page.evaluate(() => window.scrollY);
-        if (
-          Math.abs(filterScrollImmediately - filterScrollBaseline) > 12 ||
-          Math.abs(filterScrollAfterTimerWindow - filterScrollImmediately) > 12
-        ) {
+        // A filter change may legitimately shrink the document enough for the
+        // browser to clamp scrollY immediately. The regression is specifically
+        // about a delayed movement after Gallery render has settled.
+        if (Math.abs(filterScrollAfterTimerWindow - filterScrollImmediately) > 12) {
           throw new Error(
             `Show Less follow-scroll leaked across filter render: baseline=${filterScrollBaseline}, immediate=${filterScrollImmediately}, after=${filterScrollAfterTimerWindow}`
           );
