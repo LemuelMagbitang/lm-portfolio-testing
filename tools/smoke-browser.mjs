@@ -869,8 +869,10 @@ try {
         const modal = document.querySelector('#lightbox.is-3d-focused');
         if (!modal) return null;
         const style = getComputedStyle(modal);
-        const scrollTopBeforeWheel = modal.scrollTop;
+        const scrollHeightBeforeWheel = modal.scrollHeight;
+        const clientHeightBeforeWheel = modal.clientHeight;
         modal.scrollTop = 96;
+        const scrollTopBeforeWheel = modal.scrollTop;
         const event = new WheelEvent('wheel', {
           bubbles: true,
           cancelable: true,
@@ -878,13 +880,14 @@ try {
         });
         modal.dispatchEvent(event);
         const scrollTopAfterWheel = modal.scrollTop;
-        modal.scrollTop = scrollTopBeforeWheel;
         return {
           position: style.position,
           overflowY: style.overflowY,
           overflowX: style.overflowX,
           touchAction: style.touchAction,
           overscrollBehavior: style.overscrollBehavior,
+          scrollHeightBeforeWheel,
+          clientHeightBeforeWheel,
           scrollTopBeforeWheel,
           scrollTopAfterWheel,
           wheelDefaultPrevented: event.defaultPrevented
@@ -896,7 +899,8 @@ try {
           focused3DScrollContract.overflowX !== 'hidden' ||
           focused3DScrollContract.touchAction !== 'none' ||
           focused3DScrollContract.overscrollBehavior !== 'none' ||
-          focused3DScrollContract.scrollTopAfterWheel !== 96 ||
+          focused3DScrollContract.scrollTopBeforeWheel !== 0 ||
+          focused3DScrollContract.scrollTopAfterWheel !== 0 ||
           !focused3DScrollContract.wheelDefaultPrevented) {
         throw new Error('Focused 3D environment is not scroll-locked: ' + JSON.stringify(focused3DScrollContract));
       }
