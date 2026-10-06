@@ -115,7 +115,7 @@ assert.ok(sharedProjectEditorIndex >= 0 && sharedProjectEditorIndex < curatedRen
 assert.ok(sharedProjectEditorIndex < projectsRendererIndex);
 assert.match(adminSource, /buildProjectBody\(row\.querySelector\('\[data-editor\]'\),e\.project,\{showFilters:false,onChanged:markDirty,filterDefs:\[\]\}\)/);
 assert.match(adminSource, /buildProjectBody\(wrap\.querySelector\('\[data-body\]'\), p, \{filterDefs, badgeDefs\}\)/);
-assert.match(adminSource, /const deletedBadgeLabels\\s*=\\s*new Set\\(\\)/);
+assert.match(adminSource, /const deletedBadgeLabels\s*=\s*new Set\(\)/);
 assert.match(adminSource, /function getBadgeRenameMap\(\)/);
 assert.match(adminSource, /project\.badges=\[\.\.\.new Set\(nextBadges\)\]/);
 assert.match(adminSource, /project\.badge=project\.badges\[0\]\|\|''/);
