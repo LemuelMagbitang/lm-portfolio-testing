@@ -7,6 +7,21 @@
 const HERO_LOOP_MODES = new Set(['latest', 'manual', 'mixed']);
 const HERO_TRANSITIONS = new Set(['kenburns', 'fade', 'none']);
 
+export const SOCIAL_PLATFORMS = Object.freeze([
+  Object.freeze({ key: 'instagram', label: 'Instagram', icon: 'fa-brands fa-instagram' }),
+  Object.freeze({ key: 'tiktok', label: 'TikTok', icon: 'fa-brands fa-tiktok' }),
+  Object.freeze({ key: 'youtube', label: 'YouTube', icon: 'fa-brands fa-youtube' }),
+  Object.freeze({ key: 'behance', label: 'Behance', icon: 'fa-brands fa-behance' }),
+  Object.freeze({ key: 'artstation', label: 'ArtStation', icon: 'fa-brands fa-artstation' }),
+  Object.freeze({ key: 'linkedin', label: 'LinkedIn', icon: 'fa-brands fa-linkedin-in' }),
+  Object.freeze({ key: 'x', label: 'X', icon: 'fa-brands fa-x-twitter' }),
+  Object.freeze({ key: 'facebook', label: 'Facebook', icon: 'fa-brands fa-facebook-f' }),
+  Object.freeze({ key: 'dribbble', label: 'Dribbble', icon: 'fa-brands fa-dribbble' }),
+  Object.freeze({ key: 'vimeo', label: 'Vimeo', icon: 'fa-brands fa-vimeo-v' })
+]);
+
+const SOCIAL_PLATFORM_KEYS = new Set(SOCIAL_PLATFORMS.map(platform => platform.key));
+
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
   protectionEnabled: true,
   formsEnabled: Object.freeze({ project: true, review: true }),
@@ -33,6 +48,19 @@ function stringValue(value) {
 
 function booleanValue(value, fallback) {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+function safeSocialUrl(value) {
+  const href = stringValue(value);
+  if (!href) return '';
+  try {
+    const parsed = new URL(href);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+      ? parsed.href
+      : '';
+  } catch (_) {
+    return '';
+  }
 }
 
 export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
@@ -85,11 +113,16 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
     },
     redirectUrl: stringValue(source.redirectUrl),
     contactEmail: stringValue(source.contactEmail),
-    socials: {
-      instagram: stringValue(socials.instagram),
-      tiktok: stringValue(socials.tiktok),
-      youtube: stringValue(socials.youtube)
-    },
+    socials: Object.fromEntries(
+      SOCIAL_PLATFORMS
+        .filter(platform => SOCIAL_PLATFORM_KEYS.has(platform.key))
+        .map(platform => [
+          platform.key,
+          Object.prototype.hasOwnProperty.call(socials, platform.key)
+            ? safeSocialUrl(socials[platform.key])
+            : safeSocialUrl(defaults.socials?.[platform.key])
+        ])
+    ),
     siteTitle: stringValue(source.siteTitle),
     ogImage: stringValue(source.ogImage),
     ogImageVersion: stringValue(source.ogImageVersion),

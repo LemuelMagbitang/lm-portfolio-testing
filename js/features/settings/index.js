@@ -7,13 +7,7 @@
 import {
   DEFAULT_SITE_SETTINGS,
   normalizeSiteSettings
-} from '../../data/site-settings.js';
-
-const SOCIAL_LABELS = {
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-  youtube: 'YouTube'
-};
+} from '../../data/site-settings.js?v=20261006-01';
 
 export async function initSiteSettings({
   url,
@@ -53,20 +47,51 @@ export async function initSiteSettings({
     }
   }
 
+  function renderSocials(settings) {
+    const documentRef = root?.ownerDocument || root;
+    if (!documentRef || typeof documentRef.createElement !== 'function') return;
+
+    const links = SOCIAL_PLATFORMS
+      .filter(platform => settings.socials?.[platform.key])
+      .map(platform => ({
+        ...platform,
+        href: settings.socials[platform.key]
+      }));
+
+    root?.querySelectorAll('.social-icons').forEach(container => {
+      const fragment = documentRef.createDocumentFragment();
+
+      links.forEach(platform => {
+        const anchor = documentRef.createElement('a');
+        anchor.href = platform.href;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.setAttribute('aria-label', platform.label);
+
+        const icon = documentRef.createElement('i');
+        icon.className = platform.icon;
+        anchor.appendChild(icon);
+        fragment.appendChild(anchor);
+      });
+
+      if (settings.contactEmail) {
+        const email = documentRef.createElement('a');
+        email.href = `mailto:${settings.contactEmail}`;
+        email.setAttribute('aria-label', 'Email');
+
+        const icon = documentRef.createElement('i');
+        icon.className = 'fa-solid fa-envelope';
+        email.appendChild(icon);
+        fragment.appendChild(email);
+      }
+
+      container.replaceChildren(fragment);
+    });
+  }
+
   function applyDom(settings) {
 
-    if (settings.contactEmail) {
-      root?.querySelectorAll('a[href^="mailto:"]').forEach(anchor => {
-        const query = anchor.getAttribute('href')?.split('?')[1];
-        anchor.href = `mailto:${settings.contactEmail}${query ? `?${query}` : ''}`;
-      });
-    }
-
-    Object.entries(SOCIAL_LABELS).forEach(([key, label]) => {
-      const href = settings.socials[key];
-      if (!href) return;
-      root?.querySelectorAll(`a[aria-label="${label}"]`).forEach(anchor => { anchor.href = href; });
-    });
+    renderSocials(settings);
 
     setHiddenField('projectForm', 'apikey', settings.web3forms.projectKey);
     setHiddenField('reviewForm', 'apikey', settings.web3forms.reviewKey);

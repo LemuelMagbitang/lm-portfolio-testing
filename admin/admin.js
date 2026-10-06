@@ -1446,6 +1446,19 @@ async function publishOgImage(file, localSettings){
   return {path,version,imageUrl,commitSha:commit.sha};
 }
 
+const CMS_SOCIAL_PLATFORMS = [
+  { key:'instagram', label:'Instagram', icon:'fa-brands fa-instagram' },
+  { key:'tiktok', label:'TikTok', icon:'fa-brands fa-tiktok' },
+  { key:'youtube', label:'YouTube', icon:'fa-brands fa-youtube' },
+  { key:'behance', label:'Behance', icon:'fa-brands fa-behance' },
+  { key:'artstation', label:'ArtStation', icon:'fa-brands fa-artstation' },
+  { key:'linkedin', label:'LinkedIn', icon:'fa-brands fa-linkedin-in' },
+  { key:'x', label:'X', icon:'fa-brands fa-x-twitter' },
+  { key:'facebook', label:'Facebook', icon:'fa-brands fa-facebook-f' },
+  { key:'dribbble', label:'Dribbble', icon:'fa-brands fa-dribbble' },
+  { key:'vimeo', label:'Vimeo', icon:'fa-brands fa-vimeo-v' }
+];
+
 /* =====================================================================
    9. SECTION: SETTINGS & TOGGLES
    ===================================================================== */
@@ -1453,7 +1466,7 @@ RENDERERS.settings = function(data){
   let s = data.json || {};
   s.formsEnabled = s.formsEnabled || {project:true, review:true};
   s.web3forms = s.web3forms || {projectKey:'', reviewKey:''};
-  s.socials = s.socials || {instagram:'',tiktok:'',youtube:''};
+  s.socials = s.socials && typeof s.socials === 'object' ? s.socials : {};
   s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
   s.ogImage = s.ogImage || 'assets/projects/site/og-image.jpg';
   s.ogImageVersion = Math.max(1, Number(s.ogImageVersion) || 2);
@@ -1483,12 +1496,11 @@ RENDERERS.settings = function(data){
 
     <div class="panel">
       <h3>Contact & Socials</h3>
+      <p class="panel-sub">Choose which supported profiles appear in the public footer/contact areas. Reorder them here by changing the rows; empty URLs are not published.</p>
       <div class="field"><label class="field-label">Contact email</label><input id="s_email" value="${attr(s.contactEmail||'')}"></div>
-      <div class="row">
-        <div class="field"><label class="field-label"><i class="fa-brands fa-instagram"></i> Instagram</label><input id="s_ig" value="${attr(s.socials.instagram)}"></div>
-        <div class="field"><label class="field-label"><i class="fa-brands fa-tiktok"></i> TikTok</label><input id="s_tt" value="${attr(s.socials.tiktok)}"></div>
-        <div class="field"><label class="field-label"><i class="fa-brands fa-youtube"></i> YouTube</label><input id="s_yt" value="${attr(s.socials.youtube)}"></div>
-      </div>
+      <div id="socialEditor" class="social-editor"></div>
+      <button class="ghost" id="addSocial" type="button"><i class="fa-solid fa-plus"></i> Add social profile</button>
+      <div class="hint">Supported options include Instagram, TikTok, YouTube, Behance, ArtStation, LinkedIn, X, Facebook, Dribbble, and Vimeo.</div>
     </div>
 
     <div class="panel">
@@ -1526,8 +1538,95 @@ RENDERERS.settings = function(data){
       flagUnsaved();
     });
   });
+  const socialEditor = content.querySelector('#socialEditor');
+  const addSocialBtn = content.querySelector('#addSocial');
+  let socialRows = Object.entries(s.socials)
+    .filter(([key]) => CMS_SOCIAL_PLATFORMS.some(platform => platform.key === key))
+    .map(([key, url]) => ({ key, url: String(url || '') }));
+
+  function availableSocialKey() {
+    const used = new Set(socialRows.map(row => row.key));
+    return CMS_SOCIAL_PLATFORMS.find(platform => !used.has(platform.key))?.key || null;
+  }
+
+  function syncSocialOptions() {
+    const selects = socialEditor?.querySelectorAll('select[data-social-key]') || [];
+    const used = socialRows.map(row => row.key);
+    selects.forEach((select, index) => {
+      Array.from(select.options).forEach(option => {
+        option.disabled = used.includes(option.value) && option.value !== socialRows[index].key;
+      });
+    });
+    if (addSocialBtn) addSocialBtn.disabled = !availableSocialKey();
+  }
+
+  function paintSocialRows() {
+    if (!socialEditor) return;
+    socialEditor.innerHTML = socialRows.map((row, index) => `
+      <div class="social-row" data-social-index="${index}">
+        <div class="field">
+          <label class="field-label">Platform</label>
+          <div class="social-platform-select">
+            <i class="${CMS_SOCIAL_PLATFORMS.find(platform => platform.key === row.key)?.icon || 'fa-solid fa-link'}"></i>
+            <select data-social-key aria-label="Social platform">
+              ${CMS_SOCIAL_PLATFORMS.map(platform => `<option value="${attr(platform.key)}" ${platform.key === row.key ? 'selected' : ''}>${esc(platform.label)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Profile URL</label>
+          <input data-social-url value="${attr(row.url)}" placeholder="https://...">
+        </div>
+        <button class="icon-btn social-remove" type="button" data-social-remove title="Remove social profile" aria-label="Remove social profile"><i class="fa-solid fa-trash"></i></button>
+      </div>`).join('');
+
+    socialEditor.querySelectorAll('[data-social-index]').forEach(rowEl => {
+      const index = Number(rowEl.dataset.socialIndex);
+      const row = socialRows[index];
+      const platformSelect = rowEl.querySelector('[data-social-key]');
+      const urlInput = rowEl.querySelector('[data-social-url]');
+
+      platformSelect.addEventListener('change', event => {
+        const duplicate = socialRows.some((item, itemIndex) => itemIndex !== index && item.key === event.target.value);
+        if (duplicate) {
+          event.target.value = row.key;
+          toast('That social platform is already selected.', true);
+          return;
+        }
+        row.key = event.target.value;
+        flagUnsaved();
+        paintSocialRows();
+      });
+
+      urlInput.addEventListener('input', event => {
+        row.url = event.target.value;
+        flagUnsaved();
+      });
+
+      rowEl.querySelector('[data-social-remove]').addEventListener('click', () => {
+        socialRows.splice(index, 1);
+        flagUnsaved();
+        paintSocialRows();
+      });
+    });
+
+    syncSocialOptions();
+  }
+
+  addSocialBtn?.addEventListener('click', () => {
+    const key = availableSocialKey();
+    if (!key) return;
+    socialRows.push({ key, url: '' });
+    flagUnsaved();
+    paintSocialRows();
+    const latest = socialEditor?.querySelector('[data-social-index]:last-child [data-social-url]');
+    latest?.focus();
+  });
+
+  paintSocialRows();
+
   content.querySelectorAll('.panel input, .panel textarea').forEach(el=>{
-    if(el.hasAttribute('data-toggle') || el.readOnly) return;
+    if(el.hasAttribute('data-toggle') || el.readOnly || el.closest('#socialEditor')) return;
     el.addEventListener('input', flagUnsaved);
   });
 
@@ -1584,7 +1683,11 @@ RENDERERS.settings = function(data){
     web3forms: { projectKey: val('s_pkey'), reviewKey: val('s_rkey') },
     redirectUrl: val('s_redirect'),
     contactEmail: val('s_email'),
-    socials: { instagram: val('s_ig'), tiktok: val('s_tt'), youtube: val('s_yt') },
+    socials: Object.fromEntries(
+      socialRows
+        .filter(row => row.key && row.url.trim())
+        .map(row => [row.key, row.url.trim()])
+    ),
     siteTitle: val('s_title'),
     siteDescription: val('s_desc'),
     heroTiming: s.heroTiming,
