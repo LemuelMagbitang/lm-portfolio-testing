@@ -956,6 +956,11 @@ textarea { resize: vertical; }
   display: block;
   visibility: hidden;
   pointer-events: none;
+  /* The blend operation belongs to the whole chrome layer, not the nested
+     <i>. Because this fixed layer is the element composited directly above
+     the artwork, the browser can compare the white glyphs against the actual
+     pixels underneath and invert them over bright artwork. */
+  mix-blend-mode: difference;
 }
 
 .lightbox-controls.active {
@@ -1022,16 +1027,13 @@ button.hamburger {
 
 .lightbox-close i,
 .lightbox-nav i{
-  color:var(--lm-color-text-primary);
+  color:#fff;
   /* +15% glyph scale without changing the control hit target. */
   font-size:1.15em;
-  /* A thin glyph-shaped outline remains artwork-aware; this is not a
-     rectangular control border, so it cannot recreate the old light box. */
+  /* Keep the outline glyph-shaped; the control layer itself owns the
+     artwork-aware difference compositing. */
   -webkit-text-stroke:1px currentColor;
   paint-order:stroke fill;
-  /* Artwork-aware contrast: white remains white on dark art and flips to
-     black where bright/white artwork passes behind the icon. */
-  mix-blend-mode:difference;
   text-shadow:none;
   pointer-events:none;
 }
