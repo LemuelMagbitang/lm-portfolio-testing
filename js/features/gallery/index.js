@@ -20,6 +20,7 @@ export async function initGallery(options = {}) {
   const showMoreBtn = documentRef.getElementById('showMoreBtn');
   const showMoreWrapper = documentRef.getElementById('showMoreWrapper');
   const portfolioGrid = documentRef.getElementById('portfolioGrid');
+  const portfolioWrapper = documentRef.querySelector('.portfolio-wrapper');
   const portfolioGridViewport = documentRef.getElementById('portfolioGridViewport');
   const gridFadeOverlay = documentRef.getElementById('gridFadeOverlay');
   if (!portfolioGrid) return;
@@ -536,6 +537,16 @@ export async function initGallery(options = {}) {
   bind(windowRef, 'pointerup', finishFilterPointer);
   bind(windowRef, 'pointercancel', finishFilterPointer);
 
+  function scrollGalleryIntoView() {
+    if (!portfolioWrapper?.scrollIntoView) return;
+
+    const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    portfolioWrapper.scrollIntoView({
+      behavior: reducedMotion ? 'auto' : 'smooth',
+      block: 'start'
+    });
+  }
+
   function applyHash() {
     const hash = decodeURIComponent(windowRef.location.hash.replace('#', ''));
     if (!hash) return;
@@ -548,6 +559,14 @@ export async function initGallery(options = {}) {
     render();
     if (isFilterCarousel()) centerFilterButton(btn, 'auto');
     updateFilterPager(filterBtns.indexOf(btn));
+
+    // Filter links from the public navigation use the same hash contract as
+    // the gallery state. There is no physical DOM anchor for a filter ID
+    // because the filter buttons are rebuilt from CMS data, so explicitly
+    // move the visitor to the gallery after the hash has selected the set.
+    windowRef.requestAnimationFrame(() => {
+      windowRef.requestAnimationFrame(scrollGalleryIntoView);
+    });
   }
 
   lifecycle.add(() => windowRef.clearTimeout(filterScrollTimer));
