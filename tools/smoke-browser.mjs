@@ -604,6 +604,29 @@ try {
         throw new Error('Lightbox binary contrast did not switch black/white over deterministic bright/dark artwork: ' + JSON.stringify(binaryContrastFixture));
       }
 
+      const projectDescriptionTypography = await page.locator('#modalFullDesc').evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          textAlign: style.textAlign,
+          textAlignLast: style.textAlignLast,
+          textJustify: style.textJustify,
+          hyphens: style.hyphens,
+          overflowWrap: style.overflowWrap
+        };
+      });
+      if (projectDescriptionTypography.textAlign !== 'justify') {
+        throw new Error('Lightbox project description is not justified: ' + JSON.stringify(projectDescriptionTypography));
+      }
+      if (projectDescriptionTypography.textAlignLast !== 'left') {
+        throw new Error('Lightbox project description last line is not left-aligned: ' + JSON.stringify(projectDescriptionTypography));
+      }
+      if (projectDescriptionTypography.hyphens !== 'auto') {
+        throw new Error('Lightbox project description is missing automatic hyphenation: ' + JSON.stringify(projectDescriptionTypography));
+      }
+      if (projectDescriptionTypography.overflowWrap !== 'break-word') {
+        throw new Error('Lightbox project description does not use controlled word wrapping: ' + JSON.stringify(projectDescriptionTypography));
+      }
+
       const lightboxControlGeometry = await page.locator('.lightbox-next').evaluate(el => {
         const buttonStyle = getComputedStyle(el);
         const icon = el.querySelector('i');
