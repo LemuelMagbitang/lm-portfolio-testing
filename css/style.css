@@ -1571,24 +1571,14 @@ body.center-page {
    conservative desktop ceiling. Multi-media projects use an even smaller
    32svh / 300px ceiling. Mobile intentionally overrides this below and remains
    full-bleed. */
+/* Lottie gets a slightly calmer desktop footprint than the general
+   artwork surface. This keeps tall animation compositions prominent without
+   letting them dominate the Lightbox reading area. */
 @media (min-width:768px){
-  /* Lottie gets a slightly calmer desktop footprint than the general artwork
-     surface. This keeps tall animation compositions prominent without
-     letting them dominate the Lightbox reading area. */
   #lightboxMediaContainer .lightbox-artwork.is-lottie-artwork{
     width:min(100%, calc(72svh * var(--lightbox-artwork-ratio, 1)));
     max-width:760px;
     max-height:72svh;
-  }
-
-  /* Compact tablets get a further small reduction while retaining the same
-     intrinsic ratio. Mobile remains full-bleed below. */
-  @media (min-width:768px) and (max-width:1099px){
-    #lightboxMediaContainer .lightbox-artwork.is-lottie-artwork{
-      width:min(100%, calc(68svh * var(--lightbox-artwork-ratio, 1)));
-      max-width:700px;
-      max-height:68svh;
-    }
   }
 
   /* Desktop sizing follows the available viewport instead of a fixed tiny
@@ -1620,6 +1610,14 @@ body.center-page {
   #lightboxMediaContainer[data-media-density="multi"][data-has-youtube="true"] .lightbox-artwork.is-youtube-artwork[data-youtube-orientation="portrait"]{
     max-width:360px;
   }
+
+  @media (min-width:768px) and (max-width:1099px){
+  #lightboxMediaContainer .lightbox-artwork.is-lottie-artwork{
+    width:min(100%, calc(68svh * var(--lightbox-artwork-ratio, 1)));
+    max-width:700px;
+    max-height:68svh;
+  }
+}
 
   /* Local video gets a tighter desktop height ceiling so portrait exports do
      not consume the whole modal and lose their edges above the fold. */
