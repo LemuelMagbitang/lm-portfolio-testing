@@ -54,9 +54,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=20261006-02">
-  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261006-08">
-  <link rel="modulepreload" href="js/app/page-composition.js?v=20261006-08">
+  <link rel="stylesheet" href="css/style.css?v=20261006-03">
+  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261006-09">
+  <link rel="modulepreload" href="js/app/page-composition.js?v=20261006-09">
   <link rel="modulepreload" href="js/infrastructure/three/model-viewer.js?v=20261005-09">
   <link rel="prefetch" href="about/" as="document">
   <script type="importmap">
@@ -246,17 +246,17 @@
   </section>
 
   <!-- LIGHTBOX MODAL -->
-  <!-- Close / previous / next controls live inside the modal so the 3D
-       focus layer can deliberately place them beneath the dark/blur veil.
-       In normal media mode they remain above the gallery; in focused 3D
-       mode they read as global lightbox navigation instead of model tools. -->
+  <!-- Navigation is a separate top-level layer. The project content lives in
+       the scrolling modal below it, so only the project groups participate in
+       next/previous transitions while the close/chevron chrome stays fixed
+       to the viewport and uses artwork-aware difference compositing. -->
+  <div class="lightbox-controls" id="lightboxControls">
+    <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close project"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous project"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Next project"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+  </div>
   <div class="lightbox-modal" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modalTitle">
     <div class="modal-interior">
-      <div class="lightbox-controls" id="lightboxControls">
-        <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close project"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-        <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous project"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-        <button class="lightbox-nav lightbox-next" type="button" aria-label="Next project"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-      </div>
       <div class="modal-header">
         <h2 id="modalTitle">Project Title</h2>
         <p id="modalDesc">Project description goes here.</p>
@@ -293,6 +293,6 @@
     window.FILTERS_URL = 'data/filters.json';
     window.HERO_LOOP_URL = 'data/hero-loop.json';
   </script>
-  <script type="module" src="js/script.js?v=20261006-08"></script>
+  <script type="module" src="js/script.js?v=20261006-09"></script>
 </body>
 </html>
