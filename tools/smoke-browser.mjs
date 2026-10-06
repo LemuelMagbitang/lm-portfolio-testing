@@ -117,6 +117,12 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     return targetBox.y >= navBox.height - 12 && targetBox.y <= navBox.height + 90;
   }, null, { timeout: 4000 });
 
+  // Hash settlement and Gallery activation are separate async stages. The
+  // navigation contract is not complete until the Gallery has acknowledged the
+  // same filter in its own button state, so wait for that observable state
+  // instead of sampling it immediately after the page-transition geometry check.
+  const activeFilterLocator = page.locator(`.filter-tabs [data-filter="${expectedHash.slice(1)}"].active`).first();
+  await activeFilterLocator.waitFor({ state: 'visible', timeout: 4000 }).catch(() => {});
   const activeFilter = await page.locator(`.filter-tabs [data-filter="${expectedHash.slice(1)}"].active`).count();
   if (activeFilter !== 1) {
     throw new Error(`${label} filter navigation selected the hash but not the matching Gallery filter.`);
