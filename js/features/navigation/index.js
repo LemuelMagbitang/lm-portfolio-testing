@@ -116,6 +116,13 @@ export function initNavigation({ root = globalThis.document } = {}) {
     event.stopImmediatePropagation?.();
     close();
 
+    // Home/Works navigation from the current Works page is an in-document
+    // top reset, not a reload. Clear any Contact/filter hash first so Back
+    // navigation and refresh cannot restore the previous Contact stage.
+    try {
+      windowRef.history.replaceState(null, '', url.pathname + url.search);
+    } catch (_) {}
+
     const scrollingElement = root.scrollingElement || root.documentElement;
     if (scrollingElement) scrollingElement.scrollTop = 0;
     try { windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' }); }
@@ -172,7 +179,11 @@ export function initNavigation({ root = globalThis.document } = {}) {
 
   // Works and the LM logo already target the current Works document on the
   // main page. Keep them in the same document instead of reloading it.
-  const samePageHomeLinks = [root.querySelector('.nav-logo'), ...mobileMenuLinks].filter(Boolean);
+  const samePageHomeLinks = Array.from(new Set([
+    root.querySelector('.nav-logo'),
+    root.querySelector('.nav-dropdown-toggle'),
+    ...mobileMenuLinks
+  ].filter(Boolean)));
   samePageHomeLinks.forEach(link => bind(link, 'click', handleSamePageHomeNavigation, true));
 
   // Bind the same-page Contact contract directly to the concrete links.
