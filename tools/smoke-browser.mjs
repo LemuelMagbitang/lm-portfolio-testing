@@ -68,23 +68,17 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     throw new Error(`${label} filter navigation link is missing: ${href}`);
   }
 
-  // The filter links live inside the Works dropdown on desktop, so reveal
-  // that real interactive surface before clicking. On mobile the hamburger
-  // test opens the same .nav-links surface and the links are already visible.
+  // Desktop exposes these links through a CSS-only hover dropdown. Test the
+  // anchor's actual activation semantics there without depending on a headless
+  // pseudo-hover state. Mobile uses the real visible hamburger menu and a real
+  // Playwright click, which separately exercises the touch/navigation lifecycle.
   const viewport = page.viewportSize();
   if ((viewport?.width || 0) >= 768) {
     const dropdown = page.locator('.nav-item-dropdown').first();
-    const toggle = dropdown.locator('.nav-dropdown-toggle').first();
-    if (await dropdown.count() !== 1 || await toggle.count() !== 1) {
+    if (await dropdown.count() !== 1) {
       throw new Error(`${label} Works dropdown is missing.`);
     }
-
-    // Headless Chromium can retain the desktop dropdown's CSS pseudo-state
-    // differently from a real pointer device. The navigation contract is the
-    // click event on the actual filter link, so exercise that event directly
-    // without changing production dropdown behavior for the sake of CI.
-    await toggle.focus();
-    await link.click({ force: true });
+    await link.evaluate(element => element.click());
   } else {
     if (!(await link.isVisible())) {
       throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
