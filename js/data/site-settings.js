@@ -10,7 +10,6 @@ const HERO_TRANSITIONS = new Set(['kenburns', 'fade', 'none']);
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
   protectionEnabled: true,
   formsEnabled: Object.freeze({ project: true, review: true }),
-  showCardBadges: true,
   showReviews: false,
   showSoftwareLogos: false,
   heroTiming: Object.freeze({
@@ -73,7 +72,6 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
       project: booleanValue(forms.project, defaults.formsEnabled.project),
       review: booleanValue(forms.review, defaults.formsEnabled.review)
     },
-    showCardBadges: booleanValue(source.showCardBadges, defaults.showCardBadges),
     showReviews: booleanValue(source.showReviews, defaults.showReviews),
     showSoftwareLogos: booleanValue(source.showSoftwareLogos, defaults.showSoftwareLogos),
     heroTiming: {

@@ -54,9 +54,6 @@ export async function initSiteSettings({
   }
 
   function applyDom(settings) {
-    root?.querySelectorAll('.card-badges').forEach(el => {
-      el.style.display = settings.showCardBadges ? '' : 'none';
-    });
 
     if (settings.contactEmail) {
       root?.querySelectorAll('a[href^="mailto:"]').forEach(anchor => {

@@ -13,7 +13,7 @@
  */
 
 import { loadProjects } from './project-loader.js';
-import { buildProjectCardElement } from './project-card.js?v=20261006-01';
+import { buildProjectCardElement } from './project-card.js?v=20261006-02';
 import { waitForProjectThumbnailReadiness } from './project-thumbnail.js?v=20261005-04';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';

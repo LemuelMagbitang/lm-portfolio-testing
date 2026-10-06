@@ -1467,7 +1467,6 @@ RENDERERS.settings = function(data){
       ${toggleRow('protectionEnabled','Right-click / drag-save protection','Disables right-click and drag-to-save on lightbox artwork.', s.protectionEnabled)}
       ${toggleRow('formsEnabled.project','"Start a Project" form','Shows the form when on; shows an Email Me button when off.', s.formsEnabled.project)}
       ${toggleRow('formsEnabled.review','"Leave a Review" form','Shows the form when on; shows an Email Me button when off.', s.formsEnabled.review)}
-      ${toggleRow('showCardBadges','Project card badges','Shows the pill (e.g. "3D Design") on every project card.', s.showCardBadges)}
       ${toggleRow('showReviews','Reviews section','Shows or hides the whole client-reviews strip above the footer.', s.showReviews)}
       ${toggleRow('showSoftwareLogos','Software skill logos','Shows every Software Skill (About page) as its logo instead of its name. One switch for the whole list — set a specific logo per skill from the About page itself.', s.showSoftwareLogos)}
     </div>
@@ -1580,7 +1579,6 @@ RENDERERS.settings = function(data){
   wireSave(()=>({
     protectionEnabled: s.protectionEnabled,
     formsEnabled: { project: s.formsEnabled.project, review: s.formsEnabled.review },
-    showCardBadges: s.showCardBadges,
     showReviews: s.showReviews,
     showSoftwareLogos: s.showSoftwareLogos,
     web3forms: { projectKey: val('s_pkey'), reviewKey: val('s_rkey') },

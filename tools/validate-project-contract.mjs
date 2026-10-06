@@ -4,7 +4,6 @@ import {
   normalizeProjectMedia,
   normalizeProjects
 } from '../js/data/project-normalizer.js';
-import { getProjectBadges } from '../js/features/projects/project-card.js?v=20261006-01';
 
 const project = normalizeProject({
   id: '  demo-project  ',
@@ -71,10 +70,6 @@ const legacyBadge = normalizeProject({
   media: [{ type: 'image', src: 'legacy-badge.jpg' }]
 });
 assert.deepEqual(legacyBadge.badges, ['3D Design']);
-assert.deepEqual(getProjectBadges({ badges: [' UI Design ', 'Branding', 'UI Design'] }), ['UI Design', 'Branding']);
-assert.deepEqual(getProjectBadges({ badge: '3D Design' }), ['3D Design']);
-assert.deepEqual(getProjectBadges({ badges: [], badge: 'Legacy' }), []);
-
 assert.equal(normalizeProjectMedia({ type: 'youtube', src: 'abc' }).type, 'youtube');
 assert.equal(normalizeProjectMedia({ type: 'model', src: 'scene.glb' }).type, 'model');
 assert.equal(normalizeProjectMedia({ type: 'image', src: '' }), null);

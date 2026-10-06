@@ -611,16 +611,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   transform: scale(calc(var(--thumb-zoom) * 1.05)) rotate(var(--thumb-rotate));
 }
 
-.card-badges { position: absolute; top: 20px; left: 20px; display: flex; gap: 8px; z-index: 5; }
-.badge.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 1px;
-  padding: 6px 14px; border-radius: 30px; text-transform: uppercase;
-}
-
 .glass-info {
   position: absolute;
   bottom: 0;

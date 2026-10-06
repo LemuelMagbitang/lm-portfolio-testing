@@ -4,7 +4,6 @@
     "project": true,
     "review": true
   },
-  "showCardBadges": false,
   "showReviews": false,
   "showSoftwareLogos": true,
   "web3forms": {
