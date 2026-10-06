@@ -1028,10 +1028,16 @@ button.hamburger {
 .lightbox-close i,
 .lightbox-nav i{
   color:var(--lm-color-text-primary);
+  /* +15% glyph scale without changing the control hit target. */
+  font-size:1.15em;
+  /* A thin glyph-shaped outline remains artwork-aware; this is not a
+     rectangular control border, so it cannot recreate the old light box. */
+  -webkit-text-stroke:1px currentColor;
+  paint-order:stroke fill;
   /* Artwork-aware contrast: white remains white on dark art and flips to
      black where bright/white artwork passes behind the icon. */
-  mix-blend-mode: difference;
-  text-shadow: none;
+  mix-blend-mode:difference;
+  text-shadow:none;
   pointer-events:none;
 }
 
@@ -2677,9 +2683,15 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   touch-action:pan-y;
 }
 
-#lightboxMediaContainer .lightbox-media-item{
+/* Project-to-project Lightbox transitions are one shared visual system.
+   The media item contains its caption, so artwork + caption move/fade/blur
+   together; the header carries the title/description on the same timeline.
+   No scale is used: the transition only translates, fades, and blurs. */
+#lightboxMediaContainer .lightbox-media-item,
+.lightbox-modal .modal-header,
+.lightbox-modal .modal-full-desc{
   transition:
-    opacity 200ms var(--lm-motion-ease),
+    opacity 280ms var(--lm-motion-ease),
     transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
     filter 280ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change:opacity,transform,filter;
@@ -2690,7 +2702,7 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 .lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-header,
 .lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-full-desc{
   opacity:0;
-  transform:translate3d(-26px, 0, 0) scale(.982);
+  transform:translate3d(-26px, 0, 0);
   filter:blur(4px);
 }
 
@@ -2698,7 +2710,7 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 .lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-header,
 .lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-full-desc{
   opacity:0;
-  transform:translate3d(26px, 0, 0) scale(.982);
+  transform:translate3d(26px, 0, 0);
   filter:blur(4px);
 }
 
@@ -2706,7 +2718,7 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-header,
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-full-desc{
   opacity:0;
-  transform:translate3d(26px, 0, 0) scale(.982);
+  transform:translate3d(26px, 0, 0);
   filter:blur(4px);
 }
 
@@ -2714,14 +2726,14 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-header,
 .lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-full-desc{
   opacity:0;
-  transform:translate3d(-26px, 0, 0) scale(.982);
+  transform:translate3d(-26px, 0, 0);
   filter:blur(4px);
 }
 
 @media (prefers-reduced-motion: reduce){
   #lightboxMediaContainer .lightbox-media-item,
-  .lightbox-modal.is-lightbox-navigating .modal-header,
-  .lightbox-modal.is-lightbox-navigating .modal-full-desc{
+  .lightbox-modal .modal-header,
+  .lightbox-modal .modal-full-desc{
     transition:none;
   }
 }
