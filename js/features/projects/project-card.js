@@ -7,6 +7,13 @@ import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261005-04';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
+export function getProjectBadges(project = {}) {
+  const source = Array.isArray(project.badges)
+    ? project.badges
+    : (project.badge ? [project.badge] : []);
+  return [...new Set(source.map(value => String(value || '').trim()).filter(Boolean))];
+}
+
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
   const media = Array.isArray(project.media) ? project.media : [];
   const presentation = {
@@ -77,13 +84,16 @@ export function buildProjectCardElement(
   const filters = Array.isArray(project.filters) ? project.filters.filter(Boolean) : [];
   card.dataset.filterIds = JSON.stringify(filters);
 
-  if (project.badge) {
+  const projectBadges = getProjectBadges(project);
+  if (projectBadges.length) {
     const badges = documentRef.createElement('div');
     badges.className = 'card-badges';
-    const span = documentRef.createElement('span');
-    span.className = 'badge glass';
-    span.textContent = String(project.badge);
-    badges.appendChild(span);
+    projectBadges.forEach(value => {
+      const span = documentRef.createElement('span');
+      span.className = 'badge glass';
+      span.textContent = value;
+      badges.appendChild(span);
+    });
     card.appendChild(badges);
   }
 

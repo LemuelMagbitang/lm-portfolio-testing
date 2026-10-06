@@ -1791,12 +1791,17 @@ function validateProjectEditorModel(project, { requireFilters = true } = {}){
 }
 
 function serializeProjectEditorModel(project){
+  const badges = Array.isArray(project.badges)
+    ? [...new Set(project.badges.map(value => String(value || '').trim()).filter(Boolean))]
+    : (project.badge ? [String(project.badge).trim()] : []);
   return {
     id:project.id,
     title:project.title,
     subtitle:project.subtitle,
-    badge:project.badge,
-    ...(Array.isArray(project.badges) ? {badges:[...project.badges]} : {}),
+    // Keep the first attribute in the legacy field so older readers remain compatible,
+    // while badges[] is now the canonical CMS/public contract.
+    badge:badges[0] || '',
+    badges,
     filters:Array.isArray(project.filters) ? [...project.filters] : [],
     description:project.description,
     thumbnail:{
@@ -1823,6 +1828,11 @@ function serializeProjectEditorModel(project){
 function buildProjectBody(el, p, options = {}){
   const markChanged = typeof options.onChanged === 'function' ? options.onChanged : flagUnsaved;
   const filterDefs = Array.isArray(options.filterDefs) ? options.filterDefs : [];
+  const badgeDefs = Array.isArray(options.badgeDefs) ? options.badgeDefs : [];
+  p.badges = Array.isArray(p.badges)
+    ? [...new Set(p.badges.map(value => String(value || '').trim()).filter(Boolean))]
+    : (p.badge ? [String(p.badge).trim()] : []);
+  p.badge = p.badges[0] || '';
   // Which artwork cards are expanded, by _uid. Starts empty (every
   // artwork loads collapsed to just its title bar) so opening a
   // project with a dozen images doesn't dump a dozen full editors
@@ -1836,8 +1846,13 @@ function buildProjectBody(el, p, options = {}){
     </div>
 
     <div class="field">
-      <label class="field-label">Badge <span style="opacity:.5">(one only — the final output, not the software)</span></label>
-      <select data-f="badge"><option value="">— none —</option>${badgeOptions(p.badge)}</select>
+      <label class="field-label">Project attributes <span style="opacity:.5">(select all that apply; separate from filter tabs)</span></label>
+      <div class="chip-select" data-badges>
+        ${badgeDefs.map(label=>{
+          const value = String(label || '').trim();
+          return value ? `<button type="button" class="chip ${p.badges.includes(value)?'selected':''}" data-badge-value="${attr(value)}">${esc(value)}</button>` : '';
+        }).join('') || '<span class="hint">No project attributes defined yet — add some under Filters & Badges.</span>'}
+      </div>
     </div>
 
     <div class="field" style="${options.showFilters === false ? 'display:none' : ''}">
@@ -1971,17 +1986,26 @@ function buildProjectBody(el, p, options = {}){
       else if(f==='thumb-focus'){ p.thumbnail.focus = inp.value; setFromFocusStr(); refreshThumbPreview(); }
       else {
         p[f] = inp.value;
-        if (f==='title' || f==='badge') {
+        if (f==='title') {
           const titleEl = el.closest('.card-item').querySelector('.item-title');
-          titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}`;
+          titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badges?.length?`<span style="color:#666;font-weight:500"> — ${esc(p.badges.join(' · '))}</span>`:''}`;
         }
       }
       markChanged();
     });
   });
-  el.querySelector('select[data-f="badge"]').addEventListener('change', function(){
-    const titleEl = el.closest('.card-item').querySelector('.item-title');
-    titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}`;
+  el.querySelectorAll('[data-badge-value]').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const value = String(chip.dataset.badgeValue || '').trim();
+      if (!value) return;
+      if (p.badges.includes(value)) p.badges = p.badges.filter(item => item !== value);
+      else p.badges.push(value);
+      p.badge = p.badges[0] || '';
+      chip.classList.toggle('selected', p.badges.includes(value));
+      const titleEl = el.closest('.card-item').querySelector('.item-title');
+      titleEl.innerHTML = `${esc(p.title)||'(untitled project)'} ${p.badges.length?`<span style="color:#666;font-weight:500"> — ${esc(p.badges.join(' · '))}</span>`:''}`;
+      markChanged();
+    });
   });
 
   // filter chips
@@ -2346,7 +2370,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
       if(!isCurrent()) return;
       const title=prompt('Curated-only project title:');
       if(!title?.trim())return;
-      v.projects.push({source:'curated',project:{id:uniqueProjectId(v,title.trim()),title:title.trim(),subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()},_uid:uid()});
+      v.projects.push({source:'curated',project:{id:uniqueProjectId(v,title.trim()),title:title.trim(),subtitle:'',badge:'',badges:[],filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()},_uid:uid()});
       markDirty();repaint();
     };
     repaint();
@@ -2377,18 +2401,20 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
 
 RENDERERS.projects = async function(data, isCurrent=()=>true){
   let items = withUids((data.json||[]).map(p=>({
-    id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'', badge:p.badge||'',
-    // Preserve the forward-compatible multi-badge field even while the
-    // current editor still exposes the legacy single-badge control.
-    // This prevents an older CMS session from silently erasing badges[]
-    // created by a newer editor/runtime.
-    badges:Array.isArray(p.badges)?[...p.badges]:null,
+    id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'',
+    badges:Array.isArray(p.badges) ? [...new Set(p.badges.map(x=>String(x||'').trim()).filter(Boolean))] : (p.badge ? [String(p.badge).trim()] : []),
+    badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
     media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
   })));
   let filterDefs = [];
-  try{ const f = await loadSection('filters'); const raw=f.json||[]; filterDefs=Array.isArray(raw)?raw:(raw.filters||[]); }catch(e){}
+  let badgeDefs = [];
+  try{
+    const f = await loadSection('filters'); const raw=f.json||[];
+    filterDefs=Array.isArray(raw)?raw:(raw.filters||[]);
+    badgeDefs=Array.isArray(raw)?[]:(Array.isArray(raw.badges)?raw.badges:[]);
+  }catch(e){}
   if(!isCurrent()) return;
   let openUid = items.length ? items[0]._uid : null;
 
@@ -2409,7 +2435,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
         <div class="card-item-head" style="cursor:pointer" data-toggle-open>
           <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
           <span class="project-item-label">
-            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badge?`<span style="color:#666;font-weight:500"> — ${esc(p.badge)}</span>`:''}</span>
+            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badges?.length?`<span style="color:#666;font-weight:500"> — ${esc(p.badges.join(' · '))}</span>`:''}</span>
             <span class="project-preview-text">${esc(p.subtitle||'')}</span>
           </span>
           <div class="card-item-actions">
@@ -2441,12 +2467,12 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
         animateReorder(() => document.getElementById('projList'), () => { [items[i+1],items[i]]=[items[i],items[i+1]]; flagUnsaved(); paint(); });
       });
 
-      if(isOpen) buildProjectBody(wrap.querySelector('[data-body]'), p, {filterDefs});
+      if(isOpen) buildProjectBody(wrap.querySelector('[data-body]'), p, {filterDefs, badgeDefs});
       list.appendChild(wrap);
     });
 
     document.getElementById('addProj').addEventListener('click', ()=>{
-      const p = {id:'',title:'',subtitle:'',badge:'',filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
+      const p = {id:'',title:'',subtitle:'',badge:'',badges:[],filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
       items.push(p);
       openUid = p._uid; flagUnsaved(); paint();
     });
