@@ -571,7 +571,7 @@
         "type": "lottie",
         "src": "assets/projects/test/Sample.json",
         "caption": "This is a lottie test animation and view",
-        "orientation": "square",
+        "orientation": "",
         "background": {
           "type": "solid",
           "color": "#2a64a2"
