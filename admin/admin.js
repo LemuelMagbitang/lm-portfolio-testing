@@ -1496,7 +1496,7 @@ RENDERERS.settings = function(data){
 
     <div class="panel">
       <h3>Contact & Socials</h3>
-      <p class="panel-sub">Choose which supported profiles appear in the public footer/contact areas. Reorder them here by changing the rows; empty URLs are not published.</p>
+      <p class="panel-sub">Choose which supported profiles appear in the public footer/contact areas. Empty URLs are not published; the public site keeps a consistent platform order.</p>
       <div class="field"><label class="field-label">Contact email</label><input id="s_email" value="${attr(s.contactEmail||'')}"></div>
       <div id="socialEditor" class="social-editor"></div>
       <button class="ghost" id="addSocial" type="button"><i class="fa-solid fa-plus"></i> Add social profile</button>

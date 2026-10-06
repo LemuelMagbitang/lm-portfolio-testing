@@ -227,6 +227,18 @@ try {
       const cards = await page.locator('#portfolioGrid .project-card').count();
       if (cards < 1) throw new Error(`Works page rendered no project cards (found ${cards}).`);
 
+      const socialLabels = await page.locator('.social-icons a').evaluateAll(links =>
+        links.map(link => link.getAttribute('aria-label') || '').filter(Boolean)
+      );
+      for (const requiredLabel of ['Instagram', 'TikTok', 'YouTube', 'Email']) {
+        if (!socialLabels.includes(requiredLabel)) {
+          throw new Error(`Works page is missing the rendered ${requiredLabel} contact link: ${JSON.stringify(socialLabels)}`);
+        }
+      }
+      if (new Set(socialLabels).size !== socialLabels.length) {
+        throw new Error(`Works page rendered duplicate contact/social labels: ${JSON.stringify(socialLabels)}`);
+      }
+
       const interactionStyles = await page.evaluate(() => {
         const card = document.querySelector('#portfolioGrid .project-card');
         const filter = document.querySelector('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
