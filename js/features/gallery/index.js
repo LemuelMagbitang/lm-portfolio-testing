@@ -7,8 +7,9 @@ import {
   getResponsiveBaseCount,
   getRowAlignedCount,
   applyGalleryReveal,
-  resetGalleryPresentation
-} from './presentation.js?v=20261005-03';
+  resetGalleryPresentation,
+  captureGalleryCardRects
+} from './presentation.js?v=20261006-01';
 export async function initGallery(options = {}) {
   const documentRef = options.root?.getElementById ? options.root : globalThis.document;
   const windowRef = documentRef?.defaultView || globalThis.window;
@@ -220,8 +221,9 @@ export async function initGallery(options = {}) {
     // currently selected button during resize/scroll settling must not reset
     // the user's Show More state.
     if (changed) {
+      const transitionFromRects = captureGalleryCardRects(portfolioGrid);
       isExpanded = false;
-      render({ animateTransition: true });
+      render({ animateTransition: true, transitionFromRects });
     }
     if (center && isFilterCarousel()) centerFilterButton(button);
     updateFilterPager(filterBtns.indexOf(button));
@@ -306,7 +308,7 @@ export async function initGallery(options = {}) {
     return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
-  function render({ animateTransition = false } = {}) {
+  function render({ animateTransition = false, transitionFromRects = null } = {}) {
     cancelCollapseScrollAnimation();
     const filteredProjects = getFilteredProjects();
     const filtered = getCardsForProjects(filteredProjects);
@@ -332,6 +334,7 @@ export async function initGallery(options = {}) {
       visibleCount: effectiveBaseCount,
       expanded: isExpanded,
       animateTransition,
+      transitionFromRects,
       windowRef,
       fadeMs,
       renderToken: token,

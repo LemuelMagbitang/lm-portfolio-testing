@@ -11,6 +11,26 @@ function setGalleryEntryDelay(card, value = '') {
   card.style.setProperty('--gallery-entry-delay', value);
 }
 
+export function captureGalleryCardRects(grid) {
+  const rects = new Map();
+  if (!grid) return rects;
+
+  Array.from(grid.querySelectorAll('.project-card')).forEach(card => {
+    const computed = globalThis.getComputedStyle?.(card);
+    if (computed?.display === 'none') return;
+
+    const rect = card.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    rects.set(card, {
+      left: rect.left,
+      top: rect.top
+    });
+  });
+
+  return rects;
+}
+
 export function getResponsiveBaseCount({
   width,
   height,
@@ -101,6 +121,7 @@ export function applyGalleryReveal({
   mobilePeek = 40,
   desktopPeek = 70,
   animateTransition = false,
+  transitionFromRects = null,
   renderToken = 0,
   isCurrentRender = () => true
 } = {}) {
@@ -110,12 +131,19 @@ export function applyGalleryReveal({
   const filteredSet = new Set(filteredCards);
   const allCards = Array.from(grid.querySelectorAll('.project-card'));
   const hiddenCards = allCards.filter(card => !filteredSet.has(card));
+  const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const filterTransitionDuration = reducedMotion ? '0ms' : '360ms';
+  let transitionStartFrame = null;
+  let transitionFrame = null;
 
   hiddenCards.forEach(card => {
     card.style.opacity = '0';
     if (animateTransition) {
-      card.style.transform = 'translate3d(0, 5px, 0) scale(.985)';
+      card.style.transitionDuration = filterTransitionDuration;
+      card.style.transitionDelay = '0ms';
+      card.style.transform = 'translate3d(0, 5px, 0)';
       card.style.filter = 'blur(5px)';
+      card.style.willChange = reducedMotion ? '' : 'opacity, transform, filter';
     }
   });
 
@@ -124,17 +152,18 @@ export function applyGalleryReveal({
     if (filteredCards.length <= visibleCount || visibleCount <= 0) return;
 
     const viewportRect = viewport.getBoundingClientRect();
-    if (!Number.isFinite(viewportRect.top)) return;
+    const gridRect = grid.getBoundingClientRect();
+    if (!Number.isFinite(viewportRect.top) || !Number.isFinite(gridRect.top)) return;
 
-    // A CSS grid row takes the height of its tallest card. With media-aware
-    // card proportions, the last card in the visible set is not necessarily
-    // the tallest card in its final row. Measure every currently visible card
-    // and clip to the furthest bottom edge so a taller sibling can never be
-    // cut off by the Show More viewport.
+    // Collapse geometry must use layout metrics, not transformed visual
+    // bounds. Filter transitions translate cards visually, but that transform
+    // must never alter the actual Show More viewport size.
     const visibleCards = filteredCards.slice(0, visibleCount);
     const furthestBottom = visibleCards.reduce((maxBottom, card) => {
-      const bottom = Number(card?.getBoundingClientRect?.().bottom);
-      return Number.isFinite(bottom) ? Math.max(maxBottom, bottom) : maxBottom;
+      const offsetTop = Number(card?.offsetTop);
+      const offsetHeight = Number(card?.offsetHeight);
+      if (!Number.isFinite(offsetTop) || !Number.isFinite(offsetHeight)) return maxBottom;
+      return Math.max(maxBottom, gridRect.top + offsetTop + offsetHeight);
     }, Number.NEGATIVE_INFINITY);
 
     if (!Number.isFinite(furthestBottom)) return;
@@ -155,6 +184,56 @@ export function applyGalleryReveal({
   // covered by the bounded post-render measurements below without letting a
   // layout observer move the Show More control underneath the user.
 
+  const settleFilterLayout = () => {
+    if (!animateTransition || !isCurrentRender(renderToken)) return;
+
+    if (reducedMotion || !transitionFromRects) {
+      filteredCards.forEach(card => {
+        card.style.opacity = '1';
+        card.style.transform = 'translate3d(0, 0, 0)';
+        card.style.filter = 'blur(0)';
+        card.style.willChange = '';
+      });
+      return;
+    }
+
+    // Old cards are already leaving layout here. Invert surviving cards from
+    // their previous viewport coordinates, then release that inverse on the
+    // next paint so CSS Grid reflow becomes continuous visual movement.
+    filteredCards.forEach(card => {
+      card.style.transition = 'none';
+      card.style.transform = 'translate3d(0, 0, 0)';
+    });
+
+    filteredCards.forEach(card => {
+      const from = transitionFromRects.get(card);
+      const to = card.getBoundingClientRect();
+      const deltaX = from ? from.left - to.left : 0;
+      const deltaY = from ? from.top - to.top : 8;
+      const x = Math.round(deltaX * 100) / 100;
+      const y = Math.round(deltaY * 100) / 100;
+      card.style.transform = 'translate3d(' + x + 'px, ' + y + 'px, 0)';
+    });
+
+    transitionStartFrame = windowRef.requestAnimationFrame(() => {
+      if (!isCurrentRender(renderToken)) return;
+
+      transitionFrame = windowRef.requestAnimationFrame(() => {
+        if (!isCurrentRender(renderToken)) return;
+
+        filteredCards.forEach(card => {
+          card.style.transition = '';
+          card.style.opacity = '1';
+          card.style.transform = 'translate3d(0, 0, 0)';
+          card.style.filter = 'blur(0)';
+        });
+
+        transitionFrame = null;
+        transitionStartFrame = null;
+      });
+    });
+  };
+
   const hideTimer = windowRef.setTimeout(() => {
     if (!isCurrentRender(renderToken)) return;
     filteredCards.forEach(card => { card.style.display = 'block'; });
@@ -162,9 +241,8 @@ export function applyGalleryReveal({
       if (!filteredSet.has(card)) card.style.display = 'none';
     });
 
-    // Re-measure after filter cards leave layout. A second frame handles
-    // browser-restored pages and media metadata that settle just after the
-    // first paint.
+    settleFilterLayout();
+
     windowRef.requestAnimationFrame(() => {
       if (!isCurrentRender(renderToken)) return;
       measureCollapsedHeight();
@@ -172,20 +250,18 @@ export function applyGalleryReveal({
     });
   }, Math.max(0, Number(fadeMs) || 0));
 
-  filteredCards.forEach((card, index) => {
+  filteredCards.forEach(card => {
     card.style.display = 'block';
     if (animateTransition) {
-      const isMobile = Number(windowRef.innerWidth) < 768;
-      card.style.setProperty(
-        '--gallery-entry-delay',
-        isMobile ? (Math.min(index, 7) * 18) + 'ms' : '0ms'
-      );
-      card.style.willChange = 'opacity, transform, filter';
-      card.style.opacity = isMobile ? '0.24' : '0';
-      card.style.transform = isMobile
-        ? 'translate3d(0, 12px, 0) scale(.96)'
-        : 'translate3d(0, 5px, 0) scale(.985)';
-      card.style.filter = isMobile ? 'blur(7px)' : 'blur(5px)';
+      // One duration, one easing, and no per-card delay make the result read
+      // as a single composition rather than a staggered list.
+      card.style.setProperty('--gallery-entry-delay', '0ms');
+      card.style.transitionDuration = filterTransitionDuration;
+      card.style.transitionDelay = '0ms';
+      card.style.willChange = reducedMotion ? '' : 'opacity, transform, filter';
+      card.style.opacity = '0.18';
+      card.style.transform = 'translate3d(0, 8px, 0)';
+      card.style.filter = 'blur(5px)';
     } else {
       setGalleryEntryDelay(card);
       card.style.willChange = '';
@@ -193,46 +269,41 @@ export function applyGalleryReveal({
   });
 
   windowRef.requestAnimationFrame(() => {
-    if (!isCurrentRender(renderToken)) return;
+    if (!isCurrentRender(renderToken) || animateTransition) return;
     filteredCards.forEach(card => {
       card.style.opacity = '1';
-      if (animateTransition) {
-        card.style.transform = 'translate3d(0, 0, 0) scale(1)';
-        card.style.filter = 'blur(0)';
-      }
     });
   });
-
-  if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
-    // Measure from the actual visible card, but defer once so navigation
-    // restoration and media dimensions have a chance to settle.
-    measureCollapsedHeight();
-    windowRef.requestAnimationFrame(measureCollapsedHeight);
-  } else {
-    viewport.style.maxHeight = 'none';
-    fadeOverlay?.classList.add('is-hidden');
-  }
 
   // The timer belongs to the current render. Returning a cancel function lets
   // the Gallery lifecycle discard it during destroy() without owning the
   // presentation implementation.
+  const cleanupTransition = () => {
+    if (transitionStartFrame !== null) {
+      windowRef.cancelAnimationFrame?.(transitionStartFrame);
+      transitionStartFrame = null;
+    }
+    if (transitionFrame !== null) {
+      windowRef.cancelAnimationFrame?.(transitionFrame);
+      transitionFrame = null;
+    }
+
+    if (!animateTransition) return;
+    [...filteredCards, ...hiddenCards].forEach(card => {
+      card.style.transition = '';
+      card.style.transitionDuration = '';
+      card.style.transitionDelay = '';
+      card.style.transform = '';
+      card.style.filter = '';
+      card.style.setProperty('--gallery-entry-delay', '');
+      card.style.willChange = '';
+    });
+  };
+
   if (!showMoreButton || !showMoreWrapper) {
     return () => {
       windowRef.clearTimeout(hideTimer);
-      if (animateTransition) {
-        filteredCards.forEach(card => {
-          card.style.transform = '';
-          card.style.filter = '';
-          setGalleryEntryDelay(card);
-          card.style.willChange = '';
-        });
-        hiddenCards.forEach(card => {
-          card.style.transform = '';
-          card.style.filter = '';
-          setGalleryEntryDelay(card);
-          card.style.willChange = '';
-        });
-      }
+      cleanupTransition();
     };
   }
 
@@ -251,16 +322,7 @@ export function applyGalleryReveal({
 
   return () => {
     windowRef.clearTimeout(hideTimer);
-    if (animateTransition) {
-      filteredCards.forEach(card => {
-        card.style.transform = '';
-        card.style.filter = '';
-      });
-      hiddenCards.forEach(card => {
-        card.style.transform = '';
-        card.style.filter = '';
-      });
-    }
+    cleanupTransition();
   };
 }
 
