@@ -490,6 +490,11 @@ try {
       await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
 
       const lottiePlayer = page.locator('#lightboxMediaContainer .lightbox-media-item lottie-player').first();
+      await page.waitForFunction(() => {
+        const player = document.querySelector('#lightboxMediaContainer .lightbox-media-item lottie-player');
+        const artwork = player?.parentElement;
+        return artwork && Math.abs(parseFloat(getComputedStyle(artwork).aspectRatio || '0') - (440 / 478)) < 0.01;
+      }, null, { timeout: 5000 });
       const lottieGeometry = await lottiePlayer.evaluate(el => {
         const artwork = el.parentElement;
         return {
