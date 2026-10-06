@@ -1967,7 +1967,11 @@ body.center-page {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
   gap: 50px;
-  align-items: start;
+  align-items: center;
+  /* Optical correction: the contact group sat a little high inside the
+     section. A small visual offset centers the whole group without changing
+     the #contact-start document anchor or scroll math. */
+  transform: translateY(8px);
 }
 
 .contact-block { text-align: center; }
