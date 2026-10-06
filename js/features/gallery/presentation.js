@@ -243,11 +243,16 @@ export function applyGalleryReveal({
 
     settleFilterLayout();
 
-    windowRef.requestAnimationFrame(() => {
-      if (!isCurrentRender(renderToken)) return;
+    if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
       measureCollapsedHeight();
-      windowRef.requestAnimationFrame(measureCollapsedHeight);
-    });
+      windowRef.requestAnimationFrame(() => {
+        if (!isCurrentRender(renderToken)) return;
+        measureCollapsedHeight();
+      });
+    } else if (expanded || filteredCards.length <= visibleCount || visibleCount <= 0) {
+      viewport.style.maxHeight = 'none';
+      fadeOverlay?.classList.add('is-hidden');
+    }
   }, Math.max(0, Number(fadeMs) || 0));
 
   filteredCards.forEach(card => {
@@ -274,6 +279,17 @@ export function applyGalleryReveal({
       card.style.opacity = '1';
     });
   });
+
+  if (!animateTransition && !expanded && filteredCards.length > visibleCount && visibleCount > 0) {
+    // Non-transition renders can measure immediately because no outgoing result
+    // is occupying the grid. Filter transitions defer measurement until their
+    // outgoing cards have left layout.
+    measureCollapsedHeight();
+    windowRef.requestAnimationFrame(measureCollapsedHeight);
+  } else if (!animateTransition && (expanded || filteredCards.length <= visibleCount || visibleCount <= 0)) {
+    viewport.style.maxHeight = 'none';
+    fadeOverlay?.classList.add('is-hidden');
+  }
 
   // The timer belongs to the current render. Returning a cancel function lets
   // the Gallery lifecycle discard it during destroy() without owning the
