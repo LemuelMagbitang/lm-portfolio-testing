@@ -138,6 +138,7 @@ let activeLightboxCards = []; // Only navigate through currently filtered items
 let previousPageScrollX = 0;
 let previousPageScrollY = 0;
 let navigationTimer = null;
+let navigationTargetIndex = null;
 let swipeStart = null;
 let openRenderToken = 0;
 
@@ -317,6 +318,7 @@ function closeLightbox({ restoreFocus = true } = {}) {
     windowRef.clearTimeout(navigationTimer);
     navigationTimer = null;
   }
+  navigationTargetIndex = null;
   swipeStart = null;
   lightbox.classList.remove(
     'active',
@@ -378,17 +380,34 @@ function navigateLightbox(direction) {
   const total = activeLightboxCards.length;
   if (!lightbox?.classList.contains('active') || total < 2) return;
 
-  // A new navigation gesture supersedes an in-flight transition. This keeps
-  // quick opposite swipes/taps responsive instead of silently dropping the
-  // second gesture while the previous 180ms transition is pending.
+  // Gestures that arrive before the current transition commits are applied
+  // relative to the pending destination. A quick Next -> Previous therefore
+  // returns to the currently displayed project instead of becoming a delayed
+  // jump to the unrelated previous project.
   if (navigationTimer) {
     windowRef.clearTimeout(navigationTimer);
     navigationTimer = null;
   }
 
+  const baseIndex = navigationTargetIndex === null
+    ? currentLightboxIndex
+    : navigationTargetIndex;
   const nextIndex = step > 0
-    ? (currentLightboxIndex + 1) % total
-    : (currentLightboxIndex - 1 + total) % total;
+    ? (baseIndex + 1) % total
+    : (baseIndex - 1 + total) % total;
+
+  if (nextIndex === currentLightboxIndex) {
+    navigationTargetIndex = null;
+    lightbox.classList.remove(
+      'is-lightbox-navigating',
+      'is-navigation-next',
+      'is-navigation-prev',
+      'is-lightbox-navigation-enter'
+    );
+    return;
+  }
+
+  navigationTargetIndex = nextIndex;
 
   lightbox.classList.remove('is-navigation-next', 'is-navigation-prev');
   lightbox.classList.add(
@@ -404,9 +423,11 @@ function navigateLightbox(direction) {
 
   navigationTimer = windowRef.setTimeout(() => {
     navigationTimer = null;
-    if (!lightbox.classList.contains('active')) return;
+    const targetIndex = navigationTargetIndex;
+    navigationTargetIndex = null;
+    if (!lightbox.classList.contains('active') || targetIndex === null) return;
 
-    openLightbox(nextIndex, -1, { preserveOpener: true });
+    openLightbox(targetIndex, -1, { preserveOpener: true });
 
     lightbox.classList.add(
       'is-lightbox-navigation-enter',
