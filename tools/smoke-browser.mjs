@@ -235,32 +235,33 @@ try {
 
       const secondaryFilter = filterButtons.nth(1);
       await secondaryFilter.click();
-       await page.waitForTimeout(90);
-       const midFilterMotion = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
-         cards
-           .filter(card => getComputedStyle(card).display !== 'none')
-           .slice(0, 6)
-           .map(card => {
-             const style = getComputedStyle(card);
-             return {
-               delay: style.transitionDelay,
-               duration: style.transitionDuration,
-               inlineTransform: card.style.transform
-             };
-           })
-       );
-       if (!midFilterMotion.length) throw new Error('Works filter transition produced no visible project cards.');
-       if (midFilterMotion.some(item => item.inlineTransform && /scale\\(/i.test(item.inlineTransform))) {
-         throw new Error('Works filter transition regressed into per-card scale motion.');
-       }
-       if (midFilterMotion.some(item => item.delay.split(',').some(value => parseFloat(value) !== 0))) {
-         throw new Error('Works filter transition reintroduced staggered card delays.');
-       }
-       if (midFilterMotion.some(item => item.duration.split(',').some(value => Math.abs(parseFloat(value) - 0.36) > 0.02))) {
-         throw new Error('Works filter transition lost its unified 360ms motion duration.');
-       }
-       await page.waitForTimeout(330);
-      await page.waitForTimeout(420);
+      await page.waitForTimeout(90);
+
+      const midFilterMotion = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+        cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .slice(0, 6)
+          .map(card => {
+            const style = getComputedStyle(card);
+            return {
+              delay: style.transitionDelay,
+              duration: style.transitionDuration,
+              inlineTransform: card.style.transform
+            };
+          })
+      );
+      if (!midFilterMotion.length) throw new Error('Works filter transition produced no visible project cards.');
+      if (midFilterMotion.some(item => item.inlineTransform?.includes('scale('))) {
+        throw new Error('Works filter transition regressed into per-card scale motion.');
+      }
+      if (midFilterMotion.some(item => item.delay.split(',').some(value => parseFloat(value) !== 0))) {
+        throw new Error('Works filter transition reintroduced staggered card delays.');
+      }
+      if (midFilterMotion.some(item => item.duration.split(',').some(value => Math.abs(parseFloat(value) - 0.36) > 0.02))) {
+        throw new Error('Works filter transition lost its unified 360ms motion duration.');
+      }
+
+      await page.waitForTimeout(330);
       const filteredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
         cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
       );
