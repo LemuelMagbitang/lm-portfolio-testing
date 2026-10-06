@@ -494,7 +494,9 @@ try {
         await page.waitForFunction(() => {
           const player = document.querySelector('#lightboxMediaContainer .lightbox-media-item lottie-player');
           const artwork = player?.parentElement;
-          return artwork && Math.abs(parseFloat(getComputedStyle(artwork).aspectRatio || '0') - (440 / 478)) < 0.01;
+          if (!artwork) return false;
+          const rect = artwork.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0 && Math.abs((rect.width / rect.height) - (440 / 478)) < 0.01;
         }, null, { timeout: 5000 });
       } catch (error) {
         const debug = await page.evaluate(() => {
@@ -508,6 +510,9 @@ try {
             inlineStyle: artwork.getAttribute('style') || '',
             cssRatio: style.aspectRatio || '',
             cssVariable: style.getPropertyValue('--lightbox-artwork-ratio') || '',
+            renderedRatio: artwork.getBoundingClientRect().height
+              ? artwork.getBoundingClientRect().width / artwork.getBoundingClientRect().height
+              : 0,
             width: artwork.getBoundingClientRect().width,
             height: artwork.getBoundingClientRect().height,
             preserveAspectRatio: player.getAttribute('preserveAspectRatio') || '',
@@ -2028,10 +2033,14 @@ try {
       const cmsLottiePreview = lottieMedia.locator('[data-mediapreview] .media-preview').first();
       await page.waitForFunction(() => {
         const box = document.querySelector('[data-mediapreview] .media-preview');
-        return box && Math.abs(parseFloat(getComputedStyle(box).aspectRatio || '0') - (440 / 478)) < 0.01;
+        if (!box) return false;
+        const rect = box.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && Math.abs((rect.width / rect.height) - (440 / 478)) < 0.01;
       }, null, { timeout: 5000 });
       const cmsLottieRatio = await cmsLottiePreview.evaluate(el => ({
-        ratio: parseFloat(getComputedStyle(el).aspectRatio || '0'),
+        ratio: el.getBoundingClientRect().height
+          ? el.getBoundingClientRect().width / el.getBoundingClientRect().height
+          : 0,
         styleRatio: el.style.aspectRatio || ''
       }));
       if (Math.abs(cmsLottieRatio.ratio - (440 / 478)) > 0.01) {
