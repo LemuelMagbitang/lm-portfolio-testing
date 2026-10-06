@@ -842,8 +842,8 @@ try {
           background: buttonStyle?.backgroundColor || ''
         };
       });
-      if (focusedCloseContrast.mixBlendMode !== 'difference') {
-        throw new Error(`Focused 3D control layer lost artwork-aware difference-mode contrast: ${focusedCloseContrast.mixBlendMode}`);
+      if (focusedCloseContrast.mixBlendMode !== 'normal') {
+        throw new Error(`Focused 3D control layer did not switch to binary contrast mode: ${focusedCloseContrast.mixBlendMode}`);
       }
       if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
         throw new Error('Focused 3D Close control still has a visible background box.');
@@ -1436,8 +1436,8 @@ try {
           }).filter(Boolean)
         };
       });
-      if (lightboxControlStyles.layerBlend !== 'difference') {
-        throw new Error('Lightbox control layer is not using artwork-aware difference-mode compositing.');
+      if (lightboxControlStyles.layerBlend !== 'normal') {
+        throw new Error('Mobile Lightbox control layer did not switch to binary contrast mode: ' + lightboxControlStyles.layerBlend);
       }
       for (const control of lightboxControlStyles.controls) {
         if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
