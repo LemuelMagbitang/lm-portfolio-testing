@@ -64,44 +64,62 @@ export function initNavigation({ root = globalThis.document } = {}) {
   mobileMenuLinks.forEach(link => bind(link, 'click', close));
 
   function scrollSamePageContact() {
-    const target = root.getElementById('contact-section') || root.getElementById('contact-start');
+    const target = root.getElementById('contact-start') || root.getElementById('contact-section');
     const windowRef = root?.defaultView || globalThis.window;
     if (!target || !windowRef?.scrollTo) return;
 
-    const visualViewport = windowRef.visualViewport;
-    const viewportHeight = Number(visualViewport?.height) || Number(windowRef.innerHeight) || 0;
-    const viewportTop = Number(visualViewport?.offsetTop) || 0;
+    const viewportHeight = Number(windowRef.visualViewport?.height) || Number(windowRef.innerHeight) || 0;
     const currentY = Number(windowRef.scrollY) || 0;
     const rect = target.getBoundingClientRect();
+    const navbarHeight = Number(root.querySelector('.navbar')?.getBoundingClientRect?.().height) || 0;
+    const offset = Math.max(navbarHeight + 12, 24);
     const documentHeight = Math.max(
       Number(root.documentElement?.scrollHeight) || 0,
       Number(root.body?.scrollHeight) || 0
     );
     const maxScrollY = Math.max(0, documentHeight - viewportHeight);
-    const targetY = Math.max(
-      0,
-      Math.min(
-        maxScrollY,
-        currentY + rect.top + (rect.height / 2) - (viewportTop + viewportHeight / 2)
-      )
-    );
+    const targetY = Math.max(0, Math.min(maxScrollY, currentY + rect.top - offset));
 
-    // Keep Contact deterministic while the mobile address bar can change the
-    // visual viewport. A smooth scroll can otherwise finish against a stale
-    // viewport height and land visibly above or below the requested center.
-    // Assigning scrollTop directly bypasses the document's global smooth-
-    // scroll setting and makes this deterministic viewport correction instant.
+    // Contact aligns the actual Start a Project heading below the fixed nav.
+    // Centering the whole Contact block can clamp to the document bottom on
+    // mobile and land inside the form instead.
     const scrollingElement = root.scrollingElement || root.documentElement;
-    [scrollingElement, root.documentElement, root.body]
-      .filter(Boolean)
-      .forEach(element => {
-        element.scrollTop = targetY;
-      });
-    try {
-      windowRef.scrollTo({ left: 0, top: targetY, behavior: 'instant' });
-    } catch (_) {
-      windowRef.scrollTo(0, targetY);
-    }
+    [scrollingElement, root.documentElement, root.body].filter(Boolean).forEach(element => {
+      element.scrollTop = targetY;
+    });
+    try { windowRef.scrollTo({ left: 0, top: targetY, behavior: 'instant' }); }
+    catch (_) { windowRef.scrollTo(0, targetY); }
+  }
+
+  function normalizedPagePath(pathname) {
+    let pathnameValue = String(pathname || '').replace(/index\.html$/, '');
+    if (pathnameValue.length > 1) pathnameValue = pathnameValue.replace(/\/+$/, '');
+    return pathnameValue || '/';
+  }
+
+  function handleSamePageHomeNavigation(event) {
+    const link = event.currentTarget;
+    const windowRef = root?.defaultView || globalThis.window;
+    if (!link || !windowRef?.location) return;
+
+    let url;
+    try { url = new URL(link.getAttribute('href') || '', windowRef.location.href); }
+    catch (_) { return; }
+
+    if (
+      url.origin !== windowRef.location.origin ||
+      url.hash ||
+      normalizedPagePath(url.pathname) !== normalizedPagePath(windowRef.location.pathname)
+    ) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation?.();
+    close();
+
+    const scrollingElement = root.scrollingElement || root.documentElement;
+    if (scrollingElement) scrollingElement.scrollTop = 0;
+    try { windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' }); }
+    catch (_) { windowRef.scrollTo(0, 0); }
   }
 
   function handleSamePageContactNavigation(event) {
@@ -141,27 +159,21 @@ export function initNavigation({ root = globalThis.document } = {}) {
       windowRef.history.pushState(null, '', url.pathname + url.search + url.hash);
     } catch (_) {}
 
-    // Scroll immediately, then correct after the menu-close transition and
-    // one later layout pass. The immediate write prevents the browser from
-    // leaving the fragment at its native anchor position; the later writes
-    // absorb font/image/layout commits that can otherwise move the section.
+    // Correct across paint boundaries after the menu closes, with no delayed
+    // second-stage timers that make the Contact landing visibly drift.
     scrollSamePageContact();
-    const settle = () => scrollSamePageContact();
     if (typeof windowRef.requestAnimationFrame === 'function') {
       windowRef.requestAnimationFrame(() => {
         scrollSamePageContact();
-        windowRef.requestAnimationFrame(() => {
-          scrollSamePageContact();
-          windowRef.setTimeout(settle, 350);
-          windowRef.setTimeout(settle, 700);
-        });
+        windowRef.requestAnimationFrame(() => scrollSamePageContact());
       });
-    } else {
-      windowRef.setTimeout(settle, 0);
-      windowRef.setTimeout(settle, 350);
-      windowRef.setTimeout(settle, 700);
     }
   }
+
+  // Works and the LM logo already target the current Works document on the
+  // main page. Keep them in the same document instead of reloading it.
+  const samePageHomeLinks = [root.querySelector('.nav-logo'), ...mobileMenuLinks].filter(Boolean);
+  samePageHomeLinks.forEach(link => bind(link, 'click', handleSamePageHomeNavigation, true));
 
   // Bind the same-page Contact contract directly to the concrete links.
   // The menu close listener remains separate; this avoids depending on
