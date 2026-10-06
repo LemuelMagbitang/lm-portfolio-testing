@@ -915,6 +915,12 @@ textarea { resize: vertical; }
   flex-direction: column;
   gap: 30px;
   margin-top: 20px;
+  transition:
+    opacity 280ms var(--lm-motion-ease),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, filter;
+  transform-origin: center center;
 }
 
 .modal-header, .modal-full-desc {
@@ -2666,64 +2672,42 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 
 /* ============================================================
    LIGHTBOX NAVIGATION MOTION
-   Simple directional movement keeps project-to-project navigation
-   tactile without turning the viewer into a carousel framework.
+   Project-to-project navigation is one composited visual unit: the modal
+   interior carries title, subtitle, descriptions, artwork, and artwork
+   captions together. Children do not run separate transition timelines.
    ============================================================ */
 .lightbox-modal{
   touch-action:pan-y;
 }
 
-/* Project-to-project Lightbox transitions are one shared visual system.
-   The media item contains its caption, so artwork + caption move/fade/blur
-   together; the header carries the title/description on the same timeline.
-   No scale is used: the transition only translates, fades, and blurs. */
-#lightboxMediaContainer .lightbox-media-item,
-.lightbox-modal .modal-header,
-.lightbox-modal .modal-full-desc{
-  transition:
-    opacity 280ms var(--lm-motion-ease),
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 280ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change:opacity,transform,filter;
-  transform-origin:center center;
-}
-
-.lightbox-modal.is-lightbox-navigating.is-navigation-next #lightboxMediaContainer .lightbox-media-item,
-.lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-header,
-.lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-full-desc{
+.lightbox-modal.is-lightbox-navigating.is-navigation-next .modal-interior{
   opacity:0;
   transform:translate3d(-26px, 0, 0);
   filter:blur(4px);
 }
 
-.lightbox-modal.is-lightbox-navigating.is-navigation-prev #lightboxMediaContainer .lightbox-media-item,
-.lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-header,
-.lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-full-desc{
+.lightbox-modal.is-lightbox-navigating.is-navigation-prev .modal-interior{
   opacity:0;
   transform:translate3d(26px, 0, 0);
   filter:blur(4px);
 }
 
-.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next #lightboxMediaContainer .lightbox-media-item,
-.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-header,
-.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-full-desc{
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-next .modal-interior{
   opacity:0;
   transform:translate3d(26px, 0, 0);
   filter:blur(4px);
+  transition:none;
 }
 
-.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev #lightboxMediaContainer .lightbox-media-item,
-.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-header,
-.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-full-desc{
+.lightbox-modal.is-lightbox-navigation-enter.is-navigation-prev .modal-interior{
   opacity:0;
   transform:translate3d(-26px, 0, 0);
   filter:blur(4px);
+  transition:none;
 }
 
 @media (prefers-reduced-motion: reduce){
-  #lightboxMediaContainer .lightbox-media-item,
-  .lightbox-modal .modal-header,
-  .lightbox-modal .modal-full-desc{
+  .modal-interior{
     transition:none;
   }
 }
