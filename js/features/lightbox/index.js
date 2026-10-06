@@ -1,6 +1,6 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
-import { createLightboxMediaRenderer } from './media-renderer.js?v=20261005-18';
+import { createLightboxMediaRenderer } from './media-renderer.js?v=20261005-19';
 export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axisRatio = 1.2 } = {}) {
   const x = Number(deltaX) || 0;
   const y = Number(deltaY) || 0;
@@ -10,8 +10,9 @@ export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axis
   return x < 0 ? 1 : -1;
 }
 
-function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null, controlsEl = null) {
+function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
   if (!lightboxEl) return { open() {}, close() {} };
+  const controlsEl = documentRef?.getElementById?.('lightboxControls') || null;
   let opener = null;
   let focusCleanup = null;
   let keydownCleanup = null;
@@ -122,7 +123,7 @@ const modalTitle = documentRef.getElementById('modalTitle');
 const modalDesc = documentRef.getElementById('modalDesc');
 const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
-const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle, lightboxControls);
+const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle);
 
 const mediaRenderer = createLightboxMediaRenderer({
   documentRef,
