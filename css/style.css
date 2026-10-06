@@ -935,6 +935,12 @@ textarea { resize: vertical; }
   color: #ccc;
   font-size: 1rem;
   line-height: 1.6;
+  text-align: justify;
+  text-align-last: left;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 .modal-gallery {
