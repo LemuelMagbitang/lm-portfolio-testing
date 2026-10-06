@@ -490,11 +490,32 @@ try {
       await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
 
       const lottiePlayer = page.locator('#lightboxMediaContainer .lightbox-media-item lottie-player').first();
-      await page.waitForFunction(() => {
-        const player = document.querySelector('#lightboxMediaContainer .lightbox-media-item lottie-player');
-        const artwork = player?.parentElement;
-        return artwork && Math.abs(parseFloat(getComputedStyle(artwork).aspectRatio || '0') - (440 / 478)) < 0.01;
-      }, null, { timeout: 5000 });
+      try {
+        await page.waitForFunction(() => {
+          const player = document.querySelector('#lightboxMediaContainer .lightbox-media-item lottie-player');
+          const artwork = player?.parentElement;
+          return artwork && Math.abs(parseFloat(getComputedStyle(artwork).aspectRatio || '0') - (440 / 478)) < 0.01;
+        }, null, { timeout: 5000 });
+      } catch (error) {
+        const debug = await page.evaluate(() => {
+          const player = document.querySelector('#lightboxMediaContainer .lightbox-media-item lottie-player');
+          const artwork = player?.parentElement;
+          if (!player || !artwork) return { player: !!player, artwork: !!artwork };
+          const style = getComputedStyle(artwork);
+          return {
+            playerConnected: player.isConnected,
+            artworkConnected: artwork.isConnected,
+            inlineStyle: artwork.getAttribute('style') || '',
+            cssRatio: style.aspectRatio || '',
+            cssVariable: style.getPropertyValue('--lightbox-artwork-ratio') || '',
+            width: artwork.getBoundingClientRect().width,
+            height: artwork.getBoundingClientRect().height,
+            preserveAspectRatio: player.getAttribute('preserveAspectRatio') || '',
+            dataset: { density: document.querySelector('#lightboxMediaContainer')?.dataset.mediaDensity || '' }
+          };
+        });
+        throw new Error('Lightbox Lottie intrinsic-ratio assertion timed out: ' + JSON.stringify(debug));
+      }
       const lottieGeometry = await lottiePlayer.evaluate(el => {
         const artwork = el.parentElement;
         return {
