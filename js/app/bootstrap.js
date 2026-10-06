@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261006-05'
+  cacheVersion = '20261006-06'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -94,6 +94,7 @@ export async function bootstrapPortfolioApp({
     try { id = decodeURIComponent(rawHash); } catch (_) {}
 
     let target = root.getElementById(id);
+    const isContactTarget = id === 'contact-start' || id === 'contact-section';
     // Keep old inbound #contact-section links working, but align them to the
     // exact Start a Project heading rather than the outer section top.
     if (id === 'contact-section') {
@@ -106,25 +107,34 @@ export async function bootstrapPortfolioApp({
 
       const rect = target.getBoundingClientRect();
       const currentY = Number(windowRef.scrollY) || 0;
-      const navbarHeight = Number(
-        root.querySelector('.navbar')?.getBoundingClientRect?.().height
-      ) || 0;
-      const offset = Math.max(navbarHeight + 12, 24);
+      const visualViewport = windowRef.visualViewport;
+      const viewportHeight = Number(visualViewport?.height) || Number(windowRef.innerHeight) || 0;
+      const viewportTop = Number(visualViewport?.offsetTop) || 0;
       const documentHeight = Math.max(
         root.documentElement?.scrollHeight || 0,
         root.body?.scrollHeight || 0
       );
-      const maxScrollY = Math.max(0, documentHeight - windowRef.innerHeight);
+      const maxScrollY = Math.max(0, documentHeight - viewportHeight);
       const documentTargetY = currentY + rect.top;
-      const targetY = Math.min(
-        maxScrollY,
-        Math.max(0, documentTargetY - offset)
-      );
+      const navbarHeight = Number(
+        root.querySelector('.navbar')?.getBoundingClientRect?.().height
+      ) || 0;
+      const offset = Math.max(navbarHeight + 12, 24);
+      const targetY = isContactTarget
+        ? Math.max(
+            0,
+            Math.min(
+              maxScrollY,
+              documentTargetY + (rect.height / 2) -
+                (viewportTop + viewportHeight / 2)
+            )
+          )
+        : Math.min(
+            maxScrollY,
+            Math.max(0, documentTargetY - offset)
+          );
 
-      windowRef.scrollTo({
-        top: targetY,
-        behavior: 'auto'
-      });
+      windowRef.scrollTo({ top: targetY, behavior: 'auto' });
       return true;
     };
 
