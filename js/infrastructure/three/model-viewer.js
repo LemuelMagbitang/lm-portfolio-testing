@@ -158,6 +158,7 @@ export async function mountModelViewer(container, src, options = {}) {
   let fitRequested = false;
   let lastSize = { width: 0, height: 0 };
   let renderLoopActive = false;
+  let focusScrollCleanup = null;
 
   // Container-level interaction listeners belong to this mount instance.
   // Keeping explicit removers prevents duplicate gesture/wheel/activation
@@ -301,6 +302,12 @@ export async function mountModelViewer(container, src, options = {}) {
 
     const setInteractive = (active) => {
       if (disposed) return;
+
+      if (!active) {
+        focusScrollCleanup?.();
+        focusScrollCleanup = null;
+      }
+
       controls.enabled = active;
       renderLoopActive = active;
       container.classList.toggle('is-interactive', active);
@@ -318,6 +325,23 @@ export async function mountModelViewer(container, src, options = {}) {
       if (active) {
         container.removeAttribute('role');
         container.setAttribute('role', 'region');
+
+        // Focused 3D is intentionally not a scrollable Lightbox state. Keep
+        // wheel/touch movement over the surrounding viewport from chaining
+        // into the page; only the WebGL canvas receives OrbitControls input.
+        const scroller = container.closest?.('.lightbox-modal');
+        if (scroller) {
+          const blockFocusScroll = (event) => {
+            if (event.type === 'wheel' && event.target === renderer?.domElement) return;
+            event.preventDefault();
+          };
+          scroller.addEventListener('wheel', blockFocusScroll, { capture: true, passive: false });
+          scroller.addEventListener('touchmove', blockFocusScroll, { capture: true, passive: false });
+          focusScrollCleanup = () => {
+            scroller.removeEventListener('wheel', blockFocusScroll, { capture: true });
+            scroller.removeEventListener('touchmove', blockFocusScroll, { capture: true });
+          };
+        }
       } else {
         container.setAttribute('role', 'button');
       }
@@ -490,6 +514,8 @@ export async function mountModelViewer(container, src, options = {}) {
     cancelAnimationFrame(frameHandle);
     resizeObserver?.disconnect();
     controls.dispose();
+    focusScrollCleanup?.();
+    focusScrollCleanup = null;
     container.__modelViewerKeydownCleanup?.();
     containerCleanup.splice(0).reverse().forEach(remove => {
       try { remove(); } catch (_) {}
