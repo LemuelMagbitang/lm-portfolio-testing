@@ -19,14 +19,14 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261006-14'
+  cacheVersion = '20261006-15'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
   const loadingStartedAt = typeof windowRef?.performance?.now === 'function'
     ? windowRef.performance.now()
     : Date.now();
-  const MIN_LOADING_SCREEN_MS = 450;
+  const MIN_LOADING_SCREEN_MS = root.body?.classList.contains('about-page') ? 120 : 450;
   let initialTransitionFrame = null;
   let initialTransitionTimer = null;
   const hasInitialHash = Boolean(String(windowRef?.location?.hash || ''));
@@ -95,10 +95,8 @@ export async function bootstrapPortfolioApp({
 
     let target = root.getElementById(id);
     const isContactTarget = id === 'contact-start' || id === 'contact-section';
-    // Both public Contact anchor variants center the whole Contact section,
-    // not merely the Start a Project heading.
     if (isContactTarget) {
-      target = root.getElementById('contact-section') || target;
+      target = root.getElementById('contact-start') || root.getElementById('contact-section') || target;
     }
     if (!target) return;
 
@@ -125,8 +123,7 @@ export async function bootstrapPortfolioApp({
             0,
             Math.min(
               maxScrollY,
-              documentTargetY + (rect.height / 2) -
-                (viewportTop + viewportHeight / 2)
+              documentTargetY - Math.max(navbarHeight + 12, 24)
             )
           )
         : Math.min(
@@ -160,6 +157,9 @@ export async function bootstrapPortfolioApp({
   }
 
   showInitialPageTransition();
+  // Settle an initial Contact hash before asynchronous composition work. A
+  // later pass after composition corrects any layout shifts from hydration.
+  settleInitialHashTarget();
 
   try {
     const { createPortfolioApp } = await import(`./page-composition.js?v=${cacheVersion}`);
