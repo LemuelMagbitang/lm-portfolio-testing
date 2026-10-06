@@ -829,6 +829,31 @@ try {
         );
       }
 
+      const focusedControlStack = await page.evaluate(() => {
+        const modal = document.querySelector('#lightbox.is-3d-focused');
+        const controls = document.querySelector('#lightboxControls');
+        if (!modal || !controls) return null;
+        const modalStyle = getComputedStyle(modal);
+        const controlsStyle = getComputedStyle(controls);
+        return {
+          modalZIndex: Number.parseInt(modalStyle.zIndex, 10) || 0,
+          controlsZIndex: Number.parseInt(controlsStyle.zIndex, 10) || 0,
+          controlsPointerEvents: controlsStyle.pointerEvents,
+          controlsVisibility: controlsStyle.visibility
+        };
+      });
+      if (!focusedControlStack ||
+          !(focusedControlStack.controlsZIndex < focusedControlStack.modalZIndex) ||
+          focusedControlStack.controlsPointerEvents !== 'none' ||
+          focusedControlStack.controlsVisibility !== 'visible') {
+        throw new Error('Focused 3D did not place the global Lightbox chrome underneath the modal layer: ' + JSON.stringify(focusedControlStack));
+      }
+
+      const focusedCaption = await page.locator('#lightbox .is-3d-focus-target .media-caption').count();
+      if (focusedCaption < 1) {
+        throw new Error('Focused 3D layer does not retain the artwork description/caption above the model.');
+      }
+
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
         el => getComputedStyle(el).backgroundColor
       );
