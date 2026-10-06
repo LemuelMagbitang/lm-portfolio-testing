@@ -152,7 +152,9 @@ export function applyGalleryReveal({
     if (filteredCards.length <= visibleCount || visibleCount <= 0) return;
 
     const viewportRect = viewport.getBoundingClientRect();
-    const gridRect = grid.getBoundingClientRect();
+    const gridRect = typeof grid?.getBoundingClientRect === 'function'
+      ? grid.getBoundingClientRect()
+      : viewportRect;
     if (!Number.isFinite(viewportRect.top) || !Number.isFinite(gridRect.top)) return;
 
     // Collapse geometry must use layout metrics, not transformed visual
