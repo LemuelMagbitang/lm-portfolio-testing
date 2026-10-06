@@ -93,6 +93,15 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     }
     await link.evaluate(element => element.click());
   } else {
+    // Mobile public filter links live inside the collapsed hamburger menu.
+    // Open it here when the caller has just reloaded a page, while preserving
+    // already-open callers such as the dedicated mobile navigation smoke.
+    const hamburger = page.locator('.hamburger').first();
+    const mobileMenu = page.locator('.nav-links').first();
+    if (await hamburger.count() === 1 && await mobileMenu.count() === 1) {
+      const menuOpen = await mobileMenu.evaluate(el => el.classList.contains('active'));
+      if (!menuOpen) await hamburger.click();
+    }
     if (!(await link.isVisible())) {
       throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
     }
