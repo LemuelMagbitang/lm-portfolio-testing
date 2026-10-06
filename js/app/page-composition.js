@@ -12,14 +12,14 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../features/projects/index.js?v=20261006-01';
-import { initNavigation } from '../features/navigation/index.js?v=20261006-06';
+} from '../features/projects/index.js?v=20261006-02';
+import { initNavigation } from '../features/navigation/index.js?v=20261006-07';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261004-15';
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js?v=20261006-01';
 
-import { initGallery } from '../features/gallery/index.js?v=20261006-05';
+import { initGallery } from '../features/gallery/index.js?v=20261006-06';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
 import { initLightbox } from '../features/lightbox/index.js?v=20261006-02';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261005-06';
@@ -70,6 +70,8 @@ export async function createPortfolioApp({
   let galleryFeatureRef = null;
   let pendingProjectOpen = null;
 
+  const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
+  const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
   const hasProjectGallery = !!root.getElementById('portfolioGrid');
   const projectsPromise = hasProjectGallery && config.urls.projects
     ? mountProjects({
@@ -77,6 +79,7 @@ export async function createPortfolioApp({
         documentRef: root,
         getGrid: () => root.getElementById('portfolioGrid'),
         applyMediaBackground,
+        waitForThumbnailReadiness: !initialContactNavigation,
         onCardActivate: details => {
           if (lightboxFeature?.openCard) {
             lightboxFeature.openCard(details.card, {
@@ -288,10 +291,12 @@ export async function createPortfolioApp({
   // Hold the branded loading gate for the critical local-media tier, but never
   // indefinitely. The renderer continues its remaining background warm-up after
   // this ceiling, so a stalled asset cannot block the visitor from the page.
-  await Promise.race([
-    projectMediaPreloadPromise,
-    projectMediaGateTimeout
-  ]);
+  if (!initialContactNavigation) {
+    await Promise.race([
+      projectMediaPreloadPromise,
+      projectMediaGateTimeout
+    ]);
+  }
   if (projectMediaGateTimer !== null) {
     root.defaultView?.clearTimeout?.(projectMediaGateTimer);
   }
