@@ -146,6 +146,229 @@ let navigationTargetIndex = null;
 let swipeStart = null;
 let openRenderToken = 0;
 
+  // Lightbox navigation uses a binary contrast decision rather than relying
+  // on difference blending alone. Difference blending inverts the backdrop
+  // and therefore naturally produces mid-gray over mid-gray artwork. For
+  // same-origin images/video/WebGL canvas we can sample the actual pixel
+  // region behind each control, choose only black or white at a luminance
+  // threshold, and keep the glyph at full opacity. Cross-origin media such
+  // as YouTube cannot expose their pixels to the parent document, so those
+  // controls use a deterministic white fallback instead of producing gray.
+  const LIGHTBOX_CONTRAST_THRESHOLD = 0.52;
+  const contrastCanvas = documentRef.createElement?.('canvas');
+  if (contrastCanvas) {
+    contrastCanvas.width = 9;
+    contrastCanvas.height = 9;
+  }
+  let contrastFrame = 0;
+  let contrastInterval = null;
+
+  const clearBinaryContrast = () => {
+    if (contrastFrame) {
+      windowRef.cancelAnimationFrame?.(contrastFrame);
+      contrastFrame = 0;
+    }
+    if (contrastInterval) {
+      windowRef.clearInterval?.(contrastInterval);
+      contrastInterval = null;
+    }
+    if (lightboxControls) {
+      lightboxControls.style.removeProperty('mix-blend-mode');
+      lightboxControls.dataset.contrastMode = 'difference';
+    }
+    [lightboxClose, lightboxPrev, lightboxNext].filter(Boolean).forEach(button => {
+      button.style.removeProperty('mix-blend-mode');
+      button.style.removeProperty('color');
+      button.removeAttribute('data-contrast-mode');
+      button.removeAttribute('data-contrast-luminance');
+    });
+  };
+
+  const parseObjectPosition = (value, axis = 0.5) => {
+    const parts = String(value || '').trim().split(/\s+/);
+    const token = parts[axis] || '50%';
+    const numeric = Number.parseFloat(token);
+    if (!Number.isFinite(numeric)) return 0.5;
+    if (token.includes('%')) return Math.max(0, Math.min(1, numeric / 100));
+    return Math.max(0, Math.min(1, numeric));
+  };
+
+  const sampleMediaLuminance = (media, rect, clientX, clientY) => {
+    if (!contrastCanvas || !media || !rect || rect.width <= 0 || rect.height <= 0) return null;
+
+    let sourceWidth = 0;
+    let sourceHeight = 0;
+    if (media instanceof HTMLImageElement) {
+      if (!media.complete || media.naturalWidth <= 0 || media.naturalHeight <= 0) return null;
+      sourceWidth = media.naturalWidth;
+      sourceHeight = media.naturalHeight;
+    } else if (media instanceof HTMLVideoElement) {
+      if (media.readyState < 2 || media.videoWidth <= 0 || media.videoHeight <= 0) return null;
+      sourceWidth = media.videoWidth;
+      sourceHeight = media.videoHeight;
+    } else if (media instanceof HTMLCanvasElement) {
+      if (media.width <= 0 || media.height <= 0) return null;
+      sourceWidth = media.width;
+      sourceHeight = media.height;
+    } else {
+      return null;
+    }
+
+    const relX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const relY = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+    let sourceX;
+    let sourceY;
+    if (media instanceof HTMLCanvasElement) {
+      sourceX = (relX / rect.width) * sourceWidth;
+      sourceY = (relY / rect.height) * sourceHeight;
+    } else {
+      const style = documentRef.defaultView?.getComputedStyle?.(media);
+      const objectFit = String(style?.objectFit || 'fill').toLowerCase();
+      const positionX = parseObjectPosition(style?.objectPosition, 0);
+      const positionY = parseObjectPosition(style?.objectPosition, 1);
+
+      let renderedWidth = rect.width;
+      let renderedHeight = rect.height;
+      if (objectFit === 'contain' || objectFit === 'cover') {
+        const scale = objectFit === 'cover'
+          ? Math.max(rect.width / sourceWidth, rect.height / sourceHeight)
+          : Math.min(rect.width / sourceWidth, rect.height / sourceHeight);
+        renderedWidth = sourceWidth * scale;
+        renderedHeight = sourceHeight * scale;
+      }
+
+      const offsetX = (rect.width - renderedWidth) * positionX;
+      const offsetY = (rect.height - renderedHeight) * positionY;
+      const localMediaX = relX - offsetX;
+      const localMediaY = relY - offsetY;
+
+      if (objectFit === 'contain' &&
+          (localMediaX < 0 || localMediaX > renderedWidth ||
+           localMediaY < 0 || localMediaY > renderedHeight)) {
+        return null;
+      }
+
+      sourceX = (localMediaX / Math.max(renderedWidth, 1)) * sourceWidth;
+      sourceY = (localMediaY / Math.max(renderedHeight, 1)) * sourceHeight;
+    }
+
+    sourceX = Math.max(0, Math.min(sourceWidth - 1, sourceX));
+    sourceY = Math.max(0, Math.min(sourceHeight - 1, sourceY));
+
+    const sampleSpan = Math.max(1, Math.min(sourceWidth, sourceHeight) * 0.018);
+    try {
+      const context = contrastCanvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return null;
+      context.clearRect(0, 0, contrastCanvas.width, contrastCanvas.height);
+      context.drawImage(
+        media,
+        Math.max(0, sourceX - sampleSpan / 2),
+        Math.max(0, sourceY - sampleSpan / 2),
+        sampleSpan,
+        sampleSpan,
+        0,
+        0,
+        contrastCanvas.width,
+        contrastCanvas.height
+      );
+      const pixels = context.getImageData(0, 0, contrastCanvas.width, contrastCanvas.height).data;
+      let luminanceTotal = 0;
+      let weightTotal = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const alpha = pixels[i + 3] / 255;
+        if (alpha <= 0.03) continue;
+        const luminance =
+          (0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255;
+        luminanceTotal += luminance * alpha;
+        weightTotal += alpha;
+      }
+      return weightTotal > 0 ? luminanceTotal / weightTotal : null;
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const sampleArtworkAtPoint = (clientX, clientY) => {
+    if (!modalMediaContainer) return null;
+    const artworks = Array.from(modalMediaContainer.querySelectorAll('.lightbox-artwork'));
+    const candidates = artworks.filter(artwork => {
+      const style = documentRef.defaultView?.getComputedStyle?.(artwork);
+      if (style?.display === 'none' || style?.visibility === 'hidden' || Number(style?.opacity || 1) <= 0.03) {
+        return false;
+      }
+      const rect = artwork.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 &&
+        clientX >= rect.left && clientX <= rect.right &&
+        clientY >= rect.top && clientY <= rect.bottom;
+    });
+    candidates.sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return (ar.width * ar.height) - (br.width * br.height);
+    });
+
+    for (const artwork of candidates) {
+      const rect = artwork.getBoundingClientRect();
+      const media = artwork.querySelector(':scope > img, :scope > video, :scope > canvas');
+      const luminance = sampleMediaLuminance(media, rect, clientX, clientY);
+      if (Number.isFinite(luminance)) return luminance;
+
+      const background = documentRef.defaultView?.getComputedStyle?.(artwork)?.backgroundColor || '';
+      const match = background.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?\s*\)/i);
+      if (match) {
+        const alpha = match[4] === undefined ? 1 : Number(match[4]);
+        if (alpha > 0.03) {
+          return (0.2126 * Number(match[1]) +
+            0.7152 * Number(match[2]) +
+            0.0722 * Number(match[3])) / 255;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const applyBinaryContrastToButton = (button) => {
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const luminance = sampleArtworkAtPoint(centerX, centerY);
+
+    // No readable parent pixels (e.g. an external YouTube iframe): choose a
+    // deterministic white glyph instead of allowing difference blending to
+    // generate gray values.
+    const isLight = Number.isFinite(luminance) && luminance >= LIGHTBOX_CONTRAST_THRESHOLD;
+    const color = isLight ? '#000' : '#fff';
+    button.style.mixBlendMode = 'normal';
+    button.style.color = color;
+    button.dataset.contrastMode = Number.isFinite(luminance) ? 'binary-sampled' : 'binary-fallback';
+    if (Number.isFinite(luminance)) {
+      button.dataset.contrastLuminance = luminance.toFixed(3);
+    } else {
+      delete button.dataset.contrastLuminance;
+    }
+  };
+
+  const scheduleNavigationContrast = () => {
+    if (contrastFrame) return;
+    contrastFrame = windowRef.requestAnimationFrame?.(() => {
+      contrastFrame = 0;
+      if (!lightbox?.classList.contains('active')) {
+        clearBinaryContrast();
+        return;
+      }
+      if (lightboxControls) {
+        lightboxControls.style.mixBlendMode = 'normal';
+        lightboxControls.dataset.contrastMode = 'binary';
+      }
+      [lightboxClose, lightboxPrev, lightboxNext].filter(Boolean).forEach(applyBinaryContrastToButton);
+    }) || 0;
+  };
+
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
 
@@ -220,6 +443,10 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
+  scheduleNavigationContrast();
+  if (!contrastInterval) {
+    contrastInterval = windowRef.setInterval(scheduleNavigationContrast, 250);
+  }
   if (!wasActive) {
     lightboxA11y.open({ captureOpener: !preserveOpener });
   }
@@ -317,6 +544,10 @@ function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
 
 // Close Lightbox function
 function closeLightbox({ restoreFocus = true } = {}) {
+  if (contrastInterval) {
+    windowRef.clearInterval?.(contrastInterval);
+    contrastInterval = null;
+  }
   // Invalidate any queued document/media positioning frames from the
   // previous open. A rapid close/reopen or navigate/back sequence must not
   // let an older request move the new Lightbox to a stale media target.
@@ -342,6 +573,7 @@ function closeLightbox({ restoreFocus = true } = {}) {
   documentRef.documentElement.classList.remove('lm-3d-focus-open');
   documentRef.body.classList.remove('lm-3d-focus-open');
   if (lightboxControls) lightboxControls.classList.remove('active');
+  clearBinaryContrast();
   delete lightbox.dataset.pre3dScrollTop;
 
   const pageScrollX = previousPageScrollX;
@@ -569,6 +801,8 @@ bind(lightbox, 'pointercancel', handleSwipePointerCancel);
 bind(documentRef, 'keydown', handleDocumentKeydown);
 bind(windowRef, 'pagehide', handlePageHide);
 bind(windowRef, 'pageshow', handlePageShow);
+bind(lightbox, 'scroll', scheduleNavigationContrast, { passive: true });
+bind(windowRef, 'resize', scheduleNavigationContrast);
 
 return {
   openCard: openProjectCard,
