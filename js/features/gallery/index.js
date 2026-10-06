@@ -316,7 +316,6 @@ export async function initGallery(options = {}) {
       windowRef.clearTimeout(collapseScrollTimer);
       collapseScrollTimer = null;
     }
-    cancelCollapseScrollAnimation();
     const filteredProjects = getFilteredProjects();
     const filtered = getCardsForProjects(filteredProjects);
     renderToken += 1;
@@ -401,30 +400,19 @@ export async function initGallery(options = {}) {
   }));
 
   let collapseScrollTimer = null;
-  let collapseScrollFrame = null;
-  const showLessScrollDurationMs = 420;
 
-  function cancelCollapseScrollAnimation() {
-    if (collapseScrollFrame !== null) {
-      windowRef.cancelAnimationFrame?.(collapseScrollFrame);
-      collapseScrollFrame = null;
-    }
-  }
-
-  function animateWindowScrollToGalleryStart(durationMs = showLessScrollDurationMs) {
-    cancelCollapseScrollAnimation();
-
+  function scrollWindowToGalleryStart() {
     const galleryRoot = portfolioWrapper || documentRef.getElementById('portfolioGrid');
     const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
     if (!galleryRoot || !scrollingElement) return;
 
     const viewportHeight = Number(windowRef.innerHeight) || 0;
-    const startY = Number(windowRef.scrollY) || Number(scrollingElement.scrollTop) || 0;
+    const currentY = Number(windowRef.scrollY) || Number(scrollingElement.scrollTop) || 0;
     const rect = galleryRoot.getBoundingClientRect();
     const scrollMarginTop = Number.parseFloat(
       windowRef.getComputedStyle?.(galleryRoot)?.scrollMarginTop || ''
     ) || 0;
-    const targetY = startY + rect.top - scrollMarginTop;
+    const targetY = currentY + rect.top - scrollMarginTop;
     const documentHeight = Math.max(
       Number(documentRef.documentElement?.scrollHeight) || 0,
       Number(documentRef.body?.scrollHeight) || 0
@@ -432,43 +420,15 @@ export async function initGallery(options = {}) {
     const maxY = Math.max(0, documentHeight - viewportHeight);
     const destination = Math.max(0, Math.min(maxY, targetY));
 
-    if (Math.abs(destination - startY) < 1) {
-      scrollingElement.scrollTop = destination;
-      return;
-    }
-
-    const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion || typeof windowRef.requestAnimationFrame !== 'function') {
-      scrollingElement.scrollTop = destination;
-      return;
-    }
-
-    const startedAt = typeof windowRef.performance?.now === 'function'
-      ? windowRef.performance.now()
-      : Date.now();
-    const distance = destination - startY;
-
-    const step = nowValue => {
-      const now = Number(nowValue) || Date.now();
-      const progress = Math.min(1, Math.max(0, (now - startedAt) / Math.max(1, durationMs)));
-      const eased = 1 - Math.pow(1 - progress, 3);
-      scrollingElement.scrollTop = startY + distance * eased;
-      if (progress < 1) {
-        collapseScrollFrame = windowRef.requestAnimationFrame(step);
-      } else {
-        collapseScrollFrame = null;
-        // Direct assignment bypasses html{scroll-behavior:smooth} so the
-        // collapsed gallery lands exactly at its requested top edge.
-        scrollingElement.scrollTop = destination;
-      }
-    };
-
-    collapseScrollFrame = windowRef.requestAnimationFrame(step);
+    // Direct scrollTop is intentional here. Show Less is a state-changing
+    // control, and the visitor asked for an immediate return to the gallery.
+    // Two paint-pass corrections absorb the synchronous collapse geometry
+    // without adding a visible timeout or a second animation system.
+    scrollingElement.scrollTop = destination;
   }
 
   lifecycle.add(() => {
     windowRef.clearTimeout(collapseScrollTimer);
-    cancelCollapseScrollAnimation();
   });
 
   bind(showMoreBtn, 'click', event => {
@@ -490,11 +450,22 @@ export async function initGallery(options = {}) {
     // legacy behavior and keeps the expanded rows from leaving the visitor
     // stranded at a stale document position.
     if (shouldFollowCollapsedControl) {
-      // Start immediately on click. The old fade timeout plus 650ms motion made
-      // Show Less feel close to a full second behind the interaction.
+      // Start immediately on click. The collapse itself is already applied
+      // synchronously by render(); correct again on the next two paint passes
+      // so the button never waits for a timeout before returning to the
+      // gallery start.
       collapseScrollTimer = null;
       if (!isExpanded && showMoreWrapper) {
-        animateWindowScrollToGalleryStart(showLessScrollDurationMs);
+        scrollWindowToGalleryStart();
+        if (typeof windowRef.requestAnimationFrame === 'function') {
+          windowRef.requestAnimationFrame(() => {
+            if (isExpanded) return;
+            scrollWindowToGalleryStart();
+            windowRef.requestAnimationFrame(() => {
+              if (!isExpanded) scrollWindowToGalleryStart();
+            });
+          });
+        }
       }
     }
   });
