@@ -359,7 +359,7 @@ export async function initGallery(options = {}) {
   // same moment) while preserving the existing URL/hash contract.
   function handlePublicFilterNavigation(event) {
     const link = event.target?.closest?.('.nav-links a[href], .mobile-menu a[href]');
-    if (!link || !root?.contains?.(link)) return;
+    if (!link || !documentRef?.contains?.(link)) return;
 
     let filterId = '';
     try {
