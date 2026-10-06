@@ -115,6 +115,12 @@ assert.ok(sharedProjectEditorIndex >= 0 && sharedProjectEditorIndex < curatedRen
 assert.ok(sharedProjectEditorIndex < projectsRendererIndex);
 assert.match(adminSource, /buildProjectBody\(row\.querySelector\('\[data-editor\]'\),e\.project,\{showFilters:false,onChanged:markDirty,filterDefs:\[\]\}\)/);
 assert.match(adminSource, /buildProjectBody\(wrap\.querySelector\('\[data-body\]'\), p, \{filterDefs, badgeDefs\}\)/);
+assert.match(adminSource, /const deletedBadgeLabels = new Set\(\)/);
+assert.match(adminSource, /function getBadgeRenameMap\(\)/);
+assert.match(adminSource, /project\.badges=\[\.\.\.new Set\(nextBadges\)\]/);
+assert.match(adminSource, /project\.badge=project\.badges\[0\]\|\|''/);
+assert.match(adminSource, /const seenBadges=new Set\(\)/);
+assert.doesNotMatch(adminSource, /function badgeOptions\(current\)/);
 assert.match(adminSource, /className='curated-project-option'/);
 assert.match(adminSource, /class="curated-project-preview"/);
 const navigationGuardIndex = adminSource.indexOf('function goToSection(name){');

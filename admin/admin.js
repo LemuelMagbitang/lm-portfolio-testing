@@ -826,7 +826,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
         {name:'filters',path:SECTIONS.filters.file,content:JSON.stringify(obj,null,2)+'\n',encoding:'utf-8'},
         {name:'projects',path:SECTIONS.projects.file,content:JSON.stringify(saveContext.extraData(),null,2)+'\n',encoding:'utf-8'}
       ],'CMS: delete filter and clear project tags');
-      toast(`Saved — filter changes and project tag cleanup committed to ${conn.branch}.`);
+      toast(`Saved — filter/attribute changes and project cleanup committed to ${conn.branch}.`);
     }else if(saveContext.combined && name==='heroLoop'){
       const sr=await loadSection('settings');
       const next={...(sr.json||{}),heroTiming:{...(sr.json?.heroTiming||{}),loopMode:obj.mode,transitionStyle:obj.transition,crossfadeMs:obj.interval}};
@@ -1100,12 +1100,14 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
 RENDERERS.filters = async function(data, isCurrent=()=>true){
   const raw=data.json||[];
   const filterItems=Array.isArray(raw)?raw:(raw.filters||[]);
-  let badgeItems=Array.isArray(raw)?[]:(raw.badges||[]);
+  let badgeItems=withUids((Array.isArray(raw)?[]:(raw.badges||[])).map(x=>({
+    label: typeof x === 'string' ? x : (x&&x.label)||''
+  })));
   let items=withUids(filterItems.map(x=>({id:x.id||'',label:x.label||''})));
   const originalIds=new Map(items.map(item=>[item._uid,item.id]));
+  const originalBadgeLabels=new Map(badgeItems.map(item=>[item._uid,String(item.label||'').trim()]));
   const deletedFilterIds=new Set();
-
-  badgeItems=badgeItems.map(x=>typeof x==='string'?x:(x&&x.label)||'').filter(Boolean);
+  const deletedBadgeLabels=new Set();
 
   function getFilterRenameMap(){
     const renames=new Map();
@@ -1116,9 +1118,21 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
     return renames;
   }
 
+  function getBadgeRenameMap(){
+    const renames=new Map();
+    badgeItems.forEach(item=>{
+      const original=originalBadgeLabels.get(item._uid);
+      const next=String(item.label||'').trim();
+      if(original && next && original!==next) renames.set(original,next);
+    });
+    return renames;
+  }
+
   function hasProjectFilterImpact(){
-    if(deletedFilterIds.size) return true;
-    return getFilterRenameMap().size > 0;
+    return deletedFilterIds.size > 0
+      || deletedBadgeLabels.size > 0
+      || getFilterRenameMap().size > 0
+      || getBadgeRenameMap().size > 0;
   }
 
   function cloneProjects(projects){
@@ -1136,31 +1150,55 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
     const result=await loadSection('projects');
     const source=Array.isArray(result.json)?result.json:[];
     const projects=cloneProjects(source);
-    const renames=getFilterRenameMap();
+    const filterRenames=getFilterRenameMap();
+    const badgeRenames=getBadgeRenameMap();
     let changed=0;
 
     projects.forEach(project=>{
       const filters=Array.isArray(project.filters)?project.filters:[];
-      const next=[];
+      const nextFilters=[];
       filters.forEach(id=>{
         if(deletedFilterIds.has(id)){
           changed++;
           return;
         }
-        const mapped=renames.get(id);
+        const mapped=filterRenames.get(id);
         if(mapped && mapped!==id) {
-          next.push(mapped);
+          nextFilters.push(mapped);
           changed++;
           return;
         }
-        next.push(id);
+        nextFilters.push(id);
       });
-      project.filters=next;
+      project.filters=nextFilters;
+
+      const badges=Array.isArray(project.badges)
+        ? project.badges
+        : (project.badge ? [project.badge] : []);
+      const nextBadges=[];
+      badges.forEach(label=>{
+        const value=String(label||'').trim();
+        if(!value) return;
+        if(deletedBadgeLabels.has(value)){
+          changed++;
+          return;
+        }
+        const mapped=badgeRenames.get(value);
+        if(mapped && mapped!==value){
+          nextBadges.push(mapped);
+          changed++;
+          return;
+        }
+        nextBadges.push(value);
+      });
+      project.badges=[...new Set(nextBadges)];
+      project.badge=project.badges[0]||'';
     });
 
     saveContext.combined='filtersWithProjects';
     saveContext.extraData=()=>projects;
     saveContext.projectFilterChangeCount=changed;
+    saveContext.projectBadgeChangeCount=changed;
     return {projects,changed};
   }
 
@@ -1179,7 +1217,7 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
       </div></div>
       <div id="filterList"></div>
       <button class="add-btn" id="addFilter"><i class="fa-solid fa-plus"></i> Add filter tab</button>
-      <div class="panel" style="margin-top:18px;background:#141414;"><h3>Project badges</h3><p class="panel-sub">One final-output badge per project. These are separate from filter tabs.</p><div class="tagbox" id="badgeList"></div><button class="add-btn" id="addBadge"><i class="fa-solid fa-plus"></i> Add badge</button></div>
+      <div class="panel" style="margin-top:18px;background:#141414;"><h3>Project attributes</h3><p class="panel-sub">Optional attributes can be assigned independently of filter tabs. Renaming or deleting an attribute automatically updates matching projects when you save.</p><div class="tagbox" id="badgeList"></div><button class="add-btn" id="addBadge"><i class="fa-solid fa-plus"></i> Add attribute</button></div>
     `;
     const list = document.getElementById('filterList');
     items.forEach((item)=>{
@@ -1241,7 +1279,42 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
       list.appendChild(row);
     });
     const badgeBox=document.getElementById('badgeList');
-    if(badgeBox){ badgeBox.innerHTML=''; badgeItems.forEach((badge,i)=>{ const r=document.createElement('div'); r.className='tag-pill'; r.innerHTML=`<input value="${attr(badge)}" style="flex:1;min-width:120px;padding:4px 0;border:0;background:transparent;"><button type="button">&times;</button>`; const inp=r.querySelector('input'); inp.addEventListener('input',()=>{badgeItems[i]=inp.value;flagUnsaved();}); r.querySelector('button').addEventListener('click',()=>{badgeItems.splice(i,1);flagUnsaved();paint();}); badgeBox.appendChild(r); }); }
+    if(badgeBox){
+      badgeBox.innerHTML='';
+      badgeItems.forEach((item)=>{
+        const r=document.createElement('div');
+        r.className='tag-pill';
+        r.innerHTML=`<input value="${attr(item.label)}" style="flex:1;min-width:120px;padding:4px 0;border:0;background:transparent;"><button type="button">&times;</button>`;
+        const inp=r.querySelector('input');
+        inp.addEventListener('input',()=>{
+          item.label=inp.value;
+          flagUnsaved();
+        });
+        r.querySelector('button').addEventListener('click',async()=>{
+          try{
+            const original=originalBadgeLabels.get(item._uid);
+            const result=await loadSection('projects');
+            const projects=Array.isArray(result.json)?result.json:[];
+            const affected=original
+              ? projects.filter(project=>{
+                  const badges=Array.isArray(project.badges)?project.badges:(project.badge?[project.badge]:[]);
+                  return badges.some(value=>String(value||'').trim()===original);
+                }).length
+              : 0;
+            if(original) deletedBadgeLabels.add(original);
+            badgeItems=badgeItems.filter(x=>x._uid!==item._uid);
+            flagUnsaved();
+            paint();
+            toast(affected
+              ? `Deleted “${item.label || original}”; its attribute will be cleared from ${affected} project${affected===1?'':'s'} when saved.`
+              : `Deleted “${item.label || original || 'empty attribute'}”. No projects were using it.`);
+          }catch(err){
+            toast('Could not delete attribute: '+err.message,true);
+          }
+        });
+        badgeBox.appendChild(r);
+      });
+    }
     document.getElementById('addFilter').addEventListener('click', ()=>{ items.push({id:'',label:'',_uid:uid()}); flagUnsaved(); paint(); });
     document.getElementById('addBadge').addEventListener('click', ()=>{ badgeItems.push('New Badge'); flagUnsaved(); paint(); });
     enableDragReorder(() => document.getElementById('filterList'), items, flagUnsaved, paint);
@@ -1256,7 +1329,14 @@ RENDERERS.filters = async function(data, isCurrent=()=>true){
         if(seen.has(id)) throw new Error(`Duplicate filter ID “${id}”. Every filter must have a unique ID.`);
         seen.add(id);
       }
-      const payload={filters:items.map(x=>({id:x.id.trim(),label:x.label.trim()})),badges:badgeItems.map(x=>x.trim()).filter(Boolean)};
+      const seenBadges=new Set();
+      for(const it of badgeItems){
+        const label=String(it.label||'').trim();
+        if(!label) continue;
+        if(seenBadges.has(label)) throw new Error(`Duplicate project attribute “${label}”. Each attribute must have a unique label.`);
+        seenBadges.add(label);
+      }
+      const payload={filters:items.map(x=>({id:x.id.trim(),label:x.label.trim()})),badges:badgeItems.map(x=>String(x.label||'').trim()).filter(Boolean)};
       await buildProjectsAfterFilterChanges(saveContext);
       return payload;
     }, 'filters', SECTIONS.filters.file);
@@ -2215,16 +2295,6 @@ function buildProjectBody(el, p, options = {}){
   });
 }
 
-function badgeOptions(current){
-  const suggested=['2D Illustration','3D Design','Motion Graphics','UI/UX Design','Brand Design'];
-  let configured=[];
-  const raw=cache.filters?.json;
-  if(raw && !Array.isArray(raw)) configured=raw.badges||[];
-  const set=new Set([...suggested,...configured].filter(Boolean));
-  if(current)set.add(current);
-  return [...set].map(b=>`<option value="${attr(b)}" ${b===current?'selected':''}>${esc(b)}</option>`).join('');
-}
-
 RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
   const raw=Array.isArray(data.json)?data.json:[];
   // The Curated Views editor can render from its own file immediately. Main
@@ -2240,7 +2310,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
         const p=e.project;
         return {source:'curated',_uid:uid(),project:{
           id:String(p.id||slugify(p.title||'')),title:p.title||'',subtitle:p.subtitle||'',badge:p.badge||'',
-          badges:Array.isArray(p.badges)?[...p.badges]:null,filters:[],description:p.description||'',
+          badges:Array.isArray(p.badges)?[...new Set(p.badges.map(x=>String(x||'').trim()).filter(Boolean))]:(p.badge?[String(p.badge).trim()]:[]),filters:[],description:p.description||'',
           thumbnail:{type:p.thumbnail?.type||'image',src:p.thumbnail?.src||'',focus:p.thumbnail?.focus||'50% 50%',zoom:p.thumbnail?.zoom||1,background:p.thumbnail?.background||null},
           media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
         }};
