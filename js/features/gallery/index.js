@@ -350,14 +350,22 @@ export async function initGallery(options = {}) {
 
   let collapseScrollTimer = null;
   let collapseScrollFrame = null;
+  let collapseScrollRestore = null;
+  const showLessScrollDurationMs = 650;
 
   function cancelCollapseScrollAnimation() {
-    if (collapseScrollFrame === null) return;
-    windowRef.cancelAnimationFrame?.(collapseScrollFrame);
-    collapseScrollFrame = null;
+    if (collapseScrollFrame !== null) {
+      windowRef.cancelAnimationFrame?.(collapseScrollFrame);
+      collapseScrollFrame = null;
+    }
+    if (typeof collapseScrollRestore === 'function') {
+      const restore = collapseScrollRestore;
+      collapseScrollRestore = null;
+      restore();
+    }
   }
 
-  function animateWindowScrollToShowMore(durationMs = 1500) {
+  function animateWindowScrollToShowMore(durationMs = showLessScrollDurationMs) {
     cancelCollapseScrollAnimation();
     if (!showMoreWrapper) return;
 
@@ -383,6 +391,19 @@ export async function initGallery(options = {}) {
       return;
     }
 
+    const scrollRoot = documentRef.documentElement;
+    const previousScrollBehavior = scrollRoot?.style?.scrollBehavior ?? '';
+    if (scrollRoot?.style) {
+      // The document globally uses smooth scrolling. Each frame of this
+      // controlled collapse must bypass that CSS animation or multiple
+      // scroll operations will queue behind one another and make Show Less
+      // feel extremely slow or settle past the intended target.
+      scrollRoot.style.scrollBehavior = 'auto';
+      collapseScrollRestore = () => {
+        scrollRoot.style.scrollBehavior = previousScrollBehavior;
+      };
+    }
+
     const startedAt = typeof windowRef.performance?.now === 'function'
       ? windowRef.performance.now()
       : Date.now();
@@ -390,7 +411,7 @@ export async function initGallery(options = {}) {
 
     const step = nowValue => {
       const now = Number(nowValue) || Date.now();
-      const progress = Math.min(1, Math.max(0, (now - startedAt) / durationMs));
+      const progress = Math.min(1, Math.max(0, (now - startedAt) / Math.max(1, durationMs)));
       const eased = 1 - Math.pow(1 - progress, 3);
       windowRef.scrollTo({ top: startY + distance * eased, behavior: 'auto' });
       if (progress < 1) {
@@ -398,6 +419,11 @@ export async function initGallery(options = {}) {
       } else {
         collapseScrollFrame = null;
         windowRef.scrollTo({ top: destination, behavior: 'auto' });
+        if (typeof collapseScrollRestore === 'function') {
+          const restore = collapseScrollRestore;
+          collapseScrollRestore = null;
+          restore();
+        }
       }
     };
 
@@ -432,7 +458,7 @@ export async function initGallery(options = {}) {
       collapseScrollTimer = windowRef.setTimeout(() => {
         windowRef.requestAnimationFrame(() => {
           if (isExpanded || !showMoreWrapper) return;
-          animateWindowScrollToShowMore(1500);
+          animateWindowScrollToShowMore(showLessScrollDurationMs);
         });
       }, Math.max(0, fadeMs) + 16);
     }
