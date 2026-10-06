@@ -9,7 +9,7 @@ import {
   applyGalleryReveal,
   resetGalleryPresentation,
   captureGalleryCardRects
-} from './presentation.js?v=20261006-02';
+} from './presentation.js?v=20261006-03';
 export async function initGallery(options = {}) {
   const documentRef = options.root?.getElementById ? options.root : globalThis.document;
   const windowRef = documentRef?.defaultView || globalThis.window;
@@ -309,6 +309,13 @@ export async function initGallery(options = {}) {
   }
 
   function render({ animateTransition = false, transitionFromRects = null } = {}) {
+    // A pending Show Less follow-scroll belongs to the layout that existed
+    // when the button was collapsed. If a filter/resize/pageshow render starts
+    // first, that old timer must not scroll the visitor into the new layout.
+    if (collapseScrollTimer !== null) {
+      windowRef.clearTimeout(collapseScrollTimer);
+      collapseScrollTimer = null;
+    }
     cancelCollapseScrollAnimation();
     const filteredProjects = getFilteredProjects();
     const filtered = getCardsForProjects(filteredProjects);
@@ -501,6 +508,7 @@ export async function initGallery(options = {}) {
     if (shouldFollowCollapsedControl) {
       windowRef.clearTimeout(collapseScrollTimer);
       collapseScrollTimer = windowRef.setTimeout(() => {
+        collapseScrollTimer = null;
         windowRef.requestAnimationFrame(() => {
           if (isExpanded || !showMoreWrapper) return;
           animateWindowScrollToShowMore(showLessScrollDurationMs);

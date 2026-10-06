@@ -1214,6 +1214,27 @@ try {
           );
         }
 
+        // Regression: a pending Show Less follow-scroll must be cancelled when
+        // a filter change starts a new Gallery render. Without this guard the
+        // old timer can scroll into the newly filtered layout several hundred
+        // milliseconds later.
+        await mobileShowMore.click();
+        const filterScrollBaseline = await page.evaluate(() => window.scrollY);
+        await page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn').nth(1).click();
+        const filterScrollImmediately = await page.evaluate(() => window.scrollY);
+        await page.waitForTimeout(850);
+        const filterScrollAfterTimerWindow = await page.evaluate(() => window.scrollY);
+        if (
+          Math.abs(filterScrollImmediately - filterScrollBaseline) > 12 ||
+          Math.abs(filterScrollAfterTimerWindow - filterScrollImmediately) > 12
+        ) {
+          throw new Error(
+            `Show Less follow-scroll leaked across filter render: baseline=${filterScrollBaseline}, immediate=${filterScrollImmediately}, after=${filterScrollAfterTimerWindow}`
+          );
+        }
+        await page.locator('.filter-tabs [data-filter="all"]').first().click();
+        await page.waitForTimeout(250);
+
         await mobileShowMore.click();
         await page.waitForTimeout(350);
         if ((await mobileShowMore.locator('.btn-text').textContent()).trim().toUpperCase() !== 'SHOW LESS') {

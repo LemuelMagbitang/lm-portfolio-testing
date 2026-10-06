@@ -14,7 +14,7 @@ This repository is a static GitHub Pages site. For reliable local testing, serve
 
 GitHub Desktop can clone repositories and switch between remote branches without using Git commands.
 
-### 2. Switch to the hardening branch
+### 2. Switch to the runtime-cutover branch
 
 In GitHub Desktop:
 
