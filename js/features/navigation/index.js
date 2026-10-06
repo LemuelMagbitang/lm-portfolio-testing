@@ -92,8 +92,16 @@ export function initNavigation({ root = globalThis.document } = {}) {
     // Assigning scrollTop directly bypasses the document's global smooth-
     // scroll setting and makes this deterministic viewport correction instant.
     const scrollingElement = root.scrollingElement || root.documentElement;
-    if (scrollingElement) scrollingElement.scrollTop = targetY;
-    else windowRef.scrollTo(0, targetY);
+    [scrollingElement, root.documentElement, root.body]
+      .filter(Boolean)
+      .forEach(element => {
+        element.scrollTop = targetY;
+      });
+    try {
+      windowRef.scrollTo({ left: 0, top: targetY, behavior: 'instant' });
+    } catch (_) {
+      windowRef.scrollTo(0, targetY);
+    }
   }
 
   function handleSamePageContactNavigation(event) {
@@ -126,6 +134,7 @@ export function initNavigation({ root = globalThis.document } = {}) {
     if (targetId !== 'contact-start' && targetId !== 'contact-section') return;
 
     event.preventDefault();
+    event.stopImmediatePropagation?.();
     close();
 
     try {
