@@ -402,7 +402,7 @@ export async function initGallery(options = {}) {
 
   let collapseScrollTimer = null;
   let collapseScrollFrame = null;
-    const showLessScrollDurationMs = 650;
+  const showLessScrollDurationMs = 420;
 
   function cancelCollapseScrollAnimation() {
     if (collapseScrollFrame !== null) {
@@ -490,14 +490,12 @@ export async function initGallery(options = {}) {
     // legacy behavior and keeps the expanded rows from leaving the visitor
     // stranded at a stale document position.
     if (shouldFollowCollapsedControl) {
-      windowRef.clearTimeout(collapseScrollTimer);
-      collapseScrollTimer = windowRef.setTimeout(() => {
-        collapseScrollTimer = null;
-        windowRef.requestAnimationFrame(() => {
-          if (isExpanded || !showMoreWrapper) return;
-          animateWindowScrollToGalleryStart(showLessScrollDurationMs);
-        });
-      }, Math.max(0, fadeMs) + 16);
+      // Start immediately on click. The old fade timeout plus 650ms motion made
+      // Show Less feel close to a full second behind the interaction.
+      collapseScrollTimer = null;
+      if (!isExpanded && showMoreWrapper) {
+        animateWindowScrollToGalleryStart(showLessScrollDurationMs);
+      }
     }
   });
 
