@@ -519,28 +519,40 @@ try {
       const closeButton = page.locator('#lightboxClose');
       const navigationContrast = await page.evaluate(() => {
         const controls = document.querySelector('.lightbox-controls');
-        const icon = document.querySelector('.lightbox-next i');
+        const buttons = Array.from(document.querySelectorAll('#lightboxClose, .lightbox-prev, .lightbox-next'));
         const controlsStyle = controls ? getComputedStyle(controls) : null;
-        const iconStyle = icon ? getComputedStyle(icon) : null;
         return {
           mixBlendMode: controlsStyle?.mixBlendMode || '',
-          iconBlendMode: iconStyle?.mixBlendMode || '',
-          color: iconStyle?.color || '',
-          textShadow: iconStyle?.textShadow || ''
+          buttons: buttons.map(button => {
+            const style = getComputedStyle(button);
+            const icon = button.querySelector('i');
+            const iconStyle = icon ? getComputedStyle(icon) : null;
+            return {
+              blendMode: style.mixBlendMode || '',
+              color: style.color || '',
+              contrastMode: button.dataset.contrastMode || '',
+              textShadow: iconStyle?.textShadow || ''
+            };
+          })
         };
       });
-      if (navigationContrast.mixBlendMode !== 'difference') {
-        throw new Error('Lightbox control layer lost artwork-aware difference compositing: ' + navigationContrast.mixBlendMode);
+      if (navigationContrast.mixBlendMode !== 'normal') {
+        throw new Error('Lightbox control layer did not switch to binary contrast mode: ' + navigationContrast.mixBlendMode);
       }
-      if (navigationContrast.iconBlendMode !== 'normal') {
-        throw new Error('Lightbox navigation icon unexpectedly owns the blend mode instead of the control layer: ' + navigationContrast.iconBlendMode);
-      }
-      if (navigationContrast.color !== 'rgb(255, 255, 255)') {
-        throw new Error('Lightbox navigation icon is not brand white: ' + navigationContrast.color);
-      }
-      if (navigationContrast.textShadow !== 'none') {
-        throw new Error('Lightbox navigation icon still carries a legacy outline shadow: ' + navigationContrast.textShadow);
-      }
+      navigationContrast.buttons.forEach(button => {
+        if (button.blendMode !== 'normal') {
+          throw new Error('Lightbox navigation control retained difference blending: ' + JSON.stringify(button));
+        }
+        if (button.color !== 'rgb(0, 0, 0)' && button.color !== 'rgb(255, 255, 255)') {
+          throw new Error('Lightbox navigation control produced a non-binary color: ' + JSON.stringify(button));
+        }
+        if (!button.contrastMode.startsWith('binary-')) {
+          throw new Error('Lightbox navigation control did not receive the binary contrast state: ' + JSON.stringify(button));
+        }
+        if (button.textShadow !== 'none') {
+          throw new Error('Lightbox navigation icon still carries a legacy outline shadow: ' + JSON.stringify(button));
+        }
+      });
 
       const lightboxControlGeometry = await page.locator('.lightbox-next').evaluate(el => {
         const buttonStyle = getComputedStyle(el);
