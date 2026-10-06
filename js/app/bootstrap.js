@@ -134,9 +134,11 @@ export async function bootstrapPortfolioApp({
             Math.max(0, documentTargetY - offset)
           );
 
-      // Use the legacy two-argument overload so initial hash settlement is
-      // instant even though the site globally opts into smooth scrolling via CSS.
-      windowRef.scrollTo(0, targetY);
+      // Assigning scrollTop directly bypasses the document's global smooth-
+      // scroll setting and makes initial hash settlement deterministic.
+      const scrollingElement = root.scrollingElement || root.documentElement;
+      if (scrollingElement) scrollingElement.scrollTop = targetY;
+      else windowRef.scrollTo(0, targetY);
       return true;
     };
 
