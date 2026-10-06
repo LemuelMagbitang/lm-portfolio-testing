@@ -1574,12 +1574,6 @@ try {
         }
       }
 
-      await assertPublicFilterNavigation(page, {
-        href: '../#3d-motion',
-        expectedHash: '#3d-motion',
-        label: 'About-to-Works'
-      });
-
       const aboutContact = page.locator('.nav-links a[href="../#contact-start"]').first();
       if (await aboutContact.count() !== 1) {
         throw new Error('About page Contact navigation does not target the exact Start a Project anchor.');
@@ -1605,6 +1599,17 @@ try {
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Cross-page Contact navigation did not preserve the exact contact-start hash.');
       }
+
+      // The Contact check intentionally comes first because it keeps this
+      // About-page assertion on the About document. The filter check then
+      // verifies the independent cross-page About -> Works gallery target.
+      await page.goto(`${BASE_URL}/about/`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.waitForTimeout(120);
+      await assertPublicFilterNavigation(page, {
+        href: '../#3d-motion',
+        expectedHash: '#3d-motion',
+        label: 'About-to-Works'
+      });
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/admin/', async page => {
