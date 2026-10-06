@@ -141,7 +141,16 @@ export function initNavigation({ root = globalThis.document } = {}) {
     }
   }
 
-  bind(root, 'click', handleSamePageContactNavigation);
+  // Bind the same-page Contact contract directly to the concrete links.
+  // The menu close listener remains separate; this avoids depending on
+  // document-level click delegation or on which nested icon element receives
+  // the original event.
+  mobileMenuLinks.forEach(link => {
+    const href = link.getAttribute('href') || '';
+    if (href.includes('#contact-start') || href.includes('#contact-section')) {
+      bind(link, 'click', handleSamePageContactNavigation);
+    }
+  });
 
   // The mobile menu uses a dimmed page layer for visual separation. Keep
   // that layer interactive by closing when the user taps anywhere outside
