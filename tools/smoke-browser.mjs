@@ -809,6 +809,11 @@ try {
         label: 'Mobile Works'
       });
 
+      // Restore the ALL state so the remainder of this mobile smoke page keeps
+      // its original fixture assumptions (including the first project card).
+      await page.locator('.filter-tabs [data-filter="all"]').first().click();
+      await page.waitForTimeout(420);
+
       const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       if (await filters.count() < 2) throw new Error('Mobile/tablet Works filter UI did not render.');
 
