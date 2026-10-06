@@ -3365,6 +3365,38 @@ function fitPreviewAspect(boxEl, ratio){
   boxEl.style.aspectRatio = Math.max(9/16, Math.min(21/9, ratio));
 }
 
+const lottiePreviewDimensionCache = new Map();
+
+function loadLottiePreviewDimensions(url){
+  if (!url) return Promise.resolve(null);
+  const cached = lottiePreviewDimensionCache.get(url);
+  if (cached) return cached;
+
+  const request = fetch(url, {
+    credentials: 'omit',
+    cache: 'force-cache'
+  }).then(async response => {
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const width = Number(payload?.w);
+    const height = Number(payload?.h);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+    const dimensions = { width, height };
+    lottiePreviewDimensionCache.set(url, Promise.resolve(dimensions));
+    return dimensions;
+  }).catch(() => null);
+
+  lottiePreviewDimensionCache.set(url, request);
+  return request;
+}
+
+function fitExactPreviewAspect(boxEl, width, height){
+  const w = Number(width);
+  const h = Number(height);
+  if (!boxEl || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+  boxEl.style.aspectRatio = w + ' / ' + h;
+}
+
 function wirePreviewAspect(boxEl, m){
   if (!boxEl) return;
   if (m.type === 'model') {
@@ -3382,6 +3414,14 @@ function wirePreviewAspect(boxEl, m){
     // call, so this uses the same rule of thumb the live lightbox already
     // uses: a /shorts/ link is portrait, everything else is landscape.
     fitPreviewAspect(boxEl, /\/shorts\//.test(m.src || '') ? 9/16 : 16/9);
+    return;
+  }
+  if (m.type === 'lottie') {
+    const url = ghRawUrl(m.src);
+    loadLottiePreviewDimensions(url).then(dimensions => {
+      if (!dimensions || !boxEl.isConnected) return;
+      fitExactPreviewAspect(boxEl, dimensions.width, dimensions.height);
+    });
     return;
   }
   const img = boxEl.querySelector('img');
