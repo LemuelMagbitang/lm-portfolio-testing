@@ -68,11 +68,10 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     throw new Error(`${label} filter navigation link is missing: ${href}`);
   }
 
-  // The mobile menu is separately covered by assertMobileNavigation().
-  // Trigger the actual anchor's click handler directly here so this
-  // regression test validates hash/state/scroll behavior without making the
-  // check depend on whether a responsive menu happens to be visually open.
-  await link.evaluate(el => el.click());
+  // Exercise the real Playwright click path. This includes the mobile
+  // navigation's link listener and closes the menu before Gallery settles the
+  // target filter/scroll state.
+  await link.click();
   await page.waitForFunction(hash => window.location.hash === hash, expectedHash, { timeout: 3000 });
   await page.waitForFunction(() => {
     const target = document.querySelector('.portfolio-wrapper');
@@ -86,6 +85,12 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
   const activeFilter = await page.locator(`.filter-tabs [data-filter="${expectedHash.slice(1)}"].active`).count();
   if (activeFilter !== 1) {
     throw new Error(`${label} filter navigation selected the hash but not the matching Gallery filter.`);
+  }
+
+  const hamburger = page.locator('.hamburger').first();
+  if (await hamburger.isVisible().catch(() => false)) {
+    const menuOpen = await page.locator('.nav-links').first().evaluate(el => el.classList.contains('active'));
+    if (menuOpen) throw new Error(`${label} filter navigation left the mobile menu open.`);
   }
 }
  
