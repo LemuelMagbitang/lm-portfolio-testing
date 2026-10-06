@@ -6,7 +6,7 @@
  * change without forcing application-wide edits.
  */
 
-export { mountProjects } from './browser-runtime.js?v=20261006-01';
+export { mountProjects } from './browser-runtime.js?v=20261006-02';
 export {
   loadProjects,
   getProjectForCard,
