@@ -437,6 +437,12 @@ try {
         if (visibleProjectCount > 1) {
           const lightboxTransitionState = await page.evaluate(() => {
             const unit = document.querySelector('.lightbox-modal .modal-interior');
+              const controls = document.querySelector('.lightbox-controls');
+              const lightboxModal = document.querySelector('.lightbox-modal');
+              const controlsAreSiblingLayer = !!controls && !!lightboxModal &&
+                controls.parentElement === lightboxModal.parentElement &&
+                controls !== lightboxModal &&
+                !controls.closest('.modal-interior');
             const children = Array.from(document.querySelectorAll(
               '#lightboxMediaContainer .lightbox-media-item, .lightbox-modal .modal-header, .lightbox-modal .modal-full-desc'
             ));
@@ -469,6 +475,9 @@ try {
               'Lightbox project transition lost unified modal-interior translate/fade/blur motion: ' +
               JSON.stringify(lightboxTransitionState)
             );
+          }
+          if (!lightboxTransitionState.controlsAreSiblingLayer) {
+            throw new Error('Lightbox navigation controls are nested inside the project transition container.');
           }
           if (lightboxTransitionState.children.some(item =>
             item.transform !== 'none' ||
@@ -1190,19 +1199,21 @@ try {
         await mobileShowMore.click();
         await page.waitForTimeout(1625);
 
-        const showLessAnchorAfter = await page.locator('#showMoreWrapper').boundingBox();
+        const galleryAfterShowLess = await page.locator('.portfolio-wrapper').boundingBox();
         const collapsed = await page.locator('#portfolioGridViewport').evaluate(el => {
           const style = getComputedStyle(el);
           return style.maxHeight !== 'none' && el.scrollHeight > el.clientHeight;
         });
         const collapsedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
-        const viewportHeight = await page.evaluate(() => window.innerHeight);
+        const galleryScrollMargin = await page.locator('.portfolio-wrapper').evaluate(el =>
+          Number.parseFloat(getComputedStyle(el).scrollMarginTop || '') || 0
+        );
         if (!collapsed || collapsedLabel?.trim().toUpperCase() !== 'SHOW MORE') {
           throw new Error('Mobile Show Less did not restore the collapsed gallery state.');
         }
-        if (!showLessAnchorAfter || showLessAnchorAfter.y < 80 || showLessAnchorAfter.y > viewportHeight - 80) {
+        if (!galleryAfterShowLess || Math.abs(galleryAfterShowLess.y - galleryScrollMargin) > 18) {
           throw new Error(
-            `Mobile Show Less did not follow the new Show More location: y=${showLessAnchorAfter?.y}, viewport=${viewportHeight}`
+            `Mobile Show Less did not return to the top of the project gallery: y=${galleryAfterShowLess?.y}, expected=${galleryScrollMargin}`
           );
         }
 
@@ -1851,12 +1862,12 @@ try {
       if (await contact.count() !== 1) throw new Error('Works page Contact navigation link is missing.');
       await contact.click();
       await page.waitForTimeout(120);
-      const box = await page.locator('#contact-start').first().boundingBox();
+      const box = await page.locator('#contact-section').first().boundingBox();
       const viewport = await page.evaluate(() => ({
         height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
         top: Number(window.visualViewport?.offsetTop) || 0
       }));
-      if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      if (!box) throw new Error('Same-page Contact navigation did not reach the Contact section.');
       const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
       if (centerDelta > 32) throw new Error('Same-page Contact navigation is not centered: delta=' + centerDelta);
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
@@ -1962,19 +1973,19 @@ try {
         timeout: 6000
       });
       await page.waitForTimeout(120);
-      const contactHeading = page.locator('#contact-start').first();
-      const contactBox = await contactHeading.boundingBox();
+      const contactSection = page.locator('#contact-section').first();
+      const contactBox = await contactSection.boundingBox();
       const contactViewport = await page.evaluate(() => ({
         height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
         top: Number(window.visualViewport?.offsetTop) || 0
       }));
-      if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Start a Project heading.');
-      const headingCenter = contactBox.y + contactBox.height / 2;
+      if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Contact section.');
+      const sectionCenter = contactBox.y + contactBox.height / 2;
       const viewportCenter = contactViewport.top + contactViewport.height / 2;
-      if (Math.abs(headingCenter - viewportCenter) > 32) {
+      if (Math.abs(sectionCenter - viewportCenter) > 32) {
         throw new Error(
-          'Cross-page Contact navigation is not visually centered: headingCenter=' +
-          headingCenter + ', viewportCenter=' + viewportCenter
+          'Cross-page Contact navigation is not visually centered: sectionCenter=' +
+          sectionCenter + ', viewportCenter=' + viewportCenter
         );
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
