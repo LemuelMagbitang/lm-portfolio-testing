@@ -97,7 +97,10 @@ export function initNavigation({ root = globalThis.document } = {}) {
   }
 
   function handleSamePageContactNavigation(event) {
-    const link = event.target?.closest?.('.nav-links a[href], .mobile-menu a[href]');
+    const boundLink = event.currentTarget;
+    const link = boundLink?.matches?.('.nav-links a[href], .mobile-menu a[href]')
+      ? boundLink
+      : event.target?.closest?.('.nav-links a[href], .mobile-menu a[href]');
     if (!link || !root?.contains?.(link)) return;
 
     const windowRef = root?.defaultView || globalThis.window;
@@ -129,15 +132,25 @@ export function initNavigation({ root = globalThis.document } = {}) {
       windowRef.history.pushState(null, '', url.pathname + url.search + url.hash);
     } catch (_) {}
 
-    // Let the menu-close/layout pass settle before measuring the target.
-    const settle = () => {
-      scrollSamePageContact();
-      windowRef.requestAnimationFrame?.(() => scrollSamePageContact());
-    };
+    // Scroll immediately, then correct after the menu-close transition and
+    // one later layout pass. The immediate write prevents the browser from
+    // leaving the fragment at its native anchor position; the later writes
+    // absorb font/image/layout commits that can otherwise move the section.
+    scrollSamePageContact();
+    const settle = () => scrollSamePageContact();
     if (typeof windowRef.requestAnimationFrame === 'function') {
-      windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(settle));
+      windowRef.requestAnimationFrame(() => {
+        scrollSamePageContact();
+        windowRef.requestAnimationFrame(() => {
+          scrollSamePageContact();
+          windowRef.setTimeout(settle, 350);
+          windowRef.setTimeout(settle, 700);
+        });
+      });
     } else {
       windowRef.setTimeout(settle, 0);
+      windowRef.setTimeout(settle, 350);
+      windowRef.setTimeout(settle, 700);
     }
   }
 
@@ -148,7 +161,7 @@ export function initNavigation({ root = globalThis.document } = {}) {
   mobileMenuLinks.forEach(link => {
     const href = link.getAttribute('href') || '';
     if (href.includes('#contact-start') || href.includes('#contact-section')) {
-      bind(link, 'click', handleSamePageContactNavigation);
+      bind(link, 'click', handleSamePageContactNavigation, true);
     }
   });
 
