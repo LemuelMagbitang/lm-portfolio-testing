@@ -1869,7 +1869,7 @@ try {
       }));
       if (!box) throw new Error('Same-page Contact navigation did not reach the Contact section.');
       const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
-      if (centerDelta > 32) throw new Error('Same-page Contact navigation is not centered: delta=' + centerDelta);
+      if (centerDelta > 32) throw new Error('Same-page Contact section is not centered: delta=' + centerDelta);
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
       }
@@ -1882,15 +1882,15 @@ try {
       }
       await contact.click();
       await page.waitForTimeout(120);
-      const box = await page.locator('#contact-start').first().boundingBox();
+      const box = await page.locator('#contact-section').first().boundingBox();
       const viewport = await page.evaluate(() => ({
         height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
         top: Number(window.visualViewport?.offsetTop) || 0
       }));
-      if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      if (!box) throw new Error('Same-page Contact navigation did not reach the Contact section.');
       const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
       if (centerDelta > 32) {
-        throw new Error('Same-page Contact navigation is not centered: delta=' + centerDelta);
+        throw new Error('Same-page Contact section is not centered: delta=' + centerDelta);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -2013,14 +2013,14 @@ try {
       if (await page.locator('.nav-links.active, .nav-links.is-open').count() > 0) {
         throw new Error('Mobile Contact navigation left the hamburger menu open.');
       }
-      const box = await page.locator('#contact-start').first().boundingBox();
+      const box = await page.locator('#contact-section').first().boundingBox();
       const viewport = await page.evaluate(() => ({
         height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
         top: Number(window.visualViewport?.offsetTop) || 0
       }));
-      if (!box) throw new Error('Mobile same-page Contact navigation did not reach the Start a Project heading.');
+      if (!box) throw new Error('Mobile same-page Contact navigation did not reach the Contact section.');
       const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
-      if (centerDelta > 36) throw new Error('Mobile same-page Contact navigation is not centered: delta=' + centerDelta);
+      if (centerDelta > 36) throw new Error('Mobile same-page Contact section is not centered: delta=' + centerDelta);
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Mobile same-page Contact navigation did not preserve the exact contact-start hash.');
       }
