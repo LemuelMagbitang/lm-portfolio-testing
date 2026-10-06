@@ -74,12 +74,17 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
   const viewport = page.viewportSize();
   if ((viewport?.width || 0) >= 768) {
     const dropdown = page.locator('.nav-item-dropdown').first();
-    if (await dropdown.count() !== 1) {
+    const toggle = dropdown.locator('.nav-dropdown-toggle').first();
+    if (await dropdown.count() !== 1 || await toggle.count() !== 1) {
       throw new Error(`${label} Works dropdown is missing.`);
     }
-    await dropdown.hover();
+
+    // The production dropdown intentionally supports :focus-within as well as
+    // mouse hover. Focus is deterministic in headless Chromium and still
+    // exercises the browser-visible dropdown surface before the real click.
+    await toggle.focus();
     if (!(await link.isVisible())) {
-      throw new Error(`${label} filter navigation link did not become visible after opening the desktop dropdown.`);
+      throw new Error(`${label} filter navigation link did not become visible after focusing the desktop dropdown.`);
     }
   } else if (!(await link.isVisible())) {
     throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
