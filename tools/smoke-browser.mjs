@@ -436,58 +436,50 @@ try {
 
         if (visibleProjectCount > 1) {
           const lightboxTransitionState = await page.evaluate(() => {
-            const selectors = [
-              '#lightboxMediaContainer .lightbox-media-item',
-              '.lightbox-modal .modal-header',
-              '.lightbox-modal .modal-full-desc'
-            ];
-            const unitScale = transform => {
-              if (!transform || transform === 'none') return null;
-              const match = transform.match(/^matrix\(([^)]+)\)$/);
-              if (match) {
-                const values = match[1].split(',').map(Number);
-                return { x: values[4] || 0, y: values[5] || 0, sx: values[0], sy: values[3] };
-              }
-              const match3d = transform.match(/^matrix3d\(([^)]+)\)$/);
-              if (match3d) {
-                const values = match3d[1].split(',').map(Number);
-                return { x: values[12] || 0, y: values[13] || 0, sx: values[0], sy: values[5] };
-              }
-              return null;
-            };
-            return selectors.map(selector => {
-              const el = document.querySelector(selector);
+            const unit = document.querySelector('.lightbox-modal .modal-interior');
+            const children = Array.from(document.querySelectorAll(
+              '#lightboxMediaContainer .lightbox-media-item, .lightbox-modal .modal-header, .lightbox-modal .modal-full-desc'
+            ));
+            const read = el => {
               const style = el ? getComputedStyle(el) : null;
               return {
-                selector,
                 exists: !!el,
                 opacity: style?.opacity || '',
                 transform: style?.transform || '',
-                scale: unitScale(style?.transform || ''),
                 filter: style?.filter || '',
                 transitionDuration: style?.transitionDuration || '',
                 transitionProperty: style?.transitionProperty || ''
               };
-            });
+            };
+            return { unit: read(unit), children: children.map(read) };
           });
 
-          if (lightboxTransitionState.some(item =>
-            !item.exists ||
-            parseFloat(item.opacity || '1') >= 0.95 ||
-            !item.scale ||
-            Math.abs(item.scale.sx - 1) > 0.01 ||
-            Math.abs(item.scale.sy - 1) > 0.01 ||
-            !item.filter.includes('blur') ||
-            !item.transitionProperty.includes('opacity') ||
-            !item.transitionProperty.includes('transform') ||
-            !item.transitionProperty.includes('filter') ||
-            item.transitionDuration.split(',').some(value => Math.abs(parseFloat(value) - 0.28) > 0.02)
-          )) {
+          const unit = lightboxTransitionState.unit;
+          if (
+            !unit.exists ||
+            parseFloat(unit.opacity || '1') >= 0.95 ||
+            unit.transform === 'none' ||
+            !unit.filter.includes('blur') ||
+            !unit.transitionProperty.includes('opacity') ||
+            !unit.transitionProperty.includes('transform') ||
+            !unit.transitionProperty.includes('filter') ||
+            unit.transitionDuration.split(',').some(value => Math.abs(parseFloat(value) - 0.28) > 0.02)
+          ) {
             throw new Error(
-              'Lightbox project transition is not unified translate/fade/blur motion: ' +
+              'Lightbox project transition lost unified modal-interior translate/fade/blur motion: ' +
               JSON.stringify(lightboxTransitionState)
             );
           }
+          if (lightboxTransitionState.children.some(item =>
+            item.transform !== 'none' ||
+            item.transitionProperty.includes('transform') ||
+            item.transitionProperty.includes('opacity')
+          )) {
+            throw new Error(
+              'Lightbox child elements retained independent transition motion instead of moving with modal-interior: ' +
+              JSON.stringify(lightboxTransitionState)
+            );
+          }}
         }
       }
 
@@ -1854,6 +1846,24 @@ try {
       }
     }, { width: 1280, height: 900 });
 
+    await smokePage(browser, '/', async page => {
+      const contact = page.locator('.nav-links a[href="#contact-start"]').first();
+      if (await contact.count() !== 1) throw new Error('Works page Contact navigation link is missing.');
+      await contact.click();
+      await page.waitForTimeout(120);
+      const box = await page.locator('#contact-start').first().boundingBox();
+      const viewport = await page.evaluate(() => ({
+        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
+        top: Number(window.visualViewport?.offsetTop) || 0
+      }));
+      if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
+      if (centerDelta > 32) throw new Error('Same-page Contact navigation is not centered: delta=' + centerDelta);
+      if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
+        throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
+      }
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
@@ -1953,6 +1963,28 @@ try {
         expectedHash: '#3d-motion',
         label: 'About-to-Works'
       });
+    }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/', async page => {
+      await page.locator('.hamburger').first().click();
+      const contact = page.locator('.nav-links a[href="#contact-start"]').first();
+      if (await contact.count() !== 1) throw new Error('Mobile Works Contact navigation link is missing.');
+      await contact.click();
+      await page.waitForTimeout(160);
+      if (await page.locator('.nav-links.active, .nav-links.is-open').count() > 0) {
+        throw new Error('Mobile Contact navigation left the hamburger menu open.');
+      }
+      const box = await page.locator('#contact-start').first().boundingBox();
+      const viewport = await page.evaluate(() => ({
+        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
+        top: Number(window.visualViewport?.offsetTop) || 0
+      }));
+      if (!box) throw new Error('Mobile same-page Contact navigation did not reach the Start a Project heading.');
+      const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
+      if (centerDelta > 36) throw new Error('Mobile same-page Contact navigation is not centered: delta=' + centerDelta);
+      if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
+        throw new Error('Mobile same-page Contact navigation did not preserve the exact contact-start hash.');
+      }
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/admin/', async page => {
