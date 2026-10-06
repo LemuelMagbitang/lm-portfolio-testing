@@ -1419,6 +1419,11 @@ try {
         throw new Error('Lightbox artwork surface did not receive its intrinsic ratio token.');
       }
 
+      await page.waitForFunction(() => {
+        const layer = document.querySelector('.lightbox-controls');
+        return layer && getComputedStyle(layer).mixBlendMode === 'normal';
+      }, null, { timeout: 1000 });
+
       const lightboxControlStyles = await page.evaluate(() => {
         const layer = document.querySelector('.lightbox-controls');
         const layerStyle = layer ? getComputedStyle(layer) : null;
@@ -1431,7 +1436,9 @@ try {
             return {
               selector,
               background: buttonStyle.backgroundColor,
-              borderStyle: buttonStyle.borderStyle
+              borderStyle: buttonStyle.borderStyle,
+              color: buttonStyle.color,
+              contrastMode: el.dataset.contrastMode || ''
             };
           }).filter(Boolean)
         };
