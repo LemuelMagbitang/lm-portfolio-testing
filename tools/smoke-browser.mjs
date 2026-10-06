@@ -457,7 +457,7 @@ try {
                 transitionProperty: style?.transitionProperty || ''
               };
             };
-            return { unit: read(unit), children: children.map(read) };
+            return { controlsAreSiblingLayer, unit: read(unit), children: children.map(read) };
           });
 
           const unit = lightboxTransitionState.unit;
