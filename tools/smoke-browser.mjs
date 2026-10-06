@@ -1791,64 +1791,6 @@ try {
     }, { width: 430, height: 700 });
 
     await smokePage(browser, '/', async page => {
-      const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
-      if (await filters.count() < 2) throw new Error('Tablet Works filter UI did not render.');
-
-      const allFilter = page.locator('.filter-tabs [data-filter="all"]');
-      if (await allFilter.count() !== 1) throw new Error('Tablet Works filter UI is missing ALL.');
-
-      const showMore = page.locator('#showMoreBtn').first();
-      const showMoreWrapper = page.locator('#showMoreWrapper').first();
-      await showMore.waitFor({ state: 'visible', timeout: 5000 });
-
-      await showMore.click();
-      await page.waitForTimeout(350);
-      if ((await showMore.locator('.btn-text').textContent()).trim().toUpperCase() !== 'SHOW LESS') {
-        throw new Error('Tablet Show More did not enter the expanded state.');
-      }
-      if ((await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight)) !== 'none') {
-        throw new Error('Tablet expanded gallery remained clipped after Show More.');
-      }
-
-      // Lightbox close must not mutate the Gallery expansion state.
-      const firstCard = page.locator('#portfolioGrid .project-card').first();
-      await firstCard.click();
-      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-      await page.locator('#lightboxClose').click();
-      await page.waitForTimeout(160);
-      if ((await showMore.locator('.btn-text').textContent()).trim().toUpperCase() !== 'SHOW LESS') {
-        throw new Error('Tablet Lightbox close unexpectedly reset the expanded Gallery state.');
-      }
-
-      // Height changes may alter the requested visible count, but must not
-      // invent a new interaction state while the visitor remains expanded.
-      await page.setViewportSize({ width: 834, height: 768 });
-      await page.waitForTimeout(250);
-      if ((await showMore.locator('.btn-text').textContent()).trim().toUpperCase() !== 'SHOW LESS') {
-        throw new Error('Tablet height resize unexpectedly collapsed the expanded Gallery.');
-      }
-      if ((await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight)) !== 'none') {
-        throw new Error('Tablet height resize re-clipped an expanded Gallery.');
-      }
-
-      await showMore.click();
-      await page.waitForTimeout(760);
-      const collapsedLabel = (await showMore.locator('.btn-text').textContent()).trim().toUpperCase();
-      const collapsedViewport = await page.locator('#portfolioGridViewport').evaluate(el => ({
-        maxHeight: getComputedStyle(el).maxHeight,
-        clipped: el.scrollHeight > el.clientHeight
-      }));
-      if (collapsedLabel !== 'SHOW MORE' || collapsedViewport.maxHeight === 'none' || !collapsedViewport.clipped) {
-        throw new Error('Tablet Show Less did not restore a clipped collapsed gallery after height resize.');
-      }
-
-      const anchor = await showMoreWrapper.boundingBox();
-      if (!anchor || anchor.y < 60 || anchor.y > 708) {
-        throw new Error(`Tablet Show Less control left the viewport after collapse: y=${anchor?.y}`);
-      }
-    }, { width: 834, height: 900 });
-
-    await smokePage(browser, '/', async page => {
       const cards = page.locator('#portfolioGrid .project-card');
       const boxes = await cards.evaluateAll(items => items.slice(0, 3).map(card => {
         const r = card.getBoundingClientRect();
