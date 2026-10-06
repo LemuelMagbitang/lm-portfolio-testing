@@ -950,10 +950,9 @@ textarea { resize: vertical; }
    video into 16:9, which is why Shorts looked squished — removed.) */
 
 .lightbox-controls {
-  position: relative;
-  /* Keep controls in normal compositing; contrast comes from their explicit
-     text-shadow edge rather than blend-mode sampling of the artwork. */
-  z-index: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
   display: block;
   visibility: hidden;
   pointer-events: none;
@@ -2510,34 +2509,32 @@ body.center-page {
 .lightbox-modal.is-3d-focused .is-3d-focus-target{z-index:20;}
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{z-index:20;}
 .lightbox-modal.is-3d-focused .is-3d-focus-target .model-viewer-ui{z-index:40;}
-/* Global lightbox chrome (X / previous / next) belongs below the 3D
-   backdrop veil while the interactive model is active. It is deliberately
-   inert and non-hit-testable so it cannot be mistaken for OrbitControls or
-   accidentally triggered while the visitor is orbiting the model. */
-.lightbox-modal.is-3d-focused .lightbox-controls{
+/* Focused 3D keeps the global chrome as a separate top-level layer, but the
+   controls become inert so they cannot compete with the model interaction. */
+.lightbox-controls.is-3d-controls-disabled{
   position:fixed;
   inset:0;
-  z-index:5;
+  z-index:10001;
   pointer-events:none;
   opacity:.24;
   filter:blur(2px) saturate(.55);
   transition:opacity .25s ease, filter .25s ease;
 }
-.lightbox-modal.is-3d-focused .lightbox-nav,
-.lightbox-modal.is-3d-focused .lightbox-nav:hover,
-.lightbox-modal.is-3d-focused .lightbox-close,
-.lightbox-modal.is-3d-focused .lightbox-close:hover{
+.lightbox-controls.is-3d-controls-disabled .lightbox-nav,
+.lightbox-controls.is-3d-controls-disabled .lightbox-nav:hover,
+.lightbox-controls.is-3d-controls-disabled .lightbox-close,
+.lightbox-controls.is-3d-controls-disabled .lightbox-close:hover{
   opacity:.9;
   pointer-events:none;
 }
-.lightbox-modal.is-3d-focused .lightbox-nav{
+.lightbox-controls.is-3d-controls-disabled .lightbox-nav{
   background:transparent;
   border:0;
   box-shadow:none;
   color:#fff;
 }
 
-.lightbox-modal.is-3d-focused .lightbox-close{
+.lightbox-controls.is-3d-controls-disabled .lightbox-close{
   background:transparent;
   border:0;
   box-shadow:none;
