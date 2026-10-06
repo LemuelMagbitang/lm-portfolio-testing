@@ -824,6 +824,10 @@ export function createLightboxMediaRenderer({
           onActivate: () => {
             const currentScroll = lightbox.scrollTop;
             lightbox.dataset.pre3dScrollTop = String(currentScroll);
+            // The interactive 3D state always begins at its own viewport
+            // origin. The previous Lightbox scroll position is restored only
+            // when Back/Escape exits this focused environment.
+            lightbox.scrollTop = 0;
             lightbox.classList.add('is-3d-focused');
             modelEntry.classList.add('is-3d-focus-target');
             if (lightboxControls) {
