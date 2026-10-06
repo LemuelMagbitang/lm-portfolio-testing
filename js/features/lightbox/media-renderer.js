@@ -150,40 +150,7 @@ export function createLightboxMediaRenderer({
     return withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
   }
 
-  async function preloadLottie(url, { fetchPriority = 'low' } = {}) {
-    if (!url || typeof globalThis.fetch !== 'function') return false;
-    const controller = typeof globalThis.AbortController === 'function'
-      ? new globalThis.AbortController()
-      : null;
-    try {
-      const cleanup = () => controller?.abort();
-      const unregister = registerPreloadCleanup(cleanup);
-      const payload = await withPreloadTimeout(
-        globalThis.fetch(url, {
-          credentials: 'omit',
-          cache: 'force-cache',
-          ...(fetchPriority === 'high' ? { priority: 'high' } : {}),
-          signal: controller?.signal
-        }).then(async response => {
-          if (!response.ok) return false;
-          return response.json();
-        }),
-        MEDIA_PRELOAD_TIMEOUT_MS,
-        cleanup
-      ).finally(unregister);
-      if (!payload) return false;
-      const width = Number(payload?.w);
-      const height = Number(payload?.h);
-      if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
-        lottieDimensionCache.set(url, { width, height });
-      }
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function resolveLottieDimensions(url) {
+  function resolveLottieDimensions(url, { fetchPriority = 'low' } = {}) {
     if (!url || typeof globalThis.fetch !== 'function') return Promise.resolve(null);
     const cached = lottieDimensionCache.get(url);
     if (cached) return Promise.resolve(cached);
@@ -193,7 +160,8 @@ export function createLightboxMediaRenderer({
 
     const request = globalThis.fetch(url, {
       credentials: 'omit',
-      cache: 'force-cache'
+      cache: 'force-cache',
+      ...(fetchPriority === 'high' ? { priority: 'high' } : {})
     }).then(async response => {
       if (!response.ok) return null;
       const payload = await response.json();
@@ -211,6 +179,20 @@ export function createLightboxMediaRenderer({
 
     lottieDimensionRequests.set(url, request);
     return request;
+  }
+
+  async function preloadLottie(url, { fetchPriority = 'low' } = {}) {
+    if (!url || typeof globalThis.fetch !== 'function') return false;
+    try {
+      const dimensions = await withPreloadTimeout(
+        resolveLottieDimensions(url, { fetchPriority }),
+        MEDIA_PRELOAD_TIMEOUT_MS,
+        () => {}
+      );
+      return !!dimensions;
+    } catch (_) {
+      return false;
+    }
   }
 
   async function preloadVideo(url, { fetchPriority = 'low' } = {}) {
