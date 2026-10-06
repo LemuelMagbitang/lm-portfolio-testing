@@ -420,12 +420,12 @@ try {
             ];
             const unitScale = transform => {
               if (!transform || transform === 'none') return null;
-              const match = transform.match(/^matrix\\(([^)]+)\\)$/);
+              const match = transform.match(/^matrix\(([^)]+)\)$/);
               if (match) {
                 const values = match[1].split(',').map(Number);
                 return { x: values[4] || 0, y: values[5] || 0, sx: values[0], sy: values[3] };
               }
-              const match3d = transform.match(/^matrix3d\\(([^)]+)\\)$/);
+              const match3d = transform.match(/^matrix3d\(([^)]+)\)$/);
               if (match3d) {
                 const values = match3d[1].split(',').map(Number);
                 return { x: values[12] || 0, y: values[13] || 0, sx: values[0], sy: values[5] };
@@ -450,7 +450,7 @@ try {
 
           if (lightboxTransitionState.some(item =>
             !item.exists ||
-            item.opacity !== '0' ||
+            parseFloat(item.opacity || '1') >= 0.95 ||
             !item.scale ||
             Math.abs(item.scale.sx - 1) > 0.01 ||
             Math.abs(item.scale.sy - 1) > 0.01 ||
