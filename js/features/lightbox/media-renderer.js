@@ -23,6 +23,7 @@ export function createLightboxMediaRenderer({
   const imageDimensionCache = new Map();
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
+  const lottieDimensionRequests = new Map();
   let youtubePreloadRoot = null;
   let mediaPreloadRoot = null;
   let destroyed = false;
@@ -180,6 +181,36 @@ export function createLightboxMediaRenderer({
     } catch (_) {
       return false;
     }
+  }
+
+  function resolveLottieDimensions(url) {
+    if (!url || typeof globalThis.fetch !== 'function') return Promise.resolve(null);
+    const cached = lottieDimensionCache.get(url);
+    if (cached) return Promise.resolve(cached);
+
+    const pending = lottieDimensionRequests.get(url);
+    if (pending) return pending;
+
+    const request = globalThis.fetch(url, {
+      credentials: 'omit',
+      cache: 'force-cache'
+    }).then(async response => {
+      if (!response.ok) return null;
+      const payload = await response.json();
+      const width = Number(payload?.w);
+      const height = Number(payload?.h);
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return null;
+      }
+      const dimensions = { width, height };
+      lottieDimensionCache.set(url, dimensions);
+      return dimensions;
+    }).catch(() => null).finally(() => {
+      lottieDimensionRequests.delete(url);
+    });
+
+    lottieDimensionRequests.set(url, request);
+    return request;
   }
 
   async function preloadVideo(url, { fetchPriority = 'low' } = {}) {
@@ -877,8 +908,19 @@ export function createLightboxMediaRenderer({
     player.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     player.preserveAspectRatio = 'xMidYMid meet';
     const entry = buildMediaEntry(player, item.caption || item.description, item.background);
+    const artwork = entry.querySelector('.lightbox-artwork');
     const dimensions = lottieDimensionCache.get(resolvedSrc);
-    if (dimensions) setAspectRatio(entry.querySelector('.lightbox-artwork'), dimensions.width, dimensions.height);
+    if (dimensions) {
+      setAspectRatio(artwork, dimensions.width, dimensions.height);
+    } else {
+      // Startup warm-up is intentionally bounded and may not finish before a
+      // visitor opens a project. Resolve the Lottie JSON dimensions on demand
+      // so first-open still converges to the intrinsic artwork geometry.
+      void resolveLottieDimensions(resolvedSrc).then(resolved => {
+        if (!resolved || destroyed || !artwork?.isConnected) return;
+        setAspectRatio(artwork, resolved.width, resolved.height);
+      });
+    }
     return entry;
   }
 
@@ -949,6 +991,7 @@ export function createLightboxMediaRenderer({
     imageDimensionCache.clear();
     videoDimensionCache.clear();
     lottieDimensionCache.clear();
+    lottieDimensionRequests.clear();
   }
 
   function dispose(container) {
