@@ -164,8 +164,15 @@ export function applyGalleryReveal({
     const furthestBottom = visibleCards.reduce((maxBottom, card) => {
       const offsetTop = Number(card?.offsetTop);
       const offsetHeight = Number(card?.offsetHeight);
-      if (!Number.isFinite(offsetTop) || !Number.isFinite(offsetHeight)) return maxBottom;
-      return Math.max(maxBottom, gridRect.top + offsetTop + offsetHeight);
+      if (Number.isFinite(offsetTop) && Number.isFinite(offsetHeight)) {
+        return Math.max(maxBottom, gridRect.top + offsetTop + offsetHeight);
+      }
+
+      // Lightweight test doubles and older embedded callers may not expose
+      // offset geometry. Fall back to the visual bottom only when layout
+      // metrics are unavailable; real browser cards take the layout-metric path.
+      const bottom = Number(card?.getBoundingClientRect?.().bottom);
+      return Number.isFinite(bottom) ? Math.max(maxBottom, bottom) : maxBottom;
     }, Number.NEGATIVE_INFINITY);
 
     if (!Number.isFinite(furthestBottom)) return;
