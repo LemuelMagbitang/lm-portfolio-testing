@@ -404,9 +404,68 @@ try {
 
       const nextButton = page.locator('.lightbox-next').first();
       if (await nextButton.count() === 1) {
+        const visibleProjectCount = await page.locator('#portfolioGrid .project-card').evaluateAll(
+          cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+        );
         await nextButton.click();
         await page.waitForTimeout(120);
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+        if (visibleProjectCount > 1) {
+          const lightboxTransitionState = await page.evaluate(() => {
+            const selectors = [
+              '#lightboxMediaContainer .lightbox-media-item',
+              '.lightbox-modal .modal-header',
+              '.lightbox-modal .modal-full-desc'
+            ];
+            const unitScale = transform => {
+              if (!transform || transform === 'none') return null;
+              const match = transform.match(/^matrix\\(([^)]+)\\)$/);
+              if (match) {
+                const values = match[1].split(',').map(Number);
+                return { x: values[4] || 0, y: values[5] || 0, sx: values[0], sy: values[3] };
+              }
+              const match3d = transform.match(/^matrix3d\\(([^)]+)\\)$/);
+              if (match3d) {
+                const values = match3d[1].split(',').map(Number);
+                return { x: values[12] || 0, y: values[13] || 0, sx: values[0], sy: values[5] };
+              }
+              return null;
+            };
+            return selectors.map(selector => {
+              const el = document.querySelector(selector);
+              const style = el ? getComputedStyle(el) : null;
+              return {
+                selector,
+                exists: !!el,
+                opacity: style?.opacity || '',
+                transform: style?.transform || '',
+                scale: unitScale(style?.transform || ''),
+                filter: style?.filter || '',
+                transitionDuration: style?.transitionDuration || '',
+                transitionProperty: style?.transitionProperty || ''
+              };
+            });
+          });
+
+          if (lightboxTransitionState.some(item =>
+            !item.exists ||
+            item.opacity !== '0' ||
+            !item.scale ||
+            Math.abs(item.scale.sx - 1) > 0.01 ||
+            Math.abs(item.scale.sy - 1) > 0.01 ||
+            !item.filter.includes('blur') ||
+            !item.transitionProperty.includes('opacity') ||
+            !item.transitionProperty.includes('transform') ||
+            !item.transitionProperty.includes('filter') ||
+            item.transitionDuration.split(',').some(value => Math.abs(parseFloat(value) - 0.28) > 0.02)
+          )) {
+            throw new Error(
+              'Lightbox project transition is not unified translate/fade/blur motion: ' +
+              JSON.stringify(lightboxTransitionState)
+            );
+          }
+        }
       }
 
       // Exercise the real DOM swipe path, not only the exported direction helper.
