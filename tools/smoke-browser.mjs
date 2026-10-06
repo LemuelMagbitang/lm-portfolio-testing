@@ -2132,7 +2132,15 @@ try {
 
       page.once('dialog', dialog => dialog.accept());
       await projectsNav.click();
-      await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
+      try {
+        await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 5000 });
+      } catch (error) {
+        const sectionError = await page.locator('#content [data-error-message]').textContent().catch(() => '');
+        const contentText = await page.locator('#content').innerText().catch(() => '');
+        throw new Error(
+          `CMS Projects section failed to render: ${sectionError?.trim() || contentText?.trim() || error.message}`
+        );
+      }
       const curatedDirtyAfterLeave = await page.locator('#dirty-curatedViews').evaluate(el => getComputedStyle(el).display);
       if (curatedDirtyAfterLeave !== 'none') throw new Error('Curated Views dirty state leaked across CMS section navigation.');
       await projectsNav.click();
