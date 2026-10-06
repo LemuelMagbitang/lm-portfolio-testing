@@ -956,11 +956,10 @@ textarea { resize: vertical; }
   display: block;
   visibility: hidden;
   pointer-events: none;
-  /* The blend operation belongs to the whole chrome layer, not the nested
-     <i>. Because this fixed layer is the element composited directly above
-     the artwork, the browser can compare the white glyphs against the actual
-     pixels underneath and invert them over bright artwork. */
-  mix-blend-mode: difference;
+  /* Runtime Lightbox contrast chooses an explicit black/white color per
+     control from the pixels beneath it. Keep the base state neutral so the
+     pre-RAF frame cannot introduce gray or force white-only glyphs. */
+  mix-blend-mode: normal;
 }
 
 .lightbox-controls.active {
@@ -1027,7 +1026,7 @@ button.hamburger {
 
 .lightbox-close i,
 .lightbox-nav i{
-  color:#fff;
+  color:inherit;
   /* +15% glyph scale without changing the control hit target. */
   font-size:1.15em;
   /* Keep the outline glyph-shaped; the control layer itself owns the
