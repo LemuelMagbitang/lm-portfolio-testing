@@ -89,7 +89,9 @@ export function initNavigation({ root = globalThis.document } = {}) {
     // Keep Contact deterministic while the mobile address bar can change the
     // visual viewport. A smooth scroll can otherwise finish against a stale
     // viewport height and land visibly above or below the requested center.
-    windowRef.scrollTo({ top: targetY, behavior: 'auto' });
+    // Use the legacy two-argument overload so this targeted correction is
+    // instant even though the site globally opts into smooth scrolling via CSS.
+    windowRef.scrollTo(0, targetY);
   }
 
   function handleSamePageContactNavigation(event) {
