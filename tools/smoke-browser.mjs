@@ -530,6 +530,7 @@ try {
             return {
               blendMode: style.mixBlendMode || '',
               color: style.color || '',
+              iconColor: iconStyle?.color || '',
               contrastMode: button.dataset.contrastMode || '',
               textShadow: iconStyle?.textShadow || ''
             };
@@ -546,6 +547,9 @@ try {
         if (button.color !== 'rgb(0, 0, 0)' && button.color !== 'rgb(255, 255, 255)') {
           throw new Error('Lightbox navigation control produced a non-binary color: ' + JSON.stringify(button));
         }
+        if (button.iconColor !== button.color) {
+          throw new Error('Lightbox navigation icon is not inheriting the binary button color: ' + JSON.stringify(button));
+        }
         if (!button.contrastMode.startsWith('binary-')) {
           throw new Error('Lightbox navigation control did not receive the binary contrast state: ' + JSON.stringify(button));
         }
@@ -553,6 +557,52 @@ try {
           throw new Error('Lightbox navigation icon still carries a legacy outline shadow: ' + JSON.stringify(button));
         }
       });
+
+      const binaryContrastFixture = await page.evaluate(async () => {
+        const artwork = document.querySelector('#lightboxMediaContainer .lightbox-artwork');
+        const next = document.querySelector('.lightbox-next');
+        if (!artwork || !next) return null;
+
+        const originalHtml = artwork.innerHTML;
+        const originalStyle = artwork.getAttribute('style');
+
+        artwork.style.position = 'fixed';
+        artwork.style.inset = '0';
+        artwork.style.width = '100vw';
+        artwork.style.height = '100vh';
+        artwork.style.maxWidth = 'none';
+        artwork.style.aspectRatio = 'auto';
+        artwork.style.zIndex = '200';
+
+        const fixtureImage = document.createElement('img');
+        fixtureImage.alt = '';
+        fixtureImage.decoding = 'sync';
+        fixtureImage.style.cssText = 'display:block;width:100%;height:100%;object-fit:fill;';
+        artwork.replaceChildren(fixtureImage);
+
+        const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 360));
+        const setFixtureColor = async color => {
+          fixtureImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="' + color + '"/></svg>'
+          );
+          await fixtureImage.decode().catch(() => {});
+          await waitForContrast();
+          return getComputedStyle(next).color;
+        };
+
+        const bright = await setFixtureColor('#ffffff');
+        const dark = await setFixtureColor('#000000');
+
+        if (originalStyle === null) artwork.removeAttribute('style');
+        else artwork.setAttribute('style', originalStyle);
+        artwork.innerHTML = originalHtml;
+        return { bright, dark };
+      });
+      if (!binaryContrastFixture ||
+          binaryContrastFixture.bright !== 'rgb(0, 0, 0)' ||
+          binaryContrastFixture.dark !== 'rgb(255, 255, 255)') {
+        throw new Error('Lightbox binary contrast did not switch black/white over deterministic bright/dark artwork: ' + JSON.stringify(binaryContrastFixture));
+      }
 
       const lightboxControlGeometry = await page.locator('.lightbox-next').evaluate(el => {
         const buttonStyle = getComputedStyle(el);
