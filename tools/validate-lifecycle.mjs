@@ -114,7 +114,7 @@ const projectsRendererIndex = adminSource.indexOf('RENDERERS.projects');
 assert.ok(sharedProjectEditorIndex >= 0 && sharedProjectEditorIndex < curatedRendererIndex);
 assert.ok(sharedProjectEditorIndex < projectsRendererIndex);
 assert.match(adminSource, /buildProjectBody\(row\.querySelector\('\[data-editor\]'\),e\.project,\{showFilters:false,onChanged:markDirty,filterDefs:\[\]\}\)/);
-assert.match(adminSource, /buildProjectBody\(wrap\.querySelector\('\[data-body\]'\), p, \{filterDefs\}\)/);
+assert.match(adminSource, /buildProjectBody\(wrap\.querySelector\('\[data-body\]'\), p, \{filterDefs, badgeDefs\}\)/);
 assert.match(adminSource, /className='curated-project-option'/);
 assert.match(adminSource, /class="curated-project-preview"/);
 const navigationGuardIndex = adminSource.indexOf('function goToSection(name){');
