@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261006-08'
+  cacheVersion = '20261006-09'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -95,10 +95,10 @@ export async function bootstrapPortfolioApp({
 
     let target = root.getElementById(id);
     const isContactTarget = id === 'contact-start' || id === 'contact-section';
-    // Keep old inbound #contact-section links working, but align them to the
-    // exact Start a Project heading rather than the outer section top.
-    if (id === 'contact-section') {
-      target = root.querySelector('#contact-section .start-project-title') || target;
+    // Both public Contact anchor variants center the whole Contact section,
+    // not merely the Start a Project heading.
+    if (isContactTarget) {
+      target = root.getElementById('contact-section') || target;
     }
     if (!target) return;
 
