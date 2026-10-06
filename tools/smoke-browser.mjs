@@ -452,6 +452,38 @@ try {
         throw new Error('Lightbox navigation icon still carries a legacy outline shadow: ' + navigationContrast.textShadow);
       }
 
+      const lightboxControlGeometry = await page.locator('.lightbox-next').evaluate(el => {
+        const buttonStyle = getComputedStyle(el);
+        const icon = el.querySelector('i');
+        const iconStyle = icon ? getComputedStyle(icon) : null;
+        const buttonFont = parseFloat(buttonStyle.fontSize || '0');
+        const iconFont = parseFloat(iconStyle?.fontSize || '0');
+        return {
+          buttonFont,
+          iconFont,
+          ratio: buttonFont > 0 ? iconFont / buttonFont : 0,
+          border: buttonStyle.border,
+          background: buttonStyle.backgroundColor,
+          strokeWidth: iconStyle?.webkitTextStrokeWidth || '',
+          strokeColor: iconStyle?.webkitTextStrokeColor || ''
+        };
+      });
+      if (lightboxControlGeometry.ratio < 1.14 || lightboxControlGeometry.ratio > 1.16) {
+        throw new Error(
+          'Lightbox control icon size is not the required +15% relative scale: ' +
+          JSON.stringify(lightboxControlGeometry)
+        );
+      }
+      if (lightboxControlGeometry.strokeWidth !== '1px') {
+        throw new Error('Lightbox control icon lost its 1px glyph outline: ' + lightboxControlGeometry.strokeWidth);
+      }
+      if (lightboxControlGeometry.border !== '0px none rgb(0, 0, 0)' && !lightboxControlGeometry.border.startsWith('0px')) {
+        throw new Error('Lightbox control reintroduced a rectangular border: ' + lightboxControlGeometry.border);
+      }
+      if (lightboxControlGeometry.background !== 'rgba(0, 0, 0, 0)') {
+        throw new Error('Lightbox control reintroduced a visible background box: ' + lightboxControlGeometry.background);
+      }
+
       if (await closeButton.count()) {
         await closeButton.click();
         await page.waitForTimeout(120);
