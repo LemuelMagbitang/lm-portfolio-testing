@@ -2412,10 +2412,20 @@ body.center-page {
    Global X / project navigation remain visually subordinate to the model,
    so they read as lightbox controls rather than OrbitControls. */
 .lightbox-modal.is-3d-focused{
-  overflow-y:auto;
+  /* Focus mode is a device-bound interaction surface, not another scroll
+     position inside the Lightbox. Lock the Lightbox viewport itself while the
+     model owns all pointer/touch interaction. */
+  position:fixed;
+  inset:0;
+  width:100dvw;
+  max-width:none;
+  height:100dvh;
+  overflow:hidden!important;
   overflow-x:hidden;
+  overflow-y:hidden;
   padding:0;
   touch-action:none;
+  overscroll-behavior:none;
   background:rgba(5,5,5,.92);
   scrollbar-width:none;
 }
