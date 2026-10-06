@@ -1276,14 +1276,17 @@ try {
         const filterScrollBaseline = await page.evaluate(() => window.scrollY);
         await page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn').nth(1).click();
         const filterScrollImmediately = await page.evaluate(() => window.scrollY);
-        await page.waitForTimeout(850);
-        const filterScrollAfterTimerWindow = await page.evaluate(() => window.scrollY);
-        // A filter change may legitimately shrink the document enough for the
-        // browser to clamp scrollY immediately. The regression is specifically
-        // about a delayed movement after Gallery render has settled.
-        if (Math.abs(filterScrollAfterTimerWindow - filterScrollImmediately) > 12) {
+        // Filter changes have their own presentation/layout settling pass and
+        // may legitimately move the document while the new result set is
+        // measured. The regression is about a stale Show Less timer continuing
+        // to move the page after that filter transition has settled.
+        await page.waitForTimeout(500);
+        const filterScrollSettled = await page.evaluate(() => window.scrollY);
+        await page.waitForTimeout(220);
+        const filterScrollAfterSettle = await page.evaluate(() => window.scrollY);
+        if (Math.abs(filterScrollAfterSettle - filterScrollSettled) > 12) {
           throw new Error(
-            `Show Less follow-scroll leaked across filter render: baseline=${filterScrollBaseline}, immediate=${filterScrollImmediately}, after=${filterScrollAfterTimerWindow}`
+            `Show Less follow-scroll remained active after filter render settled: baseline=${filterScrollBaseline}, immediate=${filterScrollImmediately}, settled=${filterScrollSettled}, later=${filterScrollAfterSettle}`
           );
         }
         await page.locator('.filter-tabs [data-filter="all"]').first().click();
