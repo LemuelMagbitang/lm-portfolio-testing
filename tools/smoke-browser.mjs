@@ -1975,19 +1975,48 @@ try {
       const onNavigate = frame => { if (frame === page.mainFrame()) navigations += 1; };
       page.on('framenavigated', onNavigate);
 
+      // Start from the exact user-reported state: Contact is active and its
+      // hash is still present. Works and the LM logo must reset the document
+      // to the top and remove that hash without reloading.
+      await page.locator('.nav-links a[href="#contact-start"]').first().click();
+      await page.waitForTimeout(100);
+      if (await page.evaluate(() => window.location.hash !== '#contact-start')) {
+        throw new Error('Navigation smoke fixture failed to enter the Contact hash state.');
+      }
+
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
       await page.locator('.nav-links .nav-dropdown-toggle').first().click();
       await page.waitForTimeout(80);
-      if (Math.abs(await page.evaluate(() => window.scrollY)) > 8) {
+      const worksReset = await page.evaluate(() => ({
+        scrollY: window.scrollY,
+        hash: window.location.hash,
+        path: window.location.pathname
+      }));
+      if (Math.abs(worksReset.scrollY) > 8) {
         throw new Error('Main-page Works navigation did not return to the top without reloading.');
+      }
+      if (worksReset.hash !== '') {
+        throw new Error('Main-page Works navigation did not clear the Contact/filter hash: ' + worksReset.hash);
       }
       if (navigations !== 0) throw new Error('Main-page Works navigation triggered a document navigation.');
 
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      // Recreate Contact state before checking the logo independently.
+      await page.evaluate(() => {
+        history.pushState(null, '', location.pathname + '#contact-start');
+        window.scrollTo(0, document.body.scrollHeight);
+      });
       await page.locator('.nav-logo').first().click();
       await page.waitForTimeout(60);
-      if (Math.abs(await page.evaluate(() => window.scrollY)) > 8) {
+      const logoReset = await page.evaluate(() => ({
+        scrollY: window.scrollY,
+        hash: window.location.hash,
+        path: window.location.pathname
+      }));
+      if (Math.abs(logoReset.scrollY) > 8) {
         throw new Error('Main-page LM logo navigation did not return to the top without reloading.');
+      }
+      if (logoReset.hash !== '') {
+        throw new Error('Main-page LM logo navigation did not clear the Contact/filter hash: ' + logoReset.hash);
       }
       if (navigations !== 0) throw new Error('Main-page LM logo navigation triggered a document navigation.');
       page.off('framenavigated', onNavigate);
