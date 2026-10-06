@@ -63,8 +63,8 @@ export function initNavigation({ root = globalThis.document } = {}) {
   bind(menuButton, 'click', toggle);
   mobileMenuLinks.forEach(link => bind(link, 'click', close));
 
-  function scrollSamePageContact(targetId) {
-    const target = root.getElementById(targetId) || root.querySelector('#contact-section');
+  function scrollSamePageContact() {
+    const target = root.getElementById('contact-section') || root.getElementById('contact-start');
     const windowRef = root?.defaultView || globalThis.window;
     if (!target || !windowRef?.scrollTo) return;
 
@@ -131,8 +131,8 @@ export function initNavigation({ root = globalThis.document } = {}) {
 
     // Let the menu-close/layout pass settle before measuring the target.
     const settle = () => {
-      scrollSamePageContact(targetId);
-      windowRef.requestAnimationFrame?.(() => scrollSamePageContact(targetId));
+      scrollSamePageContact();
+      windowRef.requestAnimationFrame?.(() => scrollSamePageContact());
     };
     if (typeof windowRef.requestAnimationFrame === 'function') {
       windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(settle));
