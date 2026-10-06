@@ -734,6 +734,9 @@ try {
           ratio: artwork?.getBoundingClientRect?.().height
             ? artwork.getBoundingClientRect().width / artwork.getBoundingClientRect().height
             : 0,
+          width: artwork?.getBoundingClientRect?.().width || 0,
+          height: artwork?.getBoundingClientRect?.().height || 0,
+          classHook: !!artwork?.classList?.contains('is-lottie-artwork'),
           styleRatio: artwork?.style.aspectRatio || '',
           preserveAspectRatio: el.getAttribute('preserveAspectRatio') || '',
           backgroundLayer: !!artwork?.querySelector(':scope > .lm-media-background-layer'),
@@ -743,6 +746,16 @@ try {
       const expectedLottieRatio = 440 / 478;
       if (Math.abs(lottieGeometry.ratio - expectedLottieRatio) > 0.01) {
         throw new Error(`Lightbox Lottie artwork did not retain its intrinsic ratio: ${JSON.stringify(lottieGeometry)}`);
+      }
+      if (!lottieGeometry.classHook) {
+        throw new Error('Lightbox Lottie artwork is missing its dedicated responsive sizing hook.');
+      }
+      const desktopViewportHeight = await page.evaluate(() => window.innerHeight);
+      const desktopLottieMaxHeight = desktopViewportHeight * 0.72 + 3;
+      if (lottieGeometry.height > desktopLottieMaxHeight) {
+        throw new Error(
+          `Desktop Lightbox Lottie remains too tall (${Math.round(lottieGeometry.height)}px > ${Math.round(desktopLottieMaxHeight)}px): ${JSON.stringify(lottieGeometry)}`
+        );
       }
       if (lottieGeometry.preserveAspectRatio !== 'xMidYMid meet') {
         throw new Error(`Lightbox Lottie rendering still permits cropping: ${lottieGeometry.preserveAspectRatio}`);
