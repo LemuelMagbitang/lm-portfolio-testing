@@ -1807,6 +1807,15 @@ try {
       const softwareImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').count();
       const brokenImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').evaluateAll(images => images.filter(img => !img.complete || !img.naturalWidth).length);
       const kritaImage = page.locator('#softwareSkillsList li.has-logo img[alt="Krita"]').first();
+      const afterEffectsImage = page.locator('#softwareSkillsList li.has-logo img[alt="After Effects"], #softwareSkillsList li.has-logo img[alt="Adobe After Effects"]').first();
+      const adobeAssetChecks = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').evaluateAll(images =>
+        images.map(img => ({
+          alt: img.getAttribute('alt') || '',
+          src: img.getAttribute('src') || '',
+          naturalWidth: img.naturalWidth || 0,
+          broken: !img.complete || !img.naturalWidth
+        }))
+      );
 
       if (experience < 1) throw new Error('About page rendered no work experience entries.');
       if (education < 1) throw new Error('About page rendered no education entries.');
@@ -1820,6 +1829,28 @@ try {
         const usesSimpleIconsKrita = src?.includes('cdn.simpleicons.org/krita');
         if (!src || (!usesBundledKrita && !usesSimpleIconsKrita)) {
           throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
+        }
+      }
+
+      if (await afterEffectsImage.count()) {
+        const src = await afterEffectsImage.getAttribute('src');
+        if (!src?.includes('/assets/projects/site/logos/adobe-after-effects-cc.png')) {
+          throw new Error('About page After Effects logo left its bundled Adobe asset path.');
+        }
+      }
+
+      const expectedBundledAdobe = [
+        'After Effects',
+        'Illustrator',
+        'Photoshop',
+        'Premier Pro',
+        'Figma'
+      ];
+      for (const name of expectedBundledAdobe) {
+        const entry = adobeAssetChecks.find(item => item.alt === name);
+        if (!entry) throw new Error('About page missing expected software logo entry: ' + name);
+        if (entry.broken || entry.naturalWidth <= 0) {
+          throw new Error('About page expected software logo is broken: ' + JSON.stringify(entry));
         }
       }
 
