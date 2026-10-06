@@ -29,6 +29,7 @@ export async function mountProjects({
   onCardActivate,
   applyMediaBackground,
   parseYouTubeUrl = defaultParseYouTubeUrl,
+  waitForThumbnailReadiness = true,
   buildCard = (project, index = 0) => buildProjectCardElement(project, {
     resolveAssetUrl,
     applyMediaBackground,
@@ -50,20 +51,22 @@ export async function mountProjects({
   });
   if (!mounted) return false;
 
-  try {
-    const grid = getGrid?.();
-    const cards = Array.from(grid?.querySelectorAll?.('.project-card') || []);
-    const viewportWidth = Number(documentRef?.defaultView?.innerWidth) || 1280;
-    const initialPriorityCount = viewportWidth < 768 ? 6 : 9;
-    await waitForProjectThumbnailReadiness(cards, {
-      count: initialPriorityCount,
-      timeoutMs: 2200,
-      windowRef: documentRef?.defaultView || globalThis.window
-    });
-  } catch (error) {
-    // Thumbnail readiness is a startup optimization, not a reason to discard
-    // an otherwise valid Projects mount.
-    console.warn('Projects: thumbnail readiness wait failed.', error);
+  if (waitForThumbnailReadiness) {
+    try {
+      const grid = getGrid?.();
+      const cards = Array.from(grid?.querySelectorAll?.('.project-card') || []);
+      const viewportWidth = Number(documentRef?.defaultView?.innerWidth) || 1280;
+      const initialPriorityCount = viewportWidth < 768 ? 6 : 9;
+      await waitForProjectThumbnailReadiness(cards, {
+        count: initialPriorityCount,
+        timeoutMs: 2200,
+        windowRef: documentRef?.defaultView || globalThis.window
+      });
+    } catch (error) {
+      // Thumbnail readiness is a startup optimization, not a reason to discard
+      // an otherwise valid Projects mount.
+      console.warn('Projects: thumbnail readiness wait failed.', error);
+    }
   }
 
   return true;
