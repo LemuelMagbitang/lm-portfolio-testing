@@ -402,28 +402,24 @@ export async function initGallery(options = {}) {
 
   let collapseScrollTimer = null;
   let collapseScrollFrame = null;
-  let collapseScrollRestore = null;
-  const showLessScrollDurationMs = 650;
+    const showLessScrollDurationMs = 650;
 
   function cancelCollapseScrollAnimation() {
     if (collapseScrollFrame !== null) {
       windowRef.cancelAnimationFrame?.(collapseScrollFrame);
       collapseScrollFrame = null;
     }
-    if (typeof collapseScrollRestore === 'function') {
-      const restore = collapseScrollRestore;
-      collapseScrollRestore = null;
-      restore();
-    }
   }
 
   function animateWindowScrollToGalleryStart(durationMs = showLessScrollDurationMs) {
     cancelCollapseScrollAnimation();
-    const galleryRoot = documentRef.querySelector('.portfolio-wrapper') ||
-      documentRef.getElementById('portfolioGrid');
-    if (!galleryRoot) return;
 
-    const startY = Number(windowRef.scrollY) || 0;
+    const galleryRoot = portfolioWrapper || documentRef.getElementById('portfolioGrid');
+    const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
+    if (!galleryRoot || !scrollingElement) return;
+
+    const viewportHeight = Number(windowRef.innerHeight) || 0;
+    const startY = Number(windowRef.scrollY) || Number(scrollingElement.scrollTop) || 0;
     const rect = galleryRoot.getBoundingClientRect();
     const scrollMarginTop = Number.parseFloat(
       windowRef.getComputedStyle?.(galleryRoot)?.scrollMarginTop || ''
@@ -437,27 +433,14 @@ export async function initGallery(options = {}) {
     const destination = Math.max(0, Math.min(maxY, targetY));
 
     if (Math.abs(destination - startY) < 1) {
-      windowRef.scrollTo({ top: destination, behavior: 'auto' });
+      scrollingElement.scrollTop = destination;
       return;
     }
 
     const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion || typeof windowRef.requestAnimationFrame !== 'function') {
-      windowRef.scrollTo({ top: destination, behavior: 'auto' });
+      scrollingElement.scrollTop = destination;
       return;
-    }
-
-    const scrollRoot = documentRef.documentElement;
-    const previousScrollBehavior = scrollRoot?.style?.scrollBehavior ?? '';
-    if (scrollRoot?.style) {
-      // The document globally uses smooth scrolling. Each frame of this
-      // controlled collapse must bypass that CSS animation or multiple
-      // scroll operations will queue behind one another and make Show Less
-      // feel extremely slow or settle past the intended target.
-      scrollRoot.style.scrollBehavior = 'auto';
-      collapseScrollRestore = () => {
-        scrollRoot.style.scrollBehavior = previousScrollBehavior;
-      };
     }
 
     const startedAt = typeof windowRef.performance?.now === 'function'
@@ -469,17 +452,14 @@ export async function initGallery(options = {}) {
       const now = Number(nowValue) || Date.now();
       const progress = Math.min(1, Math.max(0, (now - startedAt) / Math.max(1, durationMs)));
       const eased = 1 - Math.pow(1 - progress, 3);
-      windowRef.scrollTo({ top: startY + distance * eased, behavior: 'auto' });
+      scrollingElement.scrollTop = startY + distance * eased;
       if (progress < 1) {
         collapseScrollFrame = windowRef.requestAnimationFrame(step);
       } else {
         collapseScrollFrame = null;
-        windowRef.scrollTo({ top: destination, behavior: 'auto' });
-        if (typeof collapseScrollRestore === 'function') {
-          const restore = collapseScrollRestore;
-          collapseScrollRestore = null;
-          restore();
-        }
+        // Direct assignment bypasses html{scroll-behavior:smooth} so the
+        // collapsed gallery lands exactly at its requested top edge.
+        scrollingElement.scrollTop = destination;
       }
     };
 
