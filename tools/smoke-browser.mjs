@@ -68,6 +68,16 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     throw new Error(`${label} filter navigation link is missing: ${href}`);
   }
 
+  // Cross-page smoke cases can deliberately reload a public page immediately
+  // before exercising its navigation. The branded loading gate intentionally
+  // intercepts pointer events until bootstrap has composed and painted the
+  // page, so synchronize against that explicit readiness contract instead of
+  // racing the transition overlay.
+  const pageTransition = page.locator('#pageTransition[data-loading="ready"]').first();
+  if (await pageTransition.count() === 1) {
+    await pageTransition.waitFor({ state: 'attached', timeout: 6000 });
+  }
+
   // Desktop exposes these links through a CSS-only hover dropdown. Test the
   // anchor's actual activation semantics there without depending on a headless
   // pseudo-hover state. Mobile uses the real visible hamburger menu and a real
