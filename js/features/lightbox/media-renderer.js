@@ -870,8 +870,12 @@ export function createLightboxMediaRenderer({
     else if (orientation === 'square') player.classList.add('yt-square');
     else player.classList.add('yt-landscape');
 
-    player.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    player.preserveAspectRatio = 'xMidYMid slice';
+    // The artwork surface is assigned the Lottie file's intrinsic w/h
+    // before normal interactive use. Use "meet" so a delayed/unknown ratio
+    // can never crop the animation; the surface itself remains responsible
+    // for the final aspect-ratio geometry.
+    player.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    player.preserveAspectRatio = 'xMidYMid meet';
     const entry = buildMediaEntry(player, item.caption || item.description, item.background);
     const dimensions = lottieDimensionCache.get(resolvedSrc);
     if (dimensions) setAspectRatio(entry.querySelector('.lightbox-artwork'), dimensions.width, dimensions.height);
