@@ -68,18 +68,11 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     throw new Error(`${label} filter navigation link is missing: ${href}`);
   }
 
-  // The same helper is used for desktop and mobile. On mobile the public
-  // filter links live inside the closed hamburger panel; open it here rather
-  // than making every caller manage menu state independently.
-  if (!(await link.isVisible().catch(() => false))) {
-    const menuButton = page.locator('.hamburger').first();
-    if (await menuButton.count() === 1 && await menuButton.isVisible().catch(() => false)) {
-      await menuButton.click();
-      await link.waitFor({ state: 'visible', timeout: 1500 });
-    }
-  }
-
-  await link.click();
+  // The mobile menu is separately covered by assertMobileNavigation().
+  // Trigger the actual anchor's click handler directly here so this
+  // regression test validates hash/state/scroll behavior without making the
+  // check depend on whether a responsive menu happens to be visually open.
+  await link.evaluate(el => el.click());
   await page.waitForFunction(hash => window.location.hash === hash, expectedHash, { timeout: 3000 });
   await page.waitForFunction(() => {
     const target = document.querySelector('.portfolio-wrapper');
