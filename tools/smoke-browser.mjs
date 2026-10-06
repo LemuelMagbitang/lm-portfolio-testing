@@ -479,7 +479,7 @@ try {
               'Lightbox child elements retained independent transition motion instead of moving with modal-interior: ' +
               JSON.stringify(lightboxTransitionState)
             );
-          }}
+          }
         }
       }
 
