@@ -2426,6 +2426,7 @@ body.center-page {
   padding:0;
   touch-action:none;
   overscroll-behavior:none;
+  overflow-anchor:none;
   background:rgba(5,5,5,.92);
   scrollbar-width:none;
 }
