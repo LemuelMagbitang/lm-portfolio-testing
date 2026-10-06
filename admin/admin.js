@@ -2634,6 +2634,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     if(!items.length) list.innerHTML = `<div class="banner muted">No projects yet — add one below.</div>`;
 
     items.forEach((p)=>{
+      const isOpen = p._uid === openUid;
       const wrap = document.createElement('div');
       wrap.className = 'card-item project-list-item' + (isOpen ? ' is-open' : ' is-collapsed');
       wrap.dataset.uid = p._uid;
