@@ -524,7 +524,9 @@ try {
       const lottieGeometry = await lottiePlayer.evaluate(el => {
         const artwork = el.parentElement;
         return {
-          ratio: parseFloat(getComputedStyle(artwork).aspectRatio || '0'),
+          ratio: artwork?.getBoundingClientRect?.().height
+            ? artwork.getBoundingClientRect().width / artwork.getBoundingClientRect().height
+            : 0,
           styleRatio: artwork?.style.aspectRatio || '',
           preserveAspectRatio: el.getAttribute('preserveAspectRatio') || '',
           backgroundLayer: !!artwork?.querySelector(':scope > .lm-media-background-layer'),
