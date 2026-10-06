@@ -1295,7 +1295,10 @@ try {
           throw new Error('Show More did not enter the stable expanded state before Lightbox regression test.');
         }
 
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.evaluate(() => {
+        const scrolling = document.scrollingElement || document.documentElement;
+        scrolling.scrollTop = scrolling.scrollHeight;
+      });
         await page.waitForTimeout(250);
         const afterPlainScrollViewport = await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight);
         const afterPlainScrollLabel = (await mobileShowMore.locator('.btn-text').textContent()).trim().toUpperCase();
@@ -1307,7 +1310,10 @@ try {
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
         await page.locator('#lightboxClose').click();
         await page.waitForTimeout(150);
-        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await page.evaluate(() => {
+        const scrolling = document.scrollingElement || document.documentElement;
+        scrolling.scrollTop = scrolling.scrollHeight;
+      });
         await page.waitForTimeout(250);
 
         const afterLightboxClose = await page.locator('#portfolioGridViewport').evaluate(el => ({
