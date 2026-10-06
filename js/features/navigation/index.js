@@ -63,6 +63,82 @@ export function initNavigation({ root = globalThis.document } = {}) {
   bind(menuButton, 'click', toggle);
   mobileMenuLinks.forEach(link => bind(link, 'click', close));
 
+  function scrollSamePageContact(targetId) {
+    const target = root.getElementById(targetId) || root.querySelector('#contact-section');
+    const windowRef = root?.defaultView || globalThis.window;
+    if (!target || !windowRef?.scrollTo) return;
+
+    const visualViewport = windowRef.visualViewport;
+    const viewportHeight = Number(visualViewport?.height) || Number(windowRef.innerHeight) || 0;
+    const viewportTop = Number(visualViewport?.offsetTop) || 0;
+    const currentY = Number(windowRef.scrollY) || 0;
+    const rect = target.getBoundingClientRect();
+    const documentHeight = Math.max(
+      Number(root.documentElement?.scrollHeight) || 0,
+      Number(root.body?.scrollHeight) || 0
+    );
+    const maxScrollY = Math.max(0, documentHeight - viewportHeight);
+    const targetY = Math.max(
+      0,
+      Math.min(
+        maxScrollY,
+        currentY + rect.top + (rect.height / 2) - (viewportTop + viewportHeight / 2)
+      )
+    );
+
+    // Keep Contact deterministic while the mobile address bar can change the
+    // visual viewport. A smooth scroll can otherwise finish against a stale
+    // viewport height and land visibly above or below the requested center.
+    windowRef.scrollTo({ top: targetY, behavior: 'auto' });
+  }
+
+  function handleSamePageContactNavigation(event) {
+    const link = event.target?.closest?.('.nav-links a[href], .mobile-menu a[href]');
+    if (!link || !root?.contains?.(link)) return;
+
+    const windowRef = root?.defaultView || globalThis.window;
+    let url;
+    try {
+      url = new URL(link.getAttribute('href') || '', windowRef.location.href);
+    } catch (_) {
+      return;
+    }
+
+    if (
+      !url.hash ||
+      url.pathname !== windowRef.location.pathname ||
+      url.search !== windowRef.location.search
+    ) return;
+
+    let targetId = '';
+    try {
+      targetId = decodeURIComponent(url.hash.slice(1));
+    } catch (_) {
+      return;
+    }
+    if (targetId !== 'contact-start' && targetId !== 'contact-section') return;
+
+    event.preventDefault();
+    close();
+
+    try {
+      windowRef.history.pushState(null, '', url.pathname + url.search + url.hash);
+    } catch (_) {}
+
+    // Let the menu-close/layout pass settle before measuring the target.
+    const settle = () => {
+      scrollSamePageContact(targetId);
+      windowRef.requestAnimationFrame?.(() => scrollSamePageContact(targetId));
+    };
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(settle));
+    } else {
+      windowRef.setTimeout(settle, 0);
+    }
+  }
+
+  bind(root, 'click', handleSamePageContactNavigation);
+
   // The mobile menu uses a dimmed page layer for visual separation. Keep
   // that layer interactive by closing when the user taps anywhere outside
   // the navbar, while preserving normal interaction inside the menu.
