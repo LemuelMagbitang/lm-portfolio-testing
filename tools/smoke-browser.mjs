@@ -73,9 +73,12 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
   // intercepts pointer events until bootstrap has composed and painted the
   // page, so synchronize against that explicit readiness contract instead of
   // racing the transition overlay.
-  const pageTransition = page.locator('#pageTransition[data-loading="ready"]').first();
+  const pageTransition = page.locator('#pageTransition').first();
   if (await pageTransition.count() === 1) {
-    await pageTransition.waitFor({ state: 'attached', timeout: 6000 });
+    await page.waitForFunction(() => {
+      const transition = document.querySelector('#pageTransition');
+      return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
+    }, null, { timeout: 6000 });
   }
 
   // Desktop exposes these links through a CSS-only hover dropdown. Test the
