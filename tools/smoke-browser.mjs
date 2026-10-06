@@ -489,6 +489,28 @@ try {
 
       await page.locator('#lightbox .lightbox-model-viewer[data-ready="true"]').waitFor({ state: 'visible', timeout: 10000 });
 
+      const lottiePlayer = page.locator('#lightboxMediaContainer .lightbox-media-item lottie-player').first();
+      const lottieGeometry = await lottiePlayer.evaluate(el => {
+        const artwork = el.parentElement;
+        return {
+          ratio: parseFloat(getComputedStyle(artwork).aspectRatio || '0'),
+          styleRatio: artwork?.style.aspectRatio || '',
+          preserveAspectRatio: el.getAttribute('preserveAspectRatio') || '',
+          backgroundLayer: !!artwork?.querySelector(':scope > .lm-media-background-layer'),
+          captionIsOutsideArtwork: !!artwork?.nextElementSibling?.classList?.contains('media-caption')
+        };
+      });
+      const expectedLottieRatio = 440 / 478;
+      if (Math.abs(lottieGeometry.ratio - expectedLottieRatio) > 0.01) {
+        throw new Error(`Lightbox Lottie artwork did not retain its intrinsic ratio: ${JSON.stringify(lottieGeometry)}`);
+      }
+      if (lottieGeometry.preserveAspectRatio !== 'xMidYMid meet') {
+        throw new Error(`Lightbox Lottie rendering still permits cropping: ${lottieGeometry.preserveAspectRatio}`);
+      }
+      if (!lottieGeometry.backgroundLayer || !lottieGeometry.captionIsOutsideArtwork) {
+        throw new Error(`Lottie background/caption ownership is not isolated to the artwork surface: ${JSON.stringify(lottieGeometry)}`);
+      }
+
       const lottieCaption = page.locator('#lightboxMediaContainer .lightbox-media-item lottie-player').first()
         .locator('xpath=..').locator('xpath=..').locator('.media-caption').first();
       if (await lottieCaption.count() === 1) {
@@ -1977,6 +1999,20 @@ try {
         throw new Error('CMS background color picker did not update its displayed value.');
       }
 
+      const cmsLottiePreview = lottieMedia.locator('[data-mediapreview] .media-preview').first();
+      await page.waitForFunction(() => {
+        const box = document.querySelector('[data-mediapreview] .media-preview');
+        return box && Math.abs(parseFloat(getComputedStyle(box).aspectRatio || '0') - (440 / 478)) < 0.01;
+      }, null, { timeout: 5000 });
+      const cmsLottieRatio = await cmsLottiePreview.evaluate(el => ({
+        ratio: parseFloat(getComputedStyle(el).aspectRatio || '0'),
+        styleRatio: el.style.aspectRatio || ''
+      }));
+      if (Math.abs(cmsLottieRatio.ratio - (440 / 478)) > 0.01) {
+        throw new Error(`CMS Lottie preview did not adopt intrinsic JSON geometry: ${JSON.stringify(cmsLottieRatio)}`);
+      }
+
+
       page.once('dialog', dialog => dialog.accept());
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
@@ -2033,7 +2069,7 @@ try {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 100, h: 100, nm: 'Smoke', ddd: 0, assets: [], layers: [] })
+            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 440, h: 478, nm: 'Smoke', ddd: 0, assets: [], layers: [] })
           });
           return;
         }
