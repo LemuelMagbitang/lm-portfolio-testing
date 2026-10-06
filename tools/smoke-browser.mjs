@@ -258,6 +258,11 @@ try {
         throw new Error('Works filter controls regressed into text-selection/caret behavior.');
       }
 
+      await page.waitForFunction(
+        () => document.querySelectorAll('#heroBanner .slide').length > 0,
+        { timeout: 5000 }
+      ).catch(() => {});
+
       const heroSlides = await page.locator('#heroBanner .slide').count();
       if (heroSlides < 1) throw new Error(`Works Hero rendered no artwork slides (found ${heroSlides}).`);
 
