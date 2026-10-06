@@ -836,7 +836,18 @@ export function createLightboxMediaRenderer({
             }
             documentRef.documentElement.classList.add('lm-3d-focus-open');
             documentRef.body.classList.add('lm-3d-focus-open');
-            windowRef.requestAnimationFrame(() => { lightbox.scrollTop = currentScroll; });
+
+            // Focus mode owns the viewport completely. Reassert zero after
+            // the class/layout change as Chromium can otherwise restore the
+            // old media-list scroll anchor on the following paint.
+            lightbox.scrollTop = 0;
+            windowRef.requestAnimationFrame(() => {
+              if (!lightbox?.classList.contains('is-3d-focused')) return;
+              lightbox.scrollTop = 0;
+              windowRef.requestAnimationFrame(() => {
+                if (lightbox?.classList.contains('is-3d-focused')) lightbox.scrollTop = 0;
+              });
+            });
           },
           onDeactivate: () => {
             lightbox?.classList.remove('is-3d-focused');
