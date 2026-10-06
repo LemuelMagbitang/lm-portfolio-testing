@@ -417,14 +417,18 @@ export async function initGallery(options = {}) {
     }
   }
 
-  function animateWindowScrollToShowMore(durationMs = showLessScrollDurationMs) {
+  function animateWindowScrollToGalleryStart(durationMs = showLessScrollDurationMs) {
     cancelCollapseScrollAnimation();
-    if (!showMoreWrapper) return;
+    const galleryRoot = documentRef.querySelector('.portfolio-wrapper') ||
+      documentRef.getElementById('portfolioGrid');
+    if (!galleryRoot) return;
 
     const startY = Number(windowRef.scrollY) || 0;
-    const rect = showMoreWrapper.getBoundingClientRect();
-    const viewportHeight = Number(windowRef.innerHeight) || 0;
-    const targetY = startY + rect.top + (rect.height / 2) - (viewportHeight / 2);
+    const rect = galleryRoot.getBoundingClientRect();
+    const scrollMarginTop = Number.parseFloat(
+      windowRef.getComputedStyle?.(galleryRoot)?.scrollMarginTop || ''
+    ) || 0;
+    const targetY = startY + rect.top - scrollMarginTop;
     const documentHeight = Math.max(
       Number(documentRef.documentElement?.scrollHeight) || 0,
       Number(documentRef.body?.scrollHeight) || 0
@@ -501,17 +505,17 @@ export async function initGallery(options = {}) {
     showMoreBtn?.setAttribute('aria-expanded', String(isExpanded));
     showMoreWrapper?.setAttribute('data-expanded', String(isExpanded));
 
-    // When Show Less collapses the gallery, explicitly follow the control to
-    // its new position. This avoids leaving the visitor at a document location
-    // that only existed in the expanded gallery and makes the collapse feel
-    // anchored to the control they just activated.
+    // When Show Less collapses the gallery, return to the top of the project
+    // gallery rather than centering the Show More control. This matches the
+    // legacy behavior and keeps the expanded rows from leaving the visitor
+    // stranded at a stale document position.
     if (shouldFollowCollapsedControl) {
       windowRef.clearTimeout(collapseScrollTimer);
       collapseScrollTimer = windowRef.setTimeout(() => {
         collapseScrollTimer = null;
         windowRef.requestAnimationFrame(() => {
           if (isExpanded || !showMoreWrapper) return;
-          animateWindowScrollToShowMore(showLessScrollDurationMs);
+          animateWindowScrollToGalleryStart(showLessScrollDurationMs);
         });
       }, Math.max(0, fadeMs) + 16);
     }
