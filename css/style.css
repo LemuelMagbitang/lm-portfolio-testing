@@ -514,6 +514,11 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Filter navigation hashes target the gallery wrapper rather than a
+     physical anchor, because filter buttons are rebuilt from CMS data.
+     Keep the fixed navbar from covering the first gallery row after the
+     controlled scroll. */
+  scroll-margin-top: 96px;
   /* The gallery owns its own geometry; prevent browser scroll anchoring
      from fighting the controlled collapse while media settles. */
   overflow-anchor: none;
