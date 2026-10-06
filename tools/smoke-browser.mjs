@@ -85,11 +85,12 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
     // without changing production dropdown behavior for the sake of CI.
     await toggle.focus();
     await link.click({ force: true });
-  } else if (!(await link.isVisible())) {
-    throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
+  } else {
+    if (!(await link.isVisible())) {
+      throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
+    }
+    await link.click();
   }
-
-  await link.click();
   await page.waitForFunction(hash => window.location.hash === hash, expectedHash, { timeout: 3000 });
   await page.waitForFunction(() => {
     const target = document.querySelector('.portfolio-wrapper');
