@@ -329,18 +329,43 @@ let openRenderToken = 0;
     return null;
   };
 
+  const sampleArtworkForControl = (rect) => {
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const points = [
+      [centerX, centerY],
+      [rect.left + rect.width * 0.28, centerY],
+      [rect.left + rect.width * 0.72, centerY],
+      [centerX, rect.top + rect.height * 0.28],
+      [centerX, rect.top + rect.height * 0.72]
+    ];
+
+    // Read the pixels under the actual hit target rather than trusting one
+    // center point. A navigation glyph can straddle a light/dark boundary,
+    // while transparent/custom media can leave the exact center unpainted.
+    const samples = [];
+    for (const [x, y] of points) {
+      const value = sampleArtworkAtPoint(x, y);
+      if (Number.isFinite(value)) samples.push(value);
+    }
+    if (!samples.length) return null;
+
+    samples.sort((a, b) => a - b);
+    return samples[Math.floor(samples.length / 2)];
+  };
+
   const applyBinaryContrastToButton = (button) => {
     if (!button) return;
     const rect = button.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const luminance = sampleArtworkAtPoint(centerX, centerY);
+    const luminance = sampleArtworkForControl(rect);
 
     // No readable parent pixels (e.g. an external YouTube iframe): choose a
     // deterministic white glyph instead of allowing difference blending to
-    // generate gray values.
+    // generate gray values. Every active control is always explicit black or
+    // white; the visual "blend" comes from the artwork-aware contrast choice,
+    // not from difference compositing.
     const isLight = Number.isFinite(luminance) && luminance >= LIGHTBOX_CONTRAST_THRESHOLD;
     const color = isLight ? '#000' : '#fff';
     button.style.mixBlendMode = 'normal';
