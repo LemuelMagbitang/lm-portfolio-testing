@@ -2570,6 +2570,42 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
   return Promise.resolve();
 }
 
+function buildProjectListPreviewHtml(project){
+  const explicit = project?.thumbnail?.src
+    ? {
+        type: project.thumbnail.type || 'image',
+        src: project.thumbnail.src,
+        background: project.thumbnail.background || null
+      }
+    : null;
+  const fallback = explicit ? null : computeFallbackThumb(project?.media || [], project?.thumbnail || {});
+  const preview = explicit || fallback;
+
+  if (preview?.src && preview.type === 'image') {
+    const sourceError = validateMediaSource('image', preview.src);
+    if (!sourceError) {
+      return `<span class="project-collapsed-image-wrap"><img src="${attr(ghRawUrl(preview.src))}" alt="" loading="lazy" decoding="async"></span>`;
+    }
+  }
+
+  const type = preview?.type || project?.thumbnail?.type || project?.media?.[0]?.type || 'image';
+  const icons = {
+    video: 'fa-solid fa-film',
+    youtube: 'fa-brands fa-youtube',
+    lottie: 'fa-solid fa-wand-magic-sparkles',
+    model: 'fa-solid fa-cube',
+    image: 'fa-regular fa-image'
+  };
+  const label = {
+    video: 'VIDEO',
+    youtube: 'YOUTUBE',
+    lottie: 'LOTTIE',
+    model: '3D',
+    image: 'MEDIA'
+  };
+  return `<span class="project-collapsed-placeholder"><i class="${icons[type] || icons.image}" aria-hidden="true"></i><span>${label[type] || 'MEDIA'}</span></span>`;
+}
+
 RENDERERS.projects = async function(data, isCurrent=()=>true){
   let items = withUids((data.json||[]).map(p=>({
     id:p.id||slugify(p.title||''), title:p.title||'', subtitle:p.subtitle||'',
@@ -2599,24 +2635,25 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
 
     items.forEach((p)=>{
       const wrap = document.createElement('div');
-      wrap.className = 'card-item';
+      wrap.className = 'card-item project-list-item' + (isOpen ? ' is-open' : ' is-collapsed');
       wrap.dataset.uid = p._uid;
-      const isOpen = p._uid===openUid;
+      const projectPreview = buildProjectListPreviewHtml(p);
       wrap.innerHTML = `
-        <div class="card-item-head" style="cursor:pointer" data-toggle-open>
-          <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
+        <div class="card-item-head project-card-head" data-toggle-open>
+          <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
           <span class="project-item-label">
-            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badges?.length?`<span style="color:#666;font-weight:500"> — ${esc(p.badges.join(' · '))}</span>`:''}</span>
+            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badges?.length?`<span class="project-attribute-summary"> — ${esc(p.badges.join(' · '))}</span>`:''}</span>
             <span class="project-preview-text">${esc(p.subtitle||'')}</span>
           </span>
-          <div class="card-item-actions">
+          <span class="project-collapsed-preview" aria-hidden="true">${projectPreview}</span>
+          <div class="card-item-actions project-card-actions">
             <button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
             <button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
-            <button class="icon-btn" data-act="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button>
-            <button class="icon-btn" data-act="toggle"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
+            <button class="icon-btn project-delete-action" data-act="del" title="Delete" aria-label="Delete project"><i class="fa-solid fa-trash"></i></button>
+            <button class="icon-btn" data-act="toggle" title="${isOpen ? 'Collapse project' : 'Expand project'}" aria-expanded="${isOpen ? 'true' : 'false'}"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
           </div>
         </div>
-        <div data-body style="display:${isOpen?'block':'none'};margin-top:16px;"></div>
+        <div data-body class="project-editor-body" style="display:${isOpen?'block':'none'};margin-top:16px;"></div>
       `;
       wrap.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if(e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;

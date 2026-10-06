@@ -111,6 +111,43 @@
   .toggle-row .t-desc{font-size:12px;color:var(--text-dim);margin-top:3px;}
 
   .card-item{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:18px;margin-bottom:12px;}
+/* ---------- Project list presentation ----------
+   Collapsed rows show a lightweight artwork preview on the right while
+   the open editor removes that decorative treatment. Image previews reuse
+   the same fallback contract as the project's editor thumbnail. */
+.project-list-item{position:relative;overflow:hidden;}
+.project-card-head{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(120px,170px) auto;align-items:center;gap:12px;min-height:78px;margin:0;}
+.project-list-item:not(.is-open) .project-card-head{padding:2px 0;}
+.project-list-item.is-open .project-collapsed-preview{display:none;}
+.project-item-label{position:relative;z-index:2;}
+.project-attribute-summary{color:#666;font-weight:500;}
+.project-collapsed-preview{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:84px;overflow:hidden;border-radius:7px;border:1px solid rgba(255,255,255,.07);background:#111;isolation:isolate;}
+.project-collapsed-preview::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(25,25,25,.96) 0%,rgba(25,25,25,.18) 28%,rgba(25,25,25,0) 62%);}
+.project-collapsed-image-wrap{position:absolute;inset:0;display:block;background:#111;}
+.project-collapsed-image-wrap::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,20,20,.72),rgba(20,20,20,0) 48%);pointer-events:none;}
+.project-collapsed-image-wrap img{width:100%;height:100%;display:block;object-fit:cover;}
+.project-collapsed-placeholder{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;font-size:10px;letter-spacing:.12em;color:#777;}
+.project-collapsed-placeholder i{font-size:16px;color:#999;}
+.project-card-actions{position:relative;z-index:3;align-self:center;}
+.project-card-actions .icon-btn{color:#bbb;}
+.project-card-actions .icon-btn:hover{color:#fff;background:rgba(255,255,255,.1);}
+.project-card-actions .project-delete-action:hover{color:#ff8f87;background:rgba(224,88,79,.1);}
+.project-list-item.is-open{background:var(--panel-2);}
+.project-editor-body{position:relative;z-index:2;}
+.project-list-item.is-collapsed .project-preview-text{max-width:54ch;}
+@media (max-width:720px){
+  .project-card-head{grid-template-columns:auto minmax(0,1fr) minmax(92px,120px) auto;gap:8px;min-height:66px;}
+  .project-collapsed-preview{height:66px;}
+  .project-card-actions{gap:3px;}
+  .project-card-actions .icon-btn{width:30px;height:30px;}
+}
+@media (max-width:520px){
+  .project-card-head{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"drag info actions" "drag preview actions";}
+  .project-card-head > .drag-handle{grid-area:drag;}
+  .project-collapsed-preview{grid-area:preview;width:100%;height:56px;margin-top:-2px;}
+  .project-item-label{grid-area:info;}
+  .project-card-actions{grid-area:actions;}
+}
   .card-item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;}
   .card-item-head .drag-handle{color:#555;font-size:13px;cursor:grab;padding:4px 6px;}
   .card-item-head .item-title{font-size:12.5px;font-weight:700;color:#ddd;flex:1;}

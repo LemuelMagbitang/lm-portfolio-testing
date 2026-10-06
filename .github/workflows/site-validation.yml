@@ -44,6 +44,9 @@ jobs:
       - name: Validate site settings contract
         run: node tools/validate-site-settings.mjs
 
+      - name: Validate CMS Projects presentation
+        run: node tools/validate-cms-project-presentation.mjs
+
       - name: Validate Projects runtime composition
         run: node tools/validate-project-runtime.mjs
 
