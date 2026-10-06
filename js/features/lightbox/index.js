@@ -1,6 +1,6 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
-import { createLightboxMediaRenderer } from './media-renderer.js?v=20261005-17';
+import { createLightboxMediaRenderer } from './media-renderer.js?v=20261005-18';
 export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axisRatio = 1.2 } = {}) {
   const x = Number(deltaX) || 0;
   const y = Number(deltaY) || 0;
@@ -10,15 +10,18 @@ export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axis
   return x < 0 ? 1 : -1;
 }
 
-function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
+function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null, controlsEl = null) {
   if (!lightboxEl) return { open() {}, close() {} };
   let opener = null;
   let focusCleanup = null;
   let keydownCleanup = null;
   function getFocusable() {
-    return Array.from(lightboxEl.querySelectorAll(
-      'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
-    )).filter(el => {
+    const selector = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const nodes = [
+      ...Array.from(lightboxEl.querySelectorAll(selector)),
+      ...(controlsEl ? Array.from(controlsEl.querySelectorAll(selector)) : [])
+    ];
+    return Array.from(new Set(nodes)).filter(el => {
       if (el.hidden) return false;
       if (el.closest?.('[inert]')) return false;
       const style = documentRef.defaultView?.getComputedStyle?.(el);
@@ -119,7 +122,7 @@ const modalTitle = documentRef.getElementById('modalTitle');
 const modalDesc = documentRef.getElementById('modalDesc');
 const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
-const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle);
+const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle, lightboxControls);
 
 const mediaRenderer = createLightboxMediaRenderer({
   documentRef,
