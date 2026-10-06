@@ -343,6 +343,48 @@ export async function initGallery(options = {}) {
   }
 
 
+  function scheduleGalleryScroll() {
+    const scroll = () => scrollGalleryIntoView();
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(scroll));
+      return;
+    }
+    windowRef.setTimeout(scroll, 0);
+  }
+
+  // Public Works filter links are navigation controls, not ordinary anchors.
+  // Gallery owns the filter state, so consume the click explicitly and run the
+  // same activation path as an in-page filter button. This removes the timing
+  // dependency on hashchange (especially when the mobile menu closes at the
+  // same moment) while preserving the existing URL/hash contract.
+  function handlePublicFilterNavigation(event) {
+    const link = event.target?.closest?.('.nav-links a[href], .mobile-menu a[href]');
+    if (!link || !root?.contains?.(link)) return;
+
+    let filterId = '';
+    try {
+      filterId = decodeURIComponent(
+        new URL(link.getAttribute('href') || '', windowRef.location.href).hash.slice(1)
+      );
+    } catch (_) {
+      return;
+    }
+    if (!filterId) return;
+
+    const button = filterBtns.find(item => item.getAttribute('data-filter') === filterId);
+    if (!button) return;
+
+    event.preventDefault();
+    activateFilterButton(button, { center: true, updateUrl: true });
+
+    // The mobile navigation closes from its link listener on the target node.
+    // Scroll only after that close and the Gallery render have had a paint to
+    // settle, so the portfolio wrapper lands below the fixed navbar reliably.
+    scheduleGalleryScroll();
+  }
+
+  bind(documentRef, 'click', handlePublicFilterNavigation);
+
   filterBtns.forEach(btn => bind(btn, 'click', event => {
     if (Date.now() < suppressFilterClickUntil) {
       event.preventDefault();
@@ -593,9 +635,7 @@ export async function initGallery(options = {}) {
     // the gallery state. There is no physical DOM anchor for a filter ID
     // because the filter buttons are rebuilt from CMS data, so explicitly
     // move the visitor to the gallery after the hash has selected the set.
-    windowRef.requestAnimationFrame(() => {
-      windowRef.requestAnimationFrame(scrollGalleryIntoView);
-    });
+    scheduleGalleryScroll();
   }
 
   lifecycle.add(() => windowRef.clearTimeout(filterScrollTimer));
