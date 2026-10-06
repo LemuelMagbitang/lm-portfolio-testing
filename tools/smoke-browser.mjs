@@ -1196,9 +1196,60 @@ try {
         });
         await page.waitForTimeout(100);
 
-        await mobileShowMore.click();
-        await page.waitForTimeout(1625);
+        const showLessTiming = await page.evaluate(() => {
+          const button = document.querySelector('#showMoreBtn');
+          const scroller = document.scrollingElement || document.documentElement;
+          const startY = Number(window.scrollY) || Number(scroller.scrollTop) || 0;
+          const start = performance.now();
+          return new Promise(resolve => {
+            let firstMovementMs = null;
+            let settled = false;
 
+            const onScroll = () => {
+              const currentY = Number(window.scrollY) || Number(scroller.scrollTop) || 0;
+              if (firstMovementMs === null && Math.abs(currentY - startY) > 1) {
+                firstMovementMs = performance.now() - start;
+              }
+            };
+
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              window.removeEventListener('scroll', onScroll);
+              resolve({
+                firstMovementMs: firstMovementMs === null ? Infinity : firstMovementMs,
+                elapsedMs: performance.now() - start
+              });
+            };
+
+            window.addEventListener('scroll', onScroll, { passive: true });
+            button?.click();
+
+            const poll = () => {
+              onScroll();
+              if (Math.abs((Number(window.scrollY) || Number(scroller.scrollTop) || 0) - startY) > 1 && firstMovementMs !== null) {
+                finish();
+                return;
+              }
+              if (performance.now() - start >= 850) {
+                finish();
+                return;
+              }
+              requestAnimationFrame(poll);
+            };
+
+            requestAnimationFrame(poll);
+          });
+        });
+
+        if (!Number.isFinite(showLessTiming.firstMovementMs) || showLessTiming.firstMovementMs > 120) {
+          throw new Error('Show Less return scroll did not begin immediately: ' + JSON.stringify(showLessTiming));
+        }
+        if (showLessTiming.elapsedMs > 850) {
+          throw new Error('Show Less return scroll exceeded the sub-second budget: ' + JSON.stringify(showLessTiming));
+        }
+
+        await page.waitForTimeout(430);
         const galleryAfterShowLess = await page.locator('.portfolio-wrapper').boundingBox();
         const collapsed = await page.locator('#portfolioGridViewport').evaluate(el => {
           const style = getComputedStyle(el);
@@ -1858,36 +1909,38 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      let navigations = 0;
+      const onNavigate = frame => { if (frame === page.mainFrame()) navigations += 1; };
+      page.on('framenavigated', onNavigate);
+
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.locator('.nav-links .nav-dropdown-toggle').first().click();
+      await page.waitForTimeout(80);
+      if (Math.abs(await page.evaluate(() => window.scrollY)) > 8) {
+        throw new Error('Main-page Works navigation did not return to the top without reloading.');
+      }
+      if (navigations !== 0) throw new Error('Main-page Works navigation triggered a document navigation.');
+
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.locator('.nav-logo').first().click();
+      await page.waitForTimeout(60);
+      if (Math.abs(await page.evaluate(() => window.scrollY)) > 8) {
+        throw new Error('Main-page LM logo navigation did not return to the top without reloading.');
+      }
+      if (navigations !== 0) throw new Error('Main-page LM logo navigation triggered a document navigation.');
+      page.off('framenavigated', onNavigate);
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
       if (await contact.count() !== 1) throw new Error('Works page Contact navigation link is missing.');
       await contact.click();
       await page.waitForTimeout(120);
-      const box = await page.locator('#contact-section').first().boundingBox();
-      const viewport = await page.evaluate(() => ({
-        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
-        top: Number(window.visualViewport?.offsetTop) || 0
-      }));
-      if (!box) throw new Error('Same-page Contact navigation did not reach the Contact section.');
-      const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
-      if (centerDelta > 32) {
-        const diagnostics = await page.evaluate(() => {
-          const section = document.querySelector('#contact-section');
-          const scrolling = document.scrollingElement || document.documentElement;
-          const rect = section?.getBoundingClientRect();
-          const viewportHeight = Number(window.visualViewport?.height) || Number(window.innerHeight) || 0;
-          return {
-            scrollY: Number(window.scrollY) || 0,
-            scrollTop: Number(scrolling?.scrollTop) || 0,
-            scrollHeight: Number(scrolling?.scrollHeight) || 0,
-            clientHeight: Number(scrolling?.clientHeight) || 0,
-            maxScrollY: Math.max(0, Number(scrolling?.scrollHeight) - viewportHeight),
-            sectionTop: Number(rect?.top) || 0,
-            sectionHeight: Number(rect?.height) || 0,
-            viewportHeight,
-            viewportCenter: (Number(window.visualViewport?.offsetTop) || 0) + viewportHeight / 2
-          };
-        });
-        throw new Error('Same-page Contact section is not centered: delta=' + centerDelta + ' diagnostics=' + JSON.stringify(diagnostics));
+      const box = await page.locator('#contact-start').first().boundingBox();
+      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      if (Math.abs(box.y - navbarHeight - 12) > 18) {
+        throw new Error('Same-page Contact heading is not top-aligned: y=' + box.y + ', navbar=' + navbarHeight);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -1901,15 +1954,11 @@ try {
       }
       await contact.click();
       await page.waitForTimeout(120);
-      const box = await page.locator('#contact-section').first().boundingBox();
-      const viewport = await page.evaluate(() => ({
-        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
-        top: Number(window.visualViewport?.offsetTop) || 0
-      }));
-      if (!box) throw new Error('Same-page Contact navigation did not reach the Contact section.');
-      const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
-      if (centerDelta > 32) {
-        throw new Error('Same-page Contact section is not centered: delta=' + centerDelta);
+      const box = await page.locator('#contact-start').first().boundingBox();
+      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      if (Math.abs(box.y - navbarHeight - 12) > 18) {
+        throw new Error('Same-page Contact heading is not top-aligned: y=' + box.y + ', navbar=' + navbarHeight);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -1992,20 +2041,11 @@ try {
         timeout: 6000
       });
       await page.waitForTimeout(120);
-      const contactSection = page.locator('#contact-section').first();
-      const contactBox = await contactSection.boundingBox();
-      const contactViewport = await page.evaluate(() => ({
-        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
-        top: Number(window.visualViewport?.offsetTop) || 0
-      }));
-      if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Contact section.');
-      const sectionCenter = contactBox.y + contactBox.height / 2;
-      const viewportCenter = contactViewport.top + contactViewport.height / 2;
-      if (Math.abs(sectionCenter - viewportCenter) > 32) {
-        throw new Error(
-          'Cross-page Contact navigation is not visually centered: sectionCenter=' +
-          sectionCenter + ', viewportCenter=' + viewportCenter
-        );
+      const contactBox = await page.locator('#contact-start').first().boundingBox();
+      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Start a Project heading.');
+      if (Math.abs(contactBox.y - navbarHeight - 12) > 22) {
+        throw new Error('Cross-page Contact heading is not top-aligned: y=' + contactBox.y + ', navbar=' + navbarHeight);
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Cross-page Contact navigation did not preserve the exact contact-start hash.');
@@ -2032,14 +2072,12 @@ try {
       if (await page.locator('.nav-links.active, .nav-links.is-open').count() > 0) {
         throw new Error('Mobile Contact navigation left the hamburger menu open.');
       }
-      const box = await page.locator('#contact-section').first().boundingBox();
-      const viewport = await page.evaluate(() => ({
-        height: Number(window.visualViewport?.height) || Number(window.innerHeight) || 0,
-        top: Number(window.visualViewport?.offsetTop) || 0
-      }));
-      if (!box) throw new Error('Mobile same-page Contact navigation did not reach the Contact section.');
-      const centerDelta = Math.abs((box.y + box.height / 2) - (viewport.top + viewport.height / 2));
-      if (centerDelta > 36) throw new Error('Mobile same-page Contact section is not centered: delta=' + centerDelta);
+      const box = await page.locator('#contact-start').first().boundingBox();
+      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
+      if (!box) throw new Error('Mobile same-page Contact navigation did not reach the Start a Project heading.');
+      if (Math.abs(box.y - navbarHeight - 12) > 24) {
+        throw new Error('Mobile same-page Contact heading is not top-aligned: y=' + box.y + ', navbar=' + navbarHeight);
+      }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Mobile same-page Contact navigation did not preserve the exact contact-start hash.');
       }
