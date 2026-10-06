@@ -134,7 +134,9 @@ export async function bootstrapPortfolioApp({
             Math.max(0, documentTargetY - offset)
           );
 
-      windowRef.scrollTo({ top: targetY, behavior: 'auto' });
+      // Use the legacy two-argument overload so initial hash settlement is
+      // instant even though the site globally opts into smooth scrolling via CSS.
+      windowRef.scrollTo(0, targetY);
       return true;
     };
 
