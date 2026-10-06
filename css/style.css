@@ -2529,9 +2529,11 @@ body.center-page {
   inset:0;
   z-index:10001;
   pointer-events:none;
-  opacity:.24;
-  filter:blur(2px) saturate(.55);
-  transition:opacity .25s ease, filter .25s ease;
+  /* Binary contrast controls must stay fully opaque; reduced opacity/filter
+     would rasterize black/white glyphs back into gray. */
+  opacity:1;
+  filter:none;
+  transition:none;
 }
 .lightbox-controls.is-3d-controls-disabled .lightbox-nav,
 .lightbox-controls.is-3d-controls-disabled .lightbox-nav:hover,
