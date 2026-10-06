@@ -254,7 +254,10 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   // position for a bounded number of animation frames so an early measurement
   // cannot be clamped before the target's final artwork height exists.
   const positionInitialMedia = (frame = 0) => {
-    if (!lightbox.classList.contains('active') || currentLightboxIndex !== index || openRenderToken !== openToken) return;
+    if (!lightbox.classList.contains('active') ||
+        lightbox.classList.contains('is-3d-focused') ||
+        currentLightboxIndex !== index ||
+        openRenderToken !== openToken) return;
 
     const items = modalMediaContainer.querySelectorAll('.lightbox-media-item');
     const target = initialMediaIndex >= 0 ? items[initialMediaIndex] : null;
