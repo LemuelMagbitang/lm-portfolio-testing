@@ -146,12 +146,16 @@ let openRenderToken = 0;
 
 
 function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } = {}) {
-  lightbox.classList.remove(
-    'is-3d-focused',
-    'is-lightbox-navigating',
-    'is-navigation-next',
-    'is-navigation-prev'
-  );
+  const preserveNavigation = lightbox.classList.contains('is-lightbox-navigating');
+  lightbox.classList.remove('is-3d-focused');
+  if (!preserveNavigation) {
+    lightbox.classList.remove(
+      'is-lightbox-navigating',
+      'is-navigation-next',
+      'is-navigation-prev',
+      'is-lightbox-navigation-enter'
+    );
+  }
   if (lightboxControls) {
     lightboxControls.classList.remove('is-3d-controls-disabled');
     lightboxControls.inert = false;
