@@ -62,6 +62,29 @@ async function configureLogoRoutes(page) {
   });
 }
 
+async function assertPublicFilterNavigation(page, { href, expectedHash, label }) {
+  const link = page.locator(`.nav-links a[href="${href}"]`).first();
+  if (await link.count() !== 1) {
+    throw new Error(`${label} filter navigation link is missing: ${href}`);
+  }
+
+  await link.click();
+  await page.waitForFunction(hash => window.location.hash === hash, expectedHash, { timeout: 3000 });
+  await page.waitForFunction(() => {
+    const target = document.querySelector('.portfolio-wrapper');
+    const nav = document.querySelector('.navbar');
+    if (!target || !nav) return false;
+    const targetBox = target.getBoundingClientRect();
+    const navBox = nav.getBoundingClientRect();
+    return targetBox.y >= navBox.height - 12 && targetBox.y <= navBox.height + 90;
+  }, null, { timeout: 4000 });
+
+  const activeFilter = await page.locator(`.filter-tabs [data-filter="${expectedHash.slice(1)}"].active`).count();
+  if (activeFilter !== 1) {
+    throw new Error(`${label} filter navigation selected the hash but not the matching Gallery filter.`);
+  }
+}
+ 
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   const page = await browser.newPage({ viewport });
   await configureLogoRoutes(page);
@@ -190,6 +213,14 @@ try {
 
       const allFilter = page.locator('.filter-tabs .filter-btn[data-filter="all"], .filter-tabs .tab-btn[data-filter="all"]');
       if (await allFilter.count() !== 1) throw new Error('Works filter UI is missing the ALL filter.');
+
+      await assertPublicFilterNavigation(page, {
+        href: '#3d-motion',
+        expectedHash: '#3d-motion',
+        label: 'Desktop Works'
+      });
+      await allFilter.click();
+      await page.waitForTimeout(420);
 
       const filterButtons = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       const filterCount = await filterButtons.count();
@@ -766,6 +797,14 @@ try {
 
     await smokePage(browser, '/', async page => {
       await assertMobileNavigation(page, 'Works page');
+
+      await page.locator('.hamburger').first().click();
+      await assertPublicFilterNavigation(page, {
+        href: '#3d-motion',
+        expectedHash: '#3d-motion',
+        label: 'Mobile Works'
+      });
+
       const filters = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
       if (await filters.count() < 2) throw new Error('Mobile/tablet Works filter UI did not render.');
 
@@ -1525,6 +1564,12 @@ try {
           throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
         }
       }
+
+      await assertPublicFilterNavigation(page, {
+        href: '../#3d-motion',
+        expectedHash: '#3d-motion',
+        label: 'About-to-Works'
+      });
 
       const aboutContact = page.locator('.nav-links a[href="../#contact-start"]').first();
       if (await aboutContact.count() !== 1) {
