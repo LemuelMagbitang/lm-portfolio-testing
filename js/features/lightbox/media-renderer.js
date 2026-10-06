@@ -906,6 +906,7 @@ export function createLightboxMediaRenderer({
     player.preserveAspectRatio = 'xMidYMid meet';
     const entry = buildMediaEntry(player, item.caption || item.description, item.background);
     const artwork = entry.querySelector('.lightbox-artwork');
+    artwork?.classList.add('is-lottie-artwork');
     const dimensions = lottieDimensionCache.get(resolvedSrc);
     if (dimensions) {
       setAspectRatio(artwork, dimensions.width, dimensions.height);
