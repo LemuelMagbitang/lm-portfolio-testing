@@ -762,6 +762,11 @@ try {
         );
       }
 
+      const focused3DEntryOrigin = await page.locator('#lightbox.is-3d-focused').evaluate(el => el.scrollTop);
+      if (focused3DEntryOrigin !== 0) {
+        throw new Error('Focused 3D environment did not reset its internal Lightbox scroll position to zero: ' + focused3DEntryOrigin);
+      }
+
       const focused3DScrollContract = await page.evaluate(() => {
         const modal = document.querySelector('#lightbox.is-3d-focused');
         if (!modal) return null;
