@@ -274,8 +274,39 @@ try {
       if (!filterColor || filterColor === 'rgba(0, 0, 0, 0)') throw new Error('Works filter button styling did not load.');
 
       const secondaryFilter = filterButtons.nth(1);
+      const preFilterGeometry = await page.evaluate(() => {
+        const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
+        const wrapper = document.querySelector('.portfolio-wrapper')?.getBoundingClientRect();
+        const card = document.querySelector('#portfolioGrid .project-card');
+        return {
+          grid: grid ? { x: grid.x, y: grid.y, width: grid.width } : null,
+          wrapper: wrapper ? { x: wrapper.x, y: wrapper.y, width: wrapper.width } : null,
+          cardWidth: card?.getBoundingClientRect?.().width || 0
+        };
+      });
       await secondaryFilter.click();
       await page.waitForTimeout(90);
+
+      const midFilterGeometry = await page.evaluate(() => {
+        const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
+        const wrapper = document.querySelector('.portfolio-wrapper')?.getBoundingClientRect();
+        const cards = Array.from(document.querySelectorAll('#portfolioGrid .project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none');
+        return {
+          grid: grid ? { x: grid.x, y: grid.y, width: grid.width } : null,
+          wrapper: wrapper ? { x: wrapper.x, y: wrapper.y, width: wrapper.width } : null,
+          cardWidths: cards.slice(0, 6).map(card => card.getBoundingClientRect().width)
+        };
+      });
+      if (!preFilterGeometry.grid || !midFilterGeometry.grid ||
+          Math.abs(preFilterGeometry.grid.x - midFilterGeometry.grid.x) > 2 ||
+          Math.abs(preFilterGeometry.grid.y - midFilterGeometry.grid.y) > 2 ||
+          Math.abs(preFilterGeometry.grid.width - midFilterGeometry.grid.width) > 2) {
+        throw new Error(`Works filter transition changed the gallery layout footprint mid-animation: before=${JSON.stringify(preFilterGeometry.grid)} after=${JSON.stringify(midFilterGeometry.grid)}`);
+      }
+      if (preFilterGeometry.cardWidth > 0 && midFilterGeometry.cardWidths.some(width => Math.abs(width - preFilterGeometry.cardWidth) > 2)) {
+        throw new Error(`Works filter transition changed project-card track width mid-animation: before=${preFilterGeometry.cardWidth} after=${JSON.stringify(midFilterGeometry.cardWidths)}`);
+      }
 
       const midFilterMotion = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
         cards
