@@ -1971,13 +1971,19 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
-      let navigations = 0;
-      const onNavigate = frame => { if (frame === page.mainFrame()) navigations += 1; };
-      page.on('framenavigated', onNavigate);
+      let unloads = 0;
+      await page.evaluate(() => {
+        window.__lmSmokeUnloadCount = 0;
+        window.addEventListener('beforeunload', () => {
+          window.__lmSmokeUnloadCount += 1;
+        });
+      });
 
       // Start from the exact user-reported state: Contact is active and its
       // hash is still present. Works and the LM logo must reset the document
-      // to the top and remove that hash without reloading.
+      // to the top and remove that hash without reloading. Same-document
+      // history.replaceState is expected and must not be mistaken for a
+      // browser navigation.
       await page.locator('.nav-links a[href="#contact-start"]').first().click();
       await page.waitForTimeout(100);
       if (await page.evaluate(() => window.location.hash !== '#contact-start')) {
@@ -1998,7 +2004,8 @@ try {
       if (worksReset.hash !== '') {
         throw new Error('Main-page Works navigation did not clear the Contact/filter hash: ' + worksReset.hash);
       }
-      if (navigations !== 0) throw new Error('Main-page Works navigation triggered a document navigation.');
+      unloads = await page.evaluate(() => window.__lmSmokeUnloadCount);
+      if (unloads !== 0) throw new Error('Main-page Works navigation triggered a document unload/reload.');
 
       // Recreate Contact state before checking the logo independently.
       await page.evaluate(() => {
@@ -2018,8 +2025,8 @@ try {
       if (logoReset.hash !== '') {
         throw new Error('Main-page LM logo navigation did not clear the Contact/filter hash: ' + logoReset.hash);
       }
-      if (navigations !== 0) throw new Error('Main-page LM logo navigation triggered a document navigation.');
-      page.off('framenavigated', onNavigate);
+      unloads = await page.evaluate(() => window.__lmSmokeUnloadCount);
+      if (unloads !== 0) throw new Error('Main-page LM logo navigation triggered a document unload/reload.');
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
