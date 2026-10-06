@@ -2465,7 +2465,7 @@ body.center-page {
   position:fixed;
   inset:0;
   z-index:20;
-  display:grid;
+  display:block;
   place-items:center;
   width:100dvw;
   height:100dvh;
@@ -2514,20 +2514,45 @@ body.center-page {
   border-radius:0;
   box-shadow:none;
 }
-.lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{display:none;}
+/* In focused 3D, the artwork caption becomes part of the dedicated
+   full-screen focus group: model/background first, caption above it, then the
+   local Back control at the bottom. The global Lightbox chrome is a separate
+   sibling layer and is intentionally placed underneath the modal itself. */
+.lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{
+  position:fixed;
+  left:50%;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + clamp(88px, 12vh, 116px));
+  z-index:30;
+  width:min(calc(100% - 40px), 760px);
+  max-width:760px;
+  margin:0;
+  padding:0;
+  color:rgba(255,255,255,.78);
+  font-size:clamp(.78rem,1.7vw,.92rem);
+  line-height:1.5;
+  text-align:center;
+  text-wrap:pretty;
+  text-shadow:0 2px 14px rgba(0,0,0,.7);
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .model-viewer-ui{
+  z-index:40;
+}
 
 /* Explicit 3D focus stacking: modal media list < backdrop veil < focused
-   3D stage < model UI. This preserves the clicked model as the visual focus. */
+   3D stage < focused description < local Back UI. */
 .lightbox-modal.is-3d-focused .modal-interior::before{z-index:10;}
 .lightbox-modal.is-3d-focused .is-3d-focus-target{z-index:20;}
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{z-index:20;}
-.lightbox-modal.is-3d-focused .is-3d-focus-target .model-viewer-ui{z-index:40;}
-/* Focused 3D keeps the global chrome as a separate top-level layer, but the
-   controls become inert so they cannot compete with the model interaction. */
+/* The project-level chevrons/X are a sibling of the Lightbox modal. In 3D
+   focus they must sit underneath the modal layer, not above the interactive
+   environment. They remain in the DOM for lifecycle/focus bookkeeping but
+   are fully covered by the focused modal background. */
 .lightbox-controls.is-3d-controls-disabled{
   position:fixed;
   inset:0;
-  z-index:10001;
+  z-index:9998;
   pointer-events:none;
   /* Binary contrast controls must stay fully opaque; reduced opacity/filter
      would rasterize black/white glyphs back into gray. */
