@@ -517,16 +517,23 @@ try {
       }
 
       const closeButton = page.locator('#lightboxClose');
-      const navigationContrast = await page.locator('.lightbox-next i').evaluate(el => {
-        const style = getComputedStyle(el);
+      const navigationContrast = await page.evaluate(() => {
+        const controls = document.querySelector('.lightbox-controls');
+        const icon = document.querySelector('.lightbox-next i');
+        const controlsStyle = controls ? getComputedStyle(controls) : null;
+        const iconStyle = icon ? getComputedStyle(icon) : null;
         return {
-          mixBlendMode: style.mixBlendMode,
-          color: style.color,
-          textShadow: style.textShadow
+          mixBlendMode: controlsStyle?.mixBlendMode || '',
+          iconBlendMode: iconStyle?.mixBlendMode || '',
+          color: iconStyle?.color || '',
+          textShadow: iconStyle?.textShadow || ''
         };
       });
       if (navigationContrast.mixBlendMode !== 'difference') {
-        throw new Error('Lightbox navigation icon lost artwork-aware difference compositing: ' + navigationContrast.mixBlendMode);
+        throw new Error('Lightbox control layer lost artwork-aware difference compositing: ' + navigationContrast.mixBlendMode);
+      }
+      if (navigationContrast.iconBlendMode !== 'normal') {
+        throw new Error('Lightbox navigation icon unexpectedly owns the blend mode instead of the control layer: ' + navigationContrast.iconBlendMode);
       }
       if (navigationContrast.color !== 'rgb(255, 255, 255)') {
         throw new Error('Lightbox navigation icon is not brand white: ' + navigationContrast.color);
@@ -772,17 +779,18 @@ try {
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
         el => getComputedStyle(el).backgroundColor
       );
-      const focusedCloseContrast = await page.locator('#lightboxClose').evaluate(el => {
-        const buttonStyle = getComputedStyle(el);
-        const icon = el.querySelector('i');
-        const iconStyle = icon ? getComputedStyle(icon) : null;
+      const focusedCloseContrast = await page.evaluate(() => {
+        const controls = document.querySelector('.lightbox-controls');
+        const button = document.querySelector('#lightboxClose');
+        const controlsStyle = controls ? getComputedStyle(controls) : null;
+        const buttonStyle = button ? getComputedStyle(button) : null;
         return {
-          mixBlendMode: iconStyle?.mixBlendMode || '',
-          background: buttonStyle.backgroundColor
+          mixBlendMode: controlsStyle?.mixBlendMode || '',
+          background: buttonStyle?.backgroundColor || ''
         };
       });
       if (focusedCloseContrast.mixBlendMode !== 'difference') {
-        throw new Error(`Focused 3D Close icon lost artwork-aware difference-mode contrast: ${focusedCloseContrast.mixBlendMode}`);
+        throw new Error(`Focused 3D control layer lost artwork-aware difference-mode contrast: ${focusedCloseContrast.mixBlendMode}`);
       }
       if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
         throw new Error('Focused 3D Close control still has a visible background box.');
@@ -1358,23 +1366,27 @@ try {
         throw new Error('Lightbox artwork surface did not receive its intrinsic ratio token.');
       }
 
-      const lightboxControlStyles = await page.evaluate(() =>
-        ['#lightboxClose', '.lightbox-prev', '.lightbox-next'].map(selector => {
-          const el = document.querySelector(selector);
-          if (!el) return null;
-          const buttonStyle = getComputedStyle(el);
-          const icon = el.querySelector('i');
-          const iconStyle = icon ? getComputedStyle(icon) : null;
-          return {
-            selector,
-            blend: iconStyle?.mixBlendMode || '',
-            background: buttonStyle.backgroundColor,
-            borderStyle: buttonStyle.borderStyle
-          };
-        }).filter(Boolean)
-      );
-      for (const control of lightboxControlStyles) {
-        if (control.blend !== 'difference') throw new Error(control.selector + ' icon is not using artwork-aware difference-mode contrast.');
+      const lightboxControlStyles = await page.evaluate(() => {
+        const layer = document.querySelector('.lightbox-controls');
+        const layerStyle = layer ? getComputedStyle(layer) : null;
+        return {
+          layerBlend: layerStyle?.mixBlendMode || '',
+          controls: ['#lightboxClose', '.lightbox-prev', '.lightbox-next'].map(selector => {
+            const el = document.querySelector(selector);
+            if (!el) return null;
+            const buttonStyle = getComputedStyle(el);
+            return {
+              selector,
+              background: buttonStyle.backgroundColor,
+              borderStyle: buttonStyle.borderStyle
+            };
+          }).filter(Boolean)
+        };
+      });
+      if (lightboxControlStyles.layerBlend !== 'difference') {
+        throw new Error('Lightbox control layer is not using artwork-aware difference-mode compositing.');
+      }
+      for (const control of lightboxControlStyles.controls) {
         if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
           throw new Error(control.selector + ' still renders a visible control box over artwork.');
         }
