@@ -1572,6 +1572,25 @@ body.center-page {
    32svh / 300px ceiling. Mobile intentionally overrides this below and remains
    full-bleed. */
 @media (min-width:768px){
+  /* Lottie gets a slightly calmer desktop footprint than the general artwork
+     surface. This keeps tall animation compositions prominent without
+     letting them dominate the Lightbox reading area. */
+  #lightboxMediaContainer .lightbox-artwork.is-lottie-artwork{
+    width:min(100%, calc(72svh * var(--lightbox-artwork-ratio, 1)));
+    max-width:760px;
+    max-height:72svh;
+  }
+
+  /* Compact tablets get a further small reduction while retaining the same
+     intrinsic ratio. Mobile remains full-bleed below. */
+  @media (min-width:768px) and (max-width:1099px){
+    #lightboxMediaContainer .lightbox-artwork.is-lottie-artwork{
+      width:min(100%, calc(68svh * var(--lightbox-artwork-ratio, 1)));
+      max-width:700px;
+      max-height:68svh;
+    }
+  }
+
   /* Desktop sizing follows the available viewport instead of a fixed tiny
      portrait box. A Shorts ratio therefore grows naturally with the screen. */
   #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork{
