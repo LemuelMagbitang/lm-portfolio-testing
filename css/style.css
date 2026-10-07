@@ -3022,10 +3022,17 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 }
 
 @media (max-width: 767px) {
-  /* Narrow cards are artwork-first. The project title remains available to
-     assistive technology through the card's aria-label. */
+  /* Match the legacy gallery on touch screens: there is no hover state, so
+     the title/subtitle overlay remains visible and is flush to the card edge. */
   .project-card .glass-info {
-    display: none;
+    display: block;
+    left:0;
+    bottom:0;
+    width:100%;
+    border-radius:0;
+    transform:translateY(0);
+    opacity:1;
+    padding:20px 15px 15px;
   }
 
   /* Filter changes get a restrained depth/blur motion on touch layouts.
@@ -3127,11 +3134,6 @@ h1,h2,h3,h4,h5,h6,
    CSS corner-shape:squircle supplies Apple's continuous/squircle-like
    curvature; border-radius remains the compatibility fallback.
    ============================================================ */
-.project-card,
-.seamless-grid{
-  border-radius:var(--lm-shape-card-radius);
-}
-
 .nav-dropdown-menu,
 .contact-primary,
 .contact-secondary,
@@ -3157,14 +3159,14 @@ select,
   border-radius:var(--lm-shape-fixed-sm);
 }
 
-/* Concentric inner surface: the artwork/info panel sits inside the card by
-   the same inset on every side, so its corner center stays aligned with the
-   outer card rather than becoming an independently rounded rectangle. */
+/* Project-card information stays flush with the artwork surface.
+   The legacy gallery contract uses a full-width bottom overlay with no inset,
+   so titles/subtitles never appear to float inside a rounded panel. */
 .project-card .glass-info{
-  left:var(--lm-shape-concentric-inset);
-  bottom:var(--lm-shape-concentric-inset);
-  width:calc(100% - (var(--lm-shape-concentric-inset) * 2));
-  border-radius:var(--lm-shape-concentric-card-inner);
+  left:0;
+  bottom:0;
+  width:100%;
+  border-radius:0;
 }
 
 /* Contact forms are inset surfaces inside their two contact blocks. */
@@ -3242,6 +3244,30 @@ a:focus-visible{
   outline:none!important;
   outline-offset:0;
   box-shadow:0 0 0 2px rgba(255,255,255,.82);
+}
+
+/* ============================================================
+   PROJECT GALLERY — legacy visual contract
+   Cards are deliberately flush, square, and gapless. The squircle system is
+   reserved for other UI surfaces and does not apply to artwork tiles.
+   ============================================================ */
+.seamless-grid,
+.project-card,
+.project-card .glass-info{
+  border-radius:0;
+}
+
+.seamless-grid{
+  gap:0;
+}
+
+.project-card .glass-info{
+  left:0;
+  right:0;
+  bottom:0;
+  width:100%;
+  margin:0;
+  border-radius:0;
 }
 
 /* ============================================================
