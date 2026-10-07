@@ -429,6 +429,7 @@ let openRenderToken = 0;
         color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
         decision = 'binary-initial';
       }
+    }
 
     button.style.mixBlendMode = 'normal';
     button.style.color = color;
