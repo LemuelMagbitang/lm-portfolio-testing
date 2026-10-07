@@ -155,6 +155,9 @@ let openRenderToken = 0;
   // as YouTube cannot expose their pixels to the parent document, so those
   // controls use a deterministic white fallback instead of producing gray.
   const LIGHTBOX_CONTRAST_THRESHOLD = 0.52;
+  const LIGHTBOX_CONTRAST_LIGHT_THRESHOLD = 0.60;
+  const LIGHTBOX_CONTRAST_DARK_THRESHOLD = 0.40;
+  const LIGHTBOX_CONTRAST_SWITCH_COVERAGE = 0.85;
   const contrastCanvas = documentRef.createElement?.('canvas');
   if (contrastCanvas) {
     contrastCanvas.width = 9;
@@ -181,6 +184,8 @@ let openRenderToken = 0;
       button.style.removeProperty('color');
       button.removeAttribute('data-contrast-mode');
       button.removeAttribute('data-contrast-luminance');
+      button.removeAttribute('data-contrast-coverage');
+      button.removeAttribute('data-contrast-color');
     });
   };
 
@@ -330,51 +335,71 @@ let openRenderToken = 0;
   };
 
   const sampleArtworkForControl = (rect) => {
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const points = [
-      [centerX, centerY],
-      [rect.left + rect.width * 0.28, centerY],
-      [rect.left + rect.width * 0.72, centerY],
-      [centerX, rect.top + rect.height * 0.28],
-      [centerX, rect.top + rect.height * 0.72]
-    ];
-
-    // Read the pixels under the actual hit target rather than trusting one
-    // center point. A navigation glyph can straddle a light/dark boundary,
-    // while transparent/custom media can leave the exact center unpainted.
     const samples = [];
-    for (const [x, y] of points) {
-      const value = sampleArtworkAtPoint(x, y);
-      if (Number.isFinite(value)) samples.push(value);
+    const columns = 7;
+    const rows = 7;
+    for (let row = 0; row < rows; row += 1) {
+      const y = rect.top + rect.height * ((row + 0.5) / rows);
+      for (let column = 0; column < columns; column += 1) {
+        const x = rect.left + rect.width * ((column + 0.5) / columns);
+        const value = sampleArtworkAtPoint(x, y);
+        if (Number.isFinite(value)) samples.push(value);
+      }
     }
     if (!samples.length) return null;
 
-    samples.sort((a, b) => a - b);
-    return samples[Math.floor(samples.length / 2)];
+    let lightCount = 0;
+    let darkCount = 0;
+    for (const value of samples) {
+      if (value >= LIGHTBOX_CONTRAST_LIGHT_THRESHOLD) lightCount += 1;
+      else if (value <= LIGHTBOX_CONTRAST_DARK_THRESHOLD) darkCount += 1;
+    }
+
+    const sorted = [...samples].sort((a, b) => a - b);
+    return {
+      luminance: sorted[Math.floor(sorted.length / 2)],
+      knownCount: samples.length,
+      lightCoverage: lightCount / samples.length,
+      darkCoverage: darkCount / samples.length
+    };
   };
+
 
   const applyBinaryContrastToButton = (button) => {
     if (!button) return;
     const rect = button.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
-    const luminance = sampleArtworkForControl(rect);
+    const sample = sampleArtworkForControl(rect);
+    const currentColor = button.dataset.contrastColor || '';
+    let color = currentColor || '#fff';
+    let decision = Number.isFinite(sample?.luminance) ? 'binary-hysteresis-hold' : 'binary-fallback';
 
-    // No readable parent pixels (e.g. an external YouTube iframe): choose a
-    // deterministic white glyph instead of allowing difference blending to
-    // generate gray values. Every active control is always explicit black or
-    // white; the visual "blend" comes from the artwork-aware contrast choice,
-    // not from difference compositing.
-    const isLight = Number.isFinite(luminance) && luminance >= LIGHTBOX_CONTRAST_THRESHOLD;
-    const color = isLight ? '#000' : '#fff';
+    if (sample?.knownCount >= 12) {
+      if (!currentColor) {
+        color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
+        decision = 'binary-initial';
+      } else if (currentColor === '#fff' && sample.lightCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
+        color = '#000';
+        decision = 'binary-switch-dark';
+      } else if (currentColor === '#000' && sample.darkCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
+        color = '#fff';
+        decision = 'binary-switch-light';
+      }
+    }
+
     button.style.mixBlendMode = 'normal';
     button.style.color = color;
-    button.dataset.contrastMode = Number.isFinite(luminance) ? 'binary-sampled' : 'binary-fallback';
-    if (Number.isFinite(luminance)) {
-      button.dataset.contrastLuminance = luminance.toFixed(3);
+    button.dataset.contrastColor = color;
+    button.dataset.contrastMode = Number.isFinite(sample?.luminance)
+      ? decision
+      : 'binary-fallback';
+    if (Number.isFinite(sample?.luminance)) {
+      button.dataset.contrastLuminance = sample.luminance.toFixed(3);
+      button.dataset.contrastCoverage = Math.max(sample.lightCoverage, sample.darkCoverage).toFixed(2);
     } else {
       delete button.dataset.contrastLuminance;
+      delete button.dataset.contrastCoverage;
     }
   };
 
