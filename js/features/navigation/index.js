@@ -77,25 +77,36 @@ export function initNavigation({ root = globalThis.document } = {}) {
   mobileMenuLinks.forEach(link => bind(link, 'click', close));
 
   function scrollSamePageContact() {
-    const target = root.getElementById('contact-start') || root.getElementById('contact-section');
+    const target = root.getElementById('contact-grid-anchor')
+      || root.querySelector('#contact-section .contact-grid')
+      || root.getElementById('contact-start')
+      || root.getElementById('contact-section');
+    const heading = root.getElementById('contact-start') || target;
     const windowRef = root?.defaultView || globalThis.window;
     if (!target || !windowRef?.scrollTo) return;
 
     const viewportHeight = Number(windowRef.visualViewport?.height) || Number(windowRef.innerHeight) || 0;
     const currentY = Number(windowRef.scrollY) || 0;
     const rect = target.getBoundingClientRect();
+    const headingRect = heading.getBoundingClientRect();
     const navbarHeight = Number(root.querySelector('.navbar')?.getBoundingClientRect?.().height) || 0;
-    const offset = Math.max(navbarHeight + 12, 24);
+    const usableTop = Math.max(navbarHeight + 24, 24);
+    const usableHeight = Math.max(1, viewportHeight - usableTop);
+
+    // Center the Contact group in the usable viewport rather than positioning
+    // only its heading. This gives desktop and mobile the same intentional
+    // compositional balance while the safety clamp keeps the heading clear of
+    // the fixed navbar.
+    const targetCenterY = rect.top + rect.height / 2;
+    const desiredY = currentY + targetCenterY - (usableTop + usableHeight / 2);
+    const headingSafeY = currentY + headingRect.top - usableTop;
     const documentHeight = Math.max(
       Number(root.documentElement?.scrollHeight) || 0,
       Number(root.body?.scrollHeight) || 0
     );
     const maxScrollY = Math.max(0, documentHeight - viewportHeight);
-    const targetY = Math.max(0, Math.min(maxScrollY, currentY + rect.top - offset));
+    const targetY = Math.max(0, Math.min(maxScrollY, Math.min(desiredY, headingSafeY)));
 
-    // Contact aligns the actual Start a Project heading below the fixed nav.
-    // Centering the whole Contact block can clamp to the document bottom on
-    // mobile and land inside the form instead.
     const scrollingElement = root.scrollingElement || root.documentElement;
     [scrollingElement, root.documentElement, root.body].filter(Boolean).forEach(element => {
       element.scrollTop = targetY;
