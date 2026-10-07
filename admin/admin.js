@@ -144,6 +144,7 @@ function ghRawUrl(path){
 const SECTIONS = {
   hero:     { file: 'data/hero.json',     label: 'Hero Messages' },
   heroLoop: { file: 'data/hero-loop.json', label: 'Hero Loop Animation' },
+  footerLoop: { file: 'data/footer-loop.json', label: 'Footer Animation' },
   filters:  { file: 'data/filters.json',  label: 'Filters & Badges' },
   projects: { file: 'data/projects.json', label: 'Projects' },
   about:    { file: 'data/about.json',    label: 'About Page' },
@@ -1003,6 +1004,124 @@ RENDERERS.hero = function(data){
 /* =====================================================================
    8. SECTION: HERO LOOP ANIMATION
    ===================================================================== */
+RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
+  const raw = data?.json && typeof data.json === 'object' && !Array.isArray(data.json) ? data.json : {};
+  let mode = raw.mode === 'manual' ? 'manual' : 'hero';
+  let manual = {
+    type: ['image','video','lottie'].includes(raw.manual?.type) ? raw.manual.type : 'image',
+    src: String(raw.manual?.src || ''),
+    alt: String(raw.manual?.alt || 'Footer animation'),
+    focus: String(raw.manual?.focus || '50% 50%'),
+    zoom: Number.isFinite(Number(raw.manual?.zoom)) ? Number(raw.manual.zoom) : 1,
+    rotate: Number.isFinite(Number(raw.manual?.rotate)) ? Number(raw.manual.rotate) : 0
+  };
+
+  content.innerHTML = sectionHead(
+    'Footer Animation',
+    'Give the footer its own visual breathing room. By default it inherits the Hero Loop source and timing; switch to Manual to use one selected image, video, or Lottie animation.'
+  ) + `
+    <div class="panel">
+      <div class="row">
+        <div class="field">
+          <label class="field-label">Source mode</label>
+          <select id="fl_mode">
+            <option value="hero" ${mode==='hero'?'selected':''}>Use Hero settings</option>
+            <option value="manual" ${mode==='manual'?'selected':''}>Use one selected media</option>
+          </select>
+        </div>
+      </div>
+      <div class="banner info" id="fl_help"></div>
+    </div>
+    <div class="panel" id="fl_manual_panel" style="display:${mode==='manual'?'block':'none'};">
+      <h3>Selected footer media</h3>
+      <p class="panel-sub">Only one source is used here. Image and Lottie stay visually quiet; video is muted, inline, and loops.</p>
+      <div class="row">
+        <div class="field" style="max-width:180px">
+          <label class="field-label">Media type</label>
+          <select id="fl_type">
+            <option value="image" ${manual.type==='image'?'selected':''}>Image</option>
+            <option value="video" ${manual.type==='video'?'selected':''}>Video</option>
+            <option value="lottie" ${manual.type==='lottie'?'selected':''}>Lottie</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Source path or URL</label>
+          <input id="fl_src" value="${attr(manual.src)}" placeholder="assets/projects/your-folder/footer.jpg / .mp4 / .json">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label class="field-label">Focus (x% y%)</label><input id="fl_focus" value="${attr(manual.focus)}" placeholder="50% 50%"></div>
+        <div class="field"><label class="field-label">Zoom</label><input id="fl_zoom" type="number" step="0.05" value="${manual.zoom}"></div>
+        <div class="field"><label class="field-label">Rotation</label><input id="fl_rotate" type="number" step="1" value="${manual.rotate}"></div>
+      </div>
+      <div id="fl_preview"></div>
+    </div>
+  `;
+
+  const help = content.querySelector('#fl_help');
+  const manualPanel = content.querySelector('#fl_manual_panel');
+  const modeEl = content.querySelector('#fl_mode');
+  const typeEl = content.querySelector('#fl_type');
+  const srcEl = content.querySelector('#fl_src');
+  const focusEl = content.querySelector('#fl_focus');
+  const zoomEl = content.querySelector('#fl_zoom');
+  const rotateEl = content.querySelector('#fl_rotate');
+  const preview = content.querySelector('#fl_preview');
+
+  function paintHelp(){
+    help.innerHTML = mode === 'hero'
+      ? '<i class="fa-solid fa-link"></i><div><strong>Linked to Hero.</strong> Footer artwork follows the Hero Loop source mode and transition timing in the Hero Loop Animation tab and Settings.</div>'
+      : '<i class="fa-solid fa-hand-pointer"></i><div><strong>Manual footer source.</strong> The footer ignores Hero artwork selection and renders only the media configured below.</div>';
+    manualPanel.style.display = mode === 'manual' ? 'block' : 'none';
+  }
+
+  function refreshPreview(){
+    if(mode !== 'manual'){
+      preview.innerHTML = '<div class="banner muted"><i class="fa-solid fa-eye"></i><div>The live footer is currently inheriting Hero settings.</div></div>';
+      return;
+    }
+    const source = manual.src ? ghRawUrl(manual.src) : '';
+    if(!source){
+      preview.innerHTML = '<div class="banner muted">Choose a source to preview the footer media.</div>';
+      return;
+    }
+    if(manual.type === 'video'){
+      preview.innerHTML = `<div class="media-preview"><video src="${attr(source)}" muted autoplay loop playsinline controls></video></div>`;
+    }else if(manual.type === 'lottie'){
+      preview.innerHTML = `<div class="media-preview"><lottie-player src="${attr(source)}" autoplay loop background="transparent" style="width:100%;height:100%;"></lottie-player></div>`;
+    }else{
+      preview.innerHTML = `<div class="media-preview"><img src="${attr(source)}" alt="${attr(manual.alt)}" onerror="handleMissingFile(this,'image')"></div>`;
+    }
+  }
+
+  modeEl.addEventListener('change', ()=>{
+    mode = modeEl.value === 'manual' ? 'manual' : 'hero';
+    paintHelp(); refreshPreview(); flagUnsaved();
+  });
+  typeEl.addEventListener('change', ()=>{
+    manual.type = typeEl.value;
+    refreshPreview(); flagUnsaved();
+  });
+  srcEl.addEventListener('input', ()=>{
+    manual.src = srcEl.value; refreshPreview(); flagUnsaved();
+  });
+  focusEl.addEventListener('input', ()=>{ manual.focus = focusEl.value; flagUnsaved(); });
+  zoomEl.addEventListener('input', ()=>{ manual.zoom = parseFloat(zoomEl.value)||1; flagUnsaved(); });
+  rotateEl.addEventListener('input', ()=>{ manual.rotate = parseFloat(rotateEl.value)||0; flagUnsaved(); });
+
+  attachMediaBrowseButton(srcEl, () => refreshPreview(), () => ({
+    kind: manual.type === 'lottie' ? 'lottie' : manual.type === 'video' ? 'video' : 'image',
+    title: manual.type === 'lottie' ? 'Choose a Lottie JSON file' : manual.type === 'video' ? 'Choose a footer video' : 'Choose a footer image'
+  }));
+
+  paintHelp();
+  refreshPreview();
+  wireSave(()=>({
+    mode,
+    manual
+  }), 'footerLoop', SECTIONS.footerLoop.file);
+};
+
 RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
   let settingsResult; try{ settingsResult=await loadSection('settings'); }catch(e){ settingsResult={json:{}}; }
   if(!isCurrent()) return;
@@ -3418,7 +3537,7 @@ async function renameMediaFolder(oldPath,onDone){
   mediaTreeCache=null;
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
-  ['about','heroLoop','hero','projects','reviews','settings','filters'].forEach(name=>{ delete cache[name]; });
+  ['about','heroLoop','footerLoop','hero','projects','reviews','settings','filters'].forEach(name=>{ delete cache[name]; });
   toast('Renamed '+oldName+' to '+name+(changedReferenceFiles.length ? ' and updated '+changedReferenceFiles.length+' reference file'+(changedReferenceFiles.length===1?'':'s') : '')+'.');
   if(onDone) onDone(newPath);
 }
