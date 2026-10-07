@@ -3710,3 +3710,15 @@ footer > .footer-content p{
 .filter-tabs[data-filter-viewport="offscreen"]{
   pointer-events:none !important;
 }
+
+/* Profile frame correction: the outer portrait mask is circular, but the
+   image itself must remain square so zoom/focus transforms cannot scale a
+   second circle inside the mask. */
+.photo-frame{
+  overflow:hidden;
+  border-radius:50% !important;
+}
+.profile-pic-large{
+  border-radius:0 !important;
+  overflow:visible;
+}
