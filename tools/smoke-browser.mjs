@@ -1503,20 +1503,27 @@ try {
       }
       const close=lightboxControlStyles.controls.find(item=>item.selector==='#lightboxClose');
       const navs=lightboxControlStyles.controls.filter(item=>item.selector!=='#lightboxClose');
-      if(!close || close.color!=='rgb(255, 255, 255)' ||
-         !/rgba\\(255, 255, 255, 0\\.08\\)/.test(close.background) ||
-         close.border!=='none' || close.radius!=='50%' || close.position!=='fixed'){
-        throw new Error('Mobile Lightbox Close control does not match the glass-circle contract: '+JSON.stringify(close));
-      }
-      navs.forEach(control=>{
-        const bottom=Number.parseFloat(control.bottom);
-        if(control.color!=='rgb(255, 255, 255)' ||
-           !/rgba\\(255, 255, 255, 0\\.08\\)/.test(control.background) ||
-           control.border!=='none' || control.position!=='fixed' ||
-           control.radius==='50%' || !Number.isFinite(bottom) || bottom<20){
-          throw new Error('Mobile Lightbox chevron control does not match the bottom glass-rect contract: '+JSON.stringify(control));
+      const lightboxIs3dFocused=await page.locator('#lightbox.is-3d-focused').count()>0;
+
+      // While focused 3D is active the global Lightbox chrome is deliberately
+      // covered by the modal. Only assert its geometry/material in the normal
+      // mobile artwork state where the controls are actually visible.
+      if(!lightboxIs3dFocused){
+        if(!close || close.color!=='rgb(255, 255, 255)' ||
+           !/rgba\\(255, 255, 255, 0\\.08\\)/.test(close.background) ||
+           close.border!=='none' || close.radius!=='50%' || close.position!=='fixed'){
+          throw new Error('Mobile Lightbox Close control does not match the glass-circle contract: '+JSON.stringify(close));
         }
-      });
+        navs.forEach(control=>{
+          const bottom=Number.parseFloat(control.bottom);
+          if(control.color!=='rgb(255, 255, 255)' ||
+             !/rgba\\(255, 255, 255, 0\\.08\\)/.test(control.background) ||
+             control.border!=='none' || control.position!=='fixed' ||
+             control.radius==='50%' || !Number.isFinite(bottom) || bottom<20){
+            throw new Error('Mobile Lightbox chevron control does not match the bottom glass-rect contract: '+JSON.stringify(control));
+          }
+        });
+      }
 
       const lightboxViewportWidth = await page.evaluate(() => window.innerWidth);
       const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
