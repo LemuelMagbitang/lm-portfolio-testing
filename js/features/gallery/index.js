@@ -391,6 +391,24 @@ export async function initGallery(options = {}) {
 
   bind(documentRef, 'click', handlePublicFilterNavigation);
 
+  // Returning to Works/home always means the public gallery is back to ALL.
+  // Navigation publishes the event; Gallery owns the state reset, render, and
+  // mobile filter-strip positioning.
+  function resetToAllFilter() {
+    const allButton = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === 'all');
+    if (!allButton) return;
+    const changed = currentFilter !== 'all';
+    const transitionFromRects = changed ? captureGalleryCardRects(portfolioGrid) : null;
+    filterBtns.forEach(item => item.classList.toggle('active', item === allButton));
+    currentFilter = 'all';
+    isExpanded = false;
+    render({ animateTransition: changed, transitionFromRects });
+    updateFilterPager(filterBtns.indexOf(allButton));
+    if (isFilterCarousel()) centerFilterButton(allButton, 'auto');
+  }
+
+  bind(windowRef, 'lm:navigate-home', resetToAllFilter);
+
   filterBtns.forEach(btn => bind(btn, 'click', event => {
     if (Date.now() < suppressFilterClickUntil) {
       event.preventDefault();
