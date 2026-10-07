@@ -15,14 +15,14 @@ import {
 } from '../features/projects/index.js?v=20261006-02';
 import { initNavigation } from '../features/navigation/index.js?v=20261007-03';
 import { initReviews } from '../features/reviews/index.js';
-import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261004-15';
+import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261007-17';
 import { initForms } from '../features/forms/index.js?v=20261007-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261006-01';
 
-import { initGallery } from '../features/gallery/index.js?v=20261007-02';
+import { initGallery } from '../features/gallery/index.js?v=20261007-04';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261007-03';
-import { initLightbox } from '../features/lightbox/index.js?v=20261007-07';
+import { initLightbox } from '../features/lightbox/index.js?v=20261007-08';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261005-06';
 
 export async function createPortfolioApp({
@@ -234,19 +234,49 @@ export async function createPortfolioApp({
     return null;
   });
 
-  const [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
-    heroPromise,
-    footerPromise,
-    reviewsPromise.then(feature => {
-      feature.setVisible(settings.showReviews);
-      return feature;
-    }),
-    aboutPromise.then(feature => {
-      feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
-      return feature;
-    }),
-    galleryPromise
-  ]);
+  let heroFeature = null;
+  let footerFeature = null;
+  let reviewsFeature = null;
+  let aboutFeature = null;
+  let galleryFeature = null;
+  let deferredMediaDestroyed = false;
+
+  if (root.body?.classList.contains('about-page')) {
+    void heroPromise.then(feature => {
+      if (deferredMediaDestroyed) feature?.destroy?.();
+      else heroFeature = feature;
+    });
+    void footerPromise.then(feature => {
+      if (deferredMediaDestroyed) feature?.destroy?.();
+      else footerFeature = feature;
+    });
+
+    [reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
+      reviewsPromise.then(feature => {
+        feature.setVisible(settings.showReviews);
+        return feature;
+      }),
+      aboutPromise.then(feature => {
+        feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
+        return feature;
+      }),
+      galleryPromise
+    ]);
+  } else {
+    [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
+      heroPromise,
+      footerPromise,
+      reviewsPromise.then(feature => {
+        feature.setVisible(settings.showReviews);
+        return feature;
+      }),
+      aboutPromise.then(feature => {
+        feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
+        return feature;
+      }),
+      galleryPromise
+    ]);
+  }
 
   // The Gallery owns the active-card contract. Assign it as soon as the
   // Gallery finishes initialization so the already-created Lightbox switches
@@ -348,6 +378,7 @@ export async function createPortfolioApp({
     about: aboutFeature,
     forms,
     destroy() {
+      deferredMediaDestroyed = true;
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
       footerFeature?.destroy?.();
