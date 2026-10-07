@@ -2004,54 +2004,138 @@ body.center-page {
 /* "Start a Project" is the primary call-to-action, "Leave a Review"
    is secondary — side-by-side on desktop with the primary one wider
    and visually heavier, stacked on mobile with the primary one first. */
-.contact-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 50px;
-  align-items: center;
-  /* Optical correction: the contact group sat a little high inside the
-     section. A small visual offset centers the whole group without changing
-     the #contact-start document anchor or scroll math. */
-  transform: translateY(8px);
+.contact-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+  gap:clamp(24px,3.5vw,50px);
+  align-items:stretch;
 }
 
-.contact-block { text-align: center; }
-
-.contact-primary {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.contact-block{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  text-align:center;
+  box-sizing:border-box;
   border-radius:var(--lm-radius-fixed-lg);
-  padding: 40px 36px;
+  padding:clamp(28px,3vw,40px) clamp(20px,2.8vw,36px);
 }
 
-.contact-secondary {
-  padding: 24px 20px 0;
-  opacity: 0.92; /* subtly lighter visual weight than the primary card */
+.contact-primary{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.10);
 }
 
-.contact-primary .section-title {
-  margin-bottom: 24px;
+.contact-secondary{
+  background:rgba(255,255,255,.018);
+  border:1px solid rgba(255,255,255,.075);
+  opacity:.96;
 }
 
-/* "START A PROJECT WITH LM." — same treatment as the About page
-   heading (genuine SF Pro Display on Apple devices, close fallback
-   elsewhere), no logo image needed. */
-.start-project-title {
-  font-size: 1.6rem;
-  letter-spacing: 0.5px;
-  color: #fff;
-  text-transform: none;
+.contact-grid .section-title{
+  min-height:2.1rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 0 24px;
+  flex:0 0 auto;
 }
 
-@media (max-width: 819px) {
-  .contact-grid {
-    grid-template-columns: 1fr;
-    gap: 60px;
+/* Both forms share the same vertical tracks on desktop. This makes the
+   second-field row (Email / Stars) and the message row physically align. */
+.contact-grid .simple-form{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:52px 52px minmax(140px,1fr) 52px;
+  grid-template-areas:
+    "name"
+    "second"
+    "message"
+    "action";
+  gap:14px;
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+}
+.contact-grid .simple-form > input[name="name"]{grid-area:name;}
+.contact-grid .simple-form > input[name="email"],
+.contact-grid .simple-form > .star-rating{grid-area:second;}
+.contact-grid .simple-form > textarea{grid-area:message;}
+.contact-grid .simple-form > button[type="submit"]{grid-area:action;}
+
+.contact-grid .simple-form > input:not([type="hidden"]),
+.contact-grid .simple-form > textarea,
+.contact-grid .simple-form > button[type="submit"],
+.contact-grid .simple-form > .star-rating{
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+
+.contact-grid .simple-form > input:not([type="hidden"]),
+.contact-grid .simple-form > textarea{
+  margin:0;
+  height:100%;
+  min-height:0;
+}
+
+.contact-grid .simple-form > textarea{
+  resize:vertical;
+  min-height:140px;
+}
+
+.contact-grid .simple-form > .star-rating{
+  height:52px;
+  min-height:52px;
+  margin:0!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+}
+
+.contact-grid .star-rating label{
+  font-size:1.8rem;
+  line-height:1;
+}
+
+.contact-grid .simple-form > button[type="submit"],
+.contact-grid .email-me-btn{
+  height:52px;
+  min-height:52px;
+  margin:0;
+  border-radius:var(--lm-radius-fixed-sm);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.submit-btn-secondary{
+  background:transparent;
+  color:#fff;
+}
+
+@media (max-width:819px){
+  .contact-grid{
+    grid-template-columns:1fr;
+    gap:28px;
   }
-  .contact-secondary {
-    padding-top: 0;
-    border-top: 1px solid #222;
-    padding-top: 40px;
+  .contact-block{
+    width:100%;
+    padding:28px 20px 30px;
+  }
+  .contact-grid .section-title{
+    min-height:2rem;
+    margin-bottom:20px;
+  }
+  .contact-grid .simple-form{
+    grid-template-rows:52px 52px 150px 52px;
+    gap:12px;
+  }
+  .contact-grid .simple-form > textarea{
+    min-height:150px;
+  }
+  .contact-grid .star-rating label{
+    font-size:1.7rem;
   }
 }
 
