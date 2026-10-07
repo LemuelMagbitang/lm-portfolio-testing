@@ -798,6 +798,29 @@ try {
         throw new Error('Focused 3D environment did not reset its internal Lightbox scroll position to zero: ' + focused3DEntryOrigin);
       }
 
+      const focused3DTouchContract = await page.evaluate(() => {
+        const modal = document.querySelector('#lightbox.is-3d-focused');
+        const canvas = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive canvas');
+        if (!modal || !canvas) return null;
+        const event = new Event('touchmove', { bubbles: true, cancelable: true });
+        canvas.dispatchEvent(event);
+        return {
+          touchDefaultPrevented: event.defaultPrevented,
+          modalOverflowY: getComputedStyle(modal).overflowY,
+          canvasPointerEvents: getComputedStyle(canvas).pointerEvents,
+          canvasTouchAction: getComputedStyle(canvas).touchAction
+        };
+      });
+      if (!focused3DTouchContract ||
+          focused3DTouchContract.touchDefaultPrevented ||
+          focused3DTouchContract.canvasPointerEvents !== 'auto' ||
+          focused3DTouchContract.canvasTouchAction !== 'none') {
+        throw new Error(
+          'Focused 3D touch input is being blocked before it reaches OrbitControls: ' +
+          JSON.stringify(focused3DTouchContract)
+        );
+      }
+
       const focused3DScrollContract = await page.evaluate(() => {
         const modal = document.querySelector('#lightbox.is-3d-focused');
         if (!modal) return null;
@@ -1128,6 +1151,23 @@ try {
         throw new Error(`YouTube Shorts did not retain portrait geometry: ${JSON.stringify(youtubeGeometry)}`);
       }
 
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(100);
+
+      // Reopen the same project so the first YouTube frame comes back through
+      // the hidden cache path. Cached reuse must preserve eager Lightbox load
+      // behavior rather than reverting to lazy loading.
+      await card.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      const reusedYoutubeLoadingModes = await page.locator(
+        '#lightboxMediaContainer iframe[data-lm-youtube]'
+      ).evaluateAll(frames => frames.map(frame => frame.getAttribute('loading') || ''));
+      if (reusedYoutubeLoadingModes.some(mode => mode === 'lazy')) {
+        throw new Error(
+          'Reused YouTube Lightbox frames regressed to lazy loading: ' +
+          JSON.stringify(reusedYoutubeLoadingModes)
+        );
+      }
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
     }, { width: 1280, height: 900 }, async page => {

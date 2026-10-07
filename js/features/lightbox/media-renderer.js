@@ -768,7 +768,10 @@ export function createLightboxMediaRenderer({
     } else {
       iframe.tabIndex = 0;
       iframe.title = item.caption || item.description || project.title || 'Project video';
-      iframe.loading = index === 0 ? 'eager' : 'lazy';
+      // Explicit Lightbox entry is already user intent. Keep cached
+      // players eager on reuse too, so the first tap/click never re-enters a
+      // lazy-loading state after the frame has been moved through the cache.
+      iframe.loading = 'eager';
       iframe.fetchPriority = index === 0 ? 'high' : 'auto';
     }
 

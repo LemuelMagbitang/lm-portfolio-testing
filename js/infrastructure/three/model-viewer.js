@@ -332,7 +332,10 @@ export async function mountModelViewer(container, src, options = {}) {
         const scroller = container.closest?.('.lightbox-modal');
         if (scroller) {
           const blockFocusScroll = (event) => {
-            if (event.type === 'wheel' && event.target === renderer?.domElement) return;
+            // Once focused, wheel/touch input that originates on the WebGL
+            // canvas belongs to OrbitControls. Only background viewport input
+            // should be trapped so it cannot scroll the Lightbox underneath.
+            if (event.target === renderer?.domElement) return;
             event.preventDefault();
           };
           scroller.addEventListener('wheel', blockFocusScroll, { capture: true, passive: false });
