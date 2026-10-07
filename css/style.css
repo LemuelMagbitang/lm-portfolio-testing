@@ -1263,16 +1263,34 @@ body.center-page {
   }
   .nav-caret { display: none; }
 
-  /* Dims the rest of the page behind the menu while it's open, so the
-     translucent panel above reads clearly as a menu rather than just
-     blending into whatever artwork happens to be behind it. Tapping
-     anywhere in this dimmed area closes the menu (handled in script.js). */
-  body.menu-open::after {
-    content: '';
+  /* Viewport-bound backdrop for the open mobile menu. This is a real
+     fixed layer rather than a body pseudo-element, so its coverage cannot
+     shrink with document height or move with the scrolled page. The page
+     remains scrollable while the menu is open; the backdrop simply darkens
+     the current viewport and the existing outside-tap handler closes it. */
+  .nav-menu-backdrop {
     position: fixed;
     inset: 0;
+    width: 100vw;
+    height: 100dvh;
     background: rgba(0, 0, 0, 0.45);
-    z-index: 900;
+    z-index: 999;
+    pointer-events: auto;
+  }
+  .nav-menu-backdrop[hidden] {
+    display: none !important;
+  }
+
+  /* Keep the menu itself above the backdrop and make an unusually long menu
+     scroll within the viewport rather than extending past it. */
+  .navbar {
+    z-index: 1000;
+  }
+  .nav-links {
+    max-height: min(520px, calc(100dvh - var(--lm-mobile-nav-height, 64px)));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Mobile is untouched by the desktop restructure above: everything
