@@ -583,10 +583,6 @@ function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
 
 // Close Lightbox function
 function closeLightbox({ restoreFocus = true } = {}) {
-  if (contrastInterval) {
-    windowRef.clearInterval?.(contrastInterval);
-    contrastInterval = null;
-  }
   // Invalidate any queued document/media positioning frames from the
   // previous open. A rapid close/reopen or navigate/back sequence must not
   // let an older request move the new Lightbox to a stale media target.
