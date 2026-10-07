@@ -50,7 +50,7 @@ const SOFTWARE_ALIASES = {
 const BUNDLED_SOFTWARE_LOGOS = {
   blender: 'assets/projects/site/logos/blender_icon_512x512.png',
   figma: 'assets/projects/site/logos/figma.png',
-  krita: 'assets/projects/site/logos/krita.svg',
+  krita: 'assets/projects/site/logos/krita.png',
   adobepremierepro: 'assets/projects/site/logos/adobe-premiew-pro-cc.png',
   adobeaftereffects: 'assets/projects/site/logos/adobe-after-effects-cc.png',
   adobephotoshop: 'assets/projects/site/logos/adobe-photoshop-cc.png',
