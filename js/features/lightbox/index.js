@@ -157,7 +157,14 @@ let openRenderToken = 0;
   const LIGHTBOX_CONTRAST_THRESHOLD = 0.52;
   const LIGHTBOX_CONTRAST_LIGHT_THRESHOLD = 0.60;
   const LIGHTBOX_CONTRAST_DARK_THRESHOLD = 0.40;
-  const LIGHTBOX_CONTRAST_SWITCH_COVERAGE = 0.85;
+  // Do not flip as soon as the control touches the opposite tone. Require
+  // nearly the whole sampled hit region to be inside the new tone, then keep
+  // that condition stable for a few checks before committing the switch.
+  // This intentionally behaves more like a phone system-status surface than
+  // a pixel-perfect blend effect at a moving artwork boundary.
+  const LIGHTBOX_CONTRAST_SWITCH_COVERAGE = 0.92;
+  const LIGHTBOX_CONTRAST_SWITCH_STREAK = 3;
+  const contrastSwitchStreaks = new WeakMap();
   const contrastCanvas = documentRef.createElement?.('canvas');
   if (contrastCanvas) {
     contrastCanvas.width = 9;
@@ -374,20 +381,41 @@ let openRenderToken = 0;
     const currentColor = button.dataset.contrastColor || '';
     let color = currentColor || '#fff';
     let decision = Number.isFinite(sample?.luminance) ? 'binary-hysteresis-hold' : 'binary-fallback';
+    let streak = contrastSwitchStreaks.get(button) || { candidate: '', count: 0 };
 
     if (sample?.knownCount >= 12) {
       if (!currentColor) {
+        // Initial paint may use the local median immediately; only subsequent
+        // opposite-color changes are debounced.
         color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
         decision = 'binary-initial';
-      } else if (currentColor === '#fff' && sample.lightCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
-        color = '#000';
-        decision = 'binary-switch-dark';
-      } else if (currentColor === '#000' && sample.darkCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
-        color = '#fff';
-        decision = 'binary-switch-light';
+        streak = { candidate: '', count: 0 };
+      } else {
+        let candidate = '';
+        if (currentColor === '#fff' && sample.lightCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
+          candidate = '#000';
+        } else if (currentColor === '#000' && sample.darkCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
+          candidate = '#fff';
+        }
+
+        if (candidate) {
+          if (streak.candidate === candidate) streak.count += 1;
+          else streak = { candidate, count: 1 };
+
+          if (streak.count >= LIGHTBOX_CONTRAST_SWITCH_STREAK) {
+            color = candidate;
+            decision = candidate === '#000' ? 'binary-switch-dark' : 'binary-switch-light';
+            streak = { candidate: '', count: 0 };
+          }
+        } else {
+          streak = { candidate: '', count: 0 };
+        }
       }
+    } else {
+      streak = { candidate: '', count: 0 };
     }
 
+    contrastSwitchStreaks.set(button, streak);
     button.style.mixBlendMode = 'normal';
     button.style.color = color;
     button.dataset.contrastColor = color;
