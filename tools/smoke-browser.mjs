@@ -565,6 +565,9 @@ try {
 
         const originalHtml = artwork.innerHTML;
         const originalArtworkStyle = artwork.getAttribute('style');
+        const siblingArtworks = Array.from(document.querySelectorAll('#lightboxMediaContainer .lightbox-artwork'));
+        const siblingStyles = siblingArtworks.map(node => node === artwork ? null : node.getAttribute('style'));
+        siblingArtworks.forEach(node => { if (node !== artwork) node.style.display = 'none'; });
         const originalNextStyle = next.getAttribute('style');
 
         artwork.style.position = 'fixed';
@@ -606,6 +609,12 @@ try {
         else next.setAttribute('style', originalNextStyle);
         if (originalArtworkStyle === null) artwork.removeAttribute('style');
         else artwork.setAttribute('style', originalArtworkStyle);
+        siblingArtworks.forEach((node,index) => {
+          if (node === artwork) return;
+          const style = siblingStyles[index];
+          if (style === null) node.removeAttribute('style');
+          else node.setAttribute('style', style);
+        });
         artwork.innerHTML = originalHtml;
         return { dark, split, light };
       });
