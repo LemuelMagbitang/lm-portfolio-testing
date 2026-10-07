@@ -13,13 +13,13 @@ import {
   getCardForProject,
   destroyProjects
 } from '../features/projects/index.js?v=20261006-02';
-import { initNavigation } from '../features/navigation/index.js?v=20261006-08';
+import { initNavigation } from '../features/navigation/index.js?v=20261007-01';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261004-15';
 import { initForms } from '../features/forms/index.js';
 import { initSiteSettings } from '../features/settings/index.js?v=20261006-01';
 
-import { initGallery } from '../features/gallery/index.js?v=20261006-07';
+import { initGallery } from '../features/gallery/index.js?v=20261007-01';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
 import { initLightbox } from '../features/lightbox/index.js?v=20261007-02';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261005-06';
