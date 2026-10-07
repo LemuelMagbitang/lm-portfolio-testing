@@ -13,6 +13,9 @@ export function initForms({
   const reviewForm = root?.getElementById('reviewForm');
   const reviewEmailBtn = root?.getElementById('reviewEmailBtn');
 
+  const contactTabs = Array.from(root?.querySelectorAll?.('.contact-mobile-tab') || []);
+  const contactPanels = Array.from(root?.querySelectorAll?.('[data-contact-panel]') || []);
+
   function applyFormToggle(form, emailButton, enabled) {
     if (!form || !emailButton) return;
     form.style.display = enabled ? '' : 'none';
@@ -26,6 +29,39 @@ export function initForms({
   function routeToEmail() {
     const href = getContactHref();
     if (href) root.defaultView.location.href = href;
+  }
+
+  function setActiveContactTab(kind, focusPanel = false) {
+    if (!contactTabs.length || !contactPanels.length) return;
+    const targetKind = kind === 'review' ? 'review' : 'project';
+
+    contactTabs.forEach(tab => {
+      const active = tab.getAttribute('data-contact-tab') === targetKind;
+      tab.setAttribute('aria-selected', String(active));
+      tab.classList.toggle('is-active', active);
+      tab.tabIndex = active ? 0 : -1;
+    });
+
+    contactPanels.forEach(panel => {
+      const active = panel.getAttribute('data-contact-panel') === targetKind;
+      panel.classList.toggle('is-contact-active', active);
+    });
+
+    if (focusPanel) {
+      const panel = contactPanels.find(item => item.getAttribute('data-contact-panel') === targetKind);
+      panel?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  const contactTabHandlers = new Map();
+  contactTabs.forEach(tab => {
+    const handler = () => setActiveContactTab(tab.getAttribute('data-contact-tab') || 'project');
+    contactTabHandlers.set(tab, handler);
+    tab.addEventListener('click', handler);
+  });
+
+  if (contactTabs.length && contactPanels.length) {
+    setActiveContactTab('project');
   }
 
   projectEmailBtn?.addEventListener('click', routeToEmail);
@@ -54,6 +90,8 @@ export function initForms({
     cleanup() {
       projectEmailBtn?.removeEventListener('click', routeToEmail);
       reviewEmailBtn?.removeEventListener('click', routeToEmail);
+      contactTabHandlers.forEach((handler, tab) => tab.removeEventListener('click', handler));
+      contactTabHandlers.clear();
     }
   };
 }
