@@ -180,7 +180,7 @@ let openRenderToken = 0;
   };
 
   const parseObjectPosition = (value, axis = 0.5) => {
-    const parts = String(value || '').trim().split(/\\s+/);
+    const parts = String(value || '').trim().split(/\s+/);
     const token = parts[axis] || '50%';
     const numeric = Number.parseFloat(token);
     if (!Number.isFinite(numeric)) return 0.5;
@@ -310,7 +310,7 @@ let openRenderToken = 0;
       if (Number.isFinite(luminance)) return luminance;
 
       const background = documentRef.defaultView?.getComputedStyle?.(artwork)?.backgroundColor || '';
-      const match = background.match(/rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:[,\\s]+([\\d.]+))?\\s*\\)/i);
+      const match = background.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?\s*\)/i);
       if (match) {
         const alpha = match[4] === undefined ? 1 : Number(match[4]);
         if (alpha > 0.03) {
