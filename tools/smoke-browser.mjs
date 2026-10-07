@@ -2752,6 +2752,24 @@ try {
 
       const testProject = page.locator('#content #projList .card-item').filter({ hasText: 'Test Project' }).first();
       if (await testProject.count() !== 1) throw new Error('CMS Projects editor did not render the test-project fixture.');
+
+      const projectRowsInitial = await page.locator('#content #projList .project-list-item').evaluateAll(rows =>
+        rows.map(row => ({
+          open: row.classList.contains('is-open'),
+          bodyDisplay: getComputedStyle(row.querySelector('[data-body]')).display,
+          title: row.querySelector('.item-title')?.textContent?.trim() || '',
+          subtitle: row.querySelector('.project-preview-text')?.textContent?.trim() || '',
+          hasPreview: !!row.querySelector('.project-collapsed-preview'),
+          hasActions: !!row.querySelector('.project-card-actions')
+        }))
+      );
+      if (!projectRowsInitial.length || projectRowsInitial.some(row => row.open || row.bodyDisplay !== 'none')) {
+        throw new Error('CMS Projects tab opened a project automatically instead of showing the list closed.');
+      }
+      const sampleRow = projectRowsInitial[0];
+      if (!sampleRow.title || !sampleRow.hasPreview || !sampleRow.hasActions) {
+        throw new Error('CMS closed Project row is missing its title, thumbnail preview, or action layer: ' + JSON.stringify(sampleRow));
+      }
       const testBody = testProject.locator('[data-body]').first();
       const bodyStyle = await testBody.getAttribute('style');
       if (!bodyStyle?.includes('display:block')) await testProject.locator('[data-toggle-open]').click();
