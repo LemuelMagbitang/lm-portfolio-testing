@@ -473,9 +473,6 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
   scheduleNavigationContrast();
-  if (!contrastInterval) {
-    contrastInterval = windowRef.setInterval(scheduleNavigationContrast, 250);
-  }
   if (!wasActive) {
     lightboxA11y.open({ captureOpener: !preserveOpener });
   }
