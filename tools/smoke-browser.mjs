@@ -2365,6 +2365,28 @@ try {
         };
       });
       if (desktopContact.centerDelta > 110 || !desktopContact.headingClear) {
+
+      const contactAlignment = await page.evaluate(() => {
+        const rect = el => el?.getBoundingClientRect?.();
+        const project = document.querySelector('#projectForm');
+        const review = document.querySelector('#reviewForm');
+        return {
+          projectName: rect(project?.querySelector('input[name="name"]')),
+          reviewName: rect(review?.querySelector('input[name="name"]')),
+          projectSecond: rect(project?.querySelector('input[name="email"]')),
+          reviewStars: rect(review?.querySelector('.star-rating')),
+          projectMessage: rect(project?.querySelector('textarea[name="message"]')),
+          reviewMessage: rect(review?.querySelector('textarea[name="review"]')),
+          projectAction: rect(project?.querySelector('button[type="submit"]')),
+          reviewAction: rect(review?.querySelector('button[type="submit"]'))
+        };
+      });
+      for (const [a,b] of [['projectName','reviewName'],['projectSecond','reviewStars'],['projectMessage','reviewMessage'],['projectAction','reviewAction']]) {
+        const x=contactAlignment[a], y=contactAlignment[b];
+        if (!x || !y || Math.abs(x.top-y.top)>2 || Math.abs(x.height-y.height)>2) {
+          throw new Error('Desktop Contact row mismatch: ' + a + ' vs ' + b + ' => ' + JSON.stringify({a:x,b:y}));
+        }
+      }
         throw new Error('Desktop Contact auto-scroll did not center the full Contact group cleanly: ' + JSON.stringify(desktopContact));
       }
     }, { width: 1280, height: 900 });
@@ -2395,6 +2417,27 @@ try {
         };
       });
       if ((!mobileContact.atBottom && mobileContact.centerDelta > 130) || !mobileContact.headingClear) {
+
+      const mobileContactSizing = await page.evaluate(() => {
+        const project = document.querySelector('#projectForm');
+        const review = document.querySelector('#reviewForm');
+        const fields = [
+          project?.querySelector('input[name="name"]'),
+          project?.querySelector('input[name="email"]'),
+          project?.querySelector('textarea[name="message"]'),
+          project?.querySelector('button[type="submit"]'),
+          review?.querySelector('input[name="name"]'),
+          review?.querySelector('.star-rating'),
+          review?.querySelector('textarea[name="review"]'),
+          review?.querySelector('button[type="submit"]')
+        ].filter(Boolean);
+        return fields.map(el => ({width:el.getBoundingClientRect().width, viewport:innerWidth}));
+      });
+      mobileContactSizing.forEach(item => {
+        if (item.width <= 0 || item.width > item.viewport - 32) {
+          throw new Error('Mobile Contact control does not fit its viewport: ' + JSON.stringify(item));
+        }
+      });
         throw new Error('Mobile Contact auto-scroll did not produce a balanced group position: ' + JSON.stringify(mobileContact));
       }
     }, { width: 390, height: 844 });
@@ -2425,31 +2468,18 @@ try {
         throw new Error('Public display typography does not resolve the new sans hierarchy: ' + JSON.stringify(typography));
       }
 
-      const flat = await page.evaluate(() => {
-        const selectors = [
-          '.project-card',
-          '.contact-primary',
-          '.review-card',
-          '.btn-show-more',
-          'input',
-          'textarea',
-          'select',
-          '.model-viewer-shell'
-        ];
+      const rounded = await page.evaluate(() => {
+        const selectors = ['.project-card','.contact-primary','.review-card','.btn-show-more','input','textarea','select','.model-viewer-shell'];
         return selectors.map(selector => {
-          const el = document.querySelector(selector);
-          if (!el) return { selector, missing: true };
-          const style = getComputedStyle(el);
-          return { selector, radius: style.borderRadius, border: style.borderStyle };
+          const el=document.querySelector(selector);
+          if(!el) return {selector,missing:true};
+          const style=getComputedStyle(el);
+          return {selector,radius:style.borderRadius,cornerShape:style.cornerShape||'',border:style.borderStyle};
         });
       });
-      flat.filter(item => !item.missing).forEach(item => {
-        if (item.radius !== '0px') {
-          throw new Error('Rectangular UI retained rounded corners: ' + JSON.stringify(item));
-        }
-        if (item.selector === '.btn-show-more' && item.border !== 'none') {
-          throw new Error('Show More/Show Less retained its outline: ' + JSON.stringify(item));
-        }
+      rounded.filter(item=>!item.missing).forEach(item=>{
+        if(item.radius==='0px') throw new Error('Rounded UI lost its radius: '+JSON.stringify(item));
+        if(item.selector==='.btn-show-more' && item.border!=='none') throw new Error('Show More/Show Less retained a visible outline border: '+JSON.stringify(item));
       });
 
       const circleChecks = await page.evaluate(() => {
@@ -2476,6 +2506,16 @@ try {
           throw new Error('Circular control lost its circular geometry: ' + JSON.stringify(check));
         }
       });
+      const footerAnimation = await page.evaluate(() => ({
+        exists: !!document.querySelector('#footerAnimation'),
+        slides: document.querySelectorAll('#footerAnimation .footer-animation-slide').length,
+        hidden: !!document.querySelector('#footerAnimation')?.hidden,
+        radius: document.querySelector('#footerAnimation') ? getComputedStyle(document.querySelector('#footerAnimation')).borderRadius : ''
+      }));
+      if (!footerAnimation.exists) throw new Error('Public footer animation surface is missing.');
+      if (footerAnimation.hidden || footerAnimation.slides < 1) throw new Error('Public footer animation has no resolved source: '+JSON.stringify(footerAnimation));
+      if (footerAnimation.radius==='0px') throw new Error('Footer animation lost its rounded geometry.');
+
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/about/', async page => {
@@ -2484,6 +2524,16 @@ try {
       if (moduleScript !== 1) throw new Error('About page is missing its module bootstrap script.');
 
       const hero = page.locator('#heroBannerAbout, #heroBanner').first();
+      const aboutHeadlineType = await page.evaluate(() => {
+        const el=document.querySelector('.about-hero-overlay .hello-heading');
+        if(!el) return null;
+        const style=getComputedStyle(el);
+        return {family:style.fontFamily,weight:style.fontWeight};
+      });
+      if(aboutHeadlineType && (aboutHeadlineType.weight!=='900' || !/Satoshi/i.test(aboutHeadlineType.family))){
+        throw new Error('About headline is not using Satoshi Black (900): '+JSON.stringify(aboutHeadlineType));
+      }
+
       if (await hero.count() !== 1) throw new Error('About page hero container is missing.');
 
       const experience = await page.locator('#experienceList .timeline-item').count();
@@ -2554,27 +2604,6 @@ try {
         timeout: 6000
       });
       await page.waitForTimeout(120);
-      const contactAlignment = await page.evaluate(() => {
-        const rect = el => el?.getBoundingClientRect?.();
-        const project = document.querySelector('#projectForm');
-        const review = document.querySelector('#reviewForm');
-        return {
-          projectName: rect(project?.querySelector('input[name="name"]')),
-          reviewName: rect(review?.querySelector('input[name="name"]')),
-          projectSecond: rect(project?.querySelector('input[name="email"]')),
-          reviewStars: rect(review?.querySelector('.star-rating')),
-          projectMessage: rect(project?.querySelector('textarea[name="message"]')),
-          reviewMessage: rect(review?.querySelector('textarea[name="review"]')),
-          projectAction: rect(project?.querySelector('button[type="submit"]')),
-          reviewAction: rect(review?.querySelector('button[type="submit"]'))
-        };
-      });
-      for (const [a,b] of [['projectName','reviewName'],['projectSecond','reviewStars'],['projectMessage','reviewMessage'],['projectAction','reviewAction']]) {
-        const x=contactAlignment[a], y=contactAlignment[b];
-        if (!x || !y || Math.abs(x.top-y.top)>2 || Math.abs(x.height-y.height)>2) {
-          throw new Error('Desktop Contact row mismatch: ' + a + ' vs ' + b + ' => ' + JSON.stringify({a:x,b:y}));
-        }
-      }
       const contactBox = await page.locator('#contact-start').first().boundingBox();
       const contactPosition = await page.evaluate(() => {
         const heading = document.querySelector('#contact-start');
