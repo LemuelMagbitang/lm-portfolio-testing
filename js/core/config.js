@@ -11,6 +11,7 @@ const DEFAULT_URLS = Object.freeze({
   about: 'data/about.json',
   filters: 'data/filters.json',
   heroLoop: 'data/hero-loop.json',
+  footerLoop: 'data/footer-loop.json',
   heroMessages: 'data/hero.json'
 });
 
@@ -30,6 +31,7 @@ export function normalizeAppConfig(raw = {}) {
       about: cleanUrl(urls.about, DEFAULT_URLS.about),
       filters: cleanUrl(urls.filters, DEFAULT_URLS.filters),
       heroLoop: cleanUrl(urls.heroLoop, DEFAULT_URLS.heroLoop),
+      footerLoop: cleanUrl(urls.footerLoop, DEFAULT_URLS.footerLoop),
       heroMessages: cleanUrl(urls.heroMessages, DEFAULT_URLS.heroMessages)
     }
   };
