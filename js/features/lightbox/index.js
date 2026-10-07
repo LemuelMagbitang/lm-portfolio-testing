@@ -360,12 +360,25 @@ let openRenderToken = 0;
     if (rect.width <= 0 || rect.height <= 0) return;
 
     const sample = sampleArtworkForControl(rect);
-    let color = '#fff';
-    let decision = 'binary-fallback';
+    const previousColor = button.dataset.contrastColor || '';
+    let color = previousColor || '#fff';
+    let decision = sample ? 'binary-mixed-hold' : 'binary-fallback';
 
     if (sample?.knownCount >= 4 && Number.isFinite(sample.luminance)) {
-      color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
-      decision = 'binary-instant';
+      // Instantaneous, coverage-based switching is more reliable than a raw
+      // median when a control sits on a moving artwork boundary. A mixed
+      // region keeps its current safe color; a strongly dominant tone flips
+      // immediately on the next frame, with no timer/debounce streak.
+      if (sample.lightCoverage >= 0.78 && sample.lightCoverage > sample.darkCoverage) {
+        color = '#000';
+        decision = 'binary-instant-dark';
+      } else if (sample.darkCoverage >= 0.78 && sample.darkCoverage > sample.lightCoverage) {
+        color = '#fff';
+        decision = 'binary-instant-light';
+      } else if (!previousColor) {
+        color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
+        decision = 'binary-initial';
+      }
     }
 
     button.style.mixBlendMode = 'normal';
