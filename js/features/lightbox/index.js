@@ -333,24 +333,56 @@ let openRenderToken = 0;
       for (let column = 0; column < columns; column += 1) {
         const x = rect.left + rect.width * ((column + 0.5) / columns);
         const value = sampleArtworkAtPoint(x, y);
-        if (Number.isFinite(value)) samples.push(value);
+        if (!Number.isFinite(value)) continue;
+
+        // Center samples represent the pixels most likely to sit directly
+        // behind the icon. Edge samples still matter, but receive slightly
+        // less weight so a bright/dark sliver at a control boundary does not
+        // flip the entire navigation control prematurely.
+        const dx = column - 1;
+        const dy = row - 1;
+        const distance = Math.hypot(dx, dy);
+        const weight = Math.max(0.72, 1.4 - (distance * 0.24));
+        samples.push({ value, weight });
       }
     }
     if (!samples.length) return null;
 
-    let lightCount = 0;
-    let darkCount = 0;
-    for (const value of samples) {
-      if (value >= LIGHTBOX_CONTRAST_LIGHT_THRESHOLD) lightCount += 1;
-      else if (value <= LIGHTBOX_CONTRAST_DARK_THRESHOLD) darkCount += 1;
+    let weightedLuminance = 0;
+    let weightedLight = 0;
+    let weightedDark = 0;
+    let weightTotal = 0;
+    for (const sample of samples) {
+      weightedLuminance += sample.value * sample.weight;
+      weightTotal += sample.weight;
+      if (sample.value >= LIGHTBOX_CONTRAST_LIGHT_THRESHOLD) weightedLight += sample.weight;
+      else if (sample.value <= LIGHTBOX_CONTRAST_DARK_THRESHOLD) weightedDark += sample.weight;
     }
 
-    const sorted = [...samples].sort((a, b) => a - b);
+    const values = samples.map(sample => sample.value).sort((a, b) => a - b);
+    const quantile = (ratio) => values[Math.max(0, Math.min(values.length - 1, Math.round((values.length - 1) * ratio)))];
+    const lowLuminance = quantile(0.25);
+    const highLuminance = quantile(0.75);
+
+    // Instead of deciding from a single median, estimate the worst useful
+    // black/white contrast across the local artwork region. This makes the
+    // control favor the color that retains the better floor of legibility.
+    const whiteContrastFloor = 1.05 / (highLuminance + 0.05);
+    const blackContrastFloor = (lowLuminance + 0.05) / 0.05;
+    const lightCoverage = weightTotal ? weightedLight / weightTotal : 0;
+    const darkCoverage = weightTotal ? weightedDark / weightTotal : 0;
+    const spread = highLuminance - lowLuminance;
+
     return {
-      luminance: sorted[Math.floor(sorted.length / 2)],
+      luminance: weightTotal ? weightedLuminance / weightTotal : null,
       knownCount: samples.length,
-      lightCoverage: lightCount / samples.length,
-      darkCoverage: darkCount / samples.length
+      lightCoverage,
+      darkCoverage,
+      lowLuminance,
+      highLuminance,
+      spread,
+      whiteContrastFloor,
+      blackContrastFloor
     };
   };
 
@@ -365,21 +397,35 @@ let openRenderToken = 0;
     let decision = sample ? 'binary-mixed-hold' : 'binary-fallback';
 
     if (sample?.knownCount >= 4 && Number.isFinite(sample.luminance)) {
-      // Instantaneous, coverage-based switching is more reliable than a raw
-      // median when a control sits on a moving artwork boundary. A mixed
-      // region keeps its current safe color; a strongly dominant tone flips
-      // immediately on the next frame, with no timer/debounce streak.
-      if (sample.lightCoverage >= 0.78 && sample.lightCoverage > sample.darkCoverage) {
+      // Prefer the color with the stronger estimated worst-region contrast.
+      // Mixed boundaries are treated as an intentional hold state: changing
+      // on every tiny edge movement is visually worse than preserving the
+      // already-readable icon color until the artwork becomes unambiguous.
+      const contrastFloorMin = 2.25;
+      const dominanceMargin = 1.16;
+      const mixedBoundary = sample.spread >= 0.30 &&
+        sample.lightCoverage >= 0.30 &&
+        sample.darkCoverage >= 0.30;
+
+      if (mixedBoundary && previousColor) {
+        color = previousColor;
+        decision = 'binary-mixed-hold';
+      } else if (
+        sample.blackContrastFloor >= contrastFloorMin &&
+        sample.blackContrastFloor >= sample.whiteContrastFloor * dominanceMargin
+      ) {
         color = '#000';
-        decision = 'binary-instant-dark';
-      } else if (sample.darkCoverage >= 0.78 && sample.darkCoverage > sample.lightCoverage) {
+        decision = 'binary-calculated-dark';
+      } else if (
+        sample.whiteContrastFloor >= contrastFloorMin &&
+        sample.whiteContrastFloor >= sample.blackContrastFloor * dominanceMargin
+      ) {
         color = '#fff';
-        decision = 'binary-instant-light';
+        decision = 'binary-calculated-light';
       } else if (!previousColor) {
         color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
         decision = 'binary-initial';
       }
-    }
 
     button.style.mixBlendMode = 'normal';
     button.style.color = color;
@@ -388,9 +434,19 @@ let openRenderToken = 0;
     if (Number.isFinite(sample?.luminance)) {
       button.dataset.contrastLuminance = sample.luminance.toFixed(3);
       button.dataset.contrastCoverage = Math.max(sample.lightCoverage, sample.darkCoverage).toFixed(2);
+      button.dataset.contrastSpread = Number.isFinite(sample?.spread) ? sample.spread.toFixed(3) : '0.000';
+      button.dataset.contrastWhiteFloor = Number.isFinite(sample?.whiteContrastFloor)
+        ? sample.whiteContrastFloor.toFixed(2)
+        : '0.00';
+      button.dataset.contrastBlackFloor = Number.isFinite(sample?.blackContrastFloor)
+        ? sample.blackContrastFloor.toFixed(2)
+        : '0.00';
     } else {
       delete button.dataset.contrastLuminance;
       delete button.dataset.contrastCoverage;
+      delete button.dataset.contrastSpread;
+      delete button.dataset.contrastWhiteFloor;
+      delete button.dataset.contrastBlackFloor;
     }
   };
 
