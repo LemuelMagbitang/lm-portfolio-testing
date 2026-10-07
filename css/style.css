@@ -3233,6 +3233,15 @@ a:focus-visible{
   box-shadow:0 0 0 2px rgba(255,255,255,.82);
 }
 
+/* Shape-following keyboard focus: no hard rectangular outline on box UI. */
+.project-card:focus-visible,
+.tab-btn:focus-visible,
+.model-viewer-back:focus-visible{
+  outline:none!important;
+  outline-offset:0;
+  box-shadow:0 0 0 2px rgba(255,255,255,.82);
+}
+
 /* ============================================================
    END ROUNDED SHAPE SYSTEM
    ============================================================ */\n
