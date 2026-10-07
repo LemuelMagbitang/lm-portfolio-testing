@@ -172,10 +172,19 @@
 
   <!-- CONTACT & REVIEWS -->
   <section id="contact-section" class="container page-spacing" style="border-top: 1px solid #222;">
+    <div class="contact-mobile-tabs" role="tablist" aria-label="Contact options">
+      <button type="button" class="contact-mobile-tab" id="contactTabProject"
+              role="tab" aria-selected="true" aria-controls="contactProjectPanel"
+              data-contact-tab="project">START A PROJECT</button>
+      <button type="button" class="contact-mobile-tab" id="contactTabReview"
+              role="tab" aria-selected="false" aria-controls="contactReviewPanel"
+              data-contact-tab="review">LEAVE A REVIEW</button>
+    </div>
+
     <div id="web3-forms-container" class="contact-grid">
 
       <!-- PRIMARY: Start a Project (the main call-to-action) -->
-      <div class="contact-block contact-primary">
+      <div class="contact-block contact-primary is-contact-active" id="contactProjectPanel" data-contact-panel="project">
         <h2 id="contact-start" class="section-title start-project-title hello-heading">START A PROJECT WITH LM.</h2>
         <!-- To pause the project form, change the Forms setting in the
              CMS/site settings. The Forms feature will switch this surface
@@ -197,7 +206,7 @@
       </div>
 
       <!-- SECONDARY: Leave a Review (lighter visual weight) -->
-      <div class="contact-block contact-secondary">
+      <div class="contact-block contact-secondary" id="contactReviewPanel" data-contact-panel="review">
         <h2 class="section-title">LEAVE A REVIEW</h2>
         <!-- The Review form is controlled by the site settings/CMS.
              The Forms feature owns the enabled/disabled fallback state. -->
