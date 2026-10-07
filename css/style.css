@@ -1105,13 +1105,6 @@ button.hamburger {
 
 
 
-/* Easy Touch Target Back to Top */
-footer a[href="#"] {
-  display: inline-block;
-  padding: 20px;
-  margin-top: 15px;
-  margin-bottom: 20px;
-}
 
 /* =========================================
    CENTERED PAGES (SUCCESS & 404)
