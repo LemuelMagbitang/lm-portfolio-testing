@@ -2619,25 +2619,24 @@ try {
         timeout: 6000
       });
       await page.waitForTimeout(120);
-      const contactBox = await page.locator('#contact-start').first().boundingBox();
       const contactPosition = await page.evaluate(() => {
-        const heading = document.querySelector('#contact-start');
-        const scrolling = document.scrollingElement || document.documentElement;
-        const navbar = document.querySelector('.navbar')?.getBoundingClientRect?.().height || 0;
-        const rect = heading?.getBoundingClientRect?.();
-        const viewportHeight = Number(window.innerHeight) || 0;
-        const maxScrollY = Math.max(0, (Number(scrolling?.scrollHeight) || 0) - viewportHeight);
+        const group=document.querySelector('#contact-section .contact-grid');
+        const heading=document.querySelector('#contact-start');
+        const nav=document.querySelector('.navbar');
+        const r=group?.getBoundingClientRect();
+        const h=heading?.getBoundingClientRect();
+        const n=nav?.getBoundingClientRect();
+        const usableTop=Math.max((n?.height||0)+24,24);
+        const usableCenter=usableTop+(innerHeight-usableTop)/2;
+        const groupCenter=r?r.top+r.height/2:0;
         return {
-          headingY: Number(rect?.y) || 0,
-          navbarHeight: Number(navbar) || 0,
-          scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
-          maxScrollY
+          centerDelta:Math.abs(groupCenter-usableCenter),
+          headingClear:(h?.top||0)>=usableTop-2,
+          hasHeading:!!h
         };
       });
-      if (!contactBox) throw new Error('Cross-page Contact navigation did not land on the Start a Project heading.');
-      const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
-      if (!clampedAtDocumentBottom && Math.abs(contactPosition.headingY - contactPosition.navbarHeight - 12) > 22) {
-        throw new Error('Cross-page Contact heading is not top-aligned: y=' + contactPosition.headingY + ', navbar=' + contactPosition.navbarHeight);
+      if (!contactPosition.hasHeading || contactPosition.centerDelta > 130 || !contactPosition.headingClear) {
+        throw new Error('Cross-page Contact navigation did not center the Contact group cleanly: '+JSON.stringify(contactPosition));
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Cross-page Contact navigation did not preserve the exact contact-start hash.');
@@ -2664,11 +2663,23 @@ try {
       if (await page.locator('.nav-links.active, .nav-links.is-open').count() > 0) {
         throw new Error('Mobile Contact navigation left the hamburger menu open.');
       }
-      const box = await page.locator('#contact-start').first().boundingBox();
-      const navbarHeight = await page.locator('.navbar').first().evaluate(el => el.getBoundingClientRect().height);
-      if (!box) throw new Error('Mobile same-page Contact navigation did not reach the Start a Project heading.');
-      if (Math.abs(box.y - navbarHeight - 12) > 24) {
-        throw new Error('Mobile same-page Contact heading is not top-aligned: y=' + box.y + ', navbar=' + navbarHeight);
+      const mobileContact = await page.evaluate(() => {
+        const group=document.querySelector('#contact-section .contact-grid');
+        const heading=document.querySelector('#contact-start');
+        const nav=document.querySelector('.navbar');
+        const r=group?.getBoundingClientRect();
+        const h=heading?.getBoundingClientRect();
+        const n=nav?.getBoundingClientRect();
+        const usableTop=Math.max((n?.height||0)+24,24);
+        const usableCenter=usableTop+(innerHeight-usableTop)/2;
+        const groupCenter=r?r.top+r.height/2:0;
+        return {
+          centerDelta:Math.abs(groupCenter-usableCenter),
+          headingClear:(h?.top||0)>=usableTop-2
+        };
+      });
+      if (mobileContact.centerDelta > 130 || !mobileContact.headingClear) {
+        throw new Error('Mobile same-page Contact auto-scroll did not balance the Contact group: '+JSON.stringify(mobileContact));
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Mobile same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -2697,6 +2708,24 @@ try {
       if (await mediaNav.count() !== 1) throw new Error('CMS Media Library navigation item is missing.');
       const curatedNav = page.locator('.nav-item[data-section="curatedViews"]');
       if (await curatedNav.count() !== 1) throw new Error('CMS Curated Views navigation item is missing.');
+      const footerNav = page.locator('.nav-item[data-section="footerLoop"]');
+      if (await footerNav.count() !== 1) throw new Error('CMS Footer Animation navigation item is missing.');
+      await footerNav.click();
+      await page.locator('#content #fl_mode').waitFor({ state:'visible', timeout:5000 });
+      if (await page.locator('#fl_mode').inputValue() !== 'hero') {
+        throw new Error('CMS Footer Animation did not default to Hero settings.');
+      }
+      await page.locator('#fl_mode').selectOption('manual');
+      await page.waitForTimeout(50);
+      if (!(await page.locator('#fl_manual_panel').isVisible())) {
+        throw new Error('CMS Footer Animation manual controls did not appear after switching modes.');
+      }
+      await page.locator('#fl_mode').selectOption('hero');
+      if (!(await page.locator('#fl_manual_panel').isHidden())) {
+        throw new Error('CMS Footer Animation manual controls did not hide when returning to Hero mode.');
+      }
+      await projectsNav.click();
+      await page.locator('#content #projList .card-item').first().waitFor({ state:'visible', timeout:5000 });
 
       // Start a real CMS save and leave the section before the mocked GitHub
       // response resolves. The stale save completion must not re-enable or
@@ -2927,6 +2956,33 @@ try {
       );
       if (!projectRowsInitial.length || projectRowsInitial.some(row => row.open || row.bodyDisplay !== 'none')) {
         throw new Error('CMS Projects tab opened a project automatically instead of showing the list closed.');
+      }
+      const closedProjectGeometry = await testProject.evaluate(row => {
+        const head=row.querySelector('.project-card-head')?.getBoundingClientRect();
+        const preview=row.querySelector('.project-collapsed-preview')?.getBoundingClientRect();
+        const label=row.querySelector('.project-item-label')?.getBoundingClientRect();
+        const actions=row.querySelector('.project-card-actions')?.getBoundingClientRect();
+        const style=getComputedStyle(row);
+        return {
+          row: head ? {left:head.left,right:head.right,top:head.top,bottom:head.bottom} : null,
+          preview: preview ? {left:preview.left,right:preview.right,top:preview.top,bottom:preview.bottom,width:preview.width,height:preview.height} : null,
+          label: label ? {left:label.left,right:label.right,top:label.top,bottom:label.bottom} : null,
+          actions: actions ? {left:actions.left,right:actions.right,top:actions.top,bottom:actions.bottom} : null,
+          radius: style.borderRadius
+        };
+      });
+      if (!closedProjectGeometry.preview || !closedProjectGeometry.label || !closedProjectGeometry.actions) {
+        throw new Error('Closed CMS Project shell is missing its thumbnail, title/subtitle block, or action layer: '+JSON.stringify(closedProjectGeometry));
+      }
+      if (closedProjectGeometry.preview.right < closedProjectGeometry.label.right ||
+          closedProjectGeometry.preview.right > closedProjectGeometry.actions.left + 6) {
+        throw new Error('CMS closed Project thumbnail is not positioned to the right of the title/subtitle and immediately before the action layer: '+JSON.stringify(closedProjectGeometry));
+      }
+      if (closedProjectGeometry.preview.height < 50 || closedProjectGeometry.preview.width < 60) {
+        throw new Error('CMS closed Project thumbnail is undersized: '+JSON.stringify(closedProjectGeometry));
+      }
+      if (closedProjectGeometry.radius === '0px') {
+        throw new Error('CMS closed Project shell lost its rounded corner geometry.');
       }
       const sampleRow = projectRowsInitial[0];
       if (!sampleRow.title || !sampleRow.hasPreview || !sampleRow.hasActions) {
