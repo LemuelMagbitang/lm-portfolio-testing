@@ -94,6 +94,7 @@ export async function initGallery(options = {}) {
   let filterPointerActive = false;
   let filterSettling = false;
   let suppressFilterClickUntil = 0;
+  let filterViewportObserver = null;
 
   // Gallery owns persistent listeners and timers through one lifecycle.
   // Short-lived pagination nodes disappear with the pager rather than
@@ -101,6 +102,30 @@ export async function initGallery(options = {}) {
   const lifecycle = createLifecycle();
   const bind = (target, type, handler, listenerOptions) =>
     lifecycle.listen(target, type, handler, listenerOptions);
+
+  function syncFilterViewportInteraction(isIntersecting) {
+    if (!filterTabs || !isFilterCarousel()) return;
+    const visible = Boolean(isIntersecting);
+    filterTabs.inert = !visible;
+    filterTabs.dataset.filterViewport = visible ? 'visible' : 'offscreen';
+    if (visible) filterTabs.style.removeProperty('pointer-events');
+    else filterTabs.style.setProperty('pointer-events', 'none');
+  }
+
+  if (filterTabs && 'IntersectionObserver' in windowRef) {
+    filterViewportObserver = new windowRef.IntersectionObserver(entries => {
+      syncFilterViewportInteraction(Boolean(entries[0]?.isIntersecting));
+    }, { threshold: [0, 0.01] });
+    filterViewportObserver.observe(filterTabs);
+    lifecycle.add(() => {
+      filterViewportObserver?.disconnect();
+      filterViewportObserver = null;
+      filterTabs.inert = false;
+      filterTabs.dataset.filterViewport = 'visible';
+      filterTabs.style.removeProperty('pointer-events');
+    });
+  }
+
   let renderToken = 0;
   let cancelReveal = null;
   lifecycle.add(() => cancelReveal?.());
@@ -634,6 +659,7 @@ export async function initGallery(options = {}) {
   });
 
   buildFilterPager();
+  syncFilterViewportInteraction(true);
   showMoreBtn?.setAttribute('aria-expanded', 'false');
   showMoreWrapper?.setAttribute('data-expanded', 'false');
   render();
