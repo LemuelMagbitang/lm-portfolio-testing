@@ -132,6 +132,8 @@ export async function initAbout({
   function showLogoFallback(frame, name) {
     if (!frame || !frame.isConnected) return;
     frame.classList.add('is-fallback');
+    frame.classList.remove('is-liquid-logo');
+    frame.style.removeProperty('--skill-logo-mask');
     frame.replaceChildren();
     frame.textContent = skillInitials(name);
   }
@@ -174,7 +176,15 @@ export async function initAbout({
     image.addEventListener("load", () => {
       if (!frame.isConnected) return;
       applyLogoTone(image, candidate);
-      frame.classList.remove("is-fallback");
+      frame.classList.remove('is-fallback');
+      try {
+        const maskSource = String(resolvedCandidate || '').replace(/([\\"])/g, '\\$1');
+        frame.style.setProperty('--skill-logo-mask', `url("${maskSource}")`);
+        frame.classList.add('is-liquid-logo');
+      } catch (_) {
+        frame.classList.remove('is-liquid-logo');
+        frame.style.removeProperty('--skill-logo-mask');
+      }
       frame.replaceChildren(image);
     }, { once: true });
 
