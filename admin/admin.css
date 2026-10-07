@@ -142,11 +142,27 @@
   .project-card-actions .icon-btn{width:30px;height:30px;}
 }
 @media (max-width:520px){
-  .project-card-head{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"drag info actions" "drag preview actions";}
+  /* The collapsed Project row stays a single compact friend-list-like row:
+     drag handle -> title/subtitle -> thumbnail -> actions. */
+  .project-card-head{
+    grid-template-columns:auto minmax(0,1fr) 72px auto;
+    grid-template-areas:"drag info preview actions";
+    gap:7px;
+    min-height:64px;
+  }
   .project-card-head > .drag-handle{grid-area:drag;}
-  .project-collapsed-preview{grid-area:preview;width:100%;height:56px;margin-top:-2px;}
-  .project-item-label{grid-area:info;}
-  .project-card-actions{grid-area:actions;}
+  .project-item-label{grid-area:info;min-width:0;}
+  .project-collapsed-preview{
+    grid-area:preview;
+    width:72px;
+    height:56px;
+    margin:0;
+  }
+  .project-card-actions{
+    grid-area:actions;
+    gap:2px;
+  }
+  .project-card-actions .icon-btn{width:28px;height:28px;}
 }
   .card-item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;}
   .card-item-head .drag-handle{color:#555;font-size:13px;cursor:grab;padding:4px 6px;}
