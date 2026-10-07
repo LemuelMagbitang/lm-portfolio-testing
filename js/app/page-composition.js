@@ -21,6 +21,7 @@ import { initSiteSettings } from '../features/settings/index.js?v=20261006-01';
 
 import { initGallery } from '../features/gallery/index.js?v=20261007-02';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
+import { initFooterAnimation } from '../features/footer/index.js?v=20261007-01';
 import { initLightbox } from '../features/lightbox/index.js?v=20261007-02';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261005-06';
 
@@ -197,6 +198,23 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(null);
 
+  const footerPromise = root.getElementById('footerAnimation')
+    ? initFooterAnimation({
+        root,
+        footerLoopUrl: config.urls.footerLoop || 'data/footer-loop.json',
+        heroLoopUrl: config.urls.heroLoop,
+        projectsUrl: config.urls.projects,
+        heroTiming: settings.heroTiming,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl,
+        ensureLottiePlayer,
+        prefersReducedMotion: runtime.prefersReducedMotion
+      }).catch(error => {
+        console.warn('Footer animation: initialization failed', error);
+        return null;
+      })
+    : Promise.resolve(null);
+
   forms.setProjectEnabled(settings.formsEnabled.project);
   forms.setReviewEnabled(settings.formsEnabled.review);
 
@@ -215,8 +233,9 @@ export async function createPortfolioApp({
     return null;
   });
 
-  const [heroFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
+  const [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
     heroPromise,
+    footerPromise,
     reviewsPromise.then(feature => {
       feature.setVisible(settings.showReviews);
       return feature;
@@ -322,6 +341,7 @@ export async function createPortfolioApp({
     navigation,
     gallery: galleryFeature,
     hero: heroFeature,
+    footer: footerFeature,
     lightbox: lightboxFeature,
     reviews: reviewsFeature,
     about: aboutFeature,
@@ -329,6 +349,7 @@ export async function createPortfolioApp({
     destroy() {
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
+      footerFeature?.destroy?.();
       galleryFeatureRef = null;
       galleryFeature?.destroy?.();
       destroyProjects();
