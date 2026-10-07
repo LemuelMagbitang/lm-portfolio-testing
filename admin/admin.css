@@ -1,7 +1,12 @@
 :root{
     --bg:#121212; --panel:#171717; --panel-2:#1d1d1d; --line:rgba(255,255,255,.08);
     --line-soft:rgba(255,255,255,.05); --text:#ccc; --text-dim:#888; --white:#fff;
-    --danger:#e0584f; --good:#2ecc71; --warn:#e0b04f; --radius:10px;
+    --danger:#e0584f; --good:#2ecc71; --warn:#e0b04f;
+    --radius:10px;
+    --lm-admin-shape-card:20px;
+    --lm-admin-shape-fixed:12px;
+    --lm-admin-shape-concentric-inset:8px;
+    --lm-admin-shape-card-inner:calc(var(--lm-admin-shape-card) - var(--lm-admin-shape-concentric-inset));
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
@@ -675,6 +680,7 @@ button.icon-btn,
 }
 .project-list-item.is-collapsed{
   padding:0;
+  overflow:hidden;
 }
 .project-list-item.is-collapsed .project-card-head{
   display:grid;
@@ -691,8 +697,10 @@ button.icon-btn,
 .project-list-item.is-collapsed .project-card-head > .project-card-actions{grid-area:actions;}
 .project-list-item.is-collapsed .project-collapsed-preview{
   height:76px;
-  border-radius:12px;
+  border-radius:var(--lm-admin-shape-card-inner);
   border:0;
+  margin:var(--lm-admin-shape-concentric-inset) 0 var(--lm-admin-shape-concentric-inset) 0;
+  width:calc(100% - var(--lm-admin-shape-concentric-inset));
 }
 .project-list-item.is-collapsed .project-collapsed-preview::after{
   background:linear-gradient(90deg,rgba(25,25,25,.28),rgba(25,25,25,0) 60%);
