@@ -745,7 +745,10 @@ export function createLightboxMediaRenderer({
       iframe.dataset.lmYoutube = 'true';
       iframe.dataset.lmYoutubeCacheKey = embedSrc;
       iframe.frameBorder = '0';
-      iframe.loading = index === 0 ? 'eager' : 'lazy';
+      // Lightbox media is opened only after explicit user intent. Keep every
+      // YouTube iframe eager so a secondary-media tap never races a lazy-load
+      // decision on mobile; fetch priority still favors the first item.
+      iframe.loading = 'eager';
       if (index === 0) iframe.fetchPriority = 'high';
       iframe.tabIndex = 0;
       iframe.title = item.caption || item.description || project.title || 'Project video';
