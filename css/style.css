@@ -3359,9 +3359,9 @@ footer .footer-animation{
    paints a plate around it. This preserves the hit-area geometry while
    giving the actual mark the full available space. */
 .skill-logo-frame{
-  width:64px;
-  height:64px;
-  flex:0 0 64px;
+  width:56px;
+  height:56px;
+  flex:0 0 56px;
   border:0;
   border-radius:0;
   background:transparent;
