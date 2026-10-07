@@ -699,8 +699,6 @@ button.icon-btn,
   height:76px;
   border-radius:var(--lm-admin-shape-card-inner);
   border:0;
-  margin:var(--lm-admin-shape-concentric-inset) 0 var(--lm-admin-shape-concentric-inset) 0;
-  width:calc(100% - var(--lm-admin-shape-concentric-inset));
 }
 .project-list-item.is-collapsed .project-collapsed-preview::after{
   background:linear-gradient(90deg,rgba(25,25,25,.28),rgba(25,25,25,0) 60%);
