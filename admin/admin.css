@@ -572,8 +572,9 @@
 .media-bg-color-picker input[type="color"]{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;border-radius:0;opacity:0;cursor:pointer;background:transparent;}
 .media-bg-hex{min-width:62px;color:#999;font-size:11px;letter-spacing:.04em;}
 .media-bg-reset{padding:7px 10px;font-size:11px;white-space:nowrap;}
-.skill-pill-icon img.skill-logo{filter:grayscale(1) contrast(1.12) brightness(1.2);}
-.skill-pill-icon img.skill-logo[data-logo-tone="dark"]{filter:grayscale(1) contrast(1.18) brightness(0) invert(1);}
+.skill-pill-icon img.skill-logo{filter:none!important;}
+.skill-pill-icon img.skill-logo[data-logo-tone="dark"]{filter:none!important;}
+.skill-pill-icon img.skill-logo[data-logo-tone="light"]{filter:none!important;}
 .media-editor-row{min-width:0;}
 .media-preview .lm-media-background-layer,
 .focus-picker .lm-media-background-layer{border-radius:inherit;}
