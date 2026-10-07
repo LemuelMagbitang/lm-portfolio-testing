@@ -3465,3 +3465,137 @@ footer > .footer-content p{
     padding:52px 16px max(28px,env(safe-area-inset-bottom,0px));
   }
 }
+
+
+/* ============================================================
+   FINAL UI PASS 2 — controls, socials, mobile contact tabs
+   ============================================================ */
+
+/* Show More / Show Less is intentionally a true pill control. */
+.btn-show-more{
+  border-radius:999px !important;
+}
+
+/* Social systems share one geometry across the public hero, footer, and About.
+   48px is ~26% larger than the former 38px About footprint. The row never
+   wraps; additional future social links stay on one line and become
+   horizontally scrollable instead of creating a second visual row. */
+.social-icons,
+.about-social-icons{
+  display:flex;
+  flex-wrap:nowrap !important;
+  align-items:center;
+  gap:18px;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  justify-content:center;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+}
+.social-icons::-webkit-scrollbar,
+.about-social-icons::-webkit-scrollbar{
+  display:none;
+}
+.social-icons a,
+.about-social-icons a{
+  flex:0 0 48px;
+  width:48px !important;
+  height:48px !important;
+  min-width:48px;
+  min-height:48px;
+  font-size:1.2rem !important;
+  scroll-snap-align:center;
+}
+
+/* Mobile Contact behaves like a deliberately simplified filter strip:
+   one compact selector row controls which full form panel is visible. */
+.contact-mobile-tabs{
+  display:none;
+}
+.contact-mobile-tab{
+  appearance:none;
+  -webkit-appearance:none;
+  border:1px solid #2a2a2a;
+  background:rgba(255,255,255,.025);
+  color:#858585;
+  min-height:42px;
+  padding:10px 16px;
+  border-radius:999px;
+  font-family:inherit;
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:
+    color var(--lm-motion-standard) var(--lm-motion-ease),
+    background-color var(--lm-motion-standard) var(--lm-motion-ease),
+    border-color var(--lm-motion-standard) var(--lm-motion-ease),
+    transform var(--lm-motion-standard) var(--lm-motion-ease);
+}
+.contact-mobile-tab[aria-selected="true"]{
+  background:#fff;
+  color:#000;
+  border-color:#fff;
+}
+.contact-mobile-tab:active{
+  transform:scale(.98);
+}
+
+@media (max-width:767px){
+  /* Explicitly win over the older mobile presentation block. */
+  .project-card .glass-info{
+    display:none !important;
+  }
+
+  .social-icons,
+  .about-social-icons{
+    justify-content:flex-start;
+    gap:14px;
+    width:100%;
+    padding-inline:2px;
+  }
+  .social-icons a,
+  .about-social-icons a{
+    flex-basis:48px;
+  }
+
+  .contact-mobile-tabs{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    margin:0 auto 18px;
+    padding:4px;
+    border:1px solid #202020;
+    border-radius:999px;
+    background:#0b0b0b;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .contact-mobile-tabs::-webkit-scrollbar{display:none;}
+  .contact-mobile-tab{
+    flex:1 1 0;
+    min-width:0;
+    min-height:40px;
+    padding:9px 12px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  #contact-section .contact-grid{
+    display:block;
+  }
+  #contact-section .contact-block{
+    display:none;
+  }
+  #contact-section .contact-block.is-contact-active{
+    display:block;
+  }
+  #contact-section .contact-grid{
+    scroll-margin-top:calc(var(--nav-h, 70px) + 18px);
+  }
+}
