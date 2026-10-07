@@ -3602,104 +3602,111 @@ footer > .footer-content p{
 }
 
 
+
 /* ============================================================
-   FINAL UI PASS 3 — Apple-like controls and liquid software marks
+   FINAL UI PASS 4 — stable navigation, clean software marks, and hit testing
    ============================================================ */
 
-/* Show More / Show Less is a true pill, not a squircle. */
-.show-more-wrapper .btn-show-more,
-.btn-show-more{
-  border-radius:999px !important;
+/* Software logos: use the actual brand artwork without a squircle plate. */
+.skill-logo-frame{
+  width:56px;
+  height:56px;
+  flex:0 0 56px;
+  overflow:visible;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
   corner-shape:initial !important;
 }
-
-/* Mobile Contact tabs: the rail owns the single outline. Individual tabs
-   stay visually quiet so the selector reads as one Apple-like control. */
-@media (max-width:767px){
-  #contact-section .contact-mobile-tab{
-    border:0 !important;
-    box-shadow:none !important;
-    outline:none !important;
-    background:transparent;
-  }
-  #contact-section .contact-mobile-tab[aria-selected="true"]{
-    background:#fff;
-    color:#000;
-    border:0 !important;
-    box-shadow:none !important;
-  }
-
-  /* Footer socials center when the row fits; the existing nowrap + overflow
-     behavior still permits horizontal scrolling when more links are added. */
-  footer > .footer-content .social-icons{
-    justify-content:safe center;
-  }
-}
-
-/* Liquid-glass software marks.
-   The CMS logo stays the source of truth; its alpha channel becomes the mask
-   for a neutral liquid glyph. Browsers without CSS masking keep the current
-   image presentation as a compatibility fallback. */
-.skill-logo-frame{
-  border:0;
-  background:transparent;
-  box-shadow:none;
-}
-.skill-logo-frame::before{
-  content:'';
-  position:absolute;
-  inset:8px;
-  display:none;
-  border-radius:38%;
-  background:linear-gradient(145deg,
-    rgba(255,255,255,.98) 0%,
-    rgba(255,255,255,.64) 24%,
-    rgba(194,202,214,.88) 46%,
-    rgba(255,255,255,.78) 67%,
-    rgba(138,148,164,.82) 100%);
-  filter:drop-shadow(0 1px 1px rgba(255,255,255,.34)) drop-shadow(0 7px 10px rgba(0,0,0,.22));
-  -webkit-mask-image:var(--skill-logo-mask);
-  mask-image:var(--skill-logo-mask);
-  -webkit-mask-repeat:no-repeat;
-  mask-repeat:no-repeat;
-  -webkit-mask-position:center;
-  mask-position:center;
-  -webkit-mask-size:contain;
-  mask-size:contain;
-  z-index:2;
-}
+.skill-logo-frame::before,
 .skill-logo-frame::after{
-  content:'';
-  position:absolute;
-  inset:9px;
-  display:none;
-  pointer-events:none;
-  border-radius:38%;
-  background:linear-gradient(125deg,
-    rgba(255,255,255,.50) 0%,
-    rgba(255,255,255,.12) 28%,
-    transparent 50%,
-    rgba(255,255,255,.22) 100%);
-  filter:blur(2px);
-  opacity:.78;
-  -webkit-mask-image:var(--skill-logo-mask);
-  mask-image:var(--skill-logo-mask);
-  -webkit-mask-repeat:no-repeat;
-  mask-repeat:no-repeat;
-  -webkit-mask-position:center;
-  mask-position:center;
-  -webkit-mask-size:contain;
-  mask-size:contain;
-  z-index:3;
-  transform:translate(-1px,-1px);
+  display:none !important;
+  content:none !important;
 }
-@supports (mask-image:url("")){
-  .skill-logo-frame.is-liquid-logo::before,
-  .skill-logo-frame.is-liquid-logo::after{display:block;}
-  .skill-logo-frame.is-liquid-logo .skill-logo{opacity:0;}
+.skill-list.minimal-list li .skill-logo{
+  width:auto;
+  max-width:100%;
+  height:auto;
+  max-height:100%;
+  object-fit:contain;
+  filter:none !important;
+  mix-blend-mode:normal !important;
+  opacity:1 !important;
+  transition:transform .22s ease,filter .22s ease;
 }
-.skill-logo-frame.is-fallback{
-  border:0;
+@media (hover:hover) and (pointer:fine){
+  .skill-logo-frame:hover .skill-logo{
+    transform:translateY(-1px) scale(1.03);
+    filter:saturate(1.05) brightness(1.04) drop-shadow(0 5px 12px rgba(0,0,0,.22)) !important;
+  }
+}
+
+/* Show More / Show Less restores its glass material after click/focus. */
+.btn-show-more{
+  border-radius:999px !important;
+  background:rgba(255,255,255,.08);
+  color:#fff;
+}
+.btn-show-more:focus,
+.btn-show-more:focus-visible{
+  background:rgba(255,255,255,.08) !important;
+  color:#fff !important;
+}
+.btn-show-more:focus{box-shadow:none !important;}
+.btn-show-more:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,.76) !important;}
+.btn-show-more:active{background:#fff;color:#000;}
+
+/* Stable white Lightbox chrome. Desktop placement remains unchanged; mobile
+   moves only the chevrons to the reachable lower side edges. */
+.lightbox-nav{
   background:transparent;
+  border:0;
   box-shadow:none;
+  color:#fff !important;
+}
+.lightbox-close{
+  background:rgba(255,255,255,.08);
+  border:0;
+  border-radius:50%;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 8px 24px rgba(0,0,0,.16);
+  color:#fff !important;
+}
+@media (max-width:767px){
+  .lightbox-nav{
+    top:auto;
+    bottom:max(calc(env(safe-area-inset-bottom,0px) + 28px),28px);
+    transform:none;
+    width:56px;
+    height:50px;
+    border-radius:16px;
+    background:rgba(255,255,255,.08);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 8px 24px rgba(0,0,0,.16);
+    color:#fff !important;
+  }
+  .lightbox-prev{
+    left:calc(12px + env(safe-area-inset-left,0px));
+    right:auto;
+  }
+  .lightbox-next{
+    right:calc(12px + env(safe-area-inset-right,0px));
+    left:auto;
+  }
+  .lightbox-close{
+    top:calc(8px + env(safe-area-inset-top,0px));
+    right:calc(17px + env(safe-area-inset-right,0px));
+    width:52px;
+    height:52px;
+    border-radius:50%;
+    background:rgba(255,255,255,.08);
+  }
+}
+
+/* Off-screen mobile filter rails must not expose a stale hit surface. */
+.filter-tabs[data-filter-viewport="offscreen"]{
+  pointer-events:none !important;
 }
