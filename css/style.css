@@ -545,7 +545,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   gap: 0;
   width: 100%;
   min-width: 0;
-  border-radius: var(--lm-card-radius);
+  border-radius: var(--lm-shape-card-radius);
   overflow: hidden;
 }
 
@@ -2020,7 +2020,7 @@ body.center-page {
   flex-direction:column;
   text-align:center;
   box-sizing:border-box;
-  border-radius:var(--lm-radius-fixed-lg);
+  border-radius:var(--lm-shape-fixed-lg);
   padding:clamp(28px,3vw,40px) clamp(20px,2.8vw,36px);
 }
 
@@ -2113,7 +2113,7 @@ body.center-page {
   height:52px;
   min-height:52px;
   margin:0;
-  border-radius:var(--lm-radius-fixed-sm);
+  border-radius:var(--lm-shape-fixed-sm);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -2171,7 +2171,7 @@ body.center-page {
   color: #fff;
   text-decoration: none;
   padding: 16px 20px;
-  border-radius:var(--lm-radius-fixed-sm);
+  border-radius:var(--lm-shape-fixed-sm);
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 1px;
@@ -2320,7 +2320,7 @@ body.center-page {
   height:clamp(120px,18vw,240px);
   margin:0 auto 30px;
   overflow:hidden;
-  border-radius:var(--lm-radius-fixed-xl);
+  border-radius:var(--lm-shape-fixed-xl);
   background:#0d0d0d;
   isolation:isolate;
 }
