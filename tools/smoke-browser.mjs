@@ -564,7 +564,8 @@ try {
         if (!artwork || !next) return null;
 
         const originalHtml = artwork.innerHTML;
-        const originalStyle = artwork.getAttribute('style');
+        const originalArtworkStyle = artwork.getAttribute('style');
+        const originalNextStyle = next.getAttribute('style');
 
         artwork.style.position = 'fixed';
         artwork.style.inset = '0';
@@ -574,6 +575,11 @@ try {
         artwork.style.aspectRatio = 'auto';
         artwork.style.zIndex = '200';
 
+        // Put the control over the middle of the fixture so the 50/50 split
+        // exercises the "hold" branch instead of the old instant median flip.
+        next.style.left = 'calc(50vw - 25px)';
+        next.style.right = 'auto';
+
         const fixtureImage = document.createElement('img');
         fixtureImage.alt = '';
         fixtureImage.decoding = 'sync';
@@ -581,27 +587,33 @@ try {
         artwork.replaceChildren(fixtureImage);
 
         const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 360));
-        const setFixtureColor = async color => {
-          fixtureImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="' + color + '"/></svg>'
-          );
+        const setFixture = async (svg) => {
+          fixtureImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
           await fixtureImage.decode().catch(() => {});
           await waitForContrast();
           return getComputedStyle(next).color;
         };
 
-        const bright = await setFixtureColor('#ffffff');
-        const dark = await setFixtureColor('#000000');
+        const darkSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64"><rect width="128" height="64" fill="#000"/></svg>';
+        const splitSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64"><rect x="0" y="0" width="64" height="64" fill="#000"/><rect x="64" y="0" width="64" height="64" fill="#fff"/></svg>';
+        const lightSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64"><rect width="128" height="64" fill="#fff"/></svg>';
 
-        if (originalStyle === null) artwork.removeAttribute('style');
-        else artwork.setAttribute('style', originalStyle);
+        const dark = await setFixture(darkSvg);
+        const split = await setFixture(splitSvg);
+        const light = await setFixture(lightSvg);
+
+        if (originalNextStyle === null) next.removeAttribute('style');
+        else next.setAttribute('style', originalNextStyle);
+        if (originalArtworkStyle === null) artwork.removeAttribute('style');
+        else artwork.setAttribute('style', originalArtworkStyle);
         artwork.innerHTML = originalHtml;
-        return { bright, dark };
+        return { dark, split, light };
       });
       if (!binaryContrastFixture ||
-          binaryContrastFixture.bright !== 'rgb(0, 0, 0)' ||
-          binaryContrastFixture.dark !== 'rgb(255, 255, 255)') {
-        throw new Error('Lightbox binary contrast did not switch black/white over deterministic bright/dark artwork: ' + JSON.stringify(binaryContrastFixture));
+          binaryContrastFixture.dark !== 'rgb(255, 255, 255)' ||
+          binaryContrastFixture.split !== 'rgb(255, 255, 255)' ||
+          binaryContrastFixture.light !== 'rgb(0, 0, 0)') {
+        throw new Error('Lightbox contrast did not hold through a 50/50 boundary and then switch after entering the opposite region: ' + JSON.stringify(binaryContrastFixture));
       }
 
       const projectDescriptionTypography = await page.locator('#modalFullDesc').evaluate(el => {
