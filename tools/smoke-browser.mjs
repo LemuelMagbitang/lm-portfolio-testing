@@ -2386,29 +2386,42 @@ try {
         };
       });
       if (desktopContact.centerDelta > 110 || !desktopContact.headingClear) {
+        throw new Error('Desktop Contact auto-scroll did not center the full Contact group cleanly: ' + JSON.stringify(desktopContact));
+      }
 
       const contactAlignment = await page.evaluate(() => {
         const rect = el => el?.getBoundingClientRect?.();
         const project = document.querySelector('#projectForm');
         const review = document.querySelector('#reviewForm');
+        const pair = (a,b) => {
+          const x=rect(a), y=rect(b);
+          return x && y ? {
+            topDelta:Math.abs(x.top-y.top),
+            heightDelta:Math.abs(x.height-y.height),
+            widthA:x.width,
+            widthB:y.width
+          } : null;
+        };
+        const stars = review?.querySelector('.star-rating');
+        const starsStyle = stars ? getComputedStyle(stars) : null;
         return {
-          projectName: rect(project?.querySelector('input[name="name"]')),
-          reviewName: rect(review?.querySelector('input[name="name"]')),
-          projectSecond: rect(project?.querySelector('input[name="email"]')),
-          reviewStars: rect(review?.querySelector('.star-rating')),
-          projectMessage: rect(project?.querySelector('textarea[name="message"]')),
-          reviewMessage: rect(review?.querySelector('textarea[name="review"]')),
-          projectAction: rect(project?.querySelector('button[type="submit"]')),
-          reviewAction: rect(review?.querySelector('button[type="submit"]'))
+          name: pair(project?.querySelector('input[name="name"]'),review?.querySelector('input[name="name"]')),
+          second: pair(project?.querySelector('input[name="email"]'),stars),
+          message: pair(project?.querySelector('textarea[name="message"]'),review?.querySelector('textarea[name="review"]')),
+          action: pair(project?.querySelector('button[type="submit"]'),review?.querySelector('button[type="submit"]')),
+          starsBackground: starsStyle?.backgroundColor || '',
+          projectFormWidth: project?.getBoundingClientRect?.().width || 0,
+          reviewFormWidth: review?.getBoundingClientRect?.().width || 0
         };
       });
-      for (const [a,b] of [['projectName','reviewName'],['projectSecond','reviewStars'],['projectMessage','reviewMessage'],['projectAction','reviewAction']]) {
-        const x=contactAlignment[a], y=contactAlignment[b];
-        if (!x || !y || Math.abs(x.top-y.top)>2 || Math.abs(x.height-y.height)>2) {
-          throw new Error('Desktop Contact row mismatch: ' + a + ' vs ' + b + ' => ' + JSON.stringify({a:x,b:y}));
+      for (const [key,value] of Object.entries(contactAlignment)) {
+        if (['projectFormWidth','reviewFormWidth','starsBackground'].includes(key)) continue;
+        if (!value || value.topDelta > 2 || value.heightDelta > 2) {
+          throw new Error('Desktop Contact row mismatch: ' + key + ' => ' + JSON.stringify(value));
         }
       }
-        throw new Error('Desktop Contact auto-scroll did not center the full Contact group cleanly: ' + JSON.stringify(desktopContact));
+      if (!contactAlignment.starsBackground || contactAlignment.starsBackground === 'rgba(0, 0, 0, 0)') {
+        throw new Error('Desktop Contact Stars field is missing its aligned field surface.');
       }
     }, { width: 1280, height: 900 });
 
@@ -2438,6 +2451,8 @@ try {
         };
       });
       if ((!mobileContact.atBottom && mobileContact.centerDelta > 130) || !mobileContact.headingClear) {
+        throw new Error('Mobile Contact auto-scroll did not produce a balanced group position: ' + JSON.stringify(mobileContact));
+      }
 
       const mobileContactSizing = await page.evaluate(() => {
         const project = document.querySelector('#projectForm');
@@ -2459,8 +2474,6 @@ try {
           throw new Error('Mobile Contact control does not fit its viewport: ' + JSON.stringify(item));
         }
       });
-        throw new Error('Mobile Contact auto-scroll did not produce a balanced group position: ' + JSON.stringify(mobileContact));
-      }
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
