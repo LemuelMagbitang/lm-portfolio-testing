@@ -511,15 +511,28 @@ export function createLightboxMediaRenderer({
   }
 
   function pauseOtherPlayback(container, activeElement = null) {
-    if (!container) return;
-    container.querySelectorAll("video").forEach(video => {
-      if (video === activeElement) return;
-      /* pause() is idempotent; calling it even on an already-paused element
-         makes playback handoff deterministic when media state is changing
-         asynchronously across devices. */
-      try { video.pause(); } catch (_) {}
-    });
-    container.querySelectorAll("iframe[data-lm-youtube]").forEach(iframe => {
+    if (container) {
+      container.querySelectorAll("video").forEach(video => {
+        if (video === activeElement) return;
+        /* pause() is idempotent; calling it even on an already-paused element
+           makes playback handoff deterministic when media state is changing
+           asynchronously across devices. */
+        try { video.pause(); } catch (_) {}
+      });
+    }
+
+    // The active Lightbox subtree is only one part of the YouTube lifecycle.
+    // A successfully preloaded frame can live in the hidden cache root after
+    // the previous project is closed. Pause every known cached frame too so a
+    // stale player can never retain audio across project opens/navigation.
+    const knownFrames = new Set([
+      ...(container ? Array.from(container.querySelectorAll("iframe[data-lm-youtube]")) : []),
+      ...Array.from(youtubeFrameCache.values()),
+      ...(youtubePreloadRoot
+        ? Array.from(youtubePreloadRoot.querySelectorAll("iframe[data-lm-youtube]"))
+        : [])
+    ]);
+    knownFrames.forEach(iframe => {
       if (iframe === activeElement) return;
       pauseYouTubeFrame(iframe);
     });
@@ -719,6 +732,12 @@ export function createLightboxMediaRenderer({
     const { isShort } = parseYouTube(item.src);
     const embedSrc = buildYouTubeEmbedUrl(item.src);
     if (!embedSrc) return null;
+
+    // Promote the newly requested player to the sole playback owner before
+    // reusing a cached iframe. This covers the hidden-preload lifecycle as well
+    // as the active Lightbox subtree, preventing stale audio overlap on reopen.
+    pauseOtherPlayback(null);
+
     let iframe = takeCachedYouTubeFrame(embedSrc);
 
     if (!iframe) {
