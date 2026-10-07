@@ -2567,7 +2567,7 @@ try {
       });
 
       const circleChecks = await page.evaluate(() => {
-        const selectors = ['.social-icons a', '.filter-page-dot'];
+        const selectors = ['.filter-page-dot'];
         return selectors.map(selector => {
           const el = document.querySelector(selector);
           if (!el) return { selector,missing:true,rendered:false };
@@ -2591,15 +2591,69 @@ try {
           throw new Error('Circular control lost its circular geometry: ' + JSON.stringify(check));
         }
       });
+
+      const socialChecks = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('.social-icons a')).map(el => {
+          const style = getComputedStyle(el);
+          return {
+            radius: style.borderRadius,
+            background: style.backgroundColor,
+            borderStyle: style.borderStyle,
+            borderWidth: style.borderWidth,
+            width: el.getBoundingClientRect().width,
+            height: el.getBoundingClientRect().height,
+            color: style.color
+          };
+        });
+      });
+      socialChecks.forEach(check => {
+        if (
+          check.radius !== '0px' ||
+          check.borderStyle !== 'none' ||
+          check.borderWidth !== '0px' ||
+          !/rgba\(0, 0, 0, 0\)|transparent/i.test(check.background)
+        ) {
+          throw new Error('Social icon retained a visible container: ' + JSON.stringify(check));
+        }
+      });
+
       const footerAnimation = await page.evaluate(() => ({
         exists: !!document.querySelector('#footerAnimation'),
         slides: document.querySelectorAll('#footerAnimation .footer-animation-slide').length,
         hidden: !!document.querySelector('#footerAnimation')?.hidden,
         radius: document.querySelector('#footerAnimation') ? getComputedStyle(document.querySelector('#footerAnimation')).borderRadius : ''
       }));
-      if (!footerAnimation.exists) throw new Error('Public footer animation surface is missing.');
-      if (footerAnimation.hidden || footerAnimation.slides < 1) throw new Error('Public footer animation has no resolved source: '+JSON.stringify(footerAnimation));
-      if (footerAnimation.radius==='0px') throw new Error('Footer animation lost its rounded geometry.');
+      const footerLayout = await page.evaluate(() => {
+        const footer = document.querySelector('footer');
+        const media = document.querySelector('#footerAnimation');
+        const content = document.querySelector('.footer-content');
+        if (!footer || !media || !content) return null;
+        const footerStyle = getComputedStyle(footer);
+        const mediaStyle = getComputedStyle(media);
+        const contentStyle = getComputedStyle(content);
+        return {
+          footerHeight: footer.getBoundingClientRect().height,
+          mediaHeight: media.getBoundingClientRect().height,
+          mediaRadius: mediaStyle.borderRadius,
+          mediaPosition: mediaStyle.position,
+          contentPosition: contentStyle.position,
+          contentZ: contentStyle.zIndex,
+          foreground: footerStyle.getPropertyValue('--footer-foreground').trim()
+        };
+      });
+      if (!footerLayout) throw new Error('Public footer layout surface is missing.');
+      if (footerLayout.mediaRadius!=='0px' || footerLayout.mediaPosition!=='absolute') {
+        throw new Error('Footer media is not a square, full-stage background layer: '+JSON.stringify(footerLayout));
+      }
+      if (footerLayout.contentPosition!=='relative' || footerLayout.contentZ!=='6') {
+        throw new Error('Footer content is not layered above the artwork: '+JSON.stringify(footerLayout));
+      }
+      if (footerLayout.mediaHeight < footerLayout.footerHeight - 1) {
+        throw new Error('Footer artwork does not fill the footer stage: '+JSON.stringify(footerLayout));
+      }
+      if (!['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
+        throw new Error('Footer foreground contrast token is not resolved: '+JSON.stringify(footerLayout));
+      }
 
       const backToTop = await page.locator('footer a[href="#"]').count();
       const backToTopLabel = await page.getByText(/back\s*to\s*top/i).count();

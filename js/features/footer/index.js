@@ -29,7 +29,8 @@ function resolveSource(item, resolveAssetUrl) {
     alt: item.alt || 'Footer artwork',
     focus: item.focus || '50% 50%',
     zoom: Number.isFinite(Number(item.zoom)) ? Number(item.zoom) : 1,
-    rotate: Number.isFinite(Number(item.rotate)) ? Number(item.rotate) : 0
+    rotate: Number.isFinite(Number(item.rotate)) ? Number(item.rotate) : 0,
+    foreground: ['light', 'dark'].includes(item.foreground) ? item.foreground : null
   };
 }
 
@@ -57,6 +58,71 @@ function sourceFromProject(project, resolveAssetUrl) {
 function sourceKey(source) {
   return source ? source.type + '|' + source.src : '';
 }
+
+function sampleMediaLuminance(documentRef, media) {
+  const width = Number(media?.naturalWidth || media?.videoWidth || 0);
+  const height = Number(media?.naturalHeight || media?.videoHeight || 0);
+  if (!width || !height) return null;
+
+  try {
+    const canvas = documentRef.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+
+    const targetAspect = 1;
+    let sourceWidth = width;
+    let sourceHeight = height;
+    let sourceX = 0;
+    let sourceY = 0;
+
+    if (width / height > targetAspect) {
+      sourceWidth = height * targetAspect;
+      sourceX = (width - sourceWidth) * 0.5;
+    } else {
+      sourceHeight = width / targetAspect;
+      sourceY = (height - sourceHeight) * 0.74;
+      sourceY = Math.max(0, Math.min(sourceY, height - sourceHeight));
+    }
+
+    context.drawImage(media, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let luminance = 0;
+    let count = 0;
+    for (let index = 0; index < data.length; index += 4) {
+      if (data[index + 3] === 0) continue;
+      const r = data[index] / 255;
+      const g = data[index + 1] / 255;
+      const b = data[index + 2] / 255;
+      const linearR = r <= 0.04045 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+      const linearG = g <= 0.04045 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+      const linearB = b <= 0.04045 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+      luminance += (0.2126 * linearR) + (0.7152 * linearG) + (0.0722 * linearB);
+      count += 1;
+    }
+    return count ? luminance / count : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function chooseForeground(documentRef, source, media) {
+  if (source?.foreground === 'dark') return '#000';
+  if (source?.foreground === 'light') return '#fff';
+
+  const luminance = source?.type === 'image' || source?.type === 'video'
+    ? sampleMediaLuminance(documentRef, media)
+    : null;
+
+  if (luminance == null) return '#fff';
+
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  return blackContrast > whiteContrast ? '#000' : '#fff';
+}
+
 
 async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJson, resolveAssetUrl, projects }) {
   const loopMode = ['latest', 'manual', 'mixed'].includes(heroTiming?.loopMode)
@@ -211,9 +277,42 @@ export async function initFooterAnimation(options = {}) {
   sources.forEach((source, index) => {
     const slide = documentRef.createElement('div');
     slide.className = 'footer-animation-slide' + (index === 0 ? ' active' : '');
-    slide.appendChild(buildMedia(documentRef, source));
+    slide.dataset.index = String(index);
+    const media = buildMedia(documentRef, source);
+    slide.appendChild(media);
     container.appendChild(slide);
   });
+
+  const footerElement = container.closest('footer');
+  const applyForeground = index => {
+    const source = sources[index];
+    const slide = container.querySelectorAll('.footer-animation-slide')[index];
+    const media = slide?.firstElementChild;
+    const color = chooseForeground(documentRef, source, media);
+    footerElement?.style.setProperty('--footer-foreground', color);
+  };
+
+  Array.from(container.querySelectorAll('.footer-animation-slide')).forEach((slide, index) => {
+    const media = slide.firstElementChild;
+    const refresh = () => applyForeground(index);
+    media?.addEventListener('load', refresh);
+    media?.addEventListener('loadeddata', refresh);
+    lifecycle.add(() => {
+      media?.removeEventListener('load', refresh);
+      media?.removeEventListener('loadeddata', refresh);
+    });
+  });
+
+  applyForeground(0);
+
+  let contrastIntervalId = null;
+  if (sources.some(source => source.type === 'video')) {
+    contrastIntervalId = windowRef.setInterval(() => {
+      const activeIndex = Number(container.querySelector('.footer-animation-slide.active')?.dataset?.index || 0);
+      applyForeground(activeIndex);
+    }, 900);
+    lifecycle.add(() => windowRef.clearInterval(contrastIntervalId));
+  }
 
   let intervalId = null;
   if (sources.length > 1 && !reducedMotion()) {
@@ -224,6 +323,7 @@ export async function initFooterAnimation(options = {}) {
       slides[index]?.classList.remove('active');
       index = (index + 1) % slides.length;
       slides[index]?.classList.add('active');
+      applyForeground(index);
     }, crossfadeMs);
     lifecycle.add(() => windowRef.clearInterval(intervalId));
   }

@@ -383,12 +383,27 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .social-icons {display: flex; gap: 15px; justify-content: center; }
 
 .social-icons a {
-  color: #fff; background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px;
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  text-decoration: none; font-size: 1.1rem; transition: all var(--lm-motion-standard);
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+  color: inherit;
+  background: transparent;
+  width: 45px;
+  height: 45px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color var(--lm-motion-standard), transform var(--lm-motion-standard);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  box-shadow: none;
 }
-.social-icons a:hover { background: #fff; color: #000; transform: scale(1.1); }
+.social-icons a:hover {
+  background: transparent;
+  color: inherit;
+  transform: translateY(-1px) scale(1.05);
+}
 
 /* =========================================
    MAIN CONTAINER & FILTER TABS
@@ -672,12 +687,27 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .social-icons {display: flex; gap: 15px; justify-content: center; }
 
 .social-icons a {
-  color: #fff; background: rgba(255, 255, 255, 0.05); width: 45px; height: 45px;
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  text-decoration: none; font-size: 1.1rem; transition: background-color var(--lm-motion-standard), color var(--lm-motion-standard), transform var(--lm-motion-standard);
-  backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+  color: inherit;
+  background: transparent;
+  width: 45px;
+  height: 45px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: color var(--lm-motion-standard), transform var(--lm-motion-standard);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  box-shadow: none;
 }
-.social-icons a:hover { background: #fff; color: #000; transform: scale(1.1); }
+.social-icons a:hover {
+  background: transparent;
+  color: inherit;
+  transform: translateY(-1px) scale(1.05);
+}
 
 /* =========================================
    ABOUT ME SECTION
@@ -1704,7 +1734,7 @@ body.center-page {
   align-items: center;
   gap: 10px;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 0;
   color: #fff;
   padding: 14px 34px;
   border-radius: 30px;
@@ -2312,15 +2342,30 @@ body.center-page {
   }
 }
 
-/* Footer animation — a quiet breathing visual that inherits Hero settings
-   by default, while the CMS can switch it to one selected media source. */
-.footer-animation{
+/* Footer animation — a hero-sized visual stage with the public footer
+   content layered over the artwork. The media remains independent from Hero
+   state; only its rendered surface shares the same visual scale. */
+footer{
   position:relative;
-  width:min(calc(100% - 48px),1200px);
-  height:clamp(120px,18vw,240px);
-  margin:0 auto 30px;
+  min-height:clamp(320px,38vh,520px);
+  display:flex;
+  align-items:stretch;
+  justify-content:center;
   overflow:hidden;
-  border-radius:var(--lm-shape-fixed-xl);
+  background:#0d0d0d;
+  color:var(--footer-foreground,#fff);
+  isolation:isolate;
+}
+.footer-animation{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  width:100%;
+  max-width:none;
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  border-radius:0;
   background:#0d0d0d;
   isolation:isolate;
 }
@@ -2330,7 +2375,7 @@ body.center-page {
   inset:0;
   z-index:4;
   pointer-events:none;
-  background:linear-gradient(to bottom,rgba(0,0,0,.06),rgba(0,0,0,.14));
+  background:linear-gradient(to bottom,rgba(0,0,0,.03),rgba(0,0,0,.16));
 }
 .footer-animation-slide{
   position:absolute;
@@ -2361,9 +2406,25 @@ body.center-page {
   50%{transform:scale(calc(var(--footer-zoom,1) * var(--footer-kenburns-to,1.15))) rotate(var(--footer-rotate,0deg));}
   100%{transform:scale(calc(var(--footer-zoom,1) * var(--footer-kenburns-from,1))) rotate(var(--footer-rotate,0deg));}
 }
-.footer-animation.transition-none .footer-animation-slide{
-  transition:none;
+.footer-animation.transition-none .footer-animation-slide{transition:none;}
+.footer-content{
+  position:relative;
+  z-index:6;
+  width:100%;
+  min-height:inherit;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  gap:15px;
+  padding:clamp(44px,6vw,68px) clamp(20px,4vw,48px) max(28px,env(safe-area-inset-bottom,0px));
+  color:var(--footer-foreground,#fff);
+  text-align:center;
+  pointer-events:auto;
 }
+.footer-content .social-icons a{color:inherit;}
+.footer-content p{color:inherit;margin:0;}
 @media (prefers-reduced-motion:reduce){
   .footer-animation-slide{transition:none;}
   .footer-animation.transition-kenburns .footer-animation-slide.active img,
@@ -2371,7 +2432,8 @@ body.center-page {
   .footer-animation.transition-kenburns .footer-animation-slide.active lottie-player{animation:none;}
 }
 @media (max-width:767px){
-  .footer-animation{width:calc(100% - 32px);height:clamp(100px,28vw,170px);margin-bottom:24px;}
+  footer{min-height:clamp(300px,44vh,520px);}
+  .footer-content{padding:36px 16px max(24px,env(safe-area-inset-bottom,0px));}
 }
 
 /* Footer copyright: .footer-content already centers each child as a
@@ -3183,8 +3245,6 @@ select,
 }
 
 .status-dot,
-.social-icons a,
-.about-social-icons a,
 .photo-frame,
 .profile-pic-large,
 .filter-page-dot,
@@ -3255,6 +3315,23 @@ a:focus-visible{
 .project-card,
 .project-card .glass-info{
   border-radius:0;
+}
+footer .footer-animation{
+  border-radius:0;
+}
+.social-icons a,
+.about-social-icons a{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+.social-icons a:hover,
+.about-social-icons a:hover{
+  background:transparent;
+  color:inherit;
 }
 
 .seamless-grid{
