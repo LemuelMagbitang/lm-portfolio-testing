@@ -190,10 +190,22 @@ export async function initFooterAnimation(options = {}) {
   const crossfadeMs = Number.isFinite(Number(heroTiming.crossfadeMs)) && Number(heroTiming.crossfadeMs) >= 500
     ? Number(heroTiming.crossfadeMs)
     : 3500;
+  const kenBurnsFromScale = Number.isFinite(Number(heroTiming.kenBurnsFromScale))
+    ? Number(heroTiming.kenBurnsFromScale)
+    : 1;
+  const kenBurnsToScale = Number.isFinite(Number(heroTiming.kenBurnsToScale))
+    ? Number(heroTiming.kenBurnsToScale)
+    : 1.15;
+  const kenBurnsDurationS = Number.isFinite(Number(heroTiming.kenBurnsDurationS)) && Number(heroTiming.kenBurnsDurationS) >= 1
+    ? Number(heroTiming.kenBurnsDurationS)
+    : 14;
 
   container.hidden = false;
   container.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
   container.classList.add('transition-' + transitionStyle);
+  container.style.setProperty('--footer-kenburns-from', kenBurnsFromScale);
+  container.style.setProperty('--footer-kenburns-to', kenBurnsToScale);
+  container.style.setProperty('--footer-kenburns-duration', kenBurnsDurationS + 's');
   container.replaceChildren();
 
   sources.forEach((source, index) => {
@@ -221,6 +233,9 @@ export async function initFooterAnimation(options = {}) {
     container.replaceChildren();
     container.hidden = true;
     container.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
+    container.style.removeProperty('--footer-kenburns-from');
+    container.style.removeProperty('--footer-kenburns-to');
+    container.style.removeProperty('--footer-kenburns-duration');
   });
 
   return {
