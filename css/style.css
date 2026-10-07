@@ -2340,7 +2340,12 @@ body.center-page {
 .footer-animation.transition-kenburns .footer-animation-slide.active img,
 .footer-animation.transition-kenburns .footer-animation-slide.active video,
 .footer-animation.transition-kenburns .footer-animation-slide.active lottie-player{
-  animation:hero-kenburns 14s ease-in-out infinite;
+  animation:footer-kenburns 14s ease-in-out infinite;
+}
+@keyframes footer-kenburns{
+  0%{transform:scale(var(--footer-zoom,1)) rotate(var(--footer-rotate,0deg));}
+  50%{transform:scale(calc(var(--footer-zoom,1) * 1.15)) rotate(var(--footer-rotate,0deg));}
+  100%{transform:scale(var(--footer-zoom,1)) rotate(var(--footer-rotate,0deg));}
 }
 .footer-animation.transition-none .footer-animation-slide{
   transition:none;
