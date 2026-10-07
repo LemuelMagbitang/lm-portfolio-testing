@@ -2516,6 +2516,9 @@ try {
       if (footerAnimation.hidden || footerAnimation.slides < 1) throw new Error('Public footer animation has no resolved source: '+JSON.stringify(footerAnimation));
       if (footerAnimation.radius==='0px') throw new Error('Footer animation lost its rounded geometry.');
 
+      const backToTop = await page.locator('footer a[href="#"]').count();
+      if (backToTop) throw new Error('Back to Top control is still present in the public footer.');
+
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/about/', async page => {
