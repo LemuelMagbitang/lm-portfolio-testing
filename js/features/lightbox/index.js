@@ -150,357 +150,19 @@ let openRenderToken = 0;
   // sample the actual pixels underneath each control and choose only black
   // or white. A continuous RAF loop keeps the icons synchronized with
   // animated/video artwork instead of waiting for a timer or debounce streak.
-  const LIGHTBOX_CONTRAST_THRESHOLD = 0.52;
-  const LIGHTBOX_CONTRAST_LIGHT_THRESHOLD = 0.60;
-  const LIGHTBOX_CONTRAST_DARK_THRESHOLD = 0.40;
-  const contrastCanvas = documentRef.createElement?.('canvas');
-  if (contrastCanvas) {
-    contrastCanvas.width = 7;
-    contrastCanvas.height = 7;
-  }
-  let contrastFrame = 0;
-
-  const clearBinaryContrast = () => {
-    if (contrastFrame) {
-      windowRef.cancelAnimationFrame?.(contrastFrame);
-      contrastFrame = 0;
-    }
-    if (lightboxControls) {
-      lightboxControls.style.removeProperty('mix-blend-mode');
-      lightboxControls.dataset.contrastMode = 'difference';
-    }
+  const resetLightboxControlState = () => {
+    lightboxControls?.style.removeProperty('mix-blend-mode');
     [lightboxClose, lightboxPrev, lightboxNext].filter(Boolean).forEach(button => {
-      button.style.removeProperty('mix-blend-mode');
       button.style.removeProperty('color');
+      button.style.removeProperty('background-color');
       button.removeAttribute('data-contrast-mode');
+      button.removeAttribute('data-contrast-color');
       button.removeAttribute('data-contrast-luminance');
       button.removeAttribute('data-contrast-coverage');
       button.removeAttribute('data-contrast-spread');
       button.removeAttribute('data-contrast-white-floor');
       button.removeAttribute('data-contrast-black-floor');
-      button.removeAttribute('data-contrast-color');
     });
-  };
-
-  const parseObjectPosition = (value, axis = 0.5) => {
-    const parts = String(value || '').trim().split(/\s+/);
-    const token = parts[axis] || '50%';
-    const numeric = Number.parseFloat(token);
-    if (!Number.isFinite(numeric)) return 0.5;
-    if (token.includes('%')) return Math.max(0, Math.min(1, numeric / 100));
-    return Math.max(0, Math.min(1, numeric));
-  };
-
-  const sampleMediaLuminance = (media, rect, clientX, clientY) => {
-    if (!contrastCanvas || !media || !rect || rect.width <= 0 || rect.height <= 0) return null;
-
-    let sourceWidth = 0;
-    let sourceHeight = 0;
-    if (media instanceof HTMLImageElement) {
-      if (!media.complete || media.naturalWidth <= 0 || media.naturalHeight <= 0) return null;
-      sourceWidth = media.naturalWidth;
-      sourceHeight = media.naturalHeight;
-    } else if (media instanceof HTMLVideoElement) {
-      if (media.readyState < 2 || media.videoWidth <= 0 || media.videoHeight <= 0) return null;
-      sourceWidth = media.videoWidth;
-      sourceHeight = media.videoHeight;
-    } else if (media instanceof HTMLCanvasElement) {
-      if (media.width <= 0 || media.height <= 0) return null;
-      sourceWidth = media.width;
-      sourceHeight = media.height;
-    } else {
-      return null;
-    }
-
-    const relX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-    const relY = Math.max(0, Math.min(rect.height, clientY - rect.top));
-
-    let sourceX;
-    let sourceY;
-    if (media instanceof HTMLCanvasElement) {
-      sourceX = (relX / rect.width) * sourceWidth;
-      sourceY = (relY / rect.height) * sourceHeight;
-    } else {
-      const style = documentRef.defaultView?.getComputedStyle?.(media);
-      const objectFit = String(style?.objectFit || 'fill').toLowerCase();
-      const positionX = parseObjectPosition(style?.objectPosition, 0);
-      const positionY = parseObjectPosition(style?.objectPosition, 1);
-
-      let renderedWidth = rect.width;
-      let renderedHeight = rect.height;
-      if (objectFit === 'contain' || objectFit === 'cover') {
-        const scale = objectFit === 'cover'
-          ? Math.max(rect.width / sourceWidth, rect.height / sourceHeight)
-          : Math.min(rect.width / sourceWidth, rect.height / sourceHeight);
-        renderedWidth = sourceWidth * scale;
-        renderedHeight = sourceHeight * scale;
-      }
-
-      const offsetX = (rect.width - renderedWidth) * positionX;
-      const offsetY = (rect.height - renderedHeight) * positionY;
-      const localMediaX = relX - offsetX;
-      const localMediaY = relY - offsetY;
-
-      if (objectFit === 'contain' &&
-          (localMediaX < 0 || localMediaX > renderedWidth ||
-           localMediaY < 0 || localMediaY > renderedHeight)) {
-        return null;
-      }
-
-      sourceX = (localMediaX / Math.max(renderedWidth, 1)) * sourceWidth;
-      sourceY = (localMediaY / Math.max(renderedHeight, 1)) * sourceHeight;
-    }
-
-    sourceX = Math.max(0, Math.min(sourceWidth - 1, sourceX));
-    sourceY = Math.max(0, Math.min(sourceHeight - 1, sourceY));
-
-    const sampleSpan = Math.max(1, Math.min(sourceWidth, sourceHeight) * 0.018);
-    try {
-      const context = contrastCanvas.getContext('2d', { willReadFrequently: true });
-      if (!context) return null;
-      context.clearRect(0, 0, contrastCanvas.width, contrastCanvas.height);
-      context.drawImage(
-        media,
-        Math.max(0, sourceX - sampleSpan / 2),
-        Math.max(0, sourceY - sampleSpan / 2),
-        sampleSpan,
-        sampleSpan,
-        0,
-        0,
-        contrastCanvas.width,
-        contrastCanvas.height
-      );
-      const pixels = context.getImageData(0, 0, contrastCanvas.width, contrastCanvas.height).data;
-      let luminanceTotal = 0;
-      let weightTotal = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        const alpha = pixels[i + 3] / 255;
-        if (alpha <= 0.03) continue;
-        const luminance =
-          (0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255;
-        luminanceTotal += luminance * alpha;
-        weightTotal += alpha;
-      }
-      return weightTotal > 0 ? luminanceTotal / weightTotal : null;
-    } catch (_) {
-      return null;
-    }
-  };
-
-  const sampleArtworkAtPoint = (clientX, clientY) => {
-    if (!modalMediaContainer) return null;
-    const artworks = Array.from(modalMediaContainer.querySelectorAll('.lightbox-artwork'));
-    const candidates = artworks.filter(artwork => {
-      const style = documentRef.defaultView?.getComputedStyle?.(artwork);
-      if (style?.display === 'none' || style?.visibility === 'hidden' || Number(style?.opacity || 1) <= 0.03) {
-        return false;
-      }
-      const rect = artwork.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 &&
-        clientX >= rect.left && clientX <= rect.right &&
-        clientY >= rect.top && clientY <= rect.bottom;
-    });
-    candidates.sort((a, b) => {
-      const ar = a.getBoundingClientRect();
-      const br = b.getBoundingClientRect();
-      return (ar.width * ar.height) - (br.width * br.height);
-    });
-
-    for (const artwork of candidates) {
-      const rect = artwork.getBoundingClientRect();
-      const media = artwork.querySelector(':scope > img, :scope > video, :scope > canvas');
-      const luminance = sampleMediaLuminance(media, rect, clientX, clientY);
-      if (Number.isFinite(luminance)) return luminance;
-
-      const background = documentRef.defaultView?.getComputedStyle?.(artwork)?.backgroundColor || '';
-      const match = background.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?\s*\)/i);
-      if (match) {
-        const alpha = match[4] === undefined ? 1 : Number(match[4]);
-        if (alpha > 0.03) {
-          return (0.2126 * Number(match[1]) +
-            0.7152 * Number(match[2]) +
-            0.0722 * Number(match[3])) / 255;
-        }
-      }
-    }
-
-    return null;
-  };
-
-  const sampleArtworkForControl = (rect) => {
-    const samples = [];
-    const columns = 5;
-    const rows = 5;
-    for (let row = 0; row < rows; row += 1) {
-      const y = rect.top + rect.height * ((row + 0.5) / rows);
-      for (let column = 0; column < columns; column += 1) {
-        const x = rect.left + rect.width * ((column + 0.5) / columns);
-        const value = sampleArtworkAtPoint(x, y);
-        if (!Number.isFinite(value)) continue;
-
-        // Center samples represent the pixels most likely to sit directly
-        // behind the icon. Edge samples still matter, but receive slightly
-        // less weight so a bright/dark sliver at a control boundary does not
-        // flip the entire navigation control prematurely.
-        const dx = column - 1;
-        const dy = row - 1;
-        const distance = Math.hypot(dx, dy);
-        const weight = Math.max(0.48, 1.6 - (distance * 0.22));
-        samples.push({ value, weight });
-      }
-    }
-    if (!samples.length) return null;
-
-    let weightedLuminance = 0;
-    let weightedLight = 0;
-    let weightedDark = 0;
-    let weightTotal = 0;
-    for (const sample of samples) {
-      weightedLuminance += sample.value * sample.weight;
-      weightTotal += sample.weight;
-      if (sample.value >= LIGHTBOX_CONTRAST_LIGHT_THRESHOLD) weightedLight += sample.weight;
-      else if (sample.value <= LIGHTBOX_CONTRAST_DARK_THRESHOLD) weightedDark += sample.weight;
-    }
-
-    const values = samples.map(sample => sample.value).sort((a, b) => a - b);
-    const quantile = (ratio) => values[Math.max(0, Math.min(values.length - 1, Math.round((values.length - 1) * ratio)))];
-    const lowLuminance = quantile(0.25);
-    const highLuminance = quantile(0.75);
-
-    // Instead of deciding from a single median, estimate the worst useful
-    // black/white contrast across the local artwork region. This makes the
-    // control favor the color that retains the better floor of legibility.
-    const whiteContrastFloor = 1.05 / (highLuminance + 0.05);
-    const blackContrastFloor = (lowLuminance + 0.05) / 0.05;
-    const lightCoverage = weightTotal ? weightedLight / weightTotal : 0;
-    const darkCoverage = weightTotal ? weightedDark / weightTotal : 0;
-    const spread = highLuminance - lowLuminance;
-
-    return {
-      luminance: weightTotal ? weightedLuminance / weightTotal : null,
-      knownCount: samples.length,
-      lightCoverage,
-      darkCoverage,
-      lowLuminance,
-      highLuminance,
-      spread,
-      whiteContrastFloor,
-      blackContrastFloor
-    };
-  };
-
-  const applyBinaryContrastToButton = (button) => {
-    if (!button) return;
-    const buttonRect = button.getBoundingClientRect();
-    if (buttonRect.width <= 0 || buttonRect.height <= 0) return;
-
-    // Sample the pixels immediately behind the glyph rather than the entire
-    // hit target. This makes each icon react to the artwork it actually sits
-    // over, especially when only one side of a touch target crosses a
-    // light/dark boundary.
-    const glyph = button.querySelector('i');
-    const glyphRect = glyph?.getBoundingClientRect?.();
-    const sourceRect = glyphRect?.width > 0 && glyphRect?.height > 0
-      ? glyphRect
-      : buttonRect;
-    const samplePadding = glyphRect?.width > 0 ? 6 : 2;
-    const rect = {
-      left: sourceRect.left - samplePadding,
-      top: sourceRect.top - samplePadding,
-      width: sourceRect.width + samplePadding * 2,
-      height: sourceRect.height + samplePadding * 2
-    };
-
-    const sample = sampleArtworkForControl(rect);
-    const previousColor = button.dataset.contrastColor || '';
-    let color = previousColor || '#fff';
-    let decision = sample ? 'binary-mixed-hold' : 'binary-fallback';
-
-    if (sample?.knownCount >= 4 && Number.isFinite(sample.luminance)) {
-      // Prefer the color with the stronger estimated worst-region contrast.
-      // Mixed boundaries are treated as an intentional hold state: changing
-      // on every tiny edge movement is visually worse than preserving the
-      // already-readable icon color until the artwork becomes unambiguous.
-      const contrastFloorMin = 2.25;
-      const dominanceMargin = 1.16;
-      const mixedBoundary = sample.spread >= 0.26 &&
-        sample.lightCoverage >= 0.26 &&
-        sample.darkCoverage >= 0.26;
-      const blackAdvantage = sample.blackContrastFloor / Math.max(sample.whiteContrastFloor, 0.01);
-      const whiteAdvantage = sample.whiteContrastFloor / Math.max(sample.blackContrastFloor, 0.01);
-
-      if (mixedBoundary && previousColor) {
-        // Hysteresis: hold the current readable color until the opposing
-        // color has a clear local advantage, then switch even across a
-        // mixed boundary instead of getting stuck on one side.
-        const currentIsBlack = previousColor === '#000';
-        const opposingAdvantage = currentIsBlack ? whiteAdvantage : blackAdvantage;
-        if (opposingAdvantage < 1.45) {
-          color = previousColor;
-          decision = 'binary-mixed-hold';
-        } else if (currentIsBlack) {
-          color = '#fff';
-          decision = 'binary-boundary-switch-light';
-        } else {
-          color = '#000';
-          decision = 'binary-boundary-switch-dark';
-        }
-      } else if (
-        sample.blackContrastFloor >= contrastFloorMin &&
-        sample.blackContrastFloor >= sample.whiteContrastFloor * dominanceMargin
-      ) {
-        color = '#000';
-        decision = 'binary-calculated-dark';
-      } else if (
-        sample.whiteContrastFloor >= contrastFloorMin &&
-        sample.whiteContrastFloor >= sample.blackContrastFloor * dominanceMargin
-      ) {
-        color = '#fff';
-        decision = 'binary-calculated-light';
-      } else if (!previousColor) {
-        color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
-        decision = 'binary-initial';
-      }
-    }
-
-    button.style.mixBlendMode = 'normal';
-    button.style.color = color;
-    button.dataset.contrastColor = color;
-    button.dataset.contrastMode = decision;
-    if (Number.isFinite(sample?.luminance)) {
-      button.dataset.contrastLuminance = sample.luminance.toFixed(3);
-      button.dataset.contrastCoverage = Math.max(sample.lightCoverage, sample.darkCoverage).toFixed(2);
-      button.dataset.contrastSpread = Number.isFinite(sample?.spread) ? sample.spread.toFixed(3) : '0.000';
-      button.dataset.contrastWhiteFloor = Number.isFinite(sample?.whiteContrastFloor)
-        ? sample.whiteContrastFloor.toFixed(2)
-        : '0.00';
-      button.dataset.contrastBlackFloor = Number.isFinite(sample?.blackContrastFloor)
-        ? sample.blackContrastFloor.toFixed(2)
-        : '0.00';
-    } else {
-      delete button.dataset.contrastLuminance;
-      delete button.dataset.contrastCoverage;
-      delete button.dataset.contrastSpread;
-      delete button.dataset.contrastWhiteFloor;
-      delete button.dataset.contrastBlackFloor;
-    }
-  };
-
-  const scheduleNavigationContrast = () => {
-    if (contrastFrame || !lightbox?.classList.contains('active')) return;
-    contrastFrame = windowRef.requestAnimationFrame?.(() => {
-      contrastFrame = 0;
-      if (!lightbox?.classList.contains('active')) {
-        clearBinaryContrast();
-        return;
-      }
-      if (lightboxControls) {
-        lightboxControls.style.mixBlendMode = 'normal';
-        lightboxControls.dataset.contrastMode = 'binary';
-      }
-      [lightboxClose, lightboxPrev, lightboxNext].filter(Boolean).forEach(applyBinaryContrastToButton);
-      scheduleNavigationContrast();
-    }) || 0;
   };
 
 // Reads a YouTube URL and returns the video ID plus whether it's a Short.
@@ -577,8 +239,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
-  scheduleNavigationContrast();
-  if (!wasActive) {
+    if (!wasActive) {
     lightboxA11y.open({ captureOpener: !preserveOpener });
   }
 
@@ -700,7 +361,7 @@ function closeLightbox({ restoreFocus = true } = {}) {
   documentRef.documentElement.classList.remove('lm-3d-focus-open');
   documentRef.body.classList.remove('lm-3d-focus-open');
   if (lightboxControls) lightboxControls.classList.remove('active');
-  clearBinaryContrast();
+  resetLightboxControlState();
   delete lightbox.dataset.pre3dScrollTop;
 
   const pageScrollX = previousPageScrollX;
@@ -928,8 +589,6 @@ bind(lightbox, 'pointercancel', handleSwipePointerCancel);
 bind(documentRef, 'keydown', handleDocumentKeydown);
 bind(windowRef, 'pagehide', handlePageHide);
 bind(windowRef, 'pageshow', handlePageShow);
-bind(lightbox, 'scroll', scheduleNavigationContrast, { passive: true });
-bind(windowRef, 'resize', scheduleNavigationContrast);
 
 return {
   openCard: openProjectCard,
