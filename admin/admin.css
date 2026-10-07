@@ -677,9 +677,18 @@ button.icon-btn,
   padding:0;
 }
 .project-list-item.is-collapsed .project-card-head{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) minmax(120px,170px) auto;
+  grid-template-areas:"drag info preview actions";
+  align-items:center;
   padding:9px 10px 9px 12px;
   min-height:94px;
+  gap:12px;
 }
+.project-list-item.is-collapsed .project-card-head > .drag-handle{grid-area:drag;}
+.project-list-item.is-collapsed .project-card-head > .project-item-label{grid-area:info;}
+.project-list-item.is-collapsed .project-card-head > .project-collapsed-preview{grid-area:preview;}
+.project-list-item.is-collapsed .project-card-head > .project-card-actions{grid-area:actions;}
 .project-list-item.is-collapsed .project-collapsed-preview{
   height:76px;
   border-radius:12px;
@@ -759,18 +768,22 @@ button.icon-btn,
    the original CMS header geometry. */
 @media (max-width:720px){
   .project-list-item.is-collapsed .project-card-head{
+    display:grid;
     min-height:76px;
     padding:8px 8px 8px 10px;
     grid-template-columns:auto minmax(0,1fr) minmax(92px,120px) auto;
+    grid-template-areas:"drag info preview actions";
     gap:8px;
   }
   .project-list-item.is-collapsed .project-collapsed-preview{height:60px;}
 }
 @media (max-width:520px){
   .project-list-item.is-collapsed .project-card-head{
+    display:grid;
     min-height:64px;
     padding:6px 7px 6px 8px;
     grid-template-columns:auto minmax(0,1fr) 72px auto;
+    grid-template-areas:"drag info preview actions";
     gap:7px;
   }
   .project-list-item.is-collapsed .project-collapsed-preview{
