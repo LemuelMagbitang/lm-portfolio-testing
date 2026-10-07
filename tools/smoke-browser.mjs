@@ -2501,19 +2501,18 @@ try {
       }
 
       const mobileContactSizing = await page.evaluate(() => {
-        const project = document.querySelector('#projectForm');
-        const review = document.querySelector('#reviewForm');
+        const activePanel = document.querySelector('[data-contact-panel].is-contact-active');
         const fields = [
-          project?.querySelector('input[name="name"]'),
-          project?.querySelector('input[name="email"]'),
-          project?.querySelector('textarea[name="message"]'),
-          project?.querySelector('button[type="submit"]'),
-          review?.querySelector('input[name="name"]'),
-          review?.querySelector('.star-rating'),
-          review?.querySelector('textarea[name="review"]'),
-          review?.querySelector('button[type="submit"]')
+          activePanel?.querySelector('input[name="name"]'),
+          activePanel?.querySelector('input[name="email"]'),
+          activePanel?.querySelector('textarea'),
+          activePanel?.querySelector('button[type="submit"]')
         ].filter(Boolean);
-        return fields.map(el => ({width:el.getBoundingClientRect().width, viewport:innerWidth}));
+        return fields.map(el => ({
+          width: el.getBoundingClientRect().width,
+          viewport: innerWidth,
+          panel: activePanel?.id || ''
+        }));
       });
       mobileContactSizing.forEach(item => {
         if (item.width <= 0 || item.width > item.viewport - 32) {
