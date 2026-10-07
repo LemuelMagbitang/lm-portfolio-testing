@@ -589,7 +589,9 @@ try {
         fixtureImage.style.cssText = 'display:block;width:100%;height:100%;object-fit:fill;';
         artwork.replaceChildren(fixtureImage);
 
-        const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 360));
+        // The runtime now requires near-full coverage plus a short consecutive
+        // observation streak before switching the binary icon color.
+        const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 900));
         const setFixture = async (svg) => {
           fixtureImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
           await fixtureImage.decode().catch(() => {});
