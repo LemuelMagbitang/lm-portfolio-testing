@@ -3096,6 +3096,12 @@ try {
       if (await page.locator('#fl_mode').inputValue() !== 'hero') {
         throw new Error('CMS Footer Animation did not default to Hero settings.');
       }
+      const footerMediaTypes = await page.locator('#fl_type option').evaluateAll(options => options.map(option => option.value));
+      for (const requiredType of ['image','video','lottie']) {
+        if (!footerMediaTypes.includes(requiredType)) {
+          throw new Error('CMS Footer Animation is missing its manual '+requiredType+' source type: '+JSON.stringify(footerMediaTypes));
+        }
+      }
       await page.locator('#fl_mode').selectOption('manual');
       await page.waitForTimeout(50);
       if (!(await page.locator('#fl_manual_panel').isVisible())) {
