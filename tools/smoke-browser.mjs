@@ -2237,9 +2237,16 @@ try {
         };
       });
       if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      const contactGroup = await page.locator('#contact-section .contact-grid').boundingBox();
+      const usableTop = Math.max(contactPosition.navbarHeight + 24, 24);
+      const usableCenter = usableTop + (Number(window.innerHeight) - usableTop) / 2;
+      const groupCenter = contactGroup ? contactGroup.y + contactGroup.height / 2 : 0;
       const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
-      if (!clampedAtDocumentBottom && Math.abs(contactPosition.headingY - contactPosition.navbarHeight - 12) > 18) {
-        throw new Error('Same-page Contact heading is not top-aligned: y=' + contactPosition.headingY + ', navbar=' + contactPosition.navbarHeight);
+      if (!contactGroup || (!clampedAtDocumentBottom && Math.abs(groupCenter - usableCenter) > 130) ||
+          contactPosition.headingY < usableTop - 2) {
+        throw new Error('Same-page Contact navigation did not center the Contact group cleanly: ' + JSON.stringify({
+          contactPosition, contactGroup, usableTop, usableCenter, groupCenter, clampedAtDocumentBottom
+        }));
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
@@ -2269,9 +2276,16 @@ try {
         };
       });
       if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
+      const contactGroup = await page.locator('#contact-section .contact-grid').boundingBox();
+      const usableTop = Math.max(contactPosition.navbarHeight + 24, 24);
+      const usableCenter = usableTop + (Number(window.innerHeight) - usableTop) / 2;
+      const groupCenter = contactGroup ? contactGroup.y + contactGroup.height / 2 : 0;
       const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
-      if (!clampedAtDocumentBottom && Math.abs(contactPosition.headingY - contactPosition.navbarHeight - 12) > 18) {
-        throw new Error('Same-page Contact heading is not top-aligned: y=' + contactPosition.headingY + ', navbar=' + contactPosition.navbarHeight);
+      if (!contactGroup || (!clampedAtDocumentBottom && Math.abs(groupCenter - usableCenter) > 130) ||
+          contactPosition.headingY < usableTop - 2) {
+        throw new Error('Same-page Contact navigation did not center the Contact group cleanly: ' + JSON.stringify({
+          contactPosition, contactGroup, usableTop, usableCenter, groupCenter, clampedAtDocumentBottom
+        }));
       }
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Same-page Contact navigation did not preserve the exact contact-start hash.');
