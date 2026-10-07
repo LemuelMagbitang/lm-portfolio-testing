@@ -138,29 +138,6 @@ export async function initAbout({
     frame.textContent = skillInitials(name);
   }
 
-  function applyLogoTone(image, candidate = "") {
-    if (!image) return;
-    try {
-      const canvas = root.createElement("canvas");
-      canvas.width = 16; canvas.height = 16;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (!ctx) throw new Error("logo tone canvas unavailable");
-      ctx.clearRect(0, 0, 16, 16);
-      ctx.drawImage(image, 0, 0, 16, 16);
-      const pixels = ctx.getImageData(0, 0, 16, 16).data;
-      let weighted = 0, weight = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        const alpha = pixels[i + 3] / 255;
-        if (alpha <= 0.03) continue;
-        weighted += ((0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]) / 255) * alpha;
-        weight += alpha;
-      }
-      image.dataset.logoTone = weight && weighted / weight < 0.45 ? "dark" : "light";
-    } catch (_) {
-      image.dataset.logoTone = /krita|youtube/i.test(candidate) || /cdn\.simpleicons\.org/i.test(candidate) ? "dark" : "unknown";
-    }
-  }
-
   function preloadAndMountLogo(frame, name, candidates, index = 0, onExhausted) {
     if (!frame || !frame.isConnected || !candidates[index]) {
       onExhausted?.();
@@ -175,16 +152,9 @@ export async function initAbout({
 
     image.addEventListener("load", () => {
       if (!frame.isConnected) return;
-      applyLogoTone(image, candidate);
       frame.classList.remove('is-fallback');
-      try {
-        const maskSource = String(resolvedCandidate || '').replace(/([\\"])/g, '\\$1');
-        frame.style.setProperty('--skill-logo-mask', `url("${maskSource}")`);
-        frame.classList.add('is-liquid-logo');
-      } catch (_) {
-        frame.classList.remove('is-liquid-logo');
-        frame.style.removeProperty('--skill-logo-mask');
-      }
+      frame.classList.remove('is-liquid-logo');
+      frame.style.removeProperty('--skill-logo-mask');
       frame.replaceChildren(image);
     }, { once: true });
 
