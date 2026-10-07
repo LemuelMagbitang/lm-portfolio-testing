@@ -2781,7 +2781,7 @@ try {
       if (brokenImages) throw new Error('About page contains a visibly broken software-logo image.');
       if (await kritaImage.count()) {
         const src = await kritaImage.getAttribute('src');
-        const usesBundledKrita = src?.includes('/assets/projects/site/logos/krita.svg');
+        const usesBundledKrita = /\/assets\/projects\/site\/logos\/krita\.(?:png|svg|webp)(?:[?#]|$)/i.test(src || '');
         const usesSimpleIconsKrita = src?.includes('cdn.simpleicons.org/krita');
         if (!src || (!usesBundledKrita && !usesSimpleIconsKrita)) {
           throw new Error('About page Krita logo did not use its bundled local asset or the Simple Icons fallback.');
