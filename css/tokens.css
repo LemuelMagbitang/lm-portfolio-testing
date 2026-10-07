@@ -21,7 +21,17 @@
 
   --lm-container-max: 1400px;
   --lm-page-gutter: 24px;
-  --lm-card-radius: 12px;
+  /* Shape system — rounded surfaces use fixed radii; nested surfaces use a
+     smaller concentric radius derived from the parent and its inset. */
+  --lm-card-radius: 18px;
+  --lm-radius-fixed-xs: 8px;
+  --lm-radius-fixed-sm: 12px;
+  --lm-radius-fixed-md: 16px;
+  --lm-radius-fixed-lg: 20px;
+  --lm-radius-fixed-xl: 24px;
+  --lm-radius-concentric-sm: 10px;
+  --lm-radius-concentric-md: 12px;
+  --lm-radius-concentric-lg: 14px;
 
   --lm-glass-fill: rgba(255, 255, 255, 0.05);
   --lm-glass-border: rgba(255, 255, 255, 0.10);
