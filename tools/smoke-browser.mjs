@@ -2534,7 +2534,7 @@ try {
       }
 
       const rounded = await page.evaluate(() => {
-        const selectors = ['.project-card','.contact-primary','.review-card','.btn-show-more','input','textarea','select','.model-viewer-shell'];
+        const selectors = ['.contact-primary','.review-card','.btn-show-more','input','textarea','select','.model-viewer-shell'];
         const supportsSquircle = CSS.supports?.('corner-shape', 'squircle') === true;
         const items = selectors.map(selector => {
           const el=document.querySelector(selector);
@@ -2557,6 +2557,9 @@ try {
             throw new Error('Rounded UI did not resolve the squircle corner shape: '+JSON.stringify(item));
           }
         });
+      }
+      if (rounded.cardRadius !== 0 || rounded.infoRadius !== 0) {
+        throw new Error('Gallery card/info should remain square: '+JSON.stringify(rounded));
       }
       rounded.items.filter(item=>!item.missing).forEach(item=>{
         if(item.radius==='0px') throw new Error('Rounded UI lost its radius: '+JSON.stringify(item));
