@@ -2328,6 +2328,59 @@ try {
       }
     }, { width: 390, height: 844 });
 
+    await smokePage(browser, '/', async page => {
+      const contact = page.locator('.nav-links a[href="#contact-start"]').first();
+      await contact.click();
+      await page.waitForTimeout(120);
+
+      const desktopContact = await page.evaluate(() => {
+        const group = document.querySelector('#contact-section .contact-grid');
+        const heading = document.querySelector('#contact-start');
+        const nav = document.querySelector('.navbar');
+        const r = group?.getBoundingClientRect();
+        const h = heading?.getBoundingClientRect();
+        const n = nav?.getBoundingClientRect();
+        const usableTop = Math.max((n?.height || 0) + 24, 24);
+        const usableCenter = usableTop + (innerHeight - usableTop) / 2;
+        const groupCenter = r ? r.top + r.height / 2 : 0;
+        return {
+          centerDelta: Math.abs(groupCenter - usableCenter),
+          headingClear: (h?.top || 0) >= usableTop - 2,
+          scrollY: scrollY
+        };
+      });
+      if (desktopContact.centerDelta > 110 || !desktopContact.headingClear) {
+        throw new Error('Desktop Contact auto-scroll did not center the full Contact group cleanly: ' + JSON.stringify(desktopContact));
+      }
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
+      const contact = page.locator('.nav-links a[href="#contact-start"]').first();
+      await contact.click();
+      await page.waitForTimeout(120);
+
+      const mobileContact = await page.evaluate(() => {
+        const group = document.querySelector('#contact-section .contact-grid');
+        const heading = document.querySelector('#contact-start');
+        const nav = document.querySelector('.navbar');
+        const r = group?.getBoundingClientRect();
+        const h = heading?.getBoundingClientRect();
+        const n = nav?.getBoundingClientRect();
+        const usableTop = Math.max((n?.height || 0) + 24, 24);
+        const usableCenter = usableTop + (innerHeight - usableTop) / 2;
+        const groupCenter = r ? r.top + r.height / 2 : 0;
+        const maxY = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+        return {
+          centerDelta: Math.abs(groupCenter - usableCenter),
+          headingClear: (h?.top || 0) >= usableTop - 2,
+          atBottom: Math.abs(scrollY - maxY) <= 3
+        };
+      });
+      if ((!mobileContact.atBottom && mobileContact.centerDelta > 130) || !mobileContact.headingClear) {
+        throw new Error('Mobile Contact auto-scroll did not produce a balanced group position: ' + JSON.stringify(mobileContact));
+      }
+    }, { width: 390, height: 844 });
+
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
