@@ -33,9 +33,7 @@
   --lm-shape-fixed-xl: 24px;
   --lm-shape-concentric-inset: 8px;
   --lm-shape-concentric-card-inner: calc(var(--lm-shape-card-radius) - var(--lm-shape-concentric-inset));
-  --lm-shape-concentric-contact-inner: calc(var(--lm-shape-shared-lg, 24px) - var(--lm-shape-concentric-inset));
   --lm-shape-shared-lg: 24px;
-  --lm-shape-shared-md: 20px;
   /* Compatibility aliases keep older feature modules on the same canonical
      shape tokens while the public names migrate to the Apple-style system. */
   --lm-card-radius: var(--lm-shape-card-radius);
