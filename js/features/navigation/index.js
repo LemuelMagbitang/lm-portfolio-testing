@@ -123,6 +123,13 @@ export function initNavigation({ root = globalThis.document } = {}) {
       windowRef.history.replaceState(null, '', url.pathname + url.search);
     } catch (_) {}
 
+    // Keep navigation and Gallery decoupled: Navigation publishes the semantic
+    // home/Works transition, while Gallery decides how its own filter state
+    // should reset.
+    try {
+      windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home'));
+    } catch (_) {}
+
     const scrollingElement = root.scrollingElement || root.documentElement;
     if (scrollingElement) scrollingElement.scrollTop = 0;
     try { windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' }); }
