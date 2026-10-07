@@ -6,8 +6,9 @@
   /* Central typography tokens — edit the families here instead of hunting
      through component styles when the visual type system changes. */
   --lm-font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --lm-font-display: "Manrope", var(--lm-font-sans);
-  --lm-font-label: var(--lm-font-sans);
+  --lm-font-display: "Satoshi", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lm-font-label: "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --lm-font-accent: "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --lm-color-background: #121212;
   --lm-color-surface: #0d0d0d;
   --lm-color-text-primary: #ffffff;
