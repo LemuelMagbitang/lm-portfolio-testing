@@ -3494,6 +3494,7 @@ footer > .footer-content p{
   -ms-overflow-style:none;
   overscroll-behavior-x:contain;
   scroll-snap-type:x proximity;
+  justify-content:safe center;
 }
 .social-icons::-webkit-scrollbar,
 .about-social-icons::-webkit-scrollbar{
