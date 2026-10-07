@@ -517,115 +517,25 @@ try {
       }
 
       const closeButton = page.locator('#lightboxClose');
-      const navigationContrast = await page.evaluate(() => {
-        const controls = document.querySelector('.lightbox-controls');
-        const buttons = Array.from(document.querySelectorAll('#lightboxClose, .lightbox-prev, .lightbox-next'));
-        const controlsStyle = controls ? getComputedStyle(controls) : null;
+      const navigationControls = await page.evaluate(() => {
+        const layer=document.querySelector('.lightbox-controls');
+        const buttons=Array.from(document.querySelectorAll('#lightboxClose, .lightbox-prev, .lightbox-next'));
         return {
-          mixBlendMode: controlsStyle?.mixBlendMode || '',
-          buttons: buttons.map(button => {
-            const style = getComputedStyle(button);
-            const icon = button.querySelector('i');
-            const iconStyle = icon ? getComputedStyle(icon) : null;
-            return {
-              blendMode: style.mixBlendMode || '',
-              color: style.color || '',
-              iconColor: iconStyle?.color || '',
-              contrastMode: button.dataset.contrastMode || '',
-              textShadow: iconStyle?.textShadow || ''
-            };
-          })
+          blend:layer ? getComputedStyle(layer).mixBlendMode : '',
+          buttons:buttons.map(button=>({
+            color:getComputedStyle(button).color,
+            border:getComputedStyle(button).borderStyle
+          }))
         };
       });
-      if (navigationContrast.mixBlendMode !== 'normal') {
-        throw new Error('Lightbox control layer did not switch to binary contrast mode: ' + navigationContrast.mixBlendMode);
+      if(navigationControls.blend!=='normal') {
+        throw new Error('Lightbox controls are not using normal compositing: '+navigationControls.blend);
       }
-      navigationContrast.buttons.forEach(button => {
-        if (button.blendMode !== 'normal') {
-          throw new Error('Lightbox navigation control retained difference blending: ' + JSON.stringify(button));
-        }
-        if (button.color !== 'rgb(0, 0, 0)' && button.color !== 'rgb(255, 255, 255)') {
-          throw new Error('Lightbox navigation control produced a non-binary color: ' + JSON.stringify(button));
-        }
-        if (button.iconColor !== button.color) {
-          throw new Error('Lightbox navigation icon is not inheriting the binary button color: ' + JSON.stringify(button));
-        }
-        if (!button.contrastMode.startsWith('binary-')) {
-          throw new Error('Lightbox navigation control did not receive the binary contrast state: ' + JSON.stringify(button));
-        }
-        if (button.textShadow !== 'none') {
-          throw new Error('Lightbox navigation icon still carries a legacy outline shadow: ' + JSON.stringify(button));
+      navigationControls.buttons.forEach(button=>{
+        if(button.color!=='rgb(255, 255, 255)' || button.border!=='none'){
+          throw new Error('Lightbox controls are not stable white/borderless: '+JSON.stringify(button));
         }
       });
-
-      const binaryContrastFixture = await page.evaluate(async () => {
-        const artwork = document.querySelector('#lightboxMediaContainer .lightbox-artwork');
-        const next = document.querySelector('.lightbox-next');
-        if (!artwork || !next) return null;
-
-        const originalHtml = artwork.innerHTML;
-        const originalArtworkStyle = artwork.getAttribute('style');
-        const siblingArtworks = Array.from(document.querySelectorAll('#lightboxMediaContainer .lightbox-artwork'));
-        const siblingStyles = siblingArtworks.map(node => node === artwork ? null : node.getAttribute('style'));
-        siblingArtworks.forEach(node => { if (node !== artwork) node.style.display = 'none'; });
-        const originalNextStyle = next.getAttribute('style');
-
-        artwork.style.position = 'fixed';
-        artwork.style.inset = '0';
-        artwork.style.width = '100vw';
-        artwork.style.height = '100vh';
-        artwork.style.maxWidth = 'none';
-        artwork.style.aspectRatio = 'auto';
-        artwork.style.zIndex = '200';
-
-        // Put the control over the middle of the fixture so the 50/50 split
-        // exercises the deterministic tie fallback while color changes remain immediate.
-        next.style.left = 'calc(50vw - 25px)';
-        next.style.right = 'auto';
-
-        const fixtureImage = document.createElement('img');
-        fixtureImage.alt = '';
-        fixtureImage.decoding = 'sync';
-        fixtureImage.style.cssText = 'display:block;width:100%;height:100%;object-fit:fill;';
-        artwork.replaceChildren(fixtureImage);
-
-        // The runtime samples continuously, so a freshly decoded fixture should
-        // update the icon within the next rendering frames.
-        const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 120));
-        const setFixture = async (svg) => {
-          fixtureImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-          await fixtureImage.decode().catch(() => {});
-          await waitForContrast();
-          return getComputedStyle(next).color;
-        };
-
-        const darkSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64"><rect width="128" height="64" fill="#000"/></svg>';
-        const splitSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64"><rect x="0" y="0" width="64" height="64" fill="#000"/><rect x="64" y="0" width="64" height="64" fill="#fff"/></svg>';
-        const lightSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="64"><rect width="128" height="64" fill="#fff"/></svg>';
-
-        const dark = await setFixture(darkSvg);
-        const split = await setFixture(splitSvg);
-        const light = await setFixture(lightSvg);
-
-        if (originalNextStyle === null) next.removeAttribute('style');
-        else next.setAttribute('style', originalNextStyle);
-        if (originalArtworkStyle === null) artwork.removeAttribute('style');
-        else artwork.setAttribute('style', originalArtworkStyle);
-        siblingArtworks.forEach((node,index) => {
-          if (node === artwork) return;
-          const style = siblingStyles[index];
-          if (style === null) node.removeAttribute('style');
-          else node.setAttribute('style', style);
-        });
-        artwork.innerHTML = originalHtml;
-        return { dark, split, light };
-      });
-      if (!binaryContrastFixture ||
-          binaryContrastFixture.dark !== 'rgb(255, 255, 255)' ||
-          binaryContrastFixture.split !== 'rgb(255, 255, 255)' ||
-          binaryContrastFixture.light !== 'rgb(0, 0, 0)') {
-        throw new Error('Lightbox contrast did not adapt immediately while preserving the 50/50 tie fallback: ' + JSON.stringify(binaryContrastFixture));
-      }
 
       const projectDescriptionTypography = await page.locator('#modalFullDesc').evaluate(el => {
         const style = getComputedStyle(el);
@@ -963,28 +873,19 @@ try {
       }
 
       const focusedCaption = await page.locator('#lightbox .is-3d-focus-target .media-caption').count();
-      if (focusedCaption < 1) {
-        throw new Error('Focused 3D layer does not retain the artwork description/caption above the model.');
+      if (focusedCaption !== 0) {
+        throw new Error('Focused 3D viewer still renders the artwork description/caption above the model.');
       }
 
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
         el => getComputedStyle(el).backgroundColor
       );
       const focusedCloseContrast = await page.evaluate(() => {
-        const controls = document.querySelector('.lightbox-controls');
-        const button = document.querySelector('#lightboxClose');
-        const controlsStyle = controls ? getComputedStyle(controls) : null;
-        const buttonStyle = button ? getComputedStyle(button) : null;
-        return {
-          mixBlendMode: controlsStyle?.mixBlendMode || '',
-          background: buttonStyle?.backgroundColor || ''
-        };
+        const controls=document.querySelector('.lightbox-controls');
+        return controls ? getComputedStyle(controls).mixBlendMode : '';
       });
-      if (focusedCloseContrast.mixBlendMode !== 'normal') {
-        throw new Error(`Focused 3D control layer did not switch to binary contrast mode: ${focusedCloseContrast.mixBlendMode}`);
-      }
-      if (focusedCloseBackground !== 'rgba(0, 0, 0, 0)' && focusedCloseBackground !== 'transparent') {
-        throw new Error('Focused 3D Close control still has a visible background box.');
+      if (focusedCloseContrast !== 'normal') {
+        throw new Error('Focused 3D global Lightbox controls did not remain on normal compositing: '+focusedCloseContrast);
       }
 
       const backFocused = await modelBack.evaluate(el => document.activeElement === el);
@@ -1572,38 +1473,50 @@ try {
         throw new Error('Lightbox artwork surface did not receive its intrinsic ratio token.');
       }
 
-      await page.waitForFunction(() => {
-        const layer = document.querySelector('.lightbox-controls');
-        return layer && getComputedStyle(layer).mixBlendMode === 'normal';
-      }, null, { timeout: 1000 });
-
       const lightboxControlStyles = await page.evaluate(() => {
-        const layer = document.querySelector('.lightbox-controls');
-        const layerStyle = layer ? getComputedStyle(layer) : null;
+        const layer=document.querySelector('.lightbox-controls');
+        const ls=layer ? getComputedStyle(layer) : null;
         return {
-          layerBlend: layerStyle?.mixBlendMode || '',
-          controls: ['#lightboxClose', '.lightbox-prev', '.lightbox-next'].map(selector => {
-            const el = document.querySelector(selector);
-            if (!el) return null;
-            const buttonStyle = getComputedStyle(el);
+          blend:ls?.mixBlendMode || '',
+          controls:['#lightboxClose','.lightbox-prev','.lightbox-next'].map(selector=>{
+            const el=document.querySelector(selector);
+            if(!el) return null;
+            const s=getComputedStyle(el);
+            const r=el.getBoundingClientRect();
             return {
               selector,
-              background: buttonStyle.backgroundColor,
-              borderStyle: buttonStyle.borderStyle,
-              color: buttonStyle.color,
-              contrastMode: el.dataset.contrastMode || ''
+              color:s.color,
+              background:s.backgroundColor,
+              border:s.borderStyle,
+              radius:s.borderRadius,
+              position:s.position,
+              top:s.top,
+              bottom:s.bottom,
+              left:r.left,
+              right:r.right
             };
           }).filter(Boolean)
         };
       });
-      if (lightboxControlStyles.layerBlend !== 'normal') {
-        throw new Error('Mobile Lightbox control layer did not switch to binary contrast mode: ' + lightboxControlStyles.layerBlend);
+      if(lightboxControlStyles.blend!=='normal'){
+        throw new Error('Mobile Lightbox controls are not using normal compositing: '+lightboxControlStyles.blend);
       }
-      for (const control of lightboxControlStyles.controls) {
-        if (control.background !== 'rgba(0, 0, 0, 0)' || control.borderStyle !== 'none') {
-          throw new Error(control.selector + ' still renders a visible control box over artwork.');
+      const close=lightboxControlStyles.controls.find(item=>item.selector==='#lightboxClose');
+      const navs=lightboxControlStyles.controls.filter(item=>item.selector!=='#lightboxClose');
+      if(!close || close.color!=='rgb(255, 255, 255)' ||
+         !/rgba\\(255, 255, 255, 0\\.08\\)/.test(close.background) ||
+         close.border!=='none' || close.radius!=='50%' || close.position!=='fixed'){
+        throw new Error('Mobile Lightbox Close control does not match the glass-circle contract: '+JSON.stringify(close));
+      }
+      navs.forEach(control=>{
+        const bottom=Number.parseFloat(control.bottom);
+        if(control.color!=='rgb(255, 255, 255)' ||
+           !/rgba\\(255, 255, 255, 0\\.08\\)/.test(control.background) ||
+           control.border!=='none' || control.position!=='fixed' ||
+           control.radius==='50%' || !Number.isFinite(bottom) || bottom<20){
+          throw new Error('Mobile Lightbox chevron control does not match the bottom glass-rect contract: '+JSON.stringify(control));
         }
-      }
+      });
 
       const lightboxViewportWidth = await page.evaluate(() => window.innerWidth);
       const artworkWidth = await firstArtwork.evaluate(el => Math.round(el.getBoundingClientRect().width));
@@ -2552,6 +2465,15 @@ try {
           reviewTabState.projectDisplay !== 'none' || reviewTabState.reviewDisplay === 'none') {
         throw new Error('Mobile Contact tab switching did not activate the review panel: '+JSON.stringify(reviewTabState));
       }
+      const contactTabStyles=await page.locator('.contact-mobile-tab').evaluateAll(tabs=>tabs.map(tab=>{
+        const s=getComputedStyle(tab);
+        return {border:s.borderStyle,width:s.borderWidth};
+      }));
+      contactTabStyles.forEach(style=>{
+        if(style.border!=='none' || style.width!=='0px'){
+          throw new Error('Mobile Contact tab retained an individual outline: '+JSON.stringify(style));
+        }
+      });
 
       const mobileGalleryMetadata = await page.evaluate(() => {
         const cards = Array.from(document.querySelectorAll('#portfolioGrid .project-card')).slice(0, 4);
@@ -2559,6 +2481,19 @@ try {
       });
       if (mobileGalleryMetadata.some(display => display !== 'none')) {
         throw new Error('Mobile project title/subtitle metadata was re-enabled by a later CSS cascade: '+JSON.stringify(mobileGalleryMetadata));
+      }
+      await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+      await page.waitForTimeout(60);
+      const filterOffscreen=await page.evaluate(()=>{
+        const rail=document.querySelector('.filter-tabs');
+        return {
+          offscreen:!!rail && rail.getBoundingClientRect().bottom<=0,
+          inert:!!rail?.inert,
+          pointerEvents:rail?getComputedStyle(rail).pointerEvents:''
+        };
+      });
+      if(filterOffscreen.offscreen && (!filterOffscreen.inert || filterOffscreen.pointerEvents!=='none')){
+        throw new Error('Off-screen mobile filter rail still exposes an interactive hit surface: '+JSON.stringify(filterOffscreen));
       }
     }, { width: 390, height: 844 });
 
@@ -2744,6 +2679,14 @@ try {
       if (footerSocialGeometry.flexWrap !== 'nowrap' || footerSocialGeometry.overflowX === 'visible' || footerSocialGeometry.overflowY) {
         throw new Error('Footer social row can wrap vertically or has incorrect overflow behavior: '+JSON.stringify(footerSocialGeometry));
       }
+      const footerSocialCenter=await page.evaluate(()=>{
+        const footer=document.querySelector('footer')?.getBoundingClientRect();
+        const row=document.querySelector('footer .social-icons')?.getBoundingClientRect();
+        return {delta:footer&&row?Math.abs((row.left+row.width/2)-(footer.left+footer.width/2)):9999};
+      });
+      if(footerSocialCenter.delta>2){
+        throw new Error('Footer social icon row is not centered: '+JSON.stringify(footerSocialCenter));
+      }
 
       const showMoreGeometry = await page.evaluate(() => {
         const button = document.querySelector('#showMoreBtn');
@@ -2824,6 +2767,10 @@ try {
       if (awards < 1) throw new Error('About page rendered no awards entries.');
       if (softwareSkills < 1) throw new Error('About page rendered no software skills.');
       if (softwareImages < 1) throw new Error('About page software-logo mode is enabled but no software logo rendered.');
+      const publicSoftwareLogoFilters=await page.locator('#softwareSkillsList li.has-logo img.skill-logo').evaluateAll(images=>images.map(img=>getComputedStyle(img).filter));
+      publicSoftwareLogoFilters.forEach(filter=>{
+        if(filter!=='none') throw new Error('About software logo retained a color filter: '+filter);
+      });
       if (brokenImages) throw new Error('About page contains a visibly broken software-logo image.');
       if (await kritaImage.count()) {
         const src = await kritaImage.getAttribute('src');
@@ -3313,6 +3260,8 @@ try {
       await nav.click();
       await page.locator('#content #tags_software').waitFor({ state: 'visible', timeout: 5000 });
 
+      const cmsLogoFilters=await page.locator('#tags_software .skill-pill-icon img.skill-logo').evaluateAll(images=>images.map(img=>getComputedStyle(img).filter)).catch(()=>[]);
+      cmsLogoFilters.forEach(filter=>{if(filter!=='none') throw new Error('CMS software logo preview retained a color filter: '+filter);});
       const softwareRows = await page.locator('#tags_software .skill-editor-row').count();
       if (softwareRows < 1) throw new Error('CMS About editor rendered no software skill rows.');
 
