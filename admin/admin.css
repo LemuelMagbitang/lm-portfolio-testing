@@ -110,7 +110,14 @@
   .toggle-row .t-label{font-weight:600;color:#fff;font-size:13.5px;}
   .toggle-row .t-desc{font-size:12px;color:var(--text-dim);margin-top:3px;}
 
-  .card-item{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:18px;margin-bottom:12px;}
+  .card-item{
+    background:var(--panel-2);
+    border:1px solid var(--line-soft);
+    border-radius:18px;
+    padding:18px;
+    margin-bottom:12px;
+  }
+
 /* ---------- Project list presentation ----------
    Collapsed rows show a lightweight artwork preview on the right while
    the open editor removes that decorative treatment. Image previews reuse
@@ -635,3 +642,114 @@
 .social-platform-select select{min-width:0;flex:1;}
 .social-remove{width:38px;height:38px;flex:0 0 38px;color:#e0584f;}
 @media (max-width:720px){.social-row{grid-template-columns:1fr auto;}.social-row .field:nth-child(2){grid-column:1 / -1;}.social-remove{grid-column:2;grid-row:1;align-self:end;}}
+
+/* ============================================================
+   ADMIN ROUNDED SHAPE SYSTEM
+   Fixed parent shapes + concentric nested surfaces + squircle
+   progressive enhancement. Actual status/handle dots remain circles.
+   ============================================================ */
+.panel,
+.card-item,
+.connect-card,
+.token-help,
+#connectError,
+button.primary,
+button.ghost,
+button.danger,
+button.icon-btn,
+.nav-item,
+.add-btn,
+.tagbox,
+.skill-pill-icon,
+.chip,
+.media-preview,
+.project-list-item.is-collapsed,
+.project-collapsed-preview{
+  border-radius:12px;
+}
+.panel,
+.card-item,
+.connect-card,
+.project-list-item.is-collapsed{
+  border-radius:18px;
+}
+.project-list-item.is-collapsed{
+  padding:0;
+}
+.project-list-item.is-collapsed .project-card-head{
+  padding:9px 10px 9px 12px;
+  min-height:94px;
+}
+.project-list-item.is-collapsed .project-collapsed-preview{
+  height:76px;
+  border-radius:12px;
+  border:0;
+}
+.project-list-item.is-collapsed .project-collapsed-preview::after{
+  background:linear-gradient(90deg,rgba(25,25,25,.28),rgba(25,25,25,0) 60%);
+}
+.project-list-item.is-collapsed .project-card-actions{
+  display:flex;
+  align-items:center;
+  gap:3px;
+  padding:4px;
+  background:rgba(18,18,18,.76);
+  border-radius:10px;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.project-list-item.is-open .project-card-head{
+  display:flex;
+  align-items:center;
+  min-height:0;
+}
+.project-list-item.is-open .project-collapsed-preview{
+  display:none;
+}
+.project-list-item.is-open{
+  border-radius:18px;
+}
+.project-list-item.is-collapsed .project-item-label{
+  min-width:0;
+}
+.project-list-item.is-collapsed .project-item-label .item-title,
+.project-list-item.is-collapsed .project-preview-text{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@supports (corner-shape:squircle){
+  .panel,
+  .card-item,
+  .connect-card,
+  #connectError,
+  button.primary,
+  button.ghost,
+  button.danger,
+  button.icon-btn,
+  .nav-item,
+  .add-btn,
+  .tagbox,
+  .skill-pill-icon,
+  .chip,
+  .media-preview,
+  .project-list-item.is-collapsed,
+  .project-collapsed-preview,
+  .project-list-item.is-collapsed .project-card-actions{
+    corner-shape:squircle;
+  }
+}
+
+/* Circular indicators/handles stay geometrically circular. */
+.connect-brand .dot,
+.sidebar-brand .dot,
+.save-status .dot,
+.nav-item .dirty-dot,
+.slider:before{
+  border-radius:50%;
+}
+
+/* ============================================================
+   END ADMIN ROUNDED SHAPE SYSTEM
+   ============================================================ */
