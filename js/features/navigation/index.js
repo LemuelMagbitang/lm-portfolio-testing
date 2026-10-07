@@ -26,6 +26,17 @@ export function initNavigation({ root = globalThis.document } = {}) {
 
   let isOpen = false;
 
+  // A real DOM backdrop is more reliable than body::after: it remains fixed to
+  // the viewport even while the document underneath is being scrolled.
+  const menuBackdrop = root.createElement?.('div');
+  if (menuBackdrop) {
+    menuBackdrop.className = 'nav-menu-backdrop';
+    menuBackdrop.setAttribute('aria-hidden', 'true');
+    menuBackdrop.hidden = true;
+    menuBackdrop.addEventListener('click', () => close());
+    root.body?.appendChild(menuBackdrop);
+  }
+
   function syncAria() {
     menuButton.setAttribute('aria-expanded', String(isOpen));
     menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
@@ -36,6 +47,7 @@ export function initNavigation({ root = globalThis.document } = {}) {
     mobileMenu.classList.add('active');
     mobileMenu.classList.add('is-open');
     root.body?.classList.add('menu-open');
+    if (menuBackdrop) menuBackdrop.hidden = false;
     syncAria();
   }
 
@@ -44,6 +56,7 @@ export function initNavigation({ root = globalThis.document } = {}) {
     mobileMenu.classList.remove('active');
     mobileMenu.classList.remove('is-open');
     root.body?.classList.remove('menu-open');
+    if (menuBackdrop) menuBackdrop.hidden = true;
     syncAria();
   }
 
@@ -232,6 +245,7 @@ export function initNavigation({ root = globalThis.document } = {}) {
         try { remove(); } catch (_) {}
       });
       close();
+      menuBackdrop?.remove?.();
     }
   };
 }
