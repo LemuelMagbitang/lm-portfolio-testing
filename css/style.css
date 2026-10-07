@@ -3107,19 +3107,30 @@ h1,h2,h3,h4,h5,h6,
 }
 
 /* ============================================================
-   ROUNDED SHAPE SYSTEM — fixed + concentric + squircle enhancement
-   Fixed shapes keep a stable radius. Nested surfaces reduce the radius
-   by their inset so their corner centers remain concentric with the parent.
-   Browsers that expose CSS corner-shape use a squircle/continuous-like
-   curvature; the rounded-rectangle radius remains the compatibility path.
+   SHAPE SYSTEM — fixed + concentric + squircle
+   Fixed shapes keep a stable radius. Nested surfaces use a concentric
+   radius derived from the parent and the visual inset. Where supported,
+   CSS corner-shape:squircle supplies Apple's continuous/squircle-like
+   curvature; border-radius remains the compatibility fallback.
    ============================================================ */
 .project-card,
-.seamless-grid,
+.seamless-grid{
+  border-radius:var(--lm-shape-card-radius);
+}
+
 .nav-dropdown-menu,
 .contact-primary,
 .contact-secondary,
 .review-card,
 .form-container,
+.skill-logo-frame,
+.model-viewer-shell,
+.model-viewer-activate-content,
+.model-viewer-back,
+.lightbox-artwork{
+  border-radius:var(--lm-shape-shared-lg);
+}
+
 input,
 textarea,
 select,
@@ -3127,55 +3138,44 @@ select,
 .email-me-btn,
 .status-btn,
 .btn-show-more,
-.skill-list.minimal-list li,
-.skill-logo-frame,
-.model-viewer-shell,
-.model-viewer-activate-content,
-.model-viewer-back,
-.lightbox-artwork,
+.skill-list.minimal-list li{
+  border-radius:var(--lm-shape-fixed-sm);
+}
+
+/* Concentric inner surface: the artwork/info panel sits inside the card by
+   the same inset on every side, so its corner center stays aligned with the
+   outer card rather than becoming an independently rounded rectangle. */
+.project-card .glass-info{
+  left:var(--lm-shape-concentric-inset);
+  bottom:var(--lm-shape-concentric-inset);
+  width:calc(100% - (var(--lm-shape-concentric-inset) * 2));
+  border-radius:var(--lm-shape-concentric-card-inner);
+}
+
+/* Contact forms are inset surfaces inside their two contact blocks. */
+.contact-primary .form-container,
+.contact-secondary .form-container{
+  border-radius:calc(var(--lm-shape-shared-lg) - var(--lm-shape-concentric-inset));
+}
+
+/* Keep the media viewport and its controls visually part of the same shape
+   family while preserving true circles as circles. */
 #lightboxMediaContainer .lightbox-artwork > iframe,
 #lightboxMediaContainer .lightbox-artwork > video{
-  border-radius:var(--lm-radius-fixed-sm);
+  border-radius:var(--lm-shape-fixed-md);
 }
 
-.project-card,
-.seamless-grid,
-.contact-primary,
-.review-card,
-.form-container,
-.skill-logo-frame,
-.model-viewer-shell,
-.model-viewer-activate-content,
-.model-viewer-back,
-#lightboxMediaContainer .lightbox-artwork{
-  border-radius:var(--lm-card-radius);
-}
-
-.project-card .glass-info{
-  /* The glass panel sits 8px inside the card, so its radius follows the
-     parent radius minus the visual inset instead of becoming a second
-     unrelated rounded rectangle. */
-  left:8px;
-  bottom:8px;
-  width:calc(100% - 16px);
-  border-radius:max(0px, calc(var(--lm-card-radius) - 8px));
-}
-
-.btn-show-more{border-radius:var(--lm-radius-fixed-sm);}
-.nav-dropdown-menu{border-radius:var(--lm-radius-fixed-md);}
-input,textarea,select{border-radius:var(--lm-radius-fixed-sm);}
-
-/* Preserve deliberate circular controls. */
 .status-dot,
 .social-icons a,
 .about-social-icons a,
 .photo-frame,
 .profile-pic-large,
-.filter-page-dot{
+.filter-page-dot,
+.star-rating label{
   border-radius:50%;
 }
 
-@supports (corner-shape: squircle){
+@supports (corner-shape:squircle){
   .project-card,
   .seamless-grid,
   .nav-dropdown-menu,
@@ -3200,21 +3200,23 @@ input,textarea,select{border-radius:var(--lm-radius-fixed-sm);}
   #lightboxMediaContainer .lightbox-artwork > video{
     corner-shape:squircle;
   }
-
-  .project-card .glass-info{
+  .project-card .glass-info,
+  .contact-primary .form-container,
+  .contact-secondary .form-container{
     corner-shape:squircle;
   }
 }
 
-/* Rectangular focus cues use a glow rather than reintroducing a hard outline.
-   This preserves keyboard visibility without violating the surface language. */
+/* Keyboard focus remains visible without restoring a hard rectangular
+   outline. The focus ring follows the same shape as the control. */
 .project-card:focus-visible .glass-info,
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 a:focus-visible{
-  box-shadow:0 0 0 2px rgba(255,255,255,.78);
+  outline:none;
+  box-shadow:0 0 0 2px rgba(255,255,255,.82);
 }
 
 /* ============================================================
