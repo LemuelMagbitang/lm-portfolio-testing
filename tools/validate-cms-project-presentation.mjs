@@ -31,4 +31,14 @@ assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must b
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 
+assert.ok(/let openUid\s*=\s*null/.test(admin), 'Projects must start with every project row closed.');
+assert.ok(/isOpen \? ' is-open' : ' is-collapsed'/.test(admin) || /isOpen \? ' is-open' : ' is-collapsed'/.test(admin.replace(/\n/g,'')),
+  'Projects renderer must expose explicit open/collapsed row state.');
+assert.ok(css.includes('.project-list-item.is-collapsed .project-card-head'),
+  'Closed Project rows need a dedicated card-shell header layout.');
+assert.ok(css.includes('.project-list-item.is-open .project-card-head'),
+  'Expanded Project rows need an explicit original-header layout.');
+assert.ok(css.includes('corner-shape:squircle'),
+  'CMS Project presentation should progressively enhance rounded surfaces as squircles.');
+
 console.log('CMS Projects presentation contract validated.');
