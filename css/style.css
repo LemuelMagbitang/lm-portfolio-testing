@@ -2920,3 +2920,114 @@ img.no-save{
   user-drag:none;
   pointer-events:none;
 }
+
+
+/* ============================================================
+   TYPE SYSTEM — Apple-like sans hierarchy
+   Inter: primary reading/UI
+   Satoshi: display/headings
+   DM Sans: labels/navigation/metadata
+   Outfit: expressive hero/accent copy
+   ============================================================ */
+body,
+button,
+input,
+textarea,
+select{
+  font-family:var(--lm-font-sans);
+}
+h1,h2,h3,h4,h5,h6,
+.hello-heading,
+.start-project-title,
+.modal-header h2,
+.message-box h1{
+  font-family:var(--lm-font-display);
+}
+.nav-links a,
+.nav-dropdown-menu a,
+.section-title,
+.filter-tabs .tab-btn,
+.hero-quote-label,
+.hero-quote-author,
+.media-caption,
+.model-viewer-hint{
+  font-family:var(--lm-font-label);
+}
+.hero-quote-text{
+  font-family:var(--lm-font-accent);
+}
+
+/* ============================================================
+   FLAT RECTANGULAR SURFACES
+   Rectangular/box UI is square and border-free. Circular identity
+   controls (avatars, status dots, social icons, filter dots) retain
+   their circular geometry.
+   ============================================================ */
+.project-card,
+.glass-info,
+.nav-dropdown-menu,
+.contact-primary,
+.contact-secondary,
+.review-card,
+.form-container,
+input,
+textarea,
+select,
+.submit-btn,
+.email-me-btn,
+.status-btn,
+.btn-show-more,
+.skill-list.minimal-list li,
+.skill-logo-frame,
+.model-viewer-shell,
+.model-viewer-activate-content,
+.model-viewer-back,
+.lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork > iframe,
+#lightboxMediaContainer .lightbox-artwork > video{
+  border-radius:0!important;
+}
+
+.project-card,
+.review-card,
+.contact-primary,
+.skill-logo-frame,
+.model-viewer-shell,
+.model-viewer-activate-content,
+.model-viewer-back,
+#lightboxMediaContainer .lightbox-artwork{
+  border:0!important;
+}
+
+.btn-show-more{
+  border:0!important;
+}
+
+.nav-dropdown-menu{
+  border:0!important;
+}
+
+input,
+textarea,
+select{
+  border:0!important;
+}
+
+.project-card:focus,
+.project-card:focus-visible,
+.tab-btn:focus,
+.tab-btn:focus-visible,
+button:focus,
+button:focus-visible,
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible{
+  border-radius:0!important;
+}
+
+/* ============================================================
+   END PUBLIC FLAT GEOMETRY SYSTEM
+   ============================================================ */
