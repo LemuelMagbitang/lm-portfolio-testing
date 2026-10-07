@@ -3600,3 +3600,106 @@ footer > .footer-content p{
     scroll-margin-top:calc(var(--nav-h, 70px) + 18px);
   }
 }
+
+
+/* ============================================================
+   FINAL UI PASS 3 — Apple-like controls and liquid software marks
+   ============================================================ */
+
+/* Show More / Show Less is a true pill, not a squircle. */
+.show-more-wrapper .btn-show-more,
+.btn-show-more{
+  border-radius:999px !important;
+  corner-shape:initial !important;
+}
+
+/* Mobile Contact tabs: the rail owns the single outline. Individual tabs
+   stay visually quiet so the selector reads as one Apple-like control. */
+@media (max-width:767px){
+  #contact-section .contact-mobile-tab{
+    border:0 !important;
+    box-shadow:none !important;
+    outline:none !important;
+    background:transparent;
+  }
+  #contact-section .contact-mobile-tab[aria-selected="true"]{
+    background:#fff;
+    color:#000;
+    border:0 !important;
+    box-shadow:none !important;
+  }
+
+  /* Footer socials center when the row fits; the existing nowrap + overflow
+     behavior still permits horizontal scrolling when more links are added. */
+  footer > .footer-content .social-icons{
+    justify-content:safe center;
+  }
+}
+
+/* Liquid-glass software marks.
+   The CMS logo stays the source of truth; its alpha channel becomes the mask
+   for a neutral liquid glyph. Browsers without CSS masking keep the current
+   image presentation as a compatibility fallback. */
+.skill-logo-frame{
+  border:0;
+  background:transparent;
+  box-shadow:none;
+}
+.skill-logo-frame::before{
+  content:'';
+  position:absolute;
+  inset:8px;
+  display:none;
+  border-radius:38%;
+  background:linear-gradient(145deg,
+    rgba(255,255,255,.98) 0%,
+    rgba(255,255,255,.64) 24%,
+    rgba(194,202,214,.88) 46%,
+    rgba(255,255,255,.78) 67%,
+    rgba(138,148,164,.82) 100%);
+  filter:drop-shadow(0 1px 1px rgba(255,255,255,.34)) drop-shadow(0 7px 10px rgba(0,0,0,.22));
+  -webkit-mask-image:var(--skill-logo-mask);
+  mask-image:var(--skill-logo-mask);
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  z-index:2;
+}
+.skill-logo-frame::after{
+  content:'';
+  position:absolute;
+  inset:9px;
+  display:none;
+  pointer-events:none;
+  border-radius:38%;
+  background:linear-gradient(125deg,
+    rgba(255,255,255,.50) 0%,
+    rgba(255,255,255,.12) 28%,
+    transparent 50%,
+    rgba(255,255,255,.22) 100%);
+  filter:blur(2px);
+  opacity:.78;
+  -webkit-mask-image:var(--skill-logo-mask);
+  mask-image:var(--skill-logo-mask);
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  z-index:3;
+  transform:translate(-1px,-1px);
+}
+@supports (mask-image:url("")){
+  .skill-logo-frame.is-liquid-logo::before,
+  .skill-logo-frame.is-liquid-logo::after{display:block;}
+  .skill-logo-frame.is-liquid-logo .skill-logo{opacity:0;}
+}
+.skill-logo-frame.is-fallback{
+  border:0;
+  background:transparent;
+  box-shadow:none;
+}
