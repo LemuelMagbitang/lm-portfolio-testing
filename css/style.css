@@ -3404,7 +3404,7 @@ footer > .footer-fade{
     );
 }
 footer > .footer-content{
-  z-index:2;
+  z-index:6;
   color:#fff !important;
   min-height:inherit;
   padding:clamp(64px,9vw,110px) clamp(20px,4vw,48px) max(34px,env(safe-area-inset-bottom,0px));
