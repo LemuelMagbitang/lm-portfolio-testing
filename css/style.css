@@ -2036,12 +2036,15 @@ body.center-page {
 }
 
 .contact-grid .section-title{
-  min-height:2.1rem;
+  height:52px;
+  min-height:52px;
   display:flex;
   align-items:center;
   justify-content:center;
   margin:0 0 24px;
-  flex:0 0 auto;
+  flex:0 0 52px;
+  line-height:1.08;
+  text-wrap:balance;
 }
 
 /* Both forms share the same vertical tracks on desktop. This makes the
@@ -2091,9 +2094,13 @@ body.center-page {
   height:52px;
   min-height:52px;
   margin:0!important;
+  padding:0 14px;
   align-items:center!important;
   justify-content:center!important;
   gap:10px!important;
+  box-sizing:border-box;
+  background:rgba(255,255,255,.03);
+  overflow:hidden;
 }
 
 .contact-grid .star-rating label{
@@ -2124,18 +2131,25 @@ body.center-page {
   }
   .contact-block{
     width:100%;
-    padding:28px 20px 30px;
+    min-height:0;
+    padding:24px 18px 28px;
   }
   .contact-grid .section-title{
-    min-height:2rem;
+    height:auto;
+    min-height:2.4rem;
     margin-bottom:20px;
+    flex:0 0 auto;
   }
   .contact-grid .simple-form{
-    grid-template-rows:52px 52px 150px 52px;
+    grid-template-rows:52px 52px minmax(150px,auto) 52px;
     gap:12px;
   }
   .contact-grid .simple-form > textarea{
     min-height:150px;
+  }
+  .contact-grid .simple-form > .star-rating{
+    height:52px;
+    min-height:52px;
   }
   .contact-grid .star-rating label{
     font-size:1.7rem;
