@@ -58,7 +58,7 @@ function sourceKey(source) {
   return source ? source.type + '|' + source.src : '';
 }
 
-async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJson, resolveAssetUrl }) {
+async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJson, resolveAssetUrl, projects }) {
   const loopMode = ['latest', 'manual', 'mixed'].includes(heroTiming?.loopMode)
     ? heroTiming.loopMode
     : 'latest';
@@ -73,11 +73,15 @@ async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJs
   }
 
   let latest = [];
-  try {
-    const raw = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
-    const projects = normalizeProjects(Array.isArray(raw) ? raw : []);
+  if (Array.isArray(projects)) {
     latest = projects.map(project => sourceFromProject(project, resolveAssetUrl)).filter(Boolean);
-  } catch (_) {}
+  } else {
+    try {
+      const raw = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
+      const normalized = normalizeProjects(Array.isArray(raw) ? raw : []);
+      latest = normalized.map(project => sourceFromProject(project, resolveAssetUrl)).filter(Boolean);
+    } catch (_) {}
+  }
 
   if (loopMode === 'manual') return manual.slice(0, 5);
   if (loopMode === 'mixed') {
@@ -158,6 +162,7 @@ export async function initFooterAnimation(options = {}) {
     sources = await resolveHeroSources({
       heroLoopUrl: options.heroLoopUrl || 'data/hero-loop.json',
       projectsUrl: options.projectsUrl || 'data/projects.json',
+      projects: Array.isArray(options.projects) ? options.projects : null,
       heroTiming,
       loadJson,
       resolveAssetUrl
