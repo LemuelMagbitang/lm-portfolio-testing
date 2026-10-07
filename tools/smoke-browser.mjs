@@ -2381,6 +2381,73 @@ try {
       }
     }, { width: 390, height: 844 });
 
+    await smokePage(browser, '/', async page => {
+      const typography = await page.evaluate(() => {
+        const pick = selector => {
+          const el = document.querySelector(selector);
+          return el ? getComputedStyle(el).fontFamily : '';
+        };
+        return {
+          body: pick('body'),
+          display: pick('.hero-quote-text, .modal-header h2, .hello-heading'),
+          label: pick('.section-title, .nav-links a, .filter-tabs .tab-btn'),
+          accent: pick('.hero-quote-text')
+        };
+      });
+      if (typography.body.toLowerCase().includes('monospace') ||
+          typography.display.toLowerCase().includes('monospace') ||
+          typography.label.toLowerCase().includes('monospace') ||
+          typography.accent.toLowerCase().includes('monospace')) {
+        throw new Error('Public typography still resolves a monospace family: ' + JSON.stringify(typography));
+      }
+      if (!/Inter/i.test(typography.body)) {
+        throw new Error('Public body typography no longer resolves Inter as the primary family: ' + JSON.stringify(typography));
+      }
+      if (!/Satoshi/i.test(typography.display) && !/Inter/i.test(typography.display)) {
+        throw new Error('Public display typography does not resolve the new sans hierarchy: ' + JSON.stringify(typography));
+      }
+
+      const flat = await page.evaluate(() => {
+        const selectors = [
+          '.project-card',
+          '.contact-primary',
+          '.review-card',
+          '.btn-show-more',
+          'input',
+          'textarea',
+          'select',
+          '.model-viewer-shell'
+        ];
+        return selectors.map(selector => {
+          const el = document.querySelector(selector);
+          if (!el) return { selector, missing: true };
+          const style = getComputedStyle(el);
+          return { selector, radius: style.borderRadius, border: style.borderStyle };
+        });
+      });
+      flat.filter(item => !item.missing).forEach(item => {
+        if (item.radius !== '0px') {
+          throw new Error('Rectangular UI retained rounded corners: ' + JSON.stringify(item));
+        }
+        if (item.selector === '.btn-show-more' && item.border !== 'none') {
+          throw new Error('Show More/Show Less retained its outline: ' + JSON.stringify(item));
+        }
+      });
+
+      const circleChecks = await page.evaluate(() => {
+        const selectors = ['.status-dot', '.social-icons a'];
+        return selectors.map(selector => {
+          const el = document.querySelector(selector);
+          return el ? getComputedStyle(el).borderRadius : '';
+        });
+      });
+      circleChecks.forEach((radius, index) => {
+        if (radius !== '50%') {
+          throw new Error('Circular control lost its circular geometry.');
+        }
+      });
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
