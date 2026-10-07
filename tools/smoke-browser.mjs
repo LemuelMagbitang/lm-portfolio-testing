@@ -2453,7 +2453,7 @@ try {
       });
 
       const circleChecks = await page.evaluate(() => {
-        const selectors = ['.status-dot', '.social-icons a'];
+        const selectors = ['.social-icons a', '.filter-page-dot'];
         return selectors.map(selector => {
           const el = document.querySelector(selector);
           if (!el) return { selector, missing: true };
