@@ -2278,6 +2278,56 @@ try {
       }
     }, { width: 1280, height: 900 });
 
+    await smokePage(browser, '/', async page => {
+      const hamburger = page.locator('.hamburger').first();
+      await hamburger.click();
+      await page.waitForTimeout(60);
+
+      const overlay = await page.evaluate(() => {
+        const backdrop = document.querySelector('.nav-menu-backdrop');
+        const rect = backdrop?.getBoundingClientRect();
+        return {
+          exists: !!backdrop,
+          hidden: backdrop?.hidden ?? true,
+          position: backdrop ? getComputedStyle(backdrop).position : '',
+          zIndex: backdrop ? getComputedStyle(backdrop).zIndex : '',
+          top: rect?.top ?? -999,
+          left: rect?.left ?? -999,
+          width: rect?.width ?? 0,
+          height: rect?.height ?? 0,
+          viewportWidth: innerWidth,
+          viewportHeight: innerHeight,
+          menuOpen: document.body.classList.contains('menu-open')
+        };
+      });
+      if (!overlay.exists || overlay.hidden || overlay.position !== 'fixed' ||
+          Number(overlay.zIndex) !== 999 ||
+          overlay.top !== 0 || overlay.left !== 0 ||
+          Math.abs(overlay.width - overlay.viewportWidth) > 2 ||
+          Math.abs(overlay.height - overlay.viewportHeight) > 2 ||
+          !overlay.menuOpen) {
+        throw new Error('Mobile hamburger backdrop is not a full viewport-fixed layer: ' + JSON.stringify(overlay));
+      }
+
+      await page.evaluate(() => window.scrollTo(0, Math.min(180, Math.max(0, document.body.scrollHeight - innerHeight))));
+      await page.waitForTimeout(60);
+      const scrolledOverlay = await page.evaluate(() => {
+        const backdrop = document.querySelector('.nav-menu-backdrop');
+        const r = backdrop?.getBoundingClientRect();
+        return { top: r?.top ?? -999, left: r?.left ?? -999, width: r?.width ?? 0, height: r?.height ?? 0 };
+      });
+      if (scrolledOverlay.top !== 0 || scrolledOverlay.left !== 0 ||
+          Math.abs(scrolledOverlay.width - 390) > 2 || Math.abs(scrolledOverlay.height - 844) > 2) {
+        throw new Error('Mobile hamburger backdrop was clipped/displaced while scrolling: ' + JSON.stringify(scrolledOverlay));
+      }
+
+      await page.mouse.click(8, 760);
+      await page.waitForTimeout(50);
+      if (await page.evaluate(() => document.body.classList.contains('menu-open'))) {
+        throw new Error('Outside tap no longer closes the mobile hamburger menu.');
+      }
+    }, { width: 390, height: 844 });
+
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
