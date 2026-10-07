@@ -204,6 +204,7 @@ export async function createPortfolioApp({
         footerLoopUrl: config.urls.footerLoop || 'data/footer-loop.json',
         heroLoopUrl: config.urls.heroLoop,
         projectsUrl: config.urls.projects,
+        projects: projectModels,
         heroTiming: settings.heroTiming,
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl,
