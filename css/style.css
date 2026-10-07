@@ -3660,14 +3660,15 @@ footer > .footer-content p{
 /* Stable white Lightbox chrome. Desktop placement remains unchanged; mobile
    moves only the chevrons to the reachable lower side edges. */
 .lightbox-nav{
-  background:transparent;
-  border:0;
-  box-shadow:none;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
   color:#fff !important;
 }
 .lightbox-close{
-  background:rgba(255,255,255,.08);
-  border:0;
+  background:rgba(255,255,255,.08) !important;
+  background-color:rgba(255,255,255,.08) !important;
+  border:0 !important;
   border-radius:50%;
   backdrop-filter:blur(10px);
   -webkit-backdrop-filter:blur(10px);
@@ -3682,8 +3683,9 @@ footer > .footer-content p{
     width:56px;
     height:50px;
     border-radius:16px;
-    background:rgba(255,255,255,.08);
-    backdrop-filter:blur(10px);
+    background:rgba(255,255,255,.08) !important;
+    background-color:rgba(255,255,255,.08) !important;
+    backdrop-filter:blur(10px) !important;
     -webkit-backdrop-filter:blur(10px);
     box-shadow:0 8px 24px rgba(0,0,0,.16);
     color:#fff !important;
@@ -3702,7 +3704,8 @@ footer > .footer-content p{
     width:52px;
     height:52px;
     border-radius:50%;
-    background:rgba(255,255,255,.08);
+    background:rgba(255,255,255,.08) !important;
+    background-color:rgba(255,255,255,.08) !important;
   }
 }
 
