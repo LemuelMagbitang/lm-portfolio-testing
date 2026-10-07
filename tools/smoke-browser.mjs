@@ -2232,6 +2232,7 @@ try {
         return {
           headingY: Number(rect?.y) || 0,
           navbarHeight: Number(navbar) || 0,
+          viewportHeight: Number(window.innerHeight) || 0,
           scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
           maxScrollY
         };
@@ -2239,7 +2240,7 @@ try {
       if (!box) throw new Error('Same-page Contact navigation did not reach the Start a Project heading.');
       const contactGroup = await page.locator('#contact-section .contact-grid').boundingBox();
       const usableTop = Math.max(contactPosition.navbarHeight + 24, 24);
-      const usableCenter = usableTop + (Number(window.innerHeight) - usableTop) / 2;
+      const usableCenter = usableTop + (Number(contactPosition.viewportHeight || 900) - usableTop) / 2;
       const groupCenter = contactGroup ? contactGroup.y + contactGroup.height / 2 : 0;
       const clampedAtDocumentBottom = Math.abs(contactPosition.scrollY - contactPosition.maxScrollY) <= 2;
       if (!contactGroup || (!clampedAtDocumentBottom && Math.abs(groupCenter - usableCenter) > 130) ||
