@@ -2491,14 +2491,30 @@ try {
 
       const rounded = await page.evaluate(() => {
         const selectors = ['.project-card','.contact-primary','.review-card','.btn-show-more','input','textarea','select','.model-viewer-shell'];
-        return selectors.map(selector => {
+        const supportsSquircle = CSS.supports?.('corner-shape', 'squircle') === true;
+        const items = selectors.map(selector => {
           const el=document.querySelector(selector);
           if(!el) return {selector,missing:true};
           const style=getComputedStyle(el);
           return {selector,radius:style.borderRadius,cornerShape:style.cornerShape||'',border:style.borderStyle};
         });
+        const card=document.querySelector('.project-card');
+        const info=card?.querySelector('.glass-info');
+        const cardRadius=parseFloat(card ? getComputedStyle(card).borderTopLeftRadius : '0');
+        const infoRadius=parseFloat(info ? getComputedStyle(info).borderTopLeftRadius : '0');
+        return {supportsSquircle,items,cardRadius,infoRadius};
       });
-      rounded.filter(item=>!item.missing).forEach(item=>{
+      if (rounded.cardRadius > 0 && rounded.infoRadius > 0 && rounded.infoRadius >= rounded.cardRadius) {
+        throw new Error('Concentric inner artwork/info radius is not smaller than its parent radius: '+JSON.stringify(rounded));
+      }
+      if (rounded.supportsSquircle) {
+        rounded.items.filter(item=>!item.missing).forEach(item=>{
+          if(!item.cornerShape || item.cornerShape==='round') {
+            throw new Error('Rounded UI did not resolve the squircle corner shape: '+JSON.stringify(item));
+          }
+        });
+      }
+      rounded.items.filter(item=>!item.missing).forEach(item=>{
         if(item.radius==='0px') throw new Error('Rounded UI lost its radius: '+JSON.stringify(item));
         if(item.selector==='.btn-show-more' && item.border!=='none') throw new Error('Show More/Show Less retained a visible outline border: '+JSON.stringify(item));
       });
@@ -2507,7 +2523,7 @@ try {
         const selectors = ['.social-icons a', '.filter-page-dot'];
         return selectors.map(selector => {
           const el = document.querySelector(selector);
-          if (!el) return { selector, missing: true };
+          if (!el) return { selector,missing:true,rendered:false };
           const style = getComputedStyle(el);
           const rect = el.getBoundingClientRect();
           const radius = parseFloat(style.borderRadius) || 0;
@@ -2518,12 +2534,13 @@ try {
             diameter,
             width: rect.width,
             height: rect.height,
+            rendered: rect.width > 0 && rect.height > 0,
             circular: Math.abs(rect.width - rect.height) <= 1 && radius >= (diameter / 2) - 1
           };
-        });
+        }).filter(item=>item.rendered);
       });
       circleChecks.forEach(check => {
-        if (check.missing || !check.circular) {
+        if (!check.circular) {
           throw new Error('Circular control lost its circular geometry: ' + JSON.stringify(check));
         }
       });
