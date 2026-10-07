@@ -393,6 +393,13 @@ function closeLightbox({ restoreFocus = true } = {}) {
   // root for instant reuse on the next open.
   mediaRenderer.dispose(modalMediaContainer);
   modalMediaContainer.replaceChildren();
+
+  // Publish only the lifecycle fact. Gallery owns the resulting presentation
+  // recomputation, so Lightbox never reaches into Gallery's private state.
+  try {
+    windowRef.dispatchEvent(new windowRef.CustomEvent('lm:lightbox-closed'));
+  } catch (_) {}
+
   // Post-layout corrections catch any scroll reconciliation triggered while
   // the Lightbox media subtree and body overflow state are being removed.
   windowRef.requestAnimationFrame(() => {

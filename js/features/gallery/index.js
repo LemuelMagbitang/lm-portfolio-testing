@@ -434,6 +434,36 @@ export async function initGallery(options = {}) {
 
   bind(windowRef, 'lm:navigate-home', resetToAllFilter);
 
+  // Lightbox is a separate feature, but closing it can coincide with media/layout
+  // reconciliation. Rebuild Gallery presentation from its own state contract
+  // without changing the user's selected filter or Show More/Show Less state.
+  bind(windowRef, 'lm:lightbox-closed', () => {
+    const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
+    const savedScrollX = Number(windowRef.scrollX) || Number(scrollingElement?.scrollLeft) || 0;
+    const savedScrollY = Number(windowRef.scrollY) || Number(scrollingElement?.scrollTop) || 0;
+    if (portfolioGridViewport) portfolioGridViewport.style.maxHeight = 'none';
+
+    render();
+
+    const restoreScroll = () => {
+      try {
+        scrollingElement.scrollLeft = savedScrollX;
+        scrollingElement.scrollTop = savedScrollY;
+        documentRef.documentElement.scrollLeft = savedScrollX;
+        documentRef.documentElement.scrollTop = savedScrollY;
+        documentRef.body.scrollLeft = savedScrollX;
+        documentRef.body.scrollTop = savedScrollY;
+        windowRef.scrollTo({ left: savedScrollX, top: savedScrollY, behavior: 'auto' });
+      } catch (_) {}
+    };
+
+    restoreScroll();
+    windowRef.requestAnimationFrame?.(() => {
+      restoreScroll();
+      windowRef.requestAnimationFrame?.(restoreScroll);
+    });
+  });
+
   filterBtns.forEach(btn => bind(btn, 'click', event => {
     if (Date.now() < suppressFilterClickUntil) {
       event.preventDefault();

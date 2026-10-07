@@ -1448,6 +1448,16 @@ try {
         if (afterLightboxClose.maxHeight !== 'none' || afterLightboxLabel !== 'SHOW LESS') {
           throw new Error('Show Less reverted to Show More after closing Lightbox and scrolling.');
         }
+
+        const cardsAfterLightboxClose = await page.locator('#portfolioGrid .project-card').evaluateAll(
+          cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+        );
+        if (cardsAfterLightboxClose !== 11) {
+          throw new Error(
+            'Closing Lightbox caused Gallery artwork/cards to disappear or remain hidden: ' +
+            cardsAfterLightboxClose + ' visible of 11.'
+          );
+        }
       }
 
       const firstCard = page.locator('#portfolioGrid .project-card').first();
