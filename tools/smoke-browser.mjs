@@ -2708,24 +2708,6 @@ try {
       if (await mediaNav.count() !== 1) throw new Error('CMS Media Library navigation item is missing.');
       const curatedNav = page.locator('.nav-item[data-section="curatedViews"]');
       if (await curatedNav.count() !== 1) throw new Error('CMS Curated Views navigation item is missing.');
-      const footerNav = page.locator('.nav-item[data-section="footerLoop"]');
-      if (await footerNav.count() !== 1) throw new Error('CMS Footer Animation navigation item is missing.');
-      await footerNav.click();
-      await page.locator('#content #fl_mode').waitFor({ state:'visible', timeout:5000 });
-      if (await page.locator('#fl_mode').inputValue() !== 'hero') {
-        throw new Error('CMS Footer Animation did not default to Hero settings.');
-      }
-      await page.locator('#fl_mode').selectOption('manual');
-      await page.waitForTimeout(50);
-      if (!(await page.locator('#fl_manual_panel').isVisible())) {
-        throw new Error('CMS Footer Animation manual controls did not appear after switching modes.');
-      }
-      await page.locator('#fl_mode').selectOption('hero');
-      if (!(await page.locator('#fl_manual_panel').isHidden())) {
-        throw new Error('CMS Footer Animation manual controls did not hide when returning to Hero mode.');
-      }
-      await projectsNav.click();
-      await page.locator('#content #projList .card-item').first().waitFor({ state:'visible', timeout:5000 });
 
       // Start a real CMS save and leave the section before the mocked GitHub
       // response resolves. The stale save completion must not re-enable or
@@ -3056,6 +3038,23 @@ try {
       const logo = kritaRow.locator('img').first();
       await logo.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
       if (await logo.count() !== 1) throw new Error('CMS About editor did not render a Krita logo preview.');
+
+      const footerNav = page.locator('.nav-item[data-section="footerLoop"]');
+      if (await footerNav.count() !== 1) throw new Error('CMS Footer Animation navigation item is missing.');
+      await footerNav.click();
+      await page.locator('#content #fl_mode').waitFor({ state:'visible', timeout:5000 });
+      if (await page.locator('#fl_mode').inputValue() !== 'hero') {
+        throw new Error('CMS Footer Animation did not default to Hero settings.');
+      }
+      await page.locator('#fl_mode').selectOption('manual');
+      await page.waitForTimeout(50);
+      if (!(await page.locator('#fl_manual_panel').isVisible())) {
+        throw new Error('CMS Footer Animation manual controls did not appear after switching modes.');
+      }
+      await page.locator('#fl_mode').selectOption('hero');
+      if (!(await page.locator('#fl_manual_panel').isHidden())) {
+        throw new Error('CMS Footer Animation manual controls did not hide when returning to Hero mode.');
+      }
     }, { width: 1280, height: 900 }, async page => {
       const about = {
         headline: 'CMS Smoke Test',
