@@ -2554,6 +2554,27 @@ try {
         timeout: 6000
       });
       await page.waitForTimeout(120);
+      const contactAlignment = await page.evaluate(() => {
+        const rect = el => el?.getBoundingClientRect?.();
+        const project = document.querySelector('#projectForm');
+        const review = document.querySelector('#reviewForm');
+        return {
+          projectName: rect(project?.querySelector('input[name="name"]')),
+          reviewName: rect(review?.querySelector('input[name="name"]')),
+          projectSecond: rect(project?.querySelector('input[name="email"]')),
+          reviewStars: rect(review?.querySelector('.star-rating')),
+          projectMessage: rect(project?.querySelector('textarea[name="message"]')),
+          reviewMessage: rect(review?.querySelector('textarea[name="review"]')),
+          projectAction: rect(project?.querySelector('button[type="submit"]')),
+          reviewAction: rect(review?.querySelector('button[type="submit"]'))
+        };
+      });
+      for (const [a,b] of [['projectName','reviewName'],['projectSecond','reviewStars'],['projectMessage','reviewMessage'],['projectAction','reviewAction']]) {
+        const x=contactAlignment[a], y=contactAlignment[b];
+        if (!x || !y || Math.abs(x.top-y.top)>2 || Math.abs(x.height-y.height)>2) {
+          throw new Error('Desktop Contact row mismatch: ' + a + ' vs ' + b + ' => ' + JSON.stringify({a:x,b:y}));
+        }
+      }
       const contactBox = await page.locator('#contact-start').first().boundingBox();
       const contactPosition = await page.evaluate(() => {
         const heading = document.querySelector('#contact-start');
