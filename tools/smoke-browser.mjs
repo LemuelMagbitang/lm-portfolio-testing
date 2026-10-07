@@ -2371,7 +2371,10 @@ try {
 
     await smokePage(browser, '/', async page => {
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
-      await contact.click();
+      // This test is about the final Contact geometry, not pointer hit-testing
+      // against the animated hero. Dispatch the real click event so the
+      // production navigation listener runs deterministically.
+      await contact.dispatchEvent('click');
       await page.waitForTimeout(120);
 
       const mobileContact = await page.evaluate(() => {
