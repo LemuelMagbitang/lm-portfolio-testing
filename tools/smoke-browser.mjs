@@ -2164,6 +2164,59 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      const nonAllFilter = page.locator('.filter-tabs .filter-btn:not([data-filter="all"])').first();
+      if (await nonAllFilter.count() !== 1) throw new Error('Desktop Gallery reset smoke fixture has no non-ALL filter.');
+      await nonAllFilter.click();
+      await page.waitForTimeout(120);
+      if (await page.locator('.filter-tabs .filter-btn[data-filter="all"].active').count() !== 0) {
+        throw new Error('Desktop Gallery smoke could not enter a selected non-ALL filter.');
+      }
+
+      await page.locator('.nav-links .nav-dropdown-toggle').first().click();
+      await page.waitForTimeout(80);
+      const reset = await page.evaluate(() => ({
+        active: document.querySelector('.filter-tabs .filter-btn.active')?.getAttribute('data-filter') || '',
+        hash: window.location.hash,
+        visibleCards: Array.from(document.querySelectorAll('#portfolioGrid .project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none').length
+      }));
+      if (reset.active !== 'all' || reset.hash !== '') {
+        throw new Error('Desktop Works navigation did not restore Gallery to ALL: ' + JSON.stringify(reset));
+      }
+      if (reset.visibleCards < 9) {
+        throw new Error('Desktop Works navigation did not restore the full Gallery result set: ' + JSON.stringify(reset));
+      }
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
+      const nonAllFilter = page.locator('.filter-tabs .filter-btn:not([data-filter="all"])').first();
+      if (await nonAllFilter.count() !== 1) throw new Error('Mobile Gallery reset smoke fixture has no non-ALL filter.');
+      await nonAllFilter.click();
+      await page.waitForTimeout(100);
+
+      await page.locator('.hamburger').click();
+      await page.waitForTimeout(60);
+      const worksLink = page.locator('.nav-links .nav-dropdown-toggle').first();
+      if (await worksLink.count() !== 1) throw new Error('Mobile hamburger Works navigation link is missing.');
+      await worksLink.click();
+      await page.waitForTimeout(120);
+      const reset = await page.evaluate(() => ({
+        active: document.querySelector('.filter-tabs .filter-btn.active')?.getAttribute('data-filter') || '',
+        hash: window.location.hash,
+        menuOpen: document.body.classList.contains('menu-open'),
+        visibleCards: Array.from(document.querySelectorAll('#portfolioGrid .project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none').length
+      }));
+      if (reset.active !== 'all' || reset.hash !== '') {
+        throw new Error('Mobile hamburger Works navigation did not restore Gallery to ALL: ' + JSON.stringify(reset));
+      }
+      if (reset.menuOpen) throw new Error('Mobile hamburger Works navigation did not close the menu.');
+      if (reset.visibleCards < 6) {
+        throw new Error('Mobile hamburger Works navigation did not restore the full Gallery result set: ' + JSON.stringify(reset));
+      }
+    }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/', async page => {
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
       if (await contact.count() !== 1) throw new Error('Works page Contact navigation link is missing.');
       await contact.click();
