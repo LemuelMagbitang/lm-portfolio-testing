@@ -1821,6 +1821,16 @@ body.center-page {
 .about-hero-overlay .name.hello-heading {
   font-size: clamp(2.6rem, 6.8vw, 4.2rem);
 }
+/* About hero name — Satoshi Black 900 is the closest local display
+   treatment to the earlier SF Pro Display Black visual weight. */
+.about-hero-overlay .name.hello-heading{
+  font-family:var(--lm-font-display);
+  font-weight:900;
+  letter-spacing:-0.045em;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:geometricPrecision;
+}
+
 
 /* Level 3 — the role. Was a 1.1rem bold green sentence, which sat at
    nearly the same visual weight as the heading and flattened the
