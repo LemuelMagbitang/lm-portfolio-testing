@@ -2020,7 +2020,7 @@ body.center-page {
 .contact-primary {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
+  border-radius:var(--lm-radius-fixed-lg);
   padding: 40px 36px;
 }
 
@@ -2070,7 +2070,7 @@ body.center-page {
   color: #fff;
   text-decoration: none;
   padding: 16px 20px;
-  border-radius: 10px;
+  border-radius:var(--lm-radius-fixed-sm);
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 1px;
@@ -2958,13 +2958,14 @@ h1,h2,h3,h4,h5,h6,
 }
 
 /* ============================================================
-   FLAT RECTANGULAR SURFACES
-   Rectangular/box UI is square and border-free. Circular identity
-   controls (avatars, status dots, social icons, filter dots) retain
-   their circular geometry.
+   ROUNDED SHAPE SYSTEM — fixed + concentric + squircle enhancement
+   Fixed shapes keep a stable radius. Nested surfaces reduce the radius
+   by their inset so their corner centers remain concentric with the parent.
+   Browsers that expose CSS corner-shape use a squircle/continuous-like
+   curvature; the rounded-rectangle radius remains the compatibility path.
    ============================================================ */
 .project-card,
-.glass-info,
+.seamless-grid,
 .nav-dropdown-menu,
 .contact-primary,
 .contact-secondary,
@@ -2985,49 +2986,88 @@ select,
 .lightbox-artwork,
 #lightboxMediaContainer .lightbox-artwork > iframe,
 #lightboxMediaContainer .lightbox-artwork > video{
-  border-radius:0!important;
+  border-radius:var(--lm-radius-fixed-sm);
 }
 
 .project-card,
-.review-card,
+.seamless-grid,
 .contact-primary,
+.review-card,
+.form-container,
 .skill-logo-frame,
 .model-viewer-shell,
 .model-viewer-activate-content,
 .model-viewer-back,
 #lightboxMediaContainer .lightbox-artwork{
-  border:0!important;
+  border-radius:var(--lm-card-radius);
 }
 
-.btn-show-more{
-  border:0!important;
+.project-card .glass-info{
+  /* The glass panel sits 8px inside the card, so its radius follows the
+     parent radius minus the visual inset instead of becoming a second
+     unrelated rounded rectangle. */
+  left:8px;
+  bottom:8px;
+  width:calc(100% - 16px);
+  border-radius:max(0px, calc(var(--lm-card-radius) - 8px));
 }
 
-.nav-dropdown-menu{
-  border:0!important;
+.btn-show-more{border-radius:var(--lm-radius-fixed-sm);}
+.nav-dropdown-menu{border-radius:var(--lm-radius-fixed-md);}
+input,textarea,select{border-radius:var(--lm-radius-fixed-sm);}
+
+/* Preserve deliberate circular controls. */
+.status-dot,
+.social-icons a,
+.about-social-icons a,
+.photo-frame,
+.profile-pic-large,
+.filter-page-dot{
+  border-radius:50%;
 }
 
-input,
-textarea,
-select{
-  border:0!important;
+@supports (corner-shape: squircle){
+  .project-card,
+  .seamless-grid,
+  .nav-dropdown-menu,
+  .contact-primary,
+  .contact-secondary,
+  .review-card,
+  .form-container,
+  input,
+  textarea,
+  select,
+  .submit-btn,
+  .email-me-btn,
+  .status-btn,
+  .btn-show-more,
+  .skill-list.minimal-list li,
+  .skill-logo-frame,
+  .model-viewer-shell,
+  .model-viewer-activate-content,
+  .model-viewer-back,
+  .lightbox-artwork,
+  #lightboxMediaContainer .lightbox-artwork > iframe,
+  #lightboxMediaContainer .lightbox-artwork > video{
+    corner-shape:squircle;
+  }
+
+  .project-card .glass-info{
+    corner-shape:squircle;
+  }
 }
 
-.project-card:focus,
-.project-card:focus-visible,
-.tab-btn:focus,
-.tab-btn:focus-visible,
-button:focus,
+/* Rectangular focus cues use a glow rather than reintroducing a hard outline.
+   This preserves keyboard visibility without violating the surface language. */
+.project-card:focus-visible .glass-info,
 button:focus-visible,
-input:focus,
 input:focus-visible,
-textarea:focus,
 textarea:focus-visible,
-select:focus,
-select:focus-visible{
-  border-radius:0!important;
+select:focus-visible,
+a:focus-visible{
+  box-shadow:0 0 0 2px rgba(255,255,255,.78);
 }
 
 /* ============================================================
-   END PUBLIC FLAT GEOMETRY SYSTEM
-   ============================================================ */
+   END ROUNDED SHAPE SYSTEM
+   ============================================================ */\n
