@@ -3350,3 +3350,118 @@ footer .footer-animation{
 /* ============================================================
    END ROUNDED SHAPE SYSTEM
    ============================================================ */\n
+
+/* ============================================================
+   FINAL UI PASS — footer, contact forms, mobile gallery, software logos
+   ============================================================ */
+
+/* Software-logo artwork uses the former container footprint but no longer
+   paints a plate around it. This preserves the hit-area geometry while
+   giving the actual mark the full available space. */
+.skill-logo-frame{
+  width:64px;
+  height:64px;
+  flex:0 0 64px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  overflow:hidden;
+}
+.skill-logo-frame::after{display:none;}
+.skill-list.minimal-list li .skill-logo{
+  width:100%;
+  max-width:100%;
+  height:100%;
+  max-height:100%;
+  object-fit:contain;
+}
+
+/* Footer visual stack:
+   layer 0 = artwork/media, layer 1 = black readability fade,
+   layer 2 = the white social/copyright group. */
+footer{
+  min-height:clamp(420px,48vh,680px);
+  color:#fff;
+}
+.footer-animation::after{
+  background:transparent;
+}
+footer > .footer-fade{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0) 43%,
+      rgba(0,0,0,.08) 55%,
+      rgba(0,0,0,.32) 70%,
+      rgba(0,0,0,.66) 86%,
+      rgba(0,0,0,.92) 100%
+    );
+}
+footer > .footer-content{
+  z-index:2;
+  color:#fff !important;
+  min-height:inherit;
+  padding:clamp(64px,9vw,110px) clamp(20px,4vw,48px) max(34px,env(safe-area-inset-bottom,0px));
+}
+footer > .footer-content .social-icons{gap:18px;}
+footer > .footer-content .social-icons a,
+footer > .footer-content p{
+  color:#fff !important;
+}
+
+/* Contact hierarchy: strong white/Black primary CTA, quieter review heading,
+   with the review action explicitly outlined like the legacy surface. */
+.start-project-title{
+  font-size:clamp(1.6rem,2.15vw,2.15rem);
+  font-weight:900;
+  color:#fff;
+  text-transform:none;
+  letter-spacing:.01em;
+}
+.contact-secondary .section-title{
+  color:#888;
+  font-weight:600;
+}
+.submit-btn-secondary{
+  background:transparent;
+  color:#fff;
+  border:1px solid rgba(255,255,255,.78);
+}
+.submit-btn-secondary:hover{
+  background:rgba(255,255,255,.07);
+  color:#fff;
+}
+
+/* Keep desktop form fields close to the legacy/deployed horizontal
+   proportions instead of letting the wider primary track stretch them
+   indefinitely. */
+@media (min-width:820px){
+  .contact-primary .form-container{
+    width:min(100%,600px);
+    max-width:600px;
+  }
+  .contact-secondary .form-container{
+    width:min(100%,520px);
+    max-width:520px;
+  }
+}
+
+/* On touch devices the project artwork is the whole card surface; title and
+   subtitle metadata are intentionally omitted to reduce visual clutter. */
+@media (max-width:767px){
+  .project-card .glass-info{
+    display:none !important;
+  }
+  footer{
+    min-height:clamp(360px,52vh,620px);
+  }
+  footer > .footer-content{
+    padding:52px 16px max(28px,env(safe-area-inset-bottom,0px));
+  }
+}
