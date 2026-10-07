@@ -2623,7 +2623,9 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     badgeDefs=Array.isArray(raw)?[]:(Array.isArray(raw.badges)?raw.badges:[]);
   }catch(e){}
   if(!isCurrent()) return;
-  let openUid = items.length ? items[0]._uid : null;
+  // Projects opens as a list by default. A project only enters its
+  // expanded editing state after the visitor explicitly opens that row.
+  let openUid = null;
 
   function paint(){
     content.innerHTML = sectionHead('Projects', 'Order here is the order on the page. Drag the handle to reorder, or click a project to expand and edit it.') + `
