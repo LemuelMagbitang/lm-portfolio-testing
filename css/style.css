@@ -3728,11 +3728,12 @@ footer > .footer-content p{
    underneath the 3D layer, so this preserves geometry/material without
    obstructing the model. */
 .lightbox-controls.is-3d-controls-disabled .lightbox-close{
-  background:rgba(255,255,255,.08);
-  border:0;
-  border-radius:50%;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-  box-shadow:0 8px 24px rgba(0,0,0,.16);
+  background:rgba(255,255,255,.08) !important;
+  background-color:rgba(255,255,255,.08) !important;
+  border:0 !important;
+  border-radius:50% !important;
+  backdrop-filter:blur(10px) !important;
+  -webkit-backdrop-filter:blur(10px) !important;
+  box-shadow:0 8px 24px rgba(0,0,0,.16) !important;
   color:#fff !important;
 }
