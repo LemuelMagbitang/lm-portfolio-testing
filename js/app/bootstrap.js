@@ -123,7 +123,7 @@ export async function bootstrapPortfolioApp({
             0,
             Math.min(
               maxScrollY,
-              documentTargetY - Math.max(navbarHeight + 12, 24)
+              documentTargetY - Math.max(navbarHeight + 24, 24)
             )
           )
         : Math.min(
