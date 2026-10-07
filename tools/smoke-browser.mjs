@@ -2456,12 +2456,24 @@ try {
         const selectors = ['.status-dot', '.social-icons a'];
         return selectors.map(selector => {
           const el = document.querySelector(selector);
-          return el ? getComputedStyle(el).borderRadius : '';
+          if (!el) return { selector, missing: true };
+          const style = getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+          const radius = parseFloat(style.borderRadius) || 0;
+          const diameter = Math.min(rect.width, rect.height);
+          return {
+            selector,
+            radius,
+            diameter,
+            width: rect.width,
+            height: rect.height,
+            circular: Math.abs(rect.width - rect.height) <= 1 && radius >= (diameter / 2) - 1
+          };
         });
       });
-      circleChecks.forEach((radius, index) => {
-        if (radius !== '50%') {
-          throw new Error('Circular control lost its circular geometry.');
+      circleChecks.forEach(check => {
+        if (check.missing || !check.circular) {
+          throw new Error('Circular control lost its circular geometry: ' + JSON.stringify(check));
         }
       });
     }, { width: 1280, height: 900 });
