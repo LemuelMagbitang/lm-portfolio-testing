@@ -579,7 +579,7 @@ try {
         artwork.style.zIndex = '200';
 
         // Put the control over the middle of the fixture so the 50/50 split
-        // exercises the "hold" branch instead of the old instant median flip.
+        // exercises the deterministic tie fallback while color changes remain immediate.
         next.style.left = 'calc(50vw - 25px)';
         next.style.right = 'auto';
 
@@ -589,9 +589,9 @@ try {
         fixtureImage.style.cssText = 'display:block;width:100%;height:100%;object-fit:fill;';
         artwork.replaceChildren(fixtureImage);
 
-        // The runtime requires near-full coverage plus a short consecutive
-        // observation streak before switching the binary icon color.
-        const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 900));
+        // The runtime samples continuously, so a freshly decoded fixture should
+        // update the icon within the next rendering frames.
+        const waitForContrast = () => new Promise(resolve => setTimeout(resolve, 120));
         const setFixture = async (svg) => {
           fixtureImage.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
           await fixtureImage.decode().catch(() => {});
@@ -624,7 +624,7 @@ try {
           binaryContrastFixture.dark !== 'rgb(255, 255, 255)' ||
           binaryContrastFixture.split !== 'rgb(255, 255, 255)' ||
           binaryContrastFixture.light !== 'rgb(0, 0, 0)') {
-        throw new Error('Lightbox contrast did not hold through a 50/50 boundary and then switch after entering the opposite region: ' + JSON.stringify(binaryContrastFixture));
+        throw new Error('Lightbox contrast did not adapt immediately while preserving the 50/50 tie fallback: ' + JSON.stringify(binaryContrastFixture));
       }
 
       const projectDescriptionTypography = await page.locator('#modalFullDesc').evaluate(el => {
@@ -1146,6 +1146,21 @@ try {
       mobileCardGeometry.forEach(ratio => {
         if (!ratio || Math.abs(ratio - 1) > 0.035) {
           throw new Error(`Mobile project card is no longer square after responsive resize: ratio=${ratio.toFixed(3)}.`);
+        }
+      });
+
+      const mobileGalleryMeta = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+        cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .map(card => {
+            const info = card.querySelector('.glass-info');
+            const style = info ? getComputedStyle(info) : null;
+            return { exists: !!info, display: style?.display || '' };
+          })
+      );
+      mobileGalleryMeta.forEach(item => {
+        if (item.exists && item.display !== 'none') {
+          throw new Error('Mobile project gallery still renders title/subtitle metadata: '+JSON.stringify(item));
         }
       });
 
@@ -2631,6 +2646,8 @@ try {
         const footerStyle = getComputedStyle(footer);
         const mediaStyle = getComputedStyle(media);
         const contentStyle = getComputedStyle(content);
+        const fade = document.querySelector('.footer-fade');
+        const fadeStyle = fade ? getComputedStyle(fade) : null;
         return {
           footerHeight: footer.getBoundingClientRect().height,
           mediaHeight: media.getBoundingClientRect().height,
@@ -2638,18 +2655,32 @@ try {
           mediaPosition: mediaStyle.position,
           contentPosition: contentStyle.position,
           contentZ: contentStyle.zIndex,
-          foreground: footerStyle.getPropertyValue('--footer-foreground').trim()
+          foreground: footerStyle.getPropertyValue('--footer-foreground').trim(),
+          fadeExists: !!fade,
+          fadePosition: fadeStyle?.position || '',
+          fadeZ: fadeStyle?.zIndex || '',
+          footerColor: footerStyle.color,
+          socialColors: Array.from(document.querySelectorAll('footer .social-icons a')).map(a => getComputedStyle(a).color)
         };
       });
       if (!footerLayout) throw new Error('Public footer layout surface is missing.');
       if (footerLayout.mediaRadius!=='0px' || footerLayout.mediaPosition!=='absolute') {
         throw new Error('Footer media is not a square, full-stage background layer: '+JSON.stringify(footerLayout));
       }
-      if (footerLayout.contentPosition!=='relative' || footerLayout.contentZ!=='6') {
-        throw new Error('Footer content is not layered above the artwork: '+JSON.stringify(footerLayout));
+      if (!footerLayout.fadeExists || footerLayout.fadePosition!=='absolute' || footerLayout.fadeZ!=='1') {
+        throw new Error('Footer readability fade is not the dedicated middle layer: '+JSON.stringify(footerLayout));
       }
-      if (footerLayout.mediaHeight < footerLayout.footerHeight - 1) {
-        throw new Error('Footer artwork does not fill the footer stage: '+JSON.stringify(footerLayout));
+      if (footerLayout.contentPosition!=='relative' || footerLayout.contentZ!=='6') {
+        throw new Error('Footer content is not layered above the artwork/fade: '+JSON.stringify(footerLayout));
+      }
+      if (footerLayout.mediaHeight < footerLayout.footerHeight - 1 || footerLayout.footerHeight < 420) {
+        throw new Error('Footer stage is not large enough or artwork does not fill it: '+JSON.stringify(footerLayout));
+      }
+      if (footerLayout.footerColor !== 'rgb(255, 255, 255)') {
+        throw new Error('Footer content foreground is not locked to white: '+JSON.stringify(footerLayout));
+      }
+      if (footerLayout.socialColors.some(color => color !== 'rgb(255, 255, 255)')) {
+        throw new Error('Footer social icons are not white: '+JSON.stringify(footerLayout));
       }
       if (!['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
         throw new Error('Footer foreground contrast token is not resolved: '+JSON.stringify(footerLayout));
@@ -2719,6 +2750,34 @@ try {
         if (!src?.includes('/assets/projects/site/logos/adobe-after-effects-cc.png')) {
           throw new Error('About page After Effects logo left its bundled Adobe asset path.');
         }
+      }
+
+      const aboutFooter = await page.evaluate(() => {
+        const footer = document.querySelector('footer');
+        const media = document.querySelector('#footerAnimation');
+        const fade = document.querySelector('.footer-fade');
+        const content = document.querySelector('.footer-content');
+        return {
+          exists: !!footer && !!media && !!fade && !!content,
+          mediaHidden: !!media?.hidden,
+          slides: media?.querySelectorAll('.footer-animation-slide').length || 0,
+          footerHeight: footer?.getBoundingClientRect().height || 0,
+          fadePosition: fade ? getComputedStyle(fade).position : '',
+          fadeZ: fade ? getComputedStyle(fade).zIndex : '',
+          contentZ: content ? getComputedStyle(content).zIndex : '',
+          contentColor: content ? getComputedStyle(content).color : '',
+          socialColors: Array.from(document.querySelectorAll('footer .social-icons a')).map(a => getComputedStyle(a).color)
+        };
+      });
+      if (!aboutFooter.exists || aboutFooter.mediaHidden || aboutFooter.slides < 1) {
+        throw new Error('About page footer artwork is missing or hidden: '+JSON.stringify(aboutFooter));
+      }
+      if (aboutFooter.footerHeight < 420 || aboutFooter.fadePosition !== 'absolute' || aboutFooter.fadeZ !== '1' || aboutFooter.contentZ !== '6') {
+        throw new Error('About page footer layer geometry is incorrect: '+JSON.stringify(aboutFooter));
+      }
+      if (aboutFooter.contentColor !== 'rgb(255, 255, 255)' ||
+          aboutFooter.socialColors.some(color => color !== 'rgb(255, 255, 255)')) {
+        throw new Error('About page footer content is not white: '+JSON.stringify(aboutFooter));
       }
 
       const expectedBundledAdobe = [
