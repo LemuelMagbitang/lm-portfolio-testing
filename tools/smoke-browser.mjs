@@ -1827,6 +1827,35 @@ try {
         if (reuseToken !== 'youtube-cache-reuse') {
           throw new Error('Closing and reopening the Lightbox did not reuse the successfully loaded YouTube iframe cache entry.');
         }
+
+        // Regression: a cached YouTube frame must not retain playback state
+        // across a Lightbox close/reopen cycle. Clear the prior teardown marker,
+        // simulate stale cached playback, reopen the project, and require the
+        // runtime to issue a fresh pause command before handing the frame back.
+        await page.locator('#lightboxClose').click();
+        await page.locator('#lightbox.active').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+        const cachedPlaybackReset = await page.locator(
+          '.lightbox-youtube-preload-root iframe[data-lm-youtube]'
+        ).first().evaluate(el => {
+          delete el.dataset.lmYoutubePauseRequested;
+          el.dataset.smokeCachedPlayback = 'true';
+          return {
+            connected: el.isConnected,
+            tabIndex: el.tabIndex
+          };
+        });
+        if (!cachedPlaybackReset.connected || cachedPlaybackReset.tabIndex !== -1) {
+          throw new Error('Cached YouTube frame did not return to its hidden non-focusable preload state.');
+        }
+
+        await playbackCard.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+        const cachedPauseOnReopen = await page.locator(
+          '#lightboxMediaContainer iframe[data-lm-youtube][data-smokeCachedPlayback="true"]'
+        ).first().getAttribute('data-lm-youtube-pause-requested');
+        if (!cachedPauseOnReopen) {
+          throw new Error('Reopening the Lightbox did not pause the previously cached YouTube player before reuse.');
+        }
       }
 
       if (await videos.count()) {
