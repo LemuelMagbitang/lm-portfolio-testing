@@ -329,8 +329,8 @@ let openRenderToken = 0;
 
   const sampleArtworkForControl = (rect) => {
     const samples = [];
-    const columns = 3;
-    const rows = 3;
+    const columns = 5;
+    const rows = 5;
     for (let row = 0; row < rows; row += 1) {
       const y = rect.top + rect.height * ((row + 0.5) / rows);
       for (let column = 0; column < columns; column += 1) {
@@ -345,7 +345,7 @@ let openRenderToken = 0;
         const dx = column - 1;
         const dy = row - 1;
         const distance = Math.hypot(dx, dy);
-        const weight = Math.max(0.72, 1.4 - (distance * 0.24));
+        const weight = Math.max(0.48, 1.6 - (distance * 0.22));
         samples.push({ value, weight });
       }
     }
@@ -391,8 +391,25 @@ let openRenderToken = 0;
 
   const applyBinaryContrastToButton = (button) => {
     if (!button) return;
-    const rect = button.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
+    const buttonRect = button.getBoundingClientRect();
+    if (buttonRect.width <= 0 || buttonRect.height <= 0) return;
+
+    // Sample the pixels immediately behind the glyph rather than the entire
+    // hit target. This makes each icon react to the artwork it actually sits
+    // over, especially when only one side of a touch target crosses a
+    // light/dark boundary.
+    const glyph = button.querySelector('i');
+    const glyphRect = glyph?.getBoundingClientRect?.();
+    const sourceRect = glyphRect?.width > 0 && glyphRect?.height > 0
+      ? glyphRect
+      : buttonRect;
+    const samplePadding = glyphRect?.width > 0 ? 6 : 2;
+    const rect = {
+      left: sourceRect.left - samplePadding,
+      top: sourceRect.top - samplePadding,
+      width: sourceRect.width + samplePadding * 2,
+      height: sourceRect.height + samplePadding * 2
+    };
 
     const sample = sampleArtworkForControl(rect);
     const previousColor = button.dataset.contrastColor || '';
@@ -406,13 +423,28 @@ let openRenderToken = 0;
       // already-readable icon color until the artwork becomes unambiguous.
       const contrastFloorMin = 2.25;
       const dominanceMargin = 1.16;
-      const mixedBoundary = sample.spread >= 0.30 &&
-        sample.lightCoverage >= 0.30 &&
-        sample.darkCoverage >= 0.30;
+      const mixedBoundary = sample.spread >= 0.26 &&
+        sample.lightCoverage >= 0.26 &&
+        sample.darkCoverage >= 0.26;
+      const blackAdvantage = sample.blackContrastFloor / Math.max(sample.whiteContrastFloor, 0.01);
+      const whiteAdvantage = sample.whiteContrastFloor / Math.max(sample.blackContrastFloor, 0.01);
 
       if (mixedBoundary && previousColor) {
-        color = previousColor;
-        decision = 'binary-mixed-hold';
+        // Hysteresis: hold the current readable color until the opposing
+        // color has a clear local advantage, then switch even across a
+        // mixed boundary instead of getting stuck on one side.
+        const currentIsBlack = previousColor === '#000';
+        const opposingAdvantage = currentIsBlack ? whiteAdvantage : blackAdvantage;
+        if (opposingAdvantage < 1.45) {
+          color = previousColor;
+          decision = 'binary-mixed-hold';
+        } else if (currentIsBlack) {
+          color = '#fff';
+          decision = 'binary-boundary-switch-light';
+        } else {
+          color = '#000';
+          decision = 'binary-boundary-switch-dark';
+        }
       } else if (
         sample.blackContrastFloor >= contrastFloorMin &&
         sample.blackContrastFloor >= sample.whiteContrastFloor * dominanceMargin
