@@ -117,19 +117,38 @@ export async function bootstrapPortfolioApp({
       const navbarHeight = Number(
         root.querySelector('.navbar')?.getBoundingClientRect?.().height
       ) || 0;
-      const offset = Math.max(navbarHeight + 12, 24);
-      const targetY = isContactTarget
-        ? Math.max(
-            0,
-            Math.min(
-              maxScrollY,
-              documentTargetY - Math.max(navbarHeight + 24, 24)
-            )
-          )
-        : Math.min(
-            maxScrollY,
-            Math.max(0, documentTargetY - offset)
-          );
+      const safeTop = Math.max(navbarHeight + 24, 24);
+
+      let desiredTargetY;
+      if (isContactTarget) {
+        // Contact now uses a single active mobile panel, so its total height
+        // depends on the selected tab and is no longer equivalent to simply
+        // positioning the heading. Center the actual Contact group in the
+        // usable viewport, then clamp so the heading remains clear of the
+        // fixed navbar.
+        const contactGroup = root.querySelector('#contact-section .contact-grid');
+        const groupRect = contactGroup?.getBoundingClientRect?.();
+        if (groupRect?.height > 0) {
+          const usableTop = safeTop;
+          const usableHeight = Math.max(1, viewportHeight - usableTop);
+          const groupCenterDocumentY = currentY + groupRect.top + groupRect.height / 2;
+          desiredTargetY = groupCenterDocumentY - (usableTop + usableHeight / 2);
+
+          const headingDocumentY = documentTargetY;
+          const minHeadingTopScrollY = headingDocumentY - safeTop;
+          desiredTargetY = Math.min(desiredTargetY, minHeadingTopScrollY);
+        } else {
+          desiredTargetY = documentTargetY - safeTop;
+        }
+      } else {
+        const offset = Math.max(navbarHeight + 12, 24);
+        desiredTargetY = documentTargetY - offset;
+      }
+
+      const targetY = Math.max(
+        0,
+        Math.min(maxScrollY, desiredTargetY)
+      );
 
       // Assigning scrollTop directly bypasses the document's global smooth-
       // scroll setting and makes initial hash settlement deterministic.
