@@ -146,41 +146,24 @@ let navigationTargetIndex = null;
 let swipeStart = null;
 let openRenderToken = 0;
 
-  // Lightbox navigation uses a binary contrast decision rather than relying
-  // on difference blending alone. Difference blending inverts the backdrop
-  // and therefore naturally produces mid-gray over mid-gray artwork. For
-  // same-origin images/video/WebGL canvas we can sample the actual pixel
-  // region behind each control, choose only black or white at a luminance
-  // threshold, and keep the glyph at full opacity. Cross-origin media such
-  // as YouTube cannot expose their pixels to the parent document, so those
-  // controls use a deterministic white fallback instead of producing gray.
+  // Artwork-aware lightbox controls use an immediate binary decision:
+  // sample the actual pixels underneath each control and choose only black
+  // or white. A continuous RAF loop keeps the icons synchronized with
+  // animated/video artwork instead of waiting for a timer or debounce streak.
   const LIGHTBOX_CONTRAST_THRESHOLD = 0.52;
   const LIGHTBOX_CONTRAST_LIGHT_THRESHOLD = 0.60;
   const LIGHTBOX_CONTRAST_DARK_THRESHOLD = 0.40;
-  // Do not flip as soon as the control touches the opposite tone. Require
-  // nearly the whole sampled hit region to be inside the new tone, then keep
-  // that condition stable for a few checks before committing the switch.
-  // This intentionally behaves more like a phone system-status surface than
-  // a pixel-perfect blend effect at a moving artwork boundary.
-  const LIGHTBOX_CONTRAST_SWITCH_COVERAGE = 0.92;
-  const LIGHTBOX_CONTRAST_SWITCH_STREAK = 3;
-  const contrastSwitchStreaks = new WeakMap();
   const contrastCanvas = documentRef.createElement?.('canvas');
   if (contrastCanvas) {
-    contrastCanvas.width = 9;
-    contrastCanvas.height = 9;
+    contrastCanvas.width = 7;
+    contrastCanvas.height = 7;
   }
   let contrastFrame = 0;
-  let contrastInterval = null;
 
   const clearBinaryContrast = () => {
     if (contrastFrame) {
       windowRef.cancelAnimationFrame?.(contrastFrame);
       contrastFrame = 0;
-    }
-    if (contrastInterval) {
-      windowRef.clearInterval?.(contrastInterval);
-      contrastInterval = null;
     }
     if (lightboxControls) {
       lightboxControls.style.removeProperty('mix-blend-mode');
@@ -197,7 +180,7 @@ let openRenderToken = 0;
   };
 
   const parseObjectPosition = (value, axis = 0.5) => {
-    const parts = String(value || '').trim().split(/\s+/);
+    const parts = String(value || '').trim().split(/\\s+/);
     const token = parts[axis] || '50%';
     const numeric = Number.parseFloat(token);
     if (!Number.isFinite(numeric)) return 0.5;
@@ -327,7 +310,7 @@ let openRenderToken = 0;
       if (Number.isFinite(luminance)) return luminance;
 
       const background = documentRef.defaultView?.getComputedStyle?.(artwork)?.backgroundColor || '';
-      const match = background.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?\s*\)/i);
+      const match = background.match(/rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:[,\\s]+([\\d.]+))?\\s*\\)/i);
       if (match) {
         const alpha = match[4] === undefined ? 1 : Number(match[4]);
         if (alpha > 0.03) {
@@ -343,8 +326,8 @@ let openRenderToken = 0;
 
   const sampleArtworkForControl = (rect) => {
     const samples = [];
-    const columns = 7;
-    const rows = 7;
+    const columns = 3;
+    const rows = 3;
     for (let row = 0; row < rows; row += 1) {
       const y = rect.top + rect.height * ((row + 0.5) / rows);
       for (let column = 0; column < columns; column += 1) {
@@ -371,57 +354,24 @@ let openRenderToken = 0;
     };
   };
 
-
   const applyBinaryContrastToButton = (button) => {
     if (!button) return;
     const rect = button.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
     const sample = sampleArtworkForControl(rect);
-    const currentColor = button.dataset.contrastColor || '';
-    let color = currentColor || '#fff';
-    let decision = Number.isFinite(sample?.luminance) ? 'binary-hysteresis-hold' : 'binary-fallback';
-    let streak = contrastSwitchStreaks.get(button) || { candidate: '', count: 0 };
+    let color = '#fff';
+    let decision = 'binary-fallback';
 
-    if (sample?.knownCount >= 12) {
-      if (!currentColor) {
-        // Initial paint may use the local median immediately; only subsequent
-        // opposite-color changes are debounced.
-        color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
-        decision = 'binary-initial';
-        streak = { candidate: '', count: 0 };
-      } else {
-        let candidate = '';
-        if (currentColor === '#fff' && sample.lightCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
-          candidate = '#000';
-        } else if (currentColor === '#000' && sample.darkCoverage >= LIGHTBOX_CONTRAST_SWITCH_COVERAGE) {
-          candidate = '#fff';
-        }
-
-        if (candidate) {
-          if (streak.candidate === candidate) streak.count += 1;
-          else streak = { candidate, count: 1 };
-
-          if (streak.count >= LIGHTBOX_CONTRAST_SWITCH_STREAK) {
-            color = candidate;
-            decision = candidate === '#000' ? 'binary-switch-dark' : 'binary-switch-light';
-            streak = { candidate: '', count: 0 };
-          }
-        } else {
-          streak = { candidate: '', count: 0 };
-        }
-      }
-    } else {
-      streak = { candidate: '', count: 0 };
+    if (sample?.knownCount >= 4 && Number.isFinite(sample.luminance)) {
+      color = sample.luminance >= LIGHTBOX_CONTRAST_THRESHOLD ? '#000' : '#fff';
+      decision = 'binary-instant';
     }
 
-    contrastSwitchStreaks.set(button, streak);
     button.style.mixBlendMode = 'normal';
     button.style.color = color;
     button.dataset.contrastColor = color;
-    button.dataset.contrastMode = Number.isFinite(sample?.luminance)
-      ? decision
-      : 'binary-fallback';
+    button.dataset.contrastMode = decision;
     if (Number.isFinite(sample?.luminance)) {
       button.dataset.contrastLuminance = sample.luminance.toFixed(3);
       button.dataset.contrastCoverage = Math.max(sample.lightCoverage, sample.darkCoverage).toFixed(2);
@@ -432,7 +382,7 @@ let openRenderToken = 0;
   };
 
   const scheduleNavigationContrast = () => {
-    if (contrastFrame) return;
+    if (contrastFrame || !lightbox?.classList.contains('active')) return;
     contrastFrame = windowRef.requestAnimationFrame?.(() => {
       contrastFrame = 0;
       if (!lightbox?.classList.contains('active')) {
@@ -444,6 +394,7 @@ let openRenderToken = 0;
         lightboxControls.dataset.contrastMode = 'binary';
       }
       [lightboxClose, lightboxPrev, lightboxNext].filter(Boolean).forEach(applyBinaryContrastToButton);
+      scheduleNavigationContrast();
     }) || 0;
   };
 
