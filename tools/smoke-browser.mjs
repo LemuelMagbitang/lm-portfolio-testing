@@ -2520,6 +2520,47 @@ try {
           throw new Error('Mobile Contact control does not fit its viewport: ' + JSON.stringify(item));
         }
       });
+
+      const mobileContactTabs = await page.evaluate(() => {
+        const tabs = Array.from(document.querySelectorAll('.contact-mobile-tab'));
+        const panels = Array.from(document.querySelectorAll('[data-contact-panel]'));
+        const activeTabs = tabs.filter(tab => tab.getAttribute('aria-selected') === 'true').length;
+        const visiblePanels = panels.filter(panel => getComputedStyle(panel).display !== 'none').length;
+        const tabRow = document.querySelector('.contact-mobile-tabs');
+        const tabStyle = tabRow ? getComputedStyle(tabRow) : null;
+        return {
+          tabCount: tabs.length,
+          activeTabs,
+          visiblePanels,
+          display: tabStyle?.display || '',
+          panelIds: panels.map(panel => ({ id: panel.id, display: getComputedStyle(panel).display }))
+        };
+      });
+      if (mobileContactTabs.tabCount !== 2 || mobileContactTabs.activeTabs !== 1 ||
+          mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'flex') {
+        throw new Error('Mobile Contact did not collapse into a single active tab panel: '+JSON.stringify(mobileContactTabs));
+      }
+
+      await page.locator('#contactTabReview').click();
+      await page.waitForTimeout(40);
+      const reviewTabState = await page.evaluate(() => ({
+        projectTab: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+        reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
+        projectDisplay: getComputedStyle(document.querySelector('#contactProjectPanel')).display,
+        reviewDisplay: getComputedStyle(document.querySelector('#contactReviewPanel')).display
+      }));
+      if (reviewTabState.projectTab !== 'false' || reviewTabState.reviewTab !== 'true' ||
+          reviewTabState.projectDisplay !== 'none' || reviewTabState.reviewDisplay === 'none') {
+        throw new Error('Mobile Contact tab switching did not activate the review panel: '+JSON.stringify(reviewTabState));
+      }
+
+      const mobileGalleryMetadata = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('#portfolioGrid .project-card')).slice(0, 4);
+        return cards.map(card => getComputedStyle(card.querySelector('.glass-info')).display);
+      });
+      if (mobileGalleryMetadata.some(display => display !== 'none')) {
+        throw new Error('Mobile project title/subtitle metadata was re-enabled by a later CSS cascade: '+JSON.stringify(mobileGalleryMetadata));
+      }
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
@@ -2682,6 +2723,37 @@ try {
       if (footerLayout.socialColors.some(color => color !== 'rgb(255, 255, 255)')) {
         throw new Error('Footer social icons are not white: '+JSON.stringify(footerLayout));
       }
+
+      const footerSocialGeometry = await page.evaluate(() => {
+        const row = document.querySelector('footer .social-icons');
+        const links = Array.from(row?.querySelectorAll(':scope > a') || []);
+        const rowStyle = row ? getComputedStyle(row) : null;
+        const first = links[0]?.getBoundingClientRect();
+        const overflowY = Number(row?.scrollHeight || 0) > Number(row?.clientHeight || 0) + 1;
+        return {
+          linkCount: links.length,
+          width: first?.width || 0,
+          height: first?.height || 0,
+          flexWrap: rowStyle?.flexWrap || '',
+          overflowX: rowStyle?.overflowX || '',
+          overflowY
+        };
+      });
+      if (footerSocialGeometry.width < 47 || footerSocialGeometry.height < 47) {
+        throw new Error('Footer social icons are not using the new 48px shared footprint: '+JSON.stringify(footerSocialGeometry));
+      }
+      if (footerSocialGeometry.flexWrap !== 'nowrap' || footerSocialGeometry.overflowX === 'visible' || footerSocialGeometry.overflowY) {
+        throw new Error('Footer social row can wrap vertically or has incorrect overflow behavior: '+JSON.stringify(footerSocialGeometry));
+      }
+
+      const showMoreGeometry = await page.evaluate(() => {
+        const button = document.querySelector('#showMoreBtn');
+        const style = button ? getComputedStyle(button) : null;
+        return { borderRadius: style?.borderRadius || '', width: button?.getBoundingClientRect?.().width || 0 };
+      });
+      if (parseFloat(showMoreGeometry.borderRadius || '0') < 100) {
+        throw new Error('Show More / Show Less control is not pill-shaped: '+JSON.stringify(showMoreGeometry));
+      }
       if (!['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
         throw new Error('Footer foreground contrast token is not resolved: '+JSON.stringify(footerLayout));
       }
@@ -2711,6 +2783,24 @@ try {
       }
 
       if (await hero.count() !== 1) throw new Error('About page hero container is missing.');
+
+      const aboutSocialGeometry = await page.evaluate(() => {
+        const row = document.querySelector('.about-social-icons');
+        const links = Array.from(row?.querySelectorAll(':scope > a') || []);
+        const style = row ? getComputedStyle(row) : null;
+        const first = links[0]?.getBoundingClientRect();
+        return {
+          width: first?.width || 0,
+          height: first?.height || 0,
+          flexWrap: style?.flexWrap || '',
+          overflowX: style?.overflowX || '',
+          overflowY: Number(row?.scrollHeight || 0) > Number(row?.clientHeight || 0) + 1
+        };
+      });
+      if (aboutSocialGeometry.width < 47 || aboutSocialGeometry.height < 47 ||
+          aboutSocialGeometry.flexWrap !== 'nowrap' || aboutSocialGeometry.overflowY) {
+        throw new Error('About social icon row is not using the shared 48px no-wrap contract: '+JSON.stringify(aboutSocialGeometry));
+      }
 
       const experience = await page.locator('#experienceList .timeline-item').count();
       const education = await page.locator('#educationList .timeline-item').count();
