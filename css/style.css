@@ -2305,6 +2305,63 @@ body.center-page {
   }
 }
 
+/* Footer animation — a quiet breathing visual that inherits Hero settings
+   by default, while the CMS can switch it to one selected media source. */
+.footer-animation{
+  position:relative;
+  width:min(calc(100% - 48px),1200px);
+  height:clamp(120px,18vw,240px);
+  margin:0 auto 30px;
+  overflow:hidden;
+  border-radius:var(--lm-radius-fixed-xl);
+  background:#0d0d0d;
+  isolation:isolate;
+}
+.footer-animation::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+  background:linear-gradient(to bottom,rgba(0,0,0,.06),rgba(0,0,0,.14));
+}
+.footer-animation-slide{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--lm-motion-slow) ease-in-out;
+}
+.footer-animation-slide.active{opacity:1;}
+.footer-animation-slide img,
+.footer-animation-slide video,
+.footer-animation-slide lottie-player{
+  width:100%!important;
+  height:100%!important;
+  display:block;
+  object-fit:cover;
+  object-position:center;
+  transform:scale(var(--footer-zoom,1)) rotate(var(--footer-rotate,0deg));
+  transform-origin:center;
+}
+.footer-animation.transition-kenburns .footer-animation-slide.active img,
+.footer-animation.transition-kenburns .footer-animation-slide.active video,
+.footer-animation.transition-kenburns .footer-animation-slide.active lottie-player{
+  animation:hero-kenburns 14s ease-in-out infinite;
+}
+.footer-animation.transition-none .footer-animation-slide{
+  transition:none;
+}
+@media (prefers-reduced-motion:reduce){
+  .footer-animation-slide{transition:none;}
+  .footer-animation.transition-kenburns .footer-animation-slide.active img,
+  .footer-animation.transition-kenburns .footer-animation-slide.active video,
+  .footer-animation.transition-kenburns .footer-animation-slide.active lottie-player{animation:none;}
+}
+@media (max-width:767px){
+  .footer-animation{width:calc(100% - 32px);height:clamp(100px,28vw,170px);margin-bottom:24px;}
+}
+
 /* Footer copyright: .footer-content already centers each child as a
    whole box (align-items: center), but that only centers the <p>'s
    own box in the row — it says nothing about the text inside it. At
