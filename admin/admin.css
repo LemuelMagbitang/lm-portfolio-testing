@@ -753,3 +753,36 @@ button.icon-btn,
 /* ============================================================
    END ADMIN ROUNDED SHAPE SYSTEM
    ============================================================ */
+
+/* Responsive closed Project shell — the collapsed row owns its compact
+   friend-list presentation; the expanded editor deliberately returns to
+   the original CMS header geometry. */
+@media (max-width:720px){
+  .project-list-item.is-collapsed .project-card-head{
+    min-height:76px;
+    padding:8px 8px 8px 10px;
+    grid-template-columns:auto minmax(0,1fr) minmax(92px,120px) auto;
+    gap:8px;
+  }
+  .project-list-item.is-collapsed .project-collapsed-preview{height:60px;}
+}
+@media (max-width:520px){
+  .project-list-item.is-collapsed .project-card-head{
+    min-height:64px;
+    padding:6px 7px 6px 8px;
+    grid-template-columns:auto minmax(0,1fr) 72px auto;
+    gap:7px;
+  }
+  .project-list-item.is-collapsed .project-collapsed-preview{
+    width:72px;
+    height:52px;
+  }
+  .project-list-item.is-collapsed .project-card-actions .icon-btn{
+    width:28px;
+    height:28px;
+  }
+  .project-list-item.is-open .project-card-head{
+    min-height:0;
+    padding:0;
+  }
+}
