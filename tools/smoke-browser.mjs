@@ -1104,6 +1104,11 @@ try {
       const youtubeArtworks = page.locator('#lightboxMediaContainer .lightbox-artwork.is-youtube-artwork');
       if (await youtubeArtworks.count() !== 2) throw new Error('Multi-media YouTube fixture did not render two YouTube artwork surfaces.');
 
+      const youtubeLoadingModes = await youtubeArtworks.locator('iframe[data-lm-youtube]').evaluateAll(frames => frames.map(frame => frame.getAttribute('loading') || ''));
+      if (youtubeLoadingModes.some(mode => mode === 'lazy')) {
+        throw new Error(`Lightbox YouTube media still uses lazy loading after explicit viewer entry: ${JSON.stringify(youtubeLoadingModes)}`);
+      }
+
       const youtubeGeometry = await youtubeArtworks.evaluateAll(nodes => nodes.map(el => {
         const rect = el.getBoundingClientRect();
         return {
