@@ -21,17 +21,21 @@
 
   --lm-container-max: 1400px;
   --lm-page-gutter: 24px;
-  /* Shape system — rounded surfaces use fixed radii; nested surfaces use a
-     smaller concentric radius derived from the parent and its inset. */
-  --lm-card-radius: 18px;
-  --lm-radius-fixed-xs: 8px;
-  --lm-radius-fixed-sm: 12px;
-  --lm-radius-fixed-md: 16px;
-  --lm-radius-fixed-lg: 20px;
-  --lm-radius-fixed-xl: 24px;
-  --lm-radius-concentric-sm: 10px;
-  --lm-radius-concentric-md: 12px;
-  --lm-radius-concentric-lg: 14px;
+  /* Shape system — Apple-style fixed + concentric geometry.
+     Fixed shapes keep the same radius across sizes. Concentric shapes
+     derive the inner radius from the parent radius minus the inset, so
+     nested surfaces share the same corner centers. */
+  --lm-shape-card-radius: 24px;
+  --lm-shape-fixed-xs: 8px;
+  --lm-shape-fixed-sm: 12px;
+  --lm-shape-fixed-md: 16px;
+  --lm-shape-fixed-lg: 20px;
+  --lm-shape-fixed-xl: 24px;
+  --lm-shape-concentric-inset: 8px;
+  --lm-shape-concentric-card-inner: calc(var(--lm-shape-card-radius) - var(--lm-shape-concentric-inset));
+  --lm-shape-concentric-contact-inner: calc(var(--lm-shape-shared-lg, 24px) - var(--lm-shape-concentric-inset));
+  --lm-shape-shared-lg: 24px;
+  --lm-shape-shared-md: 20px;
 
   --lm-glass-fill: rgba(255, 255, 255, 0.05);
   --lm-glass-border: rgba(255, 255, 255, 0.10);
