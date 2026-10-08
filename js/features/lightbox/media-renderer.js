@@ -536,14 +536,6 @@ export function createLightboxMediaRenderer({
     };
   }
 
-  function clearHolographicMotionListener() {
-    if (holographicMotionCleanup) {
-      try { holographicMotionCleanup(); } catch (_) {}
-      holographicMotionCleanup = null;
-    }
-    holographicMotionOwner = null;
-  }
-
   const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;
   const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;
 
@@ -571,7 +563,6 @@ export function createLightboxMediaRenderer({
     const x = ((Number(event.clientX) - rect.left) / rect.width) * 100;
     const y = ((Number(event.clientY) - rect.top) / rect.height) * 100;
     updateHolographicTilt(surface, x, y);
-    holographicMotionOwner = surface;
   }
 
   function buildHolographicLayer(documentRef, url, className, altText = '') {
@@ -678,6 +669,7 @@ export function createLightboxMediaRenderer({
         if (!touchGesture.engaged) {
           if (Math.hypot(dx, dy) > HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX) {
             touchGesture.moved = true;
+            suppressNextClick = true;
             clearTouchGesture();
           }
           return;
