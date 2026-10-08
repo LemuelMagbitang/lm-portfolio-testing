@@ -27,7 +27,9 @@ export function ensureLottiePlayer() {
       if (loaded) return true;
     }
     return false;
-  })();
+  })().finally(() => {
+    if (!window.customElements?.get('lottie-player')) lottiePromise = null;
+  });
 
   return lottiePromise;
 }
