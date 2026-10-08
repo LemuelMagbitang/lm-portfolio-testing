@@ -25,21 +25,42 @@ export async function loadCmsJson(url, fallback = null, options = {}) {
 
   if (!url || typeof fetchImpl !== 'function') return fallback;
 
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const externalSignal = signal || null;
+  const controller = typeof AbortController !== 'undefined'
+    ? new AbortController()
+    : null;
   let timer = null;
+  let removeExternalAbort = null;
 
   try {
-    if (controller && typeof setTimeoutImpl === 'function') {
-      timer = setTimeoutImpl(
-        () => controller.abort(),
-        Math.max(1000, Number(timeoutMs) || DEFAULT_TIMEOUT_MS)
-      );
+    // Both caller cancellation and the loader timeout must terminate the same
+    // request signal. Passing an external signal directly while timing out a
+    // separate internal controller creates a silent timeout bypass.
+    let requestSignal = externalSignal;
+    if (controller) {
+      requestSignal = controller.signal;
+      if (externalSignal) {
+        const forwardAbort = () => controller.abort();
+        if (externalSignal.aborted) {
+          controller.abort();
+        } else if (typeof externalSignal.addEventListener === 'function') {
+          externalSignal.addEventListener('abort', forwardAbort, { once: true });
+          removeExternalAbort = () =>
+            externalSignal.removeEventListener?.('abort', forwardAbort);
+        }
+      }
+      if (typeof setTimeoutImpl === 'function') {
+        timer = setTimeoutImpl(
+          () => controller.abort(),
+          Math.max(1000, Number(timeoutMs) || DEFAULT_TIMEOUT_MS)
+        );
+      }
     }
 
     const response = await fetchImpl(
       resolveCmsUrl(url, resolveUrl || (value => value)),
       {
-        signal: signal || controller?.signal,
+        signal: requestSignal,
         credentials: 'omit',
         cache: 'no-cache'
       }
@@ -54,5 +75,6 @@ export async function loadCmsJson(url, fallback = null, options = {}) {
     if (timer !== null && typeof clearTimeoutImpl === 'function') {
       clearTimeoutImpl(timer);
     }
+    removeExternalAbort?.();
   }
 }
