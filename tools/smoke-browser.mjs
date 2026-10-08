@@ -250,9 +250,20 @@ async function assertFilterButtonHitTarget(page, label, index = 1) {
 
   await button.click();
   await page.waitForTimeout(120);
-  const active = await button.evaluate(el => el.classList.contains('active'));
-  if (!active) {
+  const buttonState = await button.evaluate(el => ({
+    active: el.classList.contains('active'),
+    ariaPressed: el.getAttribute('aria-pressed')
+  }));
+  if (!buttonState.active) {
     throw new Error(label + ' filter button received input but did not become active.');
+  }
+
+  const pressedCount = await page.locator('.filter-tabs .filter-btn[aria-pressed="true"], .filter-tabs .tab-btn[aria-pressed="true"]').count();
+  if (pressedCount !== 1 || buttonState.ariaPressed !== 'true') {
+    throw new Error(
+      label + ' filter accessibility state is inconsistent: ' +
+      JSON.stringify({ button: buttonState, pressedCount })
+    );
   }
 }
 
