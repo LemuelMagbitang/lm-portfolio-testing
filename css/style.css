@@ -3661,39 +3661,6 @@ footer > .footer-content p{
   }
 }
 
-/* Show More / Show Less is a true high-contrast pill.
-   The selected/hover animation remains black ↔ white, but the base surface
-   is deliberately flat rather than glass. */
-.btn-show-more{
-  border-radius:999px !important;
-  corner-shape:initial !important;
-  background:#000 !important;
-  background-color:#000 !important;
-  color:#fff !important;
-  border:0 !important;
-  box-shadow:none !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-}
-.btn-show-more:hover,
-.btn-show-more:active{
-  background:#fff !important;
-  background-color:#fff !important;
-  color:#000 !important;
-}
-.btn-show-more:focus{
-  background:#000 !important;
-  background-color:#000 !important;
-  color:#fff !important;
-  box-shadow:none !important;
-}
-.btn-show-more:focus-visible{
-  background:#000 !important;
-  background-color:#000 !important;
-  color:#fff !important;
-  box-shadow:0 0 0 2px rgba(255,255,255,.76) !important;
-}
-
 /* Stable white Lightbox chrome. Desktop placement remains unchanged; mobile
    moves only the chevrons to the reachable lower side edges. */
 .lightbox-nav{
