@@ -10,7 +10,9 @@ function createHarness(initialChildren = []) {
   const grid = {
     children: initialChildren.slice(),
     replaceChildren(...children) {
-      this.children = children;
+      this.children = children.flatMap(child =>
+        Array.isArray(child?.children) ? child.children : [child]
+      );
     }
   };
 
