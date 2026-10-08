@@ -132,7 +132,7 @@ assert.match(adminSource, /const deletedBadgeLabels\s*=\s*new Set\(\)/);
 assert.match(adminSource, /function getBadgeRenameMap\(\)/);
 assert.match(adminSource, /project\.badges=\[\.\.\.new Set\(nextBadges\)\]/);
 assert.match(adminSource, /project\.badge=project\.badges\[0\]\|\|''/);
-assert.match(adminSource, /extensions\)\s*:\s*object\|\|Array\.isArray\(project\.extensions\)/);
+assert.match(adminSource, /\.\.\.\(project\.extensions && typeof project\.extensions === 'object' && !Array\.isArray\(project\.extensions\)/);
 assert.match(adminSource, /const seenBadges=new Set\(\)/);
 assert.doesNotMatch(adminSource, /function badgeOptions\(current\)/);
 assert.match(adminSource, /className='curated-project-option'/);
