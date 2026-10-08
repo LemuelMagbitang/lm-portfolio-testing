@@ -3733,11 +3733,6 @@ footer > .footer-content p{
     outline:none !important;
   }
 }
-/* Off-screen mobile filter rails must not expose a stale hit surface. */
-.filter-tabs[data-filter-viewport="offscreen"]{
-  pointer-events:none !important;
-}
-
 /* Profile frame correction: the outer portrait mask is circular, but the
    image itself must remain square so zoom/focus transforms cannot scale a
    second circle inside the mask. */
