@@ -34,6 +34,30 @@ function normalizeExtensions(extensions) {
   return Object.keys(normalized).length ? normalized : undefined;
 }
 
+function normalizeHolographicEffect(effect) {
+  if (!effect || typeof effect !== 'object' || Array.isArray(effect)) return undefined;
+
+  const style = normalizeString(effect.style).toLowerCase();
+  const styles = new Set(['holographic', 'iridescent', 'aurora']);
+  const intensityValue = Number(effect.intensity);
+  const intensity = Number.isFinite(intensityValue)
+    ? Math.max(0, Math.min(1, intensityValue))
+    : 0.7;
+  const texture = normalizeString(effect.texture);
+  const back = normalizeString(effect.back);
+
+  if (!styles.has(style) && !texture && !back && effect.intensity === undefined) {
+    return undefined;
+  }
+
+  return {
+    style: styles.has(style) ? style : 'holographic',
+    intensity,
+    ...(texture ? { texture } : {}),
+    ...(back ? { back } : {})
+  };
+}
+
 function normalizeBackground(background) {
   if (!background || typeof background !== 'object' || Array.isArray(background)) return undefined;
 
@@ -76,6 +100,9 @@ export function normalizeProjectMedia(media = {}) {
 
   const background = normalizeBackground(media.background);
   if (background) normalized.background = background;
+
+  const holographic = normalizeHolographicEffect(media.holographic);
+  if (holographic) normalized.holographic = holographic;
 
   return normalized;
 }
