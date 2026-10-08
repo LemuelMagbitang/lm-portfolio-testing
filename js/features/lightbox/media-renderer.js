@@ -670,6 +670,9 @@ export function createLightboxMediaRenderer({
       surface.removeEventListener('pointerup', onPointerUp);
       surface.removeEventListener('pointercancel', onPointerUp);
       surface.removeEventListener('pointerleave', onPointerLeave);
+      surface.removeEventListener('touchmove', onTouchMove);
+      surface.removeEventListener('touchend', onTouchEnd);
+      surface.removeEventListener('touchcancel', onTouchEnd);
       surface.removeEventListener('click', toggleFlip);
       surface.removeEventListener('keydown', toggleFlip);
       surface.replaceChildren();
@@ -749,6 +752,30 @@ export function createLightboxMediaRenderer({
       clearTouchGesture();
     };
 
+    // Pointer Events cover modern browsers, but Safari/iOS gesture arbitration
+    // can still hand scrolling to the page before a late pointermove
+    // preventDefault() is honored. Mirror the engaged gesture through a
+    // non-passive Touch Events path so a held hologram can reliably take over
+    // after the deliberate 220 ms hold without blocking ordinary scroll starts.
+    const onTouchMove = event => {
+      if (!touchGesture?.engaged) return;
+      const touch = event.touches?.[0] || event.changedTouches?.[0];
+      if (!touch) return;
+      event.preventDefault();
+      setHolographicReflection(surface, {
+        clientX: Number(touch.clientX) || 0,
+        clientY: Number(touch.clientY) || 0
+      });
+    };
+
+    const onTouchEnd = () => {
+      if (!touchGesture) return;
+      const engaged = touchGesture.engaged;
+      const moved = touchGesture.moved;
+      if (engaged || moved) suppressNextClick = true;
+      clearTouchGesture();
+    };
+
     const toggleFlip = event => {
       if (event?.type === 'click' && suppressNextClick) {
         suppressNextClick = false;
@@ -774,6 +801,9 @@ export function createLightboxMediaRenderer({
     surface.addEventListener('pointerup', onPointerUp);
     surface.addEventListener('pointercancel', onPointerUp);
     surface.addEventListener('pointerleave', onPointerLeave);
+    surface.addEventListener('touchmove', onTouchMove, { passive: false });
+    surface.addEventListener('touchend', onTouchEnd);
+    surface.addEventListener('touchcancel', onTouchEnd);
     surface.addEventListener('click', toggleFlip);
     surface.addEventListener('keydown', toggleFlip);
 
