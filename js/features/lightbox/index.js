@@ -496,7 +496,7 @@ const handleSwipePointerDown = event => {
 
   const target = event.target;
   if (
-    target?.closest?.('button, a, iframe, video, .model-viewer-shell')
+    target?.closest?.('button, a, iframe, video, .model-viewer-shell, .lightbox-holographic')
   ) {
     swipeStart = null;
     return;
