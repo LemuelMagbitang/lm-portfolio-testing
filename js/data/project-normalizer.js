@@ -23,6 +23,17 @@ function normalizeBadges(badges, legacyBadge = '') {
   return [...new Set(source.map(normalizeString).filter(Boolean))];
 }
 
+function normalizeExtensions(extensions) {
+  if (!extensions || typeof extensions !== 'object' || Array.isArray(extensions)) return undefined;
+  const normalized = {};
+  Object.entries(extensions).forEach(([key, value]) => {
+    const name = normalizeString(key);
+    if (!name || value === undefined) return;
+    normalized[name] = value;
+  });
+  return Object.keys(normalized).length ? normalized : undefined;
+}
+
 function normalizeBackground(background) {
   if (!background || typeof background !== 'object' || Array.isArray(background)) return undefined;
 
@@ -80,6 +91,7 @@ export function normalizeProject(project = {}) {
     hasModel: media.some(item => item.type === 'model')
   };
 
+  const extensions = normalizeExtensions(project.extensions);
   const normalized = {
     id: normalizeString(project.id),
     title,
@@ -92,6 +104,11 @@ export function normalizeProject(project = {}) {
     mediaCount: media.length,
     capabilities
   };
+
+  // Extensions are feature-owned content metadata. Keeping them outside the
+  // core project shape lets future capabilities add data without forcing the
+  // Gallery/Lightbox/presentation contracts to know about that feature.
+  if (extensions) normalized.extensions = extensions;
 
   // Thumbnail presentation controls remain meaningful even when the CMS
   // leaves thumbnail.src empty and the Projects card chooses its first media
