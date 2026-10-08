@@ -1310,6 +1310,49 @@ try {
         throw new Error('Desktop-to-mobile resize did not restore the mobile Show More control.');
       }
 
+      const collapsedShowMoreMaterial = await showMoreAfterResize.evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          background: style.backgroundColor,
+          border: style.borderStyle,
+          color: style.color,
+          backdropFilter: style.backdropFilter
+        };
+      });
+      if (
+        collapsedShowMoreMaterial.color !== 'rgb(255, 255, 255)' ||
+        collapsedShowMoreMaterial.border !== 'solid' ||
+        collapsedShowMoreMaterial.backdropFilter === 'none' ||
+        collapsedShowMoreMaterial.background === 'rgb(0, 0, 0)'
+      ) {
+        throw new Error('Mobile Show More did not retain the requested glass material: ' + JSON.stringify(collapsedShowMoreMaterial));
+      }
+
+      await showMoreAfterResize.click();
+      await page.waitForTimeout(300);
+      const expandedShowLessMaterial = await showMoreAfterResize.evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          expanded: el.classList.contains('expanded'),
+          background: style.backgroundColor,
+          color: style.color,
+          backdropFilter: style.backdropFilter
+        };
+      });
+      if (
+        !expandedShowLessMaterial.expanded ||
+        expandedShowLessMaterial.background !== 'rgb(255, 255, 255)' ||
+        expandedShowLessMaterial.color !== 'rgb(0, 0, 0)' ||
+        expandedShowLessMaterial.backdropFilter !== 'none'
+      ) {
+        throw new Error('Mobile Show Less did not retain the requested white/black solid material: ' + JSON.stringify(expandedShowLessMaterial));
+      }
+
+      // Return to the collapsed state so the remaining resize assertions keep
+      // the original mobile fixture geometry.
+      await showMoreAfterResize.click();
+      await page.waitForTimeout(300);
+
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.waitForTimeout(500);
       const desktopRestoredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
@@ -3205,7 +3248,19 @@ try {
         expectedHash: '#3d-motion',
         label: 'About-to-Works'
       });
-    }, { width: 390, height: 844 });
+    }, { width: 390, height: 844 }, null, async page => {
+      await page.waitForTimeout(700);
+      const transition = page.locator('#pageTransition').first();
+      const headline = page.locator('#aboutHeadline').first();
+      const transitionLoading = await transition.getAttribute('data-loading');
+      const transitionVisible = await transition.isVisible().catch(() => false);
+      if (transitionLoading === 'active' && transitionVisible) {
+        throw new Error('About first paint is still blocked by CMS hydration after 700ms.');
+      }
+      if (!(await headline.isVisible().catch(() => false))) {
+        throw new Error('About static hero text is not available during the fast first paint.');
+      }
+    });
 
     await smokePage(browser, '/', async page => {
       await page.locator('.hamburger').first().click();
