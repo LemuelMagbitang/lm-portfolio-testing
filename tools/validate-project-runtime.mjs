@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
-import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js';
+import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261008-09';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js';
 import {
