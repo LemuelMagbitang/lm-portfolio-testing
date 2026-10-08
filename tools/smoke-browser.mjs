@@ -2589,6 +2589,21 @@ try {
       if (!contactAlignment.starsBackground || contactAlignment.starsBackground === 'rgba(0, 0, 0, 0)') {
         throw new Error('Desktop Contact Stars field is missing its aligned field surface.');
       }
+
+      const web3FormAuthFields = await page.locator('form.simple-form').evaluateAll(forms =>
+        forms.map(form => ({
+          id: form.id || '',
+          accessKeyCount: form.querySelectorAll('input[name="access_key"]').length,
+          legacyApiKeyCount: form.querySelectorAll('input[name="apikey"]').length
+        }))
+      );
+      web3FormAuthFields.forEach(form => {
+        if (form.accessKeyCount !== 1 || form.legacyApiKeyCount !== 0) {
+          throw new Error(
+            'Web3Forms credential field contract regressed: ' + JSON.stringify(form)
+          );
+        }
+      });
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
