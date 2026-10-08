@@ -74,8 +74,24 @@ export async function loadProjects({
 
   try {
     const raw = await loadJson(url, null, { resolveUrl });
+    const hasProjectCollection =
+      Array.isArray(raw) ||
+      Array.isArray(raw?.projects);
+
+    // An explicitly supplied empty collection is valid CMS state. Publish it
+    // as an empty Projects model instead of treating it like a transport/load
+    // failure and leaving stale cards on the page.
+    if (!hasProjectCollection) return false;
+
     const projects = normalizeProjects(raw);
-    if (!projects.length) return false;
+    if (!projects.length) {
+      if (loadToken !== projectLoadToken) return false;
+      grid.replaceChildren();
+      projectModels = [];
+      projectCardMap.clear();
+      return true;
+    }
+
     const fragment = createFragment();
     if (!fragment || typeof fragment.appendChild !== 'function') return false;
 
