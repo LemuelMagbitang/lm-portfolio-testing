@@ -3026,6 +3026,62 @@ try {
       await filterRail.scrollIntoViewIfNeeded();
       await page.waitForTimeout(60);
       await assertFilterButtonHitTarget(page,'Mobile Works after lower-page scroll');
+
+      // Breakpoint-transition regression guard: filter interaction state must
+      // survive mobile -> desktop -> mobile without leaving the rail inert,
+      // pointer-disabled, or bound to the wrong layout mode.
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.waitForTimeout(120);
+      const desktopFilterMode = await filterRail.evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          flexWrap: style.flexWrap,
+          overflowX: style.overflowX,
+          inert: el.inert,
+          pointerEvents: style.pointerEvents
+        };
+      });
+      if (
+        desktopFilterMode.flexWrap !== 'wrap' ||
+        desktopFilterMode.overflowX === 'auto' ||
+        desktopFilterMode.inert ||
+        desktopFilterMode.pointerEvents === 'none'
+      ) {
+        throw new Error(
+          'Filter rail retained stale mobile interaction/layout state after switching to desktop: ' +
+          JSON.stringify(desktopFilterMode)
+        );
+      }
+      await assertFilterButtonHitTarget(page,'Desktop Works after mobile breakpoint');
+
+      await page.locator('.filter-tabs [data-filter="all"]').first().click();
+      await page.waitForTimeout(120);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(120);
+      await filterRail.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(60);
+      const restoredMobileFilterMode = await filterRail.evaluate(el => {
+        const style = getComputedStyle(el);
+        return {
+          flexWrap: style.flexWrap,
+          overflowX: style.overflowX,
+          inert: el.inert,
+          pointerEvents: style.pointerEvents
+        };
+      });
+      if (
+        restoredMobileFilterMode.flexWrap !== 'nowrap' ||
+        restoredMobileFilterMode.overflowX !== 'auto' ||
+        restoredMobileFilterMode.inert ||
+        restoredMobileFilterMode.pointerEvents === 'none'
+      ) {
+        throw new Error(
+          'Filter rail did not restore a directly interactive mobile carousel after a breakpoint round-trip: ' +
+          JSON.stringify(restoredMobileFilterMode)
+        );
+      }
+      await assertFilterButtonHitTarget(page,'Mobile Works after breakpoint round-trip');
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
