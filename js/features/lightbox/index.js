@@ -1,6 +1,6 @@
 /** Architecture V2 — complete lightbox controller. */
 import { createLifecycle } from '../../core/lifecycle.js';
-import { createLightboxMediaRenderer } from './media-renderer.js?v=20261009-04';
+import { createLightboxMediaRenderer } from './media-renderer.js?v=20261009-05';
 export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axisRatio = 1.2 } = {}) {
   const x = Number(deltaX) || 0;
   const y = Number(deltaY) || 0;
