@@ -107,6 +107,20 @@ export async function createPortfolioApp({
     resolveAssetUrl: siteAssetUrl
   });
 
+  // Start About asset warm-up as soon as the data endpoint is known. The
+  // browser can populate its HTTP/image cache while the branded loading gate
+  // and the rest of the composed features initialize.
+  const aboutAssetPreloadPromise = preloadAboutAssets({
+    url: config.urls.about,
+    root,
+    documentRef: root,
+    loadJson: loadCmsJson,
+    resolveAssetUrl: siteAssetUrl
+  }).catch(error => {
+    console.warn('About asset preload failed:', error);
+    return { total: 0, ready: 0 };
+  });
+
   const forms = initForms({ root });
 
   // Settings and project data are the minimum dependencies needed to
@@ -323,17 +337,6 @@ export async function createPortfolioApp({
           });
       })
     : Promise.resolve(true);
-
-  const aboutAssetPreloadPromise = preloadAboutAssets({
-    url: config.urls.about,
-    root,
-    documentRef: root,
-    loadJson: loadCmsJson,
-    resolveAssetUrl: siteAssetUrl
-  }).catch(error => {
-    console.warn('About asset preload failed:', error);
-    return { total: 0, ready: 0 };
-  });
 
   // Project-media warm-up started as soon as its minimum dependencies were
   // available. The branded loading gate below only waits on its critical tier,
