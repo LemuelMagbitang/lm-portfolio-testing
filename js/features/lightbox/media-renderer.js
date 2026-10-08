@@ -692,7 +692,6 @@ export function createLightboxMediaRenderer({
       setHolographicReflection(surface, event);
     };
     const onPointerLeave = () => {
-      if (surface.dataset.holoInput === 'tilt') return;
       updateHolographicTilt(surface, 50, 50);
     };
     let touchStart = null;
