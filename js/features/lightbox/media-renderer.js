@@ -826,7 +826,7 @@ export function createLightboxMediaRenderer({
 
     // 3D owns its own background because the model shell becomes fixed
     // during focus. The caption remains outside the full-screen model shell.
-    const modelEntry = buildMediaEntry(modelWrap, null, null);
+    const modelEntry = buildMediaEntry(modelWrap, item.caption || item.description, null);
     modelEntry.classList.add('is-3d-media-item');
 
     if (typeof mountModelViewer !== 'function') {
