@@ -187,6 +187,49 @@ async function assertMobileNavigation(page, label) {
   if (!closed || collapsed !== 'false') {
     throw new Error(label + ' mobile navigation did not close from an outside tap.');
   }
+
+  // Regression guard: a closed mobile Works dropdown must not retain an
+  // interactive/visible hit surface over the document. Previously its nested
+  // dropdown rules overrode the parent's pointer-events:none and intercepted
+  // arbitrary page taps as filter navigation.
+  const closedMenuContract = await menu.evaluate(el => {
+    const style = getComputedStyle(el);
+    const dropdown = el.querySelector('.nav-dropdown-menu');
+    const dropdownStyle = dropdown ? getComputedStyle(dropdown) : null;
+    return {
+      maxHeight: style.maxHeight,
+      opacity: style.opacity,
+      visibility: style.visibility,
+      pointerEvents: style.pointerEvents,
+      dropdownVisibility: dropdownStyle?.visibility || '',
+      dropdownPointerEvents: dropdownStyle?.pointerEvents || ''
+    };
+  });
+  if (
+    closedMenuContract.maxHeight !== '0px' ||
+    closedMenuContract.opacity !== '0' ||
+    closedMenuContract.visibility !== 'hidden' ||
+    closedMenuContract.pointerEvents !== 'none' ||
+    closedMenuContract.dropdownVisibility !== 'hidden' ||
+    closedMenuContract.dropdownPointerEvents !== 'none'
+  ) {
+    throw new Error(label + ' closed mobile navigation still exposes a stale interactive hit surface: ' + JSON.stringify(closedMenuContract));
+  }
+
+  const hero = page.locator('.hero-section').first();
+  const heroBox = await hero.boundingBox();
+  if (heroBox) {
+    const beforeHash = await page.evaluate(() => window.location.hash);
+    await page.mouse.click(
+      heroBox.x + heroBox.width / 2,
+      heroBox.y + heroBox.height / 2
+    );
+    await page.waitForTimeout(120);
+    const afterHash = await page.evaluate(() => window.location.hash);
+    if (afterHash !== beforeHash) {
+      throw new Error(label + ' clicking ordinary hero/background content unexpectedly triggered filter navigation: ' + beforeHash + ' -> ' + afterHash);
+    }
+  }
 }
 
 const { server, getStderr } = startServer();
@@ -1249,6 +1292,17 @@ try {
 
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
       if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
+
+      const footerSocialCenter = await page.evaluate(() => {
+        const footer = document.querySelector('footer')?.getBoundingClientRect();
+        const row = document.querySelector('footer .social-icons')?.getBoundingClientRect();
+        return {
+          delta: footer && row ? Math.abs((row.left + row.width / 2) - (footer.left + footer.width / 2)) : 9999
+        };
+      });
+      if (footerSocialCenter.delta > 2) {
+        throw new Error('Mobile Works footer social icon row is not centered: ' + JSON.stringify(footerSocialCenter));
+      }
 
       const viewportTier = await page.evaluate(() => window.innerWidth < 768 ? 6 : 9);
       const thumbnailReadiness = await page.locator('#portfolioGrid .project-card').evaluateAll((cards, limit) =>
@@ -2753,10 +2807,21 @@ try {
       const showMoreGeometry = await page.evaluate(() => {
         const button = document.querySelector('#showMoreBtn');
         const style = button ? getComputedStyle(button) : null;
-        return { borderRadius: style?.borderRadius || '', width: button?.getBoundingClientRect?.().width || 0 };
+        return {
+          borderRadius: style?.borderRadius || '',
+          background: style?.backgroundColor || '',
+          backdropFilter: style?.backdropFilter || '',
+          width: button?.getBoundingClientRect?.().width || 0
+        };
       });
       if (parseFloat(showMoreGeometry.borderRadius || '0') < 100) {
         throw new Error('Show More / Show Less control is not pill-shaped: '+JSON.stringify(showMoreGeometry));
+      }
+      if (
+        showMoreGeometry.background !== 'rgb(0, 0, 0)' ||
+        showMoreGeometry.backdropFilter !== 'none'
+      ) {
+        throw new Error('Show More / Show Less control regressed to a glass material instead of the black-and-white pill: ' + JSON.stringify(showMoreGeometry));
       }
       if (!['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
         throw new Error('Footer foreground contrast token is not resolved: '+JSON.stringify(footerLayout));
@@ -2876,6 +2941,17 @@ try {
       if (aboutFooter.contentColor !== 'rgb(255, 255, 255)' ||
           aboutFooter.socialColors.some(color => color !== 'rgb(255, 255, 255)')) {
         throw new Error('About page footer content is not white: '+JSON.stringify(aboutFooter));
+      }
+
+      const aboutFooterSocialCenter = await page.evaluate(() => {
+        const footer = document.querySelector('footer')?.getBoundingClientRect();
+        const row = document.querySelector('footer .social-icons')?.getBoundingClientRect();
+        return {
+          delta: footer && row ? Math.abs((row.left + row.width / 2) - (footer.left + footer.width / 2)) : 9999
+        };
+      });
+      if (aboutFooterSocialCenter.delta > 2) {
+        throw new Error('About footer social icon row is not centered: ' + JSON.stringify(aboutFooterSocialCenter));
       }
 
       const expectedBundledAdobe = [

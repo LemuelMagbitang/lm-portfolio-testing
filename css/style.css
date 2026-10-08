@@ -1309,11 +1309,30 @@ body.center-page {
   .navbar {
     z-index: 1000;
   }
-  .nav-links {
-    max-height: min(520px, calc(100dvh - var(--lm-mobile-nav-height, 64px)));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
+  /* A closed mobile menu has no visual or interactive footprint.
+     In particular, its nested Works dropdown must not remain targetable while
+     the parent is visually collapsed. */
+  .nav-links:not(.active){
+    max-height:0 !important;
+    opacity:0 !important;
+    visibility:hidden !important;
+    overflow:hidden !important;
+    pointer-events:none !important;
+  }
+  .nav-links:not(.active) .nav-dropdown-menu,
+  .nav-links:not(.active) .nav-dropdown-menu *{
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+  .nav-links.active{
+    max-height:min(520px, calc(100dvh - var(--lm-mobile-nav-height, 64px))) !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    pointer-events:auto !important;
   }
 
   /* Mobile is untouched by the desktop restructure above: everything
@@ -3554,10 +3573,10 @@ footer > .footer-content p{
 
   .social-icons,
   .about-social-icons{
-    justify-content:flex-start;
+    justify-content:center !important;
     gap:14px;
     width:100%;
-    padding-inline:2px;
+    padding-inline:0;
   }
   .social-icons a,
   .about-social-icons a{
@@ -3642,20 +3661,38 @@ footer > .footer-content p{
   }
 }
 
-/* Show More / Show Less restores its glass material after click/focus. */
+/* Show More / Show Less is a true high-contrast pill.
+   The selected/hover animation remains black ↔ white, but the base surface
+   is deliberately flat rather than glass. */
 .btn-show-more{
   border-radius:999px !important;
-  background:rgba(255,255,255,.08);
-  color:#fff;
-}
-.btn-show-more:focus,
-.btn-show-more:focus-visible{
-  background:rgba(255,255,255,.08) !important;
+  corner-shape:initial !important;
+  background:#000 !important;
+  background-color:#000 !important;
   color:#fff !important;
+  border:1px solid rgba(255,255,255,.82) !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
 }
-.btn-show-more:focus{box-shadow:none !important;}
-.btn-show-more:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,.76) !important;}
-.btn-show-more:active{background:#fff;color:#000;}
+.btn-show-more:hover,
+.btn-show-more:active{
+  background:#fff !important;
+  background-color:#fff !important;
+  color:#000 !important;
+}
+.btn-show-more:focus{
+  background:#000 !important;
+  background-color:#000 !important;
+  color:#fff !important;
+  box-shadow:none !important;
+}
+.btn-show-more:focus-visible{
+  background:#000 !important;
+  background-color:#000 !important;
+  color:#fff !important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.76) !important;
+}
 
 /* Stable white Lightbox chrome. Desktop placement remains unchanged; mobile
    moves only the chevrons to the reachable lower side edges. */
@@ -3751,4 +3788,15 @@ footer > .footer-content p{
   -webkit-backdrop-filter:blur(10px) !important;
   box-shadow:0 8px 24px rgba(0,0,0,.16) !important;
   color:#fff !important;
+}
+
+
+/* Final mobile footer alignment contract. Keep the entire social row centered
+   whenever its contents fit; overflow remains horizontal when future links grow. */
+@media (max-width:767px){
+  footer > .footer-content .social-icons{
+    justify-content:center !important;
+    width:100%;
+    padding-inline:0;
+  }
 }
