@@ -13,7 +13,7 @@ import {
   getCardForProject,
   destroyProjects
 } from '../features/projects/index.js?v=20261006-02';
-import { initNavigation } from '../features/navigation/index.js?v=20261008-01';
+import { initNavigation } from '../features/navigation/index.js?v=20261008-02';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
 import { initForms } from '../features/forms/index.js?v=20261008-03';
