@@ -41,6 +41,8 @@ export function initForms({
       tab.classList.toggle('is-active', active);
       tab.tabIndex = active ? 0 : -1;
     });
+    const tabRail = contactTabs[0]?.parentElement;
+    if (tabRail) tabRail.setAttribute('data-active', targetKind);
 
     contactPanels.forEach(panel => {
       const active = panel.getAttribute('data-contact-panel') === targetKind;
