@@ -42,6 +42,10 @@ const projectLoaderSource = await readFile(new URL('../js/features/projects/proj
 assert.match(projectLoaderSource, /export function destroyProjects\(\)/);
 assert.match(projectLoaderSource, /projectCardMap\.clear\(\);/);
 assert.match(projectLoaderSource, /projectModels = \[\];/);
+assert.match(projectLoaderSource, /let projectLoadToken = 0;/);
+assert.match(projectLoaderSource, /const loadToken = \+\+projectLoadToken;/);
+assert.match(projectLoaderSource, /loadToken !== projectLoadToken/);
+assert.match(projectLoaderSource, /projectLoadToken \+= 1;/);
 
 const pageCompositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 assert.match(pageCompositionSource, /destroyProjects/);
