@@ -408,7 +408,7 @@ export async function createPortfolioApp({
       galleryFeature?.destroy?.();
       destroyProjects();
       navigation.destroy?.();
-      reviewsFeature.cleanup?.();
+      reviewsFeature?.cleanup?.();
       aboutFeature?.cleanup?.();
       forms.cleanup?.();
     }
