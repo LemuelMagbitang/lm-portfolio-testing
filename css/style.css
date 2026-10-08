@@ -3670,7 +3670,7 @@ footer > .footer-content p{
   background:#000 !important;
   background-color:#000 !important;
   color:#fff !important;
-  border:1px solid rgba(255,255,255,.82) !important;
+  border:0 !important;
   box-shadow:none !important;
   backdrop-filter:none !important;
   -webkit-backdrop-filter:none !important;
