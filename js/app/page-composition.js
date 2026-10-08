@@ -19,7 +19,7 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js?v=20261008-03';
 import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
 
-import { initGallery } from '../features/gallery/index.js?v=20261008-06';
+import { initGallery } from '../features/gallery/index.js?v=20261008-07';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261008-05';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261007-03';
 import { initLightbox } from '../features/lightbox/index.js?v=20261008-02';
