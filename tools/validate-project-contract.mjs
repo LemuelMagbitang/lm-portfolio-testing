@@ -75,6 +75,21 @@ assert.equal(normalizeProjectMedia({ type: 'model', src: 'scene.glb' }).type, 'm
 assert.equal(normalizeProjectMedia({ type: 'image', src: '' }), null);
 assert.deepEqual(normalizeProjects({ projects: [{ id: 'a' }, { id: 'b' }] }).map(item => item.id), ['a', 'b']);
 
+const extensible = normalizeProject({
+  id: 'extensible-project',
+  title: 'Extensible Project',
+  extensions: {
+    experimentalFeature: { mode: 'storyboard', version: 2 },
+    customThemeToken: 'future-ui-token'
+  },
+  media: [{ type: 'image', src: 'extensible.jpg' }]
+});
+assert.deepEqual(extensible.extensions, {
+  experimentalFeature: { mode: 'storyboard', version: 2 },
+  customThemeToken: 'future-ui-token'
+});
+assert.equal(normalizeProject({ id: 'bad-extensions', extensions: [] }).extensions, undefined);
+
 const mixed = normalizeProject({
   id: 'mixed',
   media: [
