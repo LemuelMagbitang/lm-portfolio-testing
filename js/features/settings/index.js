@@ -94,8 +94,8 @@ export async function initSiteSettings({
 
     renderSocials(settings);
 
-    setHiddenField('projectForm', 'apikey', settings.web3forms.projectKey);
-    setHiddenField('reviewForm', 'apikey', settings.web3forms.reviewKey);
+    setHiddenField('projectForm', 'access_key', settings.web3forms.projectKey);
+    setHiddenField('reviewForm', 'access_key', settings.web3forms.reviewKey);
     setHiddenField('projectForm', 'redirect', settings.redirectUrl);
     setHiddenField('reviewForm', 'redirect', settings.redirectUrl);
 
