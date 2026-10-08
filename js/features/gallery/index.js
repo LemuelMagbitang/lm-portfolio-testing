@@ -656,8 +656,11 @@ export async function initGallery(options = {}) {
     if (!hash) return;
     const btn = filterBtns.find(item => item.getAttribute('data-filter') === hash);
     if (!btn) return;
-    filterBtns.forEach(item => item.classList.remove('active'));
-    btn.classList.add('active');
+    filterBtns.forEach(item => {
+      const active = item === btn;
+      item.classList.toggle('active', active);
+      item.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
     currentFilter = hash;
     isExpanded = false;
     render();
