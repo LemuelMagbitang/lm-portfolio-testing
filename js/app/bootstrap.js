@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261008-01'
+  cacheVersion = '20261008-02'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -70,7 +70,8 @@ export async function bootstrapPortfolioApp({
   }
 
   async function waitForReadyPaint() {
-    const fontReady = root.fonts?.ready
+    const isAboutPage = root.body?.classList.contains('about-page');
+    const fontReady = !isAboutPage && root.fonts?.ready
       ? Promise.resolve(root.fonts.ready).catch(() => {})
       : Promise.resolve();
 
