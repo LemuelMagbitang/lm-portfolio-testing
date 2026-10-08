@@ -657,6 +657,43 @@ try {
       const lightbox = page.locator('#lightbox.active');
       if (await lightbox.count() !== 1) throw new Error('Lightbox did not open from the first project card.');
 
+      const holographic = page.locator('.lightbox-holographic').first();
+      if (await holographic.count() !== 1) {
+        throw new Error('Holographic image fixture did not render its interactive Lightbox surface.');
+      }
+      if (await holographic.getAttribute('data-holo-style') !== 'iridescent') {
+        throw new Error('Holographic Lightbox fixture lost its configured visual style.');
+      }
+      const holoBox = await holographic.boundingBox();
+      if (!holoBox || holoBox.width < 20 || holoBox.height < 20) {
+        throw new Error('Holographic Lightbox surface has no usable geometry.');
+      }
+      await page.mouse.move(
+        holoBox.x + holoBox.width * 0.82,
+        holoBox.y + holoBox.height * 0.22
+      );
+      const holoStateBeforeFlip = await holographic.evaluate(el => ({
+        x: el.style.getPropertyValue('--holo-x'),
+        y: el.style.getPropertyValue('--holo-y'),
+        rx: el.style.getPropertyValue('--holo-rx'),
+        ry: el.style.getPropertyValue('--holo-ry'),
+        back: el.querySelector('.lightbox-holographic-back img')?.getAttribute('src') || ''
+      }));
+      if (holoStateBeforeFlip.x === '50%' || holoStateBeforeFlip.y === '50%' ||
+          !holoStateBeforeFlip.rx || !holoStateBeforeFlip.ry) {
+        throw new Error('Holographic Lightbox pointer tracking did not update the foil coordinates.');
+      }
+      if (!holoStateBeforeFlip.back.includes('assets/projects/test/back.svg')) {
+        throw new Error('Holographic Lightbox did not mount the configured back artwork.');
+      }
+      await holographic.click();
+      if (await holographic.getAttribute('aria-pressed') !== 'true' ||
+          !(await holographic.evaluate(el => el.classList.contains('is-flipped')))) {
+        throw new Error('Holographic Lightbox tap/click did not flip the artwork.');
+      }
+      await page.locator('#lightboxClose').first().click();
+      await page.waitForTimeout(100);
+
       const closeBeforeTab = page.locator('#lightboxClose').first();
       await closeBeforeTab.waitFor({ state: 'visible', timeout: 3000 });
       await page.keyboard.press('Tab');
@@ -4034,6 +4071,18 @@ try {
         description: '',
         thumbnail: { type: 'image', src: 'assets/projects/test/thumb.svg', focus: '50% 50%', zoom: 1 },
         media: [
+          {
+            type: 'image',
+            src: 'assets/projects/test/front.svg',
+            caption: 'Holographic image fixture',
+            orientation: 'square',
+            holographic: {
+              style: 'iridescent',
+              intensity: 0.8,
+              texture: 'assets/projects/test/foil.svg',
+              back: 'assets/projects/test/back.svg'
+            }
+          },
           { type: 'lottie', src: 'assets/projects/test/Sample.json', caption: 'Lottie fixture', orientation: 'square' },
           { type: 'model', src: 'assets/projects/test/Female base.obj', caption: '3D fixture', orientation: '' }
         ]
