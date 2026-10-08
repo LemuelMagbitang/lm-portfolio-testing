@@ -162,10 +162,15 @@ export function initNavigation({ root = globalThis.document } = {}) {
     [scrollingElement, root.documentElement, root.body]
       .filter(Boolean)
       .forEach(element => { element.scrollLeft = 0; element.scrollTop = 0; });
+    // Explicitly cancel any document smooth-scroll animation that may
+    // still be running from the visitor's previous scroll position. The
+    // global stylesheet intentionally enables smooth scrolling, so leaving
+    // behavior implicit here can let the old animation overwrite this reset
+    // a few frames later.
     try {
-      windowRef.scrollTo(0, 0);
+      windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' });
     } catch (_) {
-      try { windowRef.scrollTo({ left: 0, top: 0 }); } catch (_) {}
+      try { windowRef.scrollTo(0, 0); } catch (_) {}
     }
   }
 
