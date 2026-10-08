@@ -2710,6 +2710,29 @@ try {
       if (unloads !== 0) throw new Error('Main-page LM logo navigation triggered a document unload/reload.');
     }, { width: 1280, height: 900 });
 
+    await smokePage(browser, '/#3d-motion', async page => {
+      const selected = page.locator('.filter-tabs [data-filter="3d-motion"]').first();
+      const allButton = page.locator('.filter-tabs [data-filter="all"]').first();
+      if (await selected.count() !== 1 || await allButton.count() !== 1) {
+        throw new Error('Hash-restored Gallery filter smoke fixture is missing the expected filter controls.');
+      }
+      const state = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
+        return {
+          hash: window.location.hash,
+          active: buttons.filter(button => button.classList.contains('active')).map(button => button.getAttribute('data-filter')),
+          pressed: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').map(button => button.getAttribute('data-filter'))
+        };
+      });
+      if (state.hash !== '#3d-motion' ||
+          state.active.length !== 1 ||
+          state.active[0] !== '3d-motion' ||
+          state.pressed.length !== 1 ||
+          state.pressed[0] !== '3d-motion') {
+        throw new Error('Direct filter-hash restoration left visual and ARIA state inconsistent: ' + JSON.stringify(state));
+      }
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/', async page => {
       const nonAllFilter = page.locator('.filter-tabs .filter-btn:not([data-filter="all"])').first();
       if (await nonAllFilter.count() !== 1) throw new Error('Desktop Gallery reset smoke fixture has no non-ALL filter.');
