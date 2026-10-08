@@ -15,6 +15,8 @@ import { chromium } from 'playwright';
 
 const PORT = 4173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const SMOKE_PAGE_TIMEOUT_MS = 60000;
+let smokePageSequence = 0;
 
 function startServer() {
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], {
@@ -141,29 +143,56 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
  
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   const page = await browser.newPage({ viewport });
-  await configureLogoRoutes(page);
+  const smokeId = ++smokePageSequence;
+  const caller = (new Error().stack || '').split('\n')[2]?.trim() || 'unknown-callsite';
+  const smokeLabel = `#${smokeId} ${path} ${viewport.width}x${viewport.height}`;
+  page.setDefaultTimeout(8000);
+  page.setDefaultNavigationTimeout(15000);
+  console.log(`[smoke] START ${smokeLabel} caller=${caller}`);
 
-  const errors = [];
-  page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
-  page.on('console', message => {
-    if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
-  });
+  try {
+    await configureLogoRoutes(page);
 
-  if (typeof prepare === 'function') await prepare(page);
-  await page.goto(`${BASE_URL}${path}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 15000
-  });
+    const errors = [];
+    page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
+    page.on('console', message => {
+      if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
+    });
 
-  if (typeof beforeReady === 'function') await beforeReady(page);
-  await page.waitForTimeout(1800);
-  await assertions(page);
+    if (typeof prepare === 'function') await prepare(page);
+    await page.goto(`${BASE_URL}${path}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 15000
+    });
 
-  if (errors.length) {
-    throw new Error(`${path} produced browser errors:\n- ${errors.join('\n- ')}`);
+    if (typeof beforeReady === 'function') await beforeReady(page);
+    await page.waitForTimeout(1800);
+
+    let assertionTimer;
+    try {
+      await Promise.race([
+        assertions(page),
+        new Promise((_, reject) => {
+          assertionTimer = setTimeout(() => {
+            reject(new Error(`Smoke page timed out after ${SMOKE_PAGE_TIMEOUT_MS}ms: ${smokeLabel} caller=${caller}`));
+          }, SMOKE_PAGE_TIMEOUT_MS);
+        })
+      ]);
+    } finally {
+      if (assertionTimer) clearTimeout(assertionTimer);
+    }
+
+    if (errors.length) {
+      throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}`);
+    }
+
+    console.log(`[smoke] PASS ${smokeLabel}`);
+  } catch (error) {
+    console.error(`[smoke] FAIL ${smokeLabel}: ${error?.message || error}`);
+    throw error;
+  } finally {
+    await page.close().catch(() => {});
   }
-
-  await page.close();
 }
 
 async function assertMobileNavigation(page, label) {
@@ -2835,7 +2864,7 @@ try {
         };
       });
       if (mobileContactTabs.tabCount !== 2 || mobileContactTabs.activeTabs !== 1 ||
-          mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'flex') {
+          mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'grid') {
         throw new Error('Mobile Contact did not collapse into a single active tab panel: '+JSON.stringify(mobileContactTabs));
       }
 
