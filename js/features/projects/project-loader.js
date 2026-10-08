@@ -10,7 +10,7 @@
  * browser composition, previews, and non-browser tests alike.
  */
 
-import { normalizeProjects } from '../../data/project-normalizer.js?v=20261008-01';
+import { normalizeProjects } from '../../data/project-normalizer.js?v=20261008-02';
 
 // Project models belong to the Projects feature, not to card markup. The
 // WeakMap keeps the model private while exposing a stable card -> project
