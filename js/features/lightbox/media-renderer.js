@@ -19,6 +19,10 @@ export function createLightboxMediaRenderer({
   lightboxControls = null
 } = {}) {
   let youtubeMessageCleanup = null;
+  const holographicCleanups = new Set();
+  let holographicMotionOwner = null;
+  let holographicMotionCleanup = null;
+  let holographicMotionPermission = 'unknown';
   const youtubeFrameCache = new Map();
   const imageDimensionCache = new Map();
   const videoDimensionCache = new Map();
@@ -391,6 +395,18 @@ export function createLightboxMediaRenderer({
 
         const fetchPriority = critical ? 'high' : 'low';
 
+        if (type === 'image') {
+          const holo = normalizeHolographicConfig(item.holographic);
+          if (holo?.back) {
+            const backUrl = resolveAssetUrl(holo.back);
+            scheduleJob('holographic-back:' + backUrl, () => preloadImage(backUrl, { fetchPriority: 'low' }), false);
+          }
+          if (holo?.texture) {
+            const textureUrl = resolveAssetUrl(holo.texture);
+            scheduleJob('holographic-texture:' + textureUrl, () => preloadImage(textureUrl, { fetchPriority: 'low' }), false);
+          }
+        }
+
         if (type === 'model') {
           hasModel = true;
           scheduleJob(key, () => preloadFetch(url, { fetchPriority }), critical);
@@ -500,6 +516,219 @@ export function createLightboxMediaRenderer({
     }
 
     return img;
+  }
+
+  function clampHolographic(value, min = 0, max = 100) {
+    return Math.max(min, Math.min(max, Number(value) || 0));
+  }
+
+  function normalizeHolographicConfig(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const style = String(value.style || '').trim().toLowerCase();
+    const intensityValue = Number(value.intensity);
+    const intensity = Number.isFinite(intensityValue)
+      ? Math.max(0, Math.min(1, intensityValue))
+      : 0.7;
+    const texture = String(value.texture || '').trim();
+    const back = String(value.back || '').trim();
+    return {
+      style: ['holographic', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
+      intensity,
+      ...(texture ? { texture } : {}),
+      ...(back ? { back } : {})
+    };
+  }
+
+  function clearHolographicMotionListener() {
+    if (holographicMotionCleanup) {
+      try { holographicMotionCleanup(); } catch (_) {}
+      holographicMotionCleanup = null;
+    }
+    holographicMotionOwner = null;
+  }
+
+  async function requestHolographicMotion(surface) {
+    if (!surface || holographicMotionPermission === 'denied') return false;
+
+    try {
+      const OrientationEvent = windowRef?.DeviceOrientationEvent;
+      if (OrientationEvent && typeof OrientationEvent.requestPermission === 'function') {
+        const result = await OrientationEvent.requestPermission();
+        holographicMotionPermission = result === 'granted' ? 'granted' : 'denied';
+      } else if (OrientationEvent || windowRef?.addEventListener) {
+        holographicMotionPermission = 'granted';
+      }
+    } catch (_) {
+      holographicMotionPermission = 'denied';
+    }
+
+    if (holographicMotionPermission !== 'granted' || holographicMotionOwner === surface) return false;
+
+    clearHolographicMotionListener();
+    holographicMotionOwner = surface;
+
+    const onOrientation = event => {
+      if (!holographicMotionOwner || holographicMotionOwner !== surface || !surface.isConnected) return;
+      const gamma = clampHolographic(event?.gamma, -45, 45);
+      const beta = clampHolographic((Number(event?.beta) || 90) - 90, -45, 45);
+      const x = clampHolographic(50 + (gamma / 45) * 50);
+      const y = clampHolographic(50 + (beta / 45) * 50);
+      updateHolographicTilt(surface, x, y, { fromMotion: true });
+    };
+
+    windowRef.addEventListener('deviceorientation', onOrientation, { passive: true });
+    holographicMotionCleanup = () => windowRef.removeEventListener('deviceorientation', onOrientation);
+    return true;
+  }
+
+  function updateHolographicTilt(surface, x, y, { fromMotion = false } = {}) {
+    if (!surface) return;
+    const clampedX = clampHolographic(x);
+    const clampedY = clampHolographic(y);
+    const ry = ((clampedX - 50) / 50) * 11;
+    const rx = ((50 - clampedY) / 50) * 11;
+    const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
+    surface.style.setProperty('--holo-x', clampedX + '%');
+    surface.style.setProperty('--holo-y', clampedY + '%');
+    surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
+    surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
+    surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
+    if (fromMotion) surface.dataset.holoInput = 'tilt';
+  }
+
+  function setHolographicReflection(surface, event) {
+    const rect = surface.getBoundingClientRect?.();
+    if (!rect || !rect.width || !rect.height) return;
+    const x = ((Number(event.clientX) - rect.left) / rect.width) * 100;
+    const y = ((Number(event.clientY) - rect.top) / rect.height) * 100;
+    updateHolographicTilt(surface, x, y);
+    holographicMotionOwner = surface;
+  }
+
+  function buildHolographicLayer(documentRef, url, className, altText = '') {
+    const layer = documentRef.createElement('img');
+    layer.className = className;
+    layer.src = url;
+    layer.alt = altText;
+    layer.draggable = false;
+    layer.setAttribute('aria-hidden', 'true');
+    return layer;
+  }
+
+  function buildHolographicImage(frontImage, item, project) {
+    const config = normalizeHolographicConfig(item?.holographic);
+    if (!config || !frontImage?.src) return null;
+
+    const surface = documentRef.createElement('div');
+    surface.className = 'lightbox-holographic';
+    surface.dataset.holoStyle = config.style;
+    surface.dataset.holoInput = 'pointer';
+    surface.style.setProperty('--holo-intensity', String(config.intensity));
+    surface.style.setProperty('--holo-x', '50%');
+    surface.style.setProperty('--holo-y', '50%');
+    surface.style.setProperty('--holo-rx', '0deg');
+    surface.style.setProperty('--holo-ry', '0deg');
+    surface.style.setProperty('--holo-angle', '0deg');
+    surface.tabIndex = 0;
+    surface.setAttribute('role', 'button');
+    surface.setAttribute('aria-label', project.title
+      ? `Flip holographic artwork: ${project.title}`
+      : 'Flip holographic artwork');
+    surface.setAttribute('aria-pressed', 'false');
+
+    const inner = documentRef.createElement('div');
+    inner.className = 'lightbox-holographic-inner';
+
+    const front = documentRef.createElement('div');
+    front.className = 'lightbox-holographic-face lightbox-holographic-front';
+    front.appendChild(frontImage);
+
+    const back = documentRef.createElement('div');
+    back.className = 'lightbox-holographic-face lightbox-holographic-back';
+    const backUrl = config.back ? resolveAssetUrl(config.back) : resolveAssetUrl(item.src);
+    const backImage = buildImageMedia(
+      backUrl,
+      project.title ? `${project.title} — reverse artwork` : 'Reverse artwork',
+      { eager: true }
+    );
+    back.appendChild(backImage);
+
+    const textureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
+    [front, back].forEach(face => {
+      const spectrum = documentRef.createElement('span');
+      spectrum.className = 'lightbox-holographic-spectrum';
+      spectrum.setAttribute('aria-hidden', 'true');
+
+      const glare = documentRef.createElement('span');
+      glare.className = 'lightbox-holographic-glare';
+      glare.setAttribute('aria-hidden', 'true');
+
+      face.appendChild(spectrum);
+      face.appendChild(glare);
+
+      if (textureUrl) {
+        const texture = buildHolographicLayer(
+          documentRef,
+          textureUrl,
+          'lightbox-holographic-texture',
+          ''
+        );
+        face.appendChild(texture);
+      }
+    });
+
+    inner.append(front, back);
+    surface.appendChild(inner);
+
+    const cleanup = () => {
+      if (holographicMotionOwner === surface) clearHolographicMotionListener();
+      surface.replaceChildren();
+    };
+
+    const onPointerMove = event => {
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') {
+        if (event.pointerType === 'touch' && event.isPrimary === false) return;
+      }
+      setHolographicReflection(surface, event);
+    };
+    const onPointerLeave = () => {
+      if (surface.dataset.holoInput === 'tilt') return;
+      updateHolographicTilt(surface, 50, 50);
+    };
+    const onPointerDown = event => {
+      holographicMotionOwner = surface;
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+        setHolographicReflection(surface, event);
+      }
+    };
+    const onPointerUp = () => {
+      // Keep the latest touch/pen reflection for a moment rather than
+      // snapping immediately, so a tap still reads as an intentional finish
+      // to the interaction before the flip occurs.
+    };
+    const toggleFlip = async event => {
+      if (event?.type === 'keydown') {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+      }
+      surface.classList.toggle('is-flipped');
+      surface.setAttribute(
+        'aria-pressed',
+        surface.classList.contains('is-flipped') ? 'true' : 'false'
+      );
+      await requestHolographicMotion(surface);
+    };
+
+    surface.addEventListener('pointermove', onPointerMove);
+    surface.addEventListener('pointerdown', onPointerDown, { passive: true });
+    surface.addEventListener('pointerup', onPointerUp);
+    surface.addEventListener('pointercancel', onPointerUp);
+    surface.addEventListener('pointerleave', onPointerLeave);
+    surface.addEventListener('click', toggleFlip);
+    surface.addEventListener('keydown', toggleFlip);
+
+    holographicCleanups.add(cleanup);
+    return surface;
   }
 
   function pauseYouTubeFrame(iframe) {
@@ -725,6 +954,15 @@ export function createLightboxMediaRenderer({
     };
     applyIntrinsicRatio();
     image.addEventListener('load', applyIntrinsicRatio, { once: true });
+
+    if (normalizeHolographicConfig(item.holographic)) {
+      const holographic = buildHolographicImage(image, item, project);
+      if (holographic) {
+        artwork.classList.add('has-holographic');
+        artwork.replaceChildren(holographic);
+      }
+    }
+
     return entry;
   }
 
@@ -993,6 +1231,11 @@ export function createLightboxMediaRenderer({
 
   function destroy() {
     destroyed = true;
+    Array.from(holographicCleanups).reverse().forEach(cleanup => {
+      try { cleanup(); } catch (_) {}
+      holographicCleanups.delete(cleanup);
+    });
+    clearHolographicMotionListener();
     Array.from(activePreloadCleanups).reverse().forEach(cleanup => {
       try { cleanup(); } catch (_) {}
     });
@@ -1019,6 +1262,11 @@ export function createLightboxMediaRenderer({
 
   function dispose(container) {
     if (!container) return;
+    Array.from(holographicCleanups).reverse().forEach(cleanup => {
+      try { cleanup(); } catch (_) {}
+      holographicCleanups.delete(cleanup);
+    });
+    clearHolographicMotionListener();
     youtubeMessageCleanup?.();
     youtubeMessageCleanup = null;
     pauseOtherPlayback(container);
