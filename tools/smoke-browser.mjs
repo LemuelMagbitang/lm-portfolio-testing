@@ -1816,6 +1816,9 @@ try {
               background:s.backgroundColor,
               border:s.borderStyle,
               radius:s.borderRadius,
+              backingBackground:getComputedStyle(el,'::before').backgroundColor,
+              backingBorderRadius:getComputedStyle(el,'::before').borderRadius,
+              backingBorder:getComputedStyle(el,'::before').borderStyle,
               position:s.position,
               top:s.top,
               bottom:s.bottom,
@@ -1837,17 +1840,21 @@ try {
       // mobile artwork state where the controls are actually visible.
       if(!lightboxIs3dFocused){
         if(!close || close.color!=='rgb(255, 255, 255)' ||
-           close.background !== 'rgba(255, 255, 255, 0.08)' ||
-           close.border!=='none' || close.radius!=='50%' || close.position!=='fixed'){
-          throw new Error('Mobile Lightbox Close control does not match the glass-circle contract: '+JSON.stringify(close));
+           close.background !== 'rgba(0, 0, 0, 0)' ||
+           close.border!=='none' || close.radius!=='50%' || close.position!=='fixed' ||
+           close.backingBorder!=='solid' ||
+           !(close.backingBackground.startsWith('rgba(0, 0, 0,') || close.backingBackground.startsWith('rgb(0, 0, 0'))){
+          throw new Error('Mobile Lightbox Close control does not match the protected dark-circle contract: '+JSON.stringify(close));
         }
         navs.forEach(control=>{
           const bottom=Number.parseFloat(control.bottom);
           if(control.color!=='rgb(255, 255, 255)' ||
-             control.background !== 'rgba(255, 255, 255, 0.08)' ||
+             control.background !== 'rgba(0, 0, 0, 0)' ||
              control.border!=='none' || control.position!=='fixed' ||
-             control.radius==='50%' || !Number.isFinite(bottom) || bottom<20){
-            throw new Error('Mobile Lightbox chevron control does not match the bottom glass-rect contract: '+JSON.stringify(control));
+             control.radius==='50%' || !Number.isFinite(bottom) || bottom<20 ||
+             control.backingBorder!=='solid' ||
+             !(control.backingBackground.startsWith('rgba(0, 0, 0,') || control.backingBackground.startsWith('rgb(0, 0, 0')))){
+            throw new Error('Mobile Lightbox chevron control does not match the protected dark-squircle contract: '+JSON.stringify(control));
           }
         });
       }
