@@ -15,8 +15,42 @@ import { chromium } from 'playwright';
 
 const PORT = 4173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const SMOKE_PAGE_TIMEOUT_MS = 60000;
+const SMOKE_PAGE_TIMEOUT_MS = 20000;
+const SMOKE_BOOT_SETTLE_MS = 1000;
 let smokePageSequence = 0;
+
+function waitForSmokeTask(task, timeoutMs, label) {
+  let timer = null;
+  let settled = false;
+  const work = Promise.resolve()
+    .then(task)
+    .then(
+      value => {
+        settled = true;
+        if (timer) clearTimeout(timer);
+        return value;
+      },
+      error => {
+        settled = true;
+        if (timer) clearTimeout(timer);
+        throw error;
+      }
+    );
+
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      if (settled) return;
+      reject(new Error(
+        'Smoke page timed out after ' + timeoutMs + 'ms: ' + label
+      ));
+    }, timeoutMs);
+  });
+
+  // `work` always has fulfillment/rejection handlers attached above, so a
+  // timed-out page cannot later surface an unhandled rejection after the page
+  // has been closed by smokePage().
+  return Promise.race([work, timeout]);
+}
 
 function startServer() {
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], {
@@ -146,49 +180,41 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
   const smokeId = ++smokePageSequence;
   const caller = (new Error().stack || '').split('\n')[2]?.trim() || 'unknown-callsite';
   const smokeLabel = `#${smokeId} ${path} ${viewport.width}x${viewport.height}`;
+  const startedAt = Date.now();
   page.setDefaultTimeout(8000);
   page.setDefaultNavigationTimeout(15000);
   console.log(`[smoke] START ${smokeLabel} caller=${caller}`);
 
   try {
-    await configureLogoRoutes(page);
+    await waitForSmokeTask(async () => {
+      await configureLogoRoutes(page);
 
-    const errors = [];
-    page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
-    page.on('console', message => {
-      if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
-    });
+      const errors = [];
+      page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
+      page.on('console', message => {
+        if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
+      });
 
-    if (typeof prepare === 'function') await prepare(page);
-    await page.goto(`${BASE_URL}${path}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 15000
-    });
+      if (typeof prepare === 'function') await prepare(page);
+      await page.goto(`${BASE_URL}${path}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000
+      });
 
-    if (typeof beforeReady === 'function') await beforeReady(page);
-    await page.waitForTimeout(1800);
+      if (typeof beforeReady === 'function') await beforeReady(page);
+      await page.waitForTimeout(SMOKE_BOOT_SETTLE_MS);
+      await assertions(page);
 
-    let assertionTimer;
-    try {
-      await Promise.race([
-        assertions(page),
-        new Promise((_, reject) => {
-          assertionTimer = setTimeout(() => {
-            reject(new Error(`Smoke page timed out after ${SMOKE_PAGE_TIMEOUT_MS}ms: ${smokeLabel} caller=${caller}`));
-          }, SMOKE_PAGE_TIMEOUT_MS);
-        })
-      ]);
-    } finally {
-      if (assertionTimer) clearTimeout(assertionTimer);
-    }
+      if (errors.length) {
+        throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}`);
+      }
+    }, SMOKE_PAGE_TIMEOUT_MS, `${smokeLabel} caller=${caller}`);
 
-    if (errors.length) {
-      throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}`);
-    }
-
-    console.log(`[smoke] PASS ${smokeLabel}`);
+    const durationMs = Date.now() - startedAt;
+    console.log(`[smoke] PASS ${smokeLabel} duration=${durationMs}ms`);
   } catch (error) {
-    console.error(`[smoke] FAIL ${smokeLabel}: ${error?.message || error}`);
+    const durationMs = Date.now() - startedAt;
+    console.error(`[smoke] FAIL ${smokeLabel} duration=${durationMs}ms: ${error?.message || error}`);
     throw error;
   } finally {
     await page.close().catch(() => {});
