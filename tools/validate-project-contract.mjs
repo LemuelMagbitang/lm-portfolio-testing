@@ -90,6 +90,28 @@ assert.deepEqual(extensible.extensions, {
 });
 assert.equal(normalizeProject({ id: 'bad-extensions', extensions: [] }).extensions, undefined);
 
+const holographic = normalizeProjectMedia({
+  type: 'image',
+  src: 'front.png',
+  holographic: {
+    style: ' IRIDESCENT ',
+    intensity: 1.4,
+    texture: ' assets/foil.svg ',
+    back: ' assets/back.png '
+  }
+});
+assert.deepEqual(holographic.holographic, {
+  style: 'iridescent',
+  intensity: 1,
+  texture: 'assets/foil.svg',
+  back: 'assets/back.png'
+});
+assert.equal(normalizeProjectMedia({
+  type: 'image',
+  src: 'plain.png',
+  holographic: { intensity: -2 }
+}).holographic.intensity, 0);
+
 const mixed = normalizeProject({
   id: 'mixed',
   media: [
