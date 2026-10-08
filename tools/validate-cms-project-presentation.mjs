@@ -41,4 +41,16 @@ assert.ok(css.includes('.project-list-item.is-open .project-card-head'),
 assert.ok(css.includes('corner-shape:squircle'),
   'CMS Project presentation should progressively enhance rounded surfaces as squircles.');
 
+assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must expose the holographic image control.');
+assert.ok(/data-holo-enabled/.test(admin), 'CMS Projects must expose an enable/disable control for holographic images.');
+assert.ok(/data-holo-texture/.test(admin) && /data-holo-back/.test(admin),
+  'CMS holographic images must support optional texture and back-image sources.');
+assert.ok(/attachMediaBrowseButton\([^\n]+\n(?:.|\n){0,700}data-holo-texture/.test(admin) ||
+  /data-holo-texture/.test(admin) && /kind:\s*'image'/.test(admin),
+  'CMS holographic source fields must use the existing Media Library image picker.');
+assert.ok(/holographic:normalizeEditorHolographic\(media\.holographic\)/.test(admin),
+  'CMS project serialization must preserve per-media holographic settings.');
+assert.ok(/m\.holographic/.test(admin),
+  'CMS project hydration must preserve per-media holographic settings.');
+
 console.log('CMS Projects presentation contract validated.');
