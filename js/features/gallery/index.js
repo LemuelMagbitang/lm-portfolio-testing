@@ -209,8 +209,18 @@ export async function initGallery(options = {}) {
     });
   }
 
-  function activateFilterButton(button, { center = false, updateUrl = true } = {}) {
+  function cancelPendingFilterSettlement() {
+    windowRef.clearTimeout(filterScrollTimer);
+    filterScrollTimer = null;
+    windowRef.clearTimeout(filterSettleTimer);
+    filterSettleTimer = null;
+    filterSettling = false;
+  }
+
+  function activateFilterButton(button, { center = false, updateUrl = true, fromScroll = false } = {}) {
     if (!button) return;
+    if (!fromScroll) cancelPendingFilterSettlement();
+
     const nextFilter = button.getAttribute('data-filter') || 'all';
     const changed = currentFilter !== nextFilter;
 
@@ -249,7 +259,7 @@ export async function initGallery(options = {}) {
 
     filterSettling = true;
     windowRef.clearTimeout(filterSettleTimer);
-    activateFilterButton(nearest, { center: false, updateUrl: true });
+    activateFilterButton(nearest, { center: false, updateUrl: true, fromScroll: true });
     updateFilterPager(filterBtns.indexOf(nearest));
 
     if (center) {
