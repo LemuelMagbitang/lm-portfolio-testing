@@ -18,6 +18,7 @@ import { normalizeProjects } from '../../data/project-normalizer.js';
 const cardProjectMap = new WeakMap();
 const projectCardMap = new Map();
 let projectModels = [];
+let projectLoadToken = 0;
 
 export function getProjectForCard(card) {
   return cardProjectMap.get(card) || null;
@@ -41,6 +42,10 @@ export function getCardForProject(projectId) {
  * garbage-collected cleanly on remounts and in long-lived preview/test hosts.
  */
 export function destroyProjects() {
+  // Invalidate any CMS load that is still awaiting the network. A completed
+  // stale load must not repopulate projectModels or the card index after an
+  // app teardown/remount or after a newer load has taken ownership.
+  projectLoadToken += 1;
   projectCardMap.clear();
   projectModels = [];
 }
@@ -65,6 +70,7 @@ export async function loadProjects({
 
   const grid = getGrid();
   if (!grid) return false;
+  const loadToken = ++projectLoadToken;
 
   try {
     const raw = await loadJson(url, null, { resolveUrl });
@@ -90,6 +96,11 @@ export async function loadProjects({
       // API describing cards that never reached the DOM.
       return false;
     }
+
+    // The request/build may have completed after teardown or after another
+    // load started. Only the current generation may publish into the DOM or
+    // replace the normalized project index.
+    if (loadToken !== projectLoadToken) return false;
 
     grid.replaceChildren(fragment);
 
