@@ -23,6 +23,8 @@ export function createLightboxMediaRenderer({
   let holographicMotionOwner = null;
   let holographicMotionCleanup = null;
   let holographicMotionPermission = 'unknown';
+  let holographicFocusOwner = null;
+  let holographicFocusScrollCleanup = null;
   const youtubeFrameCache = new Map();
   const imageDimensionCache = new Map();
   const videoDimensionCache = new Map();
@@ -547,15 +549,23 @@ export function createLightboxMediaRenderer({
     holographicMotionOwner = null;
   }
 
+  function getHolographicScreenAngle() {
+    const angle = Number(windowRef?.screen?.orientation?.angle);
+    if (Number.isFinite(angle)) return ((angle % 360) + 360) % 360;
+    const legacyAngle = Number(windowRef?.orientation);
+    return Number.isFinite(legacyAngle) ? ((legacyAngle % 360) + 360) % 360 : 0;
+  }
+
   async function requestHolographicMotion(surface) {
     if (!surface || holographicMotionPermission === 'denied') return false;
 
     try {
       const OrientationEvent = windowRef?.DeviceOrientationEvent;
-      if (OrientationEvent && typeof OrientationEvent.requestPermission === 'function') {
+      if (!OrientationEvent) return false;
+      if (typeof OrientationEvent.requestPermission === 'function') {
         const result = await OrientationEvent.requestPermission();
         holographicMotionPermission = result === 'granted' ? 'granted' : 'denied';
-      } else if (OrientationEvent || windowRef?.addEventListener) {
+      } else {
         holographicMotionPermission = 'granted';
       }
     } catch (_) {
@@ -566,18 +576,44 @@ export function createLightboxMediaRenderer({
 
     clearHolographicMotionListener();
     holographicMotionOwner = surface;
+    let motionFrame = null;
+    let smoothX = 50;
+    let smoothY = 50;
 
     const onOrientation = event => {
       if (!holographicMotionOwner || holographicMotionOwner !== surface || !surface.isConnected) return;
-      const gamma = clampHolographic(event?.gamma, -45, 45);
-      const beta = clampHolographic((Number(event?.beta) || 90) - 90, -45, 45);
-      const x = clampHolographic(50 + (gamma / 45) * 50);
-      const y = clampHolographic(50 + (beta / 45) * 50);
-      updateHolographicTilt(surface, x, y, { fromMotion: true });
+
+      let horizontal = clampHolographic(event?.gamma, -38, 38);
+      let vertical = clampHolographic((Number(event?.beta) || 90) - 90, -38, 38);
+      const angle = getHolographicScreenAngle();
+
+      if (angle === 90) {
+        [horizontal, vertical] = [-vertical, horizontal];
+      } else if (angle === 180) {
+        horizontal = -horizontal;
+        vertical = -vertical;
+      } else if (angle === 270) {
+        [horizontal, vertical] = [vertical, -horizontal];
+      }
+
+      const targetX = clampHolographic(50 + (horizontal / 38) * 50);
+      const targetY = clampHolographic(50 + (vertical / 38) * 50);
+
+      if (motionFrame) return;
+      motionFrame = windowRef?.requestAnimationFrame?.(() => {
+        motionFrame = null;
+        smoothX += (targetX - smoothX) * 0.18;
+        smoothY += (targetY - smoothY) * 0.18;
+        updateHolographicTilt(surface, smoothX, smoothY, { fromMotion: true });
+      }) ?? null;
     };
 
     windowRef.addEventListener('deviceorientation', onOrientation, { passive: true });
-    holographicMotionCleanup = () => windowRef.removeEventListener('deviceorientation', onOrientation);
+    holographicMotionCleanup = () => {
+      if (motionFrame) windowRef?.cancelAnimationFrame?.(motionFrame);
+      motionFrame = null;
+      windowRef.removeEventListener('deviceorientation', onOrientation);
+    };
     return true;
   }
 
@@ -627,6 +663,7 @@ export function createLightboxMediaRenderer({
     surface.className = 'lightbox-holographic';
     surface.dataset.holoStyle = config.style;
     surface.dataset.holoInput = 'pointer';
+    surface.dataset.holoFocused = 'false';
     surface.style.setProperty('--holo-intensity', String(config.intensity));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
@@ -659,6 +696,14 @@ export function createLightboxMediaRenderer({
     );
     back.appendChild(backImage);
 
+    const setHolographicAspect = () => {
+      const width = Number(frontImage.naturalWidth) || 0;
+      const height = Number(frontImage.naturalHeight) || 0;
+      if (width > 0 && height > 0) surface.style.setProperty('--holo-aspect', width + ' / ' + height);
+    };
+    setHolographicAspect();
+    frontImage.addEventListener('load', setHolographicAspect, { once: true });
+
     const textureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
     [front, back].forEach(face => {
       const spectrum = documentRef.createElement('span');
@@ -686,15 +731,126 @@ export function createLightboxMediaRenderer({
     inner.append(front, back);
     surface.appendChild(inner);
 
+    const activationHint = documentRef.createElement('div');
+    activationHint.className = 'lightbox-holographic-activate';
+    activationHint.setAttribute('aria-hidden', 'true');
+    activationHint.innerHTML = '<span><i class="fa-solid fa-mobile-screen-button"></i><strong>OPEN CARD VIEW</strong></span>';
+    surface.appendChild(activationHint);
+
+    const viewerUi = documentRef.createElement('div');
+    viewerUi.className = 'lightbox-holographic-ui';
+    viewerUi.hidden = true;
+
+    const backButton = documentRef.createElement('button');
+    backButton.className = 'lightbox-holographic-back';
+    backButton.type = 'button';
+    backButton.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>BACK</span>';
+    backButton.setAttribute('aria-label', 'Back to project media');
+    backButton.hidden = true;
+
+    const motionButton = documentRef.createElement('button');
+    motionButton.className = 'lightbox-holographic-motion';
+    motionButton.type = 'button';
+    motionButton.innerHTML = '<i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i><span>ENABLE MOTION</span>';
+    motionButton.setAttribute('aria-label', 'Enable device tilt motion');
+    motionButton.hidden = true;
+
+    viewerUi.append(backButton, motionButton);
+    surface.appendChild(viewerUi);
+
+    const deactivateFocus = ({ restoreScroll = true } = {}) => {
+      if (holographicFocusOwner !== surface) return;
+      holographicFocusScrollCleanup?.();
+      holographicFocusScrollCleanup = null;
+      if (holographicMotionOwner === surface) clearHolographicMotionListener();
+      holographicFocusOwner = null;
+
+      surface.closest('.lightbox-media-item')?.classList.remove('is-holo-focus-target');
+      surface.classList.remove('is-holo-focused');
+      surface.dataset.holoFocused = 'false';
+      surface.setAttribute('role', 'button');
+      surface.setAttribute('aria-pressed', surface.classList.contains('is-flipped') ? 'true' : 'false');
+      surface.setAttribute('aria-label', project.title ? 'Flip holographic artwork: ' + project.title : 'Flip holographic artwork');
+      surface.tabIndex = 0;
+      viewerUi.hidden = true;
+      backButton.hidden = true;
+      motionButton.hidden = true;
+
+      lightboxControls?.classList.remove('is-holo-controls-disabled');
+      if (lightboxControls) lightboxControls.inert = false;
+      lightbox?.classList.remove('is-holo-focused');
+      documentRef.documentElement.classList.remove('lm-holo-focus-open');
+      documentRef.body.classList.remove('lm-holo-focus-open');
+
+      if (restoreScroll && lightbox) {
+        const previousScroll = Number(lightbox.dataset.preHoloScrollTop);
+        if (Number.isFinite(previousScroll)) {
+          lightbox.scrollTop = previousScroll;
+          windowRef?.requestAnimationFrame?.(() => {
+            if (!lightbox?.classList.contains('is-holo-focused')) lightbox.scrollTop = previousScroll;
+          });
+        }
+      }
+      if (lightbox) delete lightbox.dataset.preHoloScrollTop;
+    };
+    surface.__deactivateHolographicFocus = deactivateFocus;
+
+    const activateFocus = async () => {
+      if (surface.dataset.holoFocused === 'true' || !lightbox?.classList.contains('active')) return;
+      if (lightbox.classList.contains('is-3d-focused')) return;
+      holographicFocusOwner?.__deactivateHolographicFocus?.();
+
+      const mediaEntry = surface.closest('.lightbox-media-item');
+      if (!mediaEntry) return;
+
+      holographicFocusOwner = surface;
+      lightbox.dataset.preHoloScrollTop = String(Number(lightbox.scrollTop) || 0);
+      lightbox.scrollTop = 0;
+      lightbox.classList.add('is-holo-focused');
+      mediaEntry.classList.add('is-holo-focus-target');
+      surface.classList.add('is-holo-focused');
+      surface.dataset.holoFocused = 'true';
+      surface.setAttribute('role', 'region');
+      surface.setAttribute('aria-label', project.title ? project.title + ' holographic card viewer' : 'Holographic card viewer');
+      surface.tabIndex = -1;
+
+      if (lightboxControls) {
+        lightboxControls.classList.add('is-holo-controls-disabled');
+        lightboxControls.inert = true;
+      }
+      documentRef.documentElement.classList.add('lm-holo-focus-open');
+      documentRef.body.classList.add('lm-holo-focus-open');
+
+      const blockFocusScroll = event => event.preventDefault();
+      lightbox.addEventListener('wheel', blockFocusScroll, { capture: true, passive: false });
+      lightbox.addEventListener('touchmove', blockFocusScroll, { capture: true, passive: false });
+      holographicFocusScrollCleanup = () => {
+        lightbox.removeEventListener('wheel', blockFocusScroll, { capture: true });
+        lightbox.removeEventListener('touchmove', blockFocusScroll, { capture: true });
+      };
+
+      viewerUi.hidden = false;
+      backButton.hidden = false;
+      motionButton.hidden = false;
+
+      const started = await requestHolographicMotion(surface);
+      motionButton.querySelector('span').textContent = started ? 'MOTION ENABLED' : 'TOUCH TILT';
+
+      windowRef?.requestAnimationFrame?.(() => {
+        if (surface.dataset.holoFocused === 'true') backButton.focus({ preventScroll: true });
+      });
+    };
+
     const cleanup = () => {
+      surface.__deactivateHolographicFocus?.({ restoreScroll: false });
+      delete surface.__deactivateHolographicFocus;
       if (holographicMotionOwner === surface) clearHolographicMotionListener();
       surface.replaceChildren();
     };
 
     const onPointerMove = event => {
-      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') {
-        if (event.pointerType === 'touch' && event.isPrimary === false) return;
-      }
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen' && event.pointerType !== 'touch') return;
+      if (event.pointerType === 'touch' && event.isPrimary === false) return;
       setHolographicReflection(surface, event);
     };
     const onPointerLeave = () => {
@@ -702,8 +858,10 @@ export function createLightboxMediaRenderer({
     };
     let touchStart = null;
     let suppressNextClick = false;
+    let lastActivationPointerType = '';
     const onPointerDown = event => {
       holographicMotionOwner = surface;
+      lastActivationPointerType = event.pointerType || '';
       if (event.pointerType === 'touch' || event.pointerType === 'pen') {
         touchStart = {
           x: Number(event.clientX) || 0,
@@ -726,6 +884,7 @@ export function createLightboxMediaRenderer({
       touchStart = null;
     };
     const toggleFlip = async event => {
+      if (event?.target?.closest?.('.lightbox-holographic-ui')) return;
       if (event?.type === 'click' && suppressNextClick) {
         suppressNextClick = false;
         return;
@@ -734,13 +893,35 @@ export function createLightboxMediaRenderer({
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
       }
+
+      const coarseInteraction = lastActivationPointerType === 'touch' || lastActivationPointerType === 'pen' ||
+        windowRef?.matchMedia?.('(pointer: coarse)')?.matches;
+
+      if (event?.type === 'click' && coarseInteraction && surface.dataset.holoFocused !== 'true') {
+        await activateFocus();
+        lastActivationPointerType = '';
+        return;
+      }
+
       surface.classList.toggle('is-flipped');
-      surface.setAttribute(
-        'aria-pressed',
-        surface.classList.contains('is-flipped') ? 'true' : 'false'
-      );
-      await requestHolographicMotion(surface);
+      surface.setAttribute('aria-pressed', surface.classList.contains('is-flipped') ? 'true' : 'false');
+
+      if (surface.dataset.holoFocused !== 'true') await requestHolographicMotion(surface);
+      lastActivationPointerType = '';
     };
+
+    backButton.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      deactivateFocus();
+    });
+
+    motionButton.addEventListener('click', async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const started = await requestHolographicMotion(surface);
+      motionButton.querySelector('span').textContent = started ? 'MOTION ENABLED' : 'TOUCH TILT';
+    });
 
     surface.addEventListener('pointermove', onPointerMove);
     surface.addEventListener('pointermove', onPointerMoveForGesture);
