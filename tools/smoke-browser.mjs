@@ -3062,10 +3062,10 @@ try {
         throw new Error('Show More / Show Less control is not pill-shaped: '+JSON.stringify(showMoreGeometry));
       }
       if (
-        showMoreGeometry.background !== 'rgb(0, 0, 0)' ||
-        showMoreGeometry.backdropFilter !== 'none'
+        showMoreGeometry.background !== 'rgba(255, 255, 255, 0.08)' ||
+        showMoreGeometry.backdropFilter === 'none'
       ) {
-        throw new Error('Show More / Show Less control regressed to a glass material instead of the black-and-white pill: ' + JSON.stringify(showMoreGeometry));
+        throw new Error('Collapsed Show More control did not retain the requested glass material: ' + JSON.stringify(showMoreGeometry));
       }
       if (!['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
         throw new Error('Footer foreground contrast token is not resolved: '+JSON.stringify(footerLayout));
