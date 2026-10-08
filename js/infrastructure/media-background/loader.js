@@ -17,7 +17,9 @@ export function ensureMediaBackgroundHelper() {
   mediaBackgroundPromise = loadScriptOnce(
     new URL('js/infrastructure/media-background/engine.js?v=20261005-01', getSiteRootUrl()).href,
     () => !!window.LMMediaBackground
-  );
+  ).finally(() => {
+    if (!window.LMMediaBackground) mediaBackgroundPromise = null;
+  });
 
   return mediaBackgroundPromise;
 }
