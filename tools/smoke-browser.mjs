@@ -102,6 +102,10 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
       const menuOpen = await mobileMenu.evaluate(el => el.classList.contains('active'));
       if (!menuOpen) await hamburger.click();
     }
+    // The mobile menu opens with a short opacity/max-height transition.
+    // Wait for the actual filter anchor to become visible before exercising
+    // its navigation semantics instead of racing the presentation animation.
+    await link.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
     if (!(await link.isVisible())) {
       throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
     }
