@@ -678,7 +678,10 @@ try {
         if(
           !button.pseudoBackground ||
           button.pseudoBackground === 'rgba(0, 0, 0, 0)' ||
-          !/^rgba?\\(0, 0, 0,/.test(button.pseudoBackground)
+          !(
+            button.pseudoBackground.startsWith('rgba(0, 0, 0,') ||
+            button.pseudoBackground.startsWith('rgb(0, 0, 0')
+          )
         ){
           throw new Error('Lightbox control backing layer is missing its transparent dark boundary: '+JSON.stringify(button));
         }
