@@ -1853,7 +1853,10 @@ try {
              control.border!=='none' || control.position!=='fixed' ||
              control.radius==='50%' || !Number.isFinite(bottom) || bottom<20 ||
              control.backingBorder!=='solid' ||
-             !(control.backingBackground.startsWith('rgba(0, 0, 0,') || control.backingBackground.startsWith('rgb(0, 0, 0')))){
+             !(
+               control.backingBackground.startsWith('rgba(0, 0, 0,') ||
+               control.backingBackground.startsWith('rgb(0, 0, 0')
+             )){
             throw new Error('Mobile Lightbox chevron control does not match the protected dark-squircle contract: '+JSON.stringify(control));
           }
         });
