@@ -4,6 +4,9 @@
     "title": "Haeru",
     "subtitle": "Co-Founder & Chief Creative Officer",
     "badge": "UI/UX Design",
+    "badges": [
+      "UI/UX Design"
+    ],
     "filters": [
       "archive"
     ],
@@ -88,6 +91,9 @@
     "title": "Retail & Spatial Layouts",
     "subtitle": "Retail Environment & Pop-Up Kiosk Design",
     "badge": "3D Design",
+    "badges": [
+      "3D Design"
+    ],
     "filters": [
       "3d-motion"
     ],
@@ -196,6 +202,9 @@
     "title": "3D Product & Packaging",
     "subtitle": "Commercial Product Rendering & Structural Packaging",
     "badge": "3D Design",
+    "badges": [
+      "3D Design"
+    ],
     "filters": [
       "3d-motion"
     ],
@@ -232,6 +241,9 @@
     "title": "Epiphany",
     "subtitle": "3D Conceptual Artwork Collection",
     "badge": "3D Design",
+    "badges": [
+      "3D Design"
+    ],
     "filters": [
       "3d-motion"
     ],
@@ -292,6 +304,9 @@
     "title": "5th Place — Walang Hanggang Dambana ng Sining (Eternal Shrine of Art)",
     "subtitle": "57th Shell National Student Art Competition (NSAC)",
     "badge": "2D Illustration",
+    "badges": [
+      "2D Illustration"
+    ],
     "filters": [
       "illustration"
     ],
@@ -322,6 +337,9 @@
     "title": "Friends Gacha",
     "subtitle": "Character Design & Animation",
     "badge": "Motion Graphics",
+    "badges": [
+      "Motion Graphics"
+    ],
     "filters": [
       "3d-motion"
     ],
@@ -370,6 +388,9 @@
     "title": "Baku: The Moon Eater",
     "subtitle": "3D Character Concept for Gauntlet of Gods Challenge",
     "badge": "3D Design",
+    "badges": [
+      "3D Design"
+    ],
     "filters": [
       "3d-motion"
     ],
@@ -391,7 +412,11 @@
         "type": "image",
         "src": "assets/projects/gog-render-challenge/card-layout.jpg",
         "caption": "Card Layout for the Gauntlet of Gods Physical Game Print",
-        "orientation": ""
+        "orientation": "",
+        "holographic": {
+          "style": "holographic",
+          "intensity": 0.7
+        }
       },
       {
         "type": "youtube",
@@ -412,6 +437,9 @@
     "title": "Arts of Lem (AOL) Gestalt Design Study",
     "subtitle": "Re-engineering a personal logo through the Gestalt laws of visual perception",
     "badge": "3D Design",
+    "badges": [
+      "3D Design"
+    ],
     "filters": [
       "3d-motion"
     ],
@@ -460,6 +488,9 @@
     "title": "Commercial & Graphic Design",
     "subtitle": "Key Visuals & Editorial Layouts",
     "badge": "Brand Design",
+    "badges": [
+      "Brand Design"
+    ],
     "filters": [
       "archive"
     ],
@@ -520,6 +551,9 @@
     "title": "Personal Illustrations",
     "subtitle": "A Collection of 2D Artworks & Studies",
     "badge": "2D Illustration",
+    "badges": [
+      "2D Illustration"
+    ],
     "filters": [
       "illustration"
     ],
@@ -556,6 +590,9 @@
     "title": "Test Project",
     "subtitle": "this is a test project subtitle for this project website portfolio testing",
     "badge": "3D Design",
+    "badges": [
+      "3D Design"
+    ],
     "filters": [
       "3d-motion"
     ],
