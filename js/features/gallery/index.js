@@ -47,6 +47,7 @@ export async function initGallery(options = {}) {
       allButton.type = 'button';
       allButton.className = 'tab-btn filter-btn active';
       allButton.dataset.filter = 'all';
+      allButton.setAttribute('aria-pressed', 'true');
       allButton.textContent = 'ALL';
       fragment.appendChild(allButton);
 
@@ -56,6 +57,7 @@ export async function initGallery(options = {}) {
         button.type = 'button';
         button.className = 'tab-btn filter-btn';
         button.dataset.filter = String(filter.id);
+        button.setAttribute('aria-pressed', 'false');
         button.textContent = filter.label || filter.name || filter.id;
         fragment.appendChild(button);
       });
@@ -224,7 +226,11 @@ export async function initGallery(options = {}) {
     const nextFilter = button.getAttribute('data-filter') || 'all';
     const changed = currentFilter !== nextFilter;
 
-    filterBtns.forEach(item => item.classList.toggle('active', item === button));
+    filterBtns.forEach(item => {
+      const active = item === button;
+      item.classList.toggle('active', active);
+      item.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
     currentFilter = nextFilter;
 
     // Only a real filter change starts a new result set. Centering the
