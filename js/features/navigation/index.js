@@ -155,9 +155,18 @@ export function initNavigation({ root = globalThis.document } = {}) {
     } catch (_) {}
 
     const scrollingElement = root.scrollingElement || root.documentElement;
-    if (scrollingElement) scrollingElement.scrollTop = 0;
-    try { windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' }); }
-    catch (_) { windowRef.scrollTo(0, 0); }
+    // Clear every standards/legacy document scroll surface synchronously.
+    // This keeps same-document Works/logo navigation deterministic even when
+    // a browser, embedded surface, or restored page exposes BODY as the
+    // effective scrolling element.
+    [scrollingElement, root.documentElement, root.body]
+      .filter(Boolean)
+      .forEach(element => { element.scrollLeft = 0; element.scrollTop = 0; });
+    try {
+      windowRef.scrollTo(0, 0);
+    } catch (_) {
+      try { windowRef.scrollTo({ left: 0, top: 0 }); } catch (_) {}
+    }
   }
 
   function handleSamePageContactNavigation(event) {
