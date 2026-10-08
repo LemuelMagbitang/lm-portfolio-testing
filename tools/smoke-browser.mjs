@@ -221,6 +221,41 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
   }
 }
 
+async function assertFilterButtonHitTarget(page, label, index = 1) {
+  const button = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn').nth(index);
+  if (await button.count() !== 1) {
+    throw new Error(label + ' is missing the requested filter button.');
+  }
+
+  const hit = await button.evaluate(el => {
+    const rect = el.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const top = document.elementFromPoint(centerX, centerY);
+    const style = getComputedStyle(el);
+    return {
+      filter: el.getAttribute('data-filter') || '',
+      topTag: top?.tagName || '',
+      topClass: top?.className || '',
+      topIsButton: top === el || !!top?.closest?.('.filter-tabs .filter-btn, .filter-tabs .tab-btn'),
+      pointerEvents: style.pointerEvents,
+      inert: Boolean(el.closest('.filter-tabs')?.inert),
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+    };
+  });
+
+  if (!hit.topIsButton || hit.pointerEvents === 'none' || hit.inert) {
+    throw new Error(label + ' filter button is not the topmost interactive hit target: ' + JSON.stringify(hit));
+  }
+
+  await button.click();
+  await page.waitForTimeout(120);
+  const active = await button.evaluate(el => el.classList.contains('active'));
+  if (!active) {
+    throw new Error(label + ' filter button received input but did not become active.');
+  }
+}
+
 async function assertMobileNavigation(page, label) {
   const button = page.locator('.hamburger').first();
   const menu = page.locator('.nav-links').first();
@@ -486,6 +521,9 @@ try {
       if (!filterColor || filterColor === 'rgba(0, 0, 0, 0)') throw new Error('Works filter button styling did not load.');
 
       const secondaryFilter = filterButtons.nth(1);
+      await assertFilterButtonHitTarget(page, 'Desktop Works');
+      await allFilter.click();
+      await page.waitForTimeout(120);
       const preFilterGeometry = await page.evaluate(() => {
         const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
         const wrapper = document.querySelector('.portfolio-wrapper')?.getBoundingClientRect();
@@ -1563,6 +1601,9 @@ try {
 
       const allFilter = page.locator('.filter-tabs [data-filter="all"]');
       if (await allFilter.count() !== 1) throw new Error('Mobile/tablet Works filter UI is missing ALL.');
+      await assertFilterButtonHitTarget(page, 'Mobile Works');
+      await allFilter.click();
+      await page.waitForTimeout(120);
 
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
       if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
