@@ -23,7 +23,7 @@ import { initGallery } from '../features/gallery/index.js?v=20261007-05';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261007-03';
 import { initLightbox } from '../features/lightbox/index.js?v=20261008-02';
-import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261005-06';
+import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 
 export async function createPortfolioApp({
   root = globalThis.document,

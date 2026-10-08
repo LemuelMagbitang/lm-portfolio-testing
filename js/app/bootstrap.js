@@ -12,7 +12,7 @@ import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
 import {
   ensureMediaBackgroundHelper,
   applyMediaBackground
-} from '../infrastructure/media-background/loader.js';
+} from '../infrastructure/media-background/loader.js?v=20261008-01';
 import { loadCmsJson } from '../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../infrastructure/youtube/url.js';
 import { normalizeAppConfig } from '../core/config.js';
