@@ -1287,7 +1287,6 @@ export function createLightboxMediaRenderer({
       try { cleanup(); } catch (_) {}
       holographicCleanups.delete(cleanup);
     });
-    clearHolographicMotionListener();
     Array.from(activePreloadCleanups).reverse().forEach(cleanup => {
       try { cleanup(); } catch (_) {}
     });
@@ -1318,7 +1317,6 @@ export function createLightboxMediaRenderer({
       try { cleanup(); } catch (_) {}
       holographicCleanups.delete(cleanup);
     });
-    clearHolographicMotionListener();
     youtubeMessageCleanup?.();
     youtubeMessageCleanup = null;
     pauseOtherPlayback(container);
