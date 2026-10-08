@@ -32,11 +32,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preload" as="image" href="../assets/projects/site/profile.jpg" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@500,700,800,900&display=swap">
-  <link rel="stylesheet" href="../css/style.css?v=20261007-25">
-  <link rel="modulepreload" href="../js/app/bootstrap.js?v=20261008-01">
-  <link rel="modulepreload" href="../js/app/page-composition.js?v=20261008-01">
+  <link rel="stylesheet" href="../css/style.css?v=20261008-02">
+  <link rel="modulepreload" href="../js/app/bootstrap.js?v=20261008-02">
+  <link rel="modulepreload" href="../js/app/page-composition.js?v=20261008-02">
   <script type="importmap">
   {
     "imports": {
@@ -81,7 +84,7 @@
     <div class="hero-banner" id="heroBannerAbout"></div>
 
     <div class="hero-overlay about-hero-overlay">
-      <div class="photo-frame"><img src="../assets/projects/site/profile.jpg" alt="Lemuel Magbitang" class="profile-pic-large" id="aboutPhoto"></div>
+      <div class="photo-frame"><img src="../assets/projects/site/profile.jpg" alt="Lemuel Magbitang" class="profile-pic-large" id="aboutPhoto" loading="eager" fetchpriority="high"></div>
 
       <div class="about-bio-text">
         <h2 class="name hello-heading" id="aboutHeadline">HELLO, I'M LM.</h2>
@@ -186,6 +189,6 @@
     window.HERO_LOOP_URL = 'data/hero-loop.json';
     window.FOOTER_LOOP_URL = 'data/footer-loop.json';
   </script>
-  <script type="module" src="../js/script.js?v=20261008-01"></script>
+  <script type="module" src="../js/script.js?v=20261008-02"></script>
 </body>
 </html>
