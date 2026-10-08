@@ -2624,6 +2624,21 @@ try {
       if (worksReset.hash !== '') {
         throw new Error('Main-page Works navigation did not clear the Contact/filter hash: ' + worksReset.hash);
       }
+      const worksFilterA11y = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
+        return {
+          activeCount: buttons.filter(button => button.classList.contains('active')).length,
+          pressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
+          allPressed: document.querySelector('.filter-tabs [data-filter="all"]')?.getAttribute('aria-pressed') || null
+        };
+      });
+      if (
+        worksFilterA11y.activeCount !== 1 ||
+        worksFilterA11y.pressedCount !== 1 ||
+        worksFilterA11y.allPressed !== 'true'
+      ) {
+        throw new Error('Main-page Works navigation restored ALL visually but left filter ARIA state inconsistent: ' + JSON.stringify(worksFilterA11y));
+      }
       unloads = await page.evaluate(() => window.__lmSmokeUnloadCount);
       if (unloads !== 0) throw new Error('Main-page Works navigation triggered a document unload/reload.');
 
@@ -2644,6 +2659,21 @@ try {
       }
       if (logoReset.hash !== '') {
         throw new Error('Main-page LM logo navigation did not clear the Contact/filter hash: ' + logoReset.hash);
+      }
+      const logoFilterA11y = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
+        return {
+          activeCount: buttons.filter(button => button.classList.contains('active')).length,
+          pressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
+          allPressed: document.querySelector('.filter-tabs [data-filter="all"]')?.getAttribute('aria-pressed') || null
+        };
+      });
+      if (
+        logoFilterA11y.activeCount !== 1 ||
+        logoFilterA11y.pressedCount !== 1 ||
+        logoFilterA11y.allPressed !== 'true'
+      ) {
+        throw new Error('Main-page LM logo navigation left filter ARIA state inconsistent after Home reset: ' + JSON.stringify(logoFilterA11y));
       }
       unloads = await page.evaluate(() => window.__lmSmokeUnloadCount);
       if (unloads !== 0) throw new Error('Main-page LM logo navigation triggered a document unload/reload.');
