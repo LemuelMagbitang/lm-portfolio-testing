@@ -23,6 +23,9 @@ export function loadScriptOnce(
   const promise = new Promise(resolve => {
     let settled = false;
     let timer = null;
+    let observedScript = null;
+    let ownsScript = false;
+    let removeListeners = () => {};
 
     const finish = value => {
       if (settled) return;
@@ -30,11 +33,31 @@ export function loadScriptOnce(
       if (timer !== null) {
         (documentRef.defaultView || globalThis).clearTimeout?.(timer);
       }
+      removeListeners();
+      if (!value && ownsScript && observedScript?.parentNode) {
+        observedScript.remove();
+      }
       resolve(value);
     };
 
     const boundedTimeout = Math.max(1000, Number(timeoutMs) || SCRIPT_LOAD_TIMEOUT_MS);
-    const timeout = () => finish(test());
+    const onLoad = () => finish(test());
+    const onError = () => finish(false);
+
+    const observeScript = (script, owned) => {
+      observedScript = script;
+      ownsScript = owned;
+      script.addEventListener('load', onLoad, { once: true });
+      script.addEventListener('error', onError, { once: true });
+      removeListeners = () => {
+        script.removeEventListener?.('load', onLoad);
+        script.removeEventListener?.('error', onError);
+      };
+      timer = (documentRef.defaultView || globalThis).setTimeout?.(
+        () => finish(test()),
+        boundedTimeout
+      ) ?? null;
+    };
 
     const existing = Array.from(documentRef.scripts || [])
       .find(node => node.dataset.lmRuntimeSrc === url);
@@ -44,10 +67,7 @@ export function loadScriptOnce(
         finish(true);
         return;
       }
-
-      existing.addEventListener('load', () => finish(test()), { once: true });
-      existing.addEventListener('error', () => finish(false), { once: true });
-      timer = (documentRef.defaultView || globalThis).setTimeout?.(timeout, boundedTimeout) ?? null;
+      observeScript(existing, existing.dataset.lmRuntimeManaged === 'true');
       return;
     }
 
@@ -55,12 +75,20 @@ export function loadScriptOnce(
     script.src = url;
     script.async = true;
     script.dataset.lmRuntimeSrc = url;
-    script.onload = () => finish(test());
-    script.onerror = () => finish(false);
-    timer = (documentRef.defaultView || globalThis).setTimeout?.(timeout, boundedTimeout) ?? null;
+    script.dataset.lmRuntimeManaged = 'true';
+    observeScript(script, true);
     documentRef.head.appendChild(script);
   });
 
   loadedScripts.set(url, promise);
+
+  // Cache only live/successful loads. A transient network/CDN failure must
+  // never poison later capability requests for the lifetime of the page.
+  void promise.then(result => {
+    if (!result && loadedScripts.get(url) === promise) {
+      loadedScripts.delete(url);
+    }
+  });
+
   return promise;
 }
