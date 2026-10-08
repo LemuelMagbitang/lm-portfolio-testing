@@ -2413,6 +2413,29 @@ try {
       ) {
         throw new Error('768px breakpoint entered a hybrid layout instead of the tablet three-column grid.');
       }
+
+      const contactLayout = await page.evaluate(() => {
+        const grid = document.querySelector('#web3-forms-container');
+        const blocks = Array.from(grid?.querySelectorAll(':scope > .contact-block') || [])
+          .map(block => {
+            const rect = block.getBoundingClientRect();
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+          });
+        const mobileTabs = document.querySelector('.contact-mobile-tabs');
+        return {
+          columns: blocks.filter(block => block.width > 0).length,
+          sameRow: blocks.length >= 2 && Math.abs(blocks[0].y - blocks[1].y) <= 2,
+          widthGap: blocks.length >= 2 ? Math.abs((blocks[0].x + blocks[0].width) - blocks[1].x) : 0,
+          mobileTabsVisible: !!mobileTabs && getComputedStyle(mobileTabs).display !== 'none'
+        };
+      });
+      if (
+        contactLayout.columns < 2 ||
+        !contactLayout.sameRow ||
+        contactLayout.mobileTabsVisible
+      ) {
+        throw new Error('Tablet Contact layout did not preserve the desktop side-by-side presentation: ' + JSON.stringify(contactLayout));
+      }
     }, { width: 768, height: 900 });
 
     await smokePage(browser, '/', async page => {
