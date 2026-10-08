@@ -4219,7 +4219,7 @@ footer > .footer-content p{
   padding:0;
   border-radius:0;
   background:transparent;
-  touch-action:none;
+  touch-action:none!important;
   cursor:grab;
 }
 .lightbox-modal.is-holo-focused .is-holo-focus-target .lightbox-holographic-inner{
