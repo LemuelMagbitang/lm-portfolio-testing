@@ -188,6 +188,11 @@ async function assertMobileNavigation(page, label) {
     throw new Error(label + ' mobile navigation did not close from an outside tap.');
   }
 
+  // The menu close interaction is intentionally animated. Pointer events are
+  // disabled immediately by the CSS contract, while opacity/max-height settle
+  // over a few hundred milliseconds. Wait before inspecting final presentation.
+  await page.waitForTimeout(360);
+
   // Regression guard: a closed mobile Works dropdown must not retain an
   // interactive/visible hit surface over the document. Previously its nested
   // dropdown rules overrode the parent's pointer-events:none and intercepted
