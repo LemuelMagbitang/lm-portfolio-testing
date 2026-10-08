@@ -1770,8 +1770,30 @@ try {
         throw new Error('Expanded Gallery state was not settled before Lightbox close regression test: ' + JSON.stringify(expandedBeforeLightbox));
       }
 
-      const lightboxCard = page.locator('#portfolioGrid .project-card').filter({ visible: true }).first();
-      await lightboxCard.click();
+      const lightboxPoint = await page.locator('#portfolioGrid .project-card').evaluateAll(cards => {
+        const rects = cards
+          .filter(card => getComputedStyle(card).display !== 'none')
+          .map(card => card.getBoundingClientRect())
+          .filter(rect =>
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.top >= 0 &&
+            rect.bottom <= innerHeight
+          );
+        const rect = rects[0];
+        return rect ? {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        } : null;
+      });
+      if (!lightboxPoint) {
+        throw new Error('Expanded Gallery regression test could not find a fully visible project card without scrolling it into view.');
+      }
+      // Use a direct screen-coordinate click instead of Locator.click(). The
+      // latter may scroll the target into view before dispatching the click,
+      // which would make this test capture a different pre-Lightbox scroll
+      // position than the one we just measured.
+      await page.mouse.click(lightboxPoint.x, lightboxPoint.y);
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(120);
