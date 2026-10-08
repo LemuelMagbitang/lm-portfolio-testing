@@ -2455,17 +2455,34 @@ try {
           columns: blocks.filter(block => block.width > 0).length,
           sameRow: blocks.length >= 2 && Math.abs(blocks[0].y - blocks[1].y) <= 2,
           widthGap: blocks.length >= 2 ? Math.abs((blocks[0].x + blocks[0].width) - blocks[1].x) : 0,
+          widthDelta: blocks.length >= 2 ? Math.abs(blocks[0].width - blocks[1].width) : Infinity,
           mobileTabsVisible: !!mobileTabs && getComputedStyle(mobileTabs).display !== 'none'
         };
       });
       if (
         contactLayout.columns < 2 ||
         !contactLayout.sameRow ||
+        contactLayout.widthDelta > 2 ||
         contactLayout.mobileTabsVisible
       ) {
         throw new Error('Tablet Contact layout did not preserve the desktop side-by-side presentation: ' + JSON.stringify(contactLayout));
       }
     }, { width: 768, height: 900 });
+
+    await smokePage(browser, '/', async page => {
+      const contactLayout = await page.evaluate(() => {
+        const blocks = Array.from(document.querySelectorAll('#web3-forms-container > .contact-block'))
+          .map(block => block.getBoundingClientRect());
+        return {
+          count: blocks.length,
+          sameRow: blocks.length >= 2 && Math.abs(blocks[0].y - blocks[1].y) <= 2,
+          widthDelta: blocks.length >= 2 ? Math.abs(blocks[0].width - blocks[1].width) : Infinity
+        };
+      });
+      if (contactLayout.count < 2 || !contactLayout.sameRow || contactLayout.widthDelta > 2) {
+        throw new Error('1024px iPad/tablet Contact blocks drifted away from equal side-by-side sizing: ' + JSON.stringify(contactLayout));
+      }
+    }, { width: 1024, height: 900 });
 
     await smokePage(browser, '/', async page => {
       const cards = page.locator('#portfolioGrid .project-card');
