@@ -588,8 +588,12 @@ export function createLightboxMediaRenderer({
     const ry = ((clampedX - 50) / 50) * 11;
     const rx = ((50 - clampedY) / 50) * 11;
     const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
+    const foilX = 100 - clampedX;
+    const foilY = 100 - clampedY;
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
+    surface.style.setProperty('--holo-foil-x', foilX.toFixed(2) + '%');
+    surface.style.setProperty('--holo-foil-y', foilY.toFixed(2) + '%');
     surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
@@ -626,6 +630,8 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-intensity', String(config.intensity));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
+    surface.style.setProperty('--holo-foil-x', '50%');
+    surface.style.setProperty('--holo-foil-y', '50%');
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
     surface.style.setProperty('--holo-angle', '0deg');

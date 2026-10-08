@@ -1306,13 +1306,22 @@ try {
         const holoStateBeforeFlip = await holographic.evaluate(el => ({
           x: el.style.getPropertyValue('--holo-x'),
           y: el.style.getPropertyValue('--holo-y'),
+          foilX: el.style.getPropertyValue('--holo-foil-x'),
+          foilY: el.style.getPropertyValue('--holo-foil-y'),
           rx: el.style.getPropertyValue('--holo-rx'),
           ry: el.style.getPropertyValue('--holo-ry'),
           back: el.querySelector('.lightbox-holographic-back img')?.getAttribute('src') || ''
         }));
+        const pointerX = Number.parseFloat(holoStateBeforeFlip.x);
+        const pointerY = Number.parseFloat(holoStateBeforeFlip.y);
+        const foilX = Number.parseFloat(holoStateBeforeFlip.foilX);
+        const foilY = Number.parseFloat(holoStateBeforeFlip.foilY);
         if (holoStateBeforeFlip.x === '50%' || holoStateBeforeFlip.y === '50%' ||
-            !holoStateBeforeFlip.rx || !holoStateBeforeFlip.ry) {
-          throw new Error('Holographic Lightbox pointer tracking did not update the foil coordinates.');
+            !holoStateBeforeFlip.rx || !holoStateBeforeFlip.ry ||
+            !Number.isFinite(foilX) || !Number.isFinite(foilY) ||
+            Math.abs((pointerX + foilX) - 100) > 1.5 ||
+            Math.abs((pointerY + foilY) - 100) > 1.5) {
+          throw new Error('Holographic Lightbox pointer/foil mapping did not preserve the inverse refraction contract.');
         }
         if (!holoStateBeforeFlip.back.includes('holographic-smoke/back.svg')) {
           throw new Error('Holographic Lightbox did not mount the configured back artwork.');

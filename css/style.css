@@ -1606,8 +1606,8 @@ body.center-page {
     rgba(154,89,255,.28),
     rgba(255,45,125,.18)
   );
-  background-size:145% 145%;
-  background-position:var(--holo-x,50%) var(--holo-y,50%);
+  background-size:200% 200%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   opacity:calc(.10 + (var(--holo-intensity,.7) * .78));
   transform:scale(1.08);
   mix-blend-mode:screen;
@@ -1649,14 +1649,15 @@ body.center-page {
     rgba(255,231,104,.26) 81%,
     rgba(255,100,205,.22) 100%
   );
-  background-size:190% 190%;
+  background-size:200% 200%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
 }
 
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
   background:
-    radial-gradient(circle at var(--holo-x,50%) var(--holo-y,50%), rgba(77,238,255,.42), transparent 32%),
-    radial-gradient(circle at calc(100% - var(--holo-x,50%)) var(--holo-y,50%), rgba(180,100,255,.38), transparent 36%),
-    radial-gradient(circle at var(--holo-x,50%) calc(100% - var(--holo-y,50%)), rgba(90,255,180,.34), transparent 38%);
+    radial-gradient(circle at var(--holo-foil-x,50%) var(--holo-foil-y,50%), rgba(77,238,255,.42), transparent 32%),
+    radial-gradient(circle at calc(100% - var(--holo-foil-x,50%)) var(--holo-foil-y,50%), rgba(180,100,255,.38), transparent 36%),
+    radial-gradient(circle at var(--holo-foil-x,50%) calc(100% - var(--holo-foil-y,50%)), rgba(90,255,180,.34), transparent 38%);
   background-size:150% 150%;
 }
 
