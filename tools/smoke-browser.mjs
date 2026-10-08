@@ -462,6 +462,22 @@ try {
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
 
+        const affordance = await holographic.evaluate(el => {
+          const base = getComputedStyle(el);
+          const hint = getComputedStyle(el, '::before');
+          const sheen = getComputedStyle(el, '::after');
+          return {
+            animationName: base.animationName,
+            hint: hint.content,
+            sheenAnimation: sheen.animationName
+          };
+        });
+        if (!affordance.animationName.includes('holo-idle-float') ||
+            affordance.hint !== '"HOLD + MOVE"' ||
+            !affordance.sheenAnimation.includes('holo-idle-sheen')) {
+          throw new Error('Mobile holographic surface is missing its subtle interaction affordance.');
+        }
+
         // Quick movement must remain a normal Lightbox gesture: no foil
         // engagement before the hold threshold.
         await holographic.dispatchEvent('pointerdown', {
@@ -506,6 +522,23 @@ try {
           pointerType: 'touch', isPrimary: true, pointerId: 82,
           clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
         });
+
+        const touchMovePrevented = await holographic.evaluate(el => {
+          const event = new Event('touchmove', { bubbles: true, cancelable: true });
+          const rect = el.getBoundingClientRect();
+          const touch = {
+            clientX: rect.left + rect.width * .74,
+            clientY: rect.top + rect.height * .24
+          };
+          Object.defineProperty(event, 'touches', { value: [touch] });
+          Object.defineProperty(event, 'changedTouches', { value: [touch] });
+          el.dispatchEvent(event);
+          return event.defaultPrevented;
+        });
+        if (!touchMovePrevented) {
+          throw new Error('Held mobile holographic touch did not cancel the native touch-scroll path.');
+        }
+
         await page.waitForTimeout(40);
         const tiltState = await holographic.evaluate(el => ({
           x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
@@ -1420,6 +1453,17 @@ try {
         }
         if (await holographic.getAttribute('data-holo-style') !== 'iridescent') {
           throw new Error('Holographic Lightbox fixture lost its configured visual style.');
+        }
+
+        const affordance = await holographic.evaluate(el => ({
+          animationName: getComputedStyle(el).animationName,
+          hint: getComputedStyle(el, '::before').content,
+          sheenAnimation: getComputedStyle(el, '::after').animationName
+        }));
+        if (!affordance.animationName.includes('holo-idle-float') ||
+            affordance.hint !== '"MOVE / CLICK"' ||
+            !affordance.sheenAnimation.includes('holo-idle-sheen')) {
+          throw new Error('Desktop holographic surface is missing its subtle interaction affordance.');
         }
 
         const holoBox = await holographic.boundingBox();

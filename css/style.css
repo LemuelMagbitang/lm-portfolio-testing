@@ -1596,17 +1596,20 @@ body.center-page {
    completely to the live pointer/touch transform. */
 #lightboxMediaContainer .lightbox-holographic:hover,
 #lightboxMediaContainer .lightbox-holographic:focus-visible,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged{
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending{
   animation-play-state:paused;
 }
 #lightboxMediaContainer .lightbox-holographic:hover::before,
 #lightboxMediaContainer .lightbox-holographic:focus-visible::before,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::before{
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::before,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::before{
   opacity:.28;
 }
 #lightboxMediaContainer .lightbox-holographic:hover::after,
 #lightboxMediaContainer .lightbox-holographic:focus-visible::after,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::after{
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::after,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::after{
   animation-play-state:paused;
   opacity:.18;
 }
@@ -1792,6 +1795,11 @@ body.center-page {
   #lightboxMediaContainer .lightbox-holographic-glare,
   #lightboxMediaContainer .lightbox-holographic-texture{
     transition:none;
+  }
+  #lightboxMediaContainer .lightbox-holographic,
+  #lightboxMediaContainer .lightbox-holographic::before,
+  #lightboxMediaContainer .lightbox-holographic::after{
+    animation:none;
   }
 }
 

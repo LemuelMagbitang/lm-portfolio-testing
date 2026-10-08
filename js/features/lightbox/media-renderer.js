@@ -660,7 +660,7 @@ export function createLightboxMediaRenderer({
         holdTimer = null;
       }
       touchGesture = null;
-      surface.classList.remove('is-holo-touch-engaged');
+      surface.classList.remove('is-holo-touch-engaged', 'is-holo-touch-pending');
     };
 
     const cleanup = () => {
@@ -723,6 +723,7 @@ export function createLightboxMediaRenderer({
 
       clearTouchGesture();
       suppressNextClick = false;
+      surface.classList.add('is-holo-touch-pending');
       touchGesture = {
         pointerId: event.pointerId,
         startX: Number(event.clientX) || 0,
