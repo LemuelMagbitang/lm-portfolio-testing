@@ -2828,6 +2828,9 @@ try {
           activeTabs,
           visiblePanels,
           display: tabStyle?.display || '',
+          active: tabRow?.getAttribute('data-active') || '',
+          indicatorBackground: tabRow ? getComputedStyle(tabRow, '::before').backgroundColor : '',
+          indicatorTransition: tabRow ? getComputedStyle(tabRow, '::before').transitionProperty : '',
           panelIds: panels.map(panel => ({ id: panel.id, display: getComputedStyle(panel).display }))
         };
       });
@@ -2838,15 +2841,26 @@ try {
 
       await page.locator('#contactTabReview').click();
       await page.waitForTimeout(40);
-      const reviewTabState = await page.evaluate(() => ({
-        projectTab: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
-        reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
-        projectDisplay: getComputedStyle(document.querySelector('#contactProjectPanel')).display,
-        reviewDisplay: getComputedStyle(document.querySelector('#contactReviewPanel')).display
-      }));
+      const reviewTabState = await page.evaluate(() => {
+        const rail = document.querySelector('.contact-mobile-tabs');
+        const indicator = rail ? getComputedStyle(rail, '::before') : null;
+        return {
+          projectTab: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+          reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
+          projectDisplay: getComputedStyle(document.querySelector('#contactProjectPanel')).display,
+          reviewDisplay: getComputedStyle(document.querySelector('#contactReviewPanel')).display,
+          active: rail?.getAttribute('data-active') || '',
+          indicatorBackground: indicator?.backgroundColor || '',
+          indicatorTransition: indicator?.transitionProperty || '',
+          indicatorTransform: indicator?.transform || ''
+        };
+      });
       if (reviewTabState.projectTab !== 'false' || reviewTabState.reviewTab !== 'true' ||
-          reviewTabState.projectDisplay !== 'none' || reviewTabState.reviewDisplay === 'none') {
-        throw new Error('Mobile Contact tab switching did not activate the review panel: '+JSON.stringify(reviewTabState));
+          reviewTabState.projectDisplay !== 'none' || reviewTabState.reviewDisplay === 'none' ||
+          reviewTabState.active !== 'review' ||
+          reviewTabState.indicatorBackground !== 'rgb(255, 255, 255)' ||
+          !reviewTabState.indicatorTransition.includes('transform')) {
+        throw new Error('Mobile Contact tab switching did not activate the sliding review state: '+JSON.stringify(reviewTabState));
       }
       const contactTabStyles=await page.locator('.contact-mobile-tab').evaluateAll(tabs=>tabs.map(tab=>{
         const s=getComputedStyle(tab);
