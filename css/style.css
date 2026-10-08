@@ -3103,19 +3103,6 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 }
 
 @media (max-width: 767px) {
-  /* Match the legacy gallery on touch screens: there is no hover state, so
-     the title/subtitle overlay remains visible and is flush to the card edge. */
-  .project-card .glass-info {
-    display: block;
-    left:0;
-    bottom:0;
-    width:100%;
-    border-radius:0;
-    transform:translateY(0);
-    opacity:1;
-    padding:20px 15px 15px;
-  }
-
   /* Filter changes get a restrained depth/blur motion on touch layouts.
      Transform and filter do not participate in grid sizing, so the gallery
      geometry remains deterministic while the incoming result settles into
