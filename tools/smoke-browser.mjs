@@ -656,10 +656,16 @@ try {
         const buttons=Array.from(document.querySelectorAll('#lightboxClose, .lightbox-prev, .lightbox-next'));
         return {
           blend:layer ? getComputedStyle(layer).mixBlendMode : '',
-          buttons:buttons.map(button=>({
-            color:getComputedStyle(button).color,
-            border:getComputedStyle(button).borderStyle
-          }))
+          buttons:buttons.map(button=>{
+            const style=getComputedStyle(button);
+            const pseudo=getComputedStyle(button,'::before');
+            return {
+              color:style.color,
+              border:style.borderStyle,
+              pseudoBackground:pseudo.backgroundColor,
+              pseudoBorderRadius:pseudo.borderRadius
+            };
+          })
         };
       });
       if(navigationControls.blend!=='normal') {
@@ -668,6 +674,13 @@ try {
       navigationControls.buttons.forEach(button=>{
         if(button.color!=='rgb(255, 255, 255)' || button.border!=='none'){
           throw new Error('Lightbox controls are not stable white/borderless: '+JSON.stringify(button));
+        }
+        if(
+          !button.pseudoBackground ||
+          button.pseudoBackground === 'rgba(0, 0, 0, 0)' ||
+          !/rgba?\\(0, 0, 0,/.test(button.pseudoBackground)
+        ){
+          throw new Error('Lightbox control backing layer is missing its transparent dark boundary: '+JSON.stringify(button));
         }
       });
 
@@ -875,6 +888,50 @@ try {
         throw new Error(`3D overlay/canvas positioning is not explicit: ${JSON.stringify(layerOrder)}`);
       }
 
+      const normal3DDescriptionState = await page.evaluate(() => {
+        const modalDescription = document.querySelector('#modalDesc');
+        const fullDescription = document.querySelector('#modalFullDesc');
+        const caption = document.querySelector('#lightbox .is-3d-media-item .media-caption');
+        const read = el => {
+          const style = el ? getComputedStyle(el) : null;
+          return {
+            exists: !!el,
+            text: el?.textContent?.trim() || '',
+            display: style?.display || '',
+            visibility: style?.visibility || '',
+            opacity: style?.opacity || ''
+          };
+        };
+        return {
+          modalDescription: read(modalDescription),
+          fullDescription: read(fullDescription),
+          caption: read(caption)
+        };
+      });
+      const anyNormal3DDescription =
+        normal3DDescriptionState.modalDescription.text ||
+        normal3DDescriptionState.fullDescription.text ||
+        normal3DDescriptionState.caption.text;
+      if (!anyNormal3DDescription) {
+        throw new Error('3D project Lightbox opened without any project/media description content.');
+      }
+      if (
+        normal3DDescriptionState.modalDescription.exists &&
+        (normal3DDescriptionState.modalDescription.visibility === 'hidden' ||
+         normal3DDescriptionState.modalDescription.display === 'none' ||
+         normal3DDescriptionState.modalDescription.opacity === '0')
+      ) {
+        throw new Error('3D project description is hidden before entering focused 3D inspection.');
+      }
+      if (
+        normal3DDescriptionState.caption.exists &&
+        (normal3DDescriptionState.caption.visibility === 'hidden' ||
+         normal3DDescriptionState.caption.display === 'none' ||
+         normal3DDescriptionState.caption.opacity === '0')
+      ) {
+        throw new Error('3D artwork caption is hidden before entering focused 3D inspection.');
+      }
+
       await modelShell.click();
       await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
 
@@ -1029,9 +1086,33 @@ try {
         throw new Error('Focused 3D did not place the global Lightbox chrome underneath the modal layer: ' + JSON.stringify(focusedControlStack));
       }
 
-      const focusedCaption = await page.locator('#lightbox .is-3d-focus-target .media-caption').count();
-      if (focusedCaption !== 0) {
-        throw new Error('Focused 3D viewer still renders the artwork description/caption above the model.');
+      const focusedDescriptionState = await page.evaluate(() => {
+        const modalDescription = document.querySelector('#modalDesc');
+        const fullDescription = document.querySelector('#modalFullDesc');
+        const caption = document.querySelector('#lightbox .is-3d-focus-target .media-caption');
+        const read = el => {
+          const style = el ? getComputedStyle(el) : null;
+          return {
+            exists: !!el,
+            display: style?.display || '',
+            visibility: style?.visibility || '',
+            opacity: style?.opacity || ''
+          };
+        };
+        return {
+          modalDescription: read(modalDescription),
+          fullDescription: read(fullDescription),
+          caption: read(caption)
+        };
+      });
+      for (const [name,state] of Object.entries(focusedDescriptionState)) {
+        if (state.exists && (
+          state.display !== 'none' &&
+          state.visibility !== 'hidden' &&
+          state.opacity !== '0'
+        )) {
+          throw new Error('Focused 3D inspection layer still exposes '+name+': '+JSON.stringify(state));
+        }
       }
 
       const focusedCloseBackground = await page.locator('#lightboxClose').evaluate(
@@ -2969,12 +3050,15 @@ try {
           height: first?.height || 0,
           flexWrap: style?.flexWrap || '',
           overflowX: style?.overflowX || '',
+          justifyContent: style?.justifyContent || '',
           overflowY: Number(row?.scrollHeight || 0) > Number(row?.clientHeight || 0) + 1
         };
       });
       if (aboutSocialGeometry.width < 47 || aboutSocialGeometry.height < 47 ||
-          aboutSocialGeometry.flexWrap !== 'nowrap' || aboutSocialGeometry.overflowY) {
-        throw new Error('About social icon row is not using the shared 48px no-wrap contract: '+JSON.stringify(aboutSocialGeometry));
+          aboutSocialGeometry.flexWrap !== 'nowrap' ||
+          aboutSocialGeometry.justifyContent !== 'flex-start' ||
+          aboutSocialGeometry.overflowY) {
+        throw new Error('About hero social icon row is not left-aligned with the hero text column: '+JSON.stringify(aboutSocialGeometry));
       }
 
       const experience = await page.locator('#experienceList .timeline-item').count();
