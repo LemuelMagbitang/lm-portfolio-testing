@@ -437,11 +437,20 @@ try {
       browser,
       '/?holographic-smoke=1',
       async page => {
-        const firstCard = page.locator('#portfolioGrid .project-card').first();
-        await firstCard.waitFor({ state: 'visible', timeout: 4000 });
-        await firstCard.click();
+        // The bootstrap exposes an explicit readiness contract. Synchronize
+        // against it instead of racing Projects thumbnail hydration.
+        await page.waitForFunction(() => {
+          const transition = document.querySelector('#pageTransition');
+          return transition?.dataset.loading === 'ready' &&
+            transition.getAttribute('aria-hidden') === 'true';
+        }, null, { timeout: 6000 });
+
+        const fixtureCard = page.locator('#portfolioGrid .project-card[data-project-id="holographic-smoke"]').first();
+        await fixtureCard.waitFor({ state: 'visible', timeout: 3000 });
+        await fixtureCard.click();
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-        const holographic = page.locator('.lightbox-holographic').first();
+        const holographic = page.locator('#lightboxMediaContainer .lightbox-holographic').first();
+        await holographic.waitFor({ state: 'visible', timeout: 3000 });
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
 
