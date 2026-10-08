@@ -2055,6 +2055,122 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
   sync();
 }
 
+function normalizeEditorHolographic(value){
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const styles = new Set(['holographic','iridescent','aurora']);
+  const style = String(value.style || '').trim().toLowerCase();
+  const intensityValue = Number(value.intensity);
+  const intensity = Number.isFinite(intensityValue) ? Math.max(0, Math.min(1, intensityValue)) : 0.7;
+  return {
+    style: styles.has(style) ? style : 'holographic',
+    intensity,
+    ...(String(value.texture || '').trim() ? {texture:String(value.texture).trim()} : {}),
+    ...(String(value.back || '').trim() ? {back:String(value.back).trim()} : {})
+  };
+}
+
+function holographicControlHtml(holographic){
+  const value = normalizeEditorHolographic(holographic);
+  const enabled = !!value;
+  const style = value?.style || 'holographic';
+  const intensity = Number.isFinite(Number(value?.intensity)) ? Number(value.intensity) : 0.7;
+  return `
+    <div class="field holographic-control" data-holo-control>
+      <label class="field-label">Holographic Effect</label>
+      <label class="media-bg-toggle"><input type="checkbox" data-holo-enabled ${enabled?'checked':''}> <span>Enable interactive foil</span></label>
+      <div class="holo-options" data-holo-options>
+        <div class="row">
+          <div class="field">
+            <label class="field-label">Style</label>
+            <select data-holo-style>
+              <option value="holographic" ${style==='holographic'?'selected':''}>Holographic</option>
+              <option value="iridescent" ${style==='iridescent'?'selected':''}>Iridescent Foil</option>
+              <option value="aurora" ${style==='aurora'?'selected':''}>Aurora Gradient</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Intensity <span data-holo-intensity-value>${intensity.toFixed(2)}</span></label>
+            <input data-holo-intensity type="range" min="0" max="1" step="0.05" value="${intensity}">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Foil / pattern image <span style="opacity:.5">(optional)</span></label>
+          <input data-holo-texture value="${attr(value?.texture || '')}" placeholder="assets/projects/your-folder/foil.png / .svg">
+        </div>
+        <div class="field">
+          <label class="field-label">Back image <span style="opacity:.5">(optional — front image repeats)</span></label>
+          <input data-holo-back value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .svg">
+        </div>
+        <p class="hint">Hover / move to shift the reflection. Click or tap to flip. Mobile tilt is used when the browser allows motion access.</p>
+      </div>
+    </div>
+  `;
+}
+
+function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
+  const control = root?.querySelector('[data-holo-control]');
+  if (!control) return;
+
+  const enabledInput = control.querySelector('[data-holo-enabled]');
+  const options = control.querySelector('[data-holo-options]');
+  const styleInput = control.querySelector('[data-holo-style]');
+  const intensityInput = control.querySelector('[data-holo-intensity]');
+  const intensityLabel = control.querySelector('[data-holo-intensity-value]');
+  const textureInput = control.querySelector('[data-holo-texture]');
+  const backInput = control.querySelector('[data-holo-back]');
+
+  function sync(){
+    const supported = String(getType() || '').toLowerCase() === 'image';
+    control.hidden = !supported;
+    if (!supported) return;
+
+    const value = normalizeEditorHolographic(getEffect());
+    enabledInput.checked = !!value;
+    options.hidden = !value;
+    styleInput.value = value?.style || 'holographic';
+    intensityInput.value = String(value?.intensity ?? 0.7);
+    textureInput.value = value?.texture || '';
+    backInput.value = value?.back || '';
+    if (intensityLabel) intensityLabel.textContent = Number(intensityInput.value).toFixed(2);
+  }
+
+  function read(){
+    return {
+      style: styleInput.value || 'holographic',
+      intensity: Math.max(0, Math.min(1, Number(intensityInput.value) || 0)),
+      ...(textureInput.value.trim() ? {texture:textureInput.value.trim()} : {}),
+      ...(backInput.value.trim() ? {back:backInput.value.trim()} : {})
+    };
+  }
+
+  enabledInput.addEventListener('change', () => {
+    setEffect(enabledInput.checked ? read() : null);
+    sync();
+    onChanged?.();
+  });
+  styleInput.addEventListener('change', () => {
+    if (!enabledInput.checked) return;
+    setEffect(read());
+    onChanged?.();
+  });
+  intensityInput.addEventListener('input', () => {
+    if (intensityLabel) intensityLabel.textContent = Number(intensityInput.value).toFixed(2);
+    if (!enabledInput.checked) return;
+    setEffect(read());
+    onChanged?.();
+  });
+  [textureInput, backInput].forEach(input => {
+    input.addEventListener('input', () => {
+      if (!enabledInput.checked) return;
+      setEffect(read());
+      onChanged?.();
+    });
+  });
+
+  root.__holoEditorSync = sync;
+  sync();
+}
+
 function buildMediaPreviewHtml(m){
   const sourceError = validateMediaSource(m.type, m.src);
   if (sourceError) return `<div class="media-preview media-preview-error">${sourceTypeErrorHtml(sourceError)}</div>`;
@@ -2123,6 +2239,9 @@ function serializeProjectEditorModel(project){
       orientation:media.orientation,
       ...(media.background && typeof media.background === 'object'
         ? {background:media.background}
+        : {}),
+      ...(media.holographic && typeof media.holographic === 'object' && !Array.isArray(media.holographic)
+        ? {holographic:normalizeEditorHolographic(media.holographic)}
         : {})
     }))
   };
@@ -2419,6 +2538,7 @@ function buildProjectBody(el, p, options = {}){
           </div>
           <div data-mediapreview></div>
            ${backgroundControlHtml(m.background)}
+           ${m.type === 'image' ? holographicControlHtml(m.holographic) : holographicControlHtml(null)}
         </div>
       `;
       row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
@@ -2469,6 +2589,13 @@ function buildProjectBody(el, p, options = {}){
         value => { m.background = value; refreshPreview(); },
         () => { refreshPreview(); markChanged(); }
       );
+      wireHolographicControl(
+        row,
+        () => m.type,
+        () => m.holographic,
+        value => { m.holographic = value; },
+        () => { refreshPreview(); markChanged(); }
+      );
       refreshPreview();
       attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
         kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
@@ -2511,7 +2638,7 @@ function buildProjectBody(el, p, options = {}){
   }
   paintMedia();
   el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
-    const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,_uid:uid()};
+    const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,holographic:null,_uid:uid()};
     p.media.push(fresh);
     openMediaUids.add(fresh._uid); // new artwork opens straight into edit mode
     markChanged(); paintMedia();
@@ -2534,8 +2661,9 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
         return {source:'curated',_uid:uid(),project:{
           id:String(p.id||slugify(p.title||'')),title:p.title||'',subtitle:p.subtitle||'',badge:p.badge||'',
           badges:Array.isArray(p.badges)?[...new Set(p.badges.map(x=>String(x||'').trim()).filter(Boolean))]:(p.badge?[String(p.badge).trim()]:[]),filters:[],description:p.description||'',
+          extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
           thumbnail:{type:p.thumbnail?.type||'image',src:p.thumbnail?.src||'',focus:p.thumbnail?.focus||'50% 50%',zoom:p.thumbnail?.zoom||1,background:p.thumbnail?.background||null},
-          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
+          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
         }};
       }
       return {source:'main',projectId:String(e?.projectId||''),_uid:uid()};
@@ -2734,8 +2862,9 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     badges:Array.isArray(p.badges) ? [...new Set(p.badges.map(x=>String(x||'').trim()).filter(Boolean))] : (p.badge ? [String(p.badge).trim()] : []),
     badge:p.badge||'',
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
+    extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
-    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null})):[])
+    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
   })));
   let filterDefs = [];
   let badgeDefs = [];
