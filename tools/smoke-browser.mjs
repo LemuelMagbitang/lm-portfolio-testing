@@ -3016,9 +3016,16 @@ try {
           pointerEvents:rail?getComputedStyle(rail).pointerEvents:''
         };
       });
-      if(filterOffscreen.offscreen && (!filterOffscreen.inert || filterOffscreen.pointerEvents!=='none')){
-        throw new Error('Off-screen mobile filter rail still exposes an interactive hit surface: '+JSON.stringify(filterOffscreen));
+      // The filter rail must not use viewport visibility as an interaction lock.
+      // Being off-screen is a presentation/scroll state, not an inert state.
+      if(filterOffscreen.offscreen && (filterOffscreen.inert || filterOffscreen.pointerEvents==='none')){
+        throw new Error('Off-screen mobile filter rail retained a disabled interaction state: '+JSON.stringify(filterOffscreen));
       }
+
+      const filterRail=page.locator('.filter-tabs').first();
+      await filterRail.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(60);
+      await assertFilterButtonHitTarget(page,'Mobile Works after lower-page scroll');
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
