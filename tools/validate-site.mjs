@@ -670,6 +670,9 @@ function validateGalleryContract() {
       !/export function resetGalleryPresentation\(/.test(presentation)) {
     err('Gallery: presentation boundary is incomplete.');
   }
+  if (/filterViewportObserver|syncFilterViewportInteraction|data-filter-viewport.*pointer-events/.test(source + '\n' + css)) {
+    err('Gallery: filter controls must not use a visibility-based pointer lock; visible filter buttons must remain directly interactive.');
+  }
   if (!/function\s+isFilterCarousel\s*\(\)/.test(source) ||
       !/function\s+getNearestCenteredFilterIndex\s*\(\)/.test(source)) {
     err('Gallery: centered small-screen filter carousel contract is missing.');
