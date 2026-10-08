@@ -1324,7 +1324,7 @@ try {
       });
       if (
         collapsedShowMoreMaterial.color !== 'rgb(255, 255, 255)' ||
-        collapsedShowMoreMaterial.border !== 'solid' ||
+        collapsedShowMoreMaterial.borderWidth !== '0px' ||
         collapsedShowMoreMaterial.backdropFilter === 'none' ||
         collapsedShowMoreMaterial.background === 'rgb(0, 0, 0)'
       ) {
