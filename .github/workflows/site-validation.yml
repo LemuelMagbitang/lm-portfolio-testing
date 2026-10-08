@@ -44,6 +44,9 @@ jobs:
       - name: Test Projects loader contract
         run: node tools/test-project-loader.mjs
 
+      - name: Test CMS loader lifecycle contract
+        run: node tools/test-cms-loader.mjs
+
       - name: Validate site settings contract
         run: node tools/validate-site-settings.mjs
 
