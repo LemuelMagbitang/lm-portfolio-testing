@@ -7,7 +7,7 @@
 
 import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js?v=20261004-01';
 import { prefersReducedMotion } from '../infrastructure/browser/reduced-motion.js';
-import { loadScriptOnce } from '../infrastructure/browser/script-loader.js?v=20261004-01';
+import { loadScriptOnce } from '../infrastructure/browser/script-loader.js?v=20261008-01';
 import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
 import {
   ensureMediaBackgroundHelper,
