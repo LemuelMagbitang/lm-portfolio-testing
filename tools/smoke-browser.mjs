@@ -4010,8 +4010,15 @@ try {
       const bodyStyle = await testBody.getAttribute('style');
       if (!bodyStyle?.includes('display:block')) await testProject.locator('[data-toggle-open]').click();
 
-      const lottieMedia = testProject.locator('[data-medialist] .card-item').first();
+      // Target the named Lottie fixture rather than assuming media order.
+      // The fixture intentionally contains image → Lottie → 3D media so the
+      // editor cannot accidentally depend on a particular ordering.
+      const lottieMedia = testProject.locator('[data-medialist] .card-item').filter({ hasText: 'Lottie fixture' }).first();
       if (await lottieMedia.count() !== 1) throw new Error('CMS test-project Lottie media row is missing.');
+      const lottieType = lottieMedia.locator('select[data-mf="type"]').first();
+      if (await lottieType.count() !== 1 || (await lottieType.inputValue()) !== 'lottie') {
+        throw new Error('CMS smoke fixture located the wrong media row for the Lottie background-control test.');
+      }
       const mediaToggle = lottieMedia.locator('[data-mact="toggle"]');
       if (await mediaToggle.count()) {
         const mediaBody = lottieMedia.locator('[data-mbody]').first();
