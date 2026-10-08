@@ -695,18 +695,36 @@ export function createLightboxMediaRenderer({
       if (surface.dataset.holoInput === 'tilt') return;
       updateHolographicTilt(surface, 50, 50);
     };
+    let touchStart = null;
+    let suppressNextClick = false;
     const onPointerDown = event => {
       holographicMotionOwner = surface;
       if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+        touchStart = {
+          x: Number(event.clientX) || 0,
+          y: Number(event.clientY) || 0
+        };
+        suppressNextClick = false;
         setHolographicReflection(surface, event);
       }
     };
+    const onPointerMoveForGesture = event => {
+      if (!touchStart || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) return;
+      const dx = (Number(event.clientX) || 0) - touchStart.x;
+      const dy = (Number(event.clientY) || 0) - touchStart.y;
+      if (Math.hypot(dx, dy) > 12) suppressNextClick = true;
+    };
     const onPointerUp = () => {
-      // Keep the latest touch/pen reflection for a moment rather than
-      // snapping immediately, so a tap still reads as an intentional finish
-      // to the interaction before the flip occurs.
+      // A dragged finger is reflection input, not a flip command. The next
+      // synthetic click from that gesture is ignored once, while a stationary
+      // tap still flips the artwork.
+      touchStart = null;
     };
     const toggleFlip = async event => {
+      if (event?.type === 'click' && suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
       if (event?.type === 'keydown') {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
@@ -720,6 +738,7 @@ export function createLightboxMediaRenderer({
     };
 
     surface.addEventListener('pointermove', onPointerMove);
+    surface.addEventListener('pointermove', onPointerMoveForGesture);
     surface.addEventListener('pointerdown', onPointerDown, { passive: true });
     surface.addEventListener('pointerup', onPointerUp);
     surface.addEventListener('pointercancel', onPointerUp);
