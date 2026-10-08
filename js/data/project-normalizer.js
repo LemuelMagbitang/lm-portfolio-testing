@@ -6,7 +6,6 @@
  * shape before project features render anything.
  */
 
-const MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 
 function normalizeString(value) {
@@ -52,10 +51,20 @@ export function normalizeProjectMedia(media = {}) {
   const src = normalizeString(media.src);
   if (!src) return null;
 
-  const type = normalizeString(media.type).toLowerCase();
+  const explicitType = normalizeString(media.type).toLowerCase();
+  const inferredType = /\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(src.split('?')[0].split('#')[0].toLowerCase())
+    ? 'video'
+    : /\.json$/.test(src.split('?')[0].split('#')[0].toLowerCase())
+      ? 'lottie'
+      : 'image';
+  const type = explicitType || inferredType;
   const orientation = normalizeString(media.orientation).toLowerCase();
   const normalized = {
-    type: MEDIA_TYPES.has(type) ? type : 'image',
+    // Preserve explicit future media types rather than coercing them into
+    // images. Current validators still reject unsupported production types,
+    // while the normalized contract remains forward-compatible for features
+    // that add a renderer later.
+    type,
     src
   };
 
