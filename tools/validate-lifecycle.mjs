@@ -53,6 +53,7 @@ assert.match(pageCompositionSource, /destroyProjects\(\);/);
 assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
 
 const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
+assert.match(lightboxSource, /\.lightbox-holographic/);
 assert.match(lightboxSource, /bind\(windowRef, 'pagehide', handlePageHide\)/);
 assert.match(lightboxSource, /bind\(windowRef, 'pageshow', handlePageShow\)/);
 assert.match(lightboxSource, /setAttribute\('aria-hidden','false'\)/);
@@ -76,6 +77,11 @@ assert.match(mediaRendererSource, /image\.fetchPriority = fetchPriority === 'hig
 assert.match(mediaRendererSource, /video\.fetchPriority = fetchPriority === 'high' \? 'high' : 'low'/);
 assert.match(mediaRendererSource, /function preloadLottie\(url, \{ fetchPriority = 'low' \}/);
 assert.match(mediaRendererSource, /function preloadFetch\(url, \{ fetchPriority = 'low' \}/);
+assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);
+assert.match(mediaRendererSource, /deviceorientation/);
+assert.match(mediaRendererSource, /Array\.from\(holographicCleanups\)\.reverse\(\)/);
+assert.match(mediaRendererSource, /function buildHolographicImage\(frontImage, item, project\)/);
+assert.match(mediaRendererSource, /is-flipped/);
 assert.match(mediaRendererSource, /\.\.\.\(fetchPriority === 'high' \? \{ priority: 'high' \} : \{\}\)/);
 assert.match(mediaRendererSource, /const fetchPriority = critical \? 'high' : 'low'/);
 assert.match(mediaRendererSource, /function preloadYouTube\(url\)/);
