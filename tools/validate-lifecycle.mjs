@@ -81,7 +81,7 @@ assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/
 assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;/);
 assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;/);
 assert.match(mediaRendererSource, /surface\.addEventListener\('touchmove', onTouchMove, \{ passive: false \}\)/);
-assert.match(mediaRendererSource, /const onTouchMove = \(event\) =>/);
+assert.match(mediaRendererSource, /const onTouchMove = event =>/);
 assert.match(mediaRendererSource, /is-holo-touch-pending/);
 assert.match(mediaRendererSource, /touchGesture\.engaged/);
 assert.match(mediaRendererSource, /is-holo-touch-engaged/);
