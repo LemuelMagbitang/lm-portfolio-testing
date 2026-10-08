@@ -20,6 +20,18 @@ const legacyRootModules = new Set([
   'media-background.js'
 ]);
 
+// Stateful infrastructure modules must resolve to one browser module identity.
+// Different query strings create different ES module instances, which can split
+// singleton state such as in-flight loaders/caches across otherwise identical
+// imports. Keep the canonical cache key here so future imports cannot silently
+// reintroduce that class of runtime duplication.
+const canonicalModuleQueries = new Map([
+  ['infrastructure/browser/script-loader.js', '?v=20261004-01'],
+  ['infrastructure/browser/site-paths.js', '?v=20261004-01'],
+  ['infrastructure/media-background/loader.js', '?v=20261008-01'],
+  ['infrastructure/software-logo/lookup.js', '?v=20261008-01']
+]);
+
 for (const legacy of legacyRootModules) {
   if (fs.existsSync(path.join(jsRoot, legacy))) {
     errors.push(`Legacy root runtime js/${legacy} must be removed; use the decoupled feature/infrastructure module instead.`);
@@ -35,8 +47,18 @@ function walk(dir) {
 }
 
 function importsFrom(source) {
-  const matches = source.matchAll(/(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g);
-  return [...matches].map(match => match[1]);
+  const staticMatches = source.matchAll(/(?:import|export)\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/g);
+  const dynamicMatches = source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g);
+  return [
+    ...[...staticMatches].map(match => match[1]),
+    ...[...dynamicMatches].map(match => match[1])
+  ];
+}
+
+function importQuery(specifier) {
+  const marker = specifier.indexOf('?');
+  if (marker < 0) return '';
+  return specifier.slice(marker).split('#')[0];
 }
 
 function normalizeImport(file, specifier) {
@@ -75,9 +97,21 @@ for (const file of walk(jsRoot)) {
 
   const rel = path.relative(jsRoot, file).replaceAll(path.sep, '/');
   const source = fs.readFileSync(file, 'utf8');
-  const imports = importsFrom(source)
+  const importSpecifiers = importsFrom(source);
+  const imports = importSpecifiers
     .map(specifier => normalizeImport(file, specifier))
     .filter(Boolean);
+
+  for (const specifier of importSpecifiers) {
+    const imported = normalizeImport(file, specifier);
+    if (!imported) continue;
+    const expectedQuery = canonicalModuleQueries.get(imported);
+    if (!expectedQuery) continue;
+    const actualQuery = importQuery(specifier);
+    if (actualQuery !== expectedQuery) {
+      errors.push(`${rel} imports ${imported} with cache key ${actualQuery || '(none)'}; expected ${expectedQuery}`);
+    }
+  }
 
   for (const rule of rules) {
     if (!rel.startsWith(`${rule.dir}/`)) continue;
