@@ -41,6 +41,9 @@ jobs:
       - name: Validate project data contract
         run: node tools/validate-project-contract.mjs
 
+      - name: Test Projects loader contract
+        run: node tools/test-project-loader.mjs
+
       - name: Validate site settings contract
         run: node tools/validate-site-settings.mjs
 
