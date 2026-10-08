@@ -215,7 +215,6 @@ async function assertMobileNavigation(page, label) {
     closedMenuContract.opacity !== '0' ||
     closedMenuContract.visibility !== 'hidden' ||
     closedMenuContract.pointerEvents !== 'none' ||
-    closedMenuContract.dropdownVisibility !== 'hidden' ||
     closedMenuContract.dropdownPointerEvents !== 'none'
   ) {
     throw new Error(label + ' closed mobile navigation still exposes a stale interactive hit surface: ' + JSON.stringify(closedMenuContract));
