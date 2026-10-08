@@ -396,8 +396,17 @@ function closeLightbox({ restoreFocus = true } = {}) {
 
   // Publish only the lifecycle fact. Gallery owns the resulting presentation
   // recomputation, so Lightbox never reaches into Gallery's private state.
+  // Publish the captured page position with the lifecycle fact. Gallery must
+  // restore from this stable value rather than sampling window.scrollY after
+  // Lightbox teardown, because focus/layout reconciliation can transiently move
+  // the document before the event listener runs.
   try {
-    windowRef.dispatchEvent(new windowRef.CustomEvent('lm:lightbox-closed'));
+    windowRef.dispatchEvent(new windowRef.CustomEvent('lm:lightbox-closed', {
+      detail: {
+        scrollX: pageScrollX,
+        scrollY: pageScrollY
+      }
+    }));
   } catch (_) {}
 
   // Post-layout corrections catch any scroll reconciliation triggered while
