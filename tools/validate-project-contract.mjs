@@ -20,7 +20,7 @@ const project = normalizeProject({
   },
   media: [
     { type: 'IMAGE', src: 'art.jpg', orientation: 'portrait' },
-    { type: 'unsupported', src: 'fallback.jpg' },
+    { type: 'future-format', src: 'future.bin' },
     { type: 'video', src: '' },
     null
   ]
@@ -44,7 +44,7 @@ assert.deepEqual(project, {
   },
   media: [
     { type: 'image', src: 'art.jpg', orientation: 'portrait' },
-    { type: 'image', src: 'fallback.jpg' }
+    { type: 'future-format', src: 'future.bin' }
   ],
   mediaCount: 2,
   capabilities: {
