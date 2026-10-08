@@ -3,7 +3,7 @@ import {
   normalizeProject,
   normalizeProjectMedia,
   normalizeProjects
-} from '../js/data/project-normalizer.js?v=20261008-02';
+} from '../js/data/project-normalizer.js?v=20261008-03';
 
 const project = normalizeProject({
   id: '  demo-project  ',
