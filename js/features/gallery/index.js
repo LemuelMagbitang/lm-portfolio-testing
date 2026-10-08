@@ -35,12 +35,16 @@ export async function initGallery(options = {}) {
       const raw = await options.loadJson(options.filterUrl, null, {
         resolveUrl: options.resolveAssetUrl
       });
-      const list = Array.isArray(raw)
-        ? raw
-        : (Array.isArray(raw?.filters) ? raw.filters : []);
+      const hasFilterCollection =
+        Array.isArray(raw) ||
+        Array.isArray(raw?.filters);
 
-      if (!list.length) return;
+      // An explicitly supplied empty filter collection is valid CMS state.
+      // Render the built-in ALL state rather than preserving stale/static
+      // filter buttons from an older content snapshot.
+      if (!hasFilterCollection) return;
 
+      const list = Array.isArray(raw) ? raw : raw.filters;
       const fragment = documentRef.createDocumentFragment();
 
       const allButton = documentRef.createElement('button');
