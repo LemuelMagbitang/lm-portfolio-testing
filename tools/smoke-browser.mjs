@@ -2303,13 +2303,27 @@ try {
       await modelItem.waitFor({ state: 'attached', timeout: 3000 });
       if (await modelItem.count() !== 1) throw new Error('Direct model media target is missing.');
 
+      await page.waitForFunction(() => {
+        const lightbox = document.querySelector('#lightbox');
+        const target = document.querySelectorAll('#lightboxMediaContainer .lightbox-media-item')[1];
+        if (!lightbox || !target) return false;
+
+        const targetRect = target.getBoundingClientRect();
+        const hasTargetGeometry = targetRect.width > 0 && targetRect.height > 0;
+        if (!hasTargetGeometry || lightbox.scrollHeight <= lightbox.clientHeight) return false;
+
+        return lightbox.scrollTop > 0;
+      }, null, { timeout: 3000 });
+
       const scrollState = await page.evaluate(() => ({
         lightboxTop: document.querySelector('#lightbox')?.scrollTop || 0,
         targetTop: document.querySelectorAll('#lightboxMediaContainer .lightbox-media-item')[1]?.getBoundingClientRect().top || 0,
-        lightboxTopEdge: document.querySelector('#lightbox')?.getBoundingClientRect().top || 0
+        lightboxTopEdge: document.querySelector('#lightbox')?.getBoundingClientRect().top || 0,
+        scrollHeight: document.querySelector('#lightbox')?.scrollHeight || 0,
+        clientHeight: document.querySelector('#lightbox')?.clientHeight || 0
       }));
       if (scrollState.lightboxTop <= 0) {
-        throw new Error('Opening a project directly on its model media did not move the Lightbox to the requested media item.');
+        throw new Error('Opening a project directly on its model media did not move the Lightbox to the requested media item: ' + JSON.stringify(scrollState));
       }
 
       await page.locator('#lightboxClose').click();
