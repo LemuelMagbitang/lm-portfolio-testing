@@ -441,85 +441,71 @@ try {
         await firstCard.waitFor({ state: 'visible', timeout: 4000 });
         await firstCard.click();
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-
         const holographic = page.locator('.lightbox-holographic').first();
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
 
-        const point = {
-          pointerType: 'touch',
-          isPrimary: true,
-          pointerId: 81,
-          clientX: box.x + box.width / 2,
-          clientY: box.y + box.height / 2,
-          button: 0
-        };
-        await holographic.dispatchEvent('pointerdown', point);
-        await holographic.dispatchEvent('pointerup', point);
-        await holographic.dispatchEvent('click', { bubbles: true });
-
-        await page.waitForFunction(() =>
-          document.querySelector('.lightbox-holographic')?.dataset.holoFocused === 'true'
-        );
-
-        const focusState = await page.evaluate(() => {
-          const modal = document.querySelector('#lightbox.is-holo-focused');
-          const surface = document.querySelector('.lightbox-holographic');
-          const target = document.querySelector('.is-holo-focus-target');
-          const back = surface?.querySelector('.lightbox-holographic-back');
-          const motion = surface?.querySelector('.lightbox-holographic-motion');
-          return {
-            modal: !!modal,
-            focused: surface?.dataset.holoFocused || 'false',
-            role: surface?.getAttribute('role') || '',
-            target: !!target,
-            overflowY: modal ? getComputedStyle(modal).overflowY : '',
-            touchAction: modal ? getComputedStyle(modal).touchAction : '',
-            surfaceTouchAction: surface ? getComputedStyle(surface).touchAction : '',
-            surfacePosition: surface ? getComputedStyle(surface).position : '',
-            controlsDisabled: document.querySelector('#lightboxControls')?.classList.contains('is-holo-controls-disabled') || false,
-            backHidden: back?.hidden ?? true,
-            motionHidden: motion?.hidden ?? true
-          };
+        // Quick movement must remain a normal Lightbox gesture: no foil
+        // engagement before the hold threshold.
+        await holographic.dispatchEvent('pointerdown', {
+          pointerType: 'touch', isPrimary: true, pointerId: 81,
+          clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0
         });
+        await page.waitForTimeout(70);
+        await holographic.dispatchEvent('pointermove', {
+          pointerType: 'touch', isPrimary: true, pointerId: 81,
+          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
+        });
+        const quickState = await holographic.evaluate(el => ({
+          engaged: el.classList.contains('is-holo-touch-engaged'),
+          x: el.style.getPropertyValue('--holo-x'),
+          y: el.style.getPropertyValue('--holo-y')
+        }));
+        await holographic.dispatchEvent('pointerup', {
+          pointerType: 'touch', isPrimary: true, pointerId: 81,
+          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
+        });
+        if (quickState.engaged || quickState.x !== '50%' || quickState.y !== '50%') {
+          throw new Error('Mobile holographic touch engaged before the hold threshold.');
+        }
 
-        if (!focusState.modal || focusState.focused !== 'true' || focusState.role !== 'region' ||
-            !focusState.target || focusState.overflowY !== 'hidden' ||
-            focusState.touchAction !== 'none' || focusState.surfaceTouchAction !== 'none' ||
-            focusState.surfacePosition !== 'fixed' || !focusState.controlsDisabled ||
-            focusState.backHidden || focusState.motionHidden) {
-          throw new Error('Holographic mobile focus viewer did not own the touch surface: ' + JSON.stringify(focusState));
+        // A deliberate hold engages the holographic surface; subsequent movement
+        // is then allowed to prevent scrolling and drive the inverse foil.
+        await holographic.dispatchEvent('pointerdown', {
+          pointerType: 'touch', isPrimary: true, pointerId: 82,
+          clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0
+        });
+        await page.waitForTimeout(260);
+        const heldState = await holographic.evaluate(el => ({
+          engaged: el.classList.contains('is-holo-touch-engaged'),
+          x: el.style.getPropertyValue('--holo-x'),
+          y: el.style.getPropertyValue('--holo-y')
+        }));
+        if (!heldState.engaged) {
+          throw new Error('Mobile holographic touch did not engage after the hold threshold.');
         }
 
         await holographic.dispatchEvent('pointermove', {
-          pointerType: 'touch',
-          isPrimary: true,
-          pointerId: 82,
-          clientX: box.x + box.width * .74,
-          clientY: box.y + box.height * .24
+          pointerType: 'touch', isPrimary: true, pointerId: 82,
+          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
         });
         await page.waitForTimeout(40);
-
         const tiltState = await holographic.evaluate(el => ({
           x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
           y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
           fx: Number.parseFloat(el.style.getPropertyValue('--holo-foil-x')),
-          fy: Number.parseFloat(el.style.getPropertyValue('--holo-foil-y'))
+          fy: Number.parseFloat(el.style.getPropertyValue('--holo-foil-y')),
+          engaged: el.classList.contains('is-holo-touch-engaged')
         }));
-        if (!Number.isFinite(tiltState.x) || !Number.isFinite(tiltState.y) ||
+        await holographic.dispatchEvent('pointerup', {
+          pointerType: 'touch', isPrimary: true, pointerId: 82,
+          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
+        });
+        if (!tiltState.engaged ||
+            !Number.isFinite(tiltState.x) || !Number.isFinite(tiltState.y) ||
             Math.abs((tiltState.x + tiltState.fx) - 100) > 1.5 ||
             Math.abs((tiltState.y + tiltState.fy) - 100) > 1.5) {
-          throw new Error('Mobile holographic touch tilt lost the inverse foil mapping.');
-        }
-
-        await page.locator('.lightbox-holographic-back').click();
-        const returned = await page.evaluate(() => ({
-          focused: document.querySelector('.lightbox-holographic')?.dataset.holoFocused || 'false',
-          modalFocused: document.querySelector('#lightbox.is-holo-focused') !== null,
-          controlsDisabled: document.querySelector('#lightboxControls')?.classList.contains('is-holo-controls-disabled') || false
-        }));
-        if (returned.focused !== 'false' || returned.modalFocused || returned.controlsDisabled) {
-          throw new Error('Holographic mobile Back control did not restore Lightbox interaction.');
+          throw new Error('Held mobile holographic gesture lost its inverse foil mapping.');
         }
 
         await page.locator('#lightboxClose').first().click();
