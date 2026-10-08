@@ -265,16 +265,22 @@ export async function createPortfolioApp({
       else footerFeature = feature;
     });
 
-    const [resolvedReviewsFeature, resolvedGalleryFeature] = await Promise.all([
-      reviewsPromise.then(feature => {
-        feature.setVisible(settings.showReviews);
-        return feature;
-      }),
-      galleryPromise
-    ]);
+    // About has no visible Reviews section in the current configuration,
+    // so do not block first paint on a network request for hidden content.
+    if (settings.showReviews) {
+      void reviewsPromise.then(feature => {
+        if (deferredMediaDestroyed) {
+          feature?.cleanup?.();
+          return;
+        }
+        feature?.setVisible?.(true);
+        reviewsFeature = feature;
+      });
+    } else {
+      reviewsFeature = null;
+    }
 
-    reviewsFeature = resolvedReviewsFeature;
-    galleryFeature = resolvedGalleryFeature;
+    galleryFeature = await galleryPromise;
 
     // The About HTML contains useful static fallback content, so the About CMS
     // fetch must not hold the loading gate hostage. Hydrate it after the first
