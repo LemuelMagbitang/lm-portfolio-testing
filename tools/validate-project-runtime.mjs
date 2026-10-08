@@ -9,7 +9,7 @@ import {
   orientationFromAspectRatio,
   observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
-import { normalizeProjects } from '../js/data/project-normalizer.js';
+import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261008-01';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js';
 
