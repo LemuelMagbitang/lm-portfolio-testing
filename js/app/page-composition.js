@@ -15,7 +15,7 @@ import {
 } from '../features/projects/index.js?v=20261006-02';
 import { initNavigation } from '../features/navigation/index.js?v=20261007-03';
 import { initReviews } from '../features/reviews/index.js';
-import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261007-17';
+import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
 import { initForms } from '../features/forms/index.js?v=20261007-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
 
@@ -251,17 +251,29 @@ export async function createPortfolioApp({
       else footerFeature = feature;
     });
 
-    [reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
+    const [resolvedReviewsFeature, resolvedGalleryFeature] = await Promise.all([
       reviewsPromise.then(feature => {
         feature.setVisible(settings.showReviews);
         return feature;
       }),
-      aboutPromise.then(feature => {
-        feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
-        return feature;
-      }),
       galleryPromise
     ]);
+
+    reviewsFeature = resolvedReviewsFeature;
+    galleryFeature = resolvedGalleryFeature;
+
+    // The About HTML contains useful static fallback content, so the About CMS
+    // fetch must not hold the loading gate hostage. Hydrate it after the first
+    // composed page paint; cleanup still runs safely if navigation tears down
+    // the app before the request resolves.
+    void aboutPromise.then(feature => {
+      if (deferredMediaDestroyed) {
+        feature?.cleanup?.();
+        return;
+      }
+      feature?.setSoftwareLogosVisible?.(settings.showSoftwareLogos);
+      aboutFeature = feature;
+    });
   } else {
     [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
       heroPromise,
@@ -312,15 +324,16 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(true);
 
-  const aboutAssetPreloadPromise = !root.body?.classList.contains('about-page')
-    ? preloadAboutAssets({
-        url: config.urls.about,
-        root,
-        documentRef: root,
-        loadJson: loadCmsJson,
-        resolveAssetUrl: siteAssetUrl
-      })
-    : Promise.resolve({ total: 0, ready: 0 });
+  const aboutAssetPreloadPromise = preloadAboutAssets({
+    url: config.urls.about,
+    root,
+    documentRef: root,
+    loadJson: loadCmsJson,
+    resolveAssetUrl: siteAssetUrl
+  }).catch(error => {
+    console.warn('About asset preload failed:', error);
+    return { total: 0, ready: 0 };
+  });
 
   // Project-media warm-up started as soon as its minimum dependencies were
   // available. The branded loading gate below only waits on its critical tier,
