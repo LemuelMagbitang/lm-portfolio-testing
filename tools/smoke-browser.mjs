@@ -657,43 +657,6 @@ try {
       const lightbox = page.locator('#lightbox.active');
       if (await lightbox.count() !== 1) throw new Error('Lightbox did not open from the first project card.');
 
-      const holographic = page.locator('.lightbox-holographic').first();
-      if (await holographic.count() !== 1) {
-        throw new Error('Holographic image fixture did not render its interactive Lightbox surface.');
-      }
-      if (await holographic.getAttribute('data-holo-style') !== 'iridescent') {
-        throw new Error('Holographic Lightbox fixture lost its configured visual style.');
-      }
-      const holoBox = await holographic.boundingBox();
-      if (!holoBox || holoBox.width < 20 || holoBox.height < 20) {
-        throw new Error('Holographic Lightbox surface has no usable geometry.');
-      }
-      await page.mouse.move(
-        holoBox.x + holoBox.width * 0.82,
-        holoBox.y + holoBox.height * 0.22
-      );
-      const holoStateBeforeFlip = await holographic.evaluate(el => ({
-        x: el.style.getPropertyValue('--holo-x'),
-        y: el.style.getPropertyValue('--holo-y'),
-        rx: el.style.getPropertyValue('--holo-rx'),
-        ry: el.style.getPropertyValue('--holo-ry'),
-        back: el.querySelector('.lightbox-holographic-back img')?.getAttribute('src') || ''
-      }));
-      if (holoStateBeforeFlip.x === '50%' || holoStateBeforeFlip.y === '50%' ||
-          !holoStateBeforeFlip.rx || !holoStateBeforeFlip.ry) {
-        throw new Error('Holographic Lightbox pointer tracking did not update the foil coordinates.');
-      }
-      if (!holoStateBeforeFlip.back.includes('assets/projects/test/back.svg')) {
-        throw new Error('Holographic Lightbox did not mount the configured back artwork.');
-      }
-      await holographic.click();
-      if (await holographic.getAttribute('aria-pressed') !== 'true' ||
-          !(await holographic.evaluate(el => el.classList.contains('is-flipped')))) {
-        throw new Error('Holographic Lightbox tap/click did not flip the artwork.');
-      }
-      await page.locator('#lightboxClose').first().click();
-      await page.waitForTimeout(100);
-
       const closeBeforeTab = page.locator('#lightboxClose').first();
       await closeBeforeTab.waitFor({ state: 'visible', timeout: 3000 });
       await page.keyboard.press('Tab');
@@ -1313,6 +1276,92 @@ try {
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
     });
+
+    await smokePage(
+      browser,
+      '/?holographic-smoke=1',
+      async page => {
+        const firstCard = page.locator('#portfolioGrid .project-card').first();
+        await firstCard.waitFor({ state: 'visible', timeout: 4000 });
+        await firstCard.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+        const holographic = page.locator('.lightbox-holographic').first();
+        if (await holographic.count() !== 1) {
+          throw new Error('Holographic image fixture did not render its interactive Lightbox surface.');
+        }
+        if (await holographic.getAttribute('data-holo-style') !== 'iridescent') {
+          throw new Error('Holographic Lightbox fixture lost its configured visual style.');
+        }
+
+        const holoBox = await holographic.boundingBox();
+        if (!holoBox || holoBox.width < 20 || holoBox.height < 20) {
+          throw new Error('Holographic Lightbox surface has no usable geometry.');
+        }
+        await page.mouse.move(
+          holoBox.x + holoBox.width * 0.82,
+          holoBox.y + holoBox.height * 0.22
+        );
+
+        const holoStateBeforeFlip = await holographic.evaluate(el => ({
+          x: el.style.getPropertyValue('--holo-x'),
+          y: el.style.getPropertyValue('--holo-y'),
+          rx: el.style.getPropertyValue('--holo-rx'),
+          ry: el.style.getPropertyValue('--holo-ry'),
+          back: el.querySelector('.lightbox-holographic-back img')?.getAttribute('src') || ''
+        }));
+        if (holoStateBeforeFlip.x === '50%' || holoStateBeforeFlip.y === '50%' ||
+            !holoStateBeforeFlip.rx || !holoStateBeforeFlip.ry) {
+          throw new Error('Holographic Lightbox pointer tracking did not update the foil coordinates.');
+        }
+        if (!holoStateBeforeFlip.back.includes('holographic-smoke/back.svg')) {
+          throw new Error('Holographic Lightbox did not mount the configured back artwork.');
+        }
+
+        await holographic.click();
+        if (await holographic.getAttribute('aria-pressed') !== 'true' ||
+            !(await holographic.evaluate(el => el.classList.contains('is-flipped')))) {
+          throw new Error('Holographic Lightbox tap/click did not flip the artwork.');
+        }
+        await page.locator('#lightboxClose').first().click();
+        await page.waitForTimeout(100);
+      },
+      { width: 1280, height: 900 },
+      async page => {
+        const fixture = [{
+          id: 'holographic-smoke',
+          title: 'Holographic Smoke',
+          subtitle: 'Interactive image fixture',
+          badge: '',
+          filters: [],
+          description: '',
+          thumbnail: { type: 'image', src: 'assets/projects/holographic-smoke/front.svg', focus: '50% 50%', zoom: 1 },
+          media: [{
+            type: 'image',
+            src: 'assets/projects/holographic-smoke/front.svg',
+            caption: 'Holographic front',
+            orientation: 'square',
+            holographic: {
+              style: 'iridescent',
+              intensity: 0.8,
+              texture: 'assets/projects/holographic-smoke/foil.svg',
+              back: 'assets/projects/holographic-smoke/back.svg'
+            }
+          }]
+        }];
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/></svg>';
+        await page.route('**/data/projects.json*', async route => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(fixture)
+          });
+        });
+        await page.route('**/assets/projects/holographic-smoke/**', async route => {
+          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+        });
+      }
+    );
 
     await smokePage(browser, '/', async page => {
       const gridBeforeResize = page.locator('#portfolioGrid').first();
