@@ -1597,34 +1597,53 @@ body.center-page {
 }
 
 #lightboxMediaContainer .lightbox-holographic-spectrum{
-  background:conic-gradient(
-    from var(--holo-angle,0deg),
-    rgba(255,45,125,.18),
-    rgba(255,221,71,.28),
-    rgba(79,255,178,.24),
-    rgba(58,180,255,.30),
-    rgba(154,89,255,.28),
-    rgba(255,45,125,.18)
-  );
-  background-size:200% 200%;
-  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
-  opacity:calc(.10 + (var(--holo-intensity,.7) * .78));
+  background:
+    repeating-linear-gradient(
+      118deg,
+      rgba(255,66,168,.34) 0%,
+      rgba(255,222,104,.30) 16%,
+      rgba(100,255,184,.28) 32%,
+      rgba(75,205,255,.32) 48%,
+      rgba(155,105,255,.30) 64%,
+      rgba(255,83,156,.32) 82%,
+      rgba(255,66,168,.34) 100%
+    ),
+    radial-gradient(
+      circle at var(--holo-x,50%) var(--holo-y,50%),
+      rgba(255,255,255,.26) 0,
+      rgba(255,255,255,.08) 22%,
+      transparent 54%
+    );
+  background-size:280% 280%, 175% 175%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-x,50%) var(--holo-y,50%);
+  opacity:calc(.10 + (var(--holo-intensity,.7) * .72));
   transform:scale(1.08);
-  mix-blend-mode:screen;
+  mix-blend-mode:color-dodge;
+  filter:saturate(1.28) contrast(1.08);
   transition:opacity 140ms ease-out;
 }
 
 #lightboxMediaContainer .lightbox-holographic-glare{
-  background:radial-gradient(
-    circle at var(--holo-x,50%) var(--holo-y,50%),
-    rgba(255,255,255,.72) 0,
-    rgba(255,255,255,.24) 9%,
-    rgba(255,255,255,.07) 20%,
-    transparent 48%
-  );
-  opacity:calc(.18 + (var(--holo-intensity,.7) * .62));
+  background:
+    radial-gradient(
+      circle at var(--holo-x,50%) var(--holo-y,50%),
+      rgba(255,255,255,.78) 0,
+      rgba(255,255,255,.24) 8%,
+      rgba(255,255,255,.07) 19%,
+      transparent 48%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 30%,
+      rgba(255,255,255,.16) 47%,
+      rgba(255,255,255,.04) 54%,
+      transparent 72%
+    );
+  background-size:165% 165%, 230% 230%;
+  background-position:var(--holo-x,50%) var(--holo-y,50%), var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  opacity:calc(.14 + (var(--holo-intensity,.7) * .56));
   mix-blend-mode:screen;
-  filter:blur(1px);
+  filter:blur(1px) saturate(1.1);
   transition:opacity 140ms ease-out;
 }
 
@@ -1640,25 +1659,33 @@ body.center-page {
 }
 
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-spectrum{
-  background:linear-gradient(
-    125deg,
-    rgba(255,100,205,.22) 0%,
-    rgba(124,91,255,.32) 22%,
-    rgba(69,220,255,.32) 44%,
-    rgba(117,255,174,.26) 63%,
-    rgba(255,231,104,.26) 81%,
-    rgba(255,100,205,.22) 100%
-  );
-  background-size:200% 200%;
-  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background:
+    repeating-linear-gradient(
+      118deg,
+      rgba(255,91,197,.34) 0%,
+      rgba(117,90,255,.40) 18%,
+      rgba(69,221,255,.38) 37%,
+      rgba(104,255,173,.30) 56%,
+      rgba(255,234,104,.34) 76%,
+      rgba(255,91,197,.34) 100%
+    ),
+    radial-gradient(
+      ellipse at var(--holo-x,50%) var(--holo-y,50%),
+      rgba(255,255,255,.12),
+      transparent 60%
+    );
+  background-size:220% 220%, 170% 170%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-x,50%) var(--holo-y,50%);
+  filter:saturate(1.22) contrast(1.08);
 }
 
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
   background:
-    radial-gradient(circle at var(--holo-foil-x,50%) var(--holo-foil-y,50%), rgba(77,238,255,.42), transparent 32%),
-    radial-gradient(circle at calc(100% - var(--holo-foil-x,50%)) var(--holo-foil-y,50%), rgba(180,100,255,.38), transparent 36%),
-    radial-gradient(circle at var(--holo-foil-x,50%) calc(100% - var(--holo-foil-y,50%)), rgba(90,255,180,.34), transparent 38%);
-  background-size:150% 150%;
+    radial-gradient(circle at var(--holo-foil-x,50%) var(--holo-foil-y,50%), rgba(77,238,255,.48), transparent 30%),
+    radial-gradient(circle at calc(100% - var(--holo-foil-x,50%)) var(--holo-foil-y,50%), rgba(180,100,255,.42), transparent 35%),
+    radial-gradient(circle at var(--holo-foil-x,50%) calc(100% - var(--holo-foil-y,50%)), rgba(90,255,180,.38), transparent 37%),
+    repeating-linear-gradient(132deg, rgba(90,238,255,.16) 0 7%, rgba(180,100,255,.10) 12%, rgba(90,255,180,.14) 18%, transparent 26%);
+  background-size:150% 150%,150% 150%,150% 150%,240% 240%;
 }
 
 @supports (mix-blend-mode:color-dodge){
@@ -4073,5 +4100,205 @@ footer > .footer-content p{
     overflow-x:visible !important;
     margin-left:0;
     margin-right:0;
+  }
+}
+
+
+/* ============================================================
+   MOBILE / TABLET HOLOGRAPHIC CARD VIEWER
+   Dedicated focus mode isolates card manipulation from page scrolling.
+   ============================================================ */
+.lightbox-holographic-activate{display:none;}
+
+@media (max-width:1100px) and (pointer:coarse){
+  #lightboxMediaContainer .lightbox-holographic-activate{
+    position:absolute;
+    left:50%;
+    top:50%;
+    z-index:30;
+    transform:translate(-50%,-50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    transition:opacity .2s ease,transform .2s ease;
+  }
+  #lightboxMediaContainer .lightbox-holographic-activate span{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    min-height:46px;
+    padding:0 18px;
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:999px;
+    background:rgba(8,8,8,.46);
+    color:#fff;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 12px 30px rgba(0,0,0,.24);
+    font:800 11px/1 var(--lm-font-label, sans-serif);
+    letter-spacing:.13em;
+  }
+  #lightboxMediaContainer .lightbox-holographic-activate i{font-size:13px;}
+}
+
+.lightbox-modal.is-holo-focused{
+  position:fixed;
+  inset:0;
+  width:100dvw;
+  max-width:none;
+  height:100dvh;
+  overflow:hidden!important;
+  padding:0;
+  touch-action:none;
+  overscroll-behavior:none;
+  overflow-anchor:none;
+  background:rgba(5,5,5,.94);
+  z-index:10002;
+  scrollbar-width:none;
+}
+.lightbox-modal.is-holo-focused::-webkit-scrollbar{display:none;}
+.lightbox-modal.is-holo-focused .modal-interior{
+  position:relative;
+  z-index:1;
+  width:100%;
+  height:100dvh;
+  min-height:100dvh;
+  max-width:none;
+  margin:0;
+  gap:0;
+}
+.lightbox-modal.is-holo-focused .modal-interior::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:10;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 28%,rgba(255,255,255,.05),transparent 44%),
+    rgba(0,0,0,.60);
+  backdrop-filter:blur(18px) saturate(.72);
+  -webkit-backdrop-filter:blur(18px) saturate(.72);
+}
+.lightbox-modal.is-holo-focused .modal-header,
+.lightbox-modal.is-holo-focused .modal-full-desc,
+.lightbox-modal.is-holo-focused #lightboxMediaContainer > .lightbox-media-item:not(.is-holo-focus-target){
+  opacity:.08;
+  filter:blur(10px);
+  pointer-events:none;
+}
+.lightbox-modal.is-holo-focused .is-holo-focus-target{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:grid;
+  place-items:center;
+  width:100dvw;
+  height:100dvh;
+  min-height:100dvh;
+  margin:0;
+  padding:0 18px;
+  transform:none;
+  opacity:1;
+  filter:none;
+  background:transparent;
+}
+.lightbox-modal.is-holo-focused .is-holo-focus-target .lightbox-holographic{
+  position:fixed!important;
+  inset:0;
+  z-index:20;
+  display:grid;
+  place-items:center;
+  width:100dvw;
+  height:100dvh;
+  max-width:none;
+  max-height:none;
+  min-width:0;
+  min-height:0;
+  overflow:visible;
+  padding:0;
+  border-radius:0;
+  background:transparent;
+  touch-action:none;
+  cursor:grab;
+}
+.lightbox-modal.is-holo-focused .is-holo-focus-target .lightbox-holographic-inner{
+  width:min(88vw,560px);
+  height:min(76dvh,760px);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 30px 90px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.10);
+  transition:transform 110ms ease-out;
+  will-change:transform;
+}
+.lightbox-modal.is-holo-focused .is-holo-focus-target .lightbox-holographic-face{
+  border-radius:18px;
+}
+.lightbox-modal.is-holo-focused .is-holo-focus-target .lightbox-holographic-activate{
+  opacity:0;
+  transform:translate(-50%,-50%) scale(.96);
+}
+.lightbox-holographic-ui{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  pointer-events:none;
+}
+.lightbox-holographic-back,
+.lightbox-holographic-motion{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(8,8,8,.70);
+  color:rgba(255,255,255,.96);
+  min-height:48px;
+  padding:0 17px;
+  font:800 10px/1 var(--lm-font-label, sans-serif);
+  letter-spacing:.12em;
+  box-shadow:0 12px 30px rgba(0,0,0,.28);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;
+}
+.lightbox-holographic-back{
+  position:absolute;
+  left:calc(14px + env(safe-area-inset-left,0px));
+  top:calc(12px + env(safe-area-inset-top,0px));
+}
+.lightbox-holographic-motion{
+  position:absolute;
+  left:50%;
+  bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  transform:translateX(-50%);
+}
+.lightbox-holographic-back i,
+.lightbox-holographic-motion i{margin-right:7px;}
+.lightbox-holographic-back:focus-visible,
+.lightbox-holographic-motion:focus-visible{
+  outline:2px solid rgba(255,255,255,.88);
+  outline-offset:3px;
+}
+.lightbox-controls.is-holo-controls-disabled{
+  position:fixed;
+  inset:0;
+  z-index:9998;
+  pointer-events:none;
+  opacity:1;
+  filter:none;
+  transition:none;
+}
+.lightbox-controls.is-holo-controls-disabled .lightbox-nav,
+.lightbox-controls.is-holo-controls-disabled .lightbox-close{
+  opacity:.9;
+}
+
+@media (max-width:1100px) and (pointer:coarse) and (prefers-reduced-motion:reduce){
+  .lightbox-modal.is-holo-focused .modal-interior::before{
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+  }
+  .lightbox-modal.is-holo-focused .is-holo-focus-target .lightbox-holographic-inner{
+    transition:none;
   }
 }
