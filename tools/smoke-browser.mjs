@@ -203,7 +203,15 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
 
       if (typeof beforeReady === 'function') await beforeReady(page);
       await page.waitForTimeout(SMOKE_BOOT_SETTLE_MS);
-      await assertions(page);
+      try {
+        await assertions(page);
+      } catch (error) {
+        if (errors.length) {
+          const browserErrors = errors.join('\\n- ');
+          error.message = `${error.message}\\n\\nBrowser errors observed before failure:\\n- ${browserErrors}`;
+        }
+        throw error;
+      }
 
       if (errors.length) {
         throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}`);
