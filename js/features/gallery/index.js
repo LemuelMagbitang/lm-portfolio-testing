@@ -415,7 +415,11 @@ export async function initGallery(options = {}) {
     if (!allButton) return;
     const changed = currentFilter !== 'all';
     const transitionFromRects = changed ? captureGalleryCardRects(portfolioGrid) : null;
-    filterBtns.forEach(item => item.classList.toggle('active', item === allButton));
+    filterBtns.forEach(item => {
+      const active = item === allButton;
+      item.classList.toggle('active', active);
+      item.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
     currentFilter = 'all';
     isExpanded = false;
     render({ animateTransition: changed, transitionFromRects });
