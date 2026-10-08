@@ -436,10 +436,17 @@ export async function initGallery(options = {}) {
   // Lightbox is a separate feature, but closing it can coincide with media/layout
   // reconciliation. Rebuild Gallery presentation from its own state contract
   // without changing the user's selected filter or Show More/Show Less state.
-  bind(windowRef, 'lm:lightbox-closed', () => {
+  bind(windowRef, 'lm:lightbox-closed', event => {
     const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
-    const savedScrollX = Number(windowRef.scrollX) || Number(scrollingElement?.scrollLeft) || 0;
-    const savedScrollY = Number(windowRef.scrollY) || Number(scrollingElement?.scrollTop) || 0;
+    const detail = event?.detail || {};
+    const capturedX = Number(detail.scrollX);
+    const capturedY = Number(detail.scrollY);
+    const savedScrollX = Number.isFinite(capturedX)
+      ? capturedX
+      : Number(windowRef.scrollX) || Number(scrollingElement?.scrollLeft) || 0;
+    const savedScrollY = Number.isFinite(capturedY)
+      ? capturedY
+      : Number(windowRef.scrollY) || Number(scrollingElement?.scrollTop) || 0;
     if (portfolioGridViewport) portfolioGridViewport.style.maxHeight = 'none';
 
     render();
