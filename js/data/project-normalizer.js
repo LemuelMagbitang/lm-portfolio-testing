@@ -6,6 +6,7 @@
  * shape before project features render anything.
  */
 
+const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 
 function normalizeString(value) {
@@ -129,7 +130,7 @@ export function normalizeProject(project = {}) {
   const thumbnailType = normalizeString(thumbnailSource.type).toLowerCase();
   // Preserve an explicitly declared type. If CMS data omits it, leave the
   // field unset so the Projects card runtime can retain extension inference.
-  if (MEDIA_TYPES.has(thumbnailType)) {
+  if (SUPPORTED_MEDIA_TYPES.has(thumbnailType)) {
     normalized.thumbnail.type = thumbnailType;
   }
 
