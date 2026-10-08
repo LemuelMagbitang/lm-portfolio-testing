@@ -109,6 +109,15 @@ assert.match(aboutSource, /image\.src = ''/);
 assert.match(aboutSource, /image\.onload = null/);
 assert.match(aboutSource, /image\.onerror = null/);
 
+const lottieSource = await readFile(new URL('../js/infrastructure/lottie/player.js', import.meta.url), 'utf8');
+assert.match(lottieSource, /\.finally\(\(\) => \{/);
+assert.match(lottieSource, /lottiePromise = null/);
+assert.match(lottieSource, /loadScriptOnce\(/);
+
+const mediaBackgroundLoaderSource = await readFile(new URL('../js/infrastructure/media-background/loader.js', import.meta.url), 'utf8');
+assert.match(mediaBackgroundLoaderSource, /\.finally\(\(\) => \{/);
+assert.match(mediaBackgroundLoaderSource, /mediaBackgroundPromise = null/);
+assert.match(mediaBackgroundLoaderSource, /loadScriptOnce\(/);
 
 const adminSource = await readFile(new URL('../admin/admin.js', import.meta.url), 'utf8');
 assert.equal((adminSource.match(/function buildProjectBody\(el, p, options = \{\}\)/g) || []).length, 1);
