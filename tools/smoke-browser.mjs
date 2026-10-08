@@ -433,6 +433,131 @@ try {
   const browser = await chromium.launch({ headless: true });
 
   try {
+    await smokePage(
+      browser,
+      '/?holographic-smoke=1',
+      async page => {
+        const firstCard = page.locator('#portfolioGrid .project-card').first();
+        await firstCard.waitFor({ state: 'visible', timeout: 4000 });
+        await firstCard.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+
+        const holographic = page.locator('.lightbox-holographic').first();
+        const box = await holographic.boundingBox();
+        if (!box) throw new Error('Mobile holographic fixture has no geometry.');
+
+        const point = {
+          pointerType: 'touch',
+          isPrimary: true,
+          pointerId: 81,
+          clientX: box.x + box.width / 2,
+          clientY: box.y + box.height / 2,
+          button: 0
+        };
+        await holographic.dispatchEvent('pointerdown', point);
+        await holographic.dispatchEvent('pointerup', point);
+        await holographic.dispatchEvent('click', { bubbles: true });
+
+        await page.waitForFunction(() =>
+          document.querySelector('.lightbox-holographic')?.dataset.holoFocused === 'true'
+        );
+
+        const focusState = await page.evaluate(() => {
+          const modal = document.querySelector('#lightbox.is-holo-focused');
+          const surface = document.querySelector('.lightbox-holographic');
+          const target = document.querySelector('.is-holo-focus-target');
+          const back = surface?.querySelector('.lightbox-holographic-back');
+          const motion = surface?.querySelector('.lightbox-holographic-motion');
+          return {
+            modal: !!modal,
+            focused: surface?.dataset.holoFocused || 'false',
+            role: surface?.getAttribute('role') || '',
+            target: !!target,
+            overflowY: modal ? getComputedStyle(modal).overflowY : '',
+            touchAction: modal ? getComputedStyle(modal).touchAction : '',
+            surfaceTouchAction: surface ? getComputedStyle(surface).touchAction : '',
+            surfacePosition: surface ? getComputedStyle(surface).position : '',
+            controlsDisabled: document.querySelector('#lightboxControls')?.classList.contains('is-holo-controls-disabled') || false,
+            backHidden: back?.hidden ?? true,
+            motionHidden: motion?.hidden ?? true
+          };
+        });
+
+        if (!focusState.modal || focusState.focused !== 'true' || focusState.role !== 'region' ||
+            !focusState.target || focusState.overflowY !== 'hidden' ||
+            focusState.touchAction !== 'none' || focusState.surfaceTouchAction !== 'none' ||
+            focusState.surfacePosition !== 'fixed' || !focusState.controlsDisabled ||
+            focusState.backHidden || focusState.motionHidden) {
+          throw new Error('Holographic mobile focus viewer did not own the touch surface: ' + JSON.stringify(focusState));
+        }
+
+        await holographic.dispatchEvent('pointermove', {
+          pointerType: 'touch',
+          isPrimary: true,
+          pointerId: 82,
+          clientX: box.x + box.width * .74,
+          clientY: box.y + box.height * .24
+        });
+        await page.waitForTimeout(40);
+
+        const tiltState = await holographic.evaluate(el => ({
+          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
+          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          fx: Number.parseFloat(el.style.getPropertyValue('--holo-foil-x')),
+          fy: Number.parseFloat(el.style.getPropertyValue('--holo-foil-y'))
+        }));
+        if (!Number.isFinite(tiltState.x) || !Number.isFinite(tiltState.y) ||
+            Math.abs((tiltState.x + tiltState.fx) - 100) > 1.5 ||
+            Math.abs((tiltState.y + tiltState.fy) - 100) > 1.5) {
+          throw new Error('Mobile holographic touch tilt lost the inverse foil mapping.');
+        }
+
+        await page.locator('.lightbox-holographic-back').click();
+        const returned = await page.evaluate(() => ({
+          focused: document.querySelector('.lightbox-holographic')?.dataset.holoFocused || 'false',
+          modalFocused: document.querySelector('#lightbox.is-holo-focused') !== null,
+          controlsDisabled: document.querySelector('#lightboxControls')?.classList.contains('is-holo-controls-disabled') || false
+        }));
+        if (returned.focused !== 'false' || returned.modalFocused || returned.controlsDisabled) {
+          throw new Error('Holographic mobile Back control did not restore Lightbox interaction.');
+        }
+
+        await page.locator('#lightboxClose').first().click();
+        await page.waitForTimeout(100);
+      },
+      { width: 390, height: 844 },
+      async page => {
+        const fixture = [{
+          id: 'holographic-smoke',
+          title: 'Holographic Smoke',
+          subtitle: 'Interactive image fixture',
+          badge: '',
+          filters: [],
+          description: '',
+          thumbnail: { type: 'image', src: 'assets/projects/holographic-smoke/front.svg', focus: '50% 50%', zoom: 1 },
+          media: [{
+            type: 'image',
+            src: 'assets/projects/holographic-smoke/front.svg',
+            caption: 'Holographic front',
+            orientation: 'square',
+            holographic: {
+              style: 'iridescent',
+              intensity: 0.8,
+              texture: 'assets/projects/holographic-smoke/foil.svg',
+              back: 'assets/projects/holographic-smoke/back.svg'
+            }
+          }]
+        }];
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/></svg>';
+        await page.route('**/data/projects.json*', async route => {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
+        });
+        await page.route('**/assets/projects/holographic-smoke/**', async route => {
+          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+        });
+      }
+    );
+
     await smokePage(browser, '/', async page => {
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('Works page is missing its module bootstrap script.');
