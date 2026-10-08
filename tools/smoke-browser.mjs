@@ -1843,7 +1843,7 @@ try {
         if(!close || close.color!=='rgb(255, 255, 255)' ||
            close.background !== 'rgba(0, 0, 0, 0)' ||
            close.border!=='none' || close.radius!=='50%' || close.position!=='fixed' ||
-           close.backingBorder!=='solid' ||
+           close.backingBorder!=='none' ||
            !(close.backingBackground.startsWith('rgba(0, 0, 0,') || close.backingBackground.startsWith('rgb(0, 0, 0'))){
           throw new Error('Mobile Lightbox Close control does not match the protected dark-circle contract: '+JSON.stringify(close));
         }
@@ -1853,7 +1853,7 @@ try {
              control.background !== 'rgba(0, 0, 0, 0)' ||
              control.border!=='none' || control.position!=='fixed' ||
              control.radius==='50%' || !Number.isFinite(bottom) || bottom<20 ||
-             control.backingBorder!=='solid' ||
+             control.backingBorder!=='none' ||
              !(
                control.backingBackground.startsWith('rgba(0, 0, 0,') ||
                control.backingBackground.startsWith('rgb(0, 0, 0')
