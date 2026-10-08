@@ -4052,7 +4052,12 @@ try {
 
       const cmsLottiePreview = lottieMedia.locator('[data-mediapreview] .media-preview').first();
       await page.waitForFunction(() => {
-        const box = document.querySelector('[data-mediapreview] .media-preview');
+        // Scope the geometry assertion to the named Lottie fixture. A Project
+        // contains multiple media rows, so a global first-preview selector can
+        // accidentally measure the preceding image row.
+        const row = Array.from(document.querySelectorAll('#projList .project-list-item .card-item'))
+          .find(card => (card.textContent || '').includes('Lottie fixture'));
+        const box = row?.querySelector('[data-mediapreview] .media-preview');
         if (!box) return false;
         const rect = box.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && Math.abs((rect.width / rect.height) - (440 / 478)) < 0.01;
