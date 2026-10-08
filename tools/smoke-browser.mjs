@@ -224,6 +224,24 @@ async function assertMobileNavigation(page, label) {
     throw new Error(label + ' closed mobile navigation still exposes a stale interactive hit surface: ' + JSON.stringify(closedMenuContract));
   }
 
+  const hero = page.locator('.hero-section').first();
+  const heroBox = await hero.boundingBox();
+  if (heroBox) {
+    const beforeHash = await page.evaluate(() => window.location.hash);
+    await page.mouse.click(
+      heroBox.x + heroBox.width / 2,
+      heroBox.y + heroBox.height / 2
+    );
+    await page.waitForTimeout(120);
+    const afterHash = await page.evaluate(() => window.location.hash);
+    if (afterHash !== beforeHash) {
+      throw new Error(
+        label + ' clicking ordinary hero/background content unexpectedly triggered filter navigation: ' +
+        beforeHash + ' -> ' + afterHash
+      );
+    }
+  }
+
   const assertOrdinarySurface = async (locator, label) => {
     if (await locator.count() !== 1) return;
 
