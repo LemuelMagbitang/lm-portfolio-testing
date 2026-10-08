@@ -17,7 +17,7 @@ import { initNavigation } from '../features/navigation/index.js?v=20261007-03';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261007-17';
 import { initForms } from '../features/forms/index.js?v=20261007-02';
-import { initSiteSettings } from '../features/settings/index.js?v=20261006-01';
+import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
 
 import { initGallery } from '../features/gallery/index.js?v=20261007-05';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261004-04';
