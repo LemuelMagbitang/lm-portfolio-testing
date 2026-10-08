@@ -3800,3 +3800,148 @@ footer > .footer-content p{
     padding-inline:0;
   }
 }
+
+/* ============================================================
+   RUNTIME UX CORRECTIONS — 3D description, protected Lightbox chrome,
+   Show More/Show Less material, and About hero socials
+   ============================================================ */
+
+/* A normal project Lightbox keeps the 3D artwork's description as a sibling
+   caption. Focus mode becomes a dedicated inspection layer and hides all
+   project/caption copy rather than deleting it from the normal Lightbox. */
+.lightbox-modal.is-3d-focused{
+  z-index:10002;
+}
+.lightbox-modal.is-3d-focused .modal-header,
+.lightbox-modal.is-3d-focused .modal-full-desc{
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+.lightbox-modal.is-3d-focused .is-3d-focus-target .media-caption{
+  display:none !important;
+}
+
+/* Keep global Lightbox controls readable over bright artwork without
+   changing their icon hit targets or the runtime black/white contrast logic.
+   The pseudo-element is the visual backing layer; the control itself remains
+   transparent and receives no extra opaque panel. */
+.lightbox-nav,
+.lightbox-close{
+  isolation:isolate;
+  overflow:visible;
+  background:transparent !important;
+  background-color:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+.lightbox-nav::before,
+.lightbox-close::before{
+  content:"";
+  position:absolute;
+  inset:4px;
+  z-index:0;
+  pointer-events:none;
+  background:rgba(0,0,0,.38);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 6px 18px rgba(0,0,0,.22);
+}
+.lightbox-nav::before{ border-radius:16px; }
+.lightbox-close::before{ border-radius:50%; }
+.lightbox-nav i,
+.lightbox-close i{
+  position:relative;
+  z-index:1;
+}
+@media (max-width:767px){
+  .lightbox-nav::before{
+    inset:2px;
+    border-radius:16px;
+    background:rgba(0,0,0,.40);
+  }
+  .lightbox-close::before{
+    inset:3px;
+    background:rgba(0,0,0,.40);
+  }
+}
+
+/* The Show More state is glass. The Show Less state is a solid white/black
+   control. Both states share one geometry and animate the material properties
+   so the toggle reads as one continuous object rather than two unrelated
+   buttons. */
+.btn-show-more{
+  border-radius:999px !important;
+  corner-shape:initial !important;
+  transition:
+    background-color .28s ease,
+    color .28s ease,
+    border-color .28s ease,
+    box-shadow .28s ease,
+    backdrop-filter .28s ease,
+    -webkit-backdrop-filter .28s ease,
+    transform .18s ease !important;
+}
+.btn-show-more:not(.expanded){
+  background:rgba(255,255,255,.08) !important;
+  background-color:rgba(255,255,255,.08) !important;
+  color:#fff !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  box-shadow:0 10px 28px rgba(0,0,0,.22) !important;
+  backdrop-filter:blur(14px) saturate(1.08) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(1.08) !important;
+}
+.btn-show-more:not(.expanded):hover{
+  background:rgba(255,255,255,.13) !important;
+  background-color:rgba(255,255,255,.13) !important;
+}
+.btn-show-more.expanded{
+  background:#fff !important;
+  background-color:#fff !important;
+  color:#000 !important;
+  border:1px solid #fff !important;
+  box-shadow:0 10px 28px rgba(0,0,0,.18) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+.btn-show-more.expanded:hover{
+  background:#f2f2f2 !important;
+  background-color:#f2f2f2 !important;
+  color:#000 !important;
+}
+.btn-show-more:active{
+  transform:scale(.985);
+}
+.btn-show-more:not(.expanded):focus{
+  background:rgba(255,255,255,.08) !important;
+  background-color:rgba(255,255,255,.08) !important;
+  color:#fff !important;
+}
+.btn-show-more.expanded:focus{
+  background:#fff !important;
+  background-color:#fff !important;
+  color:#000 !important;
+}
+.btn-show-more:focus-visible{
+  box-shadow:0 0 0 2px rgba(255,255,255,.78) !important;
+}
+
+/* About hero socials stay aligned with the text column. Footer socials retain
+   their independent centered contract. */
+.about-hero-overlay .about-social-icons{
+  justify-content:flex-start !important;
+  width:auto !important;
+  max-width:none;
+  overflow-x:visible !important;
+  scroll-snap-type:none;
+}
+@media (max-width:767px){
+  .about-hero-overlay .about-social-icons{
+    justify-content:flex-start !important;
+    width:auto !important;
+    overflow-x:visible !important;
+    margin-left:0;
+    margin-right:0;
+  }
+}
