@@ -1745,6 +1745,58 @@ try {
         throw new Error('Mobile Show Less did not retain the requested white/black solid material: ' + JSON.stringify(expandedShowLessMaterial));
       }
 
+      // Critical regression path: once the gallery is expanded, opening and
+      // closing a Lightbox must not collapse the Gallery or move the visitor to
+      // an unrelated position. The Lightbox close event is allowed to rebuild
+      // presentation, but it must preserve Gallery-owned expansion state and
+      // restore the exact page scroll position.
+      await page.locator('#portfolioGrid .project-card').filter({ visible: true }).first().scrollIntoViewIfNeeded().catch(() => {});
+      await page.mouse.wheel(0, 260);
+      await page.waitForTimeout(120);
+      const expandedBeforeLightbox = await page.evaluate(() => ({
+        scrollY: Math.round(window.scrollY),
+        expanded: document.querySelector('#showMoreBtn')?.classList.contains('expanded'),
+        wrapperExpanded: document.querySelector('#showMoreWrapper')?.getAttribute('data-expanded'),
+        maxHeight: getComputedStyle(document.querySelector('#portfolioGridViewport')).maxHeight,
+        visibleCards: Array.from(document.querySelectorAll('#portfolioGrid .project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none').length
+      }));
+      if (
+        !expandedBeforeLightbox.expanded ||
+        expandedBeforeLightbox.wrapperExpanded !== 'true' ||
+        expandedBeforeLightbox.maxHeight !== 'none' ||
+        expandedBeforeLightbox.visibleCards !== 11
+      ) {
+        throw new Error('Expanded Gallery state was not settled before Lightbox close regression test: ' + JSON.stringify(expandedBeforeLightbox));
+      }
+
+      const lightboxCard = page.locator('#portfolioGrid .project-card').filter({ visible: true }).first();
+      await lightboxCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      await page.locator('#lightboxClose').click();
+      await page.waitForTimeout(120);
+
+      const expandedAfterLightbox = await page.evaluate(() => ({
+        scrollY: Math.round(window.scrollY),
+        expanded: document.querySelector('#showMoreBtn')?.classList.contains('expanded'),
+        wrapperExpanded: document.querySelector('#showMoreWrapper')?.getAttribute('data-expanded'),
+        maxHeight: getComputedStyle(document.querySelector('#portfolioGridViewport')).maxHeight,
+        visibleCards: Array.from(document.querySelectorAll('#portfolioGrid .project-card'))
+          .filter(card => getComputedStyle(card).display !== 'none').length
+      }));
+      if (
+        expandedAfterLightbox.scrollY !== expandedBeforeLightbox.scrollY ||
+        !expandedAfterLightbox.expanded ||
+        expandedAfterLightbox.wrapperExpanded !== 'true' ||
+        expandedAfterLightbox.maxHeight !== 'none' ||
+        expandedAfterLightbox.visibleCards !== 11
+      ) {
+        throw new Error('Closing Lightbox regressed the expanded Gallery state: ' + JSON.stringify({
+          before: expandedBeforeLightbox,
+          after: expandedAfterLightbox
+        }));
+      }
+
       // Return to the collapsed state so the remaining resize assertions keep
       // the original mobile fixture geometry.
       await showMoreAfterResize.click();
