@@ -29,7 +29,8 @@ const canonicalModuleQueries = new Map([
   ['infrastructure/browser/script-loader.js', '?v=20261004-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261004-01'],
   ['infrastructure/media-background/loader.js', '?v=20261008-01'],
-  ['infrastructure/software-logo/lookup.js', '?v=20261008-01']
+  ['infrastructure/software-logo/lookup.js', '?v=20261008-01'],
+  ['features/projects/project-loader.js', '?v=20261008-09']
 ]);
 
 for (const legacy of legacyRootModules) {
