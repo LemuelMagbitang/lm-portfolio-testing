@@ -224,20 +224,85 @@ async function assertMobileNavigation(page, label) {
     throw new Error(label + ' closed mobile navigation still exposes a stale interactive hit surface: ' + JSON.stringify(closedMenuContract));
   }
 
-  const hero = page.locator('.hero-section').first();
-  const heroBox = await hero.boundingBox();
-  if (heroBox) {
+  const assertOrdinarySurface = async (locator, label) => {
+    if (await locator.count() !== 1) return;
+
+    await locator.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(80);
+
+    const point = await locator.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      const candidates = [
+        { x: rect.left + rect.width * 0.08, y: rect.top + rect.height * 0.12 },
+        { x: rect.left + rect.width * 0.92, y: rect.top + rect.height * 0.12 },
+        { x: rect.left + rect.width * 0.08, y: rect.top + rect.height * 0.88 },
+        { x: rect.left + rect.width * 0.92, y: rect.top + rect.height * 0.88 },
+        { x: rect.left + rect.width * 0.50, y: rect.top + rect.height * 0.50 }
+      ];
+      const blocked = value => {
+        const target = document.elementFromPoint(value.x, value.y);
+        return target?.closest?.(
+          '.nav-links, .filter-tabs, a, button, input, textarea, select, .project-card'
+        );
+      };
+      return candidates.find(candidate =>
+        candidate.x >= rect.left &&
+        candidate.x <= rect.right &&
+        candidate.y >= rect.top &&
+        candidate.y <= rect.bottom &&
+        !blocked(candidate)
+      ) || null;
+    });
+
+    if (!point) return;
+
     const beforeHash = await page.evaluate(() => window.location.hash);
-    await page.mouse.click(
-      heroBox.x + heroBox.width / 2,
-      heroBox.y + heroBox.height / 2
-    );
+    await page.mouse.click(point.x, point.y);
     await page.waitForTimeout(120);
     const afterHash = await page.evaluate(() => window.location.hash);
     if (afterHash !== beforeHash) {
-      throw new Error(label + ' clicking ordinary hero/background content unexpectedly triggered filter navigation: ' + beforeHash + ' -> ' + afterHash);
+      throw new Error(
+        label + ' ordinary page surface unexpectedly triggered filter navigation: ' +
+        beforeHash + ' -> ' + afterHash
+      );
     }
+  };
+
+  await assertOrdinarySurface(page.locator('#contact-section').first(), label + ' Contact');
+  await assertOrdinarySurface(page.locator('footer').first(), label + ' footer');
+
+  // Re-open/close once after the lower-page taps. This catches stale menu state
+  // that only appears after scrolling away from the hero before returning home.
+  await page.locator('.hamburger').first().click();
+  await page.waitForTimeout(120);
+  await page.locator('body').click({ position: { x: 5, y: 300 } });
+  await page.waitForTimeout(360);
+
+  const finalClosedContract = await menu.evaluate(el => {
+    const style = getComputedStyle(el);
+    const dropdown = el.querySelector('.nav-dropdown-menu');
+    const dropdownStyle = dropdown ? getComputedStyle(dropdown) : null;
+    return {
+      maxHeight: style.maxHeight,
+      opacity: style.opacity,
+      visibility: style.visibility,
+      pointerEvents: style.pointerEvents,
+      dropdownPointerEvents: dropdownStyle?.pointerEvents || ''
+    };
+  });
+  if (
+    finalClosedContract.maxHeight !== '0px' ||
+    finalClosedContract.opacity !== '0' ||
+    finalClosedContract.visibility !== 'hidden' ||
+    finalClosedContract.pointerEvents !== 'none' ||
+    finalClosedContract.dropdownPointerEvents !== 'none'
+  ) {
+    throw new Error(
+      label + ' repeated mobile navigation close exposed a stale interactive hit surface: ' +
+      JSON.stringify(finalClosedContract)
+    );
   }
+
 }
 
 const { server, getStderr } = startServer();
