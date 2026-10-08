@@ -2591,6 +2591,37 @@ try {
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
+      const filterButtons = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn');
+      const allButton = page.locator('.filter-tabs [data-filter="all"]').first();
+      const count = await filterButtons.count();
+      if (count !== 1 || await allButton.count() !== 1) {
+        throw new Error('Explicit empty filter CMS state did not collapse the Gallery controls to ALL only.');
+      }
+      if (!(await allButton.evaluate(el => el.classList.contains('active')))) {
+        throw new Error('Explicit empty filter CMS state did not activate the ALL filter.');
+      }
+      const a11y = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
+        return {
+          activeCount: buttons.filter(button => button.classList.contains('active')).length,
+          pressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
+          allPressed: document.querySelector('.filter-tabs [data-filter="all"]')?.getAttribute('aria-pressed') || null
+        };
+      });
+      if (a11y.activeCount !== 1 || a11y.pressedCount !== 1 || a11y.allPressed !== 'true') {
+        throw new Error('Empty filter CMS state left Gallery ARIA state inconsistent: ' + JSON.stringify(a11y));
+      }
+    }, { width: 1280, height: 900 }, async page => {
+      await page.route(`${BASE_URL}/data/filters.json**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ filters: [] })
+        });
+      });
+    });
+
+    await smokePage(browser, '/', async page => {
       let unloads = 0;
       await page.evaluate(() => {
         window.__lmSmokeUnloadCount = 0;
