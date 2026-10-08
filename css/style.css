@@ -3807,7 +3807,7 @@ footer > .footer-content p{
   z-index:0;
   pointer-events:none;
   background:rgba(0,0,0,.38);
-  border:1px solid rgba(255,255,255,.12);
+  border:0;
   box-shadow:0 6px 18px rgba(0,0,0,.22);
 }
 .lightbox-nav::before{ border-radius:16px; }
