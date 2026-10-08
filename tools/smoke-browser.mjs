@@ -1318,6 +1318,7 @@ try {
         return {
           background: style.backgroundColor,
           border: style.borderStyle,
+          borderWidth: style.borderWidth,
           color: style.color,
           backdropFilter: style.backdropFilter
         };
