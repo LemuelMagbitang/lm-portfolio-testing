@@ -2596,6 +2596,14 @@ function buildProjectBody(el, p, options = {}){
         value => { m.holographic = value; },
         () => { refreshPreview(); markChanged(); }
       );
+      attachMediaBrowseButton(row.querySelector('[data-holo-texture]'), null, {
+        kind:'image',
+        title:'Choose a foil / pattern image'
+      });
+      attachMediaBrowseButton(row.querySelector('[data-holo-back]'), null, {
+        kind:'image',
+        title:'Choose a back image'
+      });
       refreshPreview();
       attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({
         kind: m.type === 'lottie' ? 'lottie' : m.type === 'video' ? 'video' : m.type === 'model' ? 'model' : m.type === 'youtube' ? 'other' : 'image',
@@ -2608,6 +2616,7 @@ function buildProjectBody(el, p, options = {}){
         if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') {
           refreshPreview();
           row.__bgEditorSync?.();
+          row.__holoEditorSync?.();
         }
         markChanged();
       }));
