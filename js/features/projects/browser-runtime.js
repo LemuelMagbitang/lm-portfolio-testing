@@ -12,8 +12,8 @@
  * without coupling the Projects feature to one runtime implementation.
  */
 
-import { loadProjects } from './project-loader.js?v=20261008-09';
-import { buildProjectCardElement } from './project-card.js?v=20261006-02';
+import { loadProjects } from './project-loader.js?v=20261008-10';
+import { buildProjectCardElement } from './project-card.js?v=20261008-10';
 import { waitForProjectThumbnailReadiness } from './project-thumbnail.js?v=20261005-04';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
