@@ -3490,11 +3490,6 @@ footer > .footer-content p{
    FINAL UI PASS 2 — controls, socials, mobile contact tabs
    ============================================================ */
 
-/* Show More / Show Less is intentionally a true pill control. */
-.btn-show-more{
-  border-radius:999px !important;
-}
-
 /* Social systems share one geometry across the public hero, footer, and About.
    48px is ~26% larger than the former 38px About footprint. The row never
    wraps; additional future social links stay on one line and become
