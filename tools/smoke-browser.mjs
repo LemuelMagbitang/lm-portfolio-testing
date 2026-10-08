@@ -176,7 +176,18 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
 }
  
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
-  const page = await browser.newPage({ viewport });
+  // A narrow viewport alone does not emulate a phone. In Chromium the CSS
+  // pointer media feature remains `pointer:fine`, which means touch-specific
+  // presentation (including the holographic HOLD + MOVE affordance) will not
+  // activate. Use a touch/mobile context for narrow smoke cases so the test
+  // exercises the same media-query branch as an actual handset.
+  const isMobileSmoke = viewport.width < 768;
+  const context = await browser.newContext({
+    viewport,
+    isMobile: isMobileSmoke,
+    hasTouch: isMobileSmoke
+  });
+  const page = await context.newPage();
   const smokeId = ++smokePageSequence;
   const caller = (new Error().stack || '').split('\n')[2]?.trim() || 'unknown-callsite';
   const smokeLabel = `#${smokeId} ${path} ${viewport.width}x${viewport.height}`;
@@ -188,6 +199,16 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
   try {
     await waitForSmokeTask(async () => {
       await configureLogoRoutes(page);
+
+      if (isMobileSmoke) {
+        const coarse = await page.evaluate(() =>
+          window.matchMedia('(pointer: coarse)').matches &&
+          window.matchMedia('(hover: none)').matches
+        );
+        if (!coarse) {
+          throw new Error('Mobile smoke context did not emulate a coarse touch pointer.');
+        }
+      }
 
       const errors = [];
       page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
@@ -226,6 +247,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     throw error;
   } finally {
     await page.close().catch(() => {});
+    await context.close().catch(() => {});
   }
 }
 
