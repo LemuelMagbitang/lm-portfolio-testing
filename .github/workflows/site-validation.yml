@@ -47,6 +47,9 @@ jobs:
       - name: Test CMS loader lifecycle contract
         run: node tools/test-cms-loader.mjs
 
+      - name: Test browser script-loader lifecycle contract
+        run: node tools/test-script-loader.mjs
+
       - name: Validate site settings contract
         run: node tools/validate-site-settings.mjs
 
