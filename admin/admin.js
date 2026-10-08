@@ -2104,6 +2104,9 @@ function serializeProjectEditorModel(project){
     badges,
     filters:Array.isArray(project.filters) ? [...project.filters] : [],
     description:project.description,
+    ...(project.extensions && typeof project.extensions === 'object' && !Array.isArray(project.extensions)
+      ? {extensions:project.extensions}
+      : {}),
     thumbnail:{
       type:project.thumbnail?.type || 'image',
       src:project.thumbnail?.src || '',
