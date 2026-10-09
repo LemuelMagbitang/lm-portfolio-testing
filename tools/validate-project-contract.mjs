@@ -111,6 +111,22 @@ assert.deepEqual(holographic.holographic, {
   back: 'assets/back.png',
   mask: 'assets/front-mask.png'
 });
+const orphanedBackEffects = normalizeProjectMedia({
+  type: 'image',
+  src: 'front.png',
+  holographic: {
+    style: 'aurora',
+    backTexture: 'assets/orphaned-back-foil.svg',
+    backTextureMode: 'tile',
+    backMask: 'assets/orphaned-back-mask.svg'
+  }
+});
+assert.equal(orphanedBackEffects.holographic.style, 'aurora');
+assert.equal('back' in orphanedBackEffects.holographic, false);
+assert.equal('backTexture' in orphanedBackEffects.holographic, false);
+assert.equal('backTextureMode' in orphanedBackEffects.holographic, false);
+assert.equal('backMask' in orphanedBackEffects.holographic, false);
+
 assert.equal(normalizeProjectMedia({
   type: 'image',
   src: 'plain.png',
