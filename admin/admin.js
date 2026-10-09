@@ -2069,7 +2069,7 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
 
 function normalizeEditorHolographic(value){
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const styles = new Set(['holographic','brushed','beams','crosshatch','shattered','glitter','waves','cat-eye','iridescent','aurora']);
+  const styles = new Set(['holographic','cosmos','brushed','beams','crosshatch','shattered','glitter','waves','cat-eye','iridescent','aurora']);
   const style = String(value.style || '').trim().toLowerCase();
   const intensityValue = Number(value.intensity);
   const intensity = Number.isFinite(intensityValue) ? Math.max(0, Math.min(1, intensityValue)) : 0.7;
@@ -2116,6 +2116,7 @@ function holographicControlHtml(holographic){
             <div class="holo-style-intensity">
               <div class="field"><label class="field-label">Effect style</label><select data-holo-style>
                 <option value="holographic" ${style==='holographic'?'selected':''}>Smooth prism foil</option>
+                <option value="cosmos" ${style==='cosmos'?'selected':''}>Cosmos galaxy foil</option>
                 <option value="brushed" ${style==='brushed'?'selected':''}>Fine brushed foil</option>
                 <option value="beams" ${style==='beams'?'selected':''}>Vertical light beams</option>
                 <option value="crosshatch" ${style==='crosshatch'?'selected':''}>Crosshatch foil</option>

@@ -3,7 +3,7 @@ import {
   normalizeProject,
   normalizeProjectMedia,
   normalizeProjects
-} from '../js/data/project-normalizer.js?v=20261009-11';
+} from '../js/data/project-normalizer.js?v=20261009-12';
 
 const project = normalizeProject({
   id: '  demo-project  ',
@@ -113,6 +113,7 @@ assert.deepEqual(holographic.holographic, {
 });
 const supportedHolographicStyles = [
   'holographic',
+  'cosmos',
   'brushed',
   'beams',
   'crosshatch',

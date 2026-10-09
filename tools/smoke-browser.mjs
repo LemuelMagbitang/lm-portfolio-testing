@@ -1865,6 +1865,7 @@ try {
         const presetAudit = await holographic.evaluate(el => {
           const presets = [
             { style: 'holographic', layers: ['prism', 'ribbons', 'sheen'] },
+            { style: 'cosmos', layers: ['sheen'] },
             { style: 'brushed', layers: ['prism', 'sheen'] },
             { style: 'beams', layers: ['prism', 'sheen'] },
             { style: 'crosshatch', layers: ['diffraction'] },
@@ -1921,8 +1922,8 @@ try {
         if (!classicInterference.includes('repeating-linear-gradient')) {
           throw new Error('The classic holographic preset must include its neutral interference band.');
         }
-        if (presetAudit.results.length !== 10 || distinctPresetBackgrounds.size !== 10) {
-          throw new Error('Holographic finish options must produce ten distinct spectrum materials; found ' +
+        if (presetAudit.results.length !== 11 || distinctPresetBackgrounds.size !== 11) {
+          throw new Error('Holographic finish options must produce eleven distinct spectrum materials; found ' +
             distinctPresetBackgrounds.size + ' distinct backgrounds.');
         }
         const missingPresetLayers = presetAudit.results.flatMap(preset =>

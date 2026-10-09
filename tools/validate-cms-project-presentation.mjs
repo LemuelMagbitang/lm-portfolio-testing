@@ -42,6 +42,8 @@ assert.ok(css.includes('corner-shape:squircle'),
   'CMS Project presentation should progressively enhance rounded surfaces as squircles.');
 
 assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must expose the holographic image control.');
+assert.ok(/value="cosmos"/.test(admin) && /Cosmos galaxy foil/.test(admin),
+  'CMS holographic style picker must expose the optional Cosmos finish.');
 assert.ok(/data-holo-enabled/.test(admin), 'CMS Projects must expose an enable/disable control for holographic images.');
 assert.ok(/data-holo-texture/.test(admin) && /data-holo-back/.test(admin),
   'CMS holographic images must support optional texture and back-image sources.');
