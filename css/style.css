@@ -4533,3 +4533,34 @@ footer > .footer-content p{
   #lightboxMediaContainer .lightbox-holographic-ribbons,
   #lightboxMediaContainer .lightbox-holographic-sheen{animation:none!important;}
 }
+
+
+/* The artwork element is only the lightbox's layout slot. Do not let that
+   slot crop the transformed card when it pitches/rolls beyond its starting
+   rectangle; the individual card faces keep their own rounded clipping. */
+#lightboxMediaContainer .lightbox-artwork.has-holographic{
+  overflow:visible;
+}
+
+/* No extra frame around the card: keep the card's rounded silhouette on its
+   faces, while letting 3D transform and foil layers extend outside the slot. */
+#lightboxMediaContainer .lightbox-holographic{
+  border:0;
+  box-shadow:none;
+  outline:none;
+}
+#lightboxMediaContainer .lightbox-holographic:focus-visible{
+  border:0;
+  box-shadow:none;
+  outline:none!important;
+  outline-offset:0;
+}
+#lightboxMediaContainer .lightbox-holographic-face{
+  border-radius:inherit;
+  overflow:hidden;
+}
+@supports (corner-shape:squircle){
+  #lightboxMediaContainer .lightbox-holographic-face{
+    corner-shape:squircle;
+  }
+}
