@@ -1148,6 +1148,8 @@ function validateCmsRegressionContracts() {
 
   if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
       !renderer.includes('function setHolographicTarget(') ||
+      !renderer.includes("flip.className = 'lightbox-holographic-flip'") ||
+      !css.includes('.lightbox-holographic.is-flipped .lightbox-holographic-flip') ||
       !renderer.includes("'--holo-light-x'") ||
       !css.includes('data-holo-texture-mode="tile"') ||
       !css.includes('background-size:auto')) {
