@@ -79,6 +79,22 @@ assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must ex
 assert.ok(/holo-style-intensity holo-main-controls/.test(admin) &&
   /<summary>Advanced foil options/.test(admin),
   'CMS foil controls should keep style/strength visible and tuck texture/mask/reverse options into Advanced.');
+for (const marker of [
+  'data-holo-style aria-label="Holographic effect style"',
+  'aria-label="Holographic foil strength"',
+  'data-holo-texture aria-label="Front foil pattern source"',
+  'data-holo-mask aria-label="Front foil mask source"',
+  'data-holo-back aria-label="Custom reverse card image source"',
+  'data-holo-back-texture aria-label="Back foil pattern source"',
+  'data-holo-back-mask aria-label="Back foil mask source"'
+]) {
+  assert.ok(admin.includes(marker), `CMS foil control is missing an accessible name: ${marker}`);
+}
+assert.ok(/function updateIntensityAccessibility\(\)/.test(admin) &&
+  /setAttribute\('aria-valuetext',percent\+'%'\)/.test(admin) &&
+  /updateIntensityAccessibility\(\)/.test(admin),
+  'CMS foil strength must announce its updated percentage to assistive technology.');
+
 assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin) &&
   /Math\.round\(Number\(intensityInput\.value\)\*100\)\+'%'/ .test(admin),
   'CMS foil strength should have fine-grained control and a clear percentage label.');

@@ -2108,7 +2108,7 @@ function holographicControlHtml(holographic){
       <label class="media-bg-toggle holo-enable-row"><input type="checkbox" data-holo-enabled ${enabled?'checked':''}> <span>Enable interactive foil</span></label>
       <div class="holo-options" data-holo-options>
         <div class="holo-style-intensity holo-main-controls">
-          <div class="field"><label class="field-label">Effect style</label><select data-holo-style>
+          <div class="field"><label class="field-label">Effect style</label><select data-holo-style aria-label="Holographic effect style">
             <option value="holographic" ${style==='holographic'?'selected':''}>Smooth prism foil</option>
             <option value="cosmos" ${style==='cosmos'?'selected':''}>Cosmos galaxy foil</option>
             <option value="brushed" ${style==='brushed'?'selected':''}>Fine brushed foil</option>
@@ -2122,14 +2122,14 @@ function holographicControlHtml(holographic){
             <option value="aurora" ${style==='aurora'?'selected':''}>Aurora gradient</option>
           </select></div>
           <div class="field"><label class="field-label">Foil strength <span data-holo-intensity-value>${Math.round(intensity*100)}%</span></label>
-            <input data-holo-intensity type="range" min="0" max="1" step="0.01" value="${intensity}">
+            <input data-holo-intensity type="range" min="0" max="1" step="0.01" value="${intensity}" aria-label="Holographic foil strength" aria-valuetext="${Math.round(intensity*100)}%">
           </div>
         </div>
         <details class="holo-settings-group" data-holo-front-settings>
           <summary>Advanced foil options <span>Textures, masks and reverse side</span></summary>
           <div class="holo-settings-panel">
             <div class="field"><label class="field-label">Front foil pattern <span style="opacity:.5">(optional)</span></label>
-              <input data-holo-texture value="${attr(value?.texture || '')}" placeholder="Choose a pattern PNG / SVG">
+              <input data-holo-texture aria-label="Front foil pattern source" value="${attr(value?.texture || '')}" placeholder="Choose a pattern PNG / SVG">
               <div class="holo-field-note">Small motifs tile; full-card maps fill the surface.</div>
               <select data-holo-texture-mode aria-label="Front pattern mapping">
                 <option value="tile" ${textureMode==='tile'?'selected':''}>Tile pattern</option>
@@ -2137,11 +2137,11 @@ function holographicControlHtml(holographic){
               </select>
             </div>
             <div class="field"><label class="field-label">Front foil mask <span style="opacity:.5">(optional)</span></label>
-              <input data-holo-mask value="${attr(value?.mask || '')}" placeholder="Choose a front mask PNG / SVG">
+              <input data-holo-mask aria-label="Front foil mask source" value="${attr(value?.mask || '')}" placeholder="Choose a front mask PNG / SVG">
               <div class="holo-field-note">White reveals foil; black hides it. Front only.</div>
             </div>
             <div class="field holo-back-source"><label class="field-label">Back card image <span style="opacity:.5">(optional)</span></label>
-              <input data-holo-back value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .jpg / .svg">
+              <input data-holo-back aria-label="Custom reverse card image source" value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .jpg / .svg">
             </div>
             <div class="holo-back-settings" data-holo-back-options ${value?.back ? '' : 'hidden'}>
               <label class="media-bg-toggle holo-enable-row holo-back-enable-row"><input type="checkbox" data-holo-back-enabled ${value?.backFoilEnabled?'checked':''}> <span>Enable interactive foil on back</span></label>
@@ -2149,14 +2149,14 @@ function holographicControlHtml(holographic){
                 <summary>Reverse-side foil options <span>Pattern and mask (optional)</span></summary>
                 <div class="holo-settings-panel">
                   <div class="field"><label class="field-label">Back foil pattern <span style="opacity:.5">(optional)</span></label>
-                    <input data-holo-back-texture value="${attr(value?.backTexture || '')}" placeholder="Choose a back pattern PNG / SVG">
+                    <input data-holo-back-texture aria-label="Back foil pattern source" value="${attr(value?.backTexture || '')}" placeholder="Choose a back pattern PNG / SVG">
                     <select data-holo-back-texture-mode aria-label="Back pattern mapping">
                       <option value="tile" ${backTextureMode==='tile'?'selected':''}>Tile pattern</option>
                       <option value="fill" ${backTextureMode==='fill'?'selected':''}>Fill card</option>
                     </select>
                   </div>
                   <div class="field"><label class="field-label">Back foil mask <span style="opacity:.5">(optional)</span></label>
-                    <input data-holo-back-mask value="${attr(value?.backMask || '')}" placeholder="Choose a back mask PNG / SVG">
+                    <input data-holo-back-mask aria-label="Back foil mask source" value="${attr(value?.backMask || '')}" placeholder="Choose a back mask PNG / SVG">
                     <div class="holo-field-note">Leave both settings blank for a clean reverse.</div>
                   </div>
                 </div>
@@ -2180,6 +2180,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const backMaskInput=control.querySelector('[data-holo-back-mask]');
   const backFoilInput=control.querySelector('[data-holo-back-enabled]');
   function syncVisibility(){options.hidden=!enabledInput.checked;if(backOptions)backOptions.hidden=!String(backInput.value||'').trim();}
+  function updateIntensityAccessibility(){const percent=Math.round(Number(intensityInput.value)*100);if(intensityLabel)intensityLabel.textContent=percent+'%';intensityInput.setAttribute('aria-valuetext',percent+'%');}
   function sync(){
     const supported=String(getType()||'').toLowerCase()==='image';control.hidden=!supported;if(!supported)return;
     const value=normalizeEditorHolographic(getEffect());enabledInput.checked=!!value;
@@ -2190,7 +2191,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     if(backTextureModeInput)backTextureModeInput.value=value?.backTextureMode||'fill';
     if(backMaskInput)backMaskInput.value=value?.backMask||'';
     if(backFoilInput)backFoilInput.checked=!!value?.backFoilEnabled;
-    if(intensityLabel)intensityLabel.textContent=Math.round(Number(intensityInput.value)*100)+'%';syncVisibility();
+    updateIntensityAccessibility();syncVisibility();
   }
   function read(){
     const backSrc=backInput.value.trim();
@@ -2209,7 +2210,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   }
   enabledInput.addEventListener('change',()=>{setEffect(enabledInput.checked?read():null);sync();onChanged?.();});
   styleInput.addEventListener('change',()=>{if(enabledInput.checked){setEffect(read());onChanged?.();}});
-  intensityInput.addEventListener('input',()=>{if(intensityLabel)intensityLabel.textContent=Math.round(Number(intensityInput.value)*100)+'%';if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  intensityInput.addEventListener('input',()=>{updateIntensityAccessibility();if(enabledInput.checked){setEffect(read());onChanged?.();}});
   const update=()=>{syncVisibility();if(enabledInput.checked){setEffect(read());onChanged?.();}};
   [textureInput,backInput,maskInput,backTextureInput,backMaskInput].filter(Boolean).forEach(el=>el.addEventListener('input',update));
   [textureModeInput,backTextureModeInput].filter(Boolean).forEach(el=>el.addEventListener('change',update));
