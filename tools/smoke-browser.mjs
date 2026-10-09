@@ -512,6 +512,14 @@ try {
             maskState.backLayers.some(Boolean)) {
           throw new Error(`Holographic mask must cover every front foil layer and none of the back layers: ${JSON.stringify(maskState)}`);
         }
+        const textureState = await holographic.evaluate(el => {
+          const texture = el.querySelector('.lightbox-holographic-front .lightbox-holographic-texture');
+          const style = texture ? getComputedStyle(texture) : null;
+          return { mode: el.dataset.holoTextureMode, repeat: style?.backgroundRepeat || '', tag: texture?.tagName || '' };
+        });
+        if (textureState.mode !== 'fill' || textureState.repeat.includes('repeat') || textureState.tag !== 'SPAN') {
+          throw new Error('Full-card foil textures must fill the whole face as a texture overlay, not a mask.');
+        }
 
         // Quick movement must remain a normal Lightbox gesture: no foil
         // engagement before the hold threshold.
@@ -614,6 +622,8 @@ try {
             holographic: {
               style: 'iridescent',
               intensity: 0.8,
+              textureMode: 'fill',
+              textureMode: 'tile',
               texture: 'assets/projects/holographic-smoke/foil.svg',
               back: 'assets/projects/holographic-smoke/back.svg',
               mask: 'assets/projects/holographic-smoke/mask.svg'
@@ -1528,12 +1538,20 @@ try {
           holoBox.x + holoBox.width * 0.82,
           holoBox.y + holoBox.height * 0.22
         );
+        await page.waitForFunction(el => {
+          const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
+          return Number.isFinite(x) && x > 50;
+        }, holographic, { timeout: 1200 });
 
         const holoStateBeforeFlip = await holographic.evaluate(el => ({
           x: el.style.getPropertyValue('--holo-x'),
           y: el.style.getPropertyValue('--holo-y'),
           foilX: el.style.getPropertyValue('--holo-foil-x'),
           foilY: el.style.getPropertyValue('--holo-foil-y'),
+          lightX: el.style.getPropertyValue('--holo-light-x'),
+          lightY: el.style.getPropertyValue('--holo-light-y'),
+          textureMode: el.dataset.holoTextureMode,
+          textureRepeat: getComputedStyle(el.querySelector('.lightbox-holographic-front .lightbox-holographic-texture')).backgroundRepeat,
           rx: el.style.getPropertyValue('--holo-rx'),
           ry: el.style.getPropertyValue('--holo-ry'),
           back: el.querySelector('.lightbox-holographic-back img')?.getAttribute('src') || ''
@@ -1548,6 +1566,16 @@ try {
             Math.abs((pointerX + foilX) - 100) > 1.5 ||
             Math.abs((pointerY + foilY) - 100) > 1.5) {
           throw new Error('Holographic Lightbox pointer/foil mapping did not preserve the inverse refraction contract.');
+        }
+        const lightX = Number.parseFloat(holoStateBeforeFlip.lightX);
+        const lightY = Number.parseFloat(holoStateBeforeFlip.lightY);
+        if (!Number.isFinite(lightX) || !Number.isFinite(lightY) ||
+            (Math.abs(pointerX - lightX) < 8 && Math.abs(pointerY - lightY) < 8)) {
+          throw new Error('Holographic highlight must remain offset from the pointer instead of following it like a flashlight.');
+        }
+        if (holoStateBeforeFlip.textureMode !== 'tile' ||
+            !holoStateBeforeFlip.textureRepeat.includes('repeat')) {
+          throw new Error('Small foil pattern images must repeat across the whole card face.');
         }
         if (!holoStateBeforeFlip.back.includes('holographic-smoke/back.svg')) {
           throw new Error('Holographic Lightbox did not mount the configured back artwork.');
