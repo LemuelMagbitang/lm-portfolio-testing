@@ -414,6 +414,30 @@ function validateHtml(file, expectedRoot = '') {
   });
 }
 
+
+function validateCanonicalSocialMetadata() {
+  const expectedUrls = new Map([
+    ['index.html', 'https://lemuelmagbitang.github.io/'],
+    ['about/index.html', 'https://lemuelmagbitang.github.io/about/']
+  ]);
+
+  for (const [file, expectedUrl] of expectedUrls) {
+    if (!exists(file)) continue;
+    const html = readText(file);
+    const canonicalTag = html.match(/<link\\b(?=[^>]*\\brel=['"]canonical['"])[^>]*>/i)?.[0] || '';
+    const canonicalUrl = canonicalTag.match(/\\bhref=['"]([^'"]+)['"]/i)?.[1] || '';
+    const socialTag = html.match(/<meta\\b(?=[^>]*\\bproperty=['"]og:url['"])[^>]*>/i)?.[0] || '';
+    const socialUrl = socialTag.match(/\\bcontent=['"]([^'"]+)['"]/i)?.[1] || '';
+
+    if (canonicalUrl !== expectedUrl) {
+      err(file + ': canonical URL must identify this page (' + expectedUrl + ').');
+    }
+    if (socialUrl !== expectedUrl) {
+      err(file + ': Open Graph URL must identify this page (' + expectedUrl + ').');
+    }
+  }
+}
+
 function scanSourceForBadPatterns() {
   const candidates = ['index.html', 'about/index.html', 'js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'css/style.css', 'admin/index.html', 'admin/admin.js', '.github/workflows/site-validation.yml'];
 
@@ -493,6 +517,7 @@ validateHtml('index.html');
 validateHtml('about/index.html');
 validateHtml('404.html');
 validateHtml('success/index.html');
+validateCanonicalSocialMetadata();
 function validateSecuritySecrets() {
   const files = [];
   function walk(dir) {
