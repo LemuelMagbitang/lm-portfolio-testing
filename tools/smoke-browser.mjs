@@ -528,7 +528,7 @@ try {
             !affordance.prismAnimation.includes('holo-prism-drift') ||
             !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
             Number.parseFloat(affordance.flipTransition) <= 0) {
-          throw new Error('Mobile holographic surface is missing its subtle interaction affordance.');
+          throw new Error('Mobile holographic surface is missing its intended affordance/geometry: ' + JSON.stringify(affordance));
         }
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
@@ -1576,7 +1576,7 @@ try {
             !affordance.prismAnimation.includes('holo-prism-drift') ||
             !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
             Number.parseFloat(affordance.flipTransition) <= 0) {
-          throw new Error('Desktop holographic surface is missing its subtle interaction affordance.');
+          throw new Error('Desktop holographic surface is missing its intended affordance/geometry: ' + JSON.stringify(affordance));
         }
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
