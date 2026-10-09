@@ -12,7 +12,7 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../features/projects/index.js?v=20261009-10';
+} from '../features/projects/index.js?v=20261009-11';
 import { initNavigation } from '../features/navigation/index.js?v=20261009-01';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
@@ -22,7 +22,7 @@ import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261009-09';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261009-05';
-import { initLightbox } from '../features/lightbox/index.js?v=20261009-24';
+import { initLightbox } from '../features/lightbox/index.js?v=20261009-25';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 
 export async function createPortfolioApp({

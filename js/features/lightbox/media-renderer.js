@@ -576,6 +576,7 @@ export function createLightboxMediaRenderer({
   // hidden overlays unmasked avoids needless alpha/luminance-mask compositing.
   const HOLOGRAPHIC_MASK_LAYERS = {
     holographic: ['prism', 'ribbons', 'sheen'],
+    cosmos: ['sheen'],
     brushed: ['prism', 'sheen'],
     beams: ['prism', 'sheen'],
     crosshatch: ['diffraction'],
