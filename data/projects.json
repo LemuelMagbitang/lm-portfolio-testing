@@ -417,6 +417,7 @@
           "style": "iridescent",
           "intensity": 1,
           "textureMode": "fill",
+          "texture": "assets/projects/gog-render-challenge/foil-test-250.png",
           "mask": "assets/projects/gog-render-challenge/image.jpg"
         }
       },
