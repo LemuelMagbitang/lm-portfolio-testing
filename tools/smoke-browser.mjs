@@ -1731,12 +1731,22 @@ try {
             };
           });
           el.dataset.holoStyle = originalStyle;
+          // Disable the spectrum's opacity transition while measuring both values;
+          // otherwise same-task reads can observe the same in-flight transition.
+          const originalSpectrumTransition = spectrum.style.transition;
+          spectrum.style.transition = 'none';
           el.style.setProperty('--holo-intensity', '0.15');
+          const lowIntensityVariable = getComputedStyle(el).getPropertyValue('--holo-intensity').trim();
           const lowIntensityOpacity = Number.parseFloat(getComputedStyle(spectrum).opacity);
           el.style.setProperty('--holo-intensity', '0.9');
+          const highIntensityVariable = getComputedStyle(el).getPropertyValue('--holo-intensity').trim();
           const highIntensityOpacity = Number.parseFloat(getComputedStyle(spectrum).opacity);
           el.style.setProperty('--holo-intensity', originalIntensity || '0.8');
-          return { results, lowIntensityOpacity, highIntensityOpacity };
+          spectrum.style.transition = originalSpectrumTransition;
+          return {
+            results, lowIntensityOpacity, highIntensityOpacity,
+            lowIntensityVariable, highIntensityVariable
+          };
         });
         const distinctPresetBackgrounds = new Set(presetAudit.results.map(preset => preset.backgroundImage));
         if (presetAudit.results.length !== 10 || distinctPresetBackgrounds.size !== 10) {
@@ -1752,7 +1762,13 @@ try {
             missingPresetLayers.join(', '));
         }
         if (!(presetAudit.highIntensityOpacity > presetAudit.lowIntensityOpacity)) {
-          throw new Error('Holographic intensity must visibly increase the foil response.');
+          throw new Error('Holographic intensity must visibly increase the foil response: ' +
+            JSON.stringify({
+              lowOpacity: presetAudit.lowIntensityOpacity,
+              highOpacity: presetAudit.highIntensityOpacity,
+              lowVariable: presetAudit.lowIntensityVariable,
+              highVariable: presetAudit.highIntensityVariable
+            }));
         }
 
         const holoBox = await holographic.boundingBox();
