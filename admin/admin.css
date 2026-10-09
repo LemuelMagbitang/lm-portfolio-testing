@@ -820,6 +820,15 @@ button.icon-btn,
 
 
 /* Compact expandable CMS controls for the holographic effect. */
+/* Compact front-and-center controls; texture/mask details stay behind Advanced. */
+.holo-main-controls{margin:0;grid-template-columns:minmax(0,1.1fr) minmax(120px,.9fr);align-items:end;}
+.holo-main-controls .field{min-width:0;margin:0;}
+.holo-main-controls .field-label{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.holo-main-controls [data-holo-intensity-value]{color:#d8d8d8;font-size:11px;font-variant-numeric:tabular-nums;}
+.holo-main-controls select,.holo-main-controls input[type="range"]{min-width:0;width:100%;}
+.holo-back-group{margin-top:2px;}
+@media(max-width:560px){.holo-main-controls{grid-template-columns:1fr;}}
+
 .holo-options{gap:8px;padding:8px;}
 .holo-enable-row{margin-bottom:2px;}
 .holo-back-enable-row{margin-bottom:4px;}
