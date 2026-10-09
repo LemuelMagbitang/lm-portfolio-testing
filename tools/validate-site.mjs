@@ -1148,6 +1148,9 @@ function validateCmsRegressionContracts() {
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
   if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '')") ||
       !renderer.includes('layer.style.maskMode = modeList') ||
+      !renderer.includes("const asCssUrl = value => 'url(\"' + String(value).split('\"').join('%22') + '\")';") ||
+      renderer.includes("encodeURI(String(value).split('\"').join('%22'))") ||
+      renderer.includes("encodeURI(String(faceTextureUrl).split('\"').join('%22'))") ||
       !renderer.includes("modes.push('alpha')") ||
       !renderer.includes("sizes.push('contain')") ||
       !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||

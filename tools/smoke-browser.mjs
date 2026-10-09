@@ -731,6 +731,7 @@ try {
           Math.abs(uploadedArtContract.naturalRatio - uploadedArtContract.slotRatio) > .015 ||
           uploadedArtContract.alphaMode !== 'alpha' ||
           !uploadedArtContract.alphaMask.includes('funko-pop/Asset') ||
+          uploadedArtContract.alphaMask.includes('%2520') ||
           !uploadedArtContract.hasDiffraction || !uploadedArtContract.hasSparkles ||
           !uploadedArtContract.defaultBackMirrored ||
           !uploadedArtContract.backSrc.includes('funko-pop/Asset') ||

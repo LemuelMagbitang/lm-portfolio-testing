@@ -649,7 +649,9 @@ export function createLightboxMediaRenderer({
   // black suppresses it; gray allows partial foil coverage.
   function applyHolographicMask(layer, maskUrl, artworkUrl = '') {
     if (!layer?.style || (!maskUrl && !artworkUrl)) return;
-    const asCssUrl = value => 'url("' + encodeURI(String(value).split('"').join('%22')) + '")';
+    // resolveAssetUrl/currentSrc may already contain percent-escaped path segments.
+    // Preserve those escapes; encodeURI here would turn "%20" into "%2520".
+    const asCssUrl = value => 'url("' + String(value).split('"').join('%22') + '")';
     const images = [];
     const modes = [];
     const sizes = [];
@@ -803,7 +805,8 @@ export function createLightboxMediaRenderer({
         texture.className = 'lightbox-holographic-texture';
         texture.dataset.holoTextureMode = faceTextureMode;
         texture.setAttribute('aria-hidden','true');
-        const safeTextureUrl = encodeURI(String(faceTextureUrl).split('"').join('%22'));
+        // faceTextureUrl is already resolved; do not encode existing %XX path escapes twice.
+        const safeTextureUrl = String(faceTextureUrl).split('"').join('%22');
         texture.style.backgroundImage = 'url("' + safeTextureUrl + '")';
         texture.style.backgroundRepeat = faceTextureMode === 'tile' ? 'repeat' : 'no-repeat';
         texture.style.backgroundSize = faceTextureMode === 'tile' ? 'auto' : '100% 100%';
