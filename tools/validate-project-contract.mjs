@@ -107,6 +107,7 @@ assert.deepEqual(holographic.holographic, {
   intensity: 1,
   texture: 'assets/foil.svg',
   textureMode: 'tile',
+  backTextureMode: 'fill',
   back: 'assets/back.png',
   mask: 'assets/front-mask.png'
 });
