@@ -103,11 +103,18 @@ function validateMedia(media, where) {
   if (media.holographic !== undefined) {
     if (!media.holographic || typeof media.holographic !== 'object' || Array.isArray(media.holographic)) {
       err(`${where}: holographic settings must be an object.`);
-    } else if (media.holographic.mask !== undefined) {
-      if (typeof media.holographic.mask !== 'string') {
-        err(`${where}: holographic.mask must be a string path.`);
-      } else if (media.holographic.mask.trim()) {
-        checkLocalRef(media.holographic.mask, `${where} holographic.mask`);
+    } else {
+      const textureMode = String(media.holographic.textureMode || 'fill').trim().toLowerCase();
+      if (!['tile', 'fill'].includes(textureMode)) {
+        err(`${where}: holographic.textureMode must be "tile" or "fill".`);
+      }
+      for (const key of ['texture', 'mask']) {
+        if (media.holographic[key] === undefined) continue;
+        if (typeof media.holographic[key] !== 'string') {
+          err(`${where}: holographic.${key} must be a string path.`);
+        } else if (media.holographic[key].trim()) {
+          checkLocalRef(media.holographic[key], `${where} holographic.${key}`);
+        }
       }
     }
   }
@@ -1137,6 +1144,14 @@ function validateCmsRegressionContracts() {
       !renderer.includes('applyHolographicMask(sheen, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(texture, frontMaskUrl)')) {
     err('Lightbox holographic mask: black/white luminance mask must apply to front foil layers only, never the reverse face.');
+  }
+
+  if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
+      !renderer.includes('function setHolographicTarget(') ||
+      !renderer.includes("'--holo-light-x'") ||
+      !css.includes('data-holo-texture-mode="tile"') ||
+      !css.includes('background-size:auto')) {
+    err('Holographic rendering: eased pointer tracking, off-axis light, and tile/fill foil texture mapping must remain available.');
   }
 
   if (!gallery.includes('getEffectiveBaseCount') ||
