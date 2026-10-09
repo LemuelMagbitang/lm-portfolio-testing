@@ -721,7 +721,8 @@ try {
           defaultBackMirrored: backImage?.classList.contains('lightbox-holographic-default-reverse') || false,
           backSrc: backImage?.getAttribute('src') || '',
           centeredHint: hint ? getComputedStyle(hint).justifyContent === 'center' : false,
-          hintBeforeCaption: !!(hint && caption && (hint.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING))
+          hintAfterArtwork: !!(hint && artSlot && (artSlot.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING)),
+          hintBeforeCaption: !caption || !!(hint && (hint.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING))
         };
       });
       if (!uploadedArtContract.src.includes('funko-pop/Asset') ||
@@ -733,7 +734,7 @@ try {
           !uploadedArtContract.hasDiffraction || !uploadedArtContract.hasSparkles ||
           !uploadedArtContract.defaultBackMirrored ||
           !uploadedArtContract.backSrc.includes('funko-pop/Asset') ||
-          !uploadedArtContract.centeredHint || !uploadedArtContract.hintBeforeCaption) {
+          !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption) {
         throw new Error('Uploaded transparent artwork did not receive the full holographic sizing/flip contract: ' + JSON.stringify(uploadedArtContract));
       }
       await funkoHolo.click();
