@@ -73,7 +73,14 @@ function handleMissingFile(el, kind){
 // screen re-navigates to show it — stays with each caller, since
 // Media Library and the picker want different things there.
 async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
-  const files = Array.from(fileList);
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (!gridEl) throw new Error('Media Library upload target is no longer available.');
+  // Always use a fresh branch tree so an old selection or another CMS tab
+  // cannot make a same-name upload attempt a replacement with a stale SHA.
+  let uploadTree;
+  try { uploadTree = (await loadMediaTree(true) || []).slice(); }
+  catch(err){ toast(`Couldn't refresh the Media Library before upload: ${err.message}`, true); return; }
   const emptyBanner = gridEl.querySelector('.banner.muted');
   if (emptyBanner) emptyBanner.remove();
 
@@ -103,13 +110,16 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
         reader.onerror = reject;
         reader.readAsDataURL(job.file);
       });
-      // Check for an existing file at this exact path first, so a
-      // same-name upload overwrites cleanly instead of erroring.
-      let existingSha = null;
-      const existing = currentTree.find(t => t.path === job.path);
-      if (existing) existingSha = existing.sha;
-
-      await GH.uploadBinary(job.path, dataUrl, `CMS: upload ${job.path}`, existingSha);
+      // The Contents API requires the current SHA when replacing a path.
+      // Update our fresh tree after each upload, including batches containing
+      // duplicate names, so later uploads use the latest replacement SHA.
+      const existingIndex = uploadTree.findIndex(item => item.type === 'blob' && item.path === job.path);
+      const existing = existingIndex >= 0 ? uploadTree[existingIndex] : null;
+      const result = await GH.uploadBinary(job.path, dataUrl, `CMS: upload ${job.path}`, existing?.sha || null);
+      const newSha = result?.content?.sha || '';
+      if (existingIndex >= 0) uploadTree[existingIndex] = { ...existing, sha: newSha || existing.sha };
+      else uploadTree.push({ path: job.path, type: 'blob', sha: newSha, mode: '100644' });
+      setMediaTreeCache(uploadTree);
 
       job.tile.classList.remove('is-uploading');
       job.tile.classList.add('is-done');
@@ -132,13 +142,15 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
   }
 }
 
-function ghRawUrl(path){
+function ghRawUrl(path, version){
   if (!path) return '';
-  // Already a full URL (http/https), an embedded data: image, or a
-  // local blob: preview for a file still mid-upload — none of those
-  // are repo-relative paths, so they pass through completely unchanged.
+  // Keep external and transient local previews untouched. Internal media
+  // carries its Git blob SHA as a query key so replacements refresh.
   if (/^([a-z][a-z0-9+.-]*:)?\/\//i.test(path) || path.startsWith('data:') || path.startsWith('blob:')) return path;
-  return `https://raw.githubusercontent.com/${conn.owner}/${conn.repo}/${conn.branch}/${path.replace(/^\/+/, '')}`;
+  const assetPath = String(path).replace(/^\/+/, '');
+  const raw = `https://raw.githubusercontent.com/${conn.owner}/${conn.repo}/${conn.branch}/${assetPath}`;
+  const cacheKey = version || mediaTreeShaByPath?.get(assetPath);
+  return cacheKey ? `${raw}?v=${encodeURIComponent(String(cacheKey).slice(0, 12))}` : raw;
 }
 
 const SECTIONS = {
@@ -3535,12 +3547,32 @@ RENDERERS.about = function(data){
    13. MEDIA LIBRARY
    ===================================================================== */
 let mediaTreeCache = null; // raw flat tree from GitHub, refetched on demand
+let mediaTreeShaByPath = new Map();
+let mediaTreeRequestId = 0;
+let mediaTreeRequest = null;
 let mediaCurrentPath = 'assets';
 
-async function loadMediaTree(force){
-  if (mediaTreeCache && !force) return mediaTreeCache;
-  mediaTreeCache = await GH.getTree();
+function setMediaTreeCache(tree){
+  mediaTreeCache = Array.isArray(tree) ? tree : null;
+  mediaTreeShaByPath = new Map(
+    (mediaTreeCache || [])
+      .filter(item => item && item.type === 'blob' && item.path && item.sha)
+      .map(item => [item.path, item.sha])
+  );
   return mediaTreeCache;
+}
+async function loadMediaTree(force){
+  if (!force && mediaTreeRequest) return mediaTreeRequest;
+  if (mediaTreeCache && !force) return mediaTreeCache;
+  const requestId = ++mediaTreeRequestId;
+  const request = GH.getTree().then(tree => {
+    if (requestId !== mediaTreeRequestId) return mediaTreeRequest || mediaTreeCache || tree;
+    return setMediaTreeCache(tree);
+  }).finally(() => {
+    if (requestId === mediaTreeRequestId) mediaTreeRequest = null;
+  });
+  mediaTreeRequest = request;
+  return request;
 }
 
 function fileKind(path){
@@ -3706,7 +3738,7 @@ async function renameMediaFolder(oldPath,onDone){
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”? '+referenceNote)) return;
 
   await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath} and update references`);
-  mediaTreeCache=null;
+  setMediaTreeCache(null);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
   ['about','heroLoop','footerLoop','hero','projects','reviews','settings','filters'].forEach(name=>{ delete cache[name]; });
@@ -3784,6 +3816,8 @@ function openMediaPicker(onPick, options={}){
   let pickerTree=null;
   let pickerSearch='';
   let pickerKind=options.kind||'';
+  let needsInitialRefresh=true;
+  let pickerPaintVersion=0;
   const titleEl=overlay.querySelector('[data-picker-title]');
   if(titleEl && options.title) titleEl.textContent=options.title;
   const kindSelect=overlay.querySelector('#pickerKind');
@@ -3813,10 +3847,19 @@ function openMediaPicker(onPick, options={}){
   kindSelect?.addEventListener('change',()=>{pickerKind=kindSelect.value;paintPicker();});
   searchInput?.addEventListener('input',()=>{pickerSearch=searchInput.value.trim().toLowerCase();paintPicker();});
 
-  async function paintPicker(){
+  async function paintPicker(forceRefresh=false){
+    const paintVersion=++pickerPaintVersion;
+    const shouldRefresh=forceRefresh||needsInitialRefresh;
+    needsInitialRefresh=false;
     const grid=overlay.querySelector('#pickerGrid');
     let tree;
-    try{tree=await loadMediaTree(false);}catch(err){grid.innerHTML=`<div class="banner info" style="grid-column:1/-1;border-color:rgba(224,88,79,.4)">Couldn’t load your files — ${esc(err.message)}</div>`;return;}
+    try { tree=await loadMediaTree(shouldRefresh); }
+    catch(err) {
+      if(closed||paintVersion!==pickerPaintVersion)return;
+      grid.innerHTML=`<div class="banner info" style="grid-column:1/-1;border-color:rgba(224,88,79,.4)">Couldn’t load your files — ${esc(err.message)}</div>`;
+      return;
+    }
+    if(closed||paintVersion!==pickerPaintVersion)return;
     pickerTree=tree;
     const {folders,files}=childrenOfPath(tree,mediaPickerPath);
     const visibleFiles=files.filter(item=>{
@@ -4123,11 +4166,20 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
         }); } catch(err){ toast(err.message,true); }
     });
 
-    document.getElementById('btnRefresh').addEventListener('click', async () => {
-      tree = await loadMediaTree(true);
-      if(!isCurrent()) return;
-      paint();
-      toast('Refreshed.');
+    document.getElementById('btnRefresh').addEventListener('click', async event => {
+      const button=event.currentTarget;
+      button.disabled=true;
+      try {
+        const refreshedTree=await loadMediaTree(true);
+        if(!isCurrent())return;
+        tree=refreshedTree;
+        paint();
+        toast('Refreshed.');
+      } catch(err) {
+        if(isCurrent())toast(`Couldn't refresh Media Library: ${err.message}`,true);
+      } finally {
+        if(button.isConnected)button.disabled=false;
+      }
     });
 
     // upload
