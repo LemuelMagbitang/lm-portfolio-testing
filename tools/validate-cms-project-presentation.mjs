@@ -42,6 +42,13 @@ assert.ok(css.includes('corner-shape:squircle'),
   'CMS Project presentation should progressively enhance rounded surfaces as squircles.');
 
 assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must expose the holographic image control.');
+assert.ok(/holo-style-intensity holo-main-controls/.test(admin) &&
+  /<summary>Advanced foil options/.test(admin),
+  'CMS foil controls should keep style/strength visible and tuck texture/mask/reverse options into Advanced.');
+assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\\.01"/.test(admin) &&
+  /Math\.round\(Number\(intensityInput\.value\)\*100\)\+'%'/ .test(admin),
+  'CMS foil strength should have fine-grained control and a clear percentage label.');
+
 assert.ok(/value="cosmos"/.test(admin) && /Cosmos galaxy foil/.test(admin),
   'CMS holographic style picker must expose the optional Cosmos finish.');
 assert.ok(/data-holo-enabled/.test(admin), 'CMS Projects must expose an enable/disable control for holographic images.');
