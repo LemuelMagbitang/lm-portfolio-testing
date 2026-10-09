@@ -623,7 +623,6 @@ try {
               style: 'iridescent',
               intensity: 0.8,
               textureMode: 'fill',
-              textureMode: 'tile',
               texture: 'assets/projects/holographic-smoke/foil.svg',
               back: 'assets/projects/holographic-smoke/back.svg',
               mask: 'assets/projects/holographic-smoke/mask.svg'
@@ -1607,6 +1606,7 @@ try {
             holographic: {
               style: 'iridescent',
               intensity: 0.8,
+              textureMode: 'tile',
               texture: 'assets/projects/holographic-smoke/foil.svg',
               back: 'assets/projects/holographic-smoke/back.svg',
               mask: 'assets/projects/holographic-smoke/mask.svg'
