@@ -4,7 +4,7 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../js/features/projects/project-loader.js?v=20261008-09';
+} from '../js/features/projects/project-loader.js?v=20261009-10';
 
 function createHarness(initialChildren = []) {
   const grid = {
@@ -113,4 +113,35 @@ destroyProjects();
 }
 
 destroyProjects();
+
+{
+  const harness = createHarness();
+  await loadFixture(harness, [{
+    id: 'holo-side-config',
+    title: 'Holographic side config',
+    media: [{
+      type: 'image',
+      src: 'front.jpg',
+      holographic: {
+        style: 'iridescent',
+        intensity: 0.8,
+        texture: 'front-foil.svg',
+        textureMode: 'fill',
+        mask: 'front-mask.svg',
+        back: 'back.jpg',
+        backTexture: 'back-foil.svg',
+        backTextureMode: 'tile',
+        backMask: 'back-mask.svg'
+      }
+    }]
+  }]);
+  const effect = getProjects()[0]?.media[0]?.holographic;
+  assert.equal(effect?.back, 'back.jpg');
+  assert.equal(effect?.texture, 'front-foil.svg');
+  assert.equal(effect?.mask, 'front-mask.svg');
+  assert.equal(effect?.backTexture, 'back-foil.svg', 'Projects normalization must retain the reverse-side foil pattern');
+  assert.equal(effect?.backTextureMode, 'tile', 'Projects normalization must retain reverse pattern mapping');
+  assert.equal(effect?.backMask, 'back-mask.svg', 'Projects normalization must retain the independent reverse mask');
+}
+
 console.log('LM. project-loader contract test passed.');

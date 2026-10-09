@@ -48,8 +48,12 @@ function normalizeHolographicEffect(effect) {
   const textureMode = ['tile', 'fill'].includes(textureModeValue) ? textureModeValue : 'fill';
   const back = normalizeString(effect.back);
   const mask = normalizeString(effect.mask);
+  const backTexture = normalizeString(effect.backTexture);
+  const backTextureModeValue = normalizeString(effect.backTextureMode).toLowerCase();
+  const backTextureMode = ['tile', 'fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
+  const backMask = normalizeString(effect.backMask);
 
-  if (!styles.has(style) && !texture && !back && !mask && effect.intensity === undefined) {
+  if (!styles.has(style) && !texture && !back && !mask && !backTexture && !backMask && effect.intensity === undefined) {
     return undefined;
   }
 
@@ -57,9 +61,12 @@ function normalizeHolographicEffect(effect) {
     style: styles.has(style) ? style : 'holographic',
     intensity,
     textureMode,
+    backTextureMode,
     ...(texture ? { texture } : {}),
     ...(back ? { back } : {}),
-    ...(mask ? { mask } : {})
+    ...(mask ? { mask } : {}),
+    ...(backTexture ? { backTexture } : {}),
+    ...(backMask ? { backMask } : {})
   };
 }
 
