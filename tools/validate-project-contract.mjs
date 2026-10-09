@@ -3,7 +3,7 @@ import {
   normalizeProject,
   normalizeProjectMedia,
   normalizeProjects
-} from '../js/data/project-normalizer.js?v=20261009-08';
+} from '../js/data/project-normalizer.js?v=20261009-11';
 
 const project = normalizeProject({
   id: '  demo-project  ',
@@ -111,6 +111,29 @@ assert.deepEqual(holographic.holographic, {
   back: 'assets/back.png',
   mask: 'assets/front-mask.png'
 });
+const supportedHolographicStyles = [
+  'holographic',
+  'brushed',
+  'beams',
+  'crosshatch',
+  'shattered',
+  'glitter',
+  'waves',
+  'cat-eye',
+  'iridescent',
+  'aurora'
+];
+for (const style of supportedHolographicStyles) {
+  const normalizedStyle = normalizeProjectMedia({
+    type: 'image',
+    src: style + '.png',
+    holographic: { style: ' ' + style.toUpperCase() + ' ', intensity: 0.65 }
+  });
+  assert.equal(normalizedStyle?.holographic?.style, style,
+    'Supported holographic finish "' + style + '" must survive project normalization.');
+  assert.equal(normalizedStyle?.holographic?.intensity, 0.65,
+    'Supported holographic finish "' + style + '" must retain its configured intensity.');
+}
 const orphanedBackEffects = normalizeProjectMedia({
   type: 'image',
   src: 'front.png',

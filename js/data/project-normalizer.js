@@ -8,6 +8,7 @@
 
 const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
+const HOLOGRAPHIC_STYLES = new Set(['holographic', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
 
 function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -38,7 +39,6 @@ function normalizeHolographicEffect(effect) {
   if (!effect || typeof effect !== 'object' || Array.isArray(effect)) return undefined;
 
   const style = normalizeString(effect.style).toLowerCase();
-  const styles = new Set(['holographic', 'iridescent', 'aurora']);
   const intensityValue = Number(effect.intensity);
   const intensity = Number.isFinite(intensityValue)
     ? Math.max(0, Math.min(1, intensityValue))
@@ -54,12 +54,12 @@ function normalizeHolographicEffect(effect) {
   const backTextureMode = ['tile', 'fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
   const backMask = back ? normalizeString(effect.backMask) : '';
 
-  if (!styles.has(style) && !texture && !back && !mask && !backTexture && !backMask && effect.intensity === undefined) {
+  if (!HOLOGRAPHIC_STYLES.has(style) && !texture && !back && !mask && !backTexture && !backMask && effect.intensity === undefined) {
     return undefined;
   }
 
   return {
-    style: styles.has(style) ? style : 'holographic',
+    style: HOLOGRAPHIC_STYLES.has(style) ? style : 'holographic',
     intensity,
     textureMode,
     ...(back ? { backTextureMode } : {}),

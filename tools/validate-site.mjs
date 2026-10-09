@@ -16,6 +16,7 @@ const LOCAL_EXTENSIONS = new Set([
 const SUPPORTED_MEDIA = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
 const SUPPORTED_MODEL_EXT = new Set(['obj', 'gltf', 'glb', 'fbx']);
 const ORIENTATIONS = new Set(['', 'auto', 'landscape', 'portrait', 'square']);
+const SUPPORTED_HOLOGRAPHIC_STYLES = new Set(['holographic', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
 
 function readText(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -104,6 +105,10 @@ function validateMedia(media, where) {
     if (!media.holographic || typeof media.holographic !== 'object' || Array.isArray(media.holographic)) {
       err(`${where}: holographic settings must be an object.`);
     } else {
+      const holographicStyle = String(media.holographic.style || '').trim().toLowerCase();
+      if (holographicStyle && !SUPPORTED_HOLOGRAPHIC_STYLES.has(holographicStyle)) {
+        err(`${where}: unsupported holographic style '${holographicStyle}'.`);
+      }
       const textureMode = String(media.holographic.textureMode || 'fill').trim().toLowerCase();
       if (!['tile', 'fill'].includes(textureMode)) {
         err(`${where}: holographic.textureMode must be "tile" or "fill".`);
