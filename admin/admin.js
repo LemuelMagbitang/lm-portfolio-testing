@@ -2069,7 +2069,7 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
 
 function normalizeEditorHolographic(value){
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const styles = new Set(['holographic','iridescent','aurora']);
+  const styles = new Set(['holographic','brushed','beams','crosshatch','shattered','glitter','waves','cat-eye','iridescent','aurora']);
   const style = String(value.style || '').trim().toLowerCase();
   const intensityValue = Number(value.intensity);
   const intensity = Number.isFinite(intensityValue) ? Math.max(0, Math.min(1, intensityValue)) : 0.7;
@@ -2115,8 +2115,15 @@ function holographicControlHtml(holographic){
           <div class="holo-settings-panel">
             <div class="holo-style-intensity">
               <div class="field"><label class="field-label">Effect style</label><select data-holo-style>
-                <option value="holographic" ${style==='holographic'?'selected':''}>Holographic</option>
-                <option value="iridescent" ${style==='iridescent'?'selected':''}>Iridescent foil</option>
+                <option value="holographic" ${style==='holographic'?'selected':''}>Smooth prism foil</option>
+                <option value="brushed" ${style==='brushed'?'selected':''}>Fine brushed foil</option>
+                <option value="beams" ${style==='beams'?'selected':''}>Vertical light beams</option>
+                <option value="crosshatch" ${style==='crosshatch'?'selected':''}>Crosshatch foil</option>
+                <option value="shattered" ${style==='shattered'?'selected':''}>Shattered ice</option>
+                <option value="glitter" ${style==='glitter'?'selected':''}>Glitter / starfield</option>
+                <option value="waves" ${style==='waves'?'selected':''}>Water waves</option>
+                <option value="cat-eye" ${style==='cat-eye'?'selected':''}>Cat-eye lens</option>
+                <option value="iridescent" ${style==='iridescent'?'selected':''}>Pearlescent foil</option>
                 <option value="aurora" ${style==='aurora'?'selected':''}>Aurora gradient</option></select></div>
               <div class="field"><label class="field-label">Intensity <span data-holo-intensity-value>${intensity.toFixed(2)}</span></label>
                 <input data-holo-intensity type="range" min="0" max="1" step="0.05" value="${intensity}"></div>
@@ -2146,7 +2153,7 @@ function holographicControlHtml(holographic){
             </div>
           </details>
         </div>
-        <p class="holo-field-note">Works with transparent PNG cutouts and opaque PNG/JPEG artwork; foil follows the visible image silhouette.</p>
+        <p class="holo-field-note">Eight foil finishes are available. Transparent PNGs follow their alpha silhouette; opaque PNG/JPEG files use the full image surface.</p>
         <p class="holo-field-note">The card has a gentle automatic idle tilt. Move to rotate; click/tap to flip. Highlights stay fixed and never follow the pointer.</p>
       </div>
     </div>

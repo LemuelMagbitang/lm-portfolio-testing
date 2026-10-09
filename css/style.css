@@ -4610,3 +4610,139 @@ footer > .footer-content p{
  #lightboxMediaContainer .lightbox-holographic-hint{font-size:8px;letter-spacing:.095em;margin-top:0;}
 }
 @media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic{animation:none!important;}}
+
+
+/* High-contrast collectible-card foil: a moving diffraction grating plus
+   pinprick star glints. Both layers inherit the artwork-alpha/custom-mask
+   boundary set by the Lightbox renderer, including transparent cutouts. */
+#lightboxMediaContainer .lightbox-holographic-diffraction,
+#lightboxMediaContainer .lightbox-holographic-sparkles{
+  position:absolute;
+  inset:0;
+  z-index:31;
+  margin:0;
+  border:0;
+  pointer-events:none;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+}
+#lightboxMediaContainer .lightbox-holographic-diffraction{
+  background-image:
+    repeating-linear-gradient(
+      calc(var(--holo-angle,0deg) + 14deg),
+      transparent 0 5px,
+      rgba(255,255,255,.10) 6px,
+      rgba(255,255,255,.68) 7px,
+      rgba(85,235,255,.24) 8px,
+      transparent 10px 22px
+    ),
+    linear-gradient(
+      112deg,
+      rgba(255,30,190,.00) 0%,
+      rgba(255,53,169,.52) 14%,
+      rgba(255,212,108,.42) 25%,
+      rgba(99,255,213,.58) 38%,
+      rgba(80,199,255,.63) 51%,
+      rgba(186,113,255,.58) 65%,
+      rgba(255,75,159,.42) 79%,
+      rgba(255,255,255,.00) 100%
+    );
+  background-size:140% 140%,260% 220%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  mix-blend-mode:color-dodge;
+  opacity:calc(.28 + (var(--holo-intensity,.7) * .48));
+  filter:saturate(1.65) contrast(1.22);
+  animation:holo-diffraction-pulse 5.4s ease-in-out infinite alternate;
+}
+#lightboxMediaContainer .lightbox-holographic-sparkles{
+  background-image:
+    radial-gradient(ellipse 1.6px 1.6px at 16% 20%, rgba(255,255,255,.98) 0 58%, rgba(118,231,255,.75) 70%, transparent 100%),
+    radial-gradient(ellipse 1.2px 1.2px at 73% 17%, rgba(255,255,255,.95) 0 54%, rgba(255,117,221,.72) 72%, transparent 100%),
+    radial-gradient(ellipse 1.7px 1.7px at 79% 68%, rgba(255,255,255,.98) 0 50%, rgba(140,205,255,.76) 73%, transparent 100%),
+    radial-gradient(ellipse 1.25px 1.25px at 35% 82%, rgba(255,255,255,.94) 0 56%, rgba(255,221,133,.65) 74%, transparent 100%),
+    radial-gradient(ellipse 1px 1px at 54% 43%, rgba(255,255,255,.86) 0 60%, transparent 100%),
+    repeating-linear-gradient(90deg, transparent 0 36px, rgba(255,255,255,.06) 37px, transparent 38px 74px);
+  background-size:100% 100%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  mix-blend-mode:screen;
+  opacity:calc(.18 + (var(--holo-intensity,.7) * .48));
+  filter:drop-shadow(0 0 2px rgba(180,231,255,.66));
+  animation:holo-sparkle-breathe 3.8s ease-in-out infinite alternate;
+}
+@keyframes holo-diffraction-pulse{
+  0%,100%{filter:saturate(1.45) contrast(1.12) brightness(.94);}
+  50%{filter:saturate(1.85) contrast(1.28) brightness(1.12);}
+}
+@keyframes holo-sparkle-breathe{
+  0%,100%{opacity:calc(.13 + (var(--holo-intensity,.7) * .37));}
+  50%{opacity:calc(.28 + (var(--holo-intensity,.7) * .52));}
+}
+
+/* Eight selectable surface treatments inspired by real foil finishes. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-linear-gradient(94deg, transparent 0 2px, rgba(255,255,255,.76) 3px, rgba(101,223,255,.22) 4px, transparent 6px 12px),
+    linear-gradient(110deg, transparent 3%, rgba(255,82,194,.42) 18%, rgba(255,239,167,.48) 32%, rgba(95,242,255,.52) 50%, rgba(178,117,255,.46) 69%, transparent 94%);
+  background-size:100% 100%,260% 180%;
+  mix-blend-mode:color-dodge;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 7px, rgba(255,255,255,.0) 8px, rgba(255,255,255,.78) 9px, rgba(91,245,255,.44) 11px, rgba(255,79,191,.28) 13px, transparent 17px 25px),
+    linear-gradient(90deg, rgba(255,63,174,.32), rgba(255,222,111,.34), rgba(64,240,220,.46), rgba(92,151,255,.42), rgba(196,102,255,.42));
+  background-size:100% 100%,180% 100%;
+  mix-blend-mode:color-dodge;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-linear-gradient(38deg, transparent 0 8px, rgba(255,255,255,.42) 9px, rgba(101,230,255,.22) 10px, transparent 12px 19px),
+    repeating-linear-gradient(142deg, transparent 0 8px, rgba(255,255,255,.38) 9px, rgba(255,109,211,.20) 10px, transparent 12px 19px),
+    linear-gradient(115deg, rgba(255,67,193,.20), rgba(103,237,255,.34), rgba(236,173,255,.26));
+  background-size:190% 190%,190% 190%,240% 180%;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-conic-gradient(from 12deg at 28% 35%, rgba(255,255,255,.55) 0 3deg, rgba(91,224,255,.28) 3deg 7deg, transparent 7deg 17deg),
+    repeating-conic-gradient(from 28deg at 72% 64%, rgba(255,112,210,.30) 0 4deg, rgba(255,255,255,.42) 4deg 6deg, transparent 6deg 19deg),
+    linear-gradient(126deg, rgba(112,230,255,.1), rgba(255,255,255,.28), rgba(210,101,255,.22));
+  background-size:140% 140%,150% 150%,100% 100%;
+  mix-blend-mode:screen;
+  filter:saturate(1.7) contrast(1.25);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="glitter"] .lightbox-holographic-sparkles{
+  background-image:
+    radial-gradient(ellipse 2px 2px at 16% 20%, white 0 58%, rgba(118,231,255,.8) 70%, transparent 100%),
+    radial-gradient(ellipse 1.8px 1.8px at 73% 17%, white 0 54%, rgba(255,117,221,.78) 72%, transparent 100%),
+    radial-gradient(ellipse 2.2px 2.2px at 79% 68%, white 0 50%, rgba(140,205,255,.8) 73%, transparent 100%),
+    radial-gradient(ellipse 1.75px 1.75px at 35% 82%, white 0 56%, rgba(255,221,133,.7) 74%, transparent 100%),
+    radial-gradient(ellipse 1.5px 1.5px at 54% 43%, white 0 60%, transparent 100%),
+    radial-gradient(ellipse 1.1px 1.1px at 25% 59%, white 0 60%, transparent 100%),
+    radial-gradient(ellipse 1px 1px at 62% 90%, white 0 60%, transparent 100%);
+  opacity:calc(.36 + (var(--holo-intensity,.7) * .57));
+  filter:drop-shadow(0 0 3px rgba(199,238,255,.82));
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%), transparent 0 8px, rgba(255,255,255,.26) 9px, rgba(98,238,255,.20) 11px, transparent 14px 24px),
+    linear-gradient(120deg, rgba(255,90,202,.25), rgba(255,226,132,.24), rgba(94,255,219,.30), rgba(126,145,255,.32));
+  background-size:150% 150%,240% 180%;
+  mix-blend-mode:screen;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-diffraction{
+  background-image:
+    radial-gradient(ellipse 30% 82% at var(--holo-foil-x,50%) var(--holo-foil-y,50%), rgba(255,255,255,.0) 0 34%, rgba(113,244,255,.25) 42%, rgba(255,255,255,.88) 47%, rgba(233,109,255,.45) 52%, rgba(255,255,255,.08) 59%, transparent 72%),
+    linear-gradient(100deg, transparent, rgba(84,225,255,.28), rgba(255,106,212,.28), transparent);
+  background-size:150% 150%,240% 180%;
+  mix-blend-mode:color-dodge;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-sparkles{opacity:calc(.24 + (var(--holo-intensity,.7) * .5));}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-sparkles{opacity:calc(.08 + (var(--holo-intensity,.7) * .25));}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sparkles{opacity:calc(.06 + (var(--holo-intensity,.7) * .18));}
+
+/* Larger image footprint for tall artwork while retaining the exact natural ratio. */
+#lightboxMediaContainer .lightbox-artwork.has-holographic{
+  width:min(100%,calc(88svh * var(--lightbox-artwork-ratio,1)));
+}
+#lightboxMediaContainer .lightbox-holographic-back > img.lightbox-holographic-default-reverse{
+  transform:scaleX(-1);
+}

@@ -563,7 +563,7 @@ export function createLightboxMediaRenderer({
       (value.backFoilEnabled == null && Boolean(backTexture || backMask))
     );
     return {
-      style: ['holographic', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
+      style: ['holographic', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
       intensity, textureMode, backTextureMode,
       ...(texture ? { texture } : {}), ...(back ? { back, backFoilEnabled } : {}), ...(mask ? { mask } : {}),
       ...(backTexture ? { backTexture } : {}), ...(backMask ? { backMask } : {})
@@ -715,6 +715,7 @@ export function createLightboxMediaRenderer({
 
     const hint = documentRef.createElement('div');
     hint.className = 'lightbox-holographic-hint';
+    hint.style.justifyContent = 'center';
     hint.setAttribute('aria-live', 'polite');
     const faceLabel = documentRef.createElement('span');
     faceLabel.className = 'lightbox-holographic-face-status';
@@ -726,7 +727,7 @@ export function createLightboxMediaRenderer({
     separator.setAttribute('aria-hidden', 'true');
     const desktopAction = documentRef.createElement('span');
     desktopAction.className = 'lightbox-holographic-desktop-action';
-    desktopAction.textContent = 'MOVE / CLICK';
+    desktopAction.textContent = 'CLICK / MOVE';
     const touchAction = documentRef.createElement('span');
     touchAction.className = 'lightbox-holographic-touch-action';
     touchAction.textContent = 'HOLD + MOVE';
@@ -752,6 +753,7 @@ export function createLightboxMediaRenderer({
         : (project.title ? `${project.title} — holographic reverse` : 'Holographic reverse'),
       { eager: true }
     );
+    if (!backHasCustomArtwork) backImage.classList.add('lightbox-holographic-default-reverse');
     back.appendChild(backImage);
 
     const setHolographicAspect = () => {
@@ -782,14 +784,20 @@ export function createLightboxMediaRenderer({
       prism.className = 'lightbox-holographic-prism'; prism.setAttribute('aria-hidden','true');
       const ribbons = documentRef.createElement('span');
       ribbons.className = 'lightbox-holographic-ribbons'; ribbons.setAttribute('aria-hidden','true');
+      const diffraction = documentRef.createElement('span');
+      diffraction.className = 'lightbox-holographic-diffraction'; diffraction.setAttribute('aria-hidden','true');
+      const sparkles = documentRef.createElement('span');
+      sparkles.className = 'lightbox-holographic-sparkles'; sparkles.setAttribute('aria-hidden','true');
       const sheen = documentRef.createElement('span');
       sheen.className = 'lightbox-holographic-sheen'; sheen.setAttribute('aria-hidden','true');
       applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(glare, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
-      face.append(spectrum, glare, prism, ribbons, sheen);
+      face.append(spectrum, glare, prism, ribbons, diffraction, sparkles, sheen);
       if (faceTextureUrl) {
         const texture = documentRef.createElement('span');
         texture.className = 'lightbox-holographic-texture';

@@ -1154,9 +1154,11 @@ function validateCmsRegressionContracts() {
       !renderer.includes('applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl)')) {
-    err('Lightbox holographic mask: foil layers must combine each face alpha with its optional custom luminance mask.');
+    err('Lightbox holographic mask: every foil layer must follow image alpha and its optional custom luminance mask.');
   }
 
   if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
@@ -1181,10 +1183,19 @@ function validateCmsRegressionContracts() {
       !admin.includes('data-holo-back-enabled') ||
       !admin.includes('backFoilEnabled') ||
       !renderer.includes('__lightboxHoloHint') ||
-      !css.includes('contain:layout style;') ||
+      !renderer.includes('lightbox-holographic-default-reverse') ||
+      !admin.includes('value="brushed"') ||
+      !admin.includes('value="beams"') ||
+      !admin.includes('value="crosshatch"') ||
+      !admin.includes('value="shattered"') ||
+      !admin.includes('value="glitter"') ||
+      !admin.includes('value="waves"') ||
+      !admin.includes('value="cat-eye"') ||
+      !css.includes('lightbox-holographic-diffraction') ||
+      !css.includes('lightbox-holographic-sparkles') ||
       !css.includes('.lightbox-holographic-hint') ||
       !css.includes('display:none!important;content:none!important;')) {
-    err('Holographic card: the reverse needs its own foil toggle while preserving the under-card cue and idle motion.');
+    err('Holographic card: reverse toggle, no-back mirroring, eight foil finishes, and the interaction cue must remain available.');
   }
 
   if (!css.includes('.lightbox-artwork.has-holographic{\n  overflow:visible;') ||

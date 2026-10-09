@@ -540,7 +540,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           return {
             frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
@@ -688,6 +688,61 @@ try {
         });
       }
     );
+
+    await smokePage(browser, '/', async page => {
+      const funkoCard = page.locator('#portfolioGrid .project-card[data-project-id="funko-pop-test"]').first();
+      await funkoCard.waitFor({ state: 'visible', timeout: 4000 });
+      await funkoCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      const funkoHolo = page.locator('#lightboxMediaContainer .lightbox-holographic').first();
+      await funkoHolo.waitFor({ state: 'visible', timeout: 3000 });
+      await page.waitForFunction(() => {
+        const image = document.querySelector('#lightboxMediaContainer .lightbox-holographic-front img');
+        return image?.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+      }, null, { timeout: 4000 });
+      const uploadedArtContract = await funkoHolo.evaluate(el => {
+        const image = el.querySelector('.lightbox-holographic-front img');
+        const backImage = el.querySelector('.lightbox-holographic-back img');
+        const artSlot = el.closest('.lightbox-artwork');
+        const diffraction = el.querySelector('.lightbox-holographic-diffraction');
+        const sparkles = el.querySelector('.lightbox-holographic-sparkles');
+        const hint = el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-hint');
+        const caption = el.closest('.lightbox-media-item')?.querySelector('.media-caption');
+        return {
+          src: image?.getAttribute('src') || '',
+          naturalWidth: image?.naturalWidth || 0,
+          naturalHeight: image?.naturalHeight || 0,
+          naturalRatio: image?.naturalWidth && image?.naturalHeight ? image.naturalWidth / image.naturalHeight : 0,
+          slotRatio: Number.parseFloat(artSlot?.style.getPropertyValue('--lightbox-artwork-ratio') || '0'),
+          alphaMode: diffraction?.style.maskMode || '',
+          alphaMask: diffraction?.style.maskImage || '',
+          hasDiffraction: !!diffraction,
+          hasSparkles: !!sparkles,
+          defaultBackMirrored: backImage?.classList.contains('lightbox-holographic-default-reverse') || false,
+          backSrc: backImage?.getAttribute('src') || '',
+          centeredHint: hint ? getComputedStyle(hint).justifyContent === 'center' : false,
+          hintBeforeCaption: !!(hint && caption && (hint.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING))
+        };
+      });
+      if (!uploadedArtContract.src.includes('funko-pop/Asset') ||
+          uploadedArtContract.naturalWidth < 100 ||
+          uploadedArtContract.naturalHeight < 100 ||
+          Math.abs(uploadedArtContract.naturalRatio - uploadedArtContract.slotRatio) > .015 ||
+          uploadedArtContract.alphaMode !== 'alpha' ||
+          !uploadedArtContract.alphaMask.includes('funko-pop/Asset') ||
+          !uploadedArtContract.hasDiffraction || !uploadedArtContract.hasSparkles ||
+          !uploadedArtContract.defaultBackMirrored ||
+          !uploadedArtContract.backSrc.includes('funko-pop/Asset') ||
+          !uploadedArtContract.centeredHint || !uploadedArtContract.hintBeforeCaption) {
+        throw new Error('Uploaded transparent artwork did not receive the full holographic sizing/flip contract: ' + JSON.stringify(uploadedArtContract));
+      }
+      await funkoHolo.click();
+      if (!(await funkoHolo.evaluate(el => el.classList.contains('is-flipped')))) {
+        throw new Error('Uploaded artwork did not flip to its default mirrored reverse.');
+      }
+      await page.locator('#lightboxClose').first().click();
+      await page.waitForTimeout(100);
+    }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
@@ -1626,7 +1681,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           return {
             frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
@@ -1792,7 +1847,7 @@ try {
         throw new Error(`Desktop project grid columns are not equal width: ${JSON.stringify(desktopGridGeometry)}`);
       }
 
-      // Current portfolio has 11 projects. The new presentation contract
+      // Project count comes from CMS; the presentation contract
       // intentionally shows 9–15 projects without Show More on desktop.
       const desktopShowMore = page.locator('#showMoreBtn').first();
       if (desktopCards <= 15 && await desktopShowMore.isVisible().catch(() => false)) {
@@ -1844,7 +1899,7 @@ try {
         return { maxHeight: style.maxHeight, clientHeight: el.clientHeight, scrollHeight: el.scrollHeight };
       });
       const mobileCardsInDom = await page.locator('#portfolioGrid .project-card').count();
-      if (mobileCardsInDom !== 11) throw new Error(`Mobile smoke fixture unexpectedly changed project count (found ${mobileCardsInDom}).`);
+      if (mobileCardsInDom !== desktopCards) throw new Error(`Mobile resize changed project count from ${desktopCards} to ${mobileCardsInDom}.`);
 
       const mobileCardGeometry = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
         cards
@@ -1941,7 +1996,7 @@ try {
         !expandedBeforeLightbox.expanded ||
         expandedBeforeLightbox.wrapperExpanded !== 'true' ||
         expandedBeforeLightbox.maxHeight !== 'none' ||
-        expandedBeforeLightbox.visibleCards !== 11
+        expandedBeforeLightbox.visibleCards !== desktopCards
       ) {
         throw new Error('Expanded Gallery state was not settled before Lightbox close regression test: ' + JSON.stringify(expandedBeforeLightbox));
       }
@@ -1987,7 +2042,7 @@ try {
         !expandedAfterLightbox.expanded ||
         expandedAfterLightbox.wrapperExpanded !== 'true' ||
         expandedAfterLightbox.maxHeight !== 'none' ||
-        expandedAfterLightbox.visibleCards !== 11
+        expandedAfterLightbox.visibleCards !== desktopCards
       ) {
         throw new Error('Closing Lightbox regressed the expanded Gallery state: ' + JSON.stringify({
           before: expandedBeforeLightbox,
@@ -2005,11 +2060,11 @@ try {
       const desktopRestoredCards = await page.locator('#portfolioGrid .project-card').evaluateAll(
         cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
       );
-      if (desktopRestoredCards !== 11) {
-        throw new Error(`Mobile-to-desktop resize should restore all 11 current projects (found ${desktopRestoredCards}).`);
+      if (desktopRestoredCards !== desktopCards) {
+        throw new Error(`Mobile-to-desktop resize should restore all ${desktopCards} loaded projects (found ${desktopRestoredCards}).`);
       }
       if (await page.locator('#showMoreBtn').first().isVisible().catch(() => false)) {
-        throw new Error('Mobile-to-desktop resize incorrectly restored a desktop Show More control for 11 projects.');
+        throw new Error(`Mobile-to-desktop resize incorrectly restored a desktop Show More control for ${desktopCards} projects.`);
       }
     }, { width: 1280, height: 900 });
 
