@@ -658,7 +658,7 @@
         "orientation": "square",
         "holographic": {
           "style": "holographic",
-          "intensity": 0.25,
+          "intensity": 0.15,
           "textureMode": "fill"
         }
       },
@@ -669,7 +669,7 @@
         "orientation": "",
         "holographic": {
           "style": "brushed",
-          "intensity": 0.35,
+          "intensity": 0.6,
           "textureMode": "fill"
         }
       },
@@ -680,7 +680,7 @@
         "orientation": "",
         "holographic": {
           "style": "beams",
-          "intensity": 0.5,
+          "intensity": 0.65,
           "textureMode": "fill"
         }
       },
@@ -691,7 +691,7 @@
         "orientation": "",
         "holographic": {
           "style": "crosshatch",
-          "intensity": 0.6,
+          "intensity": 0.7,
           "textureMode": "fill"
         }
       },
@@ -702,7 +702,7 @@
         "orientation": "",
         "holographic": {
           "style": "shattered",
-          "intensity": 0.85,
+          "intensity": 0.75,
           "textureMode": "fill"
         }
       },
@@ -713,7 +713,7 @@
         "orientation": "",
         "holographic": {
           "style": "cosmos",
-          "intensity": 0.7,
+          "intensity": 0.8,
           "textureMode": "fill"
         }
       },
@@ -724,7 +724,7 @@
         "orientation": "",
         "holographic": {
           "style": "waves",
-          "intensity": 0.7,
+          "intensity": 0.85,
           "textureMode": "fill"
         }
       },
@@ -735,7 +735,7 @@
         "orientation": "",
         "holographic": {
           "style": "cat-eye",
-          "intensity": 0.7,
+          "intensity": 0.9,
           "textureMode": "fill"
         }
       },
@@ -746,7 +746,7 @@
         "orientation": "",
         "holographic": {
           "style": "iridescent",
-          "intensity": 0.7,
+          "intensity": 0.95,
           "textureMode": "fill"
         }
       },
@@ -757,7 +757,7 @@
         "orientation": "",
         "holographic": {
           "style": "aurora",
-          "intensity": 0.7,
+          "intensity": 1,
           "textureMode": "fill"
         }
       }
