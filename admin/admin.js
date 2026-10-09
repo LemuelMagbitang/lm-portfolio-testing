@@ -2569,8 +2569,36 @@ function buildProjectBody(el, p, options = {}){
       });
       const previewEl = row.querySelector('[data-mediapreview]');
       let modelViewerCleanup = null;
+      let previewGeneration = 0;
+      let previewDisposed = false;
+
+      // Invalidate the container token as well as the local generation. The
+      // viewer loader may still be awaiting a large model file when this row is
+      // repainted; deleting the token makes mountModelViewer discard the
+      // eventual result instead of creating WebGL resources in detached DOM.
+      function invalidateCurrentModelViewer() {
+        const host = previewEl.querySelector('[data-model-preview]');
+        const cleanup = modelViewerCleanup || host?.__modelViewerCleanup;
+        modelViewerCleanup = null;
+        try { cleanup?.(); } catch (_) {}
+        if (host?.__modelViewerMountToken) {
+          delete host.__modelViewerMountToken;
+        }
+      }
+
+      function disposeMediaPreview() {
+        if (previewDisposed) return;
+        previewDisposed = true;
+        previewGeneration += 1;
+        invalidateCurrentModelViewer();
+        previewEl.replaceChildren();
+      }
+      row.__disposeMediaPreview = disposeMediaPreview;
+
       async function refreshPreview(){
-        if (modelViewerCleanup) { modelViewerCleanup(); modelViewerCleanup = null; }
+        if (previewDisposed) return;
+        const generation = ++previewGeneration;
+        invalidateCurrentModelViewer();
         previewEl.innerHTML = buildMediaPreviewHtml(m);
         wirePreviewAspect(previewEl.firstElementChild, m);
         const previewBox = previewEl.firstElementChild;
@@ -2578,13 +2606,23 @@ function buildProjectBody(el, p, options = {}){
           globalThis.LMMediaBackground.apply(previewBox, m.background, ghRawUrl);
         }
         if (m.type === 'model' && m.src) {
+          const host = previewEl.querySelector('[data-model-preview]');
           try {
             const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261005-11');
-            const host = previewEl.querySelector('[data-model-preview]');
-            if (host) modelViewerCleanup = await mountModelViewer(host, ghRawUrl(m.src), {
+            // The row may have been deleted/rebuilt while the module import
+            // was pending. Do not mount unless this generation still owns the
+            // live preview host.
+            if (previewDisposed || generation !== previewGeneration ||
+                !row.isConnected || !host?.isConnected ||
+                previewEl.querySelector('[data-model-preview]') !== host) return;
+
+            const cleanup = await mountModelViewer(host, ghRawUrl(m.src), {
               background: m.background || null,
               orientation: m.orientation || 'auto',
               onOrientationDetected: (detected) => {
+                if (previewDisposed || generation !== previewGeneration ||
+                    !row.isConnected || !host.isConnected ||
+                    previewEl.querySelector('[data-model-preview]') !== host) return;
                 const box = previewEl.firstElementChild;
                 if (box) {
                   box.dataset.orientation = detected;
@@ -2593,15 +2631,28 @@ function buildProjectBody(el, p, options = {}){
               },
               resolveUrl: ghRawUrl
             });
+
+            // If a repaint/removal raced the loader, tear down its result
+            // immediately rather than retaining a detached WebGL renderer.
+            if (previewDisposed || generation !== previewGeneration ||
+                !row.isConnected || !host.isConnected ||
+                previewEl.querySelector('[data-model-preview]') !== host) {
+              try { cleanup?.(); } catch (_) {}
+              return;
+            }
+            modelViewerCleanup = typeof cleanup === 'function' ? cleanup : null;
           } catch (err) {
-            const host = previewEl.querySelector('[data-model-preview]');
-            if (host) host.innerHTML = `<div class="model-viewer-error"><strong>Couldn't load this 3D source.</strong><br><span>Check that the file exists and is a supported OBJ, GLTF, GLB, or FBX file.</span></div>`;
+            if (previewDisposed || generation !== previewGeneration ||
+                !row.isConnected || !host?.isConnected ||
+                previewEl.querySelector('[data-model-preview]') !== host) return;
+            host.innerHTML = `<div class="model-viewer-error"><strong>Couldn't load this 3D source.</strong><br><span>Check that the file exists and is a supported OBJ, GLTF, GLB, or FBX file.</span></div>`;
           }
         }
         // If this is (or might become) the project's fallback
         // thumbnail — first image/YouTube item, thumbnail.src left
         // blank — the focus-picker preview needs to follow along too.
-        if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
+        if (!previewDisposed && generation === previewGeneration &&
+            typeof refreshThumbPreview === 'function') refreshThumbPreview();
       }
       wireBackgroundControl(
         row,
@@ -2670,6 +2721,12 @@ function buildProjectBody(el, p, options = {}){
         animateReorder(() => el.querySelector('[data-medialist]'), () => { [p.media[mi+1],p.media[mi]]=[p.media[mi],p.media[mi+1]]; markChanged(); paintMedia(); });
       });
       freshWrap.appendChild(row);
+    });
+    // Dispose old previews before detaching the rows. This is important
+    // for drag reorder, edits, delete, and collapse/expand because each repaint
+    // creates a fresh media-list DOM subtree.
+    Array.from(medWrap.querySelectorAll('.card-item[data-uid]')).forEach(oldRow => {
+      oldRow.__disposeMediaPreview?.();
     });
     medWrap.replaceWith(freshWrap);
     medWrap = freshWrap;
