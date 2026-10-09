@@ -4780,13 +4780,8 @@ footer > .footer-content p{
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum{
   filter:brightness(.96) contrast(1.34) saturate(1.42);
 }
-#lightboxMediaContainer .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic-ribbons,
-#lightboxMediaContainer .lightbox-holographic-diffraction,
-#lightboxMediaContainer .lightbox-holographic-sparkles,
-#lightboxMediaContainer .lightbox-holographic-sheen{
-  display:none!important;
-}
+/* Secondary overlays are selected per finish below. The previous blanket
+   hide rule suppressed the very layers that make finishes look different. */
 @keyframes holo-spectrum-breathe{
   0%,100%{filter:brightness(.93) contrast(1.26) saturate(1.32);}
   50%{filter:brightness(1.08) contrast(1.42) saturate(1.58);}
@@ -4795,4 +4790,219 @@ footer > .footer-content p{
  #lightboxMediaContainer .lightbox-holographic-diffraction,
  #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}
  #lightboxMediaContainer .lightbox-holographic-spectrum{animation:none!important;}
+}
+
+
+/* Distinct holographic profiles.
+   Keep one shared renderer, but give each finish its own visual signature.
+   All overlays remain clipped by the artwork/mask assembled in the renderer. */
+#lightboxMediaContainer .lightbox-holographic-diffraction,
+#lightboxMediaContainer .lightbox-holographic-sparkles{
+  position:absolute;
+  inset:0;
+  margin:0;
+  border:0;
+  pointer-events:none;
+  background-repeat:no-repeat;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+}
+#lightboxMediaContainer .lightbox-holographic-prism{z-index:14;}
+#lightboxMediaContainer .lightbox-holographic-texture{z-index:18;}
+#lightboxMediaContainer .lightbox-holographic-diffraction{
+  z-index:21;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  mix-blend-mode:screen;
+  opacity:calc(.04 + (var(--holo-intensity,.7) * .38));
+  transition:opacity 180ms ease-out,background-position 180ms ease-out;
+}
+#lightboxMediaContainer .lightbox-holographic-ribbons{z-index:23;}
+#lightboxMediaContainer .lightbox-holographic-sparkles{
+  z-index:26;
+  background-size:100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
+  mix-blend-mode:screen;
+  opacity:calc(.06 + (var(--holo-intensity,.7) * .56));
+  filter:drop-shadow(0 0 1px rgba(255,255,255,.55));
+}
+#lightboxMediaContainer .lightbox-holographic-glare{z-index:30;}
+#lightboxMediaContainer .lightbox-holographic-sheen{z-index:35;}
+
+/* Nothing is layered on top by default; every finish opts into its own
+   supporting material, reducing visual mud and unnecessary compositing. */
+#lightboxMediaContainer .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic-ribbons,
+#lightboxMediaContainer .lightbox-holographic-diffraction,
+#lightboxMediaContainer .lightbox-holographic-sparkles,
+#lightboxMediaContainer .lightbox-holographic-sheen{
+  display:none!important;
+}
+
+/* Classic prism: broad spectral wash, shifting prism band and soft ribbons. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-ribbons,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-sheen{
+  display:block!important;
+}
+
+/* Brushed metal: fine, directional grain rather than a broad rainbow wash. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
+  display:block!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism{
+  background-image:
+    repeating-linear-gradient(92deg,rgba(255,255,255,.02) 0 2px,rgba(255,255,255,.28) 2.5px,rgba(16,22,38,.13) 3.5px,transparent 5px 9px),
+    linear-gradient(105deg,#777d91 0%,#d9d6e2 18%,#858ba3 33%,#f0d3e0 50%,#9ba7b9 68%,#e4dfed 84%,#777d91 100%);
+  background-size:100% 100%,320% 100%;
+  background-blend-mode:overlay,screen;
+  mix-blend-mode:soft-light;
+  opacity:calc(.08 + (var(--holo-intensity,.7) * .40));
+  filter:contrast(1.4) saturate(.78);
+  animation:holo-prism-drift 11s ease-in-out infinite alternate;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
+  opacity:calc(.08 + (var(--holo-intensity,.7) * .22));
+  animation-duration:7.6s;
+}
+
+/* Light beams: discrete vertical shafts with bright, separated highlights. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
+  display:block!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism{
+  background-image:
+    repeating-linear-gradient(90deg,transparent 0 8%,rgba(255,255,255,.06) 9%,rgba(255,255,255,.78) 9.7%,rgba(111,228,255,.28) 10.6%,transparent 13% 22%),
+    linear-gradient(90deg,#ff7fc2,#ffdc9d,#9cefd7,#77c9ff,#c29fff,#ff7fc2);
+  background-size:100% 100%,360% 100%;
+  background-blend-mode:screen,color-dodge;
+  mix-blend-mode:screen;
+  opacity:calc(.08 + (var(--holo-intensity,.7) * .46));
+  filter:contrast(1.22) saturate(1.5);
+  animation:holo-prism-drift 5.8s linear infinite;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
+  opacity:calc(.12 + (var(--holo-intensity,.7) * .25));
+  animation-duration:4.8s;
+}
+
+/* Crosshatch: a visibly woven diffraction grid that moves against the light. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
+  display:block!important;
+  background-image:
+    repeating-linear-gradient(38deg,transparent 0 7px,rgba(255,255,255,.38) 7.5px,rgba(83,225,255,.2) 8.5px,transparent 10px 16px),
+    repeating-linear-gradient(142deg,transparent 0 7px,rgba(255,255,255,.29) 7.5px,rgba(218,136,255,.22) 8.5px,transparent 10px 16px);
+  background-size:100% 100%,100% 100%;
+  background-blend-mode:screen,screen;
+  opacity:calc(.10 + (var(--holo-intensity,.7) * .42));
+  filter:contrast(1.12);
+}
+
+/* Shattered ice: faceted, angular flashes that converge around the refracted point. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
+  display:block!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism{
+  background-image:
+    repeating-conic-gradient(from 11deg at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.02) 0 9deg,rgba(255,255,255,.52) 10deg 10.8deg,rgba(105,222,255,.15) 11deg 18deg,transparent 19deg 29deg),
+    linear-gradient(132deg,#ff9ed9,#fff0b0,#8cebdc,#91c6ff,#c2a5ff,#ff9ed9);
+  background-size:145% 145%,320% 230%;
+  background-blend-mode:screen,color-dodge;
+  mix-blend-mode:screen;
+  opacity:calc(.08 + (var(--holo-intensity,.7) * .43));
+  animation:holo-prism-drift 8s ease-in-out infinite alternate;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-linear-gradient(47deg,transparent 0 31px,rgba(255,255,255,.68) 31.5px,transparent 32.5px 58px),
+    repeating-linear-gradient(133deg,transparent 0 27px,rgba(157,233,255,.46) 27.5px,transparent 28.5px 64px);
+  background-size:100% 100%,100% 100%;
+  opacity:calc(.06 + (var(--holo-intensity,.7) * .26));
+}
+
+/* Glitter: small, crisp pinprick glints that twinkle instead of broad bands. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="glitter"] .lightbox-holographic-sparkles{
+  display:block!important;
+  background-image:
+    radial-gradient(circle at 12% 18%,rgba(255,255,255,.96) 0 1px,transparent 2.3px),
+    radial-gradient(circle at 71% 24%,rgba(255,255,255,.92) 0 1px,transparent 2.5px),
+    radial-gradient(circle at 63% 77%,rgba(255,255,255,.98) 0 1.1px,transparent 2.6px),
+    radial-gradient(circle at 28% 84%,rgba(183,246,255,.96) 0 .8px,transparent 2.1px),
+    radial-gradient(circle at 88% 58%,rgba(255,185,241,.95) 0 .9px,transparent 2.4px);
+  background-size:100% 100%;
+  opacity:calc(.05 + (var(--holo-intensity,.7) * .62));
+  animation:holo-glitter-twinkle 3.2s ease-in-out infinite alternate;
+}
+
+/* Water waves: concentric diffraction rings that follow the refracted focal point. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
+  display:block!important;
+  background-image:
+    repeating-radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 8px,rgba(255,255,255,.30) 9px,rgba(98,223,255,.24) 11px,rgba(177,127,255,.16) 13px,transparent 15px 26px),
+    radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.08),transparent 70%);
+  background-size:170% 170%,150% 150%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  opacity:calc(.07 + (var(--holo-intensity,.7) * .43));
+  filter:blur(.15px) contrast(1.15);
+}
+
+/* Cat-eye lens: a narrow, high-contrast reflective band with a bright centre. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
+  display:block!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism{
+  background-image:
+    radial-gradient(ellipse 26% 78% at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 33%,rgba(80,227,255,.2) 40%,rgba(255,255,255,.92) 47%,rgba(255,128,223,.62) 51%,rgba(112,220,255,.40) 56%,transparent 69%),
+    linear-gradient(105deg,#f67fbd,#ffe6a0,#90edd4,#79c9ff,#bd9bff);
+  background-size:160% 160%,320% 220%;
+  background-blend-mode:screen,color-dodge;
+  mix-blend-mode:screen;
+  opacity:calc(.12 + (var(--holo-intensity,.7) * .48));
+  filter:contrast(1.28) saturate(1.4);
+  animation:holo-prism-drift 6.6s ease-in-out infinite alternate;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
+  opacity:calc(.10 + (var(--holo-intensity,.7) * .22));
+  animation-duration:6.4s;
+}
+
+/* Pearlescent foil: soft pastel refraction without hard-edged rainbow stripes. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
+  display:block!important;
+}
+
+/* Aurora: long teal/green/violet curtains with two broad, slow-moving ribbons. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
+  display:block!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+  animation-duration:12.5s;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
+  animation-duration:11.8s;
+}
+@keyframes holo-glitter-twinkle{
+  0%,100%{opacity:calc(.04 + (var(--holo-intensity,.7) * .38));filter:brightness(.94) drop-shadow(0 0 1px rgba(255,255,255,.45));}
+  50%{opacity:calc(.12 + (var(--holo-intensity,.7) * .62));filter:brightness(1.28) drop-shadow(0 0 3px rgba(210,248,255,.85));}
+}
+
+/* Respect reduced motion even though these profiles are defined at EOF. */
+@media(prefers-reduced-motion:reduce){
+  #lightboxMediaContainer .lightbox-holographic,
+  #lightboxMediaContainer .lightbox-holographic::before,
+  #lightboxMediaContainer .lightbox-holographic-sheen,
+  #lightboxMediaContainer .lightbox-holographic-prism,
+  #lightboxMediaContainer .lightbox-holographic-ribbons,
+  #lightboxMediaContainer .lightbox-holographic-diffraction,
+  #lightboxMediaContainer .lightbox-holographic-sparkles,
+  #lightboxMediaContainer .lightbox-holographic-spectrum{
+    animation:none!important;
+    transition:none!important;
+  }
 }
