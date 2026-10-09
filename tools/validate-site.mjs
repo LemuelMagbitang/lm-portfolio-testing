@@ -441,7 +441,7 @@ function validateCanonicalSocialMetadata() {
 
 function validateSharedCssCacheVersion() {
   const entryHtml = exists('index.html') ? readText('index.html') : '';
-  const expectedVersion = entryHtml.match(/css\\/style\\.css\\?v=([^'"\\s>]+)/i)?.[1] || '';
+  const expectedVersion = entryHtml.match(/css\/style\.css\?v=([^'"\s>]+)/i)?.[1] || '';
   if (!expectedVersion) {
     err('index.html: canonical stylesheet cache version is missing.');
     return;
@@ -450,7 +450,7 @@ function validateSharedCssCacheVersion() {
   for (const file of ['about/index.html', '404.html', 'success/index.html']) {
     if (!exists(file)) continue;
     const html = readText(file);
-    const version = html.match(/css\\/style\\.css\\?v=([^'"\\s>]+)/i)?.[1] || '';
+    const version = html.match(/css\/style\.css\?v=([^'"\s>]+)/i)?.[1] || '';
     if (version !== expectedVersion) {
       err(file + ': shared stylesheet cache version must match index.html (v=' + expectedVersion + ').');
     }
@@ -461,8 +461,8 @@ function validateUtilityPageIndexing() {
   for (const file of ['admin/index.html', '404.html', 'success/index.html']) {
     if (!exists(file)) continue;
     const html = readText(file);
-    const robotsTag = html.match(/<meta\\b(?=[^>]*\\bname=['"]robots['"])[^>]*>/i)?.[0] || '';
-    const content = robotsTag.match(/\\bcontent=['"]([^'"]+)['"]/i)?.[1] || '';
+    const robotsTag = html.match(/<meta\b(?=[^>]*\bname=['"]robots['"])[^>]*>/i)?.[0] || '';
+    const content = robotsTag.match(/\bcontent=['"]([^'"]+)['"]/i)?.[1] || '';
     const directives = new Set(content.toLowerCase().split(',').map(value => value.trim()));
 
     if (!directives.has('noindex') || !directives.has('nofollow')) {
