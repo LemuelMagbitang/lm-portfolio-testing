@@ -2062,11 +2062,14 @@ function normalizeEditorHolographic(value){
   const intensityValue = Number(value.intensity);
   const intensity = Number.isFinite(intensityValue) ? Math.max(0, Math.min(1, intensityValue)) : 0.7;
   const texture = String(value.texture || '').trim();
+  const textureModeValue = String(value.textureMode || 'fill').trim().toLowerCase();
+  const textureMode = ['tile','fill'].includes(textureModeValue) ? textureModeValue : 'fill';
   const back = String(value.back || '').trim();
   const mask = String(value.mask || '').trim();
   return {
     style: styles.has(style) ? style : 'holographic',
     intensity,
+    textureMode,
     ...(texture ? {texture} : {}),
     ...(back ? {back} : {}),
     ...(mask ? {mask} : {})
@@ -2078,6 +2081,7 @@ function holographicControlHtml(holographic){
   const enabled = !!value;
   const style = value?.style || 'holographic';
   const intensity = Number.isFinite(Number(value?.intensity)) ? Number(value.intensity) : 0.7;
+  const textureMode = value?.textureMode || 'fill';
   return `
     <div class="field holographic-control" data-holo-control>
       <label class="field-label">Holographic Effect</label>
@@ -2098,8 +2102,14 @@ function holographicControlHtml(holographic){
           </div>
         </div>
         <div class="field">
-          <label class="field-label">Foil / pattern image <span style="opacity:.5">(optional)</span></label>
+          <label class="field-label">Foil pattern / texture image <span style="opacity:.5">(optional)</span></label>
           <input data-holo-texture value="${attr(value?.texture || '')}" placeholder="assets/projects/your-folder/foil.png / .svg">
+          <label class="field-label">Pattern mapping</label>
+          <select data-holo-texture-mode>
+            <option value="tile" ${textureMode==='tile'?'selected':''}>Tile pattern</option>
+            <option value="fill" ${textureMode==='fill'?'selected':''}>Fill card</option>
+          </select>
+          <p class="hint">Tile repeats small motifs (for example, a 250×250 star). Fill card stretches a full-card grayscale texture edge to edge. This is a surface overlay, not a mask; use the separate front mask only to restrict which areas receive foil.</p>
         </div>
         <div class="field">
           <label class="field-label">Front foil mask <span style="opacity:.5">(optional)</span></label>
@@ -2126,6 +2136,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const intensityInput = control.querySelector('[data-holo-intensity]');
   const intensityLabel = control.querySelector('[data-holo-intensity-value]');
   const textureInput = control.querySelector('[data-holo-texture]');
+  const textureModeInput = control.querySelector('[data-holo-texture-mode]');
   const backInput = control.querySelector('[data-holo-back]');
   const maskInput = control.querySelector('[data-holo-mask]');
 
@@ -2140,6 +2151,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     styleInput.value = value?.style || 'holographic';
     intensityInput.value = String(value?.intensity ?? 0.7);
     textureInput.value = value?.texture || '';
+    textureModeInput.value = value?.textureMode || 'fill';
     backInput.value = value?.back || '';
     maskInput.value = value?.mask || '';
     if (intensityLabel) intensityLabel.textContent = Number(intensityInput.value).toFixed(2);
@@ -2149,6 +2161,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     return {
       style: styleInput.value || 'holographic',
       intensity: Math.max(0, Math.min(1, Number(intensityInput.value) || 0)),
+      textureMode: textureModeInput.value || 'fill',
       ...(textureInput.value.trim() ? {texture:textureInput.value.trim()} : {}),
       ...(backInput.value.trim() ? {back:backInput.value.trim()} : {}),
       ...(maskInput.value.trim() ? {mask:maskInput.value.trim()} : {})
@@ -2171,13 +2184,15 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     setEffect(read());
     onChanged?.();
   });
+  const updateTextureSettings = () => {
+    if (!enabledInput.checked) return;
+    setEffect(read());
+    onChanged?.();
+  };
   [textureInput, backInput, maskInput].forEach(input => {
-    input.addEventListener('input', () => {
-      if (!enabledInput.checked) return;
-      setEffect(read());
-      onChanged?.();
-    });
+    input.addEventListener('input', updateTextureSettings);
   });
+  textureModeInput.addEventListener('change', updateTextureSettings);
 
   root.__holoEditorSync = sync;
   sync();
