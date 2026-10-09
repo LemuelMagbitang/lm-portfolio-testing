@@ -4493,6 +4493,11 @@ footer > .footer-content p{
   border-radius:inherit;
   overflow:hidden;
 }
+#lightboxMediaContainer .lightbox-holographic-inner,
+#lightboxMediaContainer .lightbox-holographic-flip,
+#lightboxMediaContainer .lightbox-holographic-face{
+  border-radius:inherit;
+}
 #lightboxMediaContainer .lightbox-holographic:focus-visible{
   border-radius:inherit;
   outline-offset:5px;
