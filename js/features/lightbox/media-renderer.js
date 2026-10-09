@@ -648,6 +648,8 @@ export function createLightboxMediaRenderer({
     surface.dataset.holoStyle = config.style;
     surface.dataset.holoTextureMode = config.textureMode;
     surface.dataset.holoInput = 'pointer';
+    const backHasCustomArtwork = Boolean(String(config.back || '').trim());
+    surface.dataset.holoHasCustomBack = backHasCustomArtwork ? 'true' : 'false';
     surface.style.setProperty('--holo-intensity', String(config.intensity));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
@@ -677,10 +679,12 @@ export function createLightboxMediaRenderer({
 
     const back = documentRef.createElement('div');
     back.className = 'lightbox-holographic-face lightbox-holographic-back';
-    const backUrl = config.back ? resolveAssetUrl(config.back) : resolveAssetUrl(item.src);
+    const backUrl = backHasCustomArtwork ? resolveAssetUrl(config.back) : resolveAssetUrl(item.src);
     const backImage = buildImageMedia(
       backUrl,
-      project.title ? `${project.title} — reverse artwork` : 'Reverse artwork',
+      backHasCustomArtwork
+        ? (project.title ? `${project.title} — reverse artwork` : 'Reverse artwork')
+        : (project.title ? `${project.title} — holographic reverse` : 'Holographic reverse'),
       { eager: true }
     );
     back.appendChild(backImage);
@@ -696,7 +700,9 @@ export function createLightboxMediaRenderer({
     const textureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
     const maskUrl = config.mask ? resolveAssetUrl(config.mask) : '';
     [front, back].forEach(face => {
-      const frontMaskUrl = face === front ? maskUrl : '';
+      // A deliberate custom back can use independent artwork. The fallback
+      // reverse reuses the front image, so preserve its mask and foil map too.
+      const frontMaskUrl = face === front || !backHasCustomArtwork ? maskUrl : '';
       const spectrum = documentRef.createElement('span');
       spectrum.className = 'lightbox-holographic-spectrum';
       spectrum.setAttribute('aria-hidden', 'true');
