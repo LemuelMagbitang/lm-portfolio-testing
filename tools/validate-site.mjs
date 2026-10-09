@@ -1108,12 +1108,12 @@ function validateCmsRegressionContracts() {
       !/if\(version !== renderVersion \|\| section !== currentSection\) return;/.test(admin)) {
     err('CMS render: asynchronous section loads must be guarded against stale navigation responses.');
   }
-  if (!/const cacheKey = version \\|\\| mediaTreeShaByPath\\?\\.get\\(assetPath\\)/.test(admin) ||
-      !/await loadMediaTree\\(true\\)/.test(admin) ||
-      !/const existingIndex = uploadTree\\.findIndex/.test(admin) ||
-      !/setMediaTreeCache\\(uploadTree\\)/.test(admin) ||
-      !/needsInitialRefresh\\s*=\\s*true/.test(admin) ||
-      !/paintVersion\\s*!==\\s*pickerPaintVersion/.test(admin)) {
+  if (!admin.includes('const cacheKey = version || mediaTreeShaByPath?.get(assetPath)') ||
+      !admin.includes('await loadMediaTree(true)') ||
+      !admin.includes('const existingIndex = uploadTree.findIndex') ||
+      !admin.includes('setMediaTreeCache(uploadTree)') ||
+      !admin.includes('let needsInitialRefresh=true') ||
+      !admin.includes('paintVersion!==pickerPaintVersion')) {
     err('CMS Media Library: fresh replacement uploads, SHA-keyed previews, and guarded picker refreshes are required.');
   }
   if (admin.includes('SOFTWARE_DOMAINS') || admin.includes('logo.clearbit.com')) {
