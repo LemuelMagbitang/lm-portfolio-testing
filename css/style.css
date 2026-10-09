@@ -4469,3 +4469,67 @@ footer > .footer-content p{
     cursor:grabbing;
   }
 }
+
+
+/* Holographic card finish: free foil layers from paint containment and give
+   the card a clean, lightbox-matched rounded/squircle silhouette. */
+#lightboxMediaContainer .lightbox-holographic{
+  contain:layout style;
+  overflow:visible;
+  border-radius:clamp(16px, 4.8%, 27px);
+  border:1px solid rgba(255,255,255,.34);
+  box-shadow:0 22px 54px -25px rgba(0,0,0,.82),0 0 0 1px rgba(0,0,0,.34),inset 0 0 0 1px rgba(255,255,255,.10);
+}
+#lightboxMediaContainer .lightbox-holographic-face{border-radius:inherit;}
+#lightboxMediaContainer .lightbox-holographic:focus-visible{border-radius:inherit;outline-offset:5px;}
+@supports (corner-shape:squircle){
+  #lightboxMediaContainer .lightbox-holographic,
+  #lightboxMediaContainer .lightbox-holographic-face{corner-shape:squircle;}
+}
+/* Plain text rides over the artwork instead of looking like a UI chip. */
+#lightboxMediaContainer .lightbox-holographic::before{
+  content:'FRONT • MOVE / CLICK';
+  padding:0;border:0;border-radius:0;background:transparent;
+  color:rgba(255,255,255,.96);font-size:10px;font-weight:750;
+  letter-spacing:.105em;line-height:1.35;opacity:.92;
+  text-shadow:0 1px 10px rgba(0,0,0,.95),0 0 3px rgba(0,0,0,.92);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+  animation:holo-hint-breathe 3.8s ease-in-out infinite;
+}
+#lightboxMediaContainer .lightbox-holographic.is-flipped::before{content:'BACK • MOVE / CLICK';}
+@media (pointer:coarse){
+  #lightboxMediaContainer .lightbox-holographic::before{content:'FRONT • HOLD + MOVE';}
+  #lightboxMediaContainer .lightbox-holographic.is-flipped::before{content:'BACK • HOLD + MOVE';}
+}
+#lightboxMediaContainer .lightbox-holographic:hover::before,
+#lightboxMediaContainer .lightbox-holographic:focus-visible::before,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::before,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::before{opacity:.82;}
+/* More legible spectrum, stronger controlled color separation, broad fixed reflections. */
+#lightboxMediaContainer .lightbox-holographic-spectrum{filter:saturate(1.18) contrast(1.035);}
+#lightboxMediaContainer .lightbox-holographic-prism{
+  opacity:calc(.23 + (var(--holo-intensity,.7) * .31));
+  filter:blur(.45px) saturate(1.30) contrast(1.06);
+}
+#lightboxMediaContainer .lightbox-holographic-ribbons{
+  opacity:calc(.22 + (var(--holo-intensity,.7) * .31));
+  filter:blur(.82px) saturate(1.14);
+}
+#lightboxMediaContainer .lightbox-holographic-sheen{opacity:.42;}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism{
+  opacity:calc(.28 + (var(--holo-intensity,.7) * .36));
+  filter:blur(.4px) saturate(1.38) contrast(1.08);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
+  opacity:calc(.20 + (var(--holo-intensity,.7) * .30));
+  filter:blur(.6px) saturate(1.18);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+  opacity:calc(.25 + (var(--holo-intensity,.7) * .34));
+  filter:blur(.65px) saturate(1.32);
+}
+@media (prefers-reduced-motion:reduce){
+  #lightboxMediaContainer .lightbox-holographic-prism,
+  #lightboxMediaContainer .lightbox-holographic-ribbons,
+  #lightboxMediaContainer .lightbox-holographic-sheen{animation:none!important;}
+}
