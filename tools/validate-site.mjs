@@ -1108,6 +1108,14 @@ function validateCmsRegressionContracts() {
       !/if\(version !== renderVersion \|\| section !== currentSection\) return;/.test(admin)) {
     err('CMS render: asynchronous section loads must be guarded against stale navigation responses.');
   }
+  if (!/const cacheKey = version \\|\\| mediaTreeShaByPath\\?\\.get\\(assetPath\\)/.test(admin) ||
+      !/await loadMediaTree\\(true\\)/.test(admin) ||
+      !/const existingIndex = uploadTree\\.findIndex/.test(admin) ||
+      !/setMediaTreeCache\\(uploadTree\\)/.test(admin) ||
+      !/needsInitialRefresh\\s*=\\s*true/.test(admin) ||
+      !/paintVersion\\s*!==\\s*pickerPaintVersion/.test(admin)) {
+    err('CMS Media Library: fresh replacement uploads, SHA-keyed previews, and guarded picker refreshes are required.');
+  }
   if (admin.includes('SOFTWARE_DOMAINS') || admin.includes('logo.clearbit.com')) {
     err('CMS software logos: retired inline SOFTWARE_DOMAINS/Clearbit lookup must not return.');
   }
@@ -1162,6 +1170,13 @@ function validateCmsRegressionContracts() {
       !css.includes('background-size:auto') ||
       !css.includes('.lightbox-holographic-ribbons{\n    animation:none;')) {
     err('Holographic rendering: eased pointer tracking, off-axis light, and tile/fill foil texture mapping must remain available.');
+  }
+
+  if (!renderer.includes('face === front || !backHasCustomArtwork ? maskUrl :') ||
+      !css.includes('contain:layout style;') ||
+      !css.includes('corner-shape:squircle') ||
+      !css.includes("content:'BACK • MOVE / CLICK'")) {
+    err('Holographic card: masked fallback backs, unclipped squircle shape and dynamic FRONT/BACK guidance are required.');
   }
 
   if (!gallery.includes('getEffectiveBaseCount') ||
