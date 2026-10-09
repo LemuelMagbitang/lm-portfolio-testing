@@ -481,6 +481,13 @@ try {
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
         const holographic = page.locator('#lightboxMediaContainer .lightbox-holographic').first();
         await holographic.waitFor({ state: 'visible', timeout: 3000 });
+        const fixedLight = await holographic.evaluate(el => ({
+          x: el.style.getPropertyValue('--holo-light-x'),
+          y: el.style.getPropertyValue('--holo-light-y')
+        }));
+        if (fixedLight.x !== '34%' || fixedLight.y !== '26%') {
+          throw new Error('Mobile holographic light sources must begin at fixed, off-axis positions.');
+        }
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
 
@@ -504,7 +511,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           return {
             frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
@@ -592,6 +599,8 @@ try {
           y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
           fx: Number.parseFloat(el.style.getPropertyValue('--holo-foil-x')),
           fy: Number.parseFloat(el.style.getPropertyValue('--holo-foil-y')),
+          lightX: el.style.getPropertyValue('--holo-light-x'),
+          lightY: el.style.getPropertyValue('--holo-light-y'),
           engaged: el.classList.contains('is-holo-touch-engaged')
         }));
         await holographic.dispatchEvent('pointerup', {
@@ -603,6 +612,9 @@ try {
             Math.abs((tiltState.x + tiltState.fx) - 100) > 1.5 ||
             Math.abs((tiltState.y + tiltState.fy) - 100) > 1.5) {
           throw new Error('Held mobile holographic gesture lost its inverse foil mapping.');
+        }
+        if (tiltState.lightX !== fixedLight.x || tiltState.lightY !== fixedLight.y) {
+          throw new Error('Holding and moving a finger must not drag the holo light sources.');
         }
 
         await page.locator('#lightboxClose').first().click();
@@ -1524,7 +1536,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           return {
             frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
