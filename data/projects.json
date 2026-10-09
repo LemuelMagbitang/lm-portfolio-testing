@@ -420,6 +420,7 @@
           "backTextureMode": "fill",
           "texture": "assets/projects/gog-render-challenge/foil-test-250.png",
           "back": "assets/projects/gog-render-challenge/card-back-layout.jpg",
+          "backFoilEnabled": false,
           "mask": "assets/projects/gog-render-challenge/image.jpg"
         }
       },
@@ -627,6 +628,38 @@
         "background": {
           "type": "solid",
           "color": "#0a0118"
+        }
+      }
+    ]
+  },
+  {
+    "id": "funko-pop-test",
+    "title": "Funko Pop Test",
+    "subtitle": "Funko poppppp",
+    "badge": "2D Illustration",
+    "badges": [
+      "2D Illustration"
+    ],
+    "filters": [
+      "illustration"
+    ],
+    "description": "this is a funko pop in 2d",
+    "thumbnail": {
+      "type": "image",
+      "src": "",
+      "focus": "50% 50%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/Asset 4@4x.png",
+        "caption": "",
+        "orientation": "",
+        "holographic": {
+          "style": "holographic",
+          "intensity": 1,
+          "textureMode": "fill"
         }
       }
     ]
