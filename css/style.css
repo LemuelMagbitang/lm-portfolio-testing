@@ -5079,3 +5079,61 @@ footer > .footer-content p{
   #lightboxMediaContainer .lightbox-holographic-glare{transition:none!important;}
 }
 
+
+
+/* Cosmos-inspired foil finish.
+   Separate from the default prism profile: a star field, diffuse nebula colors,
+   moving spectral interference, and a grazing sweep. All layers use the same
+   artwork-alpha mask as the existing foil so transparent silhouettes stay clean. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-spectrum{
+  background-image:
+    radial-gradient(circle at 9% 14%,rgba(255,255,255,.98) 0 .6px,transparent 1.55px),
+    radial-gradient(circle at 27% 58%,rgba(206,246,255,.95) 0 .55px,transparent 1.7px),
+    radial-gradient(circle at 76% 21%,rgba(255,226,250,.95) 0 .65px,transparent 1.7px),
+    radial-gradient(circle at 87% 77%,rgba(255,255,255,.92) 0 .55px,transparent 1.6px),
+    radial-gradient(circle at 53% 35%,rgba(214,222,255,.90) 0 .5px,transparent 1.55px),
+    radial-gradient(circle at 37% 88%,rgba(255,239,201,.88) 0 .55px,transparent 1.65px),
+    radial-gradient(ellipse 68% 58% at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(72,200,255,.30) 0%,rgba(115,105,255,.16) 35%,transparent 76%),
+    repeating-linear-gradient(112deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px),
+    linear-gradient(112deg,#251b4a 0%,#4b72b4 16%,#9472d2 30%,#61cfd2 45%,#d887c0 61%,#f1d4a2 75%,#657bd3 89%,#251b4a 100%);
+  background-size:100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,100% 100%,185% 165%,100% 100%,360% 285%;
+  background-position:center,center,center,center,center,center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background-blend-mode:screen,screen,screen,screen,screen,screen,screen,overlay,color-dodge;
+  mix-blend-mode:color-dodge;
+  opacity:calc(.16 + (var(--holo-intensity,.7) * .38) + (var(--holo-tilt-strength,0) * .10));
+  filter:brightness(.98) contrast(1.2) saturate(1.28);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-environment{
+  background-image:
+    radial-gradient(ellipse 43% 34% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(103,231,255,.38) 0%,rgba(96,114,255,.16) 32%,transparent 72%),
+    radial-gradient(ellipse 62% 46% at 74% 65%,rgba(244,107,222,.22) 0%,rgba(112,93,255,.12) 38%,transparent 76%),
+    radial-gradient(ellipse 45% 36% at 23% 79%,rgba(71,170,255,.17) 0%,transparent 74%),
+    linear-gradient(145deg,rgba(30,39,112,.24),transparent 44%,rgba(255,182,223,.12));
+  background-size:155% 145%,160% 155%,150% 150%,100% 100%;
+  background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),left bottom,center;
+  background-blend-mode:screen,screen,screen,soft-light;
+  mix-blend-mode:screen;
+  opacity:calc(.20 + (var(--holo-intensity,.7) * .24) + (var(--holo-tilt-strength,0) * .10));
+  filter:contrast(1.08) saturate(1.14);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-glare{
+  background-image:
+    radial-gradient(ellipse 29% 25% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.84) 0%,rgba(192,239,255,.28) 18%,rgba(183,142,255,.10) 38%,transparent 72%),
+    linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 28%,rgba(255,255,255,.035) 38%,rgba(255,255,255,.32) 47%,rgba(180,231,255,.16) 50%,rgba(255,176,228,.08) 54%,transparent 65%);
+  background-size:155% 155%,250% 220%;
+  background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background-blend-mode:screen,screen;
+  mix-blend-mode:screen;
+  opacity:calc(.10 + (var(--holo-intensity,.7) * .22) + (var(--holo-tilt-strength,0) * .22));
+  filter:brightness(1.08) contrast(1.2) saturate(1.08);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{
+  display:block!important;
+  background:linear-gradient(110deg,transparent 29%,rgba(154,220,255,.035) 38%,rgba(255,255,255,.33) 46%,rgba(199,151,255,.18) 50%,rgba(255,179,232,.10) 53%,transparent 61%);
+  background-size:235% 100%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  opacity:calc(.10 + (var(--holo-intensity,.7) * .23));
+  mix-blend-mode:screen;
+  filter:blur(.45px);
+  animation-duration:8.6s;
+}
