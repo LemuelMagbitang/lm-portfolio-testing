@@ -655,7 +655,7 @@
         "type": "image",
         "src": "assets/projects/funko-pop/Asset 4@4x.png",
         "caption": "",
-        "orientation": "",
+        "orientation": "square",
         "holographic": {
           "style": "holographic",
           "intensity": 1,
