@@ -581,20 +581,12 @@ export function createLightboxMediaRenderer({
     return layer;
   }
 
-  // Luminance masks are front-face-only by design. An opaque white pixel
-  // reveals the foil; black suppresses it; gray allows partial foil coverage.
+  // Luminance masks are front-face-only by design. White reveals foil;
+  // black suppresses it; gray allows partial foil coverage.
   function applyHolographicMask(layer, maskUrl) {
     if (!layer?.style || !maskUrl) return;
-    const safeUrl = String(maskUrl).replace(/["\\\r\n]/g, '\\  function buildHolographicLayer(documentRef, url, className, altText = '') {
-    const layer = documentRef.createElement('img');
-    layer.className = className;
-    layer.src = url;
-    layer.alt = altText;
-    layer.draggable = false;
-    layer.setAttribute('aria-hidden', 'true');
-    return layer;
-  }');
-    const cssUrl = `url("${safeUrl}")`;
+    const safeUrl = encodeURI(String(maskUrl).split('"').join('%22'));
+    const cssUrl = 'url("' + safeUrl + '")';
     layer.style.maskImage = cssUrl;
     layer.style.webkitMaskImage = cssUrl;
     layer.style.maskMode = 'luminance';
