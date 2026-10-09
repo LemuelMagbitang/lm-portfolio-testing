@@ -45,10 +45,17 @@ assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must ex
 assert.ok(/holo-style-intensity holo-main-controls/.test(admin) &&
   /<summary>Advanced foil options/.test(admin),
   'CMS foil controls should keep style/strength visible and tuck texture/mask/reverse options into Advanced.');
-assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\\.01"/.test(admin) &&
+assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin) &&
   /Math\.round\(Number\(intensityInput\.value\)\*100\)\+'%'/ .test(admin),
   'CMS foil strength should have fine-grained control and a clear percentage label.');
 
+assert.ok(
+  css.includes('url("../assets/holographic/cosmos-bottom.png")') &&
+  css.includes('url("../assets/holographic/cosmos-middle-trans.png")') &&
+  css.includes('url("../assets/holographic/cosmos-top-trans.png")'),
+  'The Cosmos foil profile must use all three uploaded texture maps.');
+assert.ok(css.includes('--holo-visual-intensity:calc(var(--holo-intensity,.7) * .68)'),
+  'The visual foil intensity must be scaled separately from the CMS value to avoid clipping layered highlights.');
 assert.ok(/value="cosmos"/.test(admin) && /Cosmos galaxy foil/.test(admin),
   'CMS holographic style picker must expose the optional Cosmos finish.');
 assert.ok(/data-holo-enabled/.test(admin), 'CMS Projects must expose an enable/disable control for holographic images.');
