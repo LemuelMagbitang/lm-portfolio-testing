@@ -572,6 +572,20 @@ export function createLightboxMediaRenderer({
 
   const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;
   const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;
+  // Only mask overlays that the selected finish actually renders. Keeping
+  // hidden overlays unmasked avoids needless alpha/luminance-mask compositing.
+  const HOLOGRAPHIC_MASK_LAYERS = {
+    holographic: ['prism', 'ribbons', 'sheen'],
+    brushed: ['prism', 'sheen'],
+    beams: ['prism', 'sheen'],
+    crosshatch: ['diffraction'],
+    shattered: ['prism', 'diffraction'],
+    glitter: ['sparkles'],
+    waves: ['diffraction'],
+    'cat-eye': ['prism', 'sheen'],
+    iridescent: ['prism', 'ribbons', 'sheen'],
+    aurora: ['prism', 'ribbons', 'sheen']
+  };
 
   function updateHolographicTilt(surface, x, y) {
     if (!surface) return;
@@ -801,14 +815,20 @@ export function createLightboxMediaRenderer({
       sparkles.className = 'lightbox-holographic-sparkles'; sparkles.setAttribute('aria-hidden','true');
       const sheen = documentRef.createElement('span');
       sheen.className = 'lightbox-holographic-sheen'; sheen.setAttribute('aria-hidden','true');
-      applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(glare, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
-      applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
+      const maskedLayers = new Set([
+        'spectrum',
+        'environment',
+        'glare',
+        ...(HOLOGRAPHIC_MASK_LAYERS[config.style] || [])
+      ]);
+      if (maskedLayers.has('spectrum')) applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('environment')) applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('glare')) applyHolographicMask(glare, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('prism')) applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('ribbons')) applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('diffraction')) applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('sparkles')) applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('sheen')) applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
       face.append(spectrum, environment, glare, prism, ribbons, diffraction, sparkles, sheen);
       if (faceTextureUrl) {
         const texture = documentRef.createElement('span');

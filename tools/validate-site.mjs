@@ -1190,6 +1190,22 @@ function validateCmsRegressionContracts() {
     err('Holographic rendering: eased inverse lighting, masked environmental shading, and tile/fill texture mapping must remain available.');
   }
 
+  if (!renderer.includes('const HOLOGRAPHIC_MASK_LAYERS = {') ||
+      !renderer.includes("holographic: ['prism', 'ribbons', 'sheen']") ||
+      !renderer.includes("glitter: ['sparkles']") ||
+      !renderer.includes("...(HOLOGRAPHIC_MASK_LAYERS[config.style] || [])") ||
+      !renderer.includes("if (maskedLayers.has('environment')) applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl)") ||
+      !renderer.includes("if (maskedLayers.has('prism')) applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl)") ||
+      !css.includes('background-image:url("../assets/holographic/grain.webp")') ||
+      !css.includes('mix-blend-mode:hard-light') ||
+      !css.includes('@keyframes holo-spectrum-breathe{\n  0%,100%{opacity:') ||
+      !css.includes('@keyframes holo-glitter-twinkle{\n  0%,100%{opacity:')) {
+    err('Holographic material: use a locally cached generic grain, moving neutral interference and profile-specific masks; continuous spectrum/glitter animation must avoid filter changes.');
+  }
+  if (!exists('assets/holographic/grain.webp')) {
+    err('Holographic material: generic local grain texture asset is missing.');
+  }
+
   if (!renderer.includes('const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled)') ||
       !renderer.includes('if (!isFront && !backFoilEnabled) return;') ||
       !renderer.includes('config.backTextureMode') ||

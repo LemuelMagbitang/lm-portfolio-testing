@@ -508,6 +508,8 @@ try {
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
             environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
             environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
+            grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::before').backgroundImage,
+            classicInterferenceImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::after').backgroundImage,
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             hintFace: hint?.querySelector('[data-holo-face-label]')?.textContent || '',
@@ -529,6 +531,8 @@ try {
             affordance.artworkOverflow !== 'visible' ||
             affordance.environmentBlend !== 'soft-light' ||
             !(affordance.environmentOpacity > 0) ||
+            !affordance.grainImage.includes('grain.webp') ||
+            !affordance.classicInterferenceImage.includes('repeating-linear-gradient') ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.hintFace !== 'FRONT' ||
@@ -545,13 +549,15 @@ try {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
           const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-environment', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
-          return {
-            frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
-            backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
-          };
+          const visibleMasks = face => selectors.flatMap(selector => {
+            const layer = face?.querySelector(selector);
+            if (!layer || getComputedStyle(layer).display === 'none') return [];
+            return [{ selector, mask: layer.style.maskImage || '' }];
+          });
+          return { frontLayers: visibleMasks(front), backLayers: visibleMasks(back) };
         });
-        if (maskState.frontLayers.some(value => !value.includes('front-mask.svg')) ||
-            maskState.backLayers.some(value => !value.includes('back-mask.svg'))) {
+        if (maskState.frontLayers.some(value => !value.mask.includes('front-mask.svg')) ||
+            maskState.backLayers.some(value => !value.mask.includes('back-mask.svg'))) {
           throw new Error(`Configured holographic faces must use their own mask: ${JSON.stringify(maskState)}`);
         }
         const textureState = await holographic.evaluate(el => {
@@ -1763,6 +1769,8 @@ try {
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
             environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
             environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
+            grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::before').backgroundImage,
+            classicInterferenceImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::after').backgroundImage,
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             backEffectCount: el.querySelector('.lightbox-holographic-back')?.querySelectorAll('.lightbox-holographic-spectrum,.lightbox-holographic-environment,.lightbox-holographic-glare,.lightbox-holographic-prism,.lightbox-holographic-ribbons,.lightbox-holographic-sheen,.lightbox-holographic-texture').length || 0,
@@ -1782,6 +1790,8 @@ try {
             affordance.artworkOverflow !== 'visible' ||
             affordance.environmentBlend !== 'soft-light' ||
             !(affordance.environmentOpacity > 0) ||
+            !affordance.grainImage.includes('grain.webp') ||
+            !affordance.classicInterferenceImage.includes('repeating-linear-gradient') ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.backEffectCount !== 0 ||
@@ -1797,13 +1807,15 @@ try {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
           const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-environment', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
-          return {
-            frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
-            backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
-          };
+          const visibleMasks = face => selectors.flatMap(selector => {
+            const layer = face?.querySelector(selector);
+            if (!layer || getComputedStyle(layer).display === 'none') return [];
+            return [{ selector, mask: layer.style.maskImage || '' }];
+          });
+          return { frontLayers: visibleMasks(front), backLayers: visibleMasks(back) };
         });
-        if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
-            maskState.backLayers.some(Boolean)) {
+        if (maskState.frontLayers.some(value => !value.mask.includes('mask.svg')) ||
+            maskState.backLayers.some(value => Boolean(value.mask))) {
           throw new Error(`A plain reverse face must not inherit the front foil mask: ${JSON.stringify(maskState)}`);
         }
 
