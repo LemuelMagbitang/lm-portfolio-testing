@@ -186,12 +186,12 @@ assert.match(adminSource, /function invalidateCurrentModelViewer\(\)/);
 assert.match(adminSource, /delete host\.__modelViewerMountToken/);
 assert.match(adminSource, /generation !== previewGeneration/);
 assert.match(adminSource, /!row\.isConnected \|\| !host\?\.isConnected/);
-assert.match(adminSource, /cleanup\?\.\(\);\s*return;/);
+assert.match(adminSource, /try \{ cleanup\?\.\(\); \} catch \(_\) \{\}\s*return;/);
 const disposePreviewIndex = adminSource.indexOf('oldRow.__disposeMediaPreview?.()');
 const replaceMediaListIndex = adminSource.indexOf('medWrap.replaceWith(freshWrap)', disposePreviewIndex);
 assert.ok(disposePreviewIndex >= 0 && replaceMediaListIndex > disposePreviewIndex,
   'CMS media previews must be disposed before the old media list is detached.');
-assert.match(adminSource, /admin preview host/);
+assert.match(adminSource, /previewEl\.querySelector\('\[data-model-preview\]'\) !== host/);
 assert.match(adminSource, /\.\.\.\(project\.extensions && typeof project\.extensions === 'object' && !Array\.isArray\(project\.extensions\)/);
 assert.match(adminSource, /const seenBadges=new Set\(\)/);
 assert.doesNotMatch(adminSource, /function badgeOptions\(current\)/);
