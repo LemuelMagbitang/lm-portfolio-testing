@@ -1,11 +1,44 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizeProjectMedia } from '../js/data/project-normalizer.js';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'admin/admin.css'), 'utf8');
 const siteCss = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
+
+// Runtime regression checks: normalization must not erase the reverse-side foil switch.
+function normalizedBackFoilEnabled(holographic) {
+  const media = normalizeProjectMedia({
+    type: 'image',
+    src: 'assets/projects/test/front.png',
+    holographic
+  });
+  assert.ok(media?.holographic, 'Test holographic settings should survive project-media normalization.');
+  return media.holographic.backFoilEnabled;
+}
+
+assert.equal(
+  normalizedBackFoilEnabled({ style: 'holographic', back: 'back.png', backTexture: 'pattern.png' }),
+  true,
+  'Legacy records with a back texture should retain their implied back-foil behavior.'
+);
+assert.equal(
+  normalizedBackFoilEnabled({ style: 'holographic', back: 'back.png', backTexture: 'pattern.png', backFoilEnabled: false }),
+  false,
+  'An explicit CMS opt-out must survive normalization even when a back texture is configured.'
+);
+assert.equal(
+  normalizedBackFoilEnabled({ style: 'holographic', back: 'back.png', backFoilEnabled: true }),
+  true,
+  'An explicit CMS opt-in must survive normalization.'
+);
+assert.equal(
+  normalizedBackFoilEnabled({ style: 'holographic', back: 'back.png' }),
+  false,
+  'A clean custom reverse should remain foil-free unless enabled or given a back pattern/mask.'
+);
 
 for (const marker of [
   "project-list-item",
