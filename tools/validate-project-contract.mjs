@@ -109,6 +109,7 @@ assert.deepEqual(holographic.holographic, {
   textureMode: 'tile',
   backTextureMode: 'fill',
   back: 'assets/back.png',
+  backFoilEnabled: false,
   mask: 'assets/front-mask.png'
 });
 const supportedHolographicStyles = [
@@ -150,6 +151,28 @@ assert.equal('back' in orphanedBackEffects.holographic, false);
 assert.equal('backTexture' in orphanedBackEffects.holographic, false);
 assert.equal('backTextureMode' in orphanedBackEffects.holographic, false);
 assert.equal('backMask' in orphanedBackEffects.holographic, false);
+
+const explicitlyDisabledBackFoil = normalizeProjectMedia({
+  type: 'image',
+  src: 'front.png',
+  holographic: { style: 'holographic', back: 'assets/back.png', backTexture: 'assets/back-foil.svg', backFoilEnabled: false }
+});
+assert.equal(explicitlyDisabledBackFoil.holographic.backFoilEnabled, false,
+  'An explicit reverse-side foil opt-out must survive normalization.');
+const explicitlyEnabledBackFoil = normalizeProjectMedia({
+  type: 'image',
+  src: 'front.png',
+  holographic: { style: 'holographic', back: 'assets/back.png', backFoilEnabled: true }
+});
+assert.equal(explicitlyEnabledBackFoil.holographic.backFoilEnabled, true,
+  'An explicit reverse-side foil opt-in must survive normalization.');
+const legacyBackFoilDefault = normalizeProjectMedia({
+  type: 'image',
+  src: 'front.png',
+  holographic: { style: 'holographic', back: 'assets/back.png', backTexture: 'assets/back-foil.svg' }
+});
+assert.equal(legacyBackFoilDefault.holographic.backFoilEnabled, true,
+  'Legacy records with a back texture must keep their implied reverse-side foil behavior.');
 
 assert.equal(normalizeProjectMedia({
   type: 'image',
