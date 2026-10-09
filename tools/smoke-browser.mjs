@@ -760,6 +760,36 @@ try {
 
         await page.locator('#lightboxClose').first().click();
         await page.waitForTimeout(100);
+
+        // Exercise Cosmos through the renderer config path, not only by swapping
+        // data-holo-style during the CSS preset audit.
+        const cosmosCard = page.locator('#portfolioGrid .project-card[data-project-id="holographic-cosmos-smoke"]').first();
+        await cosmosCard.waitFor({ state: 'visible', timeout: 3000 });
+        await cosmosCard.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+        const cosmosHolographic = page.locator('#lightboxMediaContainer .lightbox-holographic').first();
+        await cosmosHolographic.waitFor({ state: 'visible', timeout: 3000 });
+        const cosmosMaterial = await cosmosHolographic.evaluate(el => {
+          const face = el.querySelector('.lightbox-holographic-front');
+          return {
+            style: el.dataset.holoStyle,
+            spectrum: getComputedStyle(face.querySelector('.lightbox-holographic-spectrum')).backgroundImage,
+            environment: getComputedStyle(face.querySelector('.lightbox-holographic-environment')).backgroundImage,
+            sheen: getComputedStyle(face.querySelector('.lightbox-holographic-sheen')).backgroundImage
+          };
+        });
+        if (cosmosMaterial.style !== 'cosmos' ||
+            !cosmosMaterial.spectrum.includes('cosmos-bottom.png') ||
+            !cosmosMaterial.environment.includes('cosmos-middle-trans.png') ||
+            !cosmosMaterial.sheen.includes('cosmos-top-trans.png')) {
+          throw new Error('Cosmos renderer profile did not preserve its texture layers: ' + JSON.stringify(cosmosMaterial));
+        }
+        for (const asset of ['cosmos-bottom.png', 'cosmos-middle-trans.png', 'cosmos-top-trans.png']) {
+          const response = await page.request.get(`${BASE_URL}/assets/holographic/${asset}`);
+          if (!response.ok()) throw new Error('Cosmos texture asset is not reachable: ' + asset + ' (' + response.status() + ')');
+        }
+        await page.locator('#lightboxClose').first().click();
+        await page.waitForTimeout(100);
       },
       { width: 390, height: 844 },
       async page => {
@@ -787,6 +817,21 @@ try {
               backTextureMode: 'tile',
               backMask: 'assets/projects/holographic-smoke/back-mask.svg'
             }
+          }]
+        }, {
+          id: 'holographic-cosmos-smoke',
+          title: 'Cosmos Holographic Smoke',
+          subtitle: 'Cosmos texture fixture',
+          badge: '',
+          filters: [],
+          description: '',
+          thumbnail: { type: 'image', src: 'assets/projects/holographic-smoke/front.svg', focus: '50% 50%', zoom: 1 },
+          media: [{
+            type: 'image',
+            src: 'assets/projects/holographic-smoke/front.svg',
+            caption: 'Cosmos foil front',
+            orientation: 'square',
+            holographic: { style: 'cosmos', intensity: 0.75, textureMode: 'fill' }
           }]
         }];
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/></svg>';
