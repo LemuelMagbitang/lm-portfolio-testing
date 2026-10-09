@@ -1148,9 +1148,9 @@ function validateCmsRegressionContracts() {
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
   if (!renderer.includes("layer.style.maskMode = 'luminance'") ||
       !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||
-      !renderer.includes('applyHolographicMask(spectrum, frontMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(prism, frontMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(ribbons, frontMaskUrl)') ||
+      !renderer.includes('applyHolographicMask(spectrum, faceMaskUrl)') ||
+      !renderer.includes('applyHolographicMask(prism, faceMaskUrl)') ||
+      !renderer.includes('applyHolographicMask(ribbons, faceMaskUrl)') ||
       !renderer.includes('applyHolographicMask(sheen, faceMaskUrl)') ||
       !renderer.includes('applyHolographicMask(texture, faceMaskUrl)')) {
     err('Lightbox holographic mask: front and reverse layers must use their own face-specific masks.');
