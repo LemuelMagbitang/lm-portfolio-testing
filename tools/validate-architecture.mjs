@@ -172,6 +172,22 @@ for (const feature of featureDirs) {
   }
 }
 
+// Contract tests import production modules too. Keep their versioned specifiers
+// canonical so integration tests exercise the same module singleton as the app.
+for (const file of walk(path.join(root, 'tools')).filter(file => file.endsWith('.mjs'))) {
+  const source = fs.readFileSync(file, 'utf8');
+  for (const specifier of importsFrom(source)) {
+    const imported = normalizeImport(file, specifier);
+    if (!imported) continue;
+    const expectedQuery = canonicalModuleQueries.get(imported);
+    if (!expectedQuery) continue;
+    const actualQuery = importQuery(specifier);
+    if (actualQuery !== expectedQuery) {
+      errors.push(`${path.relative(root, file).replaceAll(path.sep, '/')} imports ${imported} with cache key ${actualQuery || '(none)'}; expected ${expectedQuery}`);
+    }
+  }
+}
+
 for (const facade of ['cms-data.js', 'site-runtime.js']) {
   const file = path.join(jsRoot, facade);
   if (fs.existsSync(file)) {
