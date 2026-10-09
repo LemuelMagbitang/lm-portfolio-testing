@@ -659,12 +659,16 @@ export function createLightboxMediaRenderer({
       glare.className = 'lightbox-holographic-glare';
       glare.setAttribute('aria-hidden', 'true');
 
+      const sheen = documentRef.createElement('span');
+      sheen.className = 'lightbox-holographic-sheen';
+      sheen.setAttribute('aria-hidden', 'true');
+
       if (frontMaskUrl) {
         applyHolographicMask(spectrum, frontMaskUrl);
         applyHolographicMask(glare, frontMaskUrl);
+        applyHolographicMask(sheen, frontMaskUrl);
       }
-      face.appendChild(spectrum);
-      face.appendChild(glare);
+      face.append(spectrum, glare, sheen);
 
       if (textureUrl) {
         const texture = buildHolographicLayer(

@@ -1572,8 +1572,7 @@ body.center-page {
   animation:holo-hint-breathe 3.8s ease-in-out infinite;
 }
 
-#lightboxMediaContainer .lightbox-holographic::after{
-  content:'';
+#lightboxMediaContainer .lightbox-holographic-sheen{
   position:absolute;
   inset:-18%;
   z-index:35;
@@ -1582,12 +1581,12 @@ body.center-page {
     108deg,
     transparent 37%,
     rgba(255,255,255,0) 43%,
-    rgba(255,255,255,.24) 49%,
-    rgba(255,255,255,.06) 53%,
+    rgba(255,255,255,.19) 49%,
+    rgba(255,255,255,.045) 53%,
     transparent 61%
   );
   mix-blend-mode:screen;
-  opacity:.44;
+  opacity:.34;
   transform:translateX(-120%) skewX(-8deg);
   animation:holo-idle-sheen 5.4s ease-in-out infinite;
 }
@@ -1606,10 +1605,10 @@ body.center-page {
 #lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::before{
   opacity:.28;
 }
-#lightboxMediaContainer .lightbox-holographic:hover::after,
-#lightboxMediaContainer .lightbox-holographic:focus-visible::after,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::after,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::after{
+#lightboxMediaContainer .lightbox-holographic:hover .lightbox-holographic-sheen,
+#lightboxMediaContainer .lightbox-holographic:focus-visible .lightbox-holographic-sheen,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged .lightbox-holographic-sheen,
+#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending .lightbox-holographic-sheen{
   animation-play-state:paused;
   opacity:.18;
 }
@@ -1680,7 +1679,8 @@ body.center-page {
 
 #lightboxMediaContainer .lightbox-holographic-spectrum,
 #lightboxMediaContainer .lightbox-holographic-glare,
-#lightboxMediaContainer .lightbox-holographic-texture{
+#lightboxMediaContainer .lightbox-holographic-texture,
+#lightboxMediaContainer .lightbox-holographic-sheen{
   position:absolute;
   inset:0;
   pointer-events:none;
@@ -1791,7 +1791,7 @@ body.center-page {
 @media (prefers-reduced-motion:reduce){
   #lightboxMediaContainer .lightbox-holographic,
   #lightboxMediaContainer .lightbox-holographic::before,
-  #lightboxMediaContainer .lightbox-holographic::after,
+  #lightboxMediaContainer .lightbox-holographic-sheen,
   #lightboxMediaContainer .lightbox-holographic-inner,
   #lightboxMediaContainer .lightbox-holographic-spectrum,
   #lightboxMediaContainer .lightbox-holographic-glare,
@@ -1800,7 +1800,7 @@ body.center-page {
   }
   #lightboxMediaContainer .lightbox-holographic,
   #lightboxMediaContainer .lightbox-holographic::before,
-  #lightboxMediaContainer .lightbox-holographic::after{
+  #lightboxMediaContainer .lightbox-holographic-sheen{
     animation:none;
   }
 }
