@@ -546,9 +546,9 @@ try {
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
           };
         });
-        if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
-            maskState.backLayers.some(Boolean)) {
-          throw new Error(`Holographic mask must cover every front foil layer and none of the back layers: ${JSON.stringify(maskState)}`);
+        if (maskState.frontLayers.some(value => !value.includes('front-mask.svg')) ||
+            maskState.backLayers.some(value => !value.includes('back-mask.svg'))) {
+          throw new Error(`Configured holographic faces must use their own mask: ${JSON.stringify(maskState)}`);
         }
         const textureState = await holographic.evaluate(el => {
           const texture = el.querySelector('.lightbox-holographic-front .lightbox-holographic-texture');
@@ -670,10 +670,10 @@ try {
               textureMode: 'fill',
               texture: 'assets/projects/holographic-smoke/foil.svg',
               back: 'assets/projects/holographic-smoke/back.svg',
-              mask: 'assets/projects/holographic-smoke/mask.svg',
+              mask: 'assets/projects/holographic-smoke/front-mask.svg',
               backTexture: 'assets/projects/holographic-smoke/foil.svg',
               backTextureMode: 'tile',
-              backMask: 'assets/projects/holographic-smoke/mask.svg'
+              backMask: 'assets/projects/holographic-smoke/back-mask.svg'
             }
           }]
         }];
@@ -683,7 +683,7 @@ try {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
         });
         await page.route('**/assets/projects/holographic-smoke/**', async route => {
-          const body = route.request().url().includes('/mask.svg') ? maskSvg : svg;
+          const body = route.request().url().includes('-mask.svg') ? maskSvg : svg;
           await route.fulfill({ status: 200, contentType: 'image/svg+xml', body });
         });
       }
@@ -1602,8 +1602,8 @@ try {
           };
         });
         if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
-            maskState.backLayers.some(value => !value.includes('mask.svg'))) {
-          throw new Error(`Custom reverse foil layers must use the separately configured back mask: ${JSON.stringify(maskState)}`);
+            maskState.backLayers.some(Boolean)) {
+          throw new Error(`A plain reverse face must not inherit the front foil mask: ${JSON.stringify(maskState)}`);
         }
 
         const holoBox = await holographic.boundingBox();
@@ -1705,7 +1705,7 @@ try {
           });
         });
         await page.route('**/assets/projects/holographic-smoke/**', async route => {
-          const body = route.request().url().includes('/mask.svg') ? maskSvg : svg;
+          const body = route.request().url().includes('-mask.svg') ? maskSvg : svg;
           await route.fulfill({ status: 200, contentType: 'image/svg+xml', body });
         });
       }
