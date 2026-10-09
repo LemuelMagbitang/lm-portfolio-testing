@@ -1150,9 +1150,15 @@ function validateCmsRegressionContracts() {
       !renderer.includes('function setHolographicTarget(') ||
       !renderer.includes("flip.className = 'lightbox-holographic-flip'") ||
       !css.includes('.lightbox-holographic.is-flipped .lightbox-holographic-flip') ||
-      !renderer.includes("'--holo-light-x'") ||
+      !renderer.includes("surface.style.setProperty('--holo-light-x', '34%')") ||
+      !renderer.includes("surface.style.setProperty('--holo-light-y', '26%')") ||
+      !renderer.includes('lightbox-holographic-prism') ||
+      !renderer.includes('lightbox-holographic-ribbons') ||
+      !css.includes('@keyframes holo-prism-drift') ||
+      !css.includes('@keyframes holo-light-ribbons') ||
       !css.includes('data-holo-texture-mode="tile"') ||
-      !css.includes('background-size:auto')) {
+      !css.includes('background-size:auto') ||
+      !css.includes('.lightbox-holographic-ribbons{\n    animation:none;')) {
     err('Holographic rendering: eased pointer tracking, off-axis light, and tile/fill foil texture mapping must remain available.');
   }
 
