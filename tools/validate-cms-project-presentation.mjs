@@ -49,6 +49,10 @@ assert.ok(/data-holo-mask/.test(admin) &&
   /white reveals foil, black hides it/i.test(admin) &&
   /front only; the back image is never masked/i.test(admin),
   'CMS holographic images must expose a front-only black/white luminance mask with a clear usage hint.');
+assert.ok(/data-holo-texture-mode/.test(admin) &&
+  /Tile repeats small motifs/i.test(admin) &&
+  /surface overlay, not a mask/i.test(admin),
+  'CMS holographic textures must distinguish repeatable foil patterns from the separate coverage mask.');
 assert.ok(/attachMediaBrowseButton\(row\.querySelector\('\[data-holo-mask\]'\)/.test(admin),
   'CMS holographic masks must use the existing upload-capable Media Library picker.');
 assert.ok(/attachMediaBrowseButton\([^\n]+\n(?:.|\n){0,700}data-holo-texture/.test(admin) ||
