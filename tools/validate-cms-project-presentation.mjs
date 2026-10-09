@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeProjectMedia } from '../js/data/project-normalizer.js';
+import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-01';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
