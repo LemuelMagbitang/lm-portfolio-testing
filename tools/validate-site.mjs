@@ -424,10 +424,10 @@ function validateCanonicalSocialMetadata() {
   for (const [file, expectedUrl] of expectedUrls) {
     if (!exists(file)) continue;
     const html = readText(file);
-    const canonicalTag = html.match(/<link\\b(?=[^>]*\\brel=['"]canonical['"])[^>]*>/i)?.[0] || '';
-    const canonicalUrl = canonicalTag.match(/\\bhref=['"]([^'"]+)['"]/i)?.[1] || '';
-    const socialTag = html.match(/<meta\\b(?=[^>]*\\bproperty=['"]og:url['"])[^>]*>/i)?.[0] || '';
-    const socialUrl = socialTag.match(/\\bcontent=['"]([^'"]+)['"]/i)?.[1] || '';
+    const canonicalTag = html.match(/<link\b(?=[^>]*\brel=['"]canonical['"])[^>]*>/i)?.[0] || '';
+    const canonicalUrl = canonicalTag.match(/\bhref=['"]([^'"]+)['"]/i)?.[1] || '';
+    const socialTag = html.match(/<meta\b(?=[^>]*\bproperty=['"]og:url['"])[^>]*>/i)?.[0] || '';
+    const socialUrl = socialTag.match(/\bcontent=['"]([^'"]+)['"]/i)?.[1] || '';
 
     if (canonicalUrl !== expectedUrl) {
       err(file + ': canonical URL must identify this page (' + expectedUrl + ').');
