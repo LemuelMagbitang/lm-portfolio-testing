@@ -1151,9 +1151,9 @@ function validateCmsRegressionContracts() {
       !renderer.includes('applyHolographicMask(spectrum, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(prism, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(ribbons, frontMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(sheen, frontMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(texture, frontMaskUrl)')) {
-    err('Lightbox holographic mask: front layers must be masked, custom backs remain independent, and fallback backs inherit the front mask.');
+      !renderer.includes('applyHolographicMask(sheen, faceMaskUrl)') ||
+      !renderer.includes('applyHolographicMask(texture, faceMaskUrl)')) {
+    err('Lightbox holographic mask: front and reverse layers must use their own face-specific masks.');
   }
 
   if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
