@@ -4893,7 +4893,7 @@ footer > .footer-content p{
   animation:holo-prism-drift 11s ease-in-out infinite alternate;
 }
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
-  opacity:calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .22));
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18));
   animation-duration:7.6s;
 }
 
@@ -4914,7 +4914,7 @@ footer > .footer-content p{
   animation:holo-prism-drift 5.8s linear infinite;
 }
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
-  opacity:calc(.12 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .25));
+  opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));
   animation-duration:4.8s;
 }
 
