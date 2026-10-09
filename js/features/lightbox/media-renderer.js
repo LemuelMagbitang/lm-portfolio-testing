@@ -123,7 +123,7 @@ export function createLightboxMediaRenderer({
   }
 
   function preloadImage(url, { fetchPriority = 'low' } = {}) {
-    if (!url) return Promise.resolve(false);
+    if (!url || destroyed) return Promise.resolve(false);
     let image = null;
     let finishPreload = () => {};
     const preload = new Promise(resolve => {
@@ -136,7 +136,7 @@ export function createLightboxMediaRenderer({
         try { await image.decode?.(); } catch (_) {}
         const width = Number(image.naturalWidth);
         const height = Number(image.naturalHeight);
-        if (width > 0 && height > 0) imageDimensionCache.set(url, { width, height });
+        if (!destroyed && width > 0 && height > 0) imageDimensionCache.set(url, { width, height });
         resolve(true);
       };
       image.onerror = () => resolve(false);
@@ -193,7 +193,7 @@ export function createLightboxMediaRenderer({
   }
 
   async function preloadLottie(url, { fetchPriority = 'low' } = {}) {
-    if (!url || typeof globalThis.fetch !== 'function') return false;
+    if (!url || destroyed || typeof globalThis.fetch !== 'function') return false;
     try {
       const dimensions = await withPreloadTimeout(
         resolveLottieDimensions(url, { fetchPriority }),
@@ -207,7 +207,7 @@ export function createLightboxMediaRenderer({
   }
 
   async function preloadVideo(url, { fetchPriority = 'low' } = {}) {
-    if (!url) return false;
+    if (!url || destroyed) return false;
     const root = ensureMediaPreloadRoot();
     const video = documentRef.createElement('video');
     video.muted = true;
@@ -299,7 +299,7 @@ export function createLightboxMediaRenderer({
   }
 
   async function preloadFetch(url, { fetchPriority = 'low' } = {}) {
-    if (!url || typeof globalThis.fetch !== 'function') return false;
+    if (!url || destroyed || typeof globalThis.fetch !== 'function') return false;
     const controller = typeof globalThis.AbortController === 'function'
       ? new globalThis.AbortController()
       : null;
@@ -335,6 +335,7 @@ export function createLightboxMediaRenderer({
       { length: Math.min(Math.max(1, concurrency), queue.length) },
       async () => {
         while (cursor < queue.length) {
+          if (destroyed) break;
           const index = cursor++;
           const job = queue[index];
           try {

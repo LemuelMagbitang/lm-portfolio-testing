@@ -83,6 +83,12 @@ assert.match(mediaRendererSource, /lottieDimensionAbortControllers\.forEach\(con
 assert.match(mediaRendererSource, /lottieDimensionAbortControllers\.clear\(\)/);
 assert.match(mediaRendererSource, /if \(!destroyed\) lottieDimensionCache\.set\(url, dimensions\)/);
 assert.match(mediaRendererSource, /function preloadFetch\(url, \{ fetchPriority = 'low' \}/);
+assert.match(mediaRendererSource, /function preloadImage\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed\) return Promise\.resolve\(false\);/);
+assert.match(mediaRendererSource, /async function preloadLottie\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return false;/);
+assert.match(mediaRendererSource, /async function preloadVideo\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed\) return false;/);
+assert.match(mediaRendererSource, /async function preloadFetch\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return false;/);
+assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
+assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) imageDimensionCache\.set\(url, \{ width, height \}\)/);
 assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);
 assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;/);
 assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;/);
