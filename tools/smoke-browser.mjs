@@ -4096,7 +4096,9 @@ try {
       }
     }, { width: 390, height: 844 });
 
-    await smokePage(browser, '/admin/', async page => {
+    await let cmsSmokeMediaSha = 'smoke-jpg';
+    let cmsSmokeUploadPayload = null;
+    smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
       // GitHub before the application shell is exposed. The shell becomes
       // active slightly before enterApp() calls its initial Hero navigation,
@@ -4230,6 +4232,23 @@ try {
       }
       await mediaNav.click();
       await page.locator('#content #mediaGrid').waitFor({ state: 'visible', timeout: 5000 });
+
+      // Upload over an existing filename: the API must receive the current
+      // Contents SHA, then the tile should use the returned SHA as its cache key.
+      await page.locator('#content #uploadPath').fill('assets/projects');
+      await page.locator('#content #fileInput').setInputFiles({
+        name: 'smoke.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('replacement image bytes')
+      });
+      await page.waitForFunction(() => {
+        const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
+          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke.jpg'));
+        return image && new URL(image.src).searchParams.get('v') === 'smoke-replac';
+      }, null, { timeout: 8000 });
+      if (!cmsSmokeUploadPayload || cmsSmokeUploadPayload.sha !== 'smoke-jpg') {
+        throw new Error('CMS same-name media upload did not send the current existing-file SHA.');
+      }
 
       // Refresh uses the same asynchronous tree request after the Media
       // Library is already mounted; navigating away during it must not repaint
@@ -4572,6 +4591,20 @@ try {
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
+        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke.jpg' &&
+            route.request().method() === 'PUT') {
+          cmsSmokeUploadPayload = route.request().postDataJSON();
+          cmsSmokeMediaSha = 'smoke-replaced-jpg';
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              content: { sha: cmsSmokeMediaSha },
+              commit: { sha: 'smoke-media-upload-commit' }
+            })
+          });
+          return;
+        }
         if (url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method() === 'PUT') {
           // Delay a normal content save so the browser smoke test can
           // navigate away before its completion callback runs.
@@ -4609,7 +4642,7 @@ try {
               tree: [
                 { type: 'tree', path: 'assets', sha: 'smoke-assets' },
                 { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
-                { type: 'blob', path: 'assets/projects/smoke.jpg', sha: 'smoke-jpg', size: 12 }
+                { type: 'blob', path: 'assets/projects/smoke.jpg', sha: cmsSmokeMediaSha, size: 12 }
               ]
             })
           });
