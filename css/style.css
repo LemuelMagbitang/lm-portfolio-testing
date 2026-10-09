@@ -4471,17 +4471,32 @@ footer > .footer-content p{
 }
 
 
-/* Holographic card finish: free foil layers from paint containment and give
-   the card a clean, lightbox-matched rounded/squircle silhouette. */
+/* Holographic card: the artwork element remains the Lightbox sizing anchor,
+   but it must not act as a clipping window for the rotating card. */
+#lightboxMediaContainer .lightbox-artwork.has-holographic{
+  overflow:visible;
+  z-index:1;
+}
 #lightboxMediaContainer .lightbox-holographic{
   contain:layout style;
   overflow:visible;
   border-radius:clamp(16px, 4.8%, 27px);
-  border:1px solid rgba(255,255,255,.34);
-  box-shadow:0 22px 54px -25px rgba(0,0,0,.82),0 0 0 1px rgba(0,0,0,.34),inset 0 0 0 1px rgba(255,255,255,.10);
+  border:0;
+  box-shadow:none;
+  outline:none;
+  transform-origin:50% 50%;
+  isolation:isolate;
 }
-#lightboxMediaContainer .lightbox-holographic-face{border-radius:inherit;}
-#lightboxMediaContainer .lightbox-holographic:focus-visible{border-radius:inherit;outline-offset:5px;}
+/* Only the two card faces clip their own pixels to preserve smooth corners.
+   The outside Lightbox wrappers stay open so rotation can extend freely. */
+#lightboxMediaContainer .lightbox-holographic-face{
+  border-radius:inherit;
+  overflow:hidden;
+}
+#lightboxMediaContainer .lightbox-holographic:focus-visible{
+  border-radius:inherit;
+  outline-offset:5px;
+}
 @supports (corner-shape:squircle){
   #lightboxMediaContainer .lightbox-holographic,
   #lightboxMediaContainer .lightbox-holographic-face{corner-shape:squircle;}
