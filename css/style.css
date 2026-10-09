@@ -1894,7 +1894,7 @@ body.center-page {
 }
 
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
-  opacity:.28;
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .19));
   animation-duration:8s;
   mix-blend-mode:screen;
   filter:blur(.7px);
@@ -1974,7 +1974,7 @@ body.center-page {
 }
 
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
-  opacity:.29;
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .19));
   animation-duration:10.5s;
   mix-blend-mode:screen;
   filter:blur(1.4px);
@@ -4534,14 +4534,14 @@ footer > .footer-content p{
 /* More legible spectrum, stronger controlled color separation, broad fixed reflections. */
 #lightboxMediaContainer .lightbox-holographic-spectrum{filter:saturate(1.18) contrast(1.035);}
 #lightboxMediaContainer .lightbox-holographic-prism{
-  opacity:calc(.23 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .31));
+  opacity:calc(.06 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .26));
   filter:blur(.45px) saturate(1.30) contrast(1.06);
 }
 #lightboxMediaContainer .lightbox-holographic-ribbons{
-  opacity:calc(.22 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .31));
+  opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));
   filter:blur(.82px) saturate(1.14);
 }
-#lightboxMediaContainer .lightbox-holographic-sheen{opacity:.42;}
+#lightboxMediaContainer .lightbox-holographic-sheen{opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));}
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism{
   opacity:calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .31));
   filter:blur(.4px) saturate(1.38) contrast(1.08);
@@ -4662,7 +4662,7 @@ footer > .footer-content p{
   background-position:center center,var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   background-blend-mode:overlay,color-dodge;
   mix-blend-mode:color-dodge;
-  opacity:calc(.20 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .43));
+  opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .34));
   filter:brightness(.96) contrast(1.34) saturate(1.42);
   transition:opacity 160ms ease-out;
   animation:holo-spectrum-breathe 5.2s ease-in-out infinite alternate;
@@ -4686,7 +4686,7 @@ footer > .footer-content p{
   background-size:150% 150%,250% 230%;
   background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   mix-blend-mode:screen;
-  opacity:calc(.12 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .30));
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18));
   filter:brightness(1.02) contrast(1.12);
   transition:opacity 160ms ease-out;
 }
@@ -4695,7 +4695,7 @@ footer > .footer-content p{
   background-position:center center;
   background-repeat:no-repeat;
   background-size:100% 100%;
-  opacity:calc(.16 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .16));
   mix-blend-mode:soft-light;
   filter:contrast(1.08) saturate(1.1);
 }
@@ -4846,7 +4846,7 @@ footer > .footer-content p{
   z-index:21;
   background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   mix-blend-mode:screen;
-  opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38));
+  opacity:calc(.03 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .28));
   transition:opacity 180ms ease-out,background-position 180ms ease-out;
 }
 #lightboxMediaContainer .lightbox-holographic-ribbons{z-index:23;}
@@ -4854,7 +4854,7 @@ footer > .footer-content p{
   z-index:26;
   background-size:100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
   mix-blend-mode:screen;
-  opacity:calc(.06 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .56));
+  opacity:calc(.03 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .40));
 }
 #lightboxMediaContainer .lightbox-holographic-glare{z-index:30;}
 #lightboxMediaContainer .lightbox-holographic-sheen{z-index:35;}
@@ -4926,7 +4926,7 @@ footer > .footer-content p{
     repeating-linear-gradient(142deg,transparent 0 7px,rgba(255,255,255,.29) 7.5px,rgba(218,136,255,.22) 8.5px,transparent 10px 16px);
   background-size:100% 100%,100% 100%;
   background-blend-mode:screen,screen;
-  opacity:calc(.10 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .42));
+  opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .31));
   filter:contrast(1.12);
 }
 
@@ -4950,7 +4950,7 @@ footer > .footer-content p{
     repeating-linear-gradient(47deg,transparent 0 31px,rgba(255,255,255,.68) 31.5px,transparent 32.5px 58px),
     repeating-linear-gradient(133deg,transparent 0 27px,rgba(157,233,255,.46) 27.5px,transparent 28.5px 64px);
   background-size:100% 100%,100% 100%;
-  opacity:calc(.06 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .26));
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .22));
 }
 
 /* Glitter: small, crisp pinprick glints that twinkle instead of broad bands. */
@@ -4963,7 +4963,7 @@ footer > .footer-content p{
     radial-gradient(circle at 28% 84%,rgba(183,246,255,.96) 0 .8px,transparent 2.1px),
     radial-gradient(circle at 88% 58%,rgba(255,185,241,.95) 0 .9px,transparent 2.4px);
   background-size:100% 100%;
-  opacity:calc(.05 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .62));
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .42));
   animation:holo-glitter-twinkle 3.2s ease-in-out infinite alternate;
 }
 
@@ -4975,7 +4975,7 @@ footer > .footer-content p{
     radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.08),transparent 70%);
   background-size:170% 170%,150% 150%;
   background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
-  opacity:calc(.07 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .43));
+  opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .31));
   filter:blur(.15px) contrast(1.15);
 }
 
@@ -5056,7 +5056,7 @@ footer > .footer-content p{
   background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),center center,center center;
   background-blend-mode:screen,screen,multiply,soft-light;
   mix-blend-mode:soft-light;
-  opacity:calc(.30 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18) + (var(--holo-tilt-strength,0) * .18));
+  opacity:calc(.07 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .24) + (var(--holo-tilt-strength,0) * .12));
   filter:contrast(1.08) saturate(1.04);
   transition:opacity 160ms eas/* Shared visual intensity curve. The editor still stores a normalized 0–1 value;
    this visual mapping leaves headroom for reflective highlights instead of clipping
