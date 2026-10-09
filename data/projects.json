@@ -646,8 +646,8 @@
     "description": "this is a funko pop in 2d",
     "thumbnail": {
       "type": "image",
-      "src": "",
-      "focus": "50% 50%",
+      "src": "assets/projects/funko-pop/8.jpg",
+      "focus": "49% 45%",
       "zoom": 1
     },
     "media": [
