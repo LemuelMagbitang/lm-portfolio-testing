@@ -4480,7 +4480,7 @@ footer > .footer-content p{
 #lightboxMediaContainer .lightbox-holographic{
   contain:layout style;
   overflow:visible;
-  border-radius:clamp(16px, 4.8%, 27px);
+  border-radius:18px;
   border:0;
   box-shadow:none;
   outline:none;
