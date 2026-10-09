@@ -415,7 +415,7 @@
         "orientation": "",
         "holographic": {
           "style": "holographic",
-          "intensity": 0.7,
+          "intensity": 0.5,
           "textureMode": "tile",
           "backTextureMode": "fill",
           "texture": "assets/projects/gog-render-challenge/foil-test-250.png",
@@ -658,7 +658,7 @@
         "orientation": "square",
         "holographic": {
           "style": "holographic",
-          "intensity": 1,
+          "intensity": 0.25,
           "textureMode": "fill"
         }
       }
