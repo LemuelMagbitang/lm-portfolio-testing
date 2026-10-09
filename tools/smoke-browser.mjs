@@ -521,11 +521,11 @@ try {
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.contain.includes('paint') ||
-            !affordance.borderRadius || affordance.borderRadius === '0px' ||
+            affordance.borderRadius !== '0px' ||
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
             affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
             affordance.artworkOverflow !== 'visible' ||
-            !affordance.faceRadius || affordance.faceRadius === '0px' ||
+            affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.hintFace !== 'FRONT' ||
             affordance.hintAction !== 'touch' ||
@@ -1608,11 +1608,11 @@ try {
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.contain.includes('paint') ||
-            !affordance.borderRadius || affordance.borderRadius === '0px' ||
+            affordance.borderRadius !== '0px' ||
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
             affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
             affordance.artworkOverflow !== 'visible' ||
-            !affordance.faceRadius || affordance.faceRadius === '0px' ||
+            affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.backEffectCount !== 0 ||
             affordance.hintFace !== 'FRONT' ||
