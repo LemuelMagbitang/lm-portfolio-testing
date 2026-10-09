@@ -491,12 +491,14 @@ try {
           return {
             animationName: base.animationName,
             hint: hint.content,
-            sheenAnimation: sheen ? getComputedStyle(sheen).animationName : ''
+            sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
+            flipTransition: getComputedStyle(el.querySelector('.lightbox-holographic-flip')).transitionDuration
           };
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.hint !== '"HOLD + MOVE"' ||
-            !affordance.sheenAnimation.includes('holo-idle-sheen')) {
+            !affordance.sheenAnimation.includes('holo-idle-sheen') ||
+            Number.parseFloat(affordance.flipTransition) <= 0) {
           throw new Error('Mobile holographic surface is missing its subtle interaction affordance.');
         }
         const maskState = await holographic.evaluate(el => {
