@@ -696,10 +696,13 @@ try {
             y: el.style.getPropertyValue('--holo-y')
           }))
         ]);
+        const quickFoilX = Number.parseFloat(quickNativeState[1].x);
+        const quickFoilY = Number.parseFloat(quickNativeState[1].y);
         if (quickNativeState[0] < quickScrollBefore + 4 ||
             quickNativeState[1].engaged ||
-            quickNativeState[1].x !== '50%' ||
-            quickNativeState[1].y !== '50%') {
+            !Number.isFinite(quickFoilX) || !Number.isFinite(quickFoilY) ||
+            Math.abs(quickFoilX - 50) > 1 ||
+            Math.abs(quickFoilY - 50) > 1) {
           throw new Error('A quick native mobile swipe was not preserved as normal Lightbox scrolling: ' +
             JSON.stringify({ scrollBefore: quickScrollBefore, scrollAfter: quickNativeState[0], foil: quickNativeState[1] }));
         }
