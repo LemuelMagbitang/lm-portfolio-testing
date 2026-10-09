@@ -1628,8 +1628,17 @@ body.center-page {
   will-change:transform;
 }
 
-#lightboxMediaContainer .lightbox-holographic.is-flipped .lightbox-holographic-inner{
-  transform:perspective(1200px) rotateX(var(--holo-rx,0deg)) rotateY(calc(180deg + var(--holo-ry,0deg)));
+#lightboxMediaContainer .lightbox-holographic-flip{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  transform:rotateY(0deg);
+  transition:transform 460ms cubic-bezier(.22,.72,.2,1);
+  will-change:transform;
+}
+
+#lightboxMediaContainer .lightbox-holographic.is-flipped .lightbox-holographic-flip{
+  transform:rotateY(180deg);
 }
 
 #lightboxMediaContainer .lightbox-holographic-face{
@@ -1870,6 +1879,7 @@ body.center-page {
   #lightboxMediaContainer .lightbox-holographic::before,
   #lightboxMediaContainer .lightbox-holographic-sheen,
   #lightboxMediaContainer .lightbox-holographic-inner,
+  #lightboxMediaContainer .lightbox-holographic-flip,
   #lightboxMediaContainer .lightbox-holographic-spectrum,
   #lightboxMediaContainer .lightbox-holographic-glare,
   #lightboxMediaContainer .lightbox-holographic-texture{
