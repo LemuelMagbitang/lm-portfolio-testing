@@ -5058,7 +5058,10 @@ footer > .footer-content p{
   mix-blend-mode:soft-light;
   opacity:calc(.07 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .24) + (var(--holo-tilt-strength,0) * .12));
   filter:contrast(1.08) saturate(1.04);
-  transition:opacity 160ms eas/* Shared visual intensity curve. The editor still stores a normalized 0–1 value;
+  transition:opacity 160ms ease-out;
+}
+
+/* Shared visual intensity curve. The editor still stores a normalized 0–1 value;
    this visual mapping leaves headroom for reflective highlights instead of clipping
    several screen/color-dodge layers at once. */
 #lightboxMediaContainer .lightbox-holographic{
