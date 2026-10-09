@@ -499,12 +499,16 @@ try {
             animationName: base.animationName,
             hint: hint.content,
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
+            prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
+            ribbonsAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-ribbons')).animationName,
             flipTransition: getComputedStyle(el.querySelector('.lightbox-holographic-flip')).transitionDuration
           };
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.hint !== '"HOLD + MOVE"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
+            !affordance.prismAnimation.includes('holo-prism-drift') ||
+            !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
             Number.parseFloat(affordance.flipTransition) <= 0) {
           throw new Error('Mobile holographic surface is missing its subtle interaction affordance.');
         }
@@ -1524,12 +1528,16 @@ try {
             animationName: getComputedStyle(el).animationName,
             hint: getComputedStyle(el, '::before').content,
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
+            prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
+            ribbonsAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-ribbons')).animationName,
             flipTransition: getComputedStyle(el.querySelector('.lightbox-holographic-flip')).transitionDuration
           };
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.hint !== '"MOVE / CLICK"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
+            !affordance.prismAnimation.includes('holo-prism-drift') ||
+            !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
             Number.parseFloat(affordance.flipTransition) <= 0) {
           throw new Error('Desktop holographic surface is missing its subtle interaction affordance.');
         }
