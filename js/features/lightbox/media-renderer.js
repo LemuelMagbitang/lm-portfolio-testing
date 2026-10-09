@@ -20,6 +20,7 @@ export function createLightboxMediaRenderer({
 } = {}) {
   let youtubeMessageCleanup = null;
   const holographicCleanups = new Set();
+  const holographicMotionStates = new WeakMap();
   const youtubeFrameCache = new Map();
   const imageDimensionCache = new Map();
   const videoDimensionCache = new Map();
@@ -531,11 +532,14 @@ export function createLightboxMediaRenderer({
       ? Math.max(0, Math.min(1, intensityValue))
       : 0.7;
     const texture = String(value.texture || '').trim();
+    const textureModeValue = String(value.textureMode || 'fill').trim().toLowerCase();
+    const textureMode = ['tile', 'fill'].includes(textureModeValue) ? textureModeValue : 'fill';
     const back = String(value.back || '').trim();
     const mask = String(value.mask || '').trim();
     return {
       style: ['holographic', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
       intensity,
+      textureMode,
       ...(texture ? { texture } : {}),
       ...(back ? { back } : {}),
       ...(mask ? { mask } : {})
@@ -549,18 +553,67 @@ export function createLightboxMediaRenderer({
     if (!surface) return;
     const clampedX = clampHolographic(x);
     const clampedY = clampHolographic(y);
-    const ry = ((clampedX - 50) / 50) * 11;
-    const rx = ((50 - clampedY) / 50) * 11;
+    const ry = ((clampedX - 50) / 50) * 9;
+    const rx = ((50 - clampedY) / 50) * 9;
     const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
     const foilX = 100 - clampedX;
     const foilY = 100 - clampedY;
+
+    // The card tilt follows the pointer, but the reflected softbox stays
+    // off-axis and only shifts subtly in the opposite direction. This avoids
+    // the artificial "flashlight attached to cursor" look.
+    const lightX = clampHolographic(34 + ((50 - clampedX) * 0.18), 12, 56);
+    const lightY = clampHolographic(26 + ((50 - clampedY) * 0.14), 10, 48);
+
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
     surface.style.setProperty('--holo-foil-x', foilX.toFixed(2) + '%');
     surface.style.setProperty('--holo-foil-y', foilY.toFixed(2) + '%');
+    surface.style.setProperty('--holo-light-x', lightX.toFixed(2) + '%');
+    surface.style.setProperty('--holo-light-y', lightY.toFixed(2) + '%');
     surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
+  }
+
+  function setHolographicTarget(surface, x, y) {
+    if (!surface) return;
+    const motion = holographicMotionStates.get(surface);
+    const targetX = clampHolographic(x);
+    const targetY = clampHolographic(y);
+    if (!motion || typeof windowRef?.requestAnimationFrame !== 'function') {
+      updateHolographicTilt(surface, targetX, targetY);
+      return;
+    }
+
+    motion.targetX = targetX;
+    motion.targetY = targetY;
+    if (motion.frame !== null) return;
+
+    const animate = timestamp => {
+      motion.frame = null;
+      const previousTime = motion.lastTime || (timestamp - 16.67);
+      const elapsed = Math.max(1, Math.min(50, timestamp - previousTime));
+      const alpha = 1 - Math.exp(-elapsed / 42);
+      motion.lastTime = timestamp;
+      motion.x += (motion.targetX - motion.x) * alpha;
+      motion.y += (motion.targetY - motion.y) * alpha;
+
+      const dx = motion.targetX - motion.x;
+      const dy = motion.targetY - motion.y;
+      if (Math.abs(dx) < 0.04 && Math.abs(dy) < 0.04) {
+        motion.x = motion.targetX;
+        motion.y = motion.targetY;
+        motion.lastTime = 0;
+        updateHolographicTilt(surface, motion.x, motion.y);
+        return;
+      }
+
+      updateHolographicTilt(surface, motion.x, motion.y);
+      motion.frame = windowRef.requestAnimationFrame(animate);
+    };
+
+    motion.frame = windowRef.requestAnimationFrame(animate);
   }
 
   function setHolographicReflection(surface, event) {
@@ -568,7 +621,7 @@ export function createLightboxMediaRenderer({
     if (!rect || !rect.width || !rect.height) return;
     const x = ((Number(event.clientX) - rect.left) / rect.width) * 100;
     const y = ((Number(event.clientY) - rect.top) / rect.height) * 100;
-    updateHolographicTilt(surface, x, y);
+    setHolographicTarget(surface, x, y);
   }
 
   function buildHolographicLayer(documentRef, url, className, altText = '') {
@@ -606,12 +659,16 @@ export function createLightboxMediaRenderer({
     const surface = documentRef.createElement('div');
     surface.className = 'lightbox-holographic';
     surface.dataset.holoStyle = config.style;
+    surface.dataset.holoTextureMode = config.textureMode;
     surface.dataset.holoInput = 'pointer';
     surface.style.setProperty('--holo-intensity', String(config.intensity));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
     surface.style.setProperty('--holo-foil-x', '50%');
     surface.style.setProperty('--holo-foil-y', '50%');
+    surface.style.setProperty('--holo-light-x', '34%');
+    surface.style.setProperty('--holo-light-y', '26%');
+    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, frame: null, lastTime: 0 });
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
     surface.style.setProperty('--holo-angle', '0deg');
@@ -671,12 +728,11 @@ export function createLightboxMediaRenderer({
       face.append(spectrum, glare, sheen);
 
       if (textureUrl) {
-        const texture = buildHolographicLayer(
-          documentRef,
-          textureUrl,
-          'lightbox-holographic-texture',
-          ''
-        );
+        const texture = documentRef.createElement('span');
+        texture.className = 'lightbox-holographic-texture';
+        texture.setAttribute('aria-hidden', 'true');
+        const safeTextureUrl = encodeURI(String(textureUrl).split('"').join('%22'));
+        texture.style.backgroundImage = 'url("' + safeTextureUrl + '")';
         if (frontMaskUrl) applyHolographicMask(texture, frontMaskUrl);
         face.appendChild(texture);
       }
@@ -700,6 +756,11 @@ export function createLightboxMediaRenderer({
 
     const cleanup = () => {
       clearTouchGesture();
+      const motion = holographicMotionStates.get(surface);
+      if (motion?.frame !== null && motion?.frame !== undefined) {
+        windowRef?.cancelAnimationFrame?.(motion.frame);
+      }
+      holographicMotionStates.delete(surface);
       surface.removeEventListener('pointermove', onPointerMove);
       surface.removeEventListener('pointerdown', onPointerDown);
       surface.removeEventListener('pointerup', onPointerUp);
@@ -744,7 +805,7 @@ export function createLightboxMediaRenderer({
     };
 
     const onPointerLeave = () => {
-      if (!touchGesture?.engaged) updateHolographicTilt(surface, 50, 50);
+      if (!touchGesture?.engaged) setHolographicTarget(surface, 50, 50);
     };
 
     const onPointerDown = event => {
