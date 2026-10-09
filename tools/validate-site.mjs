@@ -1179,6 +1179,13 @@ function validateCmsRegressionContracts() {
     err('Holographic card: masked fallback backs, unclipped squircle shape and dynamic FRONT/BACK guidance are required.');
   }
 
+  if (!css.includes('.lightbox-artwork.has-holographic{\n  overflow:visible;') ||
+      !css.includes('border:0;\n  box-shadow:none;\n  outline:none;') ||
+      !css.includes('outline:none!important;') ||
+      !css.includes('#lightboxMediaContainer .lightbox-holographic-face{\n  border-radius:inherit;\n  overflow:hidden;')) {
+    err('Holographic card: the Lightbox artwork slot must not clip 3D tilt; the card has no outer frame and each face retains rounded clipping.');
+  }
+
   if (!gallery.includes('getEffectiveBaseCount') ||
       !gallery.includes('getRowAlignedCount') ||
       !presentation.includes('getRowAlignedCount') ||
