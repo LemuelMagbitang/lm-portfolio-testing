@@ -412,7 +412,12 @@
         "type": "image",
         "src": "assets/projects/gog-render-challenge/card-layout.png",
         "caption": "Card Layout for the Gauntlet of Gods Physical Game Print",
-        "orientation": ""
+        "orientation": "",
+        "holographic": {
+          "style": "holographic",
+          "intensity": 0.7,
+          "textureMode": "fill"
+        }
       },
       {
         "type": "youtube",
