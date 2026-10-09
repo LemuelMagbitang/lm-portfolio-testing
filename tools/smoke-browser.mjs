@@ -621,11 +621,13 @@ try {
           }]
         }];
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/></svg>';
+        const maskSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/><path d="M0 0H48V100H0Z" fill="#fff"/></svg>';
         await page.route('**/data/projects.json*', async route => {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
         });
         await page.route('**/assets/projects/holographic-smoke/**', async route => {
-          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+          const body = route.request().url().includes('/mask.svg') ? maskSvg : svg;
+          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body });
         });
       }
     );
@@ -1584,6 +1586,7 @@ try {
           }]
         }];
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/></svg>';
+        const maskSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/><path d="M0 0H48V100H0Z" fill="#fff"/></svg>';
         await page.route('**/data/projects.json*', async route => {
           await route.fulfill({
             status: 200,
@@ -1592,7 +1595,8 @@ try {
           });
         });
         await page.route('**/assets/projects/holographic-smoke/**', async route => {
-          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+          const body = route.request().url().includes('/mask.svg') ? maskSvg : svg;
+          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body });
         });
       }
     );
