@@ -494,11 +494,20 @@ try {
         const affordance = await holographic.evaluate(el => {
           const base = getComputedStyle(el);
           const hint = getComputedStyle(el, '::before');
+          const artwork = el.closest('.lightbox-artwork.has-holographic');
+          const face = el.querySelector('.lightbox-holographic-front');
           const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
           return {
             animationName: base.animationName,
             contain: base.contain,
             borderRadius: base.borderRadius,
+            borderWidth: base.borderWidth,
+            borderStyle: base.borderStyle,
+            boxShadow: base.boxShadow,
+            outlineStyle: base.outlineStyle,
+            artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
+            faceRadius: face ? getComputedStyle(face).borderRadius : '',
+            faceOverflow: face ? getComputedStyle(face).overflow : '',
             hint: hint.content,
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
             prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
@@ -509,6 +518,11 @@ try {
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.contain.includes('paint') ||
             !affordance.borderRadius || affordance.borderRadius === '0px' ||
+            affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
+            affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
+            affordance.artworkOverflow !== 'visible' ||
+            !affordance.faceRadius || affordance.faceRadius === '0px' ||
+            affordance.faceOverflow !== 'hidden' ||
             affordance.hint !== '"FRONT • HOLD + MOVE"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
             !affordance.prismAnimation.includes('holo-prism-drift') ||
@@ -1529,10 +1543,19 @@ try {
         const affordance = await holographic.evaluate(el => {
           const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
           const style = getComputedStyle(el);
+          const artwork = el.closest('.lightbox-artwork.has-holographic');
+          const face = el.querySelector('.lightbox-holographic-front');
           return {
             animationName: style.animationName,
             contain: style.contain,
             borderRadius: style.borderRadius,
+            borderWidth: style.borderWidth,
+            borderStyle: style.borderStyle,
+            boxShadow: style.boxShadow,
+            outlineStyle: style.outlineStyle,
+            artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
+            faceRadius: face ? getComputedStyle(face).borderRadius : '',
+            faceOverflow: face ? getComputedStyle(face).overflow : '',
             hint: getComputedStyle(el, '::before').content,
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
             prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
@@ -1543,6 +1566,11 @@ try {
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.contain.includes('paint') ||
             !affordance.borderRadius || affordance.borderRadius === '0px' ||
+            affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
+            affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
+            affordance.artworkOverflow !== 'visible' ||
+            !affordance.faceRadius || affordance.faceRadius === '0px' ||
+            affordance.faceOverflow !== 'hidden' ||
             affordance.hint !== '"FRONT • MOVE / CLICK"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
             !affordance.prismAnimation.includes('holo-prism-drift') ||
