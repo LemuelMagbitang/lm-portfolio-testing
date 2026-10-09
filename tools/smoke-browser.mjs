@@ -497,6 +497,8 @@ try {
           const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
           return {
             animationName: base.animationName,
+            contain: base.contain,
+            borderRadius: base.borderRadius,
             hint: hint.content,
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
             prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
@@ -505,7 +507,9 @@ try {
           };
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
-            affordance.hint !== '"HOLD + MOVE"' ||
+            affordance.contain.includes('paint') ||
+            !affordance.borderRadius || affordance.borderRadius === '0px' ||
+            affordance.hint !== '"FRONT • HOLD + MOVE"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
             !affordance.prismAnimation.includes('holo-prism-drift') ||
             !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
@@ -1524,8 +1528,11 @@ try {
 
         const affordance = await holographic.evaluate(el => {
           const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
+          const style = getComputedStyle(el);
           return {
-            animationName: getComputedStyle(el).animationName,
+            animationName: style.animationName,
+            contain: style.contain,
+            borderRadius: style.borderRadius,
             hint: getComputedStyle(el, '::before').content,
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
             prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
@@ -1534,7 +1541,9 @@ try {
           };
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
-            affordance.hint !== '"MOVE / CLICK"' ||
+            affordance.contain.includes('paint') ||
+            !affordance.borderRadius || affordance.borderRadius === '0px' ||
+            affordance.hint !== '"FRONT • MOVE / CLICK"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
             !affordance.prismAnimation.includes('holo-prism-drift') ||
             !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
@@ -1551,8 +1560,8 @@ try {
           };
         });
         if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
-            maskState.backLayers.some(Boolean)) {
-          throw new Error(`Holographic mask must cover every front foil layer and none of the back layers: ${JSON.stringify(maskState)}`);
+            maskState.backLayers.some(value => !value.includes('mask.svg'))) {
+          throw new Error(`Holographic fallback back must receive the same mask as the front foil layers: ${JSON.stringify(maskState)}`);
         }
 
         const holoBox = await holographic.boundingBox();
@@ -1603,14 +1612,18 @@ try {
             !holoStateBeforeFlip.textureRepeat.includes('repeat')) {
           throw new Error('Small foil pattern images must repeat across the whole card face.');
         }
-        if (!holoStateBeforeFlip.back.includes('holographic-smoke/back.svg')) {
-          throw new Error('Holographic Lightbox did not mount the configured back artwork.');
+        if (!holoStateBeforeFlip.back.includes('holographic-smoke/front.svg')) {
+          throw new Error('Holographic Lightbox did not reuse the front artwork when no custom back image is configured.');
         }
 
         await holographic.click();
         if (await holographic.getAttribute('aria-pressed') !== 'true' ||
             !(await holographic.evaluate(el => el.classList.contains('is-flipped')))) {
           throw new Error('Holographic Lightbox tap/click did not flip the artwork.');
+        }
+        const reverseHint = await holographic.evaluate(el => getComputedStyle(el, '::before').content);
+        if (reverseHint !== '"BACK • MOVE / CLICK"') {
+          throw new Error('Holographic guidance did not update from FRONT to BACK after flipping.');
         }
         await page.locator('#lightboxClose').first().click();
         await page.waitForTimeout(100);
@@ -1635,7 +1648,7 @@ try {
               intensity: 0.8,
               textureMode: 'tile',
               texture: 'assets/projects/holographic-smoke/foil.svg',
-              back: 'assets/projects/holographic-smoke/back.svg',
+
               mask: 'assets/projects/holographic-smoke/mask.svg'
             }
           }]
