@@ -46,13 +46,14 @@ assert.ok(/data-holo-enabled/.test(admin), 'CMS Projects must expose an enable/d
 assert.ok(/data-holo-texture/.test(admin) && /data-holo-back/.test(admin),
   'CMS holographic images must support optional texture and back-image sources.');
 assert.ok(/data-holo-mask/.test(admin) &&
-  /white reveals foil, black hides it/i.test(admin) &&
-  /front only; the back image is never masked/i.test(admin),
-  'CMS holographic images must expose a front-only black/white luminance mask with a clear usage hint.');
+  /white reveals foil; black hides it\. front only/i.test(admin) &&
+  /data-holo-back-mask/.test(admin) &&
+  /Back settings affect only the custom reverse/i.test(admin),
+  'CMS holographic masks must be independent for the front and optional custom back.');
 assert.ok(/data-holo-texture-mode/.test(admin) &&
-  /Tile repeats small motifs/i.test(admin) &&
-  /surface overlay, not a mask/i.test(admin),
-  'CMS holographic textures must distinguish repeatable foil patterns from the separate coverage mask.');
+  /Small motifs tile; full-card maps fill the surface/i.test(admin) &&
+  /data-holo-back-texture-mode/.test(admin),
+  'CMS holographic textures must support independent front/back tile or fill mapping.');
 assert.ok(/attachMediaBrowseButton\(row\.querySelector\('\[data-holo-mask\]'\)/.test(admin),
   'CMS holographic masks must use the existing upload-capable Media Library picker.');
 assert.ok(/attachMediaBrowseButton\([^\n]+\n(?:.|\n){0,700}data-holo-texture/.test(admin) ||
