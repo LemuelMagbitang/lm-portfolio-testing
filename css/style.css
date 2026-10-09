@@ -4611,6 +4611,13 @@ footer > .footer-content p{
 }
 @media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic{animation:none!important;}}
 
+/* Newly added foil layers must honor the same reduced-motion preference as the
+   card's idle tilt and existing prism/ribbon treatments. */
+@media(prefers-reduced-motion:reduce){
+ #lightboxMediaContainer .lightbox-holographic-diffraction,
+ #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}
+}
+
 
 /* High-contrast collectible-card foil: a moving diffraction grating plus
    pinprick star glints. Both layers inherit the artwork-alpha/custom-mask

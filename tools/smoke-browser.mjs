@@ -925,7 +925,8 @@ try {
       // The Lightbox is initialized before Gallery completes startup so its
       // media warm-up can begin early. Once Gallery is ready, navigation must
       // still use Gallery's filtered-card contract rather than every DOM card.
-      if (filteredCards > 0 && filteredCards < 11) {
+      const totalProjectCards = await page.locator('#portfolioGrid .project-card').count();
+      if (filteredCards > 0 && filteredCards < totalProjectCards) {
         const filteredIds = new Set(visibleFilteredCards.map(item => item.id).filter(Boolean));
         const filteredFirst = page.locator('#portfolioGrid .project-card:visible').first();
         await filteredFirst.click();

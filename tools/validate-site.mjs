@@ -1196,6 +1196,7 @@ function validateCmsRegressionContracts() {
       !admin.includes('value="cat-eye"') ||
       !css.includes('lightbox-holographic-diffraction') ||
       !css.includes('lightbox-holographic-sparkles') ||
+      !css.includes('@media(prefers-reduced-motion:reduce){\n #lightboxMediaContainer .lightbox-holographic-diffraction,\n #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}\n}') ||
       !css.includes('.lightbox-holographic-hint') ||
       !css.includes('display:none!important;content:none!important;')) {
     err('Holographic card: reverse toggle, no-back mirroring, eight foil finishes, and the interaction cue must remain available.');
