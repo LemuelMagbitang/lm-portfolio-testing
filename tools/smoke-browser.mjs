@@ -820,6 +820,8 @@ try {
         const sparkles = el.querySelector('.lightbox-holographic-sparkles');
         const spectrum = el.querySelector('.lightbox-holographic-spectrum');
         const hint = el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-hint');
+        const desktopAction = hint?.querySelector('.lightbox-holographic-desktop-action');
+        const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
         const caption = el.closest('.lightbox-media-item')?.querySelector('.media-caption');
         return {
           src: image?.getAttribute('src') || '',
@@ -836,6 +838,11 @@ try {
           defaultBackMirrored: backImage?.classList.contains('lightbox-holographic-default-reverse') || false,
           backSrc: backImage?.getAttribute('src') || '',
           centeredHint: hint ? getComputedStyle(hint).justifyContent === 'center' : false,
+          desktopActionText: desktopAction?.textContent?.trim() || '',
+          desktopActionDisplay: desktopAction ? getComputedStyle(desktopAction).display : 'missing',
+          surfaceIdleAnimation: getComputedStyle(el).animationName,
+          sheenDisplay: sheen ? getComputedStyle(sheen).display : 'missing',
+          sheenAnimation: sheen ? getComputedStyle(sheen).animationName : 'missing',
           hintAfterArtwork: !!(hint && artSlot && (artSlot.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING)),
           hintBeforeCaption: !caption || !!(hint && (hint.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING))
         };
@@ -850,9 +857,46 @@ try {
           !uploadedArtContract.hasDiffraction || !uploadedArtContract.hasSparkles ||
           !uploadedArtContract.defaultBackMirrored ||
           !uploadedArtContract.backSrc.includes('funko-pop/Asset') ||
-          !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption) {
-        throw new Error('Uploaded transparent artwork did not receive the full holographic sizing/flip contract: ' + JSON.stringify(uploadedArtContract));
+          !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption ||
+          !uploadedArtContract.desktopActionText.includes('CLICK / MOVE') ||
+          uploadedArtContract.desktopActionDisplay === 'none' ||
+          uploadedArtContract.surfaceIdleAnimation !== 'holo-idle-float' ||
+          uploadedArtContract.sheenDisplay === 'none' ||
+          !uploadedArtContract.sheenAnimation.includes('holo-idle-sheen')) {
+        throw new Error('Uploaded transparent artwork did not receive the full holographic sizing/flip/discoverability contract: ' + JSON.stringify(uploadedArtContract));
       }
+
+      // Desktop must react to real pointer movement, with the foil reflection
+      // travelling opposite the pointer rather than remaining a static overlay.
+      const desktopHoloBox = await funkoHolo.boundingBox();
+      if (!desktopHoloBox) throw new Error('Desktop holographic artwork lost its interaction geometry.');
+      await page.mouse.move(
+        desktopHoloBox.x + desktopHoloBox.width * 0.74,
+        desktopHoloBox.y + desktopHoloBox.height * 0.28
+      );
+      await page.waitForTimeout(120);
+      const desktopTiltState = await funkoHolo.evaluate(el => {
+        const read = name => Number.parseFloat(el.style.getPropertyValue(name));
+        return {
+          x: read('--holo-x'),
+          y: read('--holo-y'),
+          foilX: read('--holo-foil-x'),
+          foilY: read('--holo-foil-y')
+        };
+      });
+      if (
+        !Number.isFinite(desktopTiltState.x) ||
+        !Number.isFinite(desktopTiltState.y) ||
+        !Number.isFinite(desktopTiltState.foilX) ||
+        !Number.isFinite(desktopTiltState.foilY) ||
+        Math.abs(desktopTiltState.x - 50) < 5 ||
+        Math.abs(desktopTiltState.y - 50) < 5 ||
+        Math.abs((desktopTiltState.x + desktopTiltState.foilX) - 100) > 1.5 ||
+        Math.abs((desktopTiltState.y + desktopTiltState.foilY) - 100) > 1.5
+      ) {
+        throw new Error('Desktop holographic pointer movement did not drive the inverse foil reflection: ' + JSON.stringify(desktopTiltState));
+      }
+
       await funkoHolo.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
       if (!(await funkoHolo.evaluate(el => el.classList.contains('is-flipped')))) {
         throw new Error('Uploaded artwork did not flip to its default mirrored reverse.');
