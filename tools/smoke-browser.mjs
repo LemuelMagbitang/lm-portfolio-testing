@@ -561,6 +561,100 @@ try {
           throw new Error('Full-card foil textures must fill the whole face as a texture overlay, not a mask.');
         }
 
+        // Exercise real Chromium touch input (not just synthetic DOM events).
+        // A quick vertical swipe on the card must scroll the Lightbox normally;
+        // after an intentional hold, the same movement should drive foil instead
+        // of changing the Lightbox scroll position.
+        const nativeTouchScrollHost = page.locator('#lightbox').first();
+        await page.evaluate(() => {
+          const media = document.getElementById('lightboxMediaContainer');
+          if (!media || media.querySelector('[data-holo-touch-scroll-fixture]')) return;
+          const spacer = document.createElement('div');
+          spacer.dataset.holoTouchScrollFixture = 'true';
+          spacer.setAttribute('aria-hidden', 'true');
+          spacer.style.cssText = 'height:480px;min-height:480px;flex:0 0 480px;pointer-events:none;';
+          media.appendChild(spacer);
+          const lightbox = document.getElementById('lightbox');
+          if (lightbox) lightbox.scrollTop = 0;
+        });
+        const nativeScrollCapacity = await nativeTouchScrollHost.evaluate(el => ({
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight
+        }));
+        if (nativeScrollCapacity.scrollHeight <= nativeScrollCapacity.clientHeight + 80) {
+          throw new Error('Mobile holographic native-touch fixture did not create a scrollable Lightbox.');
+        }
+        const touchSession = await page.context().newCDPSession(page);
+        const dispatchTouch = (type, id, x, y) => touchSession.send('Input.dispatchTouchEvent', {
+          type,
+          touchPoints: type === 'touchEnd' ? [] : [{
+            id, x, y, radiusX: 2, radiusY: 2, force: 1
+          }]
+        });
+
+        const nativeQuickBox = await holographic.boundingBox();
+        if (!nativeQuickBox) throw new Error('Native-touch holographic fixture lost its geometry.');
+        const quickStartX = nativeQuickBox.x + nativeQuickBox.width * 0.5;
+        const quickStartY = nativeQuickBox.y + nativeQuickBox.height * 0.5;
+        const quickScrollBefore = await nativeTouchScrollHost.evaluate(el => el.scrollTop);
+        await dispatchTouch('touchStart', 91, quickStartX, quickStartY);
+        await page.waitForTimeout(55);
+        await dispatchTouch('touchMove', 91, quickStartX + 2, quickStartY - 42);
+        await page.waitForTimeout(90);
+        await dispatchTouch('touchEnd', 91, quickStartX + 2, quickStartY - 42);
+        await page.waitForTimeout(100);
+        const quickNativeState = await Promise.all([
+          nativeTouchScrollHost.evaluate(el => el.scrollTop),
+          holographic.evaluate(el => ({
+            engaged: el.classList.contains('is-holo-touch-engaged'),
+            x: el.style.getPropertyValue('--holo-x'),
+            y: el.style.getPropertyValue('--holo-y')
+          }))
+        ]);
+        if (quickNativeState[0] < quickScrollBefore + 4 ||
+            quickNativeState[1].engaged ||
+            quickNativeState[1].x !== '50%' ||
+            quickNativeState[1].y !== '50%') {
+          throw new Error('A quick native mobile swipe was not preserved as normal Lightbox scrolling: ' +
+            JSON.stringify({ scrollBefore: quickScrollBefore, scrollAfter: quickNativeState[0], foil: quickNativeState[1] }));
+        }
+
+        const heldNativeBox = await holographic.boundingBox();
+        if (!heldNativeBox) throw new Error('Held native-touch holographic fixture lost its geometry.');
+        await nativeTouchScrollHost.evaluate(el => { el.scrollTop = 0; });
+        await page.waitForTimeout(60);
+        const heldStartX = heldNativeBox.x + heldNativeBox.width * 0.5;
+        const heldStartY = heldNativeBox.y + heldNativeBox.height * 0.5;
+        const heldScrollBefore = await nativeTouchScrollHost.evaluate(el => el.scrollTop);
+        const heldFoilBefore = await holographic.evaluate(el => el.style.getPropertyValue('--holo-x'));
+        await dispatchTouch('touchStart', 92, heldStartX, heldStartY);
+        await page.waitForTimeout(260);
+        const nativeHoldEngaged = await holographic.evaluate(el => el.classList.contains('is-holo-touch-engaged'));
+        if (!nativeHoldEngaged) {
+          await dispatchTouch('touchEnd', 92, heldStartX, heldStartY);
+          throw new Error('A native mobile hold did not engage holographic interaction.');
+        }
+        await dispatchTouch('touchMove', 92, heldStartX + 30, heldStartY - 38);
+        await page.waitForTimeout(100);
+        const heldNativeState = await Promise.all([
+          nativeTouchScrollHost.evaluate(el => el.scrollTop),
+          holographic.evaluate(el => ({
+            engaged: el.classList.contains('is-holo-touch-engaged'),
+            x: el.style.getPropertyValue('--holo-x'),
+            y: el.style.getPropertyValue('--holo-y')
+          }))
+        ]);
+        await dispatchTouch('touchEnd', 92, heldStartX + 30, heldStartY - 38);
+        await touchSession.detach();
+        if (!heldNativeState[1].engaged ||
+            Math.abs(heldNativeState[0] - heldScrollBefore) > 1 ||
+            heldNativeState[1].x === heldFoilBefore) {
+          throw new Error('A held native mobile holographic gesture scrolled the Lightbox instead of driving foil: ' +
+            JSON.stringify({ scrollBefore: heldScrollBefore, scrollAfter: heldNativeState[0], foilBefore: heldFoilBefore, foilAfter: heldNativeState[1] }));
+        }
+        await nativeTouchScrollHost.evaluate(el => { el.scrollTop = 0; });
+        await page.waitForTimeout(60);
+
         // Quick movement must remain a normal Lightbox gesture: no foil
         // engagement before the hold threshold.
         await holographic.dispatchEvent('pointerdown', {
