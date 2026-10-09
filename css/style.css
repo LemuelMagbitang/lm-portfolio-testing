@@ -1624,7 +1624,7 @@ body.center-page {
   inset:0;
   transform-style:preserve-3d;
   transform:perspective(1200px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg));
-  transition:transform 180ms ease-out;
+  /* Pointer easing is performed with requestAnimationFrame in the renderer. */
   will-change:transform;
 }
 
@@ -1694,92 +1694,169 @@ body.center-page {
 #lightboxMediaContainer .lightbox-holographic-spectrum{
   background:
     linear-gradient(
-      118deg,
-      rgba(255,92,180,.18) 0%,
-      rgba(255,226,142,.15) 18%,
-      rgba(132,255,207,.14) 36%,
-      rgba(105,221,255,.16) 54%,
-      rgba(177,141,255,.15) 72%,
-      rgba(255,126,190,.17) 88%,
-      rgba(255,92,180,.18) 100%
+      116deg,
+      rgba(255,92,180,.12) 0%,
+      rgba(255,226,142,.11) 16%,
+      rgba(132,255,207,.10) 32%,
+      rgba(105,221,255,.12) 49%,
+      rgba(177,141,255,.12) 66%,
+      rgba(255,126,190,.11) 83%,
+      rgba(255,92,180,.12) 100%
     ),
     radial-gradient(
-      ellipse at var(--holo-x,50%) var(--holo-y,50%),
-      rgba(255,255,255,.28) 0%,
-      rgba(255,255,255,.10) 24%,
-      transparent 64%
+      ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),
+      rgba(255,255,255,.19) 0%,
+      rgba(255,255,255,.065) 27%,
+      transparent 67%
     );
-  background-size:260% 260%, 180% 180%;
-  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-x,50%) var(--holo-y,50%);
-  opacity:calc(.06 + (var(--holo-intensity,.7) * .48));
+  background-size:300% 240%,180% 180%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
+  opacity:calc(.035 + (var(--holo-intensity,.7) * .36));
   mix-blend-mode:color-dodge;
-  filter:saturate(1.08);
-  transition:opacity 180ms ease-out;
+  filter:blur(1.1px) saturate(1.02);
+  transition:opacity 140ms ease-out;
 }
 
 #lightboxMediaContainer .lightbox-holographic-glare{
   background:
     radial-gradient(
-      ellipse at var(--holo-x,50%) var(--holo-y,50%),
-      rgba(255,255,255,.56) 0%,
-      rgba(255,255,255,.20) 12%,
-      rgba(255,255,255,.06) 28%,
-      transparent 58%
+      ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),
+      rgba(255,255,255,.34) 0%,
+      rgba(255,255,255,.13) 15%,
+      rgba(255,255,255,.04) 34%,
+      transparent 64%
     ),
     linear-gradient(
       118deg,
-      transparent 26%,
-      rgba(255,255,255,.10) 44%,
-      rgba(255,255,255,.035) 56%,
-      transparent 76%
+      transparent 24%,
+      rgba(255,255,255,.075) 43%,
+      rgba(255,255,255,.025) 56%,
+      transparent 77%
     );
-  background-size:180% 180%, 240% 240%;
-  background-position:var(--holo-x,50%) var(--holo-y,50%), var(--holo-foil-x,50%) var(--holo-foil-y,50%);
-  opacity:calc(.04 + (var(--holo-intensity,.7) * .34));
+  background-size:160% 160%,260% 240%;
+  background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  opacity:calc(.02 + (var(--holo-intensity,.7) * .24));
   mix-blend-mode:screen;
-  filter:blur(2px) saturate(1.04);
-  transition:opacity 180ms ease-out;
+  filter:blur(4px) saturate(.98);
+  transition:opacity 140ms ease-out;
 }
 
 #lightboxMediaContainer .lightbox-holographic-texture{
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  opacity:calc(var(--holo-intensity,.7) * .26);
+  background-position:center center;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  opacity:calc(var(--holo-intensity,.7) * .20);
   mix-blend-mode:soft-light;
-  image-rendering:auto;
-  transition:opacity 180ms ease-out;
+  filter:blur(.25px) saturate(.9);
+  transition:opacity 140ms ease-out;
 }
 
+/* Small repeating motifs (stars, dots, crosshatch) tile at their natural size.
+   Full-card grayscale maps instead stretch cleanly to the card bounds. This
+   overlay changes the foil's surface texture; it is not a coverage mask. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-texture-mode="tile"] .lightbox-holographic-texture{
+  background-repeat:repeat;
+  background-size:auto;
+}
+
+#lightboxMediaContainer .lightbox-holographic[data-holo-texture-mode="fill"] .lightbox-holographic-texture{
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+}
+
+/* Prism holographic: broad spectral bands, a restrained off-axis reflection. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum{
+  mix-blend-mode:color-dodge;
+}
+
+/* Iridescent foil: pearlescent oil-slick bands with a softer, wider highlight. */
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-spectrum{
   background:
     linear-gradient(
-      118deg,
-      rgba(255,115,206,.18) 0%,
-      rgba(149,122,255,.20) 22%,
-      rgba(105,229,255,.18) 43%,
-      rgba(133,255,193,.15) 64%,
-      rgba(255,228,133,.17) 82%,
-      rgba(255,115,206,.18) 100%
+      116deg,
+      rgba(255,151,221,.10) 0%,
+      rgba(199,164,255,.13) 16%,
+      rgba(135,224,255,.12) 32%,
+      rgba(150,255,219,.10) 49%,
+      rgba(255,235,176,.10) 65%,
+      rgba(235,168,255,.12) 83%,
+      rgba(255,151,221,.10) 100%
     ),
     radial-gradient(
-      ellipse at var(--holo-x,50%) var(--holo-y,50%),
-      rgba(255,255,255,.16),
-      transparent 64%
+      ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),
+      rgba(255,255,255,.17) 0%,
+      rgba(255,255,255,.045) 28%,
+      transparent 68%
+    ),
+    linear-gradient(
+      164deg,
+      transparent 24%,
+      rgba(255,255,255,.025) 39%,
+      rgba(255,255,255,.07) 48%,
+      rgba(255,255,255,.025) 57%,
+      transparent 74%
     );
-  background-size:240% 240%, 180% 180%;
-  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-x,50%) var(--holo-y,50%);
-  filter:saturate(1.06);
+  background-size:320% 230%,180% 180%,260% 230%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  opacity:calc(.025 + (var(--holo-intensity,.7) * .31));
+  mix-blend-mode:screen;
+  filter:blur(1.5px) saturate(.92);
 }
 
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-glare{
+  opacity:calc(.015 + (var(--holo-intensity,.7) * .20));
+  mix-blend-mode:soft-light;
+  filter:blur(5px) saturate(.92);
+}
+
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
+  opacity:.22;
+  animation-duration:8s;
+  mix-blend-mode:soft-light;
+  filter:blur(.5px);
+}
+
+/* Aurora foil: long, soft teal/green/violet curtains rather than point-like spots. */
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
   background:
-    radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%), rgba(77,238,255,.34), transparent 34%),
-    radial-gradient(ellipse at calc(100% - var(--holo-foil-x,50%)) var(--holo-foil-y,50%), rgba(180,100,255,.30), transparent 40%),
-    radial-gradient(ellipse at var(--holo-foil-x,50%) calc(100% - var(--holo-foil-y,50%)), rgba(90,255,180,.27), transparent 42%),
-    linear-gradient(132deg, rgba(90,238,255,.08) 0%, transparent 30%, rgba(180,100,255,.08) 52%, transparent 76%, rgba(90,255,180,.08) 100%);
-  background-size:170% 170%,170% 170%,170% 170%,260% 260%;
+    linear-gradient(
+      108deg,
+      transparent 0%,
+      rgba(62,223,255,.035) 9%,
+      rgba(65,245,209,.13) 22%,
+      rgba(94,255,166,.16) 31%,
+      rgba(135,127,255,.18) 45%,
+      rgba(236,113,217,.12) 59%,
+      rgba(77,224,255,.15) 73%,
+      rgba(80,255,188,.09) 86%,
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),
+      rgba(255,255,255,.14) 0%,
+      rgba(180,255,245,.04) 24%,
+      transparent 64%
+    ),
+    linear-gradient(
+      152deg,
+      rgba(42,193,255,.025) 0%,
+      transparent 24%,
+      rgba(176,96,255,.05) 58%,
+      transparent 84%,
+      rgba(70,241,182,.035) 100%
+    );
+  background-size:240% 190%,165% 165%,260% 230%;
+  background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  opacity:calc(.03 + (var(--holo-intensity,.7) * .34));
+  mix-blend-mode:screen;
+  filter:blur(1.4px) saturate(1.04);
+}
+
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
+  opacity:.24;
+  animation-duration:10.5s;
+  mix-blend-mode:screen;
+  filter:blur(1.4px);
 }
 
 @supports (mix-blend-mode:color-dodge){
