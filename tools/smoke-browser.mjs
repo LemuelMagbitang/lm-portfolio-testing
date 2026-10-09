@@ -818,6 +818,7 @@ try {
         const artSlot = el.closest('.lightbox-artwork');
         const diffraction = el.querySelector('.lightbox-holographic-diffraction');
         const sparkles = el.querySelector('.lightbox-holographic-sparkles');
+        const spectrum = el.querySelector('.lightbox-holographic-spectrum');
         const hint = el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-hint');
         const caption = el.closest('.lightbox-media-item')?.querySelector('.media-caption');
         return {
@@ -826,8 +827,10 @@ try {
           naturalHeight: image?.naturalHeight || 0,
           naturalRatio: image?.naturalWidth && image?.naturalHeight ? image.naturalWidth / image.naturalHeight : 0,
           slotRatio: Number.parseFloat(artSlot?.style.getPropertyValue('--lightbox-artwork-ratio') || '0'),
-          alphaMode: diffraction?.style.maskMode || '',
-          alphaMask: diffraction?.style.maskImage || '',
+          // Assert artwork-alpha coverage on the always-active spectrum layer.
+          // Optional preset overlays are intentionally left unmasked when hidden.
+          alphaMode: spectrum?.style.maskMode || '',
+          alphaMask: spectrum?.style.maskImage || '',
           hasDiffraction: !!diffraction,
           hasSparkles: !!sparkles,
           defaultBackMirrored: backImage?.classList.contains('lightbox-holographic-default-reverse') || false,
