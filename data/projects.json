@@ -712,7 +712,7 @@
         "caption": "",
         "orientation": "",
         "holographic": {
-          "style": "glitter",
+          "style": "cosmos",
           "intensity": 0.7,
           "textureMode": "fill"
         }
