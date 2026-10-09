@@ -67,6 +67,11 @@ assert.match(lightboxSource, /lightboxOpenInputModality === 'pointer'/);
 assert.match(lightboxSource, /is-pointer-focus-return/);
 assert.match(lightboxSource, /openerElement: card/);
 assert.match(lightboxSource, /bind\(documentRef, 'pointerdown', clearPointerFocusReturn, true\)/);
+assert.ok(
+  lightboxSource.indexOf('const clearPointerFocusReturn') <
+    lightboxSource.indexOf("bind(documentRef, 'pointerdown', clearPointerFocusReturn, true)"),
+  'Lightbox focus-restoration handlers must be initialized before being registered.'
+);
 const mainStyleSource = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 assert.match(mainStyleSource, /\.project-card\.is-pointer-focus-return:focus-visible/);
 assert.match(mainStyleSource, /box-shadow:none!important/);

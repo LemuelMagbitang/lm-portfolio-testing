@@ -129,8 +129,6 @@ const modalDesc = documentRef.getElementById('modalDesc');
 const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
 const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle);
-bind(documentRef, 'pointerdown', clearPointerFocusReturn, true);
-bind(documentRef, 'keydown', clearPointerFocusReturn, true);
 
 const mediaRenderer = createLightboxMediaRenderer({
   documentRef,
@@ -159,6 +157,8 @@ const clearPointerFocusReturn = () => {
     card.classList.remove('is-pointer-focus-return');
   });
 };
+bind(documentRef, 'pointerdown', clearPointerFocusReturn, true);
+bind(documentRef, 'keydown', clearPointerFocusReturn, true);
 
   // Artwork-aware lightbox controls use an immediate binary decision:
   // sample the actual pixels underneath each control and choose only black
