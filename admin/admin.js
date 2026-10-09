@@ -2078,13 +2078,14 @@ function normalizeEditorHolographic(value){
   const textureMode = ['tile','fill'].includes(textureModeValue) ? textureModeValue : 'fill';
   const back = String(value.back || '').trim();
   const mask = String(value.mask || '').trim();
-  const backTexture = String(value.backTexture || '').trim();
+  // Back-side foil data is valid only while a custom reverse image exists.
+  const backTexture = back ? String(value.backTexture || '').trim() : '';
   const backTextureModeValue = String(value.backTextureMode || 'fill').trim().toLowerCase();
   const backTextureMode = ['tile','fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
-  const backMask = String(value.backMask || '').trim();
+  const backMask = back ? String(value.backMask || '').trim() : '';
   return {
     style: styles.has(style) ? style : 'holographic',
-    intensity, textureMode, backTextureMode,
+    intensity, textureMode, ...(back ? {backTextureMode} : {}),
     ...(texture ? {texture} : {}), ...(back ? {back} : {}), ...(mask ? {mask} : {}),
     ...(backTexture ? {backTexture} : {}), ...(backMask ? {backMask} : {})
   };
@@ -2167,11 +2168,21 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     if(backMaskInput)backMaskInput.value=value?.backMask||'';
     if(intensityLabel)intensityLabel.textContent=Number(intensityInput.value).toFixed(2);syncVisibility();
   }
-  function read(){return {style:styleInput.value||'holographic',intensity:Math.max(0,Math.min(1,Number(intensityInput.value)||0)),textureMode:textureModeInput.value||'fill',
-    ...(textureInput.value.trim()?{texture:textureInput.value.trim()}:{}),...(backInput.value.trim()?{back:backInput.value.trim()}:{}),
-    ...(maskInput.value.trim()?{mask:maskInput.value.trim()}:{}),...(backTextureInput?.value.trim()?{backTexture:backTextureInput.value.trim()}:{}),
-    ...(backTextureInput?.value.trim()?{backTextureMode:backTextureModeInput.value||'fill'}:{}),...(backMaskInput?.value.trim()?{backMask:backMaskInput.value.trim()}:{}),
-  };}
+  function read(){
+    const backSrc=backInput.value.trim();
+    const backTexture=backTextureInput?.value.trim()||'';
+    const backMask=backMaskInput?.value.trim()||'';
+    return {
+      style:styleInput.value||'holographic',
+      intensity:Math.max(0,Math.min(1,Number(intensityInput.value)||0)),
+      textureMode:textureModeInput.value||'fill',
+      ...(textureInput.value.trim()?{texture:textureInput.value.trim()}:{}),
+      ...(backSrc?{back:backSrc}:{}),
+      ...(maskInput.value.trim()?{mask:maskInput.value.trim()}:{}),
+      ...(backSrc&&backTexture?{backTexture,backTextureMode:backTextureModeInput.value||'fill'}:{}),
+      ...(backSrc&&backMask?{backMask}:{})
+    };
+  }
   enabledInput.addEventListener('change',()=>{setEffect(enabledInput.checked?read():null);sync();onChanged?.();});
   styleInput.addEventListener('change',()=>{if(enabledInput.checked){setEffect(read());onChanged?.();}});
   intensityInput.addEventListener('input',()=>{if(intensityLabel)intensityLabel.textContent=Number(intensityInput.value).toFixed(2);if(enabledInput.checked){setEffect(read());onChanged?.();}});
