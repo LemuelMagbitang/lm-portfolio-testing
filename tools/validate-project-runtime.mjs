@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js';
-import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261009-10';
+import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261009-11';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js';
 import {
@@ -9,7 +9,7 @@ import {
   orientationFromAspectRatio,
   observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
-import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261009-10';
+import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261009-11';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js';
 
