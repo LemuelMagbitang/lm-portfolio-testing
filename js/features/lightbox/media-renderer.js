@@ -26,6 +26,7 @@ export function createLightboxMediaRenderer({
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
   const lottieDimensionRequests = new Map();
+  const lottieDimensionAbortControllers = new Map();
   let youtubePreloadRoot = null;
   let mediaPreloadRoot = null;
   let destroyed = false;
@@ -153,17 +154,21 @@ export function createLightboxMediaRenderer({
   }
 
   function resolveLottieDimensions(url, { fetchPriority = 'low' } = {}) {
-    if (!url || typeof globalThis.fetch !== 'function') return Promise.resolve(null);
+    if (!url || destroyed || typeof globalThis.fetch !== 'function') return Promise.resolve(null);
     const cached = lottieDimensionCache.get(url);
     if (cached) return Promise.resolve(cached);
 
     const pending = lottieDimensionRequests.get(url);
     if (pending) return pending;
 
+    const controller = typeof globalThis.AbortController === 'function'
+      ? new globalThis.AbortController()
+      : null;
     const request = globalThis.fetch(url, {
       credentials: 'omit',
       cache: 'force-cache',
-      ...(fetchPriority === 'high' ? { priority: 'high' } : {})
+      ...(fetchPriority === 'high' ? { priority: 'high' } : {}),
+      signal: controller?.signal
     }).then(async response => {
       if (!response.ok) return null;
       const payload = await response.json();
@@ -173,13 +178,17 @@ export function createLightboxMediaRenderer({
         return null;
       }
       const dimensions = { width, height };
-      lottieDimensionCache.set(url, dimensions);
+      if (!destroyed) lottieDimensionCache.set(url, dimensions);
       return dimensions;
     }).catch(() => null).finally(() => {
-      lottieDimensionRequests.delete(url);
+      if (lottieDimensionRequests.get(url) === request) lottieDimensionRequests.delete(url);
+      if (lottieDimensionAbortControllers.get(url) === controller) {
+        lottieDimensionAbortControllers.delete(url);
+      }
     });
 
     lottieDimensionRequests.set(url, request);
+    if (controller) lottieDimensionAbortControllers.set(url, controller);
     return request;
   }
 
@@ -1473,6 +1482,10 @@ export function createLightboxMediaRenderer({
     youtubeFrameCache.clear();
     imageDimensionCache.clear();
     videoDimensionCache.clear();
+    lottieDimensionAbortControllers.forEach(controller => {
+      try { controller.abort(); } catch (_) {}
+    });
+    lottieDimensionAbortControllers.clear();
     lottieDimensionCache.clear();
     lottieDimensionRequests.clear();
   }
