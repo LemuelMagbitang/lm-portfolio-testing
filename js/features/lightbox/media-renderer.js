@@ -559,18 +559,15 @@ export function createLightboxMediaRenderer({
     const foilX = 100 - clampedX;
     const foilY = 100 - clampedY;
 
-    // The card tilt follows the pointer, but the reflected softbox stays
-    // off-axis and only shifts subtly in the opposite direction. This avoids
-    // the artificial "flashlight attached to cursor" look.
-    const lightX = clampHolographic(34 + ((50 - clampedX) * 0.18), 12, 56);
-    const lightY = clampHolographic(26 + ((50 - clampedY) * 0.14), 10, 48);
-
+    // Input drives card tilt and broad color refraction only. The virtual
+    // studio lights stay fixed in the foil material; no highlight follows
+    // the mouse or a held finger.
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
     surface.style.setProperty('--holo-foil-x', foilX.toFixed(2) + '%');
     surface.style.setProperty('--holo-foil-y', foilY.toFixed(2) + '%');
-    surface.style.setProperty('--holo-light-x', lightX.toFixed(2) + '%');
-    surface.style.setProperty('--holo-light-y', lightY.toFixed(2) + '%');
+    surface.style.setProperty('--holo-light-x', '34%');
+    surface.style.setProperty('--holo-light-y', '26%');
     surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
@@ -708,6 +705,14 @@ export function createLightboxMediaRenderer({
       glare.className = 'lightbox-holographic-glare';
       glare.setAttribute('aria-hidden', 'true');
 
+      const prism = documentRef.createElement('span');
+      prism.className = 'lightbox-holographic-prism';
+      prism.setAttribute('aria-hidden', 'true');
+
+      const ribbons = documentRef.createElement('span');
+      ribbons.className = 'lightbox-holographic-ribbons';
+      ribbons.setAttribute('aria-hidden', 'true');
+
       const sheen = documentRef.createElement('span');
       sheen.className = 'lightbox-holographic-sheen';
       sheen.setAttribute('aria-hidden', 'true');
@@ -715,9 +720,11 @@ export function createLightboxMediaRenderer({
       if (frontMaskUrl) {
         applyHolographicMask(spectrum, frontMaskUrl);
         applyHolographicMask(glare, frontMaskUrl);
+        applyHolographicMask(prism, frontMaskUrl);
+        applyHolographicMask(ribbons, frontMaskUrl);
         applyHolographicMask(sheen, frontMaskUrl);
       }
-      face.append(spectrum, glare, sheen);
+      face.append(spectrum, glare, prism, ribbons, sheen);
 
       if (textureUrl) {
         const texture = documentRef.createElement('span');
