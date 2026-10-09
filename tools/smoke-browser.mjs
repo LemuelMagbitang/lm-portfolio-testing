@@ -2445,6 +2445,9 @@ try {
           throw new Error('Show Less reverted or re-clipped while scrolling through the expanded gallery.');
         }
 
+        const visibleCardsBeforeLightboxClose = await page.locator('#portfolioGrid .project-card').evaluateAll(
+          cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
+        );
         await page.locator('#portfolioGrid .project-card').first().click();
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
         await page.locator('#lightboxClose').click();
@@ -2468,10 +2471,10 @@ try {
         const cardsAfterLightboxClose = await page.locator('#portfolioGrid .project-card').evaluateAll(
           cards => cards.filter(card => getComputedStyle(card).display !== 'none').length
         );
-        if (cardsAfterLightboxClose !== 11) {
+        if (cardsAfterLightboxClose !== visibleCardsBeforeLightboxClose) {
           throw new Error(
             'Closing Lightbox caused Gallery artwork/cards to disappear or remain hidden: ' +
-            cardsAfterLightboxClose + ' visible of 11.'
+            cardsAfterLightboxClose + ' visible of ' + visibleCardsBeforeLightboxClose + '.'
           );
         }
       }
