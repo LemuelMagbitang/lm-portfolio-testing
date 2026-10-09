@@ -3840,6 +3840,14 @@ a:focus-visible{
   box-shadow:0 0 0 2px rgba(255,255,255,.82);
 }
 
+/* Pointer-opened Lightbox restores focus for predictable navigation, but that
+   restoration should not leave a decorative white frame around a thumbnail.
+   Keyboard-triggered focus keeps the normal visible ring. */
+.project-card.is-pointer-focus-return:focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+}
+
 /* ============================================================
    PROJECT GALLERY — legacy visual contract
    Cards are deliberately flush, square, and gapless. The squircle system is

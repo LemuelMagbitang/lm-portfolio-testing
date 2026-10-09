@@ -50,6 +50,8 @@ assert.match(projectLoaderSource, /projectLoadToken \+= 1;/);
 const pageCompositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 assert.match(pageCompositionSource, /destroyProjects/);
 assert.match(pageCompositionSource, /destroyProjects\(\);/);
+assert.match(pageCompositionSource, /activationInput/);
+assert.match(pageCompositionSource, /details\.event\?\.type === 'keydown'/);
 assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
 
 const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
@@ -60,6 +62,14 @@ assert.match(lightboxSource, /setAttribute\('aria-hidden','false'\)/);
 assert.match(lightboxSource, /setAttribute\('aria-hidden','true'\)/);
 assert.match(lightboxSource, /closeLightbox\(\{ restoreFocus: false \}\)/);
 assert.match(lightboxSource, /mediaRenderer\.destroy\(\)/);
+assert.match(lightboxSource, /suppressPointerFocusRing/);
+assert.match(lightboxSource, /lightboxOpenInputModality === 'pointer'/);
+assert.match(lightboxSource, /is-pointer-focus-return/);
+assert.match(lightboxSource, /openerElement: card/);
+assert.match(lightboxSource, /bind\(documentRef, 'pointerdown', clearPointerFocusReturn, true\)/);
+const mainStyleSource = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
+assert.match(mainStyleSource, /\.project-card\.is-pointer-focus-return:focus-visible/);
+assert.match(mainStyleSource, /box-shadow:none!important/);
 assert.match(lightboxSource, /let openRenderToken = 0;/);
 assert.match(lightboxSource, /const openToken = \+\+openRenderToken;/);
 assert.match(lightboxSource, /openRenderToken !== openToken/);
@@ -124,6 +134,13 @@ assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadR
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
 assert.match(modelViewerSource, /__modelViewerMountToken/);
+assert.match(modelViewerSource, /antialias: !initialMobileProfile/);
+assert.match(modelViewerSource, /powerPreference: initialMobileProfile \? 'low-power' : 'high-performance'/);
+assert.match(modelViewerSource, /const maxPixelRatio = mobileProfile \? 1 : 1\.5/);
+assert.match(modelViewerSource, /container\.dataset\.renderFrameCap = mobileProfile \? '30' : '60'/);
+assert.match(modelViewerSource, /const frameInterval = isMobileRenderProfile\(\) \? \(1000 \/ 30\) : \(1000 \/ 60\)/);
+assert.match(modelViewerSource, /bindContainer\(ownerDocument, 'visibilitychange'/);
+assert.match(modelViewerSource, /Math\.min\(clock\.getDelta\(\), 0\.05\)/);
 assert.match(modelViewerSource, /const containerCleanup = \[\]/);
 assert.match(modelViewerSource, /containerCleanup\.splice\(0\)\.reverse\(\)/);
 assert.doesNotMatch(modelViewerSource, /container\.addEventListener\('(?:pointerdown|pointermove|pointercancel|click|keydown|wheel)'/);

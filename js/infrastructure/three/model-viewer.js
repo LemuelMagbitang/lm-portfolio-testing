@@ -105,6 +105,10 @@ async function loadModel(url, ext){
 
 export async function mountModelViewer(container, src, options = {}) {
   if (!container) throw new Error('3D viewer container is missing.');
+  const view = container.ownerDocument?.defaultView || globalThis.window;
+  const ownerDocument = container.ownerDocument || globalThis.document;
+  let isMobileRenderProfile = () => false;
+  let updateRenderProfile = () => {};
   if (container.__modelViewerCleanup) container.__modelViewerCleanup();
 
   // Invalidate any still-pending mount for this same shell. A previous
@@ -206,8 +210,34 @@ export async function mountModelViewer(container, src, options = {}) {
     if (!loaded?.root) throw new Error('3D model contains no scene.');
     root = loaded.root;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    // Mobile prioritizes responsiveness, thermals, and battery over maximum
+    // canvas resolution. Antialiasing is selected once at context creation;
+    // pixel ratio and frame rate adapt again if the viewer changes viewport.
+    isMobileRenderProfile = () => Boolean(
+      view?.matchMedia?.('(pointer: coarse)')?.matches ||
+      (Number(view?.innerWidth) > 0 && Number(view.innerWidth) < 768)
+    );
+    const initialMobileProfile = isMobileRenderProfile();
+    renderer = new THREE.WebGLRenderer({
+      antialias: !initialMobileProfile,
+      alpha: true,
+      powerPreference: initialMobileProfile ? 'low-power' : 'high-performance',
+      stencil: false
+    });
+    let appliedPixelRatio = 0;
+    updateRenderProfile = () => {
+      const mobileProfile = isMobileRenderProfile();
+      const maxPixelRatio = mobileProfile ? 1 : 1.5;
+      const pixelRatio = Math.min(Number(view?.devicePixelRatio) || 1, maxPixelRatio);
+      if (Math.abs(pixelRatio - appliedPixelRatio) > 0.01) {
+        renderer.setPixelRatio(pixelRatio);
+        appliedPixelRatio = pixelRatio;
+      }
+      container.dataset.renderProfile = mobileProfile ? 'mobile-balanced' : 'desktop-quality';
+      container.dataset.renderPixelRatio = pixelRatio.toFixed(2);
+      container.dataset.renderFrameCap = mobileProfile ? '30' : '60';
+    };
+    updateRenderProfile();
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
@@ -458,6 +488,7 @@ export async function mountModelViewer(container, src, options = {}) {
 
   const resizeViewer = () => {
     if (disposed) return;
+    updateRenderProfile();
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
     renderer.setSize(width, height, false);
@@ -473,36 +504,54 @@ export async function mountModelViewer(container, src, options = {}) {
 
   resizeObserver = new ResizeObserver(() => resizeViewer());
   resizeObserver.observe(container);
+  bindContainer(view, 'resize', resizeViewer, { passive: true });
   resizeViewer();
 
   const clock = new THREE.Clock();
+  let lastRenderTimestamp = -Infinity;
   const renderOnce = () => {
     if (disposed) return;
     controls.update();
     renderer.render(scene, camera);
   };
-  const render = () => {
+  const render = (timestamp = 0) => {
     if (disposed || !renderLoopActive) {
       frameHandle = 0;
       return;
     }
     frameHandle = requestAnimationFrame(render);
-    const delta = clock.getDelta();
+    const frameInterval = isMobileRenderProfile() ? (1000 / 30) : (1000 / 60);
+    if (timestamp - lastRenderTimestamp < frameInterval) return;
+    lastRenderTimestamp = timestamp;
+    // Avoid a large animation jump after a suspended tab or a slow device frame.
+    const delta = Math.min(clock.getDelta(), 0.05);
     mixers.forEach(mixer => mixer.update(delta));
     controls.update();
     renderer.render(scene, camera);
   };
   function setRenderLoop(active) {
     renderLoopActive = !!active;
-    if (renderLoopActive && !frameHandle) {
+    if (renderLoopActive && !frameHandle && ownerDocument?.visibilityState !== 'hidden') {
       clock.start();
+      lastRenderTimestamp = -Infinity;
       frameHandle = requestAnimationFrame(render);
     } else if (!renderLoopActive) {
       if (frameHandle) cancelAnimationFrame(frameHandle);
       frameHandle = 0;
+      lastRenderTimestamp = -Infinity;
       renderOnce();
     }
   }
+  bindContainer(ownerDocument, 'visibilitychange', () => {
+    if (ownerDocument?.visibilityState === 'hidden') {
+      if (frameHandle) cancelAnimationFrame(frameHandle);
+      frameHandle = 0;
+    } else if (renderLoopActive && !frameHandle) {
+      clock.start();
+      lastRenderTimestamp = -Infinity;
+      frameHandle = requestAnimationFrame(render);
+    }
+  });
 
   // The model is a static thumbnail until explicitly activated. This is a
   // major battery/GPU saving on mobile and also avoids hidden WebGL work in

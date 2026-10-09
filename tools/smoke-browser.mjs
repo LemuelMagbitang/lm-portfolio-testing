@@ -1516,6 +1516,17 @@ try {
         );
       }
 
+      const mobileRenderProfile = await modelShell.evaluate(el => ({
+        profile: el.dataset.renderProfile,
+        pixelRatio: Number(el.dataset.renderPixelRatio),
+        frameCap: Number(el.dataset.renderFrameCap)
+      }));
+      if (mobileRenderProfile.profile !== 'mobile-balanced' ||
+          mobileRenderProfile.pixelRatio > 1.01 ||
+          mobileRenderProfile.frameCap !== 30) {
+        throw new Error('Mobile 3D viewer did not apply its balanced render profile: ' + JSON.stringify(mobileRenderProfile));
+      }
+
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.waitForFunction(() => {
         const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
@@ -1523,6 +1534,16 @@ try {
         const r = el.getBoundingClientRect();
         return Math.abs(r.width - innerWidth) <= 2 && Math.abs(r.height - innerHeight) <= 2;
       }, null, { timeout: 1500 });
+      const desktopRenderProfile = await modelShell.evaluate(el => ({
+        profile: el.dataset.renderProfile,
+        pixelRatio: Number(el.dataset.renderPixelRatio),
+        frameCap: Number(el.dataset.renderFrameCap)
+      }));
+      if (desktopRenderProfile.profile !== 'desktop-quality' ||
+          desktopRenderProfile.pixelRatio > 1.51 ||
+          desktopRenderProfile.frameCap !== 60) {
+        throw new Error('Desktop 3D viewer did not restore its quality render profile: ' + JSON.stringify(desktopRenderProfile));
+      }
 
       await page.keyboard.press('Escape');
       await page.waitForTimeout(100);
@@ -1531,6 +1552,16 @@ try {
 
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
+      const pointerFocusReturn = await modelCard.evaluate(el => ({
+        active: document.activeElement === el,
+        marked: el.classList.contains('is-pointer-focus-return'),
+        focusVisible: el.matches(':focus-visible'),
+        boxShadow: getComputedStyle(el).boxShadow
+      }));
+      if (!pointerFocusReturn.active || !pointerFocusReturn.marked ||
+          (pointerFocusReturn.focusVisible && pointerFocusReturn.boxShadow !== 'none')) {
+        throw new Error('Pointer-opened 3D Lightbox left an unwanted gallery focus frame: ' + JSON.stringify(pointerFocusReturn));
+      }
     });
 
     await smokePage(

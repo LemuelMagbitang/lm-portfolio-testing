@@ -41,9 +41,11 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
     if (event.shiftKey && documentRef.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && documentRef.activeElement === last) { event.preventDefault(); first.focus(); }
   }
-  function open({ captureOpener = true } = {}) {
+  function open({ captureOpener = true, openerElement = null } = {}) {
     if (captureOpener) {
-      opener = documentRef.activeElement?.nodeType === 1 ? documentRef.activeElement : null;
+      opener = openerElement?.isConnected
+        ? openerElement
+        : (documentRef.activeElement?.nodeType === 1 ? documentRef.activeElement : null);
     }
     lightboxEl.setAttribute('aria-modal','true');
     lightboxEl.setAttribute('aria-hidden','false');
@@ -57,13 +59,16 @@ function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windo
       ? lifecycle.animationFrame(() => { const items=getFocusable(); try { (items[0]||lightboxEl).focus({ preventScroll: true }); } catch (_) { (items[0]||lightboxEl).focus?.(); } }, windowRef)
       : (() => { const id=windowRef.requestAnimationFrame(() => { const items=getFocusable(); const target = items[0] || lightboxEl; try { target.focus?.({ preventScroll: true }); } catch (_) { target.focus?.(); } }); return () => windowRef.cancelAnimationFrame?.(id); })();
   }
-  function close({ afterFocus, restoreFocus = true } = {}) {
+  function close({ afterFocus, restoreFocus = true, suppressPointerFocusRing = false } = {}) {
     keydownCleanup?.();
     keydownCleanup = null;
     focusCleanup?.();
     focusCleanup = null;
     const target=opener; opener=null;
     if (restoreFocus && target?.isConnected) {
+      if (suppressPointerFocusRing && target.classList?.contains('project-card')) {
+        target.classList.add('is-pointer-focus-return');
+      }
       try { target.focus({ preventScroll: true }); }
       catch (_) { target.focus(); }
     }
@@ -124,6 +129,8 @@ const modalDesc = documentRef.getElementById('modalDesc');
 const modalFullDesc = documentRef.getElementById('modalFullDesc');
 const modalMediaContainer = documentRef.getElementById('lightboxMediaContainer');
 const lightboxA11y = createLightboxA11y(lightbox, documentRef, windowRef, lifecycle);
+bind(documentRef, 'pointerdown', clearPointerFocusReturn, true);
+bind(documentRef, 'keydown', clearPointerFocusReturn, true);
 
 const mediaRenderer = createLightboxMediaRenderer({
   documentRef,
@@ -145,6 +152,13 @@ let navigationTimer = null;
 let navigationTargetIndex = null;
 let swipeStart = null;
 let openRenderToken = 0;
+let lightboxOpenInputModality = 'keyboard';
+
+const clearPointerFocusReturn = () => {
+  documentRef.querySelectorAll('.project-card.is-pointer-focus-return').forEach(card => {
+    card.classList.remove('is-pointer-focus-return');
+  });
+};
 
   // Artwork-aware lightbox controls use an immediate binary decision:
   // sample the actual pixels underneath each control and choose only black
@@ -169,7 +183,7 @@ let openRenderToken = 0;
 // Supports: /shorts/ID, youtu.be/ID, watch?v=ID, and /embed/ID links.
 
 
-function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } = {}) {
+function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false, activationInput = 'keyboard' } = {}) {
   const preserveNavigation = lightbox.classList.contains('is-lightbox-navigating');
   lightbox.classList.remove('is-3d-focused');
   if (!preserveNavigation) {
@@ -203,6 +217,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
   const wasActive = lightbox.classList.contains('active');
   if (!wasActive) {
+    lightboxOpenInputModality = activationInput === 'pointer' ? 'pointer' : 'keyboard';
     // Capture the page position before the fixed Lightbox takes over the
     // viewport. The modal itself owns scrolling, so the document does not need
     // an overflow lock that can trigger mobile scroll reconciliation.
@@ -240,7 +255,7 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
   lightbox.classList.add('active');
   if (lightboxControls) lightboxControls.classList.add('active');
     if (!wasActive) {
-    lightboxA11y.open({ captureOpener: !preserveOpener });
+    lightboxA11y.open({ captureOpener: !preserveOpener, openerElement: card });
   }
 
   // Opening the modal can trigger several layout/asset reconciliation passes
@@ -325,12 +340,12 @@ function openLightbox(index, initialMediaIndex = -1, { preserveOpener = false } 
 
 // Projects owns card activation and calls this public method. Lightbox only
 // resolves the active-project index and manages viewer state from there.
-function openProjectCard(card, { initialMediaIndex = -1 } = {}) {
+function openProjectCard(card, { initialMediaIndex = -1, activationInput = 'keyboard' } = {}) {
   if (!card) return false;
   activeLightboxCards = getActiveCards();
   const index = activeLightboxCards.indexOf(card);
   if (index < 0) return false;
-  openLightbox(index, initialMediaIndex);
+  openLightbox(index, initialMediaIndex, { activationInput });
   return true;
 }
 
@@ -385,7 +400,12 @@ function closeLightbox({ restoreFocus = true } = {}) {
 
   // Restore focus synchronously and immediately put the viewport back where
   // it was. The post-layout frames below catch mobile reconciliation.
-  lightboxA11y.close({ afterFocus: restorePageScroll, restoreFocus });
+  lightboxA11y.close({
+    afterFocus: restorePageScroll,
+    restoreFocus,
+    suppressPointerFocusRing: lightboxOpenInputModality === 'pointer'
+  });
+  lightboxOpenInputModality = 'keyboard';
   restorePageScroll();
   // Let the renderer own media teardown so YouTube message listeners, playback
   // state, cached iframes, and 3D viewer resources all follow one lifecycle.
