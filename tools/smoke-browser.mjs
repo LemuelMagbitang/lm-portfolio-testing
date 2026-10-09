@@ -487,17 +487,30 @@ try {
         const affordance = await holographic.evaluate(el => {
           const base = getComputedStyle(el);
           const hint = getComputedStyle(el, '::before');
-          const sheen = getComputedStyle(el, '::after');
+          const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
           return {
             animationName: base.animationName,
             hint: hint.content,
-            sheenAnimation: sheen.animationName
+            sheenAnimation: sheen ? getComputedStyle(sheen).animationName : ''
           };
         });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.hint !== '"HOLD + MOVE"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen')) {
           throw new Error('Mobile holographic surface is missing its subtle interaction affordance.');
+        }
+        const maskState = await holographic.evaluate(el => {
+          const front = el.querySelector('.lightbox-holographic-front');
+          const back = el.querySelector('.lightbox-holographic-back');
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          return {
+            frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
+            backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
+          };
+        });
+        if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
+            maskState.backLayers.some(Boolean)) {
+          throw new Error(`Holographic mask must cover every front foil layer and none of the back layers: ${JSON.stringify(maskState)}`);
         }
 
         // Quick movement must remain a normal Lightbox gesture: no foil
@@ -602,7 +615,8 @@ try {
               style: 'iridescent',
               intensity: 0.8,
               texture: 'assets/projects/holographic-smoke/foil.svg',
-              back: 'assets/projects/holographic-smoke/back.svg'
+              back: 'assets/projects/holographic-smoke/back.svg',
+              mask: 'assets/projects/holographic-smoke/mask.svg'
             }
           }]
         }];
@@ -1477,15 +1491,31 @@ try {
           throw new Error('Holographic Lightbox fixture lost its configured visual style.');
         }
 
-        const affordance = await holographic.evaluate(el => ({
-          animationName: getComputedStyle(el).animationName,
-          hint: getComputedStyle(el, '::before').content,
-          sheenAnimation: getComputedStyle(el, '::after').animationName
-        }));
+        const affordance = await holographic.evaluate(el => {
+          const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
+          return {
+            animationName: getComputedStyle(el).animationName,
+            hint: getComputedStyle(el, '::before').content,
+            sheenAnimation: sheen ? getComputedStyle(sheen).animationName : ''
+          };
+        });
         if (!affordance.animationName.includes('holo-idle-float') ||
             affordance.hint !== '"MOVE / CLICK"' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen')) {
           throw new Error('Desktop holographic surface is missing its subtle interaction affordance.');
+        }
+        const maskState = await holographic.evaluate(el => {
+          const front = el.querySelector('.lightbox-holographic-front');
+          const back = el.querySelector('.lightbox-holographic-back');
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          return {
+            frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
+            backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
+          };
+        });
+        if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
+            maskState.backLayers.some(Boolean)) {
+          throw new Error(`Holographic mask must cover every front foil layer and none of the back layers: ${JSON.stringify(maskState)}`);
         }
 
         const holoBox = await holographic.boundingBox();
@@ -1548,7 +1578,8 @@ try {
               style: 'iridescent',
               intensity: 0.8,
               texture: 'assets/projects/holographic-smoke/foil.svg',
-              back: 'assets/projects/holographic-smoke/back.svg'
+              back: 'assets/projects/holographic-smoke/back.svg',
+              mask: 'assets/projects/holographic-smoke/mask.svg'
             }
           }]
         }];
