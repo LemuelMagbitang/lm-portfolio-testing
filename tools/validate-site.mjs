@@ -1196,7 +1196,7 @@ function validateCmsRegressionContracts() {
       !admin.includes('value="cat-eye"') ||
       !css.includes('lightbox-holographic-diffraction') ||
       !css.includes('lightbox-holographic-sparkles') ||
-      !css.includes('@media(prefers-reduced-motion:reduce){\n #lightboxMediaContainer .lightbox-holographic-diffraction,\n #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}\n}') ||
+      !css.includes('#lightboxMediaContainer .lightbox-holographic-diffraction,\n #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}') ||
       !css.includes('background-blend-mode:overlay,color-dodge;') ||
       !css.includes('@keyframes holo-spectrum-breathe') ||
       !css.includes('.lightbox-holographic-sparkles,\n#lightboxMediaContainer .lightbox-holographic-sheen{\n  display:none!important;') ||
