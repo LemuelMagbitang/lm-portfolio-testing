@@ -517,7 +517,9 @@ try {
           const style = texture ? getComputedStyle(texture) : null;
           return { mode: el.dataset.holoTextureMode, repeat: style?.backgroundRepeat || '', tag: texture?.tagName || '' };
         });
-        if (textureState.mode !== 'fill' || textureState.repeat.includes('repeat') || textureState.tag !== 'SPAN') {
+        if (textureState.mode !== 'fill' ||
+            textureState.repeat === 'repeat' || textureState.repeat === 'repeat repeat' ||
+            textureState.tag !== 'SPAN') {
           throw new Error('Full-card foil textures must fill the whole face as a texture overlay, not a mask.');
         }
 
@@ -1537,10 +1539,11 @@ try {
           holoBox.x + holoBox.width * 0.82,
           holoBox.y + holoBox.height * 0.22
         );
-        await page.waitForFunction(el => {
-          const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          const x = Number.parseFloat(el?.style.getPropertyValue('--holo-x'));
           return Number.isFinite(x) && x > 50;
-        }, holographic, { timeout: 1200 });
+        }, null, { timeout: 1200 });
 
         const holoStateBeforeFlip = await holographic.evaluate(el => ({
           x: el.style.getPropertyValue('--holo-x'),
