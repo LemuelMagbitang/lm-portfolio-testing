@@ -671,6 +671,8 @@ export function createLightboxMediaRenderer({
 
     const inner = documentRef.createElement('div');
     inner.className = 'lightbox-holographic-inner';
+    const flip = documentRef.createElement('div');
+    flip.className = 'lightbox-holographic-flip';
 
     const front = documentRef.createElement('div');
     front.className = 'lightbox-holographic-face lightbox-holographic-front';
@@ -728,7 +730,8 @@ export function createLightboxMediaRenderer({
       }
     });
 
-    inner.append(front, back);
+    flip.append(front, back);
+    inner.appendChild(flip);
     surface.appendChild(inner);
 
     let touchGesture = null;
