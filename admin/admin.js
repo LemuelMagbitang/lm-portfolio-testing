@@ -2078,13 +2078,15 @@ function normalizeEditorHolographic(value){
   const textureMode = ['tile','fill'].includes(textureModeValue) ? textureModeValue : 'fill';
   const back = String(value.back || '').trim();
   const mask = String(value.mask || '').trim();
+  const backTexture = String(value.backTexture || '').trim();
+  const backTextureModeValue = String(value.backTextureMode || 'fill').trim().toLowerCase();
+  const backTextureMode = ['tile','fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
+  const backMask = String(value.backMask || '').trim();
   return {
     style: styles.has(style) ? style : 'holographic',
-    intensity,
-    textureMode,
-    ...(texture ? {texture} : {}),
-    ...(back ? {back} : {}),
-    ...(mask ? {mask} : {})
+    intensity, textureMode, backTextureMode,
+    ...(texture ? {texture} : {}), ...(back ? {back} : {}), ...(mask ? {mask} : {}),
+    ...(backTexture ? {backTexture} : {}), ...(backMask ? {backMask} : {})
   };
 }
 
@@ -2094,120 +2096,89 @@ function holographicControlHtml(holographic){
   const style = value?.style || 'holographic';
   const intensity = Number.isFinite(Number(value?.intensity)) ? Number(value.intensity) : 0.7;
   const textureMode = value?.textureMode || 'fill';
+  const backTextureMode = value?.backTextureMode || 'fill';
   return `
     <div class="field holographic-control" data-holo-control>
       <label class="field-label">Holographic Effect</label>
-      <label class="media-bg-toggle"><input type="checkbox" data-holo-enabled ${enabled?'checked':''}> <span>Enable interactive foil</span></label>
+      <label class="media-bg-toggle holo-enable-row"><input type="checkbox" data-holo-enabled ${enabled?'checked':''}> <span>Enable interactive foil</span></label>
       <div class="holo-options" data-holo-options>
-        <div class="row">
-          <div class="field">
-            <label class="field-label">Style</label>
-            <select data-holo-style>
-              <option value="holographic" ${style==='holographic'?'selected':''}>Holographic</option>
-              <option value="iridescent" ${style==='iridescent'?'selected':''}>Iridescent Foil</option>
-              <option value="aurora" ${style==='aurora'?'selected':''}>Aurora Gradient</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="field-label">Intensity <span data-holo-intensity-value>${intensity.toFixed(2)}</span></label>
-            <input data-holo-intensity type="range" min="0" max="1" step="0.05" value="${intensity}">
-          </div>
-        </div>
-        <div class="field">
-          <label class="field-label">Foil pattern / texture image <span style="opacity:.5">(optional)</span></label>
-          <input data-holo-texture value="${attr(value?.texture || '')}" placeholder="assets/projects/your-folder/foil.png / .svg">
-          <label class="field-label">Pattern mapping</label>
-          <select data-holo-texture-mode>
-            <option value="tile" ${textureMode==='tile'?'selected':''}>Tile pattern</option>
-            <option value="fill" ${textureMode==='fill'?'selected':''}>Fill card</option>
-          </select>
-          <p class="hint">Tile repeats small motifs (for example, a 250×250 star). Fill card stretches a full-card grayscale texture edge to edge. This is a surface overlay, not a mask; use the separate front mask only to restrict which areas receive foil.</p>
-        </div>
-        <div class="field">
-          <label class="field-label">Front foil mask <span style="opacity:.5">(optional)</span></label>
-          <input data-holo-mask value="${attr(value?.mask || '')}" placeholder="assets/projects/your-folder/front-holo-mask.png">
-          <p class="hint">Use a same-size black-and-white mask: white reveals foil, black hides it. This mask applies to the front only; the back image is never masked.</p>
-        </div>
-        <div class="field">
-          <label class="field-label">Back image <span style="opacity:.5">(optional — front image repeats)</span></label>
+        <div class="field holo-back-source"><label class="field-label">Back card image <span style="opacity:.5">(optional)</span></label>
           <input data-holo-back value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .svg">
         </div>
-        <p class="hint">Hover / move to shift the reflection. Click or tap to flip. Mobile tilt is used when the browser allows motion access.</p>
+        <details class="holo-settings-group" data-holo-front-settings>
+          <summary>Front-side foil settings <span>Style, intensity, pattern and mask</span></summary>
+          <div class="holo-settings-panel">
+            <div class="holo-style-intensity">
+              <div class="field"><label class="field-label">Effect style</label><select data-holo-style>
+                <option value="holographic" ${style==='holographic'?'selected':''}>Holographic</option>
+                <option value="iridescent" ${style==='iridescent'?'selected':''}>Iridescent foil</option>
+                <option value="aurora" ${style==='aurora'?'selected':''}>Aurora gradient</option></select></div>
+              <div class="field"><label class="field-label">Intensity <span data-holo-intensity-value>${intensity.toFixed(2)}</span></label>
+                <input data-holo-intensity type="range" min="0" max="1" step="0.05" value="${intensity}"></div>
+            </div>
+            <div class="field"><label class="field-label">Front foil pattern <span style="opacity:.5">(optional)</span></label>
+              <input data-holo-texture value="${attr(value?.texture || '')}" placeholder="Choose a pattern PNG / SVG">
+              <div class="holo-field-note">Small motifs tile; full-card maps fill the surface.</div>
+              <select data-holo-texture-mode aria-label="Front pattern mapping">
+                <option value="tile" ${textureMode==='tile'?'selected':''}>Tile pattern</option><option value="fill" ${textureMode==='fill'?'selected':''}>Fill card</option></select>
+            </div>
+            <div class="field"><label class="field-label">Front foil mask <span style="opacity:.5">(optional)</span></label>
+              <input data-holo-mask value="${attr(value?.mask || '')}" placeholder="Choose a front mask PNG / SVG">
+              <div class="holo-field-note">White reveals foil; black hides it. Front only.</div></div>
+          </div>
+        </details>
+        <div class="holo-back-settings" data-holo-back-options ${value?.back ? '' : 'hidden'}>
+          <details class="holo-settings-group"><summary>Back-side foil settings <span>Only for a custom back image</span></summary>
+            <div class="holo-settings-panel">
+              <div class="field"><label class="field-label">Back foil pattern <span style="opacity:.5">(optional)</span></label>
+                <input data-holo-back-texture value="${attr(value?.backTexture || '')}" placeholder="Choose a back pattern PNG / SVG">
+                <select data-holo-back-texture-mode aria-label="Back pattern mapping">
+                  <option value="tile" ${backTextureMode==='tile'?'selected':''}>Tile pattern</option><option value="fill" ${backTextureMode==='fill'?'selected':''}>Fill card</option></select></div>
+              <div class="field"><label class="field-label">Back foil mask <span style="opacity:.5">(optional)</span></label>
+                <input data-holo-back-mask value="${attr(value?.backMask || '')}" placeholder="Choose a back mask PNG / SVG">
+                <div class="holo-field-note">Leave both settings blank for a clean reverse.</div></div>
+            </div>
+          </details>
+        </div>
+        <p class="holo-field-note">The card has a gentle automatic idle tilt. Move to rotate; click/tap to flip. Highlights stay fixed and never follow the pointer.</p>
       </div>
     </div>
   `;
 }
 
 function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
-  const control = root?.querySelector('[data-holo-control]');
-  if (!control) return;
-
-  const enabledInput = control.querySelector('[data-holo-enabled]');
-  const options = control.querySelector('[data-holo-options]');
-  const styleInput = control.querySelector('[data-holo-style]');
-  const intensityInput = control.querySelector('[data-holo-intensity]');
-  const intensityLabel = control.querySelector('[data-holo-intensity-value]');
-  const textureInput = control.querySelector('[data-holo-texture]');
-  const textureModeInput = control.querySelector('[data-holo-texture-mode]');
-  const backInput = control.querySelector('[data-holo-back]');
-  const maskInput = control.querySelector('[data-holo-mask]');
-
+  const control=root?.querySelector('[data-holo-control]');if(!control)return;
+  const enabledInput=control.querySelector('[data-holo-enabled]'),options=control.querySelector('[data-holo-options]');
+  const styleInput=control.querySelector('[data-holo-style]'),intensityInput=control.querySelector('[data-holo-intensity]');
+  const intensityLabel=control.querySelector('[data-holo-intensity-value]'),textureInput=control.querySelector('[data-holo-texture]');
+  const textureModeInput=control.querySelector('[data-holo-texture-mode]'),backInput=control.querySelector('[data-holo-back]');
+  const maskInput=control.querySelector('[data-holo-mask]'),backOptions=control.querySelector('[data-holo-back-options]');
+  const backTextureInput=control.querySelector('[data-holo-back-texture]'),backTextureModeInput=control.querySelector('[data-holo-back-texture-mode]');
+  const backMaskInput=control.querySelector('[data-holo-back-mask]');
+  function syncVisibility(){options.hidden=!enabledInput.checked;if(backOptions)backOptions.hidden=!String(backInput.value||'').trim();}
   function sync(){
-    const supported = String(getType() || '').toLowerCase() === 'image';
-    control.hidden = !supported;
-    if (!supported) return;
-
-    const value = normalizeEditorHolographic(getEffect());
-    enabledInput.checked = !!value;
-    options.hidden = !value;
-    styleInput.value = value?.style || 'holographic';
-    intensityInput.value = String(value?.intensity ?? 0.7);
-    textureInput.value = value?.texture || '';
-    textureModeInput.value = value?.textureMode || 'fill';
-    backInput.value = value?.back || '';
-    maskInput.value = value?.mask || '';
-    if (intensityLabel) intensityLabel.textContent = Number(intensityInput.value).toFixed(2);
+    const supported=String(getType()||'').toLowerCase()==='image';control.hidden=!supported;if(!supported)return;
+    const value=normalizeEditorHolographic(getEffect());enabledInput.checked=!!value;
+    styleInput.value=value?.style||'holographic';intensityInput.value=String(value?.intensity??0.7);
+    textureInput.value=value?.texture||'';textureModeInput.value=value?.textureMode||'fill';
+    backInput.value=value?.back||'';maskInput.value=value?.mask||'';
+    if(backTextureInput)backTextureInput.value=value?.backTexture||'';
+    if(backTextureModeInput)backTextureModeInput.value=value?.backTextureMode||'fill';
+    if(backMaskInput)backMaskInput.value=value?.backMask||'';
+    if(intensityLabel)intensityLabel.textContent=Number(intensityInput.value).toFixed(2);syncVisibility();
   }
-
-  function read(){
-    return {
-      style: styleInput.value || 'holographic',
-      intensity: Math.max(0, Math.min(1, Number(intensityInput.value) || 0)),
-      textureMode: textureModeInput.value || 'fill',
-      ...(textureInput.value.trim() ? {texture:textureInput.value.trim()} : {}),
-      ...(backInput.value.trim() ? {back:backInput.value.trim()} : {}),
-      ...(maskInput.value.trim() ? {mask:maskInput.value.trim()} : {})
-    };
-  }
-
-  enabledInput.addEventListener('change', () => {
-    setEffect(enabledInput.checked ? read() : null);
-    sync();
-    onChanged?.();
-  });
-  styleInput.addEventListener('change', () => {
-    if (!enabledInput.checked) return;
-    setEffect(read());
-    onChanged?.();
-  });
-  intensityInput.addEventListener('input', () => {
-    if (intensityLabel) intensityLabel.textContent = Number(intensityInput.value).toFixed(2);
-    if (!enabledInput.checked) return;
-    setEffect(read());
-    onChanged?.();
-  });
-  const updateTextureSettings = () => {
-    if (!enabledInput.checked) return;
-    setEffect(read());
-    onChanged?.();
-  };
-  [textureInput, backInput, maskInput].forEach(input => {
-    input.addEventListener('input', updateTextureSettings);
-  });
-  textureModeInput.addEventListener('change', updateTextureSettings);
-
-  root.__holoEditorSync = sync;
-  sync();
+  function read(){return {style:styleInput.value||'holographic',intensity:Math.max(0,Math.min(1,Number(intensityInput.value)||0)),textureMode:textureModeInput.value||'fill',
+    ...(textureInput.value.trim()?{texture:textureInput.value.trim()}:{}),...(backInput.value.trim()?{back:backInput.value.trim()}:{}),
+    ...(maskInput.value.trim()?{mask:maskInput.value.trim()}:{}),...(backTextureInput?.value.trim()?{backTexture:backTextureInput.value.trim()}:{}),
+    ...(backTextureInput?.value.trim()?{backTextureMode:backTextureModeInput.value||'fill'}:{}),...(backMaskInput?.value.trim()?{backMask:backMaskInput.value.trim()}:{}),
+  };}
+  enabledInput.addEventListener('change',()=>{setEffect(enabledInput.checked?read():null);sync();onChanged?.();});
+  styleInput.addEventListener('change',()=>{if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  intensityInput.addEventListener('input',()=>{if(intensityLabel)intensityLabel.textContent=Number(intensityInput.value).toFixed(2);if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  const update=()=>{syncVisibility();if(enabledInput.checked){setEffect(read());onChanged?.();}};
+  [textureInput,backInput,maskInput,backTextureInput,backMaskInput].filter(Boolean).forEach(el=>el.addEventListener('input',update));
+  [textureModeInput,backTextureModeInput].filter(Boolean).forEach(el=>el.addEventListener('change',update));
+  root.__holoEditorSync=sync;sync();
 }
 
 function buildMediaPreviewHtml(m){
@@ -2646,6 +2617,14 @@ function buildProjectBody(el, p, options = {}){
       attachMediaBrowseButton(row.querySelector('[data-holo-back]'), null, {
         kind:'image',
         title:'Choose a back image'
+      });
+      attachMediaBrowseButton(row.querySelector('[data-holo-back-texture]'), null, {
+        kind:'image',
+        title:'Choose a back foil / pattern image'
+      });
+      attachMediaBrowseButton(row.querySelector('[data-holo-back-mask]'), null, {
+        kind:'image',
+        title:'Choose a back holographic mask'
       });
       refreshPreview();
       attachMediaBrowseButton(row.querySelector('[data-mf="src"]'), () => refreshPreview(), () => ({

@@ -493,7 +493,7 @@ try {
 
         const affordance = await holographic.evaluate(el => {
           const base = getComputedStyle(el);
-          const hint = getComputedStyle(el, '::before');
+          const hint = el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-hint');
           const artwork = el.closest('.lightbox-artwork.has-holographic');
           const face = el.querySelector('.lightbox-holographic-front');
           const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
@@ -508,7 +508,11 @@ try {
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
-            hint: hint.content,
+            hintFace: hint?.querySelector('[data-holo-face-label]')?.textContent || '',
+            hintAction: getComputedStyle(hint?.querySelector('.lightbox-holographic-touch-action')).display === 'none' ? 'desktop' : 'touch',
+            backTextureMode: el.querySelector('.lightbox-holographic-back .lightbox-holographic-texture')?.dataset.holoTextureMode || '',
+            backTextureRepeat: el.querySelector('.lightbox-holographic-back .lightbox-holographic-texture')
+              ? getComputedStyle(el.querySelector('.lightbox-holographic-back .lightbox-holographic-texture')).backgroundRepeat : '',
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
             prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
             ribbonsAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-ribbons')).animationName,
@@ -523,7 +527,10 @@ try {
             affordance.artworkOverflow !== 'visible' ||
             !affordance.faceRadius || affordance.faceRadius === '0px' ||
             affordance.faceOverflow !== 'hidden' ||
-            affordance.hint !== '"FRONT • HOLD + MOVE"' ||
+            affordance.hintFace !== 'FRONT' ||
+            affordance.hintAction !== 'touch' ||
+            affordance.backTextureMode !== 'tile' ||
+            !affordance.backTextureRepeat.includes('repeat') ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
             !affordance.prismAnimation.includes('holo-prism-drift') ||
             !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
@@ -663,7 +670,10 @@ try {
               textureMode: 'fill',
               texture: 'assets/projects/holographic-smoke/foil.svg',
               back: 'assets/projects/holographic-smoke/back.svg',
-              mask: 'assets/projects/holographic-smoke/mask.svg'
+              mask: 'assets/projects/holographic-smoke/mask.svg',
+              backTexture: 'assets/projects/holographic-smoke/foil.svg',
+              backTextureMode: 'tile',
+              backMask: 'assets/projects/holographic-smoke/mask.svg'
             }
           }]
         }];
@@ -1556,7 +1566,9 @@ try {
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
-            hint: getComputedStyle(el, '::before').content,
+            backEffectCount: el.querySelector('.lightbox-holographic-back')?.querySelectorAll('.lightbox-holographic-spectrum,.lightbox-holographic-glare,.lightbox-holographic-prism,.lightbox-holographic-ribbons,.lightbox-holographic-sheen,.lightbox-holographic-texture').length || 0,
+            hintFace: el.closest('.lightbox-media-item')?.querySelector('[data-holo-face-label]')?.textContent || '',
+            hintAction: getComputedStyle(el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-desktop-action')).display === 'none' ? 'touch' : 'desktop',
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
             prismAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-prism')).animationName,
             ribbonsAnimation: getComputedStyle(el.querySelector('.lightbox-holographic-ribbons')).animationName,
@@ -1571,7 +1583,9 @@ try {
             affordance.artworkOverflow !== 'visible' ||
             !affordance.faceRadius || affordance.faceRadius === '0px' ||
             affordance.faceOverflow !== 'hidden' ||
-            affordance.hint !== '"FRONT • MOVE / CLICK"' ||
+            affordance.backEffectCount !== 0 ||
+            affordance.hintFace !== 'FRONT' ||
+            affordance.hintAction !== 'desktop' ||
             !affordance.sheenAnimation.includes('holo-idle-sheen') ||
             !affordance.prismAnimation.includes('holo-prism-drift') ||
             !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
@@ -1589,7 +1603,7 @@ try {
         });
         if (maskState.frontLayers.some(value => !value.includes('mask.svg')) ||
             maskState.backLayers.some(value => !value.includes('mask.svg'))) {
-          throw new Error(`Holographic fallback back must receive the same mask as the front foil layers: ${JSON.stringify(maskState)}`);
+          throw new Error(`Custom reverse foil layers must use the separately configured back mask: ${JSON.stringify(maskState)}`);
         }
 
         const holoBox = await holographic.boundingBox();
@@ -1649,8 +1663,8 @@ try {
             !(await holographic.evaluate(el => el.classList.contains('is-flipped')))) {
           throw new Error('Holographic Lightbox tap/click did not flip the artwork.');
         }
-        const reverseHint = await holographic.evaluate(el => getComputedStyle(el, '::before').content);
-        if (reverseHint !== '"BACK • MOVE / CLICK"') {
+        const reverseHint = await holographic.evaluate(el => el.closest('.lightbox-media-item')?.querySelector('[data-holo-face-label]')?.textContent || '');
+        if (reverseHint !== 'BACK') {
           throw new Error('Holographic guidance did not update from FRONT to BACK after flipping.');
         }
         await page.locator('#lightboxClose').first().click();

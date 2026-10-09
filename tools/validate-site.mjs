@@ -1147,7 +1147,7 @@ function validateCmsRegressionContracts() {
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
   if (!renderer.includes("layer.style.maskMode = 'luminance'") ||
-      !renderer.includes("const frontMaskUrl = face === front || !backHasCustomArtwork ? maskUrl : ''") ||
+      !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||
       !renderer.includes('applyHolographicMask(spectrum, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(prism, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(ribbons, frontMaskUrl)') ||
@@ -1172,11 +1172,15 @@ function validateCmsRegressionContracts() {
     err('Holographic rendering: eased pointer tracking, off-axis light, and tile/fill foil texture mapping must remain available.');
   }
 
-  if (!renderer.includes('face === front || !backHasCustomArtwork ? maskUrl :') ||
+  if (!renderer.includes('const backHasOwnEffects = backHasCustomArtwork && Boolean(config.backTexture || config.backMask)') ||
+      !renderer.includes('if (!isFront && !backHasOwnEffects) return;') ||
+      !renderer.includes('config.backTextureMode') ||
+      !renderer.includes('__lightboxHoloHint') ||
       !css.includes('contain:layout style;') ||
       !css.includes('corner-shape:squircle') ||
-      !css.includes("content:'BACK • MOVE / CLICK'")) {
-    err('Holographic card: masked fallback backs, unclipped squircle shape and dynamic FRONT/BACK guidance are required.');
+      !css.includes('.lightbox-holographic-hint') ||
+      !css.includes('display:none!important;content:none!important;')) {
+    err('Holographic card: reverse effects are opt-in and the under-card cue/idle motion must remain available.');
   }
 
   if (!css.includes('.lightbox-artwork.has-holographic{\n  overflow:visible;') ||

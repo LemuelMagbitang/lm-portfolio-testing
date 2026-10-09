@@ -1538,7 +1538,7 @@ body.center-page {
   -webkit-touch-callout:none;
   cursor:pointer;
   outline:none;
-  contain:layout paint style;
+  contain:layout style;
   transform-origin:50% 50%;
   animation:holo-idle-float 7.2s ease-in-out infinite;
   will-change:transform;
@@ -1668,12 +1668,10 @@ body.center-page {
 }
 
 @keyframes holo-idle-float{
-  0%,100%{
-    transform:translate3d(0,0,0) rotateZ(-.28deg) rotateX(.35deg) rotateY(-.45deg);
-  }
-  50%{
-    transform:translate3d(0,-1.5px,0) rotateZ(.28deg) rotateX(-.30deg) rotateY(.42deg);
-  }
+  0%,100%{transform:translate3d(0,0,0) rotateZ(-.35deg) rotateX(.8deg) rotateY(-1.25deg);}
+  28%{transform:translate3d(0,-2px,0) rotateZ(.1deg) rotateX(-.45deg) rotateY(.8deg);}
+  52%{transform:translate3d(0,-3.5px,0) rotateZ(.38deg) rotateX(.75deg) rotateY(.55deg);}
+  78%{transform:translate3d(0,-1px,0) rotateZ(-.18deg) rotateX(-.65deg) rotateY(-1.05deg);}
 }
 
 @keyframes holo-idle-sheen{
@@ -4584,3 +4582,23 @@ footer > .footer-content p{
     corner-shape:squircle;
   }
 }
+
+
+#lightboxMediaContainer .lightbox-holographic-texture[data-holo-texture-mode="tile"]{background-repeat:repeat;background-size:auto;}
+#lightboxMediaContainer .lightbox-holographic-texture[data-holo-texture-mode="fill"]{background-repeat:no-repeat;background-size:100% 100%;}
+#lightboxMediaContainer .lightbox-holographic::before{display:none!important;content:none!important;}
+#lightboxMediaContainer .lightbox-holographic-hint{
+ width:min(100%,calc(85svh * var(--lightbox-artwork-ratio,1)));max-width:calc(100% - 40px);
+ min-height:13px;align-self:center;display:flex;justify-content:flex-end;align-items:center;gap:5px;
+ margin:-2px auto -5px;color:rgba(255,255,255,.56);font-size:9px;font-weight:700;
+ letter-spacing:.105em;line-height:1.2;text-transform:uppercase;pointer-events:none;user-select:none;-webkit-user-select:none;
+}
+#lightboxMediaContainer .lightbox-holographic-face-status{color:rgba(255,255,255,.88);}
+#lightboxMediaContainer .lightbox-holographic-hint-separator{color:rgba(255,255,255,.34);}
+#lightboxMediaContainer .lightbox-holographic-touch-action{display:none;}
+@media(pointer:coarse){
+ #lightboxMediaContainer .lightbox-holographic-desktop-action{display:none;}
+ #lightboxMediaContainer .lightbox-holographic-touch-action{display:inline;}
+ #lightboxMediaContainer .lightbox-holographic-hint{font-size:8px;letter-spacing:.095em;margin-top:0;}
+}
+@media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic{animation:none!important;}}

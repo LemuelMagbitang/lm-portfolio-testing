@@ -407,6 +407,14 @@ export function createLightboxMediaRenderer({
             const maskUrl = resolveAssetUrl(holo.mask);
             scheduleJob('holographic-mask:' + maskUrl, () => preloadImage(maskUrl, { fetchPriority: 'low' }), false);
           }
+          if (holo?.backTexture) {
+            const backTextureUrl = resolveAssetUrl(holo.backTexture);
+            scheduleJob('holographic-back-texture:' + backTextureUrl, () => preloadImage(backTextureUrl, { fetchPriority: 'low' }), false);
+          }
+          if (holo?.backMask) {
+            const backMaskUrl = resolveAssetUrl(holo.backMask);
+            scheduleJob('holographic-back-mask:' + backMaskUrl, () => preloadImage(backMaskUrl, { fetchPriority: 'low' }), false);
+          }
         }
 
         if (type === 'model') {
@@ -536,13 +544,15 @@ export function createLightboxMediaRenderer({
     const textureMode = ['tile', 'fill'].includes(textureModeValue) ? textureModeValue : 'fill';
     const back = String(value.back || '').trim();
     const mask = String(value.mask || '').trim();
+    const backTexture = String(value.backTexture || '').trim();
+    const backTextureModeValue = String(value.backTextureMode || 'fill').trim().toLowerCase();
+    const backTextureMode = ['tile', 'fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
+    const backMask = String(value.backMask || '').trim();
     return {
       style: ['holographic', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
-      intensity,
-      textureMode,
-      ...(texture ? { texture } : {}),
-      ...(back ? { back } : {}),
-      ...(mask ? { mask } : {})
+      intensity, textureMode, backTextureMode,
+      ...(texture ? { texture } : {}), ...(back ? { back } : {}), ...(mask ? { mask } : {}),
+      ...(backTexture ? { backTexture } : {}), ...(backMask ? { backMask } : {})
     };
   }
 
@@ -649,7 +659,9 @@ export function createLightboxMediaRenderer({
     surface.dataset.holoTextureMode = config.textureMode;
     surface.dataset.holoInput = 'pointer';
     const backHasCustomArtwork = Boolean(String(config.back || '').trim());
+    const backHasOwnEffects = backHasCustomArtwork && Boolean(config.backTexture || config.backMask);
     surface.dataset.holoHasCustomBack = backHasCustomArtwork ? 'true' : 'false';
+    surface.dataset.holoHasBackEffects = backHasOwnEffects ? 'true' : 'false';
     surface.style.setProperty('--holo-intensity', String(config.intensity));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
@@ -667,6 +679,26 @@ export function createLightboxMediaRenderer({
       ? `Flip holographic artwork: ${project.title}`
       : 'Flip holographic artwork');
     surface.setAttribute('aria-pressed', 'false');
+
+    const hint = documentRef.createElement('div');
+    hint.className = 'lightbox-holographic-hint';
+    hint.setAttribute('aria-live', 'polite');
+    const faceLabel = documentRef.createElement('span');
+    faceLabel.className = 'lightbox-holographic-face-status';
+    faceLabel.dataset.holoFaceLabel = '';
+    faceLabel.textContent = 'FRONT';
+    const separator = documentRef.createElement('span');
+    separator.className = 'lightbox-holographic-hint-separator';
+    separator.textContent = '•';
+    separator.setAttribute('aria-hidden', 'true');
+    const desktopAction = documentRef.createElement('span');
+    desktopAction.className = 'lightbox-holographic-desktop-action';
+    desktopAction.textContent = 'MOVE / CLICK';
+    const touchAction = documentRef.createElement('span');
+    touchAction.className = 'lightbox-holographic-touch-action';
+    touchAction.textContent = 'HOLD + MOVE';
+    hint.append(faceLabel, separator, desktopAction, touchAction);
+    surface.__lightboxHoloHint = hint;
 
     const inner = documentRef.createElement('div');
     inner.className = 'lightbox-holographic-inner';
@@ -697,48 +729,42 @@ export function createLightboxMediaRenderer({
     setHolographicAspect();
     frontImage.addEventListener('load', setHolographicAspect, { once: true });
 
-    const textureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
-    const maskUrl = config.mask ? resolveAssetUrl(config.mask) : '';
+    const frontTextureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
+    const frontMaskUrl = config.mask ? resolveAssetUrl(config.mask) : '';
+    const backTextureUrl = backHasOwnEffects && config.backTexture ? resolveAssetUrl(config.backTexture) : '';
+    const backMaskUrl = backHasOwnEffects && config.backMask ? resolveAssetUrl(config.backMask) : '';
     [front, back].forEach(face => {
-      // A deliberate custom back can use independent artwork. The fallback
-      // reverse reuses the front image, so preserve its mask and foil map too.
-      const frontMaskUrl = face === front || !backHasCustomArtwork ? maskUrl : '';
+      const isFront = face === front;
+      if (!isFront && !backHasOwnEffects) return;
+      const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl;
+      const faceTextureUrl = isFront ? frontTextureUrl : backTextureUrl;
+      const faceTextureMode = isFront ? config.textureMode : config.backTextureMode;
       const spectrum = documentRef.createElement('span');
-      spectrum.className = 'lightbox-holographic-spectrum';
-      spectrum.setAttribute('aria-hidden', 'true');
-
+      spectrum.className = 'lightbox-holographic-spectrum'; spectrum.setAttribute('aria-hidden','true');
       const glare = documentRef.createElement('span');
-      glare.className = 'lightbox-holographic-glare';
-      glare.setAttribute('aria-hidden', 'true');
-
+      glare.className = 'lightbox-holographic-glare'; glare.setAttribute('aria-hidden','true');
       const prism = documentRef.createElement('span');
-      prism.className = 'lightbox-holographic-prism';
-      prism.setAttribute('aria-hidden', 'true');
-
+      prism.className = 'lightbox-holographic-prism'; prism.setAttribute('aria-hidden','true');
       const ribbons = documentRef.createElement('span');
-      ribbons.className = 'lightbox-holographic-ribbons';
-      ribbons.setAttribute('aria-hidden', 'true');
-
+      ribbons.className = 'lightbox-holographic-ribbons'; ribbons.setAttribute('aria-hidden','true');
       const sheen = documentRef.createElement('span');
-      sheen.className = 'lightbox-holographic-sheen';
-      sheen.setAttribute('aria-hidden', 'true');
-
-      if (frontMaskUrl) {
-        applyHolographicMask(spectrum, frontMaskUrl);
-        applyHolographicMask(glare, frontMaskUrl);
-        applyHolographicMask(prism, frontMaskUrl);
-        applyHolographicMask(ribbons, frontMaskUrl);
-        applyHolographicMask(sheen, frontMaskUrl);
+      sheen.className = 'lightbox-holographic-sheen'; sheen.setAttribute('aria-hidden','true');
+      if (faceMaskUrl) {
+        applyHolographicMask(spectrum, faceMaskUrl); applyHolographicMask(glare, faceMaskUrl);
+        applyHolographicMask(prism, faceMaskUrl); applyHolographicMask(ribbons, faceMaskUrl);
+        applyHolographicMask(sheen, faceMaskUrl);
       }
       face.append(spectrum, glare, prism, ribbons, sheen);
-
-      if (textureUrl) {
+      if (faceTextureUrl) {
         const texture = documentRef.createElement('span');
         texture.className = 'lightbox-holographic-texture';
-        texture.setAttribute('aria-hidden', 'true');
-        const safeTextureUrl = encodeURI(String(textureUrl).split('"').join('%22'));
+        texture.dataset.holoTextureMode = faceTextureMode;
+        texture.setAttribute('aria-hidden','true');
+        const safeTextureUrl = encodeURI(String(faceTextureUrl).split('"').join('%22'));
         texture.style.backgroundImage = 'url("' + safeTextureUrl + '")';
-        if (frontMaskUrl) applyHolographicMask(texture, frontMaskUrl);
+        texture.style.backgroundRepeat = faceTextureMode === 'tile' ? 'repeat' : 'no-repeat';
+        texture.style.backgroundSize = faceTextureMode === 'tile' ? 'auto' : '100% 100%';
+        if (faceMaskUrl) applyHolographicMask(texture, faceMaskUrl);
         face.appendChild(texture);
       }
     });
@@ -777,6 +803,7 @@ export function createLightboxMediaRenderer({
       surface.removeEventListener('touchcancel', onTouchEnd);
       surface.removeEventListener('click', toggleFlip);
       surface.removeEventListener('keydown', toggleFlip);
+      surface.__lightboxHoloHint?.remove();
       surface.replaceChildren();
     };
 
@@ -889,10 +916,10 @@ export function createLightboxMediaRenderer({
         event.preventDefault();
       }
       surface.classList.toggle('is-flipped');
-      surface.setAttribute(
-        'aria-pressed',
-        surface.classList.contains('is-flipped') ? 'true' : 'false'
-      );
+      const isBack = surface.classList.contains('is-flipped');
+      surface.setAttribute('aria-pressed', isBack ? 'true' : 'false');
+      const faceLabel = surface.__lightboxHoloHint?.querySelector('[data-holo-face-label]');
+      if (faceLabel) faceLabel.textContent = isBack ? 'BACK' : 'FRONT';
     };
 
     // Touch movement may call preventDefault() only after the deliberate hold
@@ -1145,6 +1172,12 @@ export function createLightboxMediaRenderer({
       if (holographic) {
         artwork.classList.add('has-holographic');
         artwork.replaceChildren(holographic);
+        const hint = holographic.__lightboxHoloHint;
+        if (hint) {
+          const caption = entry.querySelector('.media-caption');
+          if (caption) caption.before(hint);
+          else entry.appendChild(hint);
+        }
       }
     }
 
