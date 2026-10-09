@@ -45,8 +45,9 @@ function normalizeHolographicEffect(effect) {
     : 0.7;
   const texture = normalizeString(effect.texture);
   const back = normalizeString(effect.back);
+  const mask = normalizeString(effect.mask);
 
-  if (!styles.has(style) && !texture && !back && effect.intensity === undefined) {
+  if (!styles.has(style) && !texture && !back && !mask && effect.intensity === undefined) {
     return undefined;
   }
 
@@ -54,7 +55,8 @@ function normalizeHolographicEffect(effect) {
     style: styles.has(style) ? style : 'holographic',
     intensity,
     ...(texture ? { texture } : {}),
-    ...(back ? { back } : {})
+    ...(back ? { back } : {}),
+    ...(mask ? { mask } : {})
   };
 }
 

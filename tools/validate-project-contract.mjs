@@ -3,7 +3,7 @@ import {
   normalizeProject,
   normalizeProjectMedia,
   normalizeProjects
-} from '../js/data/project-normalizer.js?v=20261008-03';
+} from '../js/data/project-normalizer.js?v=20261009-08';
 
 const project = normalizeProject({
   id: '  demo-project  ',
@@ -97,14 +97,16 @@ const holographic = normalizeProjectMedia({
     style: ' IRIDESCENT ',
     intensity: 1.4,
     texture: ' assets/foil.svg ',
-    back: ' assets/back.png '
+    back: ' assets/back.png ',
+    mask: ' assets/front-mask.png '
   }
 });
 assert.deepEqual(holographic.holographic, {
   style: 'iridescent',
   intensity: 1,
   texture: 'assets/foil.svg',
-  back: 'assets/back.png'
+  back: 'assets/back.png',
+  mask: 'assets/front-mask.png'
 });
 assert.equal(normalizeProjectMedia({
   type: 'image',

@@ -2061,11 +2061,15 @@ function normalizeEditorHolographic(value){
   const style = String(value.style || '').trim().toLowerCase();
   const intensityValue = Number(value.intensity);
   const intensity = Number.isFinite(intensityValue) ? Math.max(0, Math.min(1, intensityValue)) : 0.7;
+  const texture = String(value.texture || '').trim();
+  const back = String(value.back || '').trim();
+  const mask = String(value.mask || '').trim();
   return {
     style: styles.has(style) ? style : 'holographic',
     intensity,
-    ...(String(value.texture || '').trim() ? {texture:String(value.texture).trim()} : {}),
-    ...(String(value.back || '').trim() ? {back:String(value.back).trim()} : {})
+    ...(texture ? {texture} : {}),
+    ...(back ? {back} : {}),
+    ...(mask ? {mask} : {})
   };
 }
 
@@ -2098,6 +2102,11 @@ function holographicControlHtml(holographic){
           <input data-holo-texture value="${attr(value?.texture || '')}" placeholder="assets/projects/your-folder/foil.png / .svg">
         </div>
         <div class="field">
+          <label class="field-label">Front foil mask <span style="opacity:.5">(optional)</span></label>
+          <input data-holo-mask value="${attr(value?.mask || '')}" placeholder="assets/projects/your-folder/front-holo-mask.png">
+          <p class="hint">Use a same-size black-and-white mask: white reveals foil, black hides it. This mask applies to the front only; the back image is never masked.</p>
+        </div>
+        <div class="field">
           <label class="field-label">Back image <span style="opacity:.5">(optional — front image repeats)</span></label>
           <input data-holo-back value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .svg">
         </div>
@@ -2118,6 +2127,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const intensityLabel = control.querySelector('[data-holo-intensity-value]');
   const textureInput = control.querySelector('[data-holo-texture]');
   const backInput = control.querySelector('[data-holo-back]');
+  const maskInput = control.querySelector('[data-holo-mask]');
 
   function sync(){
     const supported = String(getType() || '').toLowerCase() === 'image';
@@ -2131,6 +2141,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     intensityInput.value = String(value?.intensity ?? 0.7);
     textureInput.value = value?.texture || '';
     backInput.value = value?.back || '';
+    maskInput.value = value?.mask || '';
     if (intensityLabel) intensityLabel.textContent = Number(intensityInput.value).toFixed(2);
   }
 
@@ -2139,7 +2150,8 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
       style: styleInput.value || 'holographic',
       intensity: Math.max(0, Math.min(1, Number(intensityInput.value) || 0)),
       ...(textureInput.value.trim() ? {texture:textureInput.value.trim()} : {}),
-      ...(backInput.value.trim() ? {back:backInput.value.trim()} : {})
+      ...(backInput.value.trim() ? {back:backInput.value.trim()} : {}),
+      ...(maskInput.value.trim() ? {mask:maskInput.value.trim()} : {})
     };
   }
 
@@ -2159,7 +2171,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     setEffect(read());
     onChanged?.();
   });
-  [textureInput, backInput].forEach(input => {
+  [textureInput, backInput, maskInput].forEach(input => {
     input.addEventListener('input', () => {
       if (!enabledInput.checked) return;
       setEffect(read());
@@ -2599,6 +2611,10 @@ function buildProjectBody(el, p, options = {}){
       attachMediaBrowseButton(row.querySelector('[data-holo-texture]'), null, {
         kind:'image',
         title:'Choose a foil / pattern image'
+      });
+      attachMediaBrowseButton(row.querySelector('[data-holo-mask]'), null, {
+        kind:'image',
+        title:'Choose a front holographic mask'
       });
       attachMediaBrowseButton(row.querySelector('[data-holo-back]'), null, {
         kind:'image',

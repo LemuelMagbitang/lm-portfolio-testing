@@ -402,6 +402,10 @@ export function createLightboxMediaRenderer({
             const textureUrl = resolveAssetUrl(holo.texture);
             scheduleJob('holographic-texture:' + textureUrl, () => preloadImage(textureUrl, { fetchPriority: 'low' }), false);
           }
+          if (holo?.mask) {
+            const maskUrl = resolveAssetUrl(holo.mask);
+            scheduleJob('holographic-mask:' + maskUrl, () => preloadImage(maskUrl, { fetchPriority: 'low' }), false);
+          }
         }
 
         if (type === 'model') {
@@ -528,11 +532,13 @@ export function createLightboxMediaRenderer({
       : 0.7;
     const texture = String(value.texture || '').trim();
     const back = String(value.back || '').trim();
+    const mask = String(value.mask || '').trim();
     return {
       style: ['holographic', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
       intensity,
       ...(texture ? { texture } : {}),
-      ...(back ? { back } : {})
+      ...(back ? { back } : {}),
+      ...(mask ? { mask } : {})
     };
   }
 
@@ -573,6 +579,32 @@ export function createLightboxMediaRenderer({
     layer.draggable = false;
     layer.setAttribute('aria-hidden', 'true');
     return layer;
+  }
+
+  // Luminance masks are front-face-only by design. An opaque white pixel
+  // reveals the foil; black suppresses it; gray allows partial foil coverage.
+  function applyHolographicMask(layer, maskUrl) {
+    if (!layer?.style || !maskUrl) return;
+    const safeUrl = String(maskUrl).replace(/["\\\r\n]/g, '\\  function buildHolographicLayer(documentRef, url, className, altText = '') {
+    const layer = documentRef.createElement('img');
+    layer.className = className;
+    layer.src = url;
+    layer.alt = altText;
+    layer.draggable = false;
+    layer.setAttribute('aria-hidden', 'true');
+    return layer;
+  }');
+    const cssUrl = `url("${safeUrl}")`;
+    layer.style.maskImage = cssUrl;
+    layer.style.webkitMaskImage = cssUrl;
+    layer.style.maskMode = 'luminance';
+    layer.style.webkitMaskSourceType = 'luminance';
+    layer.style.maskRepeat = 'no-repeat';
+    layer.style.webkitMaskRepeat = 'no-repeat';
+    layer.style.maskPosition = 'center';
+    layer.style.webkitMaskPosition = 'center';
+    layer.style.maskSize = '100% 100%';
+    layer.style.webkitMaskSize = '100% 100%';
   }
 
   function buildHolographicImage(frontImage, item, project) {
@@ -624,7 +656,9 @@ export function createLightboxMediaRenderer({
     frontImage.addEventListener('load', setHolographicAspect, { once: true });
 
     const textureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
+    const maskUrl = config.mask ? resolveAssetUrl(config.mask) : '';
     [front, back].forEach(face => {
+      const frontMaskUrl = face === front ? maskUrl : '';
       const spectrum = documentRef.createElement('span');
       spectrum.className = 'lightbox-holographic-spectrum';
       spectrum.setAttribute('aria-hidden', 'true');
@@ -633,6 +667,10 @@ export function createLightboxMediaRenderer({
       glare.className = 'lightbox-holographic-glare';
       glare.setAttribute('aria-hidden', 'true');
 
+      if (frontMaskUrl) {
+        applyHolographicMask(spectrum, frontMaskUrl);
+        applyHolographicMask(glare, frontMaskUrl);
+      }
       face.appendChild(spectrum);
       face.appendChild(glare);
 
@@ -643,6 +681,7 @@ export function createLightboxMediaRenderer({
           'lightbox-holographic-texture',
           ''
         );
+        if (frontMaskUrl) applyHolographicMask(texture, frontMaskUrl);
         face.appendChild(texture);
       }
     });

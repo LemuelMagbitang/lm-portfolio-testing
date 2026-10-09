@@ -100,6 +100,17 @@ function validateMedia(media, where) {
     err(`${where}: invalid orientation "${media.orientation}".`);
   }
   checkBackground(media.background, where);
+  if (media.holographic !== undefined) {
+    if (!media.holographic || typeof media.holographic !== 'object' || Array.isArray(media.holographic)) {
+      err(`${where}: holographic settings must be an object.`);
+    } else if (media.holographic.mask !== undefined) {
+      if (typeof media.holographic.mask !== 'string') {
+        err(`${where}: holographic.mask must be a string path.`);
+      } else if (media.holographic.mask.trim()) {
+        checkLocalRef(media.holographic.mask, `${where} holographic.mask`);
+      }
+    }
+  }
 }
 
 function validateFilters(filters) {
@@ -1101,6 +1112,7 @@ function validateCmsRegressionContracts() {
   const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
+  const renderer = exists('js/features/lightbox/media-renderer.js') ? readText('js/features/lightbox/media-renderer.js') : '';
   const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
@@ -1119,6 +1131,12 @@ function validateCmsRegressionContracts() {
     err('CMS 3D preview: the Projects editor must import the infrastructure Three.js adapter.');
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
+  if (!renderer.includes("layer.style.maskMode = 'luminance'") ||
+      !renderer.includes("const frontMaskUrl = face === front ? maskUrl : ''") ||
+      !renderer.includes('applyHolographicMask(spectrum, frontMaskUrl)') ||
+      !renderer.includes('applyHolographicMask(texture, frontMaskUrl)')) {
+    err('Lightbox holographic mask: black/white luminance mask must apply to front foil layers only, never the reverse face.');
+  }
 
   if (!gallery.includes('getEffectiveBaseCount') ||
       !gallery.includes('getRowAlignedCount') ||

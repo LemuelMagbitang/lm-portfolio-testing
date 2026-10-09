@@ -45,6 +45,12 @@ assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must ex
 assert.ok(/data-holo-enabled/.test(admin), 'CMS Projects must expose an enable/disable control for holographic images.');
 assert.ok(/data-holo-texture/.test(admin) && /data-holo-back/.test(admin),
   'CMS holographic images must support optional texture and back-image sources.');
+assert.ok(/data-holo-mask/.test(admin) &&
+  /white reveals foil, black hides it/i.test(admin) &&
+  /front only; the back image is never masked/i.test(admin),
+  'CMS holographic images must expose a front-only black/white luminance mask with a clear usage hint.');
+assert.ok(/attachMediaBrowseButton\(row\.querySelector\('\[data-holo-mask\]'\)/.test(admin),
+  'CMS holographic masks must use the existing upload-capable Media Library picker.');
 assert.ok(/attachMediaBrowseButton\([^\n]+\n(?:.|\n){0,700}data-holo-texture/.test(admin) ||
   /data-holo-texture/.test(admin) && /kind:\s*'image'/.test(admin),
   'CMS holographic source fields must use the existing Media Library image picker.');
