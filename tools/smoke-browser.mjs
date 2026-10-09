@@ -1695,6 +1695,66 @@ try {
           throw new Error(`A plain reverse face must not inherit the front foil mask: ${JSON.stringify(maskState)}`);
         }
 
+        const presetAudit = await holographic.evaluate(el => {
+          const presets = [
+            { style: 'holographic', layers: ['prism', 'ribbons', 'sheen'] },
+            { style: 'brushed', layers: ['prism', 'sheen'] },
+            { style: 'beams', layers: ['prism', 'sheen'] },
+            { style: 'crosshatch', layers: ['diffraction'] },
+            { style: 'shattered', layers: ['prism', 'diffraction'] },
+            { style: 'glitter', layers: ['sparkles'] },
+            { style: 'waves', layers: ['diffraction'] },
+            { style: 'cat-eye', layers: ['prism', 'sheen'] },
+            { style: 'iridescent', layers: ['prism', 'ribbons', 'sheen'] },
+            { style: 'aurora', layers: ['prism', 'ribbons', 'sheen'] }
+          ];
+          const layerSelectors = {
+            prism: '.lightbox-holographic-prism',
+            ribbons: '.lightbox-holographic-ribbons',
+            diffraction: '.lightbox-holographic-diffraction',
+            sparkles: '.lightbox-holographic-sparkles',
+            sheen: '.lightbox-holographic-sheen'
+          };
+          const spectrum = el.querySelector('.lightbox-holographic-spectrum');
+          const originalStyle = el.dataset.holoStyle;
+          const originalIntensity = el.style.getPropertyValue('--holo-intensity');
+          const results = presets.map(preset => {
+            el.dataset.holoStyle = preset.style;
+            return {
+              style: preset.style,
+              layers: preset.layers,
+              backgroundImage: getComputedStyle(spectrum).backgroundImage,
+              layerDisplay: Object.fromEntries(Object.entries(layerSelectors).map(([name, selector]) => [
+                name,
+                getComputedStyle(el.querySelector('.lightbox-holographic-front ' + selector)).display
+              ]))
+            };
+          });
+          el.dataset.holoStyle = originalStyle;
+          el.style.setProperty('--holo-intensity', '0.15');
+          const lowIntensityOpacity = Number.parseFloat(getComputedStyle(spectrum).opacity);
+          el.style.setProperty('--holo-intensity', '0.9');
+          const highIntensityOpacity = Number.parseFloat(getComputedStyle(spectrum).opacity);
+          el.style.setProperty('--holo-intensity', originalIntensity || '0.8');
+          return { results, lowIntensityOpacity, highIntensityOpacity };
+        });
+        const distinctPresetBackgrounds = new Set(presetAudit.results.map(preset => preset.backgroundImage));
+        if (presetAudit.results.length !== 10 || distinctPresetBackgrounds.size !== 10) {
+          throw new Error('Holographic finish options must produce ten distinct spectrum materials; found ' +
+            distinctPresetBackgrounds.size + ' distinct backgrounds.');
+        }
+        const missingPresetLayers = presetAudit.results.flatMap(preset =>
+          preset.layers.filter(layer => preset.layerDisplay[layer] === 'none')
+            .map(layer => preset.style + ':' + layer)
+        );
+        if (missingPresetLayers.length) {
+          throw new Error('Holographic finish options are missing their signature overlay layers: ' +
+            missingPresetLayers.join(', '));
+        }
+        if (!(presetAudit.highIntensityOpacity > presetAudit.lowIntensityOpacity)) {
+          throw new Error('Holographic intensity must visibly increase the foil response.');
+        }
+
         const holoBox = await holographic.boundingBox();
         if (!holoBox || holoBox.width < 20 || holoBox.height < 20) {
           throw new Error('Holographic Lightbox surface has no usable geometry.');
