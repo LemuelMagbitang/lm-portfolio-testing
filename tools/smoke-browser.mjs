@@ -738,7 +738,7 @@ try {
           !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption) {
         throw new Error('Uploaded transparent artwork did not receive the full holographic sizing/flip contract: ' + JSON.stringify(uploadedArtContract));
       }
-      await funkoHolo.click();
+      await funkoHolo.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
       if (!(await funkoHolo.evaluate(el => el.classList.contains('is-flipped')))) {
         throw new Error('Uploaded artwork did not flip to its default mirrored reverse.');
       }
