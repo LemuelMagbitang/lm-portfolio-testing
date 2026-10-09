@@ -48,7 +48,7 @@ assert.ok(/data-holo-texture/.test(admin) && /data-holo-back/.test(admin),
 assert.ok(/data-holo-mask/.test(admin) &&
   /white reveals foil; black hides it\. front only/i.test(admin) &&
   /data-holo-back-mask/.test(admin) &&
-  /Back settings affect only the custom reverse/i.test(admin),
+  /Leave both settings blank for a clean back/i.test(admin),
   'CMS holographic masks must be independent for the front and optional custom back.');
 assert.ok(/data-holo-texture-mode/.test(admin) &&
   /Small motifs tile; full-card maps fill the surface/i.test(admin) &&
