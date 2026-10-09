@@ -2153,8 +2153,8 @@ function holographicControlHtml(holographic){
             </div>
           </details>
         </div>
-        <p class="holo-field-note">Eight core foil finishes are available, plus Pearlescent and Aurora gradient variants. Transparent PNGs follow their alpha silhouette; opaque PNG/JPEG files use the full image surface.</p>
-        <p class="holo-field-note">The card has a gentle automatic idle tilt. Move to rotate; click/tap to flip. Highlights stay fixed and never follow the pointer.</p>
+        <p class="holo-field-note">Ten foil finishes are available, from smooth prism and brushed metal to glitter, cat-eye and aurora. Transparent PNGs follow their alpha silhouette; opaque PNG/JPEG files use the full image surface.</p>
+        <p class="holo-field-note">A gentle idle tilt keeps the card alive. Move to rotate; click/tap to flip. Reflected light shifts opposite your movement to simulate a studio light field.</p>
       </div>
     </div>
   `;

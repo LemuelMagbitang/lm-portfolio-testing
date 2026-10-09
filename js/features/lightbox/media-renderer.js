@@ -577,21 +577,27 @@ export function createLightboxMediaRenderer({
     if (!surface) return;
     const clampedX = clampHolographic(x);
     const clampedY = clampHolographic(y);
-    const ry = ((clampedX - 50) / 50) * 9;
-    const rx = ((50 - clampedY) / 50) * 9;
+    const ry = ((clampedX - 50) / 50) * 13.5;
+    const rx = ((50 - clampedY) / 50) * 13.5;
     const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
     const foilX = 100 - clampedX;
     const foilY = 100 - clampedY;
+    // Reflect a virtual studio key light against the hand movement rather than
+    // gluing a white flashlight to the pointer. Grazing angles reveal more foil.
+    const lightX = clampHolographic(50 + ((50 - clampedX) * 0.68), 16, 84);
+    const lightY = clampHolographic(50 + ((50 - clampedY) * 0.68), 16, 84);
+    const tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
 
-    // Input drives card tilt and broad color refraction only. The virtual
-    // studio lights stay fixed in the foil material; no highlight follows
-    // the mouse or a held finger.
+    // Input drives card tilt, inverse foil refraction and a counter-moving
+    // virtual key light. The animation-frame easing keeps the reflection
+    // optical and fluid rather than cursor-locked.
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
     surface.style.setProperty('--holo-foil-x', foilX.toFixed(2) + '%');
     surface.style.setProperty('--holo-foil-y', foilY.toFixed(2) + '%');
-    surface.style.setProperty('--holo-light-x', '34%');
-    surface.style.setProperty('--holo-light-y', '26%');
+    surface.style.setProperty('--holo-light-x', lightX.toFixed(2) + '%');
+    surface.style.setProperty('--holo-light-y', lightY.toFixed(2) + '%');
+    surface.style.setProperty('--holo-tilt-strength', tiltStrength.toFixed(3));
     surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
@@ -704,6 +710,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-foil-y', '50%');
     surface.style.setProperty('--holo-light-x', '34%');
     surface.style.setProperty('--holo-light-y', '26%');
+    surface.style.setProperty('--holo-tilt-strength', '0');
     holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, frame: null, lastTime: 0 });
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
@@ -780,6 +787,8 @@ export function createLightboxMediaRenderer({
       const faceArtworkUrl = faceImage.currentSrc || faceImage.src;
       const spectrum = documentRef.createElement('span');
       spectrum.className = 'lightbox-holographic-spectrum'; spectrum.setAttribute('aria-hidden','true');
+      const environment = documentRef.createElement('span');
+      environment.className = 'lightbox-holographic-environment'; environment.setAttribute('aria-hidden','true');
       const glare = documentRef.createElement('span');
       glare.className = 'lightbox-holographic-glare'; glare.setAttribute('aria-hidden','true');
       const prism = documentRef.createElement('span');
@@ -793,13 +802,14 @@ export function createLightboxMediaRenderer({
       const sheen = documentRef.createElement('span');
       sheen.className = 'lightbox-holographic-sheen'; sheen.setAttribute('aria-hidden','true');
       applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(glare, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
       applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
-      face.append(spectrum, glare, prism, ribbons, diffraction, sparkles, sheen);
+      face.append(spectrum, environment, glare, prism, ribbons, diffraction, sparkles, sheen);
       if (faceTextureUrl) {
         const texture = documentRef.createElement('span');
         texture.className = 'lightbox-holographic-texture';

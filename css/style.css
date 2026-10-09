@@ -5006,3 +5006,44 @@ footer > .footer-content p{
     transition:none!important;
   }
 }
+
+/* Optical response pass — a small virtual studio rather than a flat rainbow.
+   Environmental shading follows the exact same alpha/custom mask as the art,
+   so transparent artwork keeps its silhouette and no outer frame is introduced. */
+#lightboxMediaContainer .lightbox-holographic-inner{
+  transform:perspective(900px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) translateZ(9px);
+}
+#lightboxMediaContainer .lightbox-holographic-environment{
+  position:absolute; inset:0; z-index:27; margin:0; border:0; pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.34) 0%,rgba(222,249,255,.13) 24%,transparent 72%),
+    linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 24%,rgba(255,255,255,.025) 36%,rgba(255,255,255,.16) 45%,rgba(173,238,255,.10) 49%,rgba(247,218,255,.045) 53%,transparent 65%),
+    radial-gradient(ellipse at 50% 48%,transparent 42%,rgba(0,5,18,.16) 100%),
+    linear-gradient(180deg,rgba(255,255,255,.11) 0%,transparent 12%,transparent 86%,rgba(4,8,26,.20) 100%);
+  background-size:135% 135%,235% 205%,100% 100%,100% 100%;
+  background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),center center,center center;
+  background-blend-mode:screen,screen,multiply,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.30 + (var(--holo-intensity,.7) * .18) + (var(--holo-tilt-strength,0) * .18));
+  filter:contrast(1.08) saturate(1.04);
+  transition:opacity 160ms ease-out,background-position 100ms linear;
+}
+#lightboxMediaContainer .lightbox-holographic-glare{
+  z-index:30;
+  background-image:
+    radial-gradient(ellipse 27% 25% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.88) 0%,rgba(255,255,255,.42) 13%,rgba(211,246,255,.16) 31%,transparent 68%),
+    linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 31%,rgba(255,255,255,.025) 40%,rgba(255,255,255,.42) 46.5%,rgba(162,238,255,.22) 49%,rgba(255,218,250,.09) 51.5%,transparent 62%),
+    linear-gradient(90deg,transparent 8%,rgba(255,255,255,.025) 47%,rgba(255,255,255,.10) 50%,transparent 54%);
+  background-size:142% 142%,245% 210%,100% 100%;
+  background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),center center;
+  background-blend-mode:screen,screen,screen;
+  mix-blend-mode:screen;
+  opacity:calc(.13 + (var(--holo-intensity,.7) * .24) + (var(--holo-tilt-strength,0) * .18));
+  filter:brightness(1.08) contrast(1.26) saturate(1.08);
+  transition:opacity 140ms ease-out,background-position 100ms linear;
+}
+@media(prefers-reduced-motion:reduce){
+  #lightboxMediaContainer .lightbox-holographic-environment,
+  #lightboxMediaContainer .lightbox-holographic-glare{transition:none!important;}
+}
+

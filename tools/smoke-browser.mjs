@@ -506,6 +506,8 @@ try {
             boxShadow: base.boxShadow,
             outlineStyle: base.outlineStyle,
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
+            environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
+            environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             hintFace: hint?.querySelector('[data-holo-face-label]')?.textContent || '',
@@ -525,6 +527,8 @@ try {
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
             affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
             affordance.artworkOverflow !== 'visible' ||
+            affordance.environmentBlend !== 'soft-light' ||
+            !(affordance.environmentOpacity > 0) ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.hintFace !== 'FRONT' ||
@@ -540,7 +544,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-environment', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           return {
             frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
@@ -642,8 +646,15 @@ try {
             Math.abs((tiltState.y + tiltState.fy) - 100) > 1.5) {
           throw new Error('Held mobile holographic gesture lost its inverse foil mapping.');
         }
-        if (tiltState.lightX !== fixedLight.x || tiltState.lightY !== fixedLight.y) {
-          throw new Error('Holding and moving a finger must not drag the holo light sources.');
+        const heldLightX = Number.parseFloat(tiltState.lightX);
+        const heldLightY = Number.parseFloat(tiltState.lightY);
+        const expectedHeldLightX = Math.max(16, Math.min(84, 50 + ((50 - tiltState.x) * 0.68)));
+        const expectedHeldLightY = Math.max(16, Math.min(84, 50 + ((50 - tiltState.y) * 0.68)));
+        if (!Number.isFinite(heldLightX) || !Number.isFinite(heldLightY) ||
+            Math.abs(heldLightX - expectedHeldLightX) > 1.5 ||
+            Math.abs(heldLightY - expectedHeldLightY) > 1.5) {
+          throw new Error('Held mobile gesture did not move the virtual studio light opposite the hand: ' +
+            JSON.stringify({lightX: heldLightX, lightY: heldLightY, expectedX: expectedHeldLightX, expectedY: expectedHeldLightY}));
         }
 
         // Exercise real Chromium touch input (not just synthetic DOM events).
@@ -1750,9 +1761,11 @@ try {
             boxShadow: style.boxShadow,
             outlineStyle: style.outlineStyle,
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
+            environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
+            environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
-            backEffectCount: el.querySelector('.lightbox-holographic-back')?.querySelectorAll('.lightbox-holographic-spectrum,.lightbox-holographic-glare,.lightbox-holographic-prism,.lightbox-holographic-ribbons,.lightbox-holographic-sheen,.lightbox-holographic-texture').length || 0,
+            backEffectCount: el.querySelector('.lightbox-holographic-back')?.querySelectorAll('.lightbox-holographic-spectrum,.lightbox-holographic-environment,.lightbox-holographic-glare,.lightbox-holographic-prism,.lightbox-holographic-ribbons,.lightbox-holographic-sheen,.lightbox-holographic-texture').length || 0,
             hintFace: el.closest('.lightbox-media-item')?.querySelector('[data-holo-face-label]')?.textContent || '',
             hintAction: getComputedStyle(el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-desktop-action')).display === 'none' ? 'touch' : 'desktop',
             sheenAnimation: sheen ? getComputedStyle(sheen).animationName : '',
@@ -1767,6 +1780,8 @@ try {
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
             affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
             affordance.artworkOverflow !== 'visible' ||
+            affordance.environmentBlend !== 'soft-light' ||
+            !(affordance.environmentOpacity > 0) ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.backEffectCount !== 0 ||
@@ -1781,7 +1796,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-environment', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           return {
             frontLayers: selectors.map(selector => front?.querySelector(selector)?.style.maskImage || ''),
             backLayers: selectors.map(selector => back?.querySelector(selector)?.style.maskImage || '')
@@ -1908,9 +1923,14 @@ try {
         }
         const lightX = Number.parseFloat(holoStateBeforeFlip.lightX);
         const lightY = Number.parseFloat(holoStateBeforeFlip.lightY);
+        const expectedLightX = Math.max(16, Math.min(84, 50 + ((50 - pointerX) * 0.68)));
+        const expectedLightY = Math.max(16, Math.min(84, 50 + ((50 - pointerY) * 0.68)));
         if (!Number.isFinite(lightX) || !Number.isFinite(lightY) ||
+            Math.abs(lightX - expectedLightX) > 1.5 ||
+            Math.abs(lightY - expectedLightY) > 1.5 ||
             (Math.abs(pointerX - lightX) < 8 && Math.abs(pointerY - lightY) < 8)) {
-          throw new Error('Holographic highlight must remain offset from the pointer instead of following it like a flashlight.');
+          throw new Error('Holographic key light must move opposite the pointer within the virtual studio: ' +
+            JSON.stringify({pointerX, pointerY, lightX, lightY, expectedLightX, expectedLightY}));
         }
         if (holoStateBeforeFlip.textureMode !== 'tile' ||
             !holoStateBeforeFlip.textureRepeat.includes('repeat')) {

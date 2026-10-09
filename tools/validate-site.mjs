@@ -1160,6 +1160,7 @@ function validateCmsRegressionContracts() {
       !renderer.includes("sizes.push('contain')") ||
       !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||
       !renderer.includes('applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl)') ||
@@ -1175,6 +1176,10 @@ function validateCmsRegressionContracts() {
       !css.includes('.lightbox-holographic.is-flipped .lightbox-holographic-flip') ||
       !renderer.includes("surface.style.setProperty('--holo-light-x', '34%')") ||
       !renderer.includes("surface.style.setProperty('--holo-light-y', '26%')") ||
+      !renderer.includes('const lightX = clampHolographic(50 + ((50 - clampedX) * 0.68), 16, 84)') ||
+      !renderer.includes('const lightY = clampHolographic(50 + ((50 - clampedY) * 0.68), 16, 84)') ||
+      !css.includes('.lightbox-holographic-environment{') ||
+      !css.includes('background-blend-mode:screen,screen,multiply,soft-light') ||
       !renderer.includes('lightbox-holographic-prism') ||
       !renderer.includes('lightbox-holographic-ribbons') ||
       !css.includes('@keyframes holo-prism-drift') ||
@@ -1182,7 +1187,7 @@ function validateCmsRegressionContracts() {
       !css.includes('data-holo-texture-mode="tile"') ||
       !css.includes('background-size:auto') ||
       !css.includes('.lightbox-holographic-ribbons{\n    animation:none;')) {
-    err('Holographic rendering: eased pointer tracking, off-axis light, and tile/fill foil texture mapping must remain available.');
+    err('Holographic rendering: eased inverse lighting, masked environmental shading, and tile/fill texture mapping must remain available.');
   }
 
   if (!renderer.includes('const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled)') ||
