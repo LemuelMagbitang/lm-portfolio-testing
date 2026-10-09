@@ -558,10 +558,14 @@ export function createLightboxMediaRenderer({
     const backTextureModeValue = String(value.backTextureMode || 'fill').trim().toLowerCase();
     const backTextureMode = ['tile', 'fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
     const backMask = String(value.backMask || '').trim();
+    const backFoilEnabled = Boolean(back) && (
+      value.backFoilEnabled === true ||
+      (value.backFoilEnabled == null && Boolean(backTexture || backMask))
+    );
     return {
       style: ['holographic', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
       intensity, textureMode, backTextureMode,
-      ...(texture ? { texture } : {}), ...(back ? { back } : {}), ...(mask ? { mask } : {}),
+      ...(texture ? { texture } : {}), ...(back ? { back, backFoilEnabled } : {}), ...(mask ? { mask } : {}),
       ...(backTexture ? { backTexture } : {}), ...(backMask ? { backMask } : {})
     };
   }
@@ -643,20 +647,39 @@ export function createLightboxMediaRenderer({
 
   // Luminance masks are front-face-only by design. White reveals foil;
   // black suppresses it; gray allows partial foil coverage.
-  function applyHolographicMask(layer, maskUrl) {
-    if (!layer?.style || !maskUrl) return;
-    const safeUrl = encodeURI(String(maskUrl).split('"').join('%22'));
-    const cssUrl = 'url("' + safeUrl + '")';
-    layer.style.maskImage = cssUrl;
-    layer.style.webkitMaskImage = cssUrl;
-    layer.style.maskMode = 'luminance';
-    layer.style.webkitMaskSourceType = 'luminance';
-    layer.style.maskRepeat = 'no-repeat';
-    layer.style.webkitMaskRepeat = 'no-repeat';
-    layer.style.maskPosition = 'center';
-    layer.style.webkitMaskPosition = 'center';
-    layer.style.maskSize = '100% 100%';
-    layer.style.webkitMaskSize = '100% 100%';
+  function applyHolographicMask(layer, maskUrl, artworkUrl = '') {
+    if (!layer?.style || (!maskUrl && !artworkUrl)) return;
+    const asCssUrl = value => 'url("' + encodeURI(String(value).split('"').join('%22')) + '")';
+    const images = [];
+    const modes = [];
+    const sizes = [];
+    if (maskUrl) {
+      images.push(asCssUrl(maskUrl));
+      modes.push('luminance');
+      sizes.push('100% 100%');
+    }
+    if (artworkUrl) {
+      images.push(asCssUrl(artworkUrl));
+      modes.push('alpha');
+      sizes.push('contain');
+    }
+    const imageList = images.join(', ');
+    const modeList = modes.join(', ');
+    const sizeList = sizes.join(', ');
+    const repeatList = images.map(() => 'no-repeat').join(', ');
+    const positionList = images.map(() => 'center').join(', ');
+    layer.style.maskImage = imageList;
+    layer.style.webkitMaskImage = imageList;
+    layer.style.maskMode = modeList;
+    layer.style.webkitMaskSourceType = modeList;
+    layer.style.maskComposite = images.length > 1 ? 'intersect' : 'add';
+    layer.style.webkitMaskComposite = images.length > 1 ? 'source-in' : 'source-over';
+    layer.style.maskRepeat = repeatList;
+    layer.style.webkitMaskRepeat = repeatList;
+    layer.style.maskPosition = positionList;
+    layer.style.webkitMaskPosition = positionList;
+    layer.style.maskSize = sizeList;
+    layer.style.webkitMaskSize = sizeList;
   }
 
   function buildHolographicImage(frontImage, item, project) {
@@ -669,9 +692,9 @@ export function createLightboxMediaRenderer({
     surface.dataset.holoTextureMode = config.textureMode;
     surface.dataset.holoInput = 'pointer';
     const backHasCustomArtwork = Boolean(String(config.back || '').trim());
-    const backHasOwnEffects = backHasCustomArtwork && Boolean(config.backTexture || config.backMask);
+    const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled);
     surface.dataset.holoHasCustomBack = backHasCustomArtwork ? 'true' : 'false';
-    surface.dataset.holoHasBackEffects = backHasOwnEffects ? 'true' : 'false';
+    surface.dataset.holoHasBackEffects = backFoilEnabled ? 'true' : 'false';
     surface.style.setProperty('--holo-intensity', String(config.intensity));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
@@ -741,14 +764,16 @@ export function createLightboxMediaRenderer({
 
     const frontTextureUrl = config.texture ? resolveAssetUrl(config.texture) : '';
     const frontMaskUrl = config.mask ? resolveAssetUrl(config.mask) : '';
-    const backTextureUrl = backHasOwnEffects && config.backTexture ? resolveAssetUrl(config.backTexture) : '';
-    const backMaskUrl = backHasOwnEffects && config.backMask ? resolveAssetUrl(config.backMask) : '';
+    const backTextureUrl = backFoilEnabled && config.backTexture ? resolveAssetUrl(config.backTexture) : '';
+    const backMaskUrl = backFoilEnabled && config.backMask ? resolveAssetUrl(config.backMask) : '';
     [front, back].forEach(face => {
       const isFront = face === front;
-      if (!isFront && !backHasOwnEffects) return;
+      if (!isFront && !backFoilEnabled) return;
       const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl;
       const faceTextureUrl = isFront ? frontTextureUrl : backTextureUrl;
       const faceTextureMode = isFront ? config.textureMode : config.backTextureMode;
+      const faceImage = isFront ? frontImage : backImage;
+      const faceArtworkUrl = faceImage.currentSrc || faceImage.src;
       const spectrum = documentRef.createElement('span');
       spectrum.className = 'lightbox-holographic-spectrum'; spectrum.setAttribute('aria-hidden','true');
       const glare = documentRef.createElement('span');
@@ -759,11 +784,11 @@ export function createLightboxMediaRenderer({
       ribbons.className = 'lightbox-holographic-ribbons'; ribbons.setAttribute('aria-hidden','true');
       const sheen = documentRef.createElement('span');
       sheen.className = 'lightbox-holographic-sheen'; sheen.setAttribute('aria-hidden','true');
-      if (faceMaskUrl) {
-        applyHolographicMask(spectrum, faceMaskUrl); applyHolographicMask(glare, faceMaskUrl);
-        applyHolographicMask(prism, faceMaskUrl); applyHolographicMask(ribbons, faceMaskUrl);
-        applyHolographicMask(sheen, faceMaskUrl);
-      }
+      applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(glare, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl);
+      applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
       face.append(spectrum, glare, prism, ribbons, sheen);
       if (faceTextureUrl) {
         const texture = documentRef.createElement('span');
@@ -774,7 +799,7 @@ export function createLightboxMediaRenderer({
         texture.style.backgroundImage = 'url("' + safeTextureUrl + '")';
         texture.style.backgroundRepeat = faceTextureMode === 'tile' ? 'repeat' : 'no-repeat';
         texture.style.backgroundSize = faceTextureMode === 'tile' ? 'auto' : '100% 100%';
-        if (faceMaskUrl) applyHolographicMask(texture, faceMaskUrl);
+        applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl);
         face.appendChild(texture);
       }
     });

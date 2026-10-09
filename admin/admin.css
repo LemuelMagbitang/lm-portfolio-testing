@@ -822,6 +822,7 @@ button.icon-btn,
 /* Compact expandable CMS controls for the holographic effect. */
 .holo-options{gap:8px;padding:8px;}
 .holo-enable-row{margin-bottom:2px;}
+.holo-back-enable-row{margin-bottom:4px;}
 .holo-back-source{margin:0;}
 .holo-settings-group{margin:0;min-width:0;border:1px solid rgba(255,255,255,.09);border-radius:8px;background:rgba(255,255,255,.018);overflow:hidden;}
 .holo-settings-group>summary{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;min-height:38px;padding:8px 10px;color:#eee;font-size:12px;font-weight:650;cursor:pointer;list-style:none;}

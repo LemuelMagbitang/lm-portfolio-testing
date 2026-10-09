@@ -1146,14 +1146,17 @@ function validateCmsRegressionContracts() {
     err('CMS 3D preview: the Projects editor must import the infrastructure Three.js adapter.');
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
-  if (!renderer.includes("layer.style.maskMode = 'luminance'") ||
+  if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '')") ||
+      !renderer.includes('layer.style.maskMode = modeList') ||
+      !renderer.includes("modes.push('alpha')") ||
+      !renderer.includes("sizes.push('contain')") ||
       !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||
-      !renderer.includes('applyHolographicMask(spectrum, faceMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(prism, faceMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(ribbons, faceMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(sheen, faceMaskUrl)') ||
-      !renderer.includes('applyHolographicMask(texture, faceMaskUrl)')) {
-    err('Lightbox holographic mask: front and reverse layers must use their own face-specific masks.');
+      !renderer.includes('applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl)')) {
+    err('Lightbox holographic mask: foil layers must combine each face alpha with its optional custom luminance mask.');
   }
 
   if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
@@ -1172,22 +1175,24 @@ function validateCmsRegressionContracts() {
     err('Holographic rendering: eased pointer tracking, off-axis light, and tile/fill foil texture mapping must remain available.');
   }
 
-  if (!renderer.includes('const backHasOwnEffects = backHasCustomArtwork && Boolean(config.backTexture || config.backMask)') ||
-      !renderer.includes('if (!isFront && !backHasOwnEffects) return;') ||
+  if (!renderer.includes('const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled)') ||
+      !renderer.includes('if (!isFront && !backFoilEnabled) return;') ||
       !renderer.includes('config.backTextureMode') ||
+      !admin.includes('data-holo-back-enabled') ||
+      !admin.includes('backFoilEnabled') ||
       !renderer.includes('__lightboxHoloHint') ||
       !css.includes('contain:layout style;') ||
-      !css.includes('corner-shape:squircle') ||
       !css.includes('.lightbox-holographic-hint') ||
       !css.includes('display:none!important;content:none!important;')) {
-    err('Holographic card: reverse effects are opt-in and the under-card cue/idle motion must remain available.');
+    err('Holographic card: the reverse needs its own foil toggle while preserving the under-card cue and idle motion.');
   }
 
   if (!css.includes('.lightbox-artwork.has-holographic{\n  overflow:visible;') ||
       !css.includes('border:0;\n  box-shadow:none;\n  outline:none;') ||
       !css.includes('outline:none!important;') ||
-      !css.includes('#lightboxMediaContainer .lightbox-holographic-face{\n  border-radius:inherit;\n  overflow:hidden;')) {
-    err('Holographic card: the Lightbox artwork slot must not clip 3D tilt; the card has no outer frame and each face retains rounded clipping.');
+      !css.includes('#lightboxMediaContainer .lightbox-holographic-face{\n  border-radius:0;\n  overflow:hidden;') ||
+      !renderer.includes("layer.style.webkitMaskComposite = images.length > 1 ? 'source-in' : 'source-over'")) {
+    err('Holographic card: the artwork slot must not crop tilt; foil must have no added frame and clip to image alpha.');
   }
 
   if (!gallery.includes('getEffectiveBaseCount') ||

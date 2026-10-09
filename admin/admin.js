@@ -2083,10 +2083,14 @@ function normalizeEditorHolographic(value){
   const backTextureModeValue = String(value.backTextureMode || 'fill').trim().toLowerCase();
   const backTextureMode = ['tile','fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
   const backMask = back ? String(value.backMask || '').trim() : '';
+  const backFoilEnabled = Boolean(back) && (
+    value.backFoilEnabled === true ||
+    (value.backFoilEnabled == null && Boolean(backTexture || backMask))
+  );
   return {
     style: styles.has(style) ? style : 'holographic',
     intensity, textureMode, ...(back ? {backTextureMode} : {}),
-    ...(texture ? {texture} : {}), ...(back ? {back} : {}), ...(mask ? {mask} : {}),
+    ...(texture ? {texture} : {}), ...(back ? {back, backFoilEnabled} : {}), ...(mask ? {mask} : {}),
     ...(backTexture ? {backTexture} : {}), ...(backMask ? {backMask} : {})
   };
 }
@@ -2104,7 +2108,7 @@ function holographicControlHtml(holographic){
       <label class="media-bg-toggle holo-enable-row"><input type="checkbox" data-holo-enabled ${enabled?'checked':''}> <span>Enable interactive foil</span></label>
       <div class="holo-options" data-holo-options>
         <div class="field holo-back-source"><label class="field-label">Back card image <span style="opacity:.5">(optional)</span></label>
-          <input data-holo-back value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .svg">
+          <input data-holo-back value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .jpg / .svg">
         </div>
         <details class="holo-settings-group" data-holo-front-settings>
           <summary>Front-side foil settings <span>Style, intensity, pattern and mask</span></summary>
@@ -2129,7 +2133,8 @@ function holographicControlHtml(holographic){
           </div>
         </details>
         <div class="holo-back-settings" data-holo-back-options ${value?.back ? '' : 'hidden'}>
-          <details class="holo-settings-group"><summary>Back-side foil settings <span>Only for a custom back image</span></summary>
+          <label class="media-bg-toggle holo-enable-row holo-back-enable-row"><input type="checkbox" data-holo-back-enabled ${value?.backFoilEnabled?'checked':''}> <span>Enable interactive foil on back</span></label>
+          <details class="holo-settings-group"><summary>Back-side foil settings <span>Pattern and mask (optional)</span></summary>
             <div class="holo-settings-panel">
               <div class="field"><label class="field-label">Back foil pattern <span style="opacity:.5">(optional)</span></label>
                 <input data-holo-back-texture value="${attr(value?.backTexture || '')}" placeholder="Choose a back pattern PNG / SVG">
@@ -2141,6 +2146,7 @@ function holographicControlHtml(holographic){
             </div>
           </details>
         </div>
+        <p class="holo-field-note">Works with transparent PNG cutouts and opaque PNG/JPEG artwork; foil follows the visible image silhouette.</p>
         <p class="holo-field-note">The card has a gentle automatic idle tilt. Move to rotate; click/tap to flip. Highlights stay fixed and never follow the pointer.</p>
       </div>
     </div>
@@ -2156,6 +2162,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const maskInput=control.querySelector('[data-holo-mask]'),backOptions=control.querySelector('[data-holo-back-options]');
   const backTextureInput=control.querySelector('[data-holo-back-texture]'),backTextureModeInput=control.querySelector('[data-holo-back-texture-mode]');
   const backMaskInput=control.querySelector('[data-holo-back-mask]');
+  const backFoilInput=control.querySelector('[data-holo-back-enabled]');
   function syncVisibility(){options.hidden=!enabledInput.checked;if(backOptions)backOptions.hidden=!String(backInput.value||'').trim();}
   function sync(){
     const supported=String(getType()||'').toLowerCase()==='image';control.hidden=!supported;if(!supported)return;
@@ -2166,6 +2173,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     if(backTextureInput)backTextureInput.value=value?.backTexture||'';
     if(backTextureModeInput)backTextureModeInput.value=value?.backTextureMode||'fill';
     if(backMaskInput)backMaskInput.value=value?.backMask||'';
+    if(backFoilInput)backFoilInput.checked=!!value?.backFoilEnabled;
     if(intensityLabel)intensityLabel.textContent=Number(intensityInput.value).toFixed(2);syncVisibility();
   }
   function read(){
@@ -2177,7 +2185,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
       intensity:Math.max(0,Math.min(1,Number(intensityInput.value)||0)),
       textureMode:textureModeInput.value||'fill',
       ...(textureInput.value.trim()?{texture:textureInput.value.trim()}:{}),
-      ...(backSrc?{back:backSrc}:{}),
+      ...(backSrc?{back:backSrc,backFoilEnabled:!!backFoilInput?.checked}:{}),
       ...(maskInput.value.trim()?{mask:maskInput.value.trim()}:{}),
       ...(backSrc&&backTexture?{backTexture,backTextureMode:backTextureModeInput.value||'fill'}:{}),
       ...(backSrc&&backMask?{backMask}:{})
@@ -2189,6 +2197,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const update=()=>{syncVisibility();if(enabledInput.checked){setEffect(read());onChanged?.();}};
   [textureInput,backInput,maskInput,backTextureInput,backMaskInput].filter(Boolean).forEach(el=>el.addEventListener('input',update));
   [textureModeInput,backTextureModeInput].filter(Boolean).forEach(el=>el.addEventListener('change',update));
+  backFoilInput?.addEventListener('change',update);
   root.__holoEditorSync=sync;sync();
 }
 

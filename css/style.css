@@ -1645,7 +1645,7 @@ body.center-page {
   position:absolute;
   inset:0;
   overflow:hidden;
-  border-radius:4px;
+  border-radius:0;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   transform:translateZ(.01px);
@@ -4486,26 +4486,26 @@ footer > .footer-content p{
 #lightboxMediaContainer .lightbox-holographic{
   contain:layout style;
   overflow:visible;
-  border-radius:18px;
+  border-radius:0;
   border:0;
   box-shadow:none;
   outline:none;
   transform-origin:50% 50%;
   isolation:isolate;
 }
-/* Only the two card faces clip their own pixels to preserve smooth corners.
-   The outside Lightbox wrappers stay open so rotation can extend freely. */
+/* Faces remain edge-to-edge; foil layers are clipped by each image's alpha
+   channel so transparent cutouts keep their actual silhouette. */
 #lightboxMediaContainer .lightbox-holographic-face{
-  border-radius:inherit;
+  border-radius:0;
   overflow:hidden;
 }
 #lightboxMediaContainer .lightbox-holographic-inner,
 #lightboxMediaContainer .lightbox-holographic-flip,
 #lightboxMediaContainer .lightbox-holographic-face{
-  border-radius:inherit;
+  border-radius:0;
 }
 #lightboxMediaContainer .lightbox-holographic:focus-visible{
-  border-radius:inherit;
+  border-radius:0;
   outline-offset:5px;
 }
 @supports (corner-shape:squircle){
@@ -4563,13 +4563,13 @@ footer > .footer-content p{
 
 /* The artwork element is only the lightbox's layout slot. Do not let that
    slot crop the transformed card when it pitches/rolls beyond its starting
-   rectangle; the individual card faces keep their own rounded clipping. */
+   rectangle; foil layers follow each face's alpha silhouette. */
 #lightboxMediaContainer .lightbox-artwork.has-holographic{
   overflow:visible;
 }
 
-/* No extra frame around the card: keep the card's rounded silhouette on its
-   faces, while letting 3D transform and foil layers extend outside the slot. */
+/* No extra frame around the card: foil alpha clipping defines the visible
+   silhouette while 3D transforms extend outside the artwork slot. */
 #lightboxMediaContainer .lightbox-holographic{
   border:0;
   box-shadow:none;
@@ -4582,7 +4582,7 @@ footer > .footer-content p{
   outline-offset:0;
 }
 #lightboxMediaContainer .lightbox-holographic-face{
-  border-radius:inherit;
+  border-radius:0;
   overflow:hidden;
 }
 @supports (corner-shape:squircle){
