@@ -5,6 +5,7 @@ import path from 'node:path';
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'admin/admin.css'), 'utf8');
+const siteCss = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 
 for (const marker of [
   "project-list-item",
@@ -50,11 +51,11 @@ assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(a
   'CMS foil strength should have fine-grained control and a clear percentage label.');
 
 assert.ok(
-  css.includes('url("../assets/holographic/cosmos-bottom.png")') &&
-  css.includes('url("../assets/holographic/cosmos-middle-trans.png")') &&
-  css.includes('url("../assets/holographic/cosmos-top-trans.png")'),
+  siteCss.includes('url("../assets/holographic/cosmos-bottom.png")') &&
+  siteCss.includes('url("../assets/holographic/cosmos-middle-trans.png")') &&
+  siteCss.includes('url("../assets/holographic/cosmos-top-trans.png")'),
   'The Cosmos foil profile must use all three uploaded texture maps.');
-assert.ok(css.includes('--holo-visual-intensity:calc(var(--holo-intensity,.7) * .68)'),
+assert.ok(siteCss.includes('--holo-visual-intensity:calc(var(--holo-intensity,.7) * .68)'),
   'The visual foil intensity must be scaled separately from the CMS value to avoid clipping layered highlights.');
 assert.ok(/value="cosmos"/.test(admin) && /Cosmos galaxy foil/.test(admin),
   'CMS holographic style picker must expose the optional Cosmos finish.');
