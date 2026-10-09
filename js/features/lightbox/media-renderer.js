@@ -563,7 +563,7 @@ export function createLightboxMediaRenderer({
       (value.backFoilEnabled == null && Boolean(backTexture || backMask))
     );
     return {
-      style: ['holographic', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
+      style: ['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
       intensity, textureMode, backTextureMode,
       ...(texture ? { texture } : {}), ...(back ? { back, backFoilEnabled } : {}), ...(mask ? { mask } : {}),
       ...(backTexture ? { backTexture } : {}), ...(backMask ? { backMask } : {})
