@@ -154,23 +154,39 @@ export function initNavigation({ root = globalThis.document } = {}) {
       windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home'));
     } catch (_) {}
 
-    const scrollingElement = root.scrollingElement || root.documentElement;
-    // Clear every standards/legacy document scroll surface synchronously.
-    // This keeps same-document Works/logo navigation deterministic even when
-    // a browser, embedded surface, or restored page exposes BODY as the
-    // effective scrolling element.
-    [scrollingElement, root.documentElement, root.body]
-      .filter(Boolean)
-      .forEach(element => { element.scrollLeft = 0; element.scrollTop = 0; });
-    // Explicitly cancel any document smooth-scroll animation that may
-    // still be running from the visitor's previous scroll position. The
-    // global stylesheet intentionally enables smooth scrolling, so leaving
-    // behavior implicit here can let the old animation overwrite this reset
-    // a few frames later.
-    try {
-      windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' });
-    } catch (_) {
-      try { windowRef.scrollTo(0, 0); } catch (_) {}
+    const resetHomeScroll = () => {
+      const scrollingElement = root.scrollingElement || root.documentElement;
+
+      // Clear every standards/legacy document scroll surface. A single reset
+      // is not enough when a smooth-scroll animation was already in flight or
+      // Gallery's home-state render is still settling its layout.
+      [scrollingElement, root.documentElement, root.body]
+        .filter(Boolean)
+        .forEach(element => {
+          element.scrollLeft = 0;
+          element.scrollTop = 0;
+        });
+
+      // Override the site's global smooth-scroll setting for this navigation.
+      // Direct scrollTop writes above also provide a fallback for engines that
+      // do not support the "instant" ScrollBehavior option.
+      try {
+        windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' });
+      } catch (_) {
+        try { windowRef.scrollTo(0, 0); } catch (_) {}
+      }
+    };
+
+    // Reset synchronously for immediate feedback, then repeat across two paint
+    // frames. This cancels a pre-existing scroll animation that could otherwise
+    // resume after the first reset and ensures the destination remains at the
+    // top after Gallery has applied its home/ALL presentation.
+    resetHomeScroll();
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      windowRef.requestAnimationFrame(() => {
+        resetHomeScroll();
+        windowRef.requestAnimationFrame(resetHomeScroll);
+      });
     }
   }
 
