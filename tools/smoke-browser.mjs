@@ -4096,9 +4096,9 @@ try {
       }
     }, { width: 390, height: 844 });
 
-    await let cmsSmokeMediaSha = 'smoke-jpg';
+    let cmsSmokeMediaSha = 'smoke-jpg';
     let cmsSmokeUploadPayload = null;
-    smokePage(browser, '/admin/', async page => {
+    await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
       // GitHub before the application shell is exposed. The shell becomes
       // active slightly before enterApp() calls its initial Hero navigation,
