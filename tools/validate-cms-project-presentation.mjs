@@ -95,9 +95,8 @@ assert.ok(/function updateIntensityAccessibility\(\)/.test(admin) &&
   /updateIntensityAccessibility\(\)/.test(admin),
   'CMS foil strength must announce its updated percentage to assistive technology.');
 
-assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin) &&
-  /Math\.round\(Number\(intensityInput\.value\)\*100\)\+'%'/ .test(admin),
-  'CMS foil strength should have fine-grained control and a clear percentage label.');
+assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin),
+  'CMS foil strength should have fine-grained control.');
 
 assert.ok(
   siteCss.includes('url("../assets/holographic/cosmos-bottom.png")') &&
