@@ -97,6 +97,7 @@ const holographic = normalizeProjectMedia({
     style: ' IRIDESCENT ',
     intensity: 1.4,
     texture: ' assets/foil.svg ',
+    textureMode: ' TILE ',
     back: ' assets/back.png ',
     mask: ' assets/front-mask.png '
   }
@@ -105,6 +106,7 @@ assert.deepEqual(holographic.holographic, {
   style: 'iridescent',
   intensity: 1,
   texture: 'assets/foil.svg',
+  textureMode: 'tile',
   back: 'assets/back.png',
   mask: 'assets/front-mask.png'
 });
