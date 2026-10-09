@@ -654,7 +654,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/Asset 4@4x.png",
-        "caption": "",
+        "caption": "Smooth Prism Foil",
         "orientation": "square",
         "holographic": {
           "style": "holographic",
@@ -665,7 +665,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/miles morales@4x.png",
-        "caption": "",
+        "caption": "Fine Brush Foil",
         "orientation": "",
         "holographic": {
           "style": "brushed",
@@ -676,7 +676,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/mittens@4x.png",
-        "caption": "",
+        "caption": "Vertical Light Beams",
         "orientation": "",
         "holographic": {
           "style": "beams",
@@ -687,7 +687,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/peter b@4x.png",
-        "caption": "",
+        "caption": "Crosshatch Foil",
         "orientation": "",
         "holographic": {
           "style": "crosshatch",
@@ -698,7 +698,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/miguel o_hara@4x.png",
-        "caption": "",
+        "caption": "Shattered Ice",
         "orientation": "",
         "holographic": {
           "style": "shattered",
@@ -709,7 +709,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/Asset 8@4x.png",
-        "caption": "",
+        "caption": "Cosmos Galaxy Foil",
         "orientation": "",
         "holographic": {
           "style": "cosmos",
@@ -720,7 +720,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/ben@4x.png",
-        "caption": "",
+        "caption": "Water Waves",
         "orientation": "",
         "holographic": {
           "style": "waves",
@@ -731,7 +731,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/spidergwen@4x.png",
-        "caption": "",
+        "caption": "Cat-Eye Lens",
         "orientation": "",
         "holographic": {
           "style": "cat-eye",
@@ -742,7 +742,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/Asset 5@4x.png",
-        "caption": "",
+        "caption": "Pearlescent Foil",
         "orientation": "",
         "holographic": {
           "style": "iridescent",
@@ -753,7 +753,7 @@
       {
         "type": "image",
         "src": "assets/projects/funko-pop/pavitr@4x.png",
-        "caption": "",
+        "caption": "Aurora Gradient",
         "orientation": "",
         "holographic": {
           "style": "aurora",
