@@ -509,7 +509,6 @@ try {
             environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
             environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
             grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::before').backgroundImage,
-            classicInterferenceImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::after').backgroundImage,
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             hintFace: hint?.querySelector('[data-holo-face-label]')?.textContent || '',
@@ -532,7 +531,6 @@ try {
             affordance.environmentBlend !== 'soft-light' ||
             !(affordance.environmentOpacity > 0) ||
             !affordance.grainImage.includes('grain.webp') ||
-            !affordance.classicInterferenceImage.includes('repeating-linear-gradient') ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.hintFace !== 'FRONT' ||
@@ -1770,7 +1768,6 @@ try {
             environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
             environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
             grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::before').backgroundImage,
-            classicInterferenceImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::after').backgroundImage,
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             backEffectCount: el.querySelector('.lightbox-holographic-back')?.querySelectorAll('.lightbox-holographic-spectrum,.lightbox-holographic-environment,.lightbox-holographic-glare,.lightbox-holographic-prism,.lightbox-holographic-ribbons,.lightbox-holographic-sheen,.lightbox-holographic-texture').length || 0,
@@ -1791,7 +1788,6 @@ try {
             affordance.environmentBlend !== 'soft-light' ||
             !(affordance.environmentOpacity > 0) ||
             !affordance.grainImage.includes('grain.webp') ||
-            !affordance.classicInterferenceImage.includes('repeating-linear-gradient') ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.backEffectCount !== 0 ||
@@ -1848,6 +1844,7 @@ try {
               style: preset.style,
               layers: preset.layers,
               backgroundImage: getComputedStyle(spectrum).backgroundImage,
+              classicInterferenceImage: getComputedStyle(spectrum, '::after').backgroundImage,
               layerDisplay: Object.fromEntries(Object.entries(layerSelectors).map(([name, selector]) => [
                 name,
                 getComputedStyle(el.querySelector('.lightbox-holographic-front ' + selector)).display
@@ -1873,6 +1870,10 @@ try {
           };
         });
         const distinctPresetBackgrounds = new Set(presetAudit.results.map(preset => preset.backgroundImage));
+        const classicInterference = presetAudit.results.find(preset => preset.style === 'holographic')?.classicInterferenceImage || '';
+        if (!classicInterference.includes('repeating-linear-gradient')) {
+          throw new Error('The classic holographic preset must include its neutral interference band.');
+        }
         if (presetAudit.results.length !== 10 || distinctPresetBackgrounds.size !== 10) {
           throw new Error('Holographic finish options must produce ten distinct spectrum materials; found ' +
             distinctPresetBackgrounds.size + ' distinct backgrounds.');
