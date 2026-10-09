@@ -1147,13 +1147,13 @@ function validateCmsRegressionContracts() {
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
   if (!renderer.includes("layer.style.maskMode = 'luminance'") ||
-      !renderer.includes("const frontMaskUrl = face === front ? maskUrl : ''") ||
+      !renderer.includes("const frontMaskUrl = face === front || !backHasCustomArtwork ? maskUrl : ''") ||
       !renderer.includes('applyHolographicMask(spectrum, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(prism, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(ribbons, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(sheen, frontMaskUrl)') ||
       !renderer.includes('applyHolographicMask(texture, frontMaskUrl)')) {
-    err('Lightbox holographic mask: black/white luminance mask must apply to front foil layers only, never the reverse face.');
+    err('Lightbox holographic mask: front layers must be masked, custom backs remain independent, and fallback backs inherit the front mask.');
   }
 
   if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
