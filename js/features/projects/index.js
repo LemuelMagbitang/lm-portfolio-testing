@@ -13,4 +13,4 @@ export {
   getProjects,
   getCardForProject,
   destroyProjects
-} from './project-loader.js?v=20261009-12';
+} from './project-loader.js?v=20261010-01';
