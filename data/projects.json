@@ -419,7 +419,7 @@
           "textureMode": "tile",
           "backTextureMode": "fill",
           "texture": "assets/projects/gog-render-challenge/foil-test-250.png",
-          "back": "assets/projects/gog-render-challenge/card-back-layout.jpg",
+          "back": "assets/projects/gog-render-challenge/card-back-layout.webp",
           "backFoilEnabled": false,
           "mask": "assets/projects/gog-render-challenge/image.jpg"
         }
