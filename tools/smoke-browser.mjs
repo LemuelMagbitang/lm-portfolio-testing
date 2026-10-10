@@ -508,7 +508,7 @@ try {
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
             environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
             environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
-            grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-spectrum'), '::before').backgroundImage,
+            grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-grain-layer')).backgroundImage,
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             hintFace: hint?.querySelector('[data-holo-face-label]')?.textContent || '',
@@ -546,7 +546,7 @@ try {
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
-          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-environment', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
+          const selectors = ['.lightbox-holographic-spectrum', '.lightbox-holographic-cosmos-bottom', '.lightbox-holographic-cosmos-middle', '.lightbox-holographic-cosmos-top', '.lightbox-holographic-grain-layer', '.lightbox-holographic-glitter-layer', '.lightbox-holographic-environment', '.lightbox-holographic-glare', '.lightbox-holographic-prism', '.lightbox-holographic-ribbons', '.lightbox-holographic-diffraction', '.lightbox-holographic-sparkles', '.lightbox-holographic-sheen', '.lightbox-holographic-texture'];
           const visibleMasks = face => selectors.flatMap(selector => {
             const layer = face?.querySelector(selector);
             if (!layer || getComputedStyle(layer).display === 'none') return [];
