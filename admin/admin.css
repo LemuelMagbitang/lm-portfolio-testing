@@ -130,7 +130,7 @@
 .project-list-item{position:relative;overflow:hidden;}
 .project-card-head{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(120px,170px) auto;align-items:center;gap:12px;min-height:78px;margin:0;}
 .project-list-item:not(.is-open) .project-card-head{padding:2px 0;}
-.project-list-item.is-open .project-collapsed-preview{display:none;}
+
 .project-item-label{position:relative;z-index:2;}
 .project-attribute-summary{color:#666;font-weight:500;}
 .project-collapsed-preview{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:84px;overflow:hidden;border-radius:7px;border:1px solid rgba(255,255,255,.07);background:#111;isolation:isolate;}
@@ -738,9 +738,7 @@ button.icon-btn,
   align-items:center;
   min-height:0;
 }
-.project-list-item.is-open .project-collapsed-preview{
-  display:none;
-}
+.project-list-item.is-open .project-collapsed-preview{display:flex;flex:0 0 140px;width:140px;height:76px;margin-left:auto;}
 .project-list-item.is-open{
   border-radius:18px;
 }
@@ -854,3 +852,11 @@ button.icon-btn,
 .holo-settings-panel input,.holo-settings-panel select{min-width:0;}
 .holo-back-settings[hidden]{display:none!important;}
 @media(max-width:560px){.holo-style-intensity{grid-template-columns:1fr;}.holo-settings-group>summary span{flex-basis:100%;}}
+/* Keep project artwork visible while a row is expanded, with smaller footprints on touch layouts. */
+@media(max-width:720px){
+  .project-list-item.is-open .project-collapsed-preview{flex-basis:110px;width:110px;height:62px;}
+}
+@media(max-width:520px){
+  .project-list-item.is-open .project-collapsed-preview{flex-basis:72px;width:72px;height:56px;}
+  .project-list-item.is-open .project-item-label{flex:1 1 auto;min-width:0;}
+}
