@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 10, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. The current priority is to close runtime and cache-correctness gaps and verify user-facing behavior across devices before beginning the broader artist-first visual redesign.
+As of October 10, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted visual bug/glitch fixes, structural decoupling, CMS/Lighbox polish, optimization, and cross-device verification.
 
 - `js/script.js` is a 19-line browser entrypoint; startup and page wiring live in `js/app/bootstrap.js` and `js/app/page-composition.js`.
 - Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings have explicit feature entry points.
@@ -16,10 +16,10 @@ As of October 10, 2026, the `projects-runtime-cutover` branch has completed the 
 - Gallery presentation owns responsive density, row-aware Show More/Show Less reveal, collapsed viewport geometry, and reset behavior rather than Gallery state owning CSS/layout decisions.
 - Lightbox now handles progressive media loading, image/video/YouTube/Lottie/3D rendering, playback handoff, orientation, focus restoration, swipe navigation, and scoped artwork backgrounds.
 - The browser smoke suite covers the ES-module boot path, Works/About, mobile navigation, filters/ALL, Show More state across pageshow/resize/Lightbox close, local-video pause handoff, YouTube handoff/cache reuse, intrinsic video ratios, Shorts framing, 3D focus mode, software logos, and CMS editor fixtures.
-- The latest fully verified baseline before the current cache-version correction is `41406bf19b3f9fcfbe5e5389c85ca6d23d3f233f` (`Fix review email fallback routing`, October 10, 2026 09:30 PHT). Validation run [#2347](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38013411473) passed site/data/path validation, architecture boundaries, project contracts, loader/lifecycle tests, site settings, contact-form fallback validation, CMS Projects presentation, Projects runtime, Gallery presentation, syntax checks, and Chromium browser smoke. GitHub Pages build/deploy run [#2471](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38013411803) also succeeded for that SHA. A cache-version correction is included in the current follow-up; consider it verified only after its own validation and Pages runs finish successfully.
-- The latest source behavior fix separates the project-inquiry and review `mailto:` fallbacks and validates routing and teardown in `tools/validate-forms.mjs`. The R/W/E audit found the Forms import still pinned to `20261008-03`, so this follow-up bumps the module and its upstream import/preload chain to `20261010-03`. Do not call this follow-up verified until its own validation and Pages runs pass.
+- Latest verified code checkpoint: `32acf464f04952661d7a90472cf5701a586bde3a` (`Align desktop foil smoke checks with separate grain layer`). Validation run [#38016943421](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38016943421) and Pages build/deploy [#38016943316](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38016943316) both passed. The cache-version corrections, separate Cosmos maps, optional grain/glitter layers, and browser smoke checks are verified on this SHA.
+- The contact form fallback fix separates project-inquiry and review `mailto:` routing and validates routing/teardown in `tools/validate-forms.mjs`. Cache keys are part of the architecture contract and must remain aligned across public imports, test harnesses, and preload/script entry points.
 - The CMS now has a **Curated Views** editor. It can create unlisted view records, reference Main Portfolio projects, create view-owned projects, reorder entries, and preserve ownership boundaries. Public Curated View hash routing is intentionally **not** enabled yet.
-- Runtime cache-busting is intentionally feature-local rather than globally synchronized. This follow-up coordinates the Forms feature, composition loader, bootstrap import, browser entrypoint, and page preload references at `20261010-03`; unrelated CSS and specialized modules retain their own versions. Any source change must bump every affected public import/preload reference so GitHub Pages cannot serve a stale module.
+- Runtime cache-busting is intentionally feature-local rather than globally synchronized. The Oct 10 hardening aligned the affected Projects/Lightbox/normalizer import graph, public entry/preload chain, About page, 404/success pages, and architecture/test expectations. Any future source change must bump all affected public import/preload references without unnecessarily invalidating unrelated modules.
 
 ### Current focus
 
@@ -29,7 +29,11 @@ The deployment gate remains separate from architectural completion: each public-
 
 ### R/W/E audit checkpoint — October 10, 2026
 
-The current implementation is no longer in structural migration. The remaining risk is concentrated in runtime edge cases and presentation ownership, not in the basic decoupling model.
+The current implementation is no longer in structural migration. Keep the existing design; the current effort is functional, structural, and performance hardening only.
+
+- **Foil layers:** Cosmos bottom/middle/top maps are separate, masked DOM layers; grain and glitter are independent layers, with CMS toggles and backwards-compatible grain defaults. Foil gradients respond to the existing Lightbox tilt/light variables, using a reference-inspired reflective simulation rather than claiming a physical WebGL normal-map shader.
+- **CMS thumbnails:** collapsed project rows now mount Lottie/video near the viewport and have a static low-power 3D thumbnail path. Resource teardown is scoped to row visibility to reduce unnecessary playback/WebGL work.
+- **Verification:** the Layers/CMS presentation tests and Chromium desktop/mobile smoke suite passed on `32acf464f04952661d7a90472cf5701a586bde3a`; Pages build/deploy also passed. Manual CMS UI review and real-device Lightbox tilt/3D validation remain outstanding. The remaining risk is concentrated in runtime edge cases and presentation ownership, not in the basic decoupling model.
 
 - **Architecture:** validated at the current head; legacy root controllers are removed and the browser entrypoint remains thin.
 - **Gallery:** the state contract is correct in code and covered by browser regressions for resize, pageshow, scrolling, collapse/expand, and Lightbox return. The remaining requirement is real-device confirmation that no browser-specific layout restoration regression remains.
@@ -38,7 +42,7 @@ The current implementation is no longer in structural migration. The remaining r
 - **CSS:** the ownership layer is substantially established, but the stylesheet still contains historical duplicate/override regions. Consolidation is a polish/hardening task, not a prerequisite for the current runtime contract.
 - **About/CMS:** software-logo lookup has contained fallbacks and the Curated Views CMS boundary is active. Public Curated View routing remains intentionally disabled until its resolver contract is complete.
 
-The immediate next engineering stage is **runtime hardening + cross-device verification**, followed by the full content-independent responsive pass. Final visual polish should begin only after those gates are stable.
+The immediate next engineering stage is **targeted runtime hardening + cross-device verification**: confirm CMS Lottie/3D thumbnails against real projects, test foil light response on touch devices, and continue the responsive/edge-case audit. Do not initiate a portfolio redesign; visual changes should stay limited to requested foil upgrades and concrete visual bug fixes.
 
 ### October 5 runtime follow-up (historical checkpoint)
 
