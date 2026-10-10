@@ -2649,7 +2649,7 @@ function buildProjectBody(el, p, options = {}){
         if (m.type === 'model' && m.src) {
           const host = previewEl.querySelector('[data-model-preview]');
           try {
-            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261005-11');
+            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261010-12');
             // The row may have been deleted/rebuilt while the module import
             // was pending. Do not mount unless this generation still owns the
             // live preview host.
