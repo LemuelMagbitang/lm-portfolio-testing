@@ -286,7 +286,7 @@ This migration must not:
 - Retired the Flow layout and the permanent Inspect button from the CMS/public Lightbox contract. Only Grid/Tiling, Horizontal Stack, and Horizontal Card Layout remain selectable.
 - Grouped galleries no longer have a decorative background or border and do not horizontally scroll. Per-artwork captions and foil front/back prompts are hidden until the visitor inspects an item.
 - Horizontal choices now use a single responsive rule: all-foil groups render in a horizontal row when it fits and transition to a wrapping, overlapping card presentation when the row is too wide or the viewport is narrow. Groups with any non-foil items fall back to the clean grid.
-- Desktop hover gently lifts grouped cards; mobile remains visually idle until a visitor taps a card to open full-screen Inspect. No in-artwork Inspect chip or press-and-hold gesture remains, and foil flipping is performed inside Inspect.
+- Desktop hover raises the card's stacking order and shadow without moving its hit target; mobile remains visually idle until a visitor taps a card to open full-screen Inspect. No in-artwork Inspect chip or press-and-hold gesture remains, and foil flipping is performed inside Inspect.
 
 
 - Equal-height group artwork frames use a responsive shared height. Media uses `object-fit:contain` and the intrinsic aspect-ratio contract, so square and portrait artwork is not stretched. The mobile layered cards keep at least roughly three-quarters of a typical card visible rather than hiding the artwork behind the next card.

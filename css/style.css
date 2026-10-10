@@ -5446,7 +5446,7 @@ footer > .footer-content p{
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="horizontal"] .lightbox-media-item:focus-visible,
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:hover,
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:focus-visible{
-    z-index:200;transform:translate3d(0,-10px,0) rotate(0deg) scale(1.025);
+    z-index:200;
     filter:drop-shadow(0 18px 22px rgba(0,0,0,.34));
   }
 }
