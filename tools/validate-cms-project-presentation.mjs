@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-02';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
-import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261010-05';
+import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261010-06';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
@@ -165,7 +165,7 @@ assert.ok(
 assert.ok(
   renderer.includes('clipMaskUrl: cosmosClipUrl') &&
   renderer.includes("modes.push('alpha')") &&
-  renderer.includes("size: '280px auto', repeat: 'repeat', position: '0 0'"),
+  renderer.includes("size: '50% 50%', repeat: 'repeat', position: '0 0'") && renderer.includes("clipMaskSize: '50% 50%'"),
   'Cosmos effects must intersect the top-map alpha clip and tile the original map without stretching.'
 );
 assert.ok(

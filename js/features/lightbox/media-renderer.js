@@ -848,7 +848,7 @@ export function createLightboxMediaRenderer({
           ? {
               ...detailOptions,
               clipMaskUrl: cosmosClipUrl,
-              clipMaskSize: '280px auto',
+              clipMaskSize: '50% 50%',
               clipMaskRepeat: 'repeat',
               clipMaskPosition: '0 0'
             }
@@ -913,7 +913,7 @@ export function createLightboxMediaRenderer({
       cosmosLayers.forEach(layer => {
         const mapPath = HOLOGRAPHIC_COSMOS_MAPS[layer.dataset.holoLayer];
         const mapUrl = mapPath ? resolveAssetUrl(mapPath) : '';
-        applyFaceHolographicMask(layer, mapUrl, { size: '280px auto', repeat: 'repeat', position: '0 0' });
+        applyFaceHolographicMask(layer, mapUrl, { size: '50% 50%', repeat: 'repeat', position: '0 0' });
       });
       [grainLayer, glitterLayer].filter(Boolean).forEach(layer => applyFaceHolographicMask(layer));
       face.append(
@@ -931,17 +931,27 @@ export function createLightboxMediaRenderer({
           'conic-gradient(from calc(146deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%), #ffe87a 0deg, #adff67 42deg, #47f3ce 86deg, #57cfff 130deg, #8f7bff 176deg, #ef70f5 222deg, #ff75ac 266deg, #ff9a6b 316deg, #ffe87a 360deg), ' +
           'linear-gradient(calc(124deg + var(--holo-angle,0deg)), transparent 24%, rgba(0,8,24,.34) 34%, rgba(255,255,255,.04) 39%, rgba(255,255,255,.48) 47%, rgba(174,245,255,.24) 51%, rgba(8,16,40,.16) 58%, transparent 70%), ' +
           'radial-gradient(ellipse 42% 36% at var(--holo-light-x,34%) var(--holo-light-y,26%), rgba(255,255,255,.44), rgba(186,238,255,.12) 38%, transparent 74%)';
-        texture.style.backgroundRepeat = faceTextureMode === 'tile'
+        const cosmosTextureTile = config.style === 'cosmos';
+        texture.style.backgroundRepeat = cosmosTextureTile
           ? 'repeat, no-repeat, no-repeat, no-repeat'
-          : 'no-repeat, no-repeat, no-repeat, no-repeat';
-        texture.style.backgroundSize = faceTextureMode === 'tile' ? 'auto, 320% 280%, 250% 220%, 170% 170%' : '100% 100%, 320% 280%, 250% 220%, 170% 170%';
-        texture.style.backgroundPosition = 'center, var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-light-x,34%) var(--holo-light-y,26%)';
+          : faceTextureMode === 'tile'
+            ? 'repeat, no-repeat, no-repeat, no-repeat'
+            : 'no-repeat, no-repeat, no-repeat, no-repeat';
+        texture.style.backgroundSize = cosmosTextureTile
+          ? '50% 50%, 180% 160%, 220% 190%, 145% 145%'
+          : faceTextureMode === 'tile'
+            ? 'auto, 320% 280%, 250% 220%, 170% 170%'
+            : '100% 100%, 320% 280%, 250% 220%, 170% 170%';
+        texture.style.backgroundPosition = cosmosTextureTile
+          ? '0 0, var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-light-x,34%) var(--holo-light-y,26%)'
+          : 'center, var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-light-x,34%) var(--holo-light-y,26%)';
         texture.style.opacity = 'calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .10))';
         texture.style.mixBlendMode = 'color-dodge';
         texture.style.filter = 'contrast(1.42) saturate(1.55) brightness(1.04)';
         applyFaceHolographicMask(texture, faceTextureUrl, {
-          size: faceTextureMode === 'tile' ? 'auto' : '100% 100%',
-          repeat: faceTextureMode === 'tile' ? 'repeat' : 'no-repeat'
+          size: cosmosTextureTile ? '50% 50%' : (faceTextureMode === 'tile' ? 'auto' : '100% 100%'),
+          repeat: cosmosTextureTile || faceTextureMode === 'tile' ? 'repeat' : 'no-repeat',
+          position: cosmosTextureTile ? '0 0' : 'center'
         });
         face.appendChild(texture);
       }
@@ -959,7 +969,8 @@ export function createLightboxMediaRenderer({
         face.appendChild(normalCanvas);
         const controller = createFoilNormalRenderer(normalCanvas, normalPatternUrls, {
           intensity: config.intensity,
-          phase: isFront ? 0.17 : 0.43
+          phase: isFront ? 0.17 : 0.43,
+          uvScale: config.style === 'cosmos' ? 2 : (faceTextureMode === 'tile' ? 2 : 1)
         });
         const controllers = holographicNormalControllers.get(surface) || [];
         controllers.push(controller);

@@ -5290,3 +5290,53 @@ footer > .footer-content p{
   filter:blur(.12px) contrast(1.22) saturate(1.14);
 }
 
+
+
+/* Cosmos maps repeat as a true 2×2 tile. Masks and normal relief use the same
+   UV scale; lower white/specular contribution preserves matte card artwork. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-bottom,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-middle,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-top{
+  background-repeat:repeat,no-repeat,no-repeat,no-repeat!important;
+  background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%)!important;
+  background-blend-mode:soft-light,soft-light,overlay,soft-light!important;
+  mix-blend-mode:soft-light!important;
+  transition:filter 180ms ease,opacity 180ms ease!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-bottom{
+  background-size:50% 50%,170% 155%,230% 200%,145% 145%!important;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .17) + (var(--holo-tilt-strength,0) * .045))!important;
+  filter:brightness(.96) contrast(1.42) saturate(1.24)!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-middle{
+  background-size:50% 50%,180% 165%,220% 190%,145% 145%!important;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .16) + (var(--holo-tilt-strength,0) * .04))!important;
+  filter:brightness(.95) contrast(1.43) saturate(1.26)!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-top{
+  background-size:50% 50%,190% 170%,220% 190%!important;
+  background-repeat:repeat,no-repeat,no-repeat!important;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .15) + (var(--holo-tilt-strength,0) * .04))!important;
+  filter:brightness(.95) contrast(1.46) saturate(1.28)!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{
+  background-size:180% 160%!important;
+  mix-blend-mode:soft-light!important;
+  opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .11) + (var(--holo-tilt-strength,0) * .035))!important;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-normal-map{
+  mix-blend-mode:soft-light!important;opacity:.27!important;
+}
+#lightboxMediaContainer .lightbox-holographic:not([data-holo-style="cosmos"]) .lightbox-holographic-normal-map{
+  mix-blend-mode:soft-light;opacity:.40;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism{
+  mix-blend-mode:soft-light;filter:contrast(1.26) saturate(1.14) brightness(.97);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-sheen,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen,
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-sheen{
+  opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .075));
+}
