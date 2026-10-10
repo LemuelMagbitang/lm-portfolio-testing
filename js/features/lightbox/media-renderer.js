@@ -1762,7 +1762,8 @@ export function createLightboxMediaRenderer({
         entry.addEventListener('click', event => {
           if (event.target.closest?.('[data-artwork-inspect-trigger]')) return;
           // Preserve foil flip, video playback, YouTube and explicit control input.
-          if (event.target.closest?.('.lightbox-holographic,button,a,input,select,textarea,video,iframe,canvas')) return;
+          if (event.target.closest?.('button,a,input,select,textarea,video,iframe,canvas')) return;
+          // A foil-surface click keeps its flip behavior and also opens the requested inspector.
           openArtworkInspect(container, entry, project, inspect);
         });
       }
