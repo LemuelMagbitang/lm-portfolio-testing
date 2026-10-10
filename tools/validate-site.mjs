@@ -1219,15 +1219,15 @@ function validateCmsRegressionContracts() {
       !renderer.includes("modes.push('alpha')") ||
       !renderer.includes("sizes.push('contain')") ||
       !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||
-      !renderer.includes('applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl)') ||
+      !renderer.includes("if (maskedLayers.has('spectrum')) applyFaceHolographicMask(spectrum)") ||
+      !renderer.includes("if (maskedLayers.has('environment')) applyFaceHolographicMask(environment)") ||
+      !renderer.includes("if (maskedLayers.has('prism')) applyFaceHolographicMask(prism)") ||
+      !renderer.includes("if (maskedLayers.has('ribbons')) applyFaceHolographicMask(ribbons)") ||
+      !renderer.includes("if (maskedLayers.has('diffraction')) applyFaceHolographicMask(diffraction)") ||
+      !renderer.includes("if (maskedLayers.has('sparkles')) applyFaceHolographicMask(sparkles)") ||
+      !renderer.includes("if (maskedLayers.has('sheen')) applyFaceHolographicMask(sheen)") ||
       !renderer.includes("texture.style.backgroundImage =\n          'url(\"' + faceTextureUrl.split('\"').join('%22') + '\"), '") ||
-      !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {')) {
+      !renderer.includes('applyFaceHolographicMask(texture, faceTextureUrl, {')) {
     err('Lightbox holographic mask: every foil layer must follow image alpha and its optional custom luminance mask.');
   }
 
@@ -1263,8 +1263,8 @@ function validateCmsRegressionContracts() {
       !renderer.includes("holographic: ['prism', 'ribbons', 'sheen']") ||
       !renderer.includes("glitter: ['sparkles']") ||
       !renderer.includes("...(HOLOGRAPHIC_MASK_LAYERS[config.style] || [])") ||
-      !renderer.includes("if (maskedLayers.has('environment')) applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl)") ||
-      !renderer.includes("if (maskedLayers.has('prism')) applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl)") ||
+      !renderer.includes("if (maskedLayers.has('environment')) applyFaceHolographicMask(environment)") ||
+      !renderer.includes("if (maskedLayers.has('prism')) applyFaceHolographicMask(prism)") ||
       !css.includes('background-image:url("../assets/holographic/grain.webp")') ||
       !css.includes('mix-blend-mode:hard-light') ||
       !css.includes('@keyframes holo-spectrum-breathe{\n  0%,100%{opacity:') ||

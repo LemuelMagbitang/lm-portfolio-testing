@@ -334,7 +334,7 @@ assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
   renderer.includes("'cosmos-top': 'assets/holographic/cosmos-top-trans.png'"),
   'Each Cosmos layer must have its own source luminance map.');
 assert.ok(renderer.includes("modes.push('luminance')") &&
-  renderer.includes('applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl, mapUrl)'),
+  renderer.includes("applyFaceHolographicMask(layer, mapUrl, { size: '280px auto', repeat: 'repeat', position: '0 0' })"),
   'Cosmos grayscale values must drive spectral layer coverage through luminance masks.');
 assert.ok(renderer.includes("['cosmos-bottom', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-bottom']") &&
   renderer.includes("['cosmos-middle', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-middle']") &&
@@ -354,7 +354,7 @@ assert.ok(siteCss.includes('background-size:210% 190%,160% 160%,340% 280%') &&
   siteCss.includes('background-size:230% 220%,170% 170%,300% 240%') &&
   siteCss.includes('background-size:250% 230%,280% 230%'),
   'Cosmos spectral layers must use independent scales and movement for an iridescent response.');
-assert.ok(renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {') &&
+assert.ok(renderer.includes('applyFaceHolographicMask(texture, faceTextureUrl, {') &&
   renderer.includes('texture.style.backgroundImage =') &&
   renderer.includes("texture.style.mixBlendMode = 'color-dodge'"),
   'Monochrome front/back foil patterns must luminance-mask their own spectral color gradients.');
