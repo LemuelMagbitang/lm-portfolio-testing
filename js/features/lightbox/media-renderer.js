@@ -1677,7 +1677,10 @@ export function createLightboxMediaRenderer({
     panel.append(toolbar, stage);
     overlay.appendChild(panel);
     const onBackdropClick = event => {
-      if (event.target === overlay) closeArtworkInspect();
+      const target = event.target;
+      if (target === overlay || (!entry.contains(target) && !target.closest?.('.lightbox-inspect-back'))) {
+        closeArtworkInspect();
+      }
     };
     const onKeyDown = event => {
       if (event.key === 'Escape') {
