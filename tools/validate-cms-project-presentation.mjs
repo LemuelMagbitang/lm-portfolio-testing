@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-02';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
+import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261010-04';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
@@ -161,6 +162,62 @@ assert.ok(
   foilNormalRendererSource.includes('for(const cancelLoad of [...pendingImageCancels])'),
   'Foil pattern image requests must be cancelled when the renderer is destroyed before loading completes.'
 );
+
+// Exercise the renderer teardown with unresolved Image requests (not just source checks).
+const pendingFoilImages = [];
+class PendingFoilImage {
+  constructor() { this.onload = null; this.onerror = null; this._src = ''; this.removedSource = false; pendingFoilImages.push(this); }
+  set src(value) { this._src = value; }
+  get src() { return this._src; }
+  removeAttribute(name) { if (name === 'src') { this.removedSource = true; this._src = ''; } }
+}
+const foilView = {
+  Image: PendingFoilImage,
+  devicePixelRatio: 1,
+  addEventListener() {},
+  removeEventListener() {},
+  requestAnimationFrame() { throw new Error('No frame should be requested before foil maps load.'); },
+  cancelAnimationFrame() {}
+};
+const glConstants = {
+  VERTEX_SHADER:1, FRAGMENT_SHADER:2, COMPILE_STATUS:3, LINK_STATUS:4,
+  ARRAY_BUFFER:5, STATIC_DRAW:6, DEPTH_TEST:7, CULL_FACE:8, UNPACK_FLIP_Y_WEBGL:9,
+  TEXTURE0:10, TEXTURE_2D:11, TEXTURE_MIN_FILTER:12, TEXTURE_MAG_FILTER:13,
+  LINEAR:14, TEXTURE_WRAP_S:15, TEXTURE_WRAP_T:16, CLAMP_TO_EDGE:17,
+  RGBA:18, UNSIGNED_BYTE:19, COLOR_BUFFER_BIT:20, FLOAT:21, TRIANGLE_STRIP:22
+};
+const foilGl = {
+  ...glConstants,
+  createShader: () => ({}), shaderSource() {}, compileShader() {}, getShaderParameter: () => true,
+  getShaderInfoLog: () => '', createProgram: () => ({}), attachShader() {}, linkProgram() {},
+  getProgramParameter: () => true, getProgramInfoLog: () => '', createBuffer: () => ({}),
+  bindBuffer() {}, bufferData() {}, getAttribLocation: () => 0, getUniformLocation: () => ({}),
+  useProgram() {}, disable() {}, pixelStorei() {}, createTexture: () => ({}), activeTexture() {},
+  bindTexture() {}, texParameteri() {}, texImage2D() {}, uniform1i() {}, uniform2f() {},
+  deleteTexture() {}, deleteBuffer() {}, deleteProgram() {}, deleteShader() {},
+  getExtension: () => ({loseContext() {}}), uniform1f() {}, viewport() {}, clearColor() {},
+  clear() {}, enableVertexAttribArray() {}, vertexAttribPointer() {}, drawArrays() {}
+};
+const foilCanvas = {
+  ownerDocument: { defaultView: foilView },
+  dataset: {},
+  width: 0,
+  height: 0,
+  getContext: () => foilGl,
+  getBoundingClientRect: () => ({width:320,height:420})
+};
+const foilController = createFoilNormalRenderer(foilCanvas, ['pending-map-a.webp','pending-map-b.webp']);
+assert.equal(pendingFoilImages.length, 2, 'The foil renderer should begin loading the configured normal maps.');
+assert.ok(pendingFoilImages.every(image => image.src.startsWith('pending-map-')), 'Normal map requests should be pending before teardown.');
+foilController.destroy();
+foilController.destroy();
+assert.ok(pendingFoilImages.every(image => image.removedSource && image.src === ''), 'Destroying the renderer should release every pending normal-map source.');
+assert.ok(pendingFoilImages.every(image => image.onload === null && image.onerror === null), 'Destroying the renderer should detach pending image callbacks.');
+assert.equal(foilCanvas.width, 0, 'Destroying the renderer should release its drawing surface.');
+await Promise.resolve();
+await Promise.resolve();
+assert.notEqual(foilCanvas.dataset.normalMapStatus, 'ready', 'A destroyed renderer must not become ready after pending image requests resolve.');
+
 
 for (const marker of [
   "project-list-item",
