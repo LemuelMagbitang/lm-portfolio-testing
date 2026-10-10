@@ -53,6 +53,9 @@ jobs:
       - name: Validate site settings contract
         run: node tools/validate-site-settings.mjs
 
+      - name: Validate contact form fallbacks
+        run: node tools/validate-forms.mjs
+
       - name: Validate CMS Projects presentation
         run: node tools/validate-cms-project-presentation.mjs
 

@@ -22,14 +22,15 @@ export function initForms({
     emailButton.style.display = enabled ? 'none' : '';
   }
 
-  function getContactHref() {
-    return root?.querySelector('a[href^="mailto:"]')?.getAttribute('href') || '';
+  function routeToEmail(emailButton) {
+    const href = emailButton?.getAttribute('href') || '';
+    if (href && root?.defaultView?.location) {
+      root.defaultView.location.href = href;
+    }
   }
 
-  function routeToEmail() {
-    const href = getContactHref();
-    if (href) root.defaultView.location.href = href;
-  }
+  const projectEmailHandler = () => routeToEmail(projectEmailBtn);
+  const reviewEmailHandler = () => routeToEmail(reviewEmailBtn);
 
   function setActiveContactTab(kind, focusPanel = false) {
     if (!contactTabs.length || !contactPanels.length) return;
@@ -66,8 +67,8 @@ export function initForms({
     setActiveContactTab('project');
   }
 
-  projectEmailBtn?.addEventListener('click', routeToEmail);
-  reviewEmailBtn?.addEventListener('click', routeToEmail);
+  projectEmailBtn?.addEventListener('click', projectEmailHandler);
+  reviewEmailBtn?.addEventListener('click', reviewEmailHandler);
 
   function setProjectEnabled(enabled) {
     projectEnabled = Boolean(enabled);
@@ -90,8 +91,8 @@ export function initForms({
       if (kind === 'review') setReviewEnabled(enabled);
     },
     cleanup() {
-      projectEmailBtn?.removeEventListener('click', routeToEmail);
-      reviewEmailBtn?.removeEventListener('click', routeToEmail);
+      projectEmailBtn?.removeEventListener('click', projectEmailHandler);
+      reviewEmailBtn?.removeEventListener('click', reviewEmailHandler);
       contactTabHandlers.forEach((handler, tab) => tab.removeEventListener('click', handler));
       contactTabHandlers.clear();
     }
