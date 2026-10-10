@@ -276,7 +276,7 @@ assert.ok(!admin.includes('value="flow"') &&
 assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-artwork-group-items') &&
   siteCss.includes('flex-flow:row wrap') &&
   siteCss.includes('overflow:visible') &&
-  siteCss.includes('height:clamp(210px,42svh,360px)') &&
+  siteCss.includes('height:clamp(200px,38svh,320px)') &&
   siteCss.includes('overflow:visible;padding:0;margin:0;'),
   'Responsive layered cards must wrap without a horizontal scroller and keep equal-height, aspect-aware artwork frames.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
