@@ -76,7 +76,7 @@ assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
-assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node, src, \{[\s\S]*?thumbnail:true/.test(previewRuntime),
+assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
   'CMS multimedia thumbnails are mounted lazily in static 3D mode.');
 assert.ok(/options\.thumbnail === true/.test(modelViewer), 'The 3D viewer supports static thumbnail rendering.');
 
