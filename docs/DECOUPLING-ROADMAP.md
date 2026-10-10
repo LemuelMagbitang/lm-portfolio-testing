@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 5, 2026, the projects-runtime-cutover branch has completed the composition/data-boundary cutover and the core feature extraction. It is currently in **Phase 3B/3C hardening** while the CMS application boundary continues to be tightened. This work intentionally preserves the existing visual language rather than redesigning it.
+As of October 10, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. The current priority is to close runtime and cache-correctness gaps and verify user-facing behavior across devices before beginning the broader artist-first visual redesign.
 
 - `js/script.js` is a 19-line browser entrypoint; startup and page wiring live in `js/app/bootstrap.js` and `js/app/page-composition.js`.
 - Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings have explicit feature entry points.
@@ -16,9 +16,10 @@ As of October 5, 2026, the projects-runtime-cutover branch has completed the com
 - Gallery presentation owns responsive density, row-aware Show More/Show Less reveal, collapsed viewport geometry, and reset behavior rather than Gallery state owning CSS/layout decisions.
 - Lightbox now handles progressive media loading, image/video/YouTube/Lottie/3D rendering, playback handoff, orientation, focus restoration, swipe navigation, and scoped artwork backgrounds.
 - The browser smoke suite covers the ES-module boot path, Works/About, mobile navigation, filters/ALL, Show More state across pageshow/resize/Lightbox close, local-video pause handoff, YouTube handoff/cache reuse, intrinsic video ratios, Shorts framing, 3D focus mode, software logos, and CMS editor fixtures.
-- Latest verified CI is green at `a2df35d6dd276340ff0c23407a44a9708e2e1939` (`Sync About runtime cache after model preload contract clarification`, October 5, 2026 22:47 PHT). The `Validate portfolio` job passed site/data/path validation, architecture boundaries, project data contracts, Projects runtime, Gallery presentation, lifecycle, all JavaScript/CMS/smoke syntax checks, and Chromium browser smoke. The Pages build and deployment run for the same commit also succeeded. An earlier YouTube-footprint smoke run on `be63fae28150746ba474deb8e026b5bd4410b55f` failed; the current head is the subsequent green validation state.
+- The latest fully verified baseline before the current cache-version correction is `41406bf19b3f9fcfbe5e5389c85ca6d23d3f233f` (`Fix review email fallback routing`, October 10, 2026 09:30 PHT). Validation run [#2347](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38013411473) passed site/data/path validation, architecture boundaries, project contracts, loader/lifecycle tests, site settings, contact-form fallback validation, CMS Projects presentation, Projects runtime, Gallery presentation, syntax checks, and Chromium browser smoke. GitHub Pages build/deploy run [#2471](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38013411803) also succeeded for that SHA. A cache-version correction is included in the current follow-up; consider it verified only after its own validation and Pages runs finish successfully.
+- The latest source behavior fix separates the project-inquiry and review `mailto:` fallbacks and validates routing and teardown in `tools/validate-forms.mjs`. The R/W/E audit found the Forms import still pinned to `20261008-03`, so this follow-up bumps the module and its upstream import/preload chain to `20261010-03`. Do not call this follow-up verified until its own validation and Pages runs pass.
 - The CMS now has a **Curated Views** editor. It can create unlisted view records, reference Main Portfolio projects, create view-owned projects, reorder entries, and preserve ownership boundaries. Public Curated View hash routing is intentionally **not** enabled yet.
-- Runtime cache-busting is intentionally feature-local rather than globally synchronized. The latest composition/page cache key is `20261005-29`; feature modules carry their own query versions. Any source change must bump every affected public import/preload reference so GitHub Pages cannot serve a stale module.
+- Runtime cache-busting is intentionally feature-local rather than globally synchronized. This follow-up coordinates the Forms feature, composition loader, bootstrap import, browser entrypoint, and page preload references at `20261010-03`; unrelated CSS and specialized modules retain their own versions. Any source change must bump every affected public import/preload reference so GitHub Pages cannot serve a stale module.
 
 ### Current focus
 
@@ -26,7 +27,7 @@ Phase 3B/3C is now about hardening the behavior that users actually exercise: Sh
 
 The deployment gate remains separate from architectural completion: each public-page runtime commit must pass the GitHub Actions validation/Chromium gate before it is considered a safe cutover candidate for the eventual replacement of the legacy deployed site.
 
-### R/W/E audit checkpoint — October 5, 2026
+### R/W/E audit checkpoint — October 10, 2026
 
 The current implementation is no longer in structural migration. The remaining risk is concentrated in runtime edge cases and presentation ownership, not in the basic decoupling model.
 
@@ -39,7 +40,7 @@ The current implementation is no longer in structural migration. The remaining r
 
 The immediate next engineering stage is **runtime hardening + cross-device verification**, followed by the full content-independent responsive pass. Final visual polish should begin only after those gates are stable.
 
-### October 5 runtime follow-up
+### October 5 runtime follow-up (historical checkpoint)
 
 The latest hardening pass keeps Show Less snapping deterministic with a cancellable 1500ms document-scroll animation, waits for the initial Projects thumbnail tier before startup handoff, warms first-media YouTube projects for faster Lightbox entry, scales desktop YouTube artwork from the available viewport, tightens desktop local-video height, and uses image hit-testing suppression plus native-drag prevention for mobile artwork save protection.
 ## Current architecture shape and target direction
