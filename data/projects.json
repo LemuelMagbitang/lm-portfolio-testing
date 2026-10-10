@@ -800,11 +800,7 @@
         "type": "model",
         "src": "assets/projects/test/Female base.obj",
         "caption": "lorem ipsum dolor sit amet consectetur adipiscing elit id dolor consequat excepteur dolore nulla sit enim et et omnis possimus in officia ut fuga excepteur mollitia et eligendi non sunt temporibus voluptas excepturi vero est in voluptas occaecat occaecat quos est cum adipiscing rerum mollit cumque lorem in praesentium dolor",
-        "orientation": "",
-        "background": {
-          "type": "solid",
-          "color": "#0a0118"
-        }
+        "orientation": ""
       }
     ]
   }
