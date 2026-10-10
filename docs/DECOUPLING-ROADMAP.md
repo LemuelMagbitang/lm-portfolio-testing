@@ -306,6 +306,6 @@ This migration must not:
 ### October 10, 2026 — Inspect parity and Lightbox motion
 
 - Grouped artwork no longer renders a floating Inspect chip or uses press-and-hold. Selecting a grouped artwork opens the same viewport-owned composition as focused 3D: centered media, supporting description and gesture instructions at the bottom, and a Back control below them. Configured media backgrounds are hidden while inspecting; foil flipping remains available inside Inspect.
-- Group card lift is limited to hover-capable desktop pointers; touch layouts keep a calm resting presentation and open Inspect on tap. New media uses a restrained staggered entrance, and a lightweight shimmer appears only while a 3D viewer reports `aria-busy=true`.
+- Group card lift is limited to hover-capable desktop pointers; touch layouts keep a calm resting presentation and open Inspect on tap. New media uses a restrained staggered, opacity-only entrance to preserve pointer hit targets during foil reflection, and a lightweight shimmer appears only while a 3D viewer reports `aria-busy=true`.
 - The regular 3D media shell has no decorative border or drop shadow. Browser smoke accepts the absence of a 3D background layer when a CMS item has no background configured, while still checking its z-index when present.
 - Cache identity targets: Lightbox entry/renderer `?v=20261010-16`, public stylesheet `?v=20261010-17`, and bootstrap/page-composition chain `20261010-20`; architecture and runtime-test expectations match these identities.
