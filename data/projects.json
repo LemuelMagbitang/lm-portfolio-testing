@@ -417,6 +417,8 @@
           "style": "holographic",
           "intensity": 0.5,
           "textureMode": "tile",
+          "glitterLayer": false,
+          "grainLayer": true,
           "backTextureMode": "fill",
           "texture": "assets/projects/gog-render-challenge/foil-test-250.png",
           "back": "assets/projects/gog-render-challenge/card-back-layout.webp",
@@ -435,6 +437,157 @@
         "src": "assets/projects/gog-render-challenge/original-character-design.jpg",
         "caption": "Original Character Design from 2022",
         "orientation": ""
+      }
+    ]
+  },
+  {
+    "id": "funko-pop-test",
+    "title": "Funko Pop Test",
+    "subtitle": "Funko poppppp",
+    "badge": "2D Illustration",
+    "badges": [
+      "2D Illustration"
+    ],
+    "filters": [
+      "illustration"
+    ],
+    "description": "this is a funko pop in 2d",
+    "thumbnail": {
+      "type": "image",
+      "src": "assets/projects/funko-pop/8.jpg",
+      "focus": "49% 45%",
+      "zoom": 1
+    },
+    "media": [
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/Asset 4@4x.png",
+        "caption": "Smooth Prism Foil",
+        "orientation": "square",
+        "holographic": {
+          "style": "holographic",
+          "intensity": 0.15,
+          "textureMode": "fill",
+          "glitterLayer": true,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/miles morales@4x.png",
+        "caption": "Fine Brush Foil",
+        "orientation": "",
+        "holographic": {
+          "style": "brushed",
+          "intensity": 0.6,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/mittens@4x.png",
+        "caption": "Vertical Light Beams",
+        "orientation": "",
+        "holographic": {
+          "style": "beams",
+          "intensity": 0.65,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/peter b@4x.png",
+        "caption": "Crosshatch Foil",
+        "orientation": "",
+        "holographic": {
+          "style": "crosshatch",
+          "intensity": 0.7,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/miguel o_hara@4x.png",
+        "caption": "Shattered Ice",
+        "orientation": "",
+        "holographic": {
+          "style": "shattered",
+          "intensity": 0.75,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/Asset 8@4x.png",
+        "caption": "Cosmos Galaxy Foil",
+        "orientation": "",
+        "holographic": {
+          "style": "cosmos",
+          "intensity": 0.8,
+          "textureMode": "fill",
+          "glitterLayer": true,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/ben@4x.png",
+        "caption": "Water Waves",
+        "orientation": "",
+        "holographic": {
+          "style": "waves",
+          "intensity": 0.85,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/spidergwen@4x.png",
+        "caption": "Cat-Eye Lens",
+        "orientation": "",
+        "holographic": {
+          "style": "cat-eye",
+          "intensity": 0.9,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/Asset 5@4x.png",
+        "caption": "Pearlescent Foil",
+        "orientation": "",
+        "holographic": {
+          "style": "iridescent",
+          "intensity": 0.95,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop/pavitr@4x.png",
+        "caption": "Aurora Gradient",
+        "orientation": "",
+        "holographic": {
+          "style": "aurora",
+          "intensity": 1,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true
+        }
       }
     ]
   },
@@ -628,139 +781,6 @@
         "background": {
           "type": "solid",
           "color": "#0a0118"
-        }
-      }
-    ]
-  },
-  {
-    "id": "funko-pop-test",
-    "title": "Funko Pop Test",
-    "subtitle": "Funko poppppp",
-    "badge": "2D Illustration",
-    "badges": [
-      "2D Illustration"
-    ],
-    "filters": [
-      "illustration"
-    ],
-    "description": "this is a funko pop in 2d",
-    "thumbnail": {
-      "type": "image",
-      "src": "assets/projects/funko-pop/8.jpg",
-      "focus": "49% 45%",
-      "zoom": 1
-    },
-    "media": [
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/Asset 4@4x.png",
-        "caption": "Smooth Prism Foil",
-        "orientation": "square",
-        "holographic": {
-          "style": "holographic",
-          "intensity": 0.15,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/miles morales@4x.png",
-        "caption": "Fine Brush Foil",
-        "orientation": "",
-        "holographic": {
-          "style": "brushed",
-          "intensity": 0.6,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/mittens@4x.png",
-        "caption": "Vertical Light Beams",
-        "orientation": "",
-        "holographic": {
-          "style": "beams",
-          "intensity": 0.65,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/peter b@4x.png",
-        "caption": "Crosshatch Foil",
-        "orientation": "",
-        "holographic": {
-          "style": "crosshatch",
-          "intensity": 0.7,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/miguel o_hara@4x.png",
-        "caption": "Shattered Ice",
-        "orientation": "",
-        "holographic": {
-          "style": "shattered",
-          "intensity": 0.75,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/Asset 8@4x.png",
-        "caption": "Cosmos Galaxy Foil",
-        "orientation": "",
-        "holographic": {
-          "style": "cosmos",
-          "intensity": 0.8,
-          "textureMode": "fill",
-          "grainLayer": true,
-          "glitterLayer": true
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/ben@4x.png",
-        "caption": "Water Waves",
-        "orientation": "",
-        "holographic": {
-          "style": "waves",
-          "intensity": 0.85,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/spidergwen@4x.png",
-        "caption": "Cat-Eye Lens",
-        "orientation": "",
-        "holographic": {
-          "style": "cat-eye",
-          "intensity": 0.9,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/Asset 5@4x.png",
-        "caption": "Pearlescent Foil",
-        "orientation": "",
-        "holographic": {
-          "style": "iridescent",
-          "intensity": 0.95,
-          "textureMode": "fill"
-        }
-      },
-      {
-        "type": "image",
-        "src": "assets/projects/funko-pop/pavitr@4x.png",
-        "caption": "Aurora Gradient",
-        "orientation": "",
-        "holographic": {
-          "style": "aurora",
-          "intensity": 1,
-          "textureMode": "fill"
         }
       }
     ]
