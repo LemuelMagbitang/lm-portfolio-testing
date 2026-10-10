@@ -1525,7 +1525,7 @@ body.center-page {
   perspective:1200px;
 }
 
-#lightboxMediaContainer .lightbox-holographic{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
   position:relative;
   width:100%;
   height:100%;
@@ -1548,7 +1548,7 @@ body.center-page {
 /* The hologram should advertise that it is interactive even before the
    visitor moves a pointer. Keep the cue quiet enough that it reads as part of
    the artwork rather than as a UI badge. */
-#lightboxMediaContainer .lightbox-holographic::before{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{
   content:'MOVE / CLICK';
   position:absolute;
   top:12px;
@@ -1572,7 +1572,7 @@ body.center-page {
   animation:holo-hint-breathe 3.8s ease-in-out infinite;
 }
 
-#lightboxMediaContainer .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{
   position:absolute;
   inset:-18%;
   z-index:35;
@@ -1593,33 +1593,33 @@ body.center-page {
 
 /* Once the visitor is actively controlling the card, the idle motion yields
    completely to the live pointer/touch transform. */
-#lightboxMediaContainer .lightbox-holographic:hover,
-#lightboxMediaContainer .lightbox-holographic:focus-visible,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending{
   animation-play-state:paused;
 }
-#lightboxMediaContainer .lightbox-holographic:hover::before,
-#lightboxMediaContainer .lightbox-holographic:focus-visible::before,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::before,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::before{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover::before,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible::before,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged::before,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending::before{
   opacity:.28;
 }
-#lightboxMediaContainer .lightbox-holographic:hover .lightbox-holographic-sheen,
-#lightboxMediaContainer .lightbox-holographic:focus-visible .lightbox-holographic-sheen,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged .lightbox-holographic-sheen,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover .lightbox-holographic-sheen,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible .lightbox-holographic-sheen,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged .lightbox-holographic-sheen,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending .lightbox-holographic-sheen{
   animation-play-state:paused;
   opacity:.18;
 }
 
-#lightboxMediaContainer .lightbox-holographic:focus-visible{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible{
   outline:2px solid rgba(255,255,255,.85);
   outline-offset:4px;
   border-radius:6px;
 }
 
-#lightboxMediaContainer .lightbox-holographic-inner{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner{
   position:absolute;
   inset:0;
   transform-style:preserve-3d;
@@ -1628,7 +1628,7 @@ body.center-page {
   will-change:transform;
 }
 
-#lightboxMediaContainer .lightbox-holographic-flip{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-flip{
   position:absolute;
   inset:0;
   transform-style:preserve-3d;
@@ -1637,11 +1637,11 @@ body.center-page {
   will-change:transform;
 }
 
-#lightboxMediaContainer .lightbox-holographic.is-flipped .lightbox-holographic-flip{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped .lightbox-holographic-flip{
   transform:rotateY(180deg);
 }
 
-#lightboxMediaContainer .lightbox-holographic-face{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{
   position:absolute;
   inset:0;
   overflow:hidden;
@@ -1652,11 +1652,11 @@ body.center-page {
   background:transparent;
 }
 
-#lightboxMediaContainer .lightbox-holographic-face.lightbox-holographic-back{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face.lightbox-holographic-back{
   transform:rotateY(180deg) translateZ(.01px);
 }
 
-#lightboxMediaContainer .lightbox-holographic-face > img:not(.lightbox-holographic-texture){
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face > img:not(.lightbox-holographic-texture){
   display:block;
   width:100%;
   height:100%;
@@ -1696,12 +1696,12 @@ body.center-page {
   100%{background-position:0% 50%; opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .17));}
 }
 
-#lightboxMediaContainer .lightbox-holographic-spectrum,
-#lightboxMediaContainer .lightbox-holographic-glare,
-#lightboxMediaContainer .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic-ribbons,
-#lightboxMediaContainer .lightbox-holographic-texture,
-#lightboxMediaContainer .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{
   position:absolute;
   inset:0;
   pointer-events:none;
@@ -1712,7 +1712,7 @@ body.center-page {
   backface-visibility:hidden;
 }
 
-#lightboxMediaContainer .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{
   background:
     linear-gradient(
       116deg,
@@ -1738,7 +1738,7 @@ body.center-page {
   transition:opacity 140ms ease-out;
 }
 
-#lightboxMediaContainer .lightbox-holographic-glare{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare{
   background:
     radial-gradient(
       ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),
@@ -1770,7 +1770,7 @@ body.center-page {
 
 /* A wide moving prism wash and two broad specular ribbons add depth. Their
    motion is autonomous CSS animation, never driven by cursor/touch position. */
-#lightboxMediaContainer .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism{
   background:linear-gradient(
     116deg,
     transparent 0%,
@@ -1790,7 +1790,7 @@ body.center-page {
   animation:holo-prism-drift 8.2s ease-in-out infinite alternate;
 }
 
-#lightboxMediaContainer .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons{
   background:
     linear-gradient(
       112deg,
@@ -1815,7 +1815,7 @@ body.center-page {
   animation:holo-light-ribbons 7.1s cubic-bezier(.42,0,.32,1) infinite;
 }
 
-#lightboxMediaContainer .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture{
   background-position:center center;
   background-repeat:no-repeat;
   background-size:100% 100%;
@@ -1828,33 +1828,33 @@ body.center-page {
 /* Small repeating motifs (stars, dots, crosshatch) tile at their natural size.
    Full-card grayscale maps instead stretch cleanly to the card bounds. This
    overlay changes the foil's surface texture; it is not a coverage mask. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-texture-mode="tile"] .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-texture-mode="tile"] .lightbox-holographic-texture{
   background-repeat:repeat;
   background-size:auto;
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-texture-mode="fill"] .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-texture-mode="fill"] .lightbox-holographic-texture{
   background-repeat:no-repeat;
   background-size:100% 100%;
 }
 
 /* Prism holographic: broad spectral bands, a restrained off-axis reflection. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum{
   mix-blend-mode:color-dodge;
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism{
   mix-blend-mode:color-dodge;
   opacity:calc(.18 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .34));
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-ribbons{
   mix-blend-mode:screen;
   filter:blur(.7px);
 }
 
 /* Iridescent foil: pearlescent oil-slick bands with a softer, wider highlight. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-spectrum{
   background:
     linear-gradient(
       116deg,
@@ -1887,20 +1887,20 @@ body.center-page {
   filter:blur(1.5px) saturate(.92);
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-glare{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-glare{
   opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));
   mix-blend-mode:soft-light;
   filter:blur(5px) saturate(.92);
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .19));
   animation-duration:8s;
   mix-blend-mode:screen;
   filter:blur(.7px);
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
   background:linear-gradient(
     116deg,
     transparent 0%,
@@ -1918,7 +1918,7 @@ body.center-page {
   animation-duration:10.2s;
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons{
   background:linear-gradient(
     112deg,
     transparent 0%,
@@ -1938,7 +1938,7 @@ body.center-page {
 }
 
 /* Aurora foil: long, soft teal/green/violet curtains rather than point-like spots. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
   background:
     linear-gradient(
       108deg,
@@ -1973,14 +1973,14 @@ body.center-page {
   filter:blur(1.4px) saturate(1.04);
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .19));
   animation-duration:10.5s;
   mix-blend-mode:screen;
   filter:blur(1.4px);
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
   background:linear-gradient(
     108deg,
     transparent 0%,
@@ -1999,7 +1999,7 @@ body.center-page {
   animation-duration:12.5s;
 }
 
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
   background:linear-gradient(
     105deg,
     transparent 0%,
@@ -2020,29 +2020,29 @@ body.center-page {
 }
 
 @supports (mix-blend-mode:color-dodge){
-  #lightboxMediaContainer .lightbox-holographic-spectrum{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{
     mix-blend-mode:color-dodge;
   }
 }
 
 @media (prefers-reduced-motion:reduce){
-  #lightboxMediaContainer .lightbox-holographic,
-  #lightboxMediaContainer .lightbox-holographic::before,
-  #lightboxMediaContainer .lightbox-holographic-sheen,
-  #lightboxMediaContainer .lightbox-holographic-inner,
-  #lightboxMediaContainer .lightbox-holographic-flip,
-  #lightboxMediaContainer .lightbox-holographic-spectrum,
-  #lightboxMediaContainer .lightbox-holographic-glare,
-  #lightboxMediaContainer .lightbox-holographic-prism,
-  #lightboxMediaContainer .lightbox-holographic-ribbons,
-  #lightboxMediaContainer .lightbox-holographic-texture{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-flip,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture{
     transition:none;
   }
-  #lightboxMediaContainer .lightbox-holographic,
-  #lightboxMediaContainer .lightbox-holographic::before,
-  #lightboxMediaContainer .lightbox-holographic-sheen,
-  #lightboxMediaContainer .lightbox-holographic-prism,
-  #lightboxMediaContainer .lightbox-holographic-ribbons{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons{
     animation:none;
   }
 }
@@ -4471,17 +4471,17 @@ footer > .footer-content p{
    hold engages the foil; quick movement stays available to the Lightbox's
    normal vertical scroll/swipe gesture. */
 @media (pointer:coarse){
-  #lightboxMediaContainer .lightbox-holographic::before{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{
     content:'HOLD + MOVE';
     top:10px;
     right:10px;
     font-size:8px;
     letter-spacing:.11em;
   }
-  #lightboxMediaContainer .lightbox-holographic{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
     touch-action:pan-y;
   }
-  #lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged{
     cursor:grabbing;
   }
 }
@@ -4493,7 +4493,7 @@ footer > .footer-content p{
   overflow:visible;
   z-index:1;
 }
-#lightboxMediaContainer .lightbox-holographic{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
   contain:layout style;
   overflow:visible;
   border-radius:0;
@@ -4505,25 +4505,25 @@ footer > .footer-content p{
 }
 /* Faces remain edge-to-edge; foil layers are clipped by each image's alpha
    channel so transparent cutouts keep their actual silhouette. */
-#lightboxMediaContainer .lightbox-holographic-face{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{
   border-radius:0;
   overflow:hidden;
 }
-#lightboxMediaContainer .lightbox-holographic-inner,
-#lightboxMediaContainer .lightbox-holographic-flip,
-#lightboxMediaContainer .lightbox-holographic-face{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-flip,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{
   border-radius:0;
 }
-#lightboxMediaContainer .lightbox-holographic:focus-visible{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible{
   border-radius:0;
   outline-offset:5px;
 }
 @supports (corner-shape:squircle){
-  #lightboxMediaContainer .lightbox-holographic,
-  #lightboxMediaContainer .lightbox-holographic-face{corner-shape:squircle;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{corner-shape:squircle;}
 }
 /* Plain text rides over the artwork instead of looking like a UI chip. */
-#lightboxMediaContainer .lightbox-holographic::before{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{
   content:'FRONT • MOVE / CLICK';
   padding:0;border:0;border-radius:0;background:transparent;
   color:rgba(255,255,255,.96);font-size:10px;font-weight:750;
@@ -4532,42 +4532,42 @@ footer > .footer-content p{
   backdrop-filter:none;-webkit-backdrop-filter:none;
   animation:holo-hint-breathe 3.8s ease-in-out infinite;
 }
-#lightboxMediaContainer .lightbox-holographic.is-flipped::before{content:'BACK • MOVE / CLICK';}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • MOVE / CLICK';}
 @media (pointer:coarse){
-  #lightboxMediaContainer .lightbox-holographic::before{content:'FRONT • HOLD + MOVE';}
-  #lightboxMediaContainer .lightbox-holographic.is-flipped::before{content:'BACK • HOLD + MOVE';}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{content:'FRONT • HOLD + MOVE';}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • HOLD + MOVE';}
 }
-#lightboxMediaContainer .lightbox-holographic:hover::before,
-#lightboxMediaContainer .lightbox-holographic:focus-visible::before,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-engaged::before,
-#lightboxMediaContainer .lightbox-holographic.is-holo-touch-pending::before{opacity:.82;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover::before,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible::before,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged::before,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending::before{opacity:.82;}
 /* More legible spectrum, stronger controlled color separation, broad fixed reflections. */
-#lightboxMediaContainer .lightbox-holographic-spectrum{filter:saturate(1.18) contrast(1.035);}
-#lightboxMediaContainer .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{filter:saturate(1.18) contrast(1.035);}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism{
   opacity:calc(.06 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .26));
   filter:blur(.45px) saturate(1.30) contrast(1.06);
 }
-#lightboxMediaContainer .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons{
   opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));
   filter:blur(.82px) saturate(1.14);
 }
-#lightboxMediaContainer .lightbox-holographic-sheen{opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));}
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism{
   opacity:calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .31));
   filter:blur(.4px) saturate(1.38) contrast(1.08);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
   opacity:calc(.07 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .25));
   filter:blur(.6px) saturate(1.18);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
   opacity:calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .28));
   filter:blur(.65px) saturate(1.32);
 }
 @media (prefers-reduced-motion:reduce){
-  #lightboxMediaContainer .lightbox-holographic-prism,
-  #lightboxMediaContainer .lightbox-holographic-ribbons,
-  #lightboxMediaContainer .lightbox-holographic-sheen{animation:none!important;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{animation:none!important;}
 }
 
 
@@ -4580,46 +4580,46 @@ footer > .footer-content p{
 
 /* No extra frame around the card: foil alpha clipping defines the visible
    silhouette while 3D transforms extend outside the artwork slot. */
-#lightboxMediaContainer .lightbox-holographic{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
   border:0;
   box-shadow:none;
   outline:none;
 }
-#lightboxMediaContainer .lightbox-holographic:focus-visible{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible{
   border:0;
   box-shadow:none;
   outline:none!important;
   outline-offset:0;
 }
-#lightboxMediaContainer .lightbox-holographic-face{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{
   border-radius:0;
   overflow:hidden;
 }
 @supports (corner-shape:squircle){
-  #lightboxMediaContainer .lightbox-holographic-face{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{
     corner-shape:squircle;
   }
 }
 
 
-#lightboxMediaContainer .lightbox-holographic-texture[data-holo-texture-mode="tile"]{background-repeat:repeat;background-size:auto;}
-#lightboxMediaContainer .lightbox-holographic-texture[data-holo-texture-mode="fill"]{background-repeat:no-repeat;background-size:100% 100%;}
-#lightboxMediaContainer .lightbox-holographic::before{display:none!important;content:none!important;}
-#lightboxMediaContainer .lightbox-holographic-hint{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture[data-holo-texture-mode="tile"]{background-repeat:repeat;background-size:auto;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture[data-holo-texture-mode="fill"]{background-repeat:no-repeat;background-size:100% 100%;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{display:none!important;content:none!important;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
  width:min(100%,calc(85svh * var(--lightbox-artwork-ratio,1)));max-width:calc(100% - 40px);
  min-height:13px;align-self:center;display:flex;justify-content:flex-end;align-items:center;gap:5px;
  margin:-2px auto -5px;color:rgba(255,255,255,.56);font-size:9px;font-weight:700;
  letter-spacing:.105em;line-height:1.2;text-transform:uppercase;pointer-events:none;user-select:none;-webkit-user-select:none;
 }
-#lightboxMediaContainer .lightbox-holographic-face-status{color:rgba(255,255,255,.88);}
-#lightboxMediaContainer .lightbox-holographic-hint-separator{color:rgba(255,255,255,.34);}
-#lightboxMediaContainer .lightbox-holographic-touch-action{display:none;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face-status{color:rgba(255,255,255,.88);}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-separator{color:rgba(255,255,255,.34);}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{display:none;}
 @media(pointer:coarse){
- #lightboxMediaContainer .lightbox-holographic-desktop-action{display:none;}
- #lightboxMediaContainer .lightbox-holographic-touch-action{display:inline;}
- #lightboxMediaContainer .lightbox-holographic-hint{font-size:8px;letter-spacing:.095em;margin-top:0;}
+ :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action{display:none;}
+ :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{display:inline;}
+ :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{font-size:8px;letter-spacing:.095em;margin-top:0;}
 }
-@media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic{animation:none!important;}}
+@media(prefers-reduced-motion:reduce){:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{animation:none!important;}}
 
 /* Stable collectible foil: one moving spectral material, one separate reflection,
    and an optional user-provided pattern. Heavy overlapping layers are disabled. */
@@ -4627,25 +4627,25 @@ footer > .footer-content p{
   overflow:visible;
   width:min(100%,calc(88svh * var(--lightbox-artwork-ratio,1)));
 }
-#lightboxMediaContainer .lightbox-holographic{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
   border:0;
   box-shadow:none;
   outline:none;
 }
-#lightboxMediaContainer .lightbox-holographic:focus-visible{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible{
   outline:2px solid rgba(255,255,255,.86);
   outline-offset:5px;
 }
-#lightboxMediaContainer .lightbox-holographic-face{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{
   border-radius:0;
   overflow:hidden;
 }
-#lightboxMediaContainer .lightbox-holographic-back > img.lightbox-holographic-default-reverse{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-back > img.lightbox-holographic-default-reverse{
   transform:scaleX(-1);
 }
-#lightboxMediaContainer .lightbox-holographic-spectrum,
-#lightboxMediaContainer .lightbox-holographic-glare,
-#lightboxMediaContainer .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture{
   position:absolute;
   inset:0;
   margin:0;
@@ -4654,7 +4654,7 @@ footer > .footer-content p{
   -webkit-backface-visibility:hidden;
   backface-visibility:hidden;
 }
-#lightboxMediaContainer .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{
   z-index:10;
   background-image:
     repeating-linear-gradient(112deg,
@@ -4677,7 +4677,7 @@ footer > .footer-content p{
   transition:opacity 160ms ease-out;
   animation:holo-spectrum-breathe 5.2s ease-in-out infinite alternate;
 }
-#lightboxMediaContainer .lightbox-holographic-glare{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare{
   z-index:30;
   background-image:
     radial-gradient(ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),
@@ -4700,7 +4700,7 @@ footer > .footer-content p{
   filter:brightness(1.02) contrast(1.12);
   transition:opacity 160ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture{
   z-index:20;
   background-position:center center;
   background-repeat:no-repeat;
@@ -4709,18 +4709,18 @@ footer > .footer-content p{
   mix-blend-mode:soft-light;
   filter:contrast(1.08) saturate(1.1);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-texture-mode="tile"] .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-texture-mode="tile"] .lightbox-holographic-texture{
   background-repeat:repeat;
   background-size:auto;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-texture-mode="fill"] .lightbox-holographic-texture{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-texture-mode="fill"] .lightbox-holographic-texture{
   background-repeat:no-repeat;
   background-size:100% 100%;
 }
 
 /* Grain is now an independent masked surface layer controlled by the CMS. *//* Neutral interference bands break up the flat rainbow into reflective bands
    whose brightness shifts with inverse foil movement. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum::after{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum::after{
   content:"";
   position:absolute;
   inset:0;
@@ -4739,21 +4739,21 @@ footer > .footer-content p{
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .17) + (var(--holo-tilt-strength,0) * .12));
 }
 /* Presets modify the same foil material instead of stacking independent layers. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-spectrum{
   background-image:
     repeating-linear-gradient(92deg,transparent 0 3px,rgba(255,255,255,.32) 3.5px,transparent 5px 10px),
     linear-gradient(108deg,#7b66c9,#d69ab9,#d9d8a2,#78d9d6,#89a7ec,#b883d3);
   background-size:100% 100%,300% 220%;
   background-blend-mode:overlay,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-spectrum{
   background-image:
     repeating-linear-gradient(90deg,transparent 0 8px,rgba(255,255,255,.48) 9px,rgba(116,235,255,.17) 11px,transparent 14px 24px),
     linear-gradient(90deg,#ff78bd,#ffe09a,#9ef3d2,#86cbff,#bfa0ff,#ff78bd);
   background-size:100% 100%,320% 100%;
   background-blend-mode:screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-spectrum{
   background-image:
     repeating-linear-gradient(38deg,transparent 0 7px,rgba(255,255,255,.25) 8px,transparent 9px 15px),
     repeating-linear-gradient(142deg,transparent 0 7px,rgba(113,238,255,.22) 8px,transparent 9px 15px),
@@ -4761,14 +4761,14 @@ footer > .footer-content p{
   background-size:100% 100%,100% 100%,320% 220%;
   background-blend-mode:overlay,screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-spectrum{
   background-image:
     repeating-conic-gradient(from 18deg at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.44) 0 3deg,rgba(94,224,255,.22) 3deg 7deg,transparent 7deg 18deg),
     linear-gradient(130deg,#fc91d3,#ffe6a0,#8be9e0,#7ebdff,#b997ff);
   background-size:170% 170%,320% 240%;
   background-blend-mode:screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="glitter"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="glitter"] .lightbox-holographic-spectrum{
   background-image:
     radial-gradient(circle at 17% 19%,rgba(255,255,255,.95) 0 1px,transparent 2.2px),
     radial-gradient(circle at 73% 27%,rgba(255,255,255,.9) 0 1px,transparent 2.4px),
@@ -4778,21 +4778,21 @@ footer > .footer-content p{
   background-size:100% 100%,100% 100%,100% 100%,100% 100%,340% 280%;
   background-blend-mode:screen,screen,screen,screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-spectrum{
   background-image:
     repeating-radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 9px,rgba(255,255,255,.28) 10px,rgba(116,237,255,.18) 12px,transparent 14px 26px),
     linear-gradient(120deg,#f885cc,#ffe7a1,#91f0d8,#8ac7ff,#b9a0ff);
   background-size:160% 160%,320% 220%;
   background-blend-mode:screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-spectrum{
   background-image:
     radial-gradient(ellipse 35% 82% at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 34%,rgba(134,244,255,.22) 42%,rgba(255,255,255,.76) 47%,rgba(234,109,255,.38) 53%,transparent 70%),
     linear-gradient(110deg,#f67fbd,#ffe6a0,#90edd4,#79c9ff,#bd9bff);
   background-size:160% 160%,320% 220%;
   background-blend-mode:screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-spectrum{
   background-image:
     repeating-linear-gradient(112deg,rgba(255,255,255,.04) 0 1px,transparent 1px 6px),
     linear-gradient(112deg,#ffa9d8,#fff0b2,#b1f4e2,#b4dfff,#d2b8ff,#ffa9d8);
@@ -4800,14 +4800,14 @@ footer > .footer-content p{
   background-blend-mode:soft-light,color-dodge;
   filter:brightness(.98) contrast(1.08) saturate(1.15);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-spectrum{
   background-image:
     linear-gradient(122deg,transparent 0%,rgba(106,248,220,.4) 22%,rgba(131,190,255,.58) 38%,rgba(208,118,255,.48) 54%,rgba(255,123,198,.32) 72%,transparent 100%),
     linear-gradient(35deg,#ff8bd0,#ffe19a,#7cead1,#79c7ff,#c09bff);
   background-size:280% 240%,340% 280%;
   background-blend-mode:screen,color-dodge;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum{
   filter:brightness(.96) contrast(1.34) saturate(1.42);
 }
 /* Secondary overlays are selected per finish below. The previous blanket
@@ -4817,17 +4817,17 @@ footer > .footer-content p{
   50%{opacity:calc(.22 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .46));}
 }
 @media(prefers-reduced-motion:reduce){
- #lightboxMediaContainer .lightbox-holographic-diffraction,
- #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}
- #lightboxMediaContainer .lightbox-holographic-spectrum{animation:none!important;}
+ :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,
+ :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles{animation:none!important;}
+ :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{animation:none!important;}
 }
 
 
 /* Distinct holographic profiles.
    Keep one shared renderer, but give each finish its own visual signature.
    All overlays remain clipped by the artwork/mask assembled in the renderer. */
-#lightboxMediaContainer .lightbox-holographic-diffraction,
-#lightboxMediaContainer .lightbox-holographic-sparkles{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles{
   position:absolute;
   inset:0;
   margin:0;
@@ -4837,48 +4837,48 @@ footer > .footer-content p{
   -webkit-backface-visibility:hidden;
   backface-visibility:hidden;
 }
-#lightboxMediaContainer .lightbox-holographic-prism{z-index:14;}
-#lightboxMediaContainer .lightbox-holographic-texture{z-index:18;}
-#lightboxMediaContainer .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism{z-index:14;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture{z-index:18;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction{
   z-index:21;
   background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   mix-blend-mode:screen;
   opacity:calc(.03 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .28));
   transition:opacity 180ms ease-out,background-position 180ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-ribbons{z-index:23;}
-#lightboxMediaContainer .lightbox-holographic-sparkles{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons{z-index:23;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles{
   z-index:26;
   background-size:100% 100%,100% 100%,100% 100%,100% 100%,100% 100%;
   mix-blend-mode:screen;
   opacity:calc(.03 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .40));
 }
-#lightboxMediaContainer .lightbox-holographic-glare{z-index:30;}
-#lightboxMediaContainer .lightbox-holographic-sheen{z-index:35;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare{z-index:30;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{z-index:35;}
 
 /* Nothing is layered on top by default; every finish opts into its own
    supporting material, reducing visual mud and unnecessary compositing. */
-#lightboxMediaContainer .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic-ribbons,
-#lightboxMediaContainer .lightbox-holographic-diffraction,
-#lightboxMediaContainer .lightbox-holographic-sparkles,
-#lightboxMediaContainer .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{
   display:none!important;
 }
 
 /* Classic prism: broad spectral wash, shifting prism band and soft ribbons. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-ribbons,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-ribbons,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-sheen{
   display:block!important;
 }
 
 /* Brushed metal: fine, directional grain rather than a broad rainbow wash. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
   display:block!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism{
   background-image:
     repeating-linear-gradient(92deg,rgba(255,255,255,.02) 0 2px,rgba(255,255,255,.28) 2.5px,rgba(16,22,38,.13) 3.5px,transparent 5px 9px),
     linear-gradient(105deg,#777d91 0%,#d9d6e2 18%,#858ba3 33%,#f0d3e0 50%,#9ba7b9 68%,#e4dfed 84%,#777d91 100%);
@@ -4889,17 +4889,17 @@ footer > .footer-content p{
   filter:contrast(1.4) saturate(.78);
   animation:holo-prism-drift 11s ease-in-out infinite alternate;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18));
   animation-duration:7.6s;
 }
 
 /* Light beams: discrete vertical shafts with bright, separated highlights. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
   display:block!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism{
   background-image:
     repeating-linear-gradient(90deg,transparent 0 8%,rgba(255,255,255,.06) 9%,rgba(255,255,255,.78) 9.7%,rgba(111,228,255,.28) 10.6%,transparent 13% 22%),
     linear-gradient(90deg,#ff7fc2,#ffdc9d,#9cefd7,#77c9ff,#c29fff,#ff7fc2);
@@ -4910,13 +4910,13 @@ footer > .footer-content p{
   filter:contrast(1.22) saturate(1.5);
   animation:holo-prism-drift 5.8s linear infinite;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
   opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20));
   animation-duration:4.8s;
 }
 
 /* Crosshatch: a visibly woven diffraction grid that moves against the light. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
   display:block!important;
   background-image:
     repeating-linear-gradient(38deg,transparent 0 7px,rgba(255,255,255,.38) 7.5px,rgba(83,225,255,.2) 8.5px,transparent 10px 16px),
@@ -4928,11 +4928,11 @@ footer > .footer-content p{
 }
 
 /* Shattered ice: faceted, angular flashes that converge around the refracted point. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
   display:block!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism{
   background-image:
     repeating-conic-gradient(from 11deg at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.02) 0 9deg,rgba(255,255,255,.52) 10deg 10.8deg,rgba(105,222,255,.15) 11deg 18deg,transparent 19deg 29deg),
     linear-gradient(132deg,#ff9ed9,#fff0b0,#8cebdc,#91c6ff,#c2a5ff,#ff9ed9);
@@ -4942,7 +4942,7 @@ footer > .footer-content p{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .32));
   animation:holo-prism-drift 8s ease-in-out infinite alternate;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-diffraction{
   background-image:
     repeating-linear-gradient(47deg,transparent 0 31px,rgba(255,255,255,.68) 31.5px,transparent 32.5px 58px),
     repeating-linear-gradient(133deg,transparent 0 27px,rgba(157,233,255,.46) 27.5px,transparent 28.5px 64px);
@@ -4951,7 +4951,7 @@ footer > .footer-content p{
 }
 
 /* Glitter: small, crisp pinprick glints that twinkle instead of broad bands. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="glitter"] .lightbox-holographic-sparkles{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="glitter"] .lightbox-holographic-sparkles{
   display:block!important;
   background-image:
     radial-gradient(circle at 12% 18%,rgba(255,255,255,.96) 0 1px,transparent 2.3px),
@@ -4965,7 +4965,7 @@ footer > .footer-content p{
 }
 
 /* Water waves: concentric diffraction rings that follow the refracted focal point. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
   display:block!important;
   background-image:
     repeating-radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 8px,rgba(255,255,255,.30) 9px,rgba(98,223,255,.24) 11px,rgba(177,127,255,.16) 13px,transparent 15px 26px),
@@ -4977,11 +4977,11 @@ footer > .footer-content p{
 }
 
 /* Cat-eye lens: a narrow, high-contrast reflective band with a bright centre. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
   display:block!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism{
   background-image:
     radial-gradient(ellipse 26% 78% at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 33%,rgba(80,227,255,.2) 40%,rgba(255,255,255,.92) 47%,rgba(255,128,223,.62) 51%,rgba(112,220,255,.40) 56%,transparent 69%),
     linear-gradient(105deg,#f67fbd,#ffe6a0,#90edd4,#79c9ff,#bd9bff);
@@ -4992,28 +4992,28 @@ footer > .footer-content p{
   filter:contrast(1.28) saturate(1.4);
   animation:holo-prism-drift 6.6s ease-in-out infinite alternate;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18));
   animation-duration:6.4s;
 }
 
 /* Pearlescent foil: soft pastel refraction without hard-edged rainbow stripes. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
   display:block!important;
 }
 
 /* Aurora: long teal/green/violet curtains with two broad, slow-moving ribbons. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
   display:block!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
   animation-duration:12.5s;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
   animation-duration:11.8s;
 }
 @keyframes holo-glitter-twinkle{
@@ -5023,14 +5023,14 @@ footer > .footer-content p{
 
 /* Respect reduced motion even though these profiles are defined at EOF. */
 @media(prefers-reduced-motion:reduce){
-  #lightboxMediaContainer .lightbox-holographic,
-  #lightboxMediaContainer .lightbox-holographic::before,
-  #lightboxMediaContainer .lightbox-holographic-sheen,
-  #lightboxMediaContainer .lightbox-holographic-prism,
-  #lightboxMediaContainer .lightbox-holographic-ribbons,
-  #lightboxMediaContainer .lightbox-holographic-diffraction,
-  #lightboxMediaContainer .lightbox-holographic-sparkles,
-  #lightboxMediaContainer .lightbox-holographic-spectrum{
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{
     animation:none!important;
     transition:none!important;
   }
@@ -5039,10 +5039,10 @@ footer > .footer-content p{
 /* Optical response pass — a small virtual studio rather than a flat rainbow.
    Environmental shading follows the exact same alpha/custom mask as the art,
    so transparent artwork keeps its silhouette and no outer frame is introduced. */
-#lightboxMediaContainer .lightbox-holographic-inner{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner{
   transform:perspective(900px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) translateZ(9px);
 }
-#lightboxMediaContainer .lightbox-holographic-environment{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-environment{
   position:absolute; inset:0; z-index:27; margin:0; border:0; pointer-events:none;
   background-image:
     radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.34) 0%,rgba(222,249,255,.13) 24%,transparent 72%),
@@ -5061,14 +5061,14 @@ footer > .footer-content p{
 /* Shared visual intensity curve. The editor still stores a normalized 0–1 value;
    this visual mapping leaves headroom for reflective highlights instead of clipping
    several screen/color-dodge layers at once. */
-#lightboxMediaContainer .lightbox-holographic{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
   --holo-visual-intensity:calc(var(--holo-intensity,.7) * .68);
 }
 
 /* Reference-inspired foil: independent masked maps and tilt-responsive light gradients. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-spectrum{background-image:none!important;opacity:0!important;filter:none!important;mix-blend-mode:normal!important;}
-#lightboxMediaContainer .lightbox-holographic-cosmos-layer,#lightboxMediaContainer .lightbox-holographic-grain-layer,#lightboxMediaContainer .lightbox-holographic-glitter-layer{position:absolute;inset:0;display:block;margin:0;border:0;pointer-events:none;background-repeat:no-repeat;-webkit-backface-visibility:hidden;backface-visibility:hidden;transform:translateZ(.01px);}
-#lightboxMediaContainer .lightbox-holographic-cosmos-bottom{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-spectrum{background-image:none!important;opacity:0!important;filter:none!important;mix-blend-mode:normal!important;}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-layer,:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer,:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer{position:absolute;inset:0;display:block;margin:0;border:0;pointer-events:none;background-repeat:no-repeat;-webkit-backface-visibility:hidden;backface-visibility:hidden;transform:translateZ(.01px);}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom{
   z-index:10;transform:translateZ(1px);
   background-image:
     conic-gradient(from calc(138deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#ffe875 0deg,#b8ff5c 42deg,#42f2c7 86deg,#48d7ff 130deg,#7583ff 175deg,#db65ff 220deg,#ff5da8 265deg,#ff9a69 315deg,#ffe875 360deg),
@@ -5080,7 +5080,7 @@ footer > .footer-content p{
   opacity:calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .60) + (var(--holo-tilt-strength,0) * .14));
   filter:brightness(1.05) contrast(1.27) saturate(1.72);transition:opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-middle{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle{
   z-index:11;transform:translateZ(2px);
   background-image:
     conic-gradient(from calc(218deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#45fff2 0deg,#45c6ff 45deg,#777cff 90deg,#cf69ff 135deg,#ff73d8 180deg,#fff6b7 220deg,#5dffd0 265deg,#439fff 315deg,#45fff2 360deg),
@@ -5092,7 +5092,7 @@ footer > .footer-content p{
   opacity:calc(.07 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .56) + (var(--holo-tilt-strength,0) * .16));
   filter:brightness(1.04) contrast(1.32) saturate(1.78);transition:opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-top{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top{
   z-index:12;transform:translateZ(3.5px);
   background-image:
     conic-gradient(from calc(318deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#fff5ff 0deg,#63f6ff 38deg,#567eff 84deg,#ef5dff 128deg,#ff8bc8 174deg,#ffffff 222deg,#ffe47a 276deg,#58fff1 326deg,#fff5ff 360deg),
@@ -5103,47 +5103,47 @@ footer > .footer-content p{
   opacity:calc(.06 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .50) + (var(--holo-tilt-strength,0) * .18));
   filter:brightness(1.06) contrast(1.42) saturate(1.85);transition:opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-grain-layer{transform:translateZ(4px);
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer{transform:translateZ(4px);
  z-index:17;background-image:url("../assets/holographic/grain.webp"),repeating-linear-gradient(calc(132deg + var(--holo-angle,0deg)),rgba(255,255,255,.05) 0 1px,transparent 1px 4px);
  background-size:420px 420px,260% 220%;background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-repeat:repeat,no-repeat;background-blend-mode:soft-light,overlay;mix-blend-mode:soft-light;
  opacity:calc(.018 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .12));
 }
-#lightboxMediaContainer .lightbox-holographic-glitter-layer{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer{
  z-index:18;transform:translateZ(5px);background-image:url("../assets/holographic/glitter.png"),radial-gradient(ellipse 32% 27% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.48),transparent 76%),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 30%,rgba(255,255,255,.24) 47%,rgba(193,233,255,.11) 51%,transparent 68%);
  background-size:120% 120%,170% 170%,300% 240%;background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-blend-mode:screen,screen,color-dodge;mix-blend-mode:screen;
  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .08));filter:brightness(1.02) contrast(1.13) saturate(1.16);animation:holo-glitter-twinkle 3.2s ease-in-out infinite alternate;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{transform:translateZ(6px);
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{transform:translateZ(6px);
  z-index:35;display:block!important;background-image:linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 18%,rgba(255,255,255,.02) 35%,rgba(255,255,255,.16) 47%,rgba(185,226,255,.07) 52%,transparent 68%);background-size:300% 240%;background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);mix-blend-mode:screen;
  opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20) + (var(--holo-tilt-strength,0) * .06));animation-duration:8.6s;
 }
-@media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic-cosmos-layer,#lightboxMediaContainer .lightbox-holographic-grain-layer,#lightboxMediaContainer .lightbox-holographic-glitter-layer{animation:none!important;transition:none!important;}}
+@media(prefers-reduced-motion:reduce){:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-layer,:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer,:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer{animation:none!important;transition:none!important;}}
 
 
 /* Pattern relief pass: source maps contribute visible material detail as well as
    luminance coverage. Tilt-following highlights and opposed shadows add shallow
    height cues while preserving the established card silhouette and textures. */
-#lightboxMediaContainer .lightbox-holographic-cosmos-bottom,
-#lightboxMediaContainer .lightbox-holographic-cosmos-middle,
-#lightboxMediaContainer .lightbox-holographic-cosmos-top {
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top {
   background-repeat:no-repeat;
   transition:filter 150ms ease-out,opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-bottom {
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom {
   background-image:url("../assets/holographic/cosmos-bottom.png"),conic-gradient(from calc(138deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#ffe875 0deg,#b8ff5c 42deg,#42f2c7 86deg,#48d7ff 130deg,#7583ff 175deg,#db65ff 220deg,#ff5da8 265deg,#ff9a69 315deg,#ffe875 360deg),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.34) 29%,rgba(255,255,255,.05) 38%,rgba(255,255,255,.42) 47%,rgba(131,238,255,.20) 52%,rgba(0,5,24,.12) 61%,transparent 72%),radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.62),rgba(174,230,255,.18) 34%,transparent 72%);
   background-size:100% 100%,210% 190%,340% 280%,160% 160%;
   background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
   background-blend-mode:soft-light,screen,screen,screen;
   filter:brightness(1.02) contrast(1.48) saturate(1.62);
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-middle {
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle {
   background-image:url("../assets/holographic/cosmos-middle-trans.png"),conic-gradient(from calc(218deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#45fff2 0deg,#45c6ff 45deg,#777cff 90deg,#cf69ff 135deg,#ff73d8 180deg,#fff6b7 220deg,#5dffd0 265deg,#439fff 315deg,#45fff2 360deg),linear-gradient(calc(126deg + var(--holo-angle,0deg)),transparent 16%,rgba(2,8,28,.30) 28%,rgba(255,255,255,.05) 35%,rgba(207,249,255,.46) 46%,rgba(247,195,255,.25) 52%,rgba(2,8,28,.12) 63%,transparent 76%),radial-gradient(ellipse 34% 30% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(238,255,255,.72),rgba(195,219,255,.20) 35%,transparent 72%);
   background-size:100% 100%,230% 220%,300% 240%,170% 170%;
   background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
   background-blend-mode:soft-light,screen,screen,screen;
   filter:brightness(1.02) contrast(1.52) saturate(1.68);
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-top {
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top {
   background-image:url("../assets/holographic/cosmos-top-trans.png"),conic-gradient(from calc(318deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#fff5ff 0deg,#63f6ff 38deg,#567eff 84deg,#ef5dff 128deg,#ff8bc8 174deg,#ffffff 222deg,#ffe47a 276deg,#58fff1 326deg,#fff5ff 360deg),linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.26) 30%,rgba(255,255,255,.08) 39%,rgba(255,255,255,.58) 47%,rgba(178,239,255,.28) 51%,rgba(247,218,255,.11) 56%,rgba(0,5,24,.10) 64%,transparent 74%);
   background-size:100% 100%,250% 230%,280% 230%;
   background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
@@ -5151,35 +5151,35 @@ footer > .footer-content p{
   filter:brightness(1.04) contrast(1.6) saturate(1.78);
 }
 @media(prefers-reduced-motion:reduce) {
-  #lightboxMediaContainer .lightbox-holographic-cosmos-bottom,
-  #lightboxMediaContainer .lightbox-holographic-cosmos-middle,
-  #lightboxMediaContainer .lightbox-holographic-cosmos-top { transition:none!important; }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top { transition:none!important; }
 }
 
 
 /* Per-pixel normal-map highlight pass; CSS masks retain foil coverage and artwork alpha. */
-#lightboxMediaContainer .lightbox-holographic-normal-map{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-normal-map{
   position:absolute;inset:0;z-index:20;display:block;width:100%;height:100%;
   border:0;margin:0;padding:0;pointer-events:none;background:transparent;
   mix-blend-mode:screen;opacity:.92;image-rendering:auto;
   -webkit-backface-visibility:hidden;backface-visibility:hidden;
 }
 @media(prefers-reduced-motion:reduce){
-  #lightboxMediaContainer .lightbox-holographic-normal-map{transition:none!important;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-normal-map{transition:none!important;}
 }
 
 
 /* Matte-first holographic finish pass.
    Texture assets tile at a preserved aspect ratio, while reflective gradients remain
    separate so increased strength adds contrast rather than washing out the artwork. */
-#lightboxMediaContainer .lightbox-holographic-grain-layer{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer{
   background-size:180px auto,260% 220%;
   background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   background-repeat:repeat,no-repeat;
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .10));
   mix-blend-mode:soft-light;
 }
-#lightboxMediaContainer .lightbox-holographic-glitter-layer{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer{
   background-size:144px auto,170% 170%,300% 240%;
   background-position:0 0,var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   background-repeat:repeat,no-repeat,no-repeat;
@@ -5188,11 +5188,11 @@ footer > .footer-content p{
   opacity:calc(.018 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20) + (var(--holo-tilt-strength,0) * .035));
   filter:contrast(1.18) saturate(1.12);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-layer{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-layer{
   background-repeat:repeat,no-repeat,no-repeat,no-repeat;
   transition:filter 150ms ease-out,opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-bottom{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom{
   background-size:280px auto,210% 190%,340% 280%,160% 160%;
   background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
   background-blend-mode:soft-light,soft-light,overlay,soft-light;
@@ -5200,7 +5200,7 @@ footer > .footer-content p{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .28) + (var(--holo-tilt-strength,0) * .07));
   filter:brightness(.96) contrast(1.45) saturate(1.34);
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-middle{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle{
   background-size:280px auto,230% 220%,300% 240%,170% 170%;
   background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
   background-blend-mode:soft-light,soft-light,overlay,soft-light;
@@ -5208,7 +5208,7 @@ footer > .footer-content p{
   opacity:calc(.03 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .24) + (var(--holo-tilt-strength,0) * .06));
   filter:brightness(.95) contrast(1.48) saturate(1.38);
 }
-#lightboxMediaContainer .lightbox-holographic-cosmos-top{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top{
   background-repeat:repeat,no-repeat,no-repeat;
   background-size:280px auto,250% 230%,280% 230%;
   background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
@@ -5218,15 +5218,15 @@ footer > .footer-content p{
   filter:brightness(.96) contrast(1.55) saturate(1.42);
 }
 /* The normal-map light is a surface detail, not a white wash over the finish. */
-#lightboxMediaContainer .lightbox-holographic-normal-map{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-normal-map{
   mix-blend-mode:soft-light;
   opacity:.48;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-normal-map{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-normal-map{
   opacity:.34;
 }
 /* Distinct vertical shafts with darker gaps; lower peak intensity at common strengths. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism{
   background-image:
     repeating-linear-gradient(90deg,transparent 0 12%,rgba(255,255,255,.035) 13%,rgba(255,255,255,.42) 14%,rgba(111,228,255,.18) 15.2%,transparent 17% 30%),
     linear-gradient(90deg,#364055,#b77f9b,#354558,#7da79f,#33465c,#a18db7,#364055);
@@ -5236,11 +5236,11 @@ footer > .footer-content p{
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .24));
   filter:contrast(1.38) saturate(1.18) brightness(.96);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .11));
 }
 /* Crosshatch keeps the woven grid, but its lines are softer and more chromatic than white. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
   background-image:
     repeating-linear-gradient(38deg,transparent 0 7px,rgba(255,255,255,.23) 7.5px,rgba(83,225,255,.16) 8.5px,transparent 10px 16px),
     repeating-linear-gradient(142deg,transparent 0 7px,rgba(255,255,255,.18) 7.5px,rgba(218,136,255,.15) 8.5px,transparent 10px 16px);
@@ -5250,7 +5250,7 @@ footer > .footer-content p{
   filter:contrast(1.35) saturate(1.15);
 }
 /* Cat-eye retains a narrow lens band, without a blown-out white center. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism{
   background-image:
     radial-gradient(ellipse 24% 74% at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 34%,rgba(80,227,255,.18) 41%,rgba(255,255,255,.52) 47%,rgba(255,128,223,.42) 51%,rgba(112,220,255,.28) 56%,transparent 69%),
     linear-gradient(105deg,#a95683,#c9b083,#699f91,#568db3,#8470ae);
@@ -5260,38 +5260,38 @@ footer > .footer-content p{
   opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .25));
   filter:contrast(1.5) saturate(1.18) brightness(.97);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .11));
 }
 /* Pearlescent and aurora are matte color first; a restrained sheen is the only sharp shine. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
   mix-blend-mode:soft-light;
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18));
   filter:contrast(1.3) saturate(1.16) brightness(.96);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons{
   mix-blend-mode:soft-light;
   opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .13));
   filter:contrast(1.2) saturate(1.12);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
   opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .08));
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
   mix-blend-mode:soft-light;
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .19));
   filter:contrast(1.34) saturate(1.22) brightness(.95);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
   mix-blend-mode:soft-light;
   opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .16));
   filter:contrast(1.28) saturate(1.18);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
   opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .075));
 }
 /* More concentric ripples with distinct troughs; keep the water finish soft, not white. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
   background-image:
     repeating-radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 5px,rgba(255,255,255,.22) 6px,rgba(98,223,255,.18) 7.5px,rgba(177,127,255,.12) 9px,rgba(8,28,52,.12) 10.5px,transparent 12px 18px),
     radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.055),transparent 70%);
@@ -5304,27 +5304,27 @@ footer > .footer-content p{
 
 /* Cosmos maps keep a true 2×2 texture tile. The lower and middle passes are
    deliberately visible at rest; tilt adds depth rather than making them appear. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-bottom,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-middle,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-top{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-bottom,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-middle,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-top{
   background-repeat:repeat,no-repeat,no-repeat,no-repeat!important;
   background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%)!important;
   background-blend-mode:soft-light,screen,screen,screen!important;
   transition:filter 220ms ease,opacity 220ms ease!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-bottom{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-bottom{
   background-size:50% 50%,170% 155%,230% 200%,145% 145%!important;
   mix-blend-mode:color!important;
   opacity:calc(.10 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .40) + (var(--holo-tilt-strength,0) * .06))!important;
   filter:brightness(.98) contrast(1.34) saturate(1.38)!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-middle{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-middle{
   background-size:50% 50%,180% 165%,220% 190%,145% 145%!important;
   mix-blend-mode:soft-light!important;
   opacity:calc(.09 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .055))!important;
   filter:brightness(.98) contrast(1.38) saturate(1.42)!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-top{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-top{
   background-size:50% 50%,190% 170%,220% 190%!important;
   background-repeat:repeat,no-repeat,no-repeat!important;
   background-blend-mode:soft-light,screen,screen!important;
@@ -5332,25 +5332,25 @@ footer > .footer-content p{
   opacity:calc(.055 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .27) + (var(--holo-tilt-strength,0) * .045))!important;
   filter:brightness(1) contrast(1.38) saturate(1.42)!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{
   background-size:180% 160%!important;
   mix-blend-mode:soft-light!important;
   opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .12) + (var(--holo-tilt-strength,0) * .035))!important;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-normal-map{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-normal-map{
   mix-blend-mode:soft-light!important;opacity:.34!important;
 }
-#lightboxMediaContainer .lightbox-holographic:not([data-holo-style="cosmos"]) .lightbox-holographic-normal-map{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:not([data-holo-style="cosmos"]) .lightbox-holographic-normal-map{
   mix-blend-mode:soft-light;opacity:.40;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-prism,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-prism{
   mix-blend-mode:soft-light;filter:contrast(1.26) saturate(1.14) brightness(.97);
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-sheen,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen,
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-sheen,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="brushed"] .lightbox-holographic-sheen,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style="shattered"] .lightbox-holographic-sheen{
   opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .075));
 }
 
