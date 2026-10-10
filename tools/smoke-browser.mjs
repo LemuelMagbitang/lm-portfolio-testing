@@ -1000,15 +1000,16 @@ try {
       }
 
       // A tap on grouped artwork opens the full-screen Inspector without
-      // consuming the same tap as a foil flip. The following tap inside Inspect
-      // must still flip the foil to its mirrored reverse.
-      await funkoHolo.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
+      // consuming the same tap as a foil flip. The following real pointer click
+      // inside Inspect must still flip the foil to its mirrored reverse.
+      await funkoHolo.click({ force: true });
       const inspectMode = page.locator('#lightboxMediaContainer .lightbox-inspect-mode');
       await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
+      await page.waitForTimeout(500); // let the card-to-viewport transition settle
       if (await funkoHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
       }
-      await funkoHolo.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
+      await funkoHolo.click({ force: true });
       if (!(await funkoHolo.evaluate(el => el.classList.contains('is-flipped')))) {
         throw new Error('Uploaded artwork did not flip to its default mirrored reverse inside Inspect.');
       }
