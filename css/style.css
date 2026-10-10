@@ -5377,3 +5377,10 @@ footer > .footer-content p{
   #lightboxMediaContainer .lightbox-artwork-inspect-trigger{opacity:.9;transform:none;}
 }
 @media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-artwork-inspect-trigger{transition:none;}}
+
+
+/* Horizontal Card Layout is intentionally smaller and scrollable, distinct from
+   the larger artwork-to-artwork Horizontal Stack. */
+#lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-artwork-group-items{display:flex;overflow-x:auto;padding:0 0 12px;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;}
+#lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-media-item{flex:0 0 min(32%,320px);scroll-snap-align:start;}
+@media(max-width:700px){#lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-media-item{flex-basis:min(78%,300px);}}

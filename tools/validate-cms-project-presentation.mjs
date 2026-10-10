@@ -268,6 +268,9 @@ assert.ok(siteCss.includes('data-artwork-layout="grid"') &&
   siteCss.includes('data-artwork-layout="flow"') &&
   siteCss.includes('backdrop-filter:blur(8px)'),
   'The public Lightbox must support all four group layouts plus the dimmed/blurred Inspect backdrop.');
+assert.ok(siteCss.includes('#lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-artwork-group-items{display:flex;overflow-x:auto;') &&
+  siteCss.includes('flex:0 0 min(32%,320px)'),
+  'Horizontal Card Layout must render as a scrollable row of compact cards, separate from the larger Horizontal Stack.');
 assert.ok(foilNormalRendererSource.includes('uniform float u_uvScale;') &&
   foilNormalRendererSource.includes('fract(v_uv*u_uvScale)') &&
   renderer.includes("uvScale: config.style === 'cosmos' ? 2"),
