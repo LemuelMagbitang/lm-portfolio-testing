@@ -22,7 +22,7 @@ import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261010-02';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261010-02';
-import { initLightbox } from '../features/lightbox/index.js?v=20261010-12';
+import { initLightbox } from '../features/lightbox/index.js?v=20261010-13';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 
 export async function createPortfolioApp({
@@ -49,7 +49,7 @@ export async function createPortfolioApp({
   // explicitly warms the viewer module graph during startup when a project
   // contains 3D media so the first viewer open does not pay the module-load cost.
   const loadModelViewerModule = async () => (
-    import('../infrastructure/three/model-viewer.js?v=20261010-16')
+    import('../infrastructure/three/model-viewer.js?v=20261010-17')
   );
 
   const mountModelViewer = async (...args) => {

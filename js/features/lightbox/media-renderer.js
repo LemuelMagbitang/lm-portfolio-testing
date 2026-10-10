@@ -1690,6 +1690,8 @@ export function createLightboxMediaRenderer({
         return;
       }
       if (event.key !== 'Tab') return;
+      // Keep the Lightbox's outer focus trap from overriding this modal's loop.
+      event.stopPropagation();
       const focusables = Array.from(overlay.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]'))
         .filter(node => !node.closest('[hidden],[inert]'));
       if (!focusables.length) { event.preventDefault(); back.focus(); return; }
