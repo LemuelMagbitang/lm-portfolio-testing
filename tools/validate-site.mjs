@@ -1211,7 +1211,7 @@ function validateCmsRegressionContracts() {
     err('CMS 3D preview: the Projects editor must import the infrastructure Three.js adapter.');
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
-  if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '')") ||
+  if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {})") ||
       !renderer.includes('layer.style.maskMode = modeList') ||
       !renderer.includes("const asCssUrl = value => 'url(\"' + String(value).split('\"').join('%22') + '\")';") ||
       renderer.includes("encodeURI(String(value).split('\"').join('%22'))") ||
@@ -1226,7 +1226,7 @@ function validateCmsRegressionContracts() {
       !renderer.includes('applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl)')) {
+      !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {')) {
     err('Lightbox holographic mask: every foil layer must follow image alpha and its optional custom luminance mask.');
   }
 
@@ -1295,7 +1295,7 @@ function validateCmsRegressionContracts() {
       !css.includes('border:0;\n  box-shadow:none;\n  outline:none;') ||
       !css.includes('outline:none!important;') ||
       !css.includes('#lightboxMediaContainer .lightbox-holographic-face{\n  border-radius:0;\n  overflow:hidden;') ||
-      !renderer.includes("layer.style.webkitMaskComposite = images.length > 1 ? 'source-in' : 'source-over'")) {
+      !renderer.includes("layer.style.webkitMaskComposite = webkitIntersections || 'source-over'")) {
     err('Holographic card: the artwork slot must not crop tilt; foil must have no added frame and clip to image alpha.');
   }
 
