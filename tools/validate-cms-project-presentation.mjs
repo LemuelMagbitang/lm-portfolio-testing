@@ -262,9 +262,13 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes('lightbox-artwork-group-items') &&
   renderer.includes("entry.addEventListener('click',onEntryClick,true)") &&
   renderer.includes('activeInspector?.entry===entry') &&
-  renderer.includes('Tap to flip · Move to explore the light.') &&
-  renderer.includes("description.textContent=caption||''") &&
+  renderer.includes("description.textContent=caption") &&
   renderer.includes('description.hidden=!caption') &&
+  renderer.includes("desktopAction.textContent = 'CLICK / MOVE'") &&
+  renderer.includes("touchAction.textContent = 'HOLD + MOVE'") &&
+  renderer.includes("faceLabel.textContent = isBack ? 'BACK' : 'FRONT'") &&
+  renderer.includes("footer.append(description,back)") &&
+  !renderer.includes('Tap to flip · Move to explore the light.') &&
   renderer.includes("back.innerHTML='<span aria-hidden=\"true\">←</span>'") &&
   !renderer.includes('inspectTrigger') &&
   !renderer.includes('holdOpened = true'),
@@ -291,7 +295,9 @@ assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-a
   siteCss.includes('flex-flow:row wrap') &&
   siteCss.includes('overflow:visible') &&
   siteCss.includes('height:clamp(200px,38svh,320px)') &&
-  siteCss.includes('overflow:visible;padding:0;margin:0;'),
+  siteCss.includes('overflow:visible;padding:0;margin:0;') &&
+  siteCss.includes('z-index:10002;') &&
+  siteCss.includes('.lightbox-inspect-frame .lightbox-holographic-hint{'),
   'Responsive layered cards must wrap without a horizontal scroller and keep equal-height, aspect-aware artwork frames.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),

@@ -1706,19 +1706,12 @@ export function createLightboxMediaRenderer({
     const footer=documentRef.createElement('div');
     footer.className='lightbox-inspect-footer';
     const caption=String(entry.querySelector('.media-caption')?.textContent||'').trim();
-    const title=documentRef.createElement('strong');
-    title.className='lightbox-inspect-title';
-    title.textContent=caption||String(project.title||'Artwork detail');
     const description=documentRef.createElement('p');
     description.className='lightbox-inspect-description';
-    // Inspect captions belong to the selected artwork, never the parent project.
-    description.textContent=caption||'';
+    // A grouped artwork owns its own caption. Do not fall back to project title
+    // or project description, and do not repeat the same caption in two fields.
+    description.textContent=caption;
     description.hidden=!caption;
-    const instructions=documentRef.createElement('p');
-    instructions.className='lightbox-inspect-instructions';
-    instructions.textContent=entry.dataset.artworkFoil==='true'
-      ?'Tap to flip · Move to explore the light.'
-      :'Move to explore · Back to return.';
     const back=documentRef.createElement('button');
     back.type='button';
     back.className='model-viewer-back lightbox-inspect-back';
@@ -1726,7 +1719,7 @@ export function createLightboxMediaRenderer({
     back.setAttribute('aria-label','Close Inspect Mode and return to the artwork group');
     back.addEventListener('click',()=>closeArtworkInspect());
     stage.appendChild(frame);
-    footer.append(title,description,instructions,back);
+    footer.append(description,back);
     panel.append(stage,footer);
     overlay.appendChild(panel);
     const onBackdropClick=event=>{if(event.target===overlay)closeArtworkInspect();};

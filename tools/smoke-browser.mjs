@@ -1031,14 +1031,18 @@ try {
         throw new Error('Portaled Inspector lost the holographic positioned-layer/interaction styles: ' + JSON.stringify(inspectorFoilLayers));
       }
       const inspectorPresentation = await inspectMode.evaluate(overlay => {
+        const modal = document.querySelector('#lightbox');
+        const controls = document.querySelector('.lightbox-controls');
         const stage = overlay.querySelector('.lightbox-inspect-stage');
         const artwork = overlay.querySelector('.lightbox-artwork');
         const stageRect = stage?.getBoundingClientRect();
         const artworkRect = artwork?.getBoundingClientRect();
         const back = overlay.querySelector('.lightbox-inspect-back');
-        const title = overlay.querySelector('.lightbox-inspect-title')?.textContent?.trim() || '';
-        const description = overlay.querySelector('.lightbox-inspect-description')?.textContent?.trim() || '';
-        const instructions = overlay.querySelector('.lightbox-inspect-instructions')?.textContent?.trim() || '';
+        const description = overlay.querySelector('.lightbox-inspect-description');
+        const hint = overlay.querySelector('.lightbox-holographic-hint');
+        const face = hint?.querySelector('[data-holo-face-label]')?.textContent?.trim() || '';
+        const action = hint?.querySelector('.lightbox-holographic-desktop-action')?.textContent?.trim() || '';
+        const backStyle = back ? getComputedStyle(back) : null;
         const artworkFitsStage = Boolean(stageRect && artworkRect &&
           artworkRect.width > 0 && artworkRect.height > 0 &&
           artworkRect.left >= stageRect.left - 1 &&
@@ -1046,21 +1050,41 @@ try {
           artworkRect.right <= stageRect.right + 1 &&
           artworkRect.bottom <= stageRect.bottom + 1);
         return {
+          modalZ: Number.parseInt(getComputedStyle(modal).zIndex, 10),
+          controlsZ: Number.parseInt(getComputedStyle(controls).zIndex, 10),
           overlayZ: Number.parseInt(getComputedStyle(overlay).zIndex, 10),
+          stageOverflow: getComputedStyle(stage).overflow,
           artworkFitsStage,
-          descriptionMatchesArtworkCaption: !description || description === title,
-          instructionLength: instructions.length,
+          description: description?.textContent?.trim() || '',
+          projectDescriptionLeaked: (description?.textContent || '').includes('this is a funko pop in 2d'),
+          hasDuplicateTitle: Boolean(overlay.querySelector('.lightbox-inspect-title')),
+          hintDisplay: hint ? getComputedStyle(hint).display : 'missing',
+          face,
+          action,
           backText: back?.textContent?.trim() || '',
-          backLabel: back?.getAttribute('aria-label') || ''
+          backLabel: back?.getAttribute('aria-label') || '',
+          backWidth: Number.parseFloat(backStyle?.width || '0'),
+          backHeight: Number.parseFloat(backStyle?.height || '0'),
+          backRadius: backStyle?.borderRadius || ''
         };
       });
-      if (inspectorPresentation.overlayZ < 10000 ||
+      if (!(inspectorPresentation.modalZ < inspectorPresentation.controlsZ &&
+            inspectorPresentation.controlsZ < inspectorPresentation.overlayZ) ||
+          inspectorPresentation.stageOverflow === 'hidden' ||
           !inspectorPresentation.artworkFitsStage ||
-          !inspectorPresentation.descriptionMatchesArtworkCaption ||
-          inspectorPresentation.instructionLength > 70 ||
+          inspectorPresentation.description !== 'Smooth Prism Foil' ||
+          inspectorPresentation.projectDescriptionLeaked ||
+          inspectorPresentation.hasDuplicateTitle ||
+          inspectorPresentation.hintDisplay === 'missing' ||
+          inspectorPresentation.hintDisplay === 'none' ||
+          inspectorPresentation.face !== 'FRONT' ||
+          inspectorPresentation.action !== 'CLICK / MOVE' ||
           inspectorPresentation.backText !== '←' ||
-          !inspectorPresentation.backLabel) {
-        throw new Error('Inspector safe-fit/layer/back-button contract failed: ' + JSON.stringify(inspectorPresentation));
+          !inspectorPresentation.backLabel ||
+          inspectorPresentation.backWidth < 44 ||
+          inspectorPresentation.backHeight < 44 ||
+          inspectorPresentation.backRadius !== '50%') {
+        throw new Error('Inspector safe-fit/layer/caption/hint/back-button contract failed: ' + JSON.stringify(inspectorPresentation));
       }
       if (await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
@@ -1068,6 +1092,10 @@ try {
       await inspectedHolo.click({ force: true });
       if (!(await inspectedHolo.evaluate(el => el.classList.contains('is-flipped')))) {
         throw new Error('Inspected artwork did not flip to its default mirrored reverse inside Inspect.');
+      }
+      const inspectedFace = await inspectMode.locator('.lightbox-holographic-hint [data-holo-face-label]').textContent();
+      if ((inspectedFace || '').trim() !== 'BACK') {
+        throw new Error('The native foil hint did not switch from FRONT to BACK after flipping inside Inspect.');
       }
       // The Inspector is portaled above the Lightbox. Close it through its own
       // Back control before interacting with the Lightbox close button beneath it.
