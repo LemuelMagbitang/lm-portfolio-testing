@@ -1030,6 +1030,29 @@ try {
       ) {
         throw new Error('Portaled Inspector lost the holographic positioned-layer/interaction styles: ' + JSON.stringify(inspectorFoilLayers));
       }
+      const inspectorPresentation = await inspectMode.evaluate(overlay => {
+        const artwork = overlay.querySelector('.lightbox-artwork');
+        const image = artwork?.querySelector('img,video,iframe,lottie-player,.lightbox-holographic');
+        const frame = overlay.querySelector('.lightbox-inspect-frame');
+        const back = overlay.querySelector('.lightbox-inspect-back');
+        const description = overlay.querySelector('.lightbox-inspect-description');
+        return {
+          overlayZ: Number.parseInt(getComputedStyle(overlay).zIndex, 10),
+          frame: frame ? frame.getBoundingClientRect().toJSON() : null,
+          artwork: artwork ? artwork.getBoundingClientRect().toJSON() : null,
+          imageFit: image ? getComputedStyle(image).objectFit : '',
+          description: description?.textContent || '',
+          projectDescriptionLeaked: Boolean(description?.textContent && description.textContent.includes('A project description used by smoke')),
+          backText: back?.textContent?.trim() || '',
+          backLabel: back?.getAttribute('aria-label') || ''
+        };
+      });
+      if (inspectorPresentation.overlayZ < 10000 ||
+          inspectorPresentation.imageFit !== 'contain' ||
+          inspectorPresentation.backText !== '←' ||
+          !inspectorPresentation.backLabel) {
+        throw new Error('Inspector safe-fit/layer/back-button contract failed: ' + JSON.stringify(inspectorPresentation));
+      }
       if (await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
       }
