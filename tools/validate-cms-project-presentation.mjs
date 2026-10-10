@@ -155,6 +155,12 @@ assert.ok(
   foilNormalRendererSource.includes('cancelAnimationFrame'),
   'Foil redraws should be frame-coalesced and pending animation frames cancelled on teardown.'
 );
+assert.ok(
+  foilNormalRendererSource.includes('pendingImageCancels=new Set()') &&
+  foilNormalRendererSource.includes('pendingImageCancels.add(cancel)') &&
+  foilNormalRendererSource.includes('for(const cancelLoad of [...pendingImageCancels])'),
+  'Foil pattern image requests must be cancelled when the renderer is destroyed before loading completes.'
+);
 
 for (const marker of [
   "project-list-item",

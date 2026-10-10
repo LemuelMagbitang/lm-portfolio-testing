@@ -83,7 +83,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
   let gl=null;
   try{gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'})||canvas.getContext('experimental-webgl');}catch(_){}
   if(!gl){canvas.dataset.normalMapStatus='unsupported';return NOOP;}
-  let disposed=false,ready=false,textures=[],loadedImages=[],resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74;
+  let disposed=false,ready=false,textures=[],loadedImages=[],pendingImageCancels=new Set(),resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74;
   const level=Math.max(0,Math.min(1,Number(intensity)||0));
   const mapUrls=Array.from(new Set((patternUrls||[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,4);
   canvas.dataset.normalMapPatternCount=String(mapUrls.length);
@@ -152,7 +152,31 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
   async function loadPatterns(){
     const ImageCtor=view?.Image||globalThis.Image;
     if(typeof ImageCtor!=='function'||!mapUrls.length){canvas.dataset.normalMapStatus='unavailable';return;}
-    const requests=mapUrls.map(url=>new Promise(resolve=>{const image=new ImageCtor();image.decoding='async';image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>resolve(null);image.src=url;}));
+    const requests=mapUrls.map(url=>new Promise(resolve=>{
+      const image=new ImageCtor();
+      let settled=false;
+      const settle=result=>{
+        if(settled)return;
+        settled=true;
+        pendingImageCancels.delete(cancel);
+        image.onload=null;image.onerror=null;
+        resolve(result);
+      };
+      const cancel=()=>{
+        if(settled)return;
+        // Resolve the waiting Promise and detach callbacks before releasing the
+        // src so teardown cannot keep remote map loads alive in the background.
+        settle(null);
+        try{
+          if(typeof image.removeAttribute==='function')image.removeAttribute('src');
+          else image.src='data:,';
+        }catch(_){}
+      };
+      pendingImageCancels.add(cancel);
+      image.decoding='async';image.crossOrigin='anonymous';
+      image.onload=()=>settle(image);image.onerror=()=>settle(null);
+      try{image.src=url;}catch(_){settle(null);}
+    }));
     const results=await Promise.all(requests);if(disposed)return;loadedImages=results.filter(Boolean);
     canvas.dataset.normalMapLoadedCount=String(loadedImages.length);
     if(!loadedImages.length){canvas.dataset.normalMapStatus='unavailable';return;}
@@ -167,6 +191,8 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
       disposed=true;ready=false;
       if(drawFrame!==null){try{view?.cancelAnimationFrame?.(drawFrame);}catch(_){}drawFrame=null;}
       resizeObserver?.disconnect();view?.removeEventListener?.('resize',handleResize);
+      for(const cancelLoad of [...pendingImageCancels]){try{cancelLoad();}catch(_){}}
+      pendingImageCancels.clear();
       loadedImages.forEach(image=>{image.onload=null;image.onerror=null;image.src='';});loadedImages=[];
       textures.forEach(t=>{try{gl.deleteTexture(t);}catch(_){}});textures=[];
       try{if(vertexBuffer)gl.deleteBuffer(vertexBuffer);}catch(_){}
