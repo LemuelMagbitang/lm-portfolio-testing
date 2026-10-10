@@ -773,24 +773,38 @@ try {
           const face = el.querySelector('.lightbox-holographic-front');
           const layerNames = Array.from(face.querySelectorAll('[data-holo-layer]'))
             .map(layer => layer.dataset.holoLayer);
+          const bottom = face.querySelector('.lightbox-holographic-cosmos-bottom');
+          const middle = face.querySelector('.lightbox-holographic-cosmos-middle');
+          const top = face.querySelector('.lightbox-holographic-cosmos-top');
+          const readFoilLayer = layer => ({
+            background: getComputedStyle(layer).backgroundImage,
+            mask: layer.style.maskImage || layer.style.webkitMaskImage,
+            maskMode: layer.style.maskMode || layer.style.webkitMaskSourceType
+          });
           return {
             style: el.dataset.holoStyle,
-            bottom: getComputedStyle(face.querySelector('.lightbox-holographic-cosmos-bottom')).backgroundImage,
-            middle: getComputedStyle(face.querySelector('.lightbox-holographic-cosmos-middle')).backgroundImage,
-            top: getComputedStyle(face.querySelector('.lightbox-holographic-cosmos-top')).backgroundImage,
+            bottom: readFoilLayer(bottom),
+            middle: readFoilLayer(middle),
+            top: readFoilLayer(top),
             grain: getComputedStyle(face.querySelector('.lightbox-holographic-grain-layer')).backgroundImage,
             layerNames
           };
         });
         if (cosmosMaterial.style !== 'cosmos' ||
-            !cosmosMaterial.bottom.includes('cosmos-bottom.png') ||
-            !cosmosMaterial.middle.includes('cosmos-middle-trans.png') ||
-            !cosmosMaterial.top.includes('cosmos-top-trans.png') ||
+            !cosmosMaterial.bottom.background.includes('conic-gradient') ||
+            !cosmosMaterial.bottom.mask.includes('cosmos-bottom.png') ||
+            !cosmosMaterial.bottom.maskMode.includes('luminance') ||
+            !cosmosMaterial.middle.background.includes('conic-gradient') ||
+            !cosmosMaterial.middle.mask.includes('cosmos-middle-trans.png') ||
+            !cosmosMaterial.middle.maskMode.includes('luminance') ||
+            !cosmosMaterial.top.background.includes('conic-gradient') ||
+            !cosmosMaterial.top.mask.includes('cosmos-top-trans.png') ||
+            !cosmosMaterial.top.maskMode.includes('luminance') ||
             !cosmosMaterial.grain.includes('grain.webp') ||
             cosmosMaterial.layerNames.indexOf('cosmos-bottom') < 0 ||
             cosmosMaterial.layerNames.indexOf('cosmos-middle') <= cosmosMaterial.layerNames.indexOf('cosmos-bottom') ||
             cosmosMaterial.layerNames.indexOf('cosmos-top') <= cosmosMaterial.layerNames.indexOf('cosmos-middle')) {
-          throw new Error('Cosmos renderer profile did not preserve its ordered texture layers: ' + JSON.stringify(cosmosMaterial));
+          throw new Error('Cosmos renderer profile must apply each grayscale texture as its own luminance mask over an ordered spectral layer: ' + JSON.stringify(cosmosMaterial));
         }
         for (const asset of ['cosmos-bottom.png', 'cosmos-middle-trans.png', 'cosmos-top-trans.png']) {
           const response = await page.request.get(`${BASE_URL}/assets/holographic/${asset}`);
