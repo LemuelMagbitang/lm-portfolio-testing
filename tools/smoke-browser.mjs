@@ -771,18 +771,26 @@ try {
         await cosmosHolographic.waitFor({ state: 'visible', timeout: 3000 });
         const cosmosMaterial = await cosmosHolographic.evaluate(el => {
           const face = el.querySelector('.lightbox-holographic-front');
+          const layerNames = Array.from(face.querySelectorAll('[data-holo-layer]'))
+            .map(layer => layer.dataset.holoLayer);
           return {
             style: el.dataset.holoStyle,
-            spectrum: getComputedStyle(face.querySelector('.lightbox-holographic-spectrum')).backgroundImage,
-            environment: getComputedStyle(face.querySelector('.lightbox-holographic-environment')).backgroundImage,
-            sheen: getComputedStyle(face.querySelector('.lightbox-holographic-sheen')).backgroundImage
+            bottom: getComputedStyle(face.querySelector('.lightbox-holographic-cosmos-bottom')).backgroundImage,
+            middle: getComputedStyle(face.querySelector('.lightbox-holographic-cosmos-middle')).backgroundImage,
+            top: getComputedStyle(face.querySelector('.lightbox-holographic-cosmos-top')).backgroundImage,
+            grain: getComputedStyle(face.querySelector('.lightbox-holographic-grain-layer')).backgroundImage,
+            layerNames
           };
         });
         if (cosmosMaterial.style !== 'cosmos' ||
-            !cosmosMaterial.spectrum.includes('cosmos-bottom.png') ||
-            !cosmosMaterial.environment.includes('cosmos-middle-trans.png') ||
-            !cosmosMaterial.sheen.includes('cosmos-top-trans.png')) {
-          throw new Error('Cosmos renderer profile did not preserve its texture layers: ' + JSON.stringify(cosmosMaterial));
+            !cosmosMaterial.bottom.includes('cosmos-bottom.png') ||
+            !cosmosMaterial.middle.includes('cosmos-middle-trans.png') ||
+            !cosmosMaterial.top.includes('cosmos-top-trans.png') ||
+            !cosmosMaterial.grain.includes('grain.webp') ||
+            cosmosMaterial.layerNames.indexOf('cosmos-bottom') < 0 ||
+            cosmosMaterial.layerNames.indexOf('cosmos-middle') <= cosmosMaterial.layerNames.indexOf('cosmos-bottom') ||
+            cosmosMaterial.layerNames.indexOf('cosmos-top') <= cosmosMaterial.layerNames.indexOf('cosmos-middle')) {
+          throw new Error('Cosmos renderer profile did not preserve its ordered texture layers: ' + JSON.stringify(cosmosMaterial));
         }
         for (const asset of ['cosmos-bottom.png', 'cosmos-middle-trans.png', 'cosmos-top-trans.png']) {
           const response = await page.request.get(`${BASE_URL}/assets/holographic/${asset}`);
