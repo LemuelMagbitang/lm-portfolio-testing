@@ -581,6 +581,11 @@ export function createLightboxMediaRenderer({
     };
   }
 
+  const HOLOGRAPHIC_COSMOS_MAPS = {
+    'cosmos-bottom': 'assets/holographic/cosmos-bottom.png',
+    'cosmos-middle': 'assets/holographic/cosmos-middle-trans.png',
+    'cosmos-top': 'assets/holographic/cosmos-top-trans.png'
+  };
   const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;
   const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;
   // Only mask overlays that the selected finish actually renders. Keeping
@@ -679,35 +684,48 @@ export function createLightboxMediaRenderer({
 
   // Luminance masks are front-face-only by design. White reveals foil;
   // black suppresses it; gray allows partial foil coverage.
-  function applyHolographicMask(layer, maskUrl, artworkUrl = '') {
-    if (!layer?.style || (!maskUrl && !artworkUrl)) return;
-    // resolveAssetUrl/currentSrc may already contain percent-escaped path segments.
-    // Preserve those escapes; encodeURI here would turn "%20" into "%2520".
+  function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {}) {
+    if (!layer?.style || (!maskUrl && !artworkUrl && !detailMaskUrl)) return;
     const asCssUrl = value => 'url("' + String(value).split('"').join('%22') + '")';
     const images = [];
     const modes = [];
     const sizes = [];
+    const repeats = [];
+    const positions = [];
+    if (detailMaskUrl) {
+      images.push(asCssUrl(detailMaskUrl));
+      modes.push('luminance');
+      sizes.push(detailOptions.size || '100% 100%');
+      repeats.push(detailOptions.repeat || 'no-repeat');
+      positions.push(detailOptions.position || 'center');
+    }
     if (maskUrl) {
       images.push(asCssUrl(maskUrl));
       modes.push('luminance');
       sizes.push('100% 100%');
+      repeats.push('no-repeat');
+      positions.push('center');
     }
     if (artworkUrl) {
       images.push(asCssUrl(artworkUrl));
       modes.push('alpha');
       sizes.push('contain');
+      repeats.push('no-repeat');
+      positions.push('center');
     }
     const imageList = images.join(', ');
     const modeList = modes.join(', ');
     const sizeList = sizes.join(', ');
-    const repeatList = images.map(() => 'no-repeat').join(', ');
-    const positionList = images.map(() => 'center').join(', ');
+    const repeatList = repeats.join(', ');
+    const positionList = positions.join(', ');
+    const intersections = images.slice(1).map(() => 'intersect').join(', ');
+    const webkitIntersections = images.slice(1).map(() => 'source-in').join(', ');
     layer.style.maskImage = imageList;
     layer.style.webkitMaskImage = imageList;
     layer.style.maskMode = modeList;
     layer.style.webkitMaskSourceType = modeList;
-    layer.style.maskComposite = images.length > 1 ? 'intersect' : 'add';
-    layer.style.webkitMaskComposite = images.length > 1 ? 'source-in' : 'source-over';
+    layer.style.maskComposite = intersections || 'add';
+    layer.style.webkitMaskComposite = webkitIntersections || 'source-over';
     layer.style.maskRepeat = repeatList;
     layer.style.webkitMaskRepeat = repeatList;
     layer.style.maskPosition = positionList;
@@ -866,7 +884,12 @@ export function createLightboxMediaRenderer({
       if (maskedLayers.has('diffraction')) applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
       if (maskedLayers.has('sparkles')) applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
       if (maskedLayers.has('sheen')) applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
-      [...cosmosLayers, grainLayer, glitterLayer].filter(Boolean).forEach(layer => applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl));
+      cosmosLayers.forEach(layer => {
+        const mapPath = HOLOGRAPHIC_COSMOS_MAPS[layer.dataset.holoLayer];
+        const mapUrl = mapPath ? resolveAssetUrl(mapPath) : '';
+        applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl, mapUrl);
+      });
+      [grainLayer, glitterLayer].filter(Boolean).forEach(layer => applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl));
       face.append(
         spectrum, ...cosmosLayers, ...(grainLayer ? [grainLayer] : []), ...(glitterLayer ? [glitterLayer] : []),
         environment, glare, prism, ribbons, diffraction, sparkles, sheen
@@ -876,12 +899,20 @@ export function createLightboxMediaRenderer({
         texture.className = 'lightbox-holographic-texture';
         texture.dataset.holoTextureMode = faceTextureMode;
         texture.setAttribute('aria-hidden','true');
-        // faceTextureUrl is already resolved; do not encode existing %XX path escapes twice.
-        const safeTextureUrl = String(faceTextureUrl).split('"').join('%22');
-        texture.style.backgroundImage = 'url("' + safeTextureUrl + '")';
-        texture.style.backgroundRepeat = faceTextureMode === 'tile' ? 'repeat' : 'no-repeat';
-        texture.style.backgroundSize = faceTextureMode === 'tile' ? 'auto' : '100% 100%';
-        applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl);
+        // Black suppresses the foil, white reveals it, and gray yields partial strength.
+        texture.style.backgroundImage =
+          'conic-gradient(from calc(146deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%), #ffe87a 0deg, #adff67 42deg, #47f3ce 86deg, #57cfff 130deg, #8f7bff 176deg, #ef70f5 222deg, #ff75ac 266deg, #ff9a6b 316deg, #ffe87a 360deg), ' +
+          'linear-gradient(calc(124deg + var(--holo-angle,0deg)), transparent 30%, rgba(255,255,255,.04) 39%, rgba(255,255,255,.34) 47%, rgba(174,245,255,.17) 51%, transparent 66%)';
+        texture.style.backgroundRepeat = 'no-repeat';
+        texture.style.backgroundSize = '320% 280%, 250% 220%';
+        texture.style.backgroundPosition = 'var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%)';
+        texture.style.opacity = 'calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .10))';
+        texture.style.mixBlendMode = 'color-dodge';
+        texture.style.filter = 'contrast(1.22) saturate(1.55) brightness(1.02)';
+        applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {
+          size: faceTextureMode === 'tile' ? 'auto' : '100% 100%',
+          repeat: faceTextureMode === 'tile' ? 'repeat' : 'no-repeat'
+        });
         face.appendChild(texture);
       }
     });

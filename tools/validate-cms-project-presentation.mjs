@@ -171,6 +171,10 @@ assert.ok(/project-preview-runtime\.js\?v=20261010-02/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
 assert.ok(/admin\.js\?v=20261010-05/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
+assert.ok(/admin\.css\?v=20261010-03/.test(adminHtml),
+  'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
+assert.ok(/\.media-preview\s*>\s*lottie-player\s*\{[^}]*position:absolute[^}]*display:block[^}]*width:100%[^}]*height:100%/s.test(css),
+  'Expanded CMS Lottie previews must receive a concrete visible layout box.');
 assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
@@ -214,11 +218,14 @@ assert.ok(/function updateIntensityAccessibility\(\)/.test(admin) &&
 assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin),
   'CMS foil strength should have fine-grained control.');
 
-assert.ok(
-  siteCss.includes('url("../assets/holographic/cosmos-bottom.png")') &&
-  siteCss.includes('url("../assets/holographic/cosmos-middle-trans.png")') &&
-  siteCss.includes('url("../assets/holographic/cosmos-top-trans.png")'),
-  'The Cosmos foil profile must use all three uploaded texture maps.');
+assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
+  renderer.includes("'cosmos-bottom': 'assets/holographic/cosmos-bottom.png'") &&
+  renderer.includes("'cosmos-middle': 'assets/holographic/cosmos-middle-trans.png'") &&
+  renderer.includes("'cosmos-top': 'assets/holographic/cosmos-top-trans.png'"),
+  'Each Cosmos layer must have its own source luminance map.');
+assert.ok(renderer.includes("modes.push('luminance')") &&
+  renderer.includes('applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl, mapUrl)'),
+  'Cosmos grayscale values must drive spectral layer coverage through luminance masks.');
 assert.ok(renderer.includes("['cosmos-bottom', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-bottom']") &&
   renderer.includes("['cosmos-middle', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-middle']") &&
   renderer.includes("['cosmos-top', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-top']"),
@@ -233,10 +240,14 @@ for (const [layerName, depth] of [['cosmos-bottom','1px'],['cosmos-middle','2px'
   const rule = ruleStart >= 0 ? cssLines.slice(ruleStart).join('\n').split('}')[0] : '';
   assert.ok(rule.includes('transform:translateZ(' + depth + ')'), `The ${layerName} layer must keep its own depth plane.`);
 }
-assert.ok(siteCss.includes('background-size:112% 112%,160% 160%,360% 260%') &&
-  siteCss.includes('background-size:124% 124%,300% 240%,170% 170%') &&
-  siteCss.includes('background-size:136% 132%,280% 230%'),
-  'Cosmos artwork maps must use independent scales for a view-dependent parallax cue.');
+assert.ok(siteCss.includes('background-size:210% 190%,160% 160%,340% 280%') &&
+  siteCss.includes('background-size:230% 220%,170% 170%,300% 240%') &&
+  siteCss.includes('background-size:250% 230%,280% 230%'),
+  'Cosmos spectral layers must use independent scales and movement for an iridescent response.');
+assert.ok(renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {') &&
+  renderer.includes('texture.style.backgroundImage =') &&
+  renderer.includes("texture.style.mixBlendMode = 'color-dodge'"),
+  'Monochrome front/back foil patterns must luminance-mask their own spectral color gradients.');
 const cosmosDemo = projectsData.flatMap(project => project.media || []).find(item => item?.holographic?.style === 'cosmos');
 assert.ok(cosmosDemo?.holographic?.grainLayer === true && cosmosDemo?.holographic?.glitterLayer === true,
   'The Cosmos sample artwork demonstrates both optional layers.');
