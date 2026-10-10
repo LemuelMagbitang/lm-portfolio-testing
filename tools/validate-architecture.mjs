@@ -184,7 +184,7 @@ for (const htmlPath of publicHtmlEntrypoints) {
     const resourcePath = resourceUrl.split(/[?#]/)[0].replace(/\\/g, '/');
     const resolvedPath = path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath.replaceAll(path.sep, '/')), resourcePath));
     if (resolvedPath.startsWith('admin/') && /\.m?js$/i.test(resolvedPath)) {
-      errors.push(\`\${htmlPath} loads CMS implementation script \${resourceUrl}; public pages must not load admin code\`);
+      errors.push(`${htmlPath} loads CMS implementation script ${resourceUrl}; public pages must not load admin code`);
     }
   }
 }
