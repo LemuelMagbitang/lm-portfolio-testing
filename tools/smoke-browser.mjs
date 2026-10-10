@@ -5112,7 +5112,7 @@ try {
         window.__LM_CMS_SMOKE_ABOUT__ = encodedAbout;
       }, { encodedAbout: encoded });
 
-      await page.route('**/Sample.json*', async route => {
+      await page.route('https://raw.githubusercontent.com/Smoke/TestRepo/**', async route => {
         const url = new URL(route.request().url());
         if (url.pathname.endsWith('Sample.json')) {
           await route.fulfill({
@@ -5135,6 +5135,18 @@ try {
           status: 200,
           contentType: 'image/svg+xml',
           body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#fff"/></svg>'
+        });
+      });
+
+      // Keep the real Lottie JSON on a narrowly matched route, while the
+      // general raw-content route below continues to stub the project's SVG/OBJ
+      // preview assets. Playwright applies the most recently added route first.
+      await page.route('**/Sample.json*', async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: readFileSync(new URL('../assets/projects/test/Sample.json', import.meta.url), 'utf8')
         });
       });
 
