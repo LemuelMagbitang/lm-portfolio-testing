@@ -6,6 +6,7 @@ import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
+const adminHtml = fs.readFileSync(path.join(root, 'admin/index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'admin/admin.css'), 'utf8');
 const siteCss = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 const renderer = fs.readFileSync(path.join(root, 'js/features/lightbox/media-renderer.js'), 'utf8');
@@ -168,6 +169,8 @@ assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 assert.ok(/project-preview-runtime\.js\?v=20261010-02/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
+assert.ok(/admin\.js\?v=20261010-05/.test(adminHtml),
+  'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
 assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
@@ -223,6 +226,14 @@ assert.ok(renderer.includes("['cosmos-bottom', 'lightbox-holographic-cosmos-laye
 assert.ok(siteCss.includes('.lightbox-holographic-grain-layer') && siteCss.includes('url("../assets/holographic/grain.webp")') &&
   siteCss.includes('.lightbox-holographic-glitter-layer') && siteCss.includes('url("../assets/holographic/glitter.png")'),
   'Grain and glitter must be independently composited layers.');
+for (const [layerName, depth] of [['cosmos-bottom','1px'],['cosmos-middle','2px'],['cosmos-top','3.5px'],['grain-layer','4px'],['glitter-layer','5px']]) {
+  const rule = siteCss.match(new RegExp('#lightboxMediaContainer \\\\.lightbox-holographic-' + layerName + '\\\\s*\\\\{([^}]*)\\\\}'))?.[1] || '';
+  assert.ok(rule.includes('transform:translateZ(' + depth + ')'), `The ${layerName} layer must keep its own depth plane.`);
+}
+assert.ok(siteCss.includes('background-size:112% 112%,160% 160%,360% 260%') &&
+  siteCss.includes('background-size:124% 124%,300% 240%,170% 170%') &&
+  siteCss.includes('background-size:136% 132%,280% 230%'),
+  'Cosmos artwork maps must use independent scales for a view-dependent parallax cue.');
 const cosmosDemo = projectsData.flatMap(project => project.media || []).find(item => item?.holographic?.style === 'cosmos');
 assert.ok(cosmosDemo?.holographic?.grainLayer === true && cosmosDemo?.holographic?.glitterLayer === true,
   'The Cosmos sample artwork demonstrates both optional layers.');
