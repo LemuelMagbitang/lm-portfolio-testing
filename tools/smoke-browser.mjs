@@ -5084,7 +5084,8 @@ try {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: readFileSync(new URL('../assets/projects/test/Sample.json', import.meta.url), 'utf8');
+            body: readFileSync(new URL('../assets/projects/test/Sample.json', import.meta.url), 'utf8')
+          });
           return;
         }
         if (url.pathname.endsWith('.obj')) {
