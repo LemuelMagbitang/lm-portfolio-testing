@@ -1711,18 +1711,18 @@ export function createLightboxMediaRenderer({
     title.textContent=caption||String(project.title||'Artwork detail');
     const description=documentRef.createElement('p');
     description.className='lightbox-inspect-description';
-    const projectDescription=String(project.description||'').trim();
-    description.textContent=projectDescription&&projectDescription!==caption
-      ?projectDescription:'Take a closer look at the artwork at its natural proportions.';
+    // Inspect captions belong to the selected artwork, never the parent project.
+    description.textContent=caption||'';
+    description.hidden=!caption;
     const instructions=documentRef.createElement('p');
     instructions.className='lightbox-inspect-instructions';
     instructions.textContent=entry.dataset.artworkFoil==='true'
-      ?'Tap the artwork to flip the foil · Drag across the surface to explore the light.'
-      :'Artwork is fitted to your screen without stretching. Use Back to return to the gallery.';
+      ?'Tap to flip · Move to explore the light.'
+      :'Move to explore · Back to return.';
     const back=documentRef.createElement('button');
     back.type='button';
     back.className='model-viewer-back lightbox-inspect-back';
-    back.textContent='← Back to gallery';
+    back.innerHTML='<span aria-hidden="true">←</span>';
     back.setAttribute('aria-label','Close Inspect Mode and return to the artwork group');
     back.addEventListener('click',()=>closeArtworkInspect());
     stage.appendChild(frame);
