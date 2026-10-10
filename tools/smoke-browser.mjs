@@ -1015,8 +1015,12 @@ try {
       if (!(await inspectedHolo.evaluate(el => el.classList.contains('is-flipped')))) {
         throw new Error('Inspected artwork did not flip to its default mirrored reverse inside Inspect.');
       }
+      // The Inspector is portaled above the Lightbox. Close it through its own
+      // Back control before interacting with the Lightbox close button beneath it.
+      await inspectMode.locator('.lightbox-inspect-back').click();
+      await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
       await page.locator('#lightboxClose').first().click();
-      await page.waitForTimeout(100);
+      await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
