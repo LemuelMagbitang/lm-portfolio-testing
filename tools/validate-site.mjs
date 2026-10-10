@@ -1226,7 +1226,8 @@ function validateCmsRegressionContracts() {
       !renderer.includes('applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl)') ||
       !renderer.includes('applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl)') ||
-      !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {')) {
+      !renderer.includes("texture.style.backgroundImage =\n          'url(\"' + faceTextureUrl.split('\"').join('%22') + '\"), '") ||
+      !renderer.includes('applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, \'\', {')) {
     err('Lightbox holographic mask: every foil layer must follow image alpha and its optional custom luminance mask.');
   }
 
