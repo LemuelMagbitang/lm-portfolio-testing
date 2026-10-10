@@ -905,13 +905,15 @@ export function createLightboxMediaRenderer({
           'conic-gradient(from calc(146deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%), #ffe87a 0deg, #adff67 42deg, #47f3ce 86deg, #57cfff 130deg, #8f7bff 176deg, #ef70f5 222deg, #ff75ac 266deg, #ff9a6b 316deg, #ffe87a 360deg), ' +
           'linear-gradient(calc(124deg + var(--holo-angle,0deg)), transparent 24%, rgba(0,8,24,.34) 34%, rgba(255,255,255,.04) 39%, rgba(255,255,255,.48) 47%, rgba(174,245,255,.24) 51%, rgba(8,16,40,.16) 58%, transparent 70%), ' +
           'radial-gradient(ellipse 42% 36% at var(--holo-light-x,34%) var(--holo-light-y,26%), rgba(255,255,255,.44), rgba(186,238,255,.12) 38%, transparent 74%)';
-        texture.style.backgroundRepeat = 'no-repeat';
+        texture.style.backgroundRepeat = faceTextureMode === 'tile'
+          ? 'repeat, no-repeat, no-repeat, no-repeat'
+          : 'no-repeat, no-repeat, no-repeat, no-repeat';
         texture.style.backgroundSize = faceTextureMode === 'tile' ? 'auto, 320% 280%, 250% 220%, 170% 170%' : '100% 100%, 320% 280%, 250% 220%, 170% 170%';
         texture.style.backgroundPosition = 'center, var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-foil-x,50%) var(--holo-foil-y,50%), var(--holo-light-x,34%) var(--holo-light-y,26%)';
         texture.style.opacity = 'calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .10))';
         texture.style.mixBlendMode = 'color-dodge';
         texture.style.filter = 'contrast(1.42) saturate(1.55) brightness(1.04)';
-        applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, '', {
+        applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {
           size: faceTextureMode === 'tile' ? 'auto' : '100% 100%',
           repeat: faceTextureMode === 'tile' ? 'repeat' : 'no-repeat'
         });
