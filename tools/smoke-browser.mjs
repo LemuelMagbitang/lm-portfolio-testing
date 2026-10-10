@@ -1857,8 +1857,12 @@ try {
         const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
         if (!el) return false;
         const r = el.getBoundingClientRect();
-        return Math.abs(r.width - innerWidth) <= 2 && Math.abs(r.height - innerHeight) <= 2;
-      }, null, { timeout: 1500 });
+        return Math.abs(r.width - innerWidth) <= 2 &&
+          Math.abs(r.height - innerHeight) <= 2 &&
+          el.dataset.renderProfile === 'mobile-balanced' &&
+          Number(el.dataset.renderPixelRatio) <= 1.01 &&
+          Number(el.dataset.renderFrameCap) === 30;
+      }, null, { timeout: 3000 });
       const focusedMobileGeometry = await modelShell.evaluate(el => {
         const r = el.getBoundingClientRect();
         return { width: r.width, height: r.height };
@@ -1889,8 +1893,12 @@ try {
         const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
         if (!el) return false;
         const r = el.getBoundingClientRect();
-        return Math.abs(r.width - innerWidth) <= 2 && Math.abs(r.height - innerHeight) <= 2;
-      }, null, { timeout: 1500 });
+        return Math.abs(r.width - innerWidth) <= 2 &&
+          Math.abs(r.height - innerHeight) <= 2 &&
+          el.dataset.renderProfile === 'desktop-quality' &&
+          Number(el.dataset.renderPixelRatio) <= 1.51 &&
+          Number(el.dataset.renderFrameCap) === 60;
+      }, null, { timeout: 3000 });
       const desktopRenderProfile = await modelShell.evaluate(el => ({
         profile: el.dataset.renderProfile,
         pixelRatio: Number(el.dataset.renderPixelRatio),
