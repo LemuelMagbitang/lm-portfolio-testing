@@ -266,13 +266,18 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
 assert.ok(siteCss.includes('data-artwork-effective-layout="grid"') &&
   siteCss.includes('data-artwork-effective-layout="horizontal"') &&
   siteCss.includes('data-artwork-effective-layout="layered"') &&
-  siteCss.includes('backdrop-filter:blur(8px)') &&
+  siteCss.includes('backdrop-filter:blur(14px)') &&
   siteCss.includes('background:transparent;box-shadow:none;'),
   'Artwork groups must use only the clean grid/horizontal/layered presentation states with a blurred Inspector backdrop.');
 assert.ok(!admin.includes('value="flow"') &&
-  !/textContent\s*=\s*['"]Inspect['"]/.test(renderer) &&
+  renderer.includes("inspectTrigger.className = 'lightbox-artwork-inspect-trigger'") &&
+  renderer.includes("inspectTrigger.textContent = 'Inspect ↗'") &&
+  renderer.includes('lightbox-inspect-instructions') &&
+  renderer.includes('buildInspectTransform') &&
+  siteCss.includes('.lightbox-artwork-inspect-trigger') &&
+  siteCss.includes('@media(hover:none),(pointer:coarse)') &&
   !siteCss.includes('data-artwork-layout="flow"'),
-  'Flow layout, visible Inspect buttons and legacy flow styling must not remain in the active presentation contract.');
+  'Flow must be retired while horizontal/layered groups expose fitted full-screen Inspect with motion and touch support.');
 assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-artwork-group-items') &&
   siteCss.includes('flex-flow:row wrap') &&
   siteCss.includes('overflow:visible') &&
