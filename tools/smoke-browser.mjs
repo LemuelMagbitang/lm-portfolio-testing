@@ -1560,7 +1560,7 @@ try {
           ui: read(':scope > .model-viewer-ui')
         };
       });
-      if (layerOrder.background?.zIndex !== '0' ||
+      if ((layerOrder.background && layerOrder.background.zIndex !== '0') ||
           layerOrder.canvas?.zIndex !== '2' ||
           layerOrder.activation?.zIndex !== '3' ||
           layerOrder.ui?.zIndex !== '4') {

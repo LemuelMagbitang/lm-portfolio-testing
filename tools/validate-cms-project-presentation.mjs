@@ -260,24 +260,29 @@ assert.equal(groupedProject.media[1].groupId,undefined,
   'Unknown group references must fall back to the default ungrouped presentation.');
 assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes('lightbox-artwork-group-items') &&
-  renderer.includes('holdOpened = true') &&
-  renderer.includes("event.target.closest?.('.lightbox-holographic')"),
-  'Grouped artwork must inspect on selection/hold while preserving the foil flip click.');
+  renderer.includes("entry.addEventListener('click',onEntryClick,true)") &&
+  renderer.includes('activeInspector?.entry===entry') &&
+  renderer.includes('Tap the artwork to flip the foil') &&
+  !renderer.includes('inspectTrigger') &&
+  !renderer.includes('holdOpened = true'),
+  'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil flips remain available inside Inspect.');
 assert.ok(siteCss.includes('data-artwork-effective-layout="grid"') &&
   siteCss.includes('data-artwork-effective-layout="horizontal"') &&
   siteCss.includes('data-artwork-effective-layout="layered"') &&
-  siteCss.includes('backdrop-filter:blur(14px)') &&
+  siteCss.includes('backdrop-filter:blur(18px)') &&
   siteCss.includes('background:transparent;box-shadow:none;'),
   'Artwork groups must use only the clean grid/horizontal/layered presentation states with a blurred Inspector backdrop.');
 assert.ok(!admin.includes('value="flow"') &&
-  renderer.includes("inspectTrigger.className = 'lightbox-artwork-inspect-trigger'") &&
-  renderer.includes("inspectTrigger.textContent = 'Inspect ↗'") &&
-  renderer.includes('lightbox-inspect-instructions') &&
+  !renderer.includes('inspectTrigger') &&
+  !siteCss.includes('.lightbox-artwork-inspect-trigger') &&
+  renderer.includes('lightbox-inspect-footer') &&
   renderer.includes('buildInspectTransform') &&
-  siteCss.includes('.lightbox-artwork-inspect-trigger') &&
-  siteCss.includes('@media(hover:none),(pointer:coarse)') &&
+  siteCss.includes('.lightbox-inspect-mode::before') &&
+  siteCss.includes('.lightbox-inspect-footer') &&
+  siteCss.includes('background:transparent!important;') &&
+  siteCss.includes('@media (hover:hover) and (pointer:fine)') &&
   !siteCss.includes('data-artwork-layout="flow"'),
-  'Flow must be retired while horizontal/layered groups expose fitted full-screen Inspect with motion and touch support.');
+  'Flow is retired; grouped artwork has no in-card Inspect chip and uses centered 3D-style Inspect with desktop-only hover.');
 assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-artwork-group-items') &&
   siteCss.includes('flex-flow:row wrap') &&
   siteCss.includes('overflow:visible') &&
