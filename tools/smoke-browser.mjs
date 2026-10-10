@@ -4860,12 +4860,17 @@ try {
       if (!sampleRow.title || !sampleRow.hasPreview || !sampleRow.hasActions) {
         throw new Error('CMS closed Project row is missing its title, thumbnail preview, or action layer: ' + JSON.stringify(sampleRow));
       }
-      const rowLottiePreview = testProject.locator('.project-collapsed-preview [data-preview-type="lottie"]').first();
+      // Keep the existing image-thumb fixture for the Curated Views picker,
+      // and use a separate project to exercise a Lottie thumbnail row.
+      const lottieThumbProject = page.locator('#content #projList .project-list-item').filter({ hasText: 'Lottie Thumbnail Fixture' }).first();
+      if (await lottieThumbProject.count() !== 1) throw new Error('CMS Lottie-thumbnail project fixture is missing.');
+      const rowLottiePreview = lottieThumbProject.locator('.project-collapsed-preview [data-preview-type="lottie"]').first();
       if (await rowLottiePreview.count() !== 1) {
         throw new Error('CMS project row did not render its configured Lottie thumbnail. Check thumbnail type/source handling independently from the media editor.');
       }
       await page.waitForFunction(() => {
-        const row = document.querySelector('#projList .project-list-item');
+        const row = Array.from(document.querySelectorAll('#projList .project-list-item'))
+          .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
         const preview = row?.querySelector('.project-collapsed-preview');
         const player = preview?.querySelector('[data-preview-type="lottie"]');
         const rect = preview?.getBoundingClientRect();
@@ -4873,11 +4878,10 @@ try {
           player.dataset.previewState === 'ready' && player.hasAttribute('src') &&
           !!window.customElements?.get?.('lottie-player');
       }, null, { timeout: 12000 });
-      const testBody = testProject.locator('[data-body]').first();
-      const bodyStyle = await testBody.getAttribute('style');
-      if (!bodyStyle?.includes('display:block')) await testProject.locator('[data-toggle-open]').click();
+      await lottieThumbProject.locator('[data-toggle-open]').click();
       await page.waitForFunction(() => {
-        const row = document.querySelector('#projList .project-list-item.is-open');
+        const row = Array.from(document.querySelectorAll('#projList .project-list-item.is-open'))
+          .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
         const preview = row?.querySelector('.project-collapsed-preview');
         const player = preview?.querySelector('[data-preview-type="lottie"]');
         const rect = preview?.getBoundingClientRect();
@@ -4885,6 +4889,11 @@ try {
           getComputedStyle(preview).display !== 'none' &&
           player.dataset.previewState === 'ready' && player.hasAttribute('src');
       }, null, { timeout: 8000 });
+      await lottieThumbProject.locator('[data-toggle-open]').click();
+
+      const testBody = testProject.locator('[data-body]').first();
+      const bodyStyle = await testBody.getAttribute('style');
+      if (!bodyStyle?.includes('display:block')) await testProject.locator('[data-toggle-open]').click();
 
       // Target the named Lottie fixture rather than assuming media order.
       // The fixture intentionally contains image → Lottie → 3D media so the
@@ -5006,7 +5015,7 @@ try {
         badge: '',
         filters: [],
         description: '',
-        thumbnail: { type: 'lottie', src: 'assets/projects/test/Sample.json', focus: '50% 50%', zoom: 1 },
+        thumbnail: { type: 'image', src: 'assets/projects/test/thumb.svg', focus: '50% 50%', zoom: 1 },
         media: [
           {
             type: 'image',
@@ -5023,6 +5032,15 @@ try {
           { type: 'lottie', src: 'assets/projects/test/Sample.json', caption: 'Lottie fixture', orientation: 'square' },
           { type: 'model', src: 'assets/projects/test/Female base.obj', caption: '3D fixture', orientation: '' }
         ]
+      }, {
+        id: 'lottie-thumbnail-fixture',
+        title: 'Lottie Thumbnail Fixture',
+        subtitle: 'Deferred CMS preview fixture',
+        badge: '',
+        filters: [],
+        description: '',
+        thumbnail: { type: 'lottie', src: 'assets/projects/test/Sample.json', focus: '50% 50%', zoom: 1 },
+        media: []
       }];
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(about))));
       const encodedProjects = btoa(unescape(encodeURIComponent(JSON.stringify(projectsFixture))));
