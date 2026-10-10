@@ -227,7 +227,10 @@ assert.ok(siteCss.includes('.lightbox-holographic-grain-layer') && siteCss.inclu
   siteCss.includes('.lightbox-holographic-glitter-layer') && siteCss.includes('url("../assets/holographic/glitter.png")'),
   'Grain and glitter must be independently composited layers.');
 for (const [layerName, depth] of [['cosmos-bottom','1px'],['cosmos-middle','2px'],['cosmos-top','3.5px'],['grain-layer','4px'],['glitter-layer','5px']]) {
-  const rule = siteCss.match(new RegExp('#lightboxMediaContainer \\\\.lightbox-holographic-' + layerName + '\\\\s*\\\\{([^}]*)\\\\}'))?.[1] || '';
+  const selector = '#lightboxMediaContainer .lightbox-holographic-' + layerName + '{';
+  const start = siteCss.indexOf(selector);
+  const end = start >= 0 ? siteCss.indexOf('}', start) : -1;
+  const rule = start >= 0 && end > start ? siteCss.slice(start, end) : '';
   assert.ok(rule.includes('transform:translateZ(' + depth + ')'), `The ${layerName} layer must keep its own depth plane.`);
 }
 assert.ok(siteCss.includes('background-size:112% 112%,160% 160%,360% 260%') &&
