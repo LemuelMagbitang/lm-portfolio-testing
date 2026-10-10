@@ -1322,10 +1322,10 @@ function validateCmsRegressionContracts() {
       !admin.includes('value="cat-eye"') ||
       !css.includes('lightbox-holographic-diffraction') ||
       !css.includes('lightbox-holographic-sparkles') ||
-      !css.includes('#lightboxMediaContainer .lightbox-holographic-diffraction,\n #lightboxMediaContainer .lightbox-holographic-sparkles{animation:none!important;}') ||
+      !css.includes(':is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,\n :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles{animation:none!important;}') ||
       !css.includes('background-blend-mode:overlay,color-dodge;') ||
       !css.includes('@keyframes holo-spectrum-breathe') ||
-      !css.includes('.lightbox-holographic-sparkles,\n#lightboxMediaContainer .lightbox-holographic-sheen{\n  display:none!important;') ||
+      !css.includes('.lightbox-holographic-sparkles,\n:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{\n  display:none!important;') ||
       !css.includes('.lightbox-holographic-hint') ||
       !css.includes('display:none!important;content:none!important;')) {
     err('Holographic card: reverse toggle, no-back mirroring, eight foil finishes, and the interaction cue must remain available.');
@@ -1334,7 +1334,7 @@ function validateCmsRegressionContracts() {
   if (!css.includes('.lightbox-artwork.has-holographic{\n  overflow:visible;') ||
       !css.includes('border:0;\n  box-shadow:none;\n  outline:none;') ||
       !css.includes('outline:none!important;') ||
-      !css.includes('#lightboxMediaContainer .lightbox-holographic-face{\n  border-radius:0;\n  overflow:hidden;') ||
+      !css.includes(':is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{\n  border-radius:0;\n  overflow:hidden;') ||
       !renderer.includes("layer.style.webkitMaskComposite = webkitIntersections || 'source-over'")) {
     err('Holographic card: the artwork slot must not crop tilt; foil must have no added frame and clip to image alpha.');
   }
