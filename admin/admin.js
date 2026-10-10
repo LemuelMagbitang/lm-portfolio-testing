@@ -2300,10 +2300,16 @@ function serializeProjectEditorModel(project){
         ? {background:project.thumbnail.background}
         : {})
     },
+    mediaGroups:(Array.isArray(project.mediaGroups) ? project.mediaGroups : []).map(group => ({
+      id:String(group.id || ''),
+      name:String(group.name || ''),
+      layout:['grid','stack','cards','flow'].includes(group.layout) ? group.layout : 'grid'
+    })).filter(group => group.id && group.name),
     media:(Array.isArray(project.media) ? project.media : []).map(media => ({
       type:media.type,
       src:media.src,
       caption:media.caption,
+      ...(media.groupId ? {groupId:String(media.groupId)} : {}),
       orientation:media.orientation,
       ...(media.background && typeof media.background === 'object'
         ? {background:media.background}
@@ -2323,12 +2329,24 @@ function buildProjectBody(el, p, options = {}){
     ? [...new Set(p.badges.map(value => String(value || '').trim()).filter(Boolean))]
     : (p.badge ? [String(p.badge).trim()] : []);
   p.badge = p.badges[0] || '';
+  p.mediaGroups = Array.isArray(p.mediaGroups)
+    ? p.mediaGroups.filter(group => group && typeof group === 'object').map(group => ({
+        id:String(group.id || ''),
+        name:String(group.name || ''),
+        layout:['grid','stack','cards','flow'].includes(group.layout) ? group.layout : 'grid'
+      })).filter(group => group.id && group.name)
+    : [];
+  const validArtworkGroupIds = new Set(p.mediaGroups.map(group => group.id));
+  (Array.isArray(p.media) ? p.media : []).forEach(media => {
+    if (media.groupId && !validArtworkGroupIds.has(String(media.groupId))) delete media.groupId;
+  });
   // Which artwork cards are expanded, by _uid. Starts empty (every
   // artwork loads collapsed to just its title bar) so opening a
   // project with a dozen images doesn't dump a dozen full editors
   // on screen at once — newly-added artworks are the one exception,
   // added straight into this set so they open ready to fill in.
   const openMediaUids = new Set();
+  const selectedMediaUids = new Set();
   el.innerHTML = `
     <div class="row">
       <div class="field"><label class="field-label">Title</label><input data-f="title" value="${attr(p.title)}"></div>
@@ -2385,7 +2403,24 @@ function buildProjectBody(el, p, options = {}){
 
     <div class="panel" style="background:#141414;">
       <h3 style="font-size:.85rem">Media (lightbox gallery)</h3>
-      <p class="panel-sub">Order here is the order in the lightbox. Drag the handle to reorder.</p>
+      <p class="panel-sub">Order here is the order in the lightbox. Drag the handle to reorder. Ungrouped artwork keeps the original vertical list.</p>
+      <section class="artwork-group-manager" data-artwork-groups aria-label="Artwork grouping controls">
+        <div class="artwork-group-manager-copy">
+          <strong>Artwork groups</strong>
+          <span>Select artwork below, then create a group or add it to an existing group. Layout settings apply only to this project's Lightbox.</span>
+        </div>
+        <div class="row artwork-group-create-row">
+          <div class="field"><label class="field-label" for="artworkGroupName">New group name</label><input id="artworkGroupName" data-new-group-name maxlength="80" placeholder="e.g. Character studies"></div>
+          <div class="field"><label class="field-label" for="artworkGroupLayout">Layout</label><select id="artworkGroupLayout" data-new-group-layout><option value="grid">Grid / Tiling (columns)</option><option value="stack">Horizontal Stack</option><option value="cards">Horizontal Card Layout</option><option value="flow">Flow Layout</option></select></div>
+          <div class="field"><label class="field-label" for="artworkGroupTarget">Add to existing group</label><select id="artworkGroupTarget" data-group-target><option value="">Create a new group…</option></select></div>
+        </div>
+        <div class="artwork-group-actions">
+          <button class="primary" type="button" data-group-apply disabled>Create Group</button>
+          <button type="button" data-group-ungroup-selected disabled>Ungroup selected</button>
+        </div>
+        <p class="artwork-group-selection-status" data-group-selection-status aria-live="polite">Select at least one artwork below to create a group.</p>
+        <div class="artwork-group-list" data-artwork-group-list></div>
+      </section>
       <div data-medialist></div>
       <button class="add-btn" data-addmedia type="button"><i class="fa-solid fa-plus"></i> Add media item</button>
     </div>
@@ -2558,6 +2593,106 @@ function buildProjectBody(el, p, options = {}){
   });
   picker.addEventListener('pointercancel', ()=>{ dragging=false; });
 
+  // Artwork groups are project-owned layout metadata. Each media row stores
+  // only a groupId; reorder and collapse/expand do not change membership.
+  const groupTarget = el.querySelector('[data-group-target]');
+  const groupNameInput = el.querySelector('[data-new-group-name]');
+  const groupLayoutInput = el.querySelector('[data-new-group-layout]');
+  const applyGroupButton = el.querySelector('[data-group-apply]');
+  const ungroupSelectedButton = el.querySelector('[data-group-ungroup-selected]');
+  const groupList = el.querySelector('[data-artwork-group-list]');
+  const groupStatus = el.querySelector('[data-group-selection-status]');
+  const selectedMedia = () => p.media.filter(media => selectedMediaUids.has(media._uid));
+  function paintGroups(){
+    if (!groupTarget || !groupList) return;
+    const previousTarget = groupTarget.value;
+    groupTarget.innerHTML = '<option value="">Create a new group…</option>' + p.mediaGroups.map(group =>
+      `<option value="${attr(group.id)}">${esc(group.name)}</option>`
+    ).join('');
+    groupTarget.value = p.mediaGroups.some(group => group.id === previousTarget) ? previousTarget : '';
+    groupList.innerHTML = p.mediaGroups.map(group => {
+      const count = p.media.filter(media => media.groupId === group.id).length;
+      return `<article class="artwork-group-card" data-group-card="${attr(group.id)}">
+        <div class="artwork-group-card-fields">
+          <div class="field"><label class="field-label">Group name</label><input data-edit-group-name value="${attr(group.name)}" aria-label="Group name"></div>
+          <div class="field"><label class="field-label">Layout</label><select data-edit-group-layout aria-label="Layout for ${attr(group.name)}">
+            <option value="grid" ${group.layout==='grid'?'selected':''}>Grid / Tiling</option>
+            <option value="stack" ${group.layout==='stack'?'selected':''}>Horizontal Stack</option>
+            <option value="cards" ${group.layout==='cards'?'selected':''}>Horizontal Card Layout</option>
+            <option value="flow" ${group.layout==='flow'?'selected':''}>Flow Layout</option>
+          </select></div>
+          <div class="artwork-group-card-meta"><span>${count} artwork${count===1?'':'s'}</span><button type="button" data-remove-group>Remove group &amp; ungroup artwork</button></div>
+        </div>
+      </article>`;
+    }).join('');
+    groupList.querySelectorAll('[data-group-card]').forEach(card => {
+      const group = p.mediaGroups.find(item => item.id === card.dataset.groupCard);
+      if (!group) return;
+      const nameInput = card.querySelector('[data-edit-group-name]');
+      nameInput?.addEventListener('input', () => {
+        group.name = nameInput.value;
+        if (groupStatus) groupStatus.textContent = 'Group name edited; remember to publish your changes.';
+        markChanged();
+      });
+      nameInput?.addEventListener('change', () => { paintGroups(); paintMedia(); });
+      card.querySelector('[data-edit-group-layout]')?.addEventListener('change', event => {
+        group.layout = event.target.value;
+        markChanged();
+      });
+      card.querySelector('[data-remove-group]')?.addEventListener('click', () => {
+        p.media.forEach(media => { if (media.groupId === group.id) delete media.groupId; });
+        p.mediaGroups = p.mediaGroups.filter(item => item.id !== group.id);
+        selectedMediaUids.clear();
+        markChanged();
+        paintGroups();
+        paintMedia();
+      });
+    });
+    const selected = selectedMedia();
+    if (applyGroupButton) {
+      applyGroupButton.disabled = selected.length === 0;
+      applyGroupButton.textContent = groupTarget.value ? 'Add to Group' : 'Create Group';
+    }
+    const selectedGrouped = selected.filter(media => Boolean(media.groupId)).length;
+    if (ungroupSelectedButton) ungroupSelectedButton.disabled = selectedGrouped === 0;
+    if (groupStatus) {
+      groupStatus.textContent = selected.length
+        ? `${selected.length} artwork${selected.length===1?'':'s'} selected. ${selectedGrouped ? selectedGrouped + ' already grouped.' : 'Ungrouped items keep their current vertical presentation until assigned.'}`
+        : 'Select at least one artwork below to create a group.';
+    }
+  }
+  groupTarget?.addEventListener('change', paintGroups);
+  applyGroupButton?.addEventListener('click', () => {
+    const chosen = selectedMedia();
+    if (!chosen.length) return;
+    let target = p.mediaGroups.find(group => group.id === groupTarget.value);
+    if (!target) {
+      const requestedName = String(groupNameInput?.value || '').trim();
+      const name = requestedName || `Artwork Group ${p.mediaGroups.length + 1}`;
+      const baseId = slugify(name) || 'artwork-group';
+      let id = baseId, suffix = 2;
+      while (p.mediaGroups.some(group => group.id === id)) id = `${baseId}-${suffix++}`;
+      target = {id, name, layout:['grid','stack','cards','flow'].includes(groupLayoutInput?.value) ? groupLayoutInput.value : 'grid'};
+      p.mediaGroups.push(target);
+      if (groupNameInput) groupNameInput.value = '';
+      if (groupTarget) groupTarget.value = target.id;
+    }
+    chosen.forEach(media => { media.groupId = target.id; });
+    selectedMediaUids.clear();
+    markChanged();
+    paintGroups();
+    paintMedia();
+    toast(`Artwork added to “${target.name}”.`);
+  });
+  ungroupSelectedButton?.addEventListener('click', () => {
+    const chosen = selectedMedia();
+    chosen.forEach(media => { delete media.groupId; });
+    selectedMediaUids.clear();
+    markChanged();
+    paintGroups();
+    paintMedia();
+  });
+
   // media list
   let medWrap = el.querySelector('[data-medialist]');
   function paintMedia(){
@@ -2571,7 +2706,7 @@ function buildProjectBody(el, p, options = {}){
       row.dataset.uid = m._uid;
       row.innerHTML = `
         <div class="card-item-head collapsible-head" data-toggle-open>
-          <span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
+          <span class="artwork-select-handle"><input class="artwork-select-input" type="checkbox" data-media-select aria-label="Select artwork ${attr(m.caption || m.type)}" ${selectedMediaUids.has(m._uid)?'checked':''}><span class="drag-handle" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span></span>
           <span class="item-title">${m.caption ? esc(m.caption) : '(' + esc(m.type) + ')'}</span>
           <div class="card-item-actions">
             <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
@@ -2604,15 +2739,31 @@ function buildProjectBody(el, p, options = {}){
               </select>
             </div>
           </div>
+          <div class="row media-editor-row">
+            <div class="field artwork-group-assignment"><label class="field-label">Artwork group</label>
+              <select data-mf="groupId" aria-label="Artwork group for ${attr(m.caption || m.type)}">
+                <option value="" ${!m.groupId?'selected':''}>Ungrouped — vertical list</option>
+                ${p.mediaGroups.map(group=>`<option value="${attr(group.id)}" ${m.groupId===group.id?'selected':''}>${esc(group.name)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
           <div data-mediapreview></div>
            ${backgroundControlHtml(m.background)}
            ${m.type === 'image' ? holographicControlHtml(m.holographic) : holographicControlHtml(null)}
         </div>
       `;
       row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
+        if (e.target.closest('[data-media-select]')) return;
         if (e.target.closest('[data-mact]') && e.target.closest('[data-mact]').dataset.mact !== 'toggle') return;
         if (isOpen) openMediaUids.delete(m._uid); else openMediaUids.add(m._uid);
         paintMedia();
+      });
+      const mediaSelect = row.querySelector('[data-media-select]');
+      mediaSelect?.addEventListener('click', event => event.stopPropagation());
+      mediaSelect?.addEventListener('change', () => {
+        if (mediaSelect.checked) selectedMediaUids.add(m._uid);
+        else selectedMediaUids.delete(m._uid);
+        paintGroups();
       });
       const previewEl = row.querySelector('[data-mediapreview]');
       let modelViewerCleanup = null;
@@ -2742,7 +2893,13 @@ function buildProjectBody(el, p, options = {}){
       }));
 
       row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
-        m[inp.dataset.mf]=inp.value;
+        if (inp.dataset.mf === 'groupId') {
+          if (inp.value) m.groupId = inp.value;
+          else delete m.groupId;
+          paintGroups();
+        } else {
+          m[inp.dataset.mf]=inp.value;
+        }
         if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
         if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') {
           refreshPreview();
@@ -2757,7 +2914,8 @@ function buildProjectBody(el, p, options = {}){
       row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
         const idx = p.media.findIndex(x=>x._uid===m._uid);
         if (idx > -1) p.media.splice(idx, 1);
-        markChanged(); paintMedia();
+        selectedMediaUids.delete(m._uid);
+        markChanged(); paintGroups(); paintMedia();
       });
       row.querySelector('[data-mact="up"]').addEventListener('click', ()=>{
         const mi = p.media.indexOf(m); if(mi===0)return;
@@ -2781,6 +2939,7 @@ function buildProjectBody(el, p, options = {}){
     // Covers add/delete/reorder even when the list is empty (each
     // row's own refreshPreview() already covers edits to that row).
     refreshThumbPreview();
+    paintGroups();
   }
   paintMedia();
   el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
@@ -2809,7 +2968,8 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
           badges:Array.isArray(p.badges)?[...new Set(p.badges.map(x=>String(x||'').trim()).filter(Boolean))]:(p.badge?[String(p.badge).trim()]:[]),filters:[],description:p.description||'',
           extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
           thumbnail:{type:p.thumbnail?.type||'image',src:p.thumbnail?.src||'',focus:p.thumbnail?.focus||'50% 50%',zoom:p.thumbnail?.zoom||1,background:p.thumbnail?.background||null},
-          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
+          mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid')})):[],
+          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
         }};
       }
       return {source:'main',projectId:String(e?.projectId||''),_uid:uid()};
@@ -3015,7 +3175,8 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
     extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
-    media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
+    mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid')})):[],
+          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
   })));
   let filterDefs = [];
   let badgeDefs = [];

@@ -9,6 +9,20 @@
 const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 const HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
+const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','flow']);
+function normalizeMediaGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  const seen = new Set();
+  return groups.map(group => {
+    if (!group || typeof group !== 'object' || Array.isArray(group)) return null;
+    const id = normalizeString(group.id);
+    if (!id || seen.has(id)) return null;
+    seen.add(id);
+    const name = normalizeString(group.name) || id;
+    const layout = normalizeString(group.layout).toLowerCase();
+    return {id,name,layout:ARTWORK_GROUP_LAYOUTS.has(layout)?layout:'grid'};
+  }).filter(Boolean);
+}
 
 function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -120,6 +134,9 @@ export function normalizeProjectMedia(media = {}) {
   const caption = normalizeString(media.caption);
   if (caption) normalized.caption = caption;
 
+  const groupId = normalizeString(media.groupId);
+  if (groupId) normalized.groupId = groupId;
+
   if (ORIENTATIONS.has(orientation)) normalized.orientation = orientation;
 
   const background = normalizeBackground(media.background);
@@ -140,8 +157,13 @@ export function normalizeProject(project = {}) {
     : {};
   const thumbnailSrc = normalizeString(thumbnailSource.src);
 
+  const mediaGroups = normalizeMediaGroups(project.mediaGroups);
+  const validMediaGroupIds = new Set(mediaGroups.map(group => group.id));
   const media = Array.isArray(project.media)
-    ? project.media.map(normalizeProjectMedia).filter(Boolean)
+    ? project.media.map(normalizeProjectMedia).filter(Boolean).map(item => {
+        if (item.groupId && !validMediaGroupIds.has(item.groupId)) delete item.groupId;
+        return item;
+      })
     : [];
 
   const capabilities = {
@@ -201,6 +223,7 @@ export function normalizeProject(project = {}) {
   if (background) normalized.thumbnail.background = background;
 
   normalized.media = media;
+  if (mediaGroups.length) normalized.mediaGroups = mediaGroups;
   return normalized;
 }
 

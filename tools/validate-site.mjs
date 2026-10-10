@@ -17,6 +17,7 @@ const SUPPORTED_MEDIA = new Set(['image', 'video', 'youtube', 'lottie', 'model']
 const SUPPORTED_MODEL_EXT = new Set(['obj', 'gltf', 'glb', 'fbx']);
 const ORIENTATIONS = new Set(['', 'auto', 'landscape', 'portrait', 'square']);
 const SUPPORTED_HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
+const SUPPORTED_ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','flow']);
 
 function readText(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -123,6 +124,34 @@ function validateMedia(media, where) {
       }
     }
   }
+}
+
+function validateMediaGroups(project, where) {
+  if (project.mediaGroups !== undefined && !Array.isArray(project.mediaGroups)) {
+    err(`${where}: mediaGroups must be an array when present.`);
+    return;
+  }
+  const groups = Array.isArray(project.mediaGroups) ? project.mediaGroups : [];
+  const ids = new Set();
+  groups.forEach((group,index) => {
+    const groupWhere = `${where} artwork group ${index+1}`;
+    if (!group || typeof group !== 'object' || Array.isArray(group)) {
+      err(`${groupWhere}: group must be an object.`); return;
+    }
+    const id = String(group.id || '').trim(), name = String(group.name || '').trim();
+    const layout = String(group.layout || 'grid').trim().toLowerCase();
+    if (!id) err(`${groupWhere}: missing id.`);
+    else if (ids.has(id)) err(`${groupWhere}: duplicate id "${id}".`);
+    else ids.add(id);
+    if (!name) err(`${groupWhere}: missing name.`);
+    if (!SUPPORTED_ARTWORK_GROUP_LAYOUTS.has(layout)) err(`${groupWhere}: unsupported layout "${layout}".`);
+  });
+  (Array.isArray(project.media) ? project.media : []).forEach((item,index) => {
+    if (item?.groupId === undefined || item.groupId === null || item.groupId === '') return;
+    if (typeof item.groupId !== 'string' || !ids.has(item.groupId)) {
+      err(`${where} media ${index+1}: groupId must reference a project mediaGroups id.`);
+    }
+  });
 }
 
 function validateFilters(filters) {
@@ -238,6 +267,7 @@ function validateProjects(projects, filters) {
     const media = Array.isArray(project.media) ? project.media : [];
     if (!media.length) warn(`${where}: project has no media items.`);
     media.forEach((item, j) => validateMedia(item, `${where} media ${j + 1}`));
+    validateMediaGroups(project, where);
   });
 }
 
@@ -317,6 +347,7 @@ function validateCuratedViews(views, mainProjects, filters) {
         return;
       }
 
+      validateMediaGroups(project, entryWhere);
       const projectId = String(project.id || '').trim();
       if (!projectId) err(`${entryWhere}: curated project is missing id.`);
       else {
