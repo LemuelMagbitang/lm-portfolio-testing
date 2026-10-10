@@ -488,6 +488,35 @@ function validateSharedCssCacheVersion() {
   }
 }
 
+function validateLightboxFeatureStylesheet() {
+  const entryHtml = exists('index.html') ? readText('index.html') : '';
+  const links = [...entryHtml.matchAll(/<link\\b[^>]*>/gi)].map(match => match[0]);
+  const baseIndex = links.findIndex(tag =>
+    /\\brel=['"]stylesheet['"]/i.test(tag) &&
+    /\\bhref=['"]css\\/style\\.css\\?v=[^'"]+['"]/i.test(tag)
+  );
+  const featureIndex = links.findIndex(tag =>
+    /\\brel=['"]stylesheet['"]/i.test(tag) &&
+    /\\bhref=['"]css\\/features\\/lightbox\\.css\\?v=[^'"]+['"]/i.test(tag)
+  );
+  if (baseIndex < 0 || featureIndex <= baseIndex) {
+    err('CSS ownership: index.html must load css/features/lightbox.css after shared css/style.css.');
+  }
+
+  const featureCss = exists('css/features/lightbox.css') ? readText('css/features/lightbox.css') : '';
+  if (!featureCss.includes('.lightbox-inspect-mode{z-index:10002;isolation:isolate;}') ||
+      !featureCss.includes('.lightbox-inspect-frame .lightbox-holographic-hint{') ||
+      !featureCss.includes('object-fit:contain;object-position:center;') ||
+      !featureCss.includes('overflow:visible;')) {
+    err('CSS ownership: grouped artwork fit, Inspect stacking and foil hint rules must remain in css/features/lightbox.css.');
+  }
+  const sharedCss = exists('css/style.css') ? readText('css/style.css') : '';
+  if (/October 11 Lightbox polish: safe artwork margins/.test(sharedCss) ||
+      /October 11 grouped Lightbox follow-up/.test(sharedCss)) {
+    err('CSS ownership: extracted Lightbox finishing rules must not be duplicated at the end of css/style.css.');
+  }
+}
+
 function validateUtilityPageIndexing() {
   for (const file of ['admin/index.html', '404.html', 'success/index.html']) {
     if (!exists(file)) continue;
@@ -583,6 +612,7 @@ validateHtml('404.html');
 validateHtml('success/index.html');
 validateCanonicalSocialMetadata();
 validateSharedCssCacheVersion();
+validateLightboxFeatureStylesheet();
 validateUtilityPageIndexing();
 function validateSecuritySecrets() {
   const files = [];
