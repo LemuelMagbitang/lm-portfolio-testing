@@ -171,7 +171,7 @@ assert.ok(/project-preview-runtime\.js\?v=20261010-04/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
 assert.ok(/admin\.js\?v=20261010-07/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
-assert.ok(/admin\.css\?v=20261010-03/.test(adminHtml),
+assert.ok(/admin\.css\?v=20261010-04/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
 assert.ok(css.includes('.project-list-item.is-open .project-collapsed-preview{display:flex;flex:0 0 140px;width:140px;height:76px;margin-left:auto;}') &&
   /@media\(max-width:520px\)\{[\s\S]*?\.project-list-item\.is-open \.project-collapsed-preview\{flex-basis:72px;width:72px;height:56px;\}/.test(css),
