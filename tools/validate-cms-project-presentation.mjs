@@ -262,7 +262,10 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes('lightbox-artwork-group-items') &&
   renderer.includes("entry.addEventListener('click',onEntryClick,true)") &&
   renderer.includes('activeInspector?.entry===entry') &&
-  renderer.includes('Tap the artwork to flip the foil') &&
+  renderer.includes('Tap to flip · Move to explore the light.') &&
+  renderer.includes("description.textContent=caption||''") &&
+  renderer.includes('description.hidden=!caption') &&
+  renderer.includes("back.innerHTML='<span aria-hidden=\"true\">←</span>'") &&
   !renderer.includes('inspectTrigger') &&
   !renderer.includes('holdOpened = true'),
   'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil flips remain available inside Inspect.');
