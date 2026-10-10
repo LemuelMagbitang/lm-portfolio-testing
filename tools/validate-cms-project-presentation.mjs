@@ -404,7 +404,7 @@ assert.ok(siteCss.includes('.lightbox-holographic-grain-layer') && siteCss.inclu
   siteCss.includes('.lightbox-holographic-glitter-layer') && siteCss.includes('url("../assets/holographic/glitter.png")'),
   'Grain and glitter must be independently composited layers.');
 for (const [layerName, depth] of [['cosmos-bottom','1px'],['cosmos-middle','2px'],['cosmos-top','3.5px'],['grain-layer','4px'],['glitter-layer','5px']]) {
-  const selector = '#lightboxMediaContainer .lightbox-holographic-' + layerName + '{';
+  const selector = ':is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-' + layerName + '{';
   const cssLines = siteCss.split(/\r?\n/);
   const ruleStart = cssLines.findIndex(line => line.startsWith(selector));
   const rule = ruleStart >= 0 ? cssLines.slice(ruleStart).join('\n').split('}')[0] : '';
