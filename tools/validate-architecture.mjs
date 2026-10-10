@@ -112,6 +112,9 @@ for (const file of walk(jsRoot)) {
   for (const specifier of importSpecifiers) {
     const imported = normalizeImport(file, specifier);
     if (!imported) continue;
+    if (imported.startsWith('../admin/')) {
+      errors.push(`${rel} imports CMS implementation ${imported}; the public runtime must not depend on admin code`);
+    }
     const expectedQuery = canonicalModuleQueries.get(imported);
     if (!expectedQuery) continue;
     const actualQuery = importQuery(specifier);
@@ -156,6 +159,32 @@ for (const file of walk(jsRoot)) {
     const importedInternalPath = match[2];
     if (consumerFeature !== importedFeature && importedInternalPath !== 'index.js') {
       errors.push(`${rel} imports private feature module ${imported}; import features/${importedFeature}/index.js instead`);
+    }
+  }
+}
+
+// The public pages must never load CMS implementation modules. The admin app is
+// a separate application that shares repository content, not a public dependency.
+const publicHtmlEntrypoints = ['index.html', 'about/index.html', '404.html', 'success/index.html'];
+for (const htmlPath of publicHtmlEntrypoints) {
+  const fullPath = path.join(root, htmlPath);
+  if (!fs.existsSync(fullPath)) continue;
+  const html = fs.readFileSync(fullPath, 'utf8');
+  for (const tagMatch of html.matchAll(/<(script|link)\b([^>]*)>/gi)) {
+    const tagName = tagMatch[1].toLowerCase();
+    const attributes = tagMatch[2];
+    if (tagName === 'link' && !/\brel\s*=\s*["'][^"']*modulepreload[^"']*["']/i.test(attributes)) continue;
+    const attributePattern = tagName === 'script'
+      ? /\bsrc\s*=\s*(["'])(.*?)\1/i
+      : /\bhref\s*=\s*(["'])(.*?)\1/i;
+    const attributeMatch = attributes.match(attributePattern);
+    if (!attributeMatch) continue;
+    const resourceUrl = attributeMatch[2].trim();
+    if (!resourceUrl || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(resourceUrl)) continue;
+    const resourcePath = resourceUrl.split(/[?#]/)[0].replace(/\\/g, '/');
+    const resolvedPath = path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath.replaceAll(path.sep, '/')), resourcePath));
+    if (resolvedPath.startsWith('admin/') && /\.m?js$/i.test(resolvedPath)) {
+      errors.push(\`\${htmlPath} loads CMS implementation script \${resourceUrl}; public pages must not load admin code\`);
     }
   }
 }
