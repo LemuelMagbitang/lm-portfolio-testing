@@ -5157,3 +5157,136 @@ footer > .footer-content p{
 @media(prefers-reduced-motion:reduce){
   #lightboxMediaContainer .lightbox-holographic-normal-map{transition:none!important;}
 }
+
+
+/* Matte-first holographic finish pass.
+   Texture assets tile at a preserved aspect ratio, while reflective gradients remain
+   separate so increased strength adds contrast rather than washing out the artwork. */
+#lightboxMediaContainer .lightbox-holographic-grain-layer{
+  background-size:180px auto,260% 220%;
+  background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background-repeat:repeat,no-repeat;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .10));
+  mix-blend-mode:soft-light;
+}
+#lightboxMediaContainer .lightbox-holographic-glitter-layer{
+  background-size:144px auto,170% 170%,300% 240%;
+  background-position:0 0,var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background-repeat:repeat,no-repeat,no-repeat;
+  background-blend-mode:soft-light,screen,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.018 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20) + (var(--holo-tilt-strength,0) * .035));
+  filter:contrast(1.18) saturate(1.12);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-cosmos-layer{
+  background-repeat:repeat,no-repeat,no-repeat,no-repeat;
+  transition:filter 150ms ease-out,opacity 150ms ease-out;
+}
+#lightboxMediaContainer .lightbox-holographic-cosmos-bottom{
+  background-size:280px auto,210% 190%,340% 280%,160% 160%;
+  background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
+  background-blend-mode:soft-light,soft-light,overlay,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .28) + (var(--holo-tilt-strength,0) * .07));
+  filter:brightness(.96) contrast(1.45) saturate(1.34);
+}
+#lightboxMediaContainer .lightbox-holographic-cosmos-middle{
+  background-size:280px auto,230% 220%,300% 240%,170% 170%;
+  background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
+  background-blend-mode:soft-light,soft-light,overlay,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.03 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .24) + (var(--holo-tilt-strength,0) * .06));
+  filter:brightness(.95) contrast(1.48) saturate(1.38);
+}
+#lightboxMediaContainer .lightbox-holographic-cosmos-top{
+  background-repeat:repeat,no-repeat,no-repeat;
+  background-size:280px auto,250% 230%,280% 230%;
+  background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background-blend-mode:soft-light,soft-light,overlay;
+  mix-blend-mode:soft-light;
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .22) + (var(--holo-tilt-strength,0) * .075));
+  filter:brightness(.96) contrast(1.55) saturate(1.42);
+}
+/* The normal-map light is a surface detail, not a white wash over the finish. */
+#lightboxMediaContainer .lightbox-holographic-normal-map{
+  mix-blend-mode:soft-light;
+  opacity:.48;
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-normal-map{
+  opacity:.34;
+}
+/* Distinct vertical shafts with darker gaps; lower peak intensity at common strengths. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-prism{
+  background-image:
+    repeating-linear-gradient(90deg,transparent 0 12%,rgba(255,255,255,.035) 13%,rgba(255,255,255,.42) 14%,rgba(111,228,255,.18) 15.2%,transparent 17% 30%),
+    linear-gradient(90deg,#364055,#b77f9b,#354558,#7da79f,#33465c,#a18db7,#364055);
+  background-size:100% 100%,320% 100%;
+  background-blend-mode:screen,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .24));
+  filter:contrast(1.38) saturate(1.18) brightness(.96);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="beams"] .lightbox-holographic-sheen{
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .11));
+}
+/* Crosshatch keeps the woven grid, but its lines are softer and more chromatic than white. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="crosshatch"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-linear-gradient(38deg,transparent 0 7px,rgba(255,255,255,.23) 7.5px,rgba(83,225,255,.16) 8.5px,transparent 10px 16px),
+    repeating-linear-gradient(142deg,transparent 0 7px,rgba(255,255,255,.18) 7.5px,rgba(218,136,255,.15) 8.5px,transparent 10px 16px);
+  background-blend-mode:soft-light,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .23));
+  filter:contrast(1.35) saturate(1.15);
+}
+/* Cat-eye retains a narrow lens band, without a blown-out white center. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-prism{
+  background-image:
+    radial-gradient(ellipse 24% 74% at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 34%,rgba(80,227,255,.18) 41%,rgba(255,255,255,.52) 47%,rgba(255,128,223,.42) 51%,rgba(112,220,255,.28) 56%,transparent 69%),
+    linear-gradient(105deg,#a95683,#c9b083,#699f91,#568db3,#8470ae);
+  background-size:160% 160%,320% 220%;
+  background-blend-mode:soft-light,soft-light;
+  mix-blend-mode:soft-light;
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .25));
+  filter:contrast(1.5) saturate(1.18) brightness(.97);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cat-eye"] .lightbox-holographic-sheen{
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .11));
+}
+/* Pearlescent and aurora are matte color first; a restrained sheen is the only sharp shine. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-prism{
+  mix-blend-mode:soft-light;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .18));
+  filter:contrast(1.3) saturate(1.16) brightness(.96);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-ribbons{
+  mix-blend-mode:soft-light;
+  opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .13));
+  filter:contrast(1.2) saturate(1.12);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="iridescent"] .lightbox-holographic-sheen{
+  opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .08));
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-prism{
+  mix-blend-mode:soft-light;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .19));
+  filter:contrast(1.34) saturate(1.22) brightness(.95);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-ribbons{
+  mix-blend-mode:soft-light;
+  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .16));
+  filter:contrast(1.28) saturate(1.18);
+}
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="aurora"] .lightbox-holographic-sheen{
+  opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .075));
+}
+/* More concentric ripples with distinct troughs; keep the water finish soft, not white. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="waves"] .lightbox-holographic-diffraction{
+  background-image:
+    repeating-radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),transparent 0 5px,rgba(255,255,255,.22) 6px,rgba(98,223,255,.18) 7.5px,rgba(177,127,255,.12) 9px,rgba(8,28,52,.12) 10.5px,transparent 12px 18px),
+    radial-gradient(ellipse at var(--holo-foil-x,50%) var(--holo-foil-y,50%),rgba(255,255,255,.055),transparent 70%);
+  background-size:140% 140%,145% 145%;
+  opacity:calc(.035 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .28));
+  filter:blur(.12px) contrast(1.22) saturate(1.14);
+}
+

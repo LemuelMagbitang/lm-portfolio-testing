@@ -689,7 +689,7 @@ export function createLightboxMediaRenderer({
   // Luminance masks are front-face-only by design. White reveals foil;
   // black suppresses it; gray allows partial foil coverage.
   function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {}) {
-    if (!layer?.style || (!maskUrl && !artworkUrl && !detailMaskUrl)) return;
+    if (!layer?.style || (!maskUrl && !artworkUrl && !detailMaskUrl && !detailOptions.clipMaskUrl)) return;
     const asCssUrl = value => 'url("' + String(value).split('"').join('%22') + '")';
     const images = [];
     const modes = [];
@@ -702,6 +702,13 @@ export function createLightboxMediaRenderer({
       sizes.push(detailOptions.size || '100% 100%');
       repeats.push(detailOptions.repeat || 'no-repeat');
       positions.push(detailOptions.position || 'center');
+    }
+    if (detailOptions.clipMaskUrl) {
+      images.push(asCssUrl(detailOptions.clipMaskUrl));
+      modes.push('alpha');
+      sizes.push(detailOptions.clipMaskSize || '100% 100%');
+      repeats.push(detailOptions.clipMaskRepeat || 'no-repeat');
+      positions.push(detailOptions.clipMaskPosition || 'center');
     }
     if (maskUrl) {
       images.push(asCssUrl(maskUrl));
@@ -833,6 +840,21 @@ export function createLightboxMediaRenderer({
       const faceTextureMode = isFront ? config.textureMode : config.backTextureMode;
       const faceImage = isFront ? frontImage : backImage;
       const faceArtworkUrl = faceImage.currentSrc || faceImage.src;
+      const cosmosClipUrl = config.style === 'cosmos'
+        ? resolveAssetUrl(HOLOGRAPHIC_COSMOS_MAPS['cosmos-top'])
+        : '';
+      const applyFaceHolographicMask = (layer, detailMaskUrl = '', detailOptions = {}) => {
+        const options = cosmosClipUrl
+          ? {
+              ...detailOptions,
+              clipMaskUrl: cosmosClipUrl,
+              clipMaskSize: '280px auto',
+              clipMaskRepeat: 'repeat',
+              clipMaskPosition: '0 0'
+            }
+          : detailOptions;
+        applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl, detailMaskUrl, options);
+      };
       const spectrum = documentRef.createElement('span');
       spectrum.className = 'lightbox-holographic-spectrum'; spectrum.setAttribute('aria-hidden','true');
       const environment = documentRef.createElement('span');
@@ -880,20 +902,20 @@ export function createLightboxMediaRenderer({
         'glare',
         ...(HOLOGRAPHIC_MASK_LAYERS[config.style] || [])
       ]);
-      if (maskedLayers.has('spectrum')) applyHolographicMask(spectrum, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('environment')) applyHolographicMask(environment, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('glare')) applyHolographicMask(glare, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('prism')) applyHolographicMask(prism, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('ribbons')) applyHolographicMask(ribbons, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('diffraction')) applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('sparkles')) applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
-      if (maskedLayers.has('sheen')) applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
+      if (maskedLayers.has('spectrum')) applyFaceHolographicMask(spectrum);
+      if (maskedLayers.has('environment')) applyFaceHolographicMask(environment);
+      if (maskedLayers.has('glare')) applyFaceHolographicMask(glare);
+      if (maskedLayers.has('prism')) applyFaceHolographicMask(prism);
+      if (maskedLayers.has('ribbons')) applyFaceHolographicMask(ribbons);
+      if (maskedLayers.has('diffraction')) applyFaceHolographicMask(diffraction);
+      if (maskedLayers.has('sparkles')) applyFaceHolographicMask(sparkles);
+      if (maskedLayers.has('sheen')) applyFaceHolographicMask(sheen);
       cosmosLayers.forEach(layer => {
         const mapPath = HOLOGRAPHIC_COSMOS_MAPS[layer.dataset.holoLayer];
         const mapUrl = mapPath ? resolveAssetUrl(mapPath) : '';
-        applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl, mapUrl);
+        applyFaceHolographicMask(layer, mapUrl, { size: '280px auto', repeat: 'repeat', position: '0 0' });
       });
-      [grainLayer, glitterLayer].filter(Boolean).forEach(layer => applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl));
+      [grainLayer, glitterLayer].filter(Boolean).forEach(layer => applyFaceHolographicMask(layer));
       face.append(
         spectrum, ...cosmosLayers, ...(grainLayer ? [grainLayer] : []), ...(glitterLayer ? [glitterLayer] : []),
         environment, glare, prism, ribbons, diffraction, sparkles, sheen
@@ -917,7 +939,7 @@ export function createLightboxMediaRenderer({
         texture.style.opacity = 'calc(.08 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .10))';
         texture.style.mixBlendMode = 'color-dodge';
         texture.style.filter = 'contrast(1.42) saturate(1.55) brightness(1.04)';
-        applyHolographicMask(texture, faceMaskUrl, faceArtworkUrl, faceTextureUrl, {
+        applyFaceHolographicMask(texture, faceTextureUrl, {
           size: faceTextureMode === 'tile' ? 'auto' : '100% 100%',
           repeat: faceTextureMode === 'tile' ? 'repeat' : 'no-repeat'
         });
@@ -933,7 +955,7 @@ export function createLightboxMediaRenderer({
         const normalCanvas = documentRef.createElement('canvas');
         normalCanvas.className = 'lightbox-holographic-normal-map';
         normalCanvas.setAttribute('aria-hidden', 'true');
-        applyHolographicMask(normalCanvas, faceMaskUrl, faceArtworkUrl);
+        applyFaceHolographicMask(normalCanvas);
         face.appendChild(normalCanvas);
         const controller = createFoilNormalRenderer(normalCanvas, normalPatternUrls, {
           intensity: config.intensity,

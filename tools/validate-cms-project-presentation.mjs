@@ -162,6 +162,31 @@ assert.ok(
   foilNormalRendererSource.includes('for(const cancelLoad of [...pendingImageCancels])'),
   'Foil pattern image requests must be cancelled when the renderer is destroyed before loading completes.'
 );
+assert.ok(
+  renderer.includes('clipMaskUrl: cosmosClipUrl') &&
+  renderer.includes("modes.push('alpha')") &&
+  renderer.includes("size: '280px auto', repeat: 'repeat', position: '0 0'"),
+  'Cosmos effects must intersect the top-map alpha clip and tile the original map without stretching.'
+);
+assert.ok(
+  siteCss.includes('background-size:180px auto,260% 220%') &&
+  siteCss.includes('background-size:144px auto,170% 170%,300% 240%') &&
+  siteCss.includes('background-repeat:repeat,no-repeat,no-repeat'),
+  'Grain and glitter assets must tile at preserved aspect ratios rather than stretching to the artwork bounds.'
+);
+for (const style of ['beams','crosshatch','cat-eye','iridescent','aurora','waves']) {
+  assert.ok(siteCss.includes(`data-holo-style="${style}"`), `Foil finish ${style} must keep an explicit material profile.`);
+}
+assert.ok(
+  /data-holo-style="beams"[^}]*[\s\S]{0,1200}mix-blend-mode:soft-light/.test(siteCss) &&
+  /data-holo-style="cat-eye"[^}]*[\s\S]{0,1600}rgba\(255,255,255,\.52\)/.test(siteCss) &&
+  /data-holo-style="aurora"[^}]*[\s\S]{0,1200}mix-blend-mode:soft-light/.test(siteCss),
+  'High-brightness finishes must emphasize contrast and matte color instead of white-heavy screen blending.'
+);
+assert.ok(
+  /repeating-radial-gradient\(ellipse at var\(--holo-foil-x,50%\) var\(--holo-foil-y,50%\),transparent 0 5px/.test(siteCss),
+  'Water waves must render a tighter series of concentric drop rings.'
+);
 
 // Exercise the renderer teardown with unresolved Image requests (not just source checks).
 const pendingFoilImages = [];
