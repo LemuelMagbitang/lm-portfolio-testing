@@ -11,11 +11,49 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
   let disposed = false;
   const visible = new Set(), active = new Map();
   let modelQueue = Promise.resolve();
+  const fallbackScrollOptions = {capture:true,passive:true};
+  let fallbackFrame = 0;
+  function setNodeVisibility(node, isVisible) {
+    if (isVisible) {
+      visible.add(node);
+      activate(node);
+      return;
+    }
+    const wasVisible = visible.delete(node);
+    if (wasVisible || active.has(node) || node.dataset?.previewActive === 'true' ||
+        (node.dataset?.previewType === 'model' && node.__modelViewerMountToken)) {
+      deactivate(node);
+    }
+  }
+  function checkFallbackVisibility() {
+    fallbackFrame = 0;
+    if (disposed) return;
+    const viewportHeight = Number(view?.innerHeight) || Number(doc?.documentElement?.clientHeight) || 0;
+    const viewportWidth = Number(view?.innerWidth) || Number(doc?.documentElement?.clientWidth) || 0;
+    nodes.forEach(node => {
+      let nearViewport = false;
+      if (viewportHeight > 0 && viewportWidth > 0 && node?.isConnected &&
+          root.contains(node) && typeof node.getBoundingClientRect === 'function') {
+        const rect = node.getBoundingClientRect();
+        nearViewport = Number.isFinite(rect?.top) && Number.isFinite(rect?.bottom) &&
+          Number.isFinite(rect?.left) && Number.isFinite(rect?.right) &&
+          rect.bottom >= -120 && rect.top <= viewportHeight + 120 &&
+          rect.right >= -120 && rect.left <= viewportWidth + 120;
+      }
+      setNodeVisibility(node, nearViewport);
+    });
+  }
+  function scheduleFallbackCheck() {
+    if (disposed || fallbackFrame) return;
+    if (typeof view?.requestAnimationFrame === 'function') {
+      fallbackFrame = view.requestAnimationFrame(checkFallbackVisibility);
+    } else {
+      checkFallbackVisibility();
+    }
+  }
   const observer = typeof view?.IntersectionObserver === 'function'
     ? new view.IntersectionObserver(entries => entries.forEach(entry => {
-        const node = entry.target;
-        if (entry.isIntersecting && entry.intersectionRatio > 0) { visible.add(node); activate(node); }
-        else { visible.delete(node); deactivate(node); }
+        setNodeVisibility(entry.target, entry.isIntersecting && entry.intersectionRatio > 0);
       }), {root:null,rootMargin:'120px 0px',threshold:0.01})
     : null;
   const ownsNode = node => !disposed && !!node?.isConnected && root.contains(node) && visible.has(node);
@@ -77,10 +115,27 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     });
     modelQueue=job.catch(()=>{});
   }
-  if(observer)nodes.forEach(node=>observer.observe(node));
-  else {nodes.forEach(node=>visible.add(node));nodes.forEach(activate);}
+  if(observer) {
+    nodes.forEach(node=>observer.observe(node));
+  } else {
+    // Preserve near-viewport loading on browsers without IntersectionObserver.
+    // The document capture listener also catches scrolling inside CMS panels.
+    view?.addEventListener?.('scroll',scheduleFallbackCheck,fallbackScrollOptions);
+    view?.addEventListener?.('resize',scheduleFallbackCheck,fallbackScrollOptions);
+    doc?.addEventListener?.('scroll',scheduleFallbackCheck,fallbackScrollOptions);
+    checkFallbackVisibility();
+  }
   return ()=>{
-    if(disposed)return;disposed=true;observer?.disconnect();
+    if(disposed)return;
+    disposed=true;
+    observer?.disconnect();
+    if(!observer) {
+      view?.removeEventListener?.('scroll',scheduleFallbackCheck,fallbackScrollOptions);
+      view?.removeEventListener?.('resize',scheduleFallbackCheck,fallbackScrollOptions);
+      doc?.removeEventListener?.('scroll',scheduleFallbackCheck,fallbackScrollOptions);
+      if(fallbackFrame && typeof view?.cancelAnimationFrame === 'function') view.cancelAnimationFrame(fallbackFrame);
+      fallbackFrame=0;
+    }
     nodes.forEach(node=>{visible.add(node);deactivate(node);});visible.clear();
   };
 }

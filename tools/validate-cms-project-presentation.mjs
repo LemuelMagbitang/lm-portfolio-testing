@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-02';
+import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-02';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
@@ -11,6 +12,97 @@ const renderer = fs.readFileSync(path.join(root, 'js/features/lightbox/media-ren
 const previewRuntime = fs.readFileSync(path.join(root, 'admin/project-preview-runtime.js'), 'utf8');
 const modelViewer = fs.readFileSync(path.join(root, 'js/infrastructure/three/model-viewer.js'), 'utf8');
 const projectsData = JSON.parse(fs.readFileSync(path.join(root, 'data/projects.json'), 'utf8'));
+
+function createTestEventTarget() {
+  const listeners = new Map();
+  return {
+    listeners,
+    addEventListener(type, callback) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(callback);
+    },
+    removeEventListener(type, callback) {
+      listeners.get(type)?.delete(callback);
+    },
+    dispatchEvent(type) {
+      for (const callback of [...(listeners.get(type) || [])]) callback();
+    }
+  };
+}
+// Browsers without IntersectionObserver must still lazy-load only near-view CMS media.
+const fallbackView = createTestEventTarget();
+fallbackView.innerHeight = 600;
+fallbackView.innerWidth = 800;
+let nextFrameId = 0;
+const pendingFrames = new Map();
+fallbackView.requestAnimationFrame = callback => {
+  const id = ++nextFrameId;
+  pendingFrames.set(id, callback);
+  return id;
+};
+fallbackView.cancelAnimationFrame = id => pendingFrames.delete(id);
+function flushFallbackFrames() {
+  while (pendingFrames.size) {
+    const batch = [...pendingFrames.entries()];
+    batch.forEach(([id, callback]) => {
+      pendingFrames.delete(id);
+      callback(16);
+    });
+  }
+}
+const fallbackDocument = createTestEventTarget();
+fallbackDocument.defaultView = fallbackView;
+fallbackDocument.documentElement = {clientHeight:600, clientWidth:800};
+const previewVideo = {
+  isConnected:true,
+  top:900,
+  src:'',
+  muted:false,
+  loop:false,
+  autoplay:false,
+  playsInline:false,
+  preload:'',
+  dataset:{previewType:'video',previewSrc:'previews/demo.mp4'},
+  loadCount:0,
+  playCount:0,
+  pauseCount:0,
+  getBoundingClientRect() {
+    return {top:this.top,bottom:this.top+120,left:0,right:160};
+  },
+  load() { this.loadCount++; },
+  play() { this.playCount++; return Promise.resolve(); },
+  pause() { this.pauseCount++; },
+  removeAttribute(name) { if (name === 'src') this.src = ''; },
+  setAttribute() {}
+};
+const fallbackRoot = {
+  isConnected:true,
+  ownerDocument:fallbackDocument,
+  querySelectorAll(selector) {
+    return selector === '[data-collapsed-preview-media]' ? [previewVideo] : [];
+  },
+  contains(node) { return node === previewVideo && node.isConnected; }
+};
+const disposeFallbackPreviews = mountProjectListPreviews(fallbackRoot, {
+  resolveUrl:src => 'https://cdn.example.test/' + String(src).replace(/^\/+/, '')
+});
+assert.equal(previewVideo.src, '', 'Off-screen CMS video previews must remain unloaded without IntersectionObserver.');
+assert.equal(previewVideo.playCount, 0, 'Off-screen CMS video previews must not start playback.');
+previewVideo.top = 500;
+fallbackDocument.dispatchEvent('scroll');
+flushFallbackFrames();
+assert.equal(previewVideo.src, 'https://cdn.example.test/previews/demo.mp4', 'A preview entering the viewport should resolve and load its media URL.');
+assert.equal(previewVideo.playCount, 1, 'A preview entering the viewport should start playback once.');
+previewVideo.top = 900;
+fallbackView.dispatchEvent('resize');
+flushFallbackFrames();
+assert.equal(previewVideo.src, '', 'A preview leaving the viewport should release its media source.');
+assert.equal(previewVideo.pauseCount, 1, 'A preview leaving the viewport should pause playback.');
+disposeFallbackPreviews();
+assert.equal(fallbackView.listeners.get('scroll')?.size || 0, 0, 'Fallback scroll listeners must be removed on cleanup.');
+assert.equal(fallbackView.listeners.get('resize')?.size || 0, 0, 'Fallback resize listeners must be removed on cleanup.');
+assert.equal(fallbackDocument.listeners.get('scroll')?.size || 0, 0, 'Captured document scroll listeners must be removed on cleanup.');
+
 
 // Runtime regression checks: normalization must not erase the reverse-side foil switch.
 function normalizedBackFoilEnabled(holographic) {
@@ -74,6 +166,8 @@ for (const marker of [
 assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must be lazy-loaded.');
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
+assert.ok(/project-preview-runtime\.js\?v=20261010-02/.test(admin),
+  'CMS Projects must reference the current preview lifecycle module version.');
 assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
