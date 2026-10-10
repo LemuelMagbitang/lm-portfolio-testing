@@ -425,6 +425,15 @@ export function createLightboxMediaRenderer({
             const backMaskUrl = resolveAssetUrl(holo.backMask);
             scheduleJob('holographic-back-mask:' + backMaskUrl, () => preloadImage(backMaskUrl, { fetchPriority: 'low' }), false);
           }
+          const sharedFoilAssets = [
+            ...(holo?.style === 'cosmos' ? ['assets/holographic/cosmos-bottom.png','assets/holographic/cosmos-middle-trans.png','assets/holographic/cosmos-top-trans.png'] : []),
+            ...(holo?.grainLayer !== false ? ['assets/holographic/grain.webp'] : []),
+            ...(holo?.glitterLayer === true ? ['assets/holographic/glitter.png'] : [])
+          ];
+          sharedFoilAssets.forEach(path => {
+            const layerUrl = resolveAssetUrl(path);
+            scheduleJob('holographic-layer:' + layerUrl, () => preloadImage(layerUrl, { fetchPriority: 'low' }), false);
+          });
         }
 
         if (type === 'model') {
@@ -565,6 +574,8 @@ export function createLightboxMediaRenderer({
     return {
       style: ['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
       intensity, textureMode, backTextureMode,
+      glitterLayer: value.glitterLayer === true,
+      grainLayer: value.grainLayer !== false,
       ...(texture ? { texture } : {}), ...(back ? { back, backFoilEnabled } : {}), ...(mask ? { mask } : {}),
       ...(backTexture ? { backTexture } : {}), ...(backMask ? { backMask } : {})
     };
@@ -816,6 +827,31 @@ export function createLightboxMediaRenderer({
       sparkles.className = 'lightbox-holographic-sparkles'; sparkles.setAttribute('aria-hidden','true');
       const sheen = documentRef.createElement('span');
       sheen.className = 'lightbox-holographic-sheen'; sheen.setAttribute('aria-hidden','true');
+      const cosmosLayers = config.style === 'cosmos'
+        ? [
+            ['cosmos-bottom', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-bottom'],
+            ['cosmos-middle', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-middle'],
+            ['cosmos-top', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-top']
+          ].map(([layerName, className]) => {
+            const layer = documentRef.createElement('span');
+            layer.className = className;
+            layer.dataset.holoLayer = layerName;
+            layer.setAttribute('aria-hidden', 'true');
+            return layer;
+          })
+        : [];
+      const grainLayer = config.grainLayer ? documentRef.createElement('span') : null;
+      if (grainLayer) {
+        grainLayer.className = 'lightbox-holographic-grain-layer';
+        grainLayer.dataset.holoLayer = 'grain';
+        grainLayer.setAttribute('aria-hidden', 'true');
+      }
+      const glitterLayer = config.glitterLayer ? documentRef.createElement('span') : null;
+      if (glitterLayer) {
+        glitterLayer.className = 'lightbox-holographic-glitter-layer';
+        glitterLayer.dataset.holoLayer = 'glitter';
+        glitterLayer.setAttribute('aria-hidden', 'true');
+      }
       const maskedLayers = new Set([
         'spectrum',
         'environment',
@@ -830,7 +866,11 @@ export function createLightboxMediaRenderer({
       if (maskedLayers.has('diffraction')) applyHolographicMask(diffraction, faceMaskUrl, faceArtworkUrl);
       if (maskedLayers.has('sparkles')) applyHolographicMask(sparkles, faceMaskUrl, faceArtworkUrl);
       if (maskedLayers.has('sheen')) applyHolographicMask(sheen, faceMaskUrl, faceArtworkUrl);
-      face.append(spectrum, environment, glare, prism, ribbons, diffraction, sparkles, sheen);
+      [...cosmosLayers, grainLayer, glitterLayer].filter(Boolean).forEach(layer => applyHolographicMask(layer, faceMaskUrl, faceArtworkUrl));
+      face.append(
+        spectrum, ...cosmosLayers, ...(grainLayer ? [grainLayer] : []), ...(glitterLayer ? [glitterLayer] : []),
+        environment, glare, prism, ribbons, diffraction, sparkles, sheen
+      );
       if (faceTextureUrl) {
         const texture = documentRef.createElement('span');
         texture.className = 'lightbox-holographic-texture';

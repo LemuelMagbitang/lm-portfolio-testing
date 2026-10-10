@@ -4708,20 +4708,7 @@ footer > .footer-content p{
   background-size:100% 100%;
 }
 
-/* Fine grain from the reference's generic texture creates subtle foil microstructure.
-   This is the generic surface grain, not a card-specific pre-cut foil/mask. */
-#lightboxMediaContainer .lightbox-holographic-spectrum::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background-image:url("../assets/holographic/grain.webp");
-  background-size:420px 420px;
-  background-repeat:repeat;
-  mix-blend-mode:soft-light;
-  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .10));
-}
-/* Neutral interference bands break up the flat rainbow into reflective bands
+/* Grain is now an independent masked surface layer controlled by the CMS. *//* Neutral interference bands break up the flat rainbow into reflective bands
    whose brightness shifts with inverse foil movement. */
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="holographic"] .lightbox-holographic-spectrum::after{
   content:"";
@@ -5068,79 +5055,36 @@ footer > .footer-content p{
   --holo-visual-intensity:calc(var(--holo-intensity,.7) * .68);
 }
 
-/* Cosmos foil uses the three supplied texture maps from the project asset folder.
-   The bottom provides the star field, the middle adds contrast-rich nebula texture,
-   and the transparent top image supplies the final diffraction/surface pattern. */
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-spectrum{
-  background-image:
-    url("../assets/holographic/cosmos-bottom.png"),
-    repeating-linear-gradient(
-      82deg,
-      hsl(53,65%,60%) 0%,
-      hsl(93,56%,50%) 8%,
-      hsl(176,54%,49%) 16%,
-      hsl(228,59%,55%) 24%,
-      hsl(283,60%,55%) 32%,
-      hsl(326,59%,51%) 40%,
-      hsl(283,60%,55%) 56%,
-      hsl(228,59%,55%) 72%,
-      hsl(176,54%,49%) 84%,
-      hsl(93,56%,50%) 92%,
-      hsl(53,65%,60%) 100%
-    ),
-    radial-gradient(ellipse at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(180,244,255,.28) 0%,rgba(132,152,255,.12) 36%,transparent 72%);
-  background-size:cover,400% 900%,cover;
-  background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),center;
-  background-blend-mode:color-burn,multiply,screen;
-  mix-blend-mode:color-dodge;
-  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .30) + (var(--holo-tilt-strength,0) * .06));
-  filter:brightness(.90) contrast(1.55) saturate(.88);
+/* Reference-inspired foil: independent masked maps and tilt-responsive light gradients. */
+#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-spectrum{background-image:none!important;opacity:0!important;filter:none!important;mix-blend-mode:normal!important;}
+#lightboxMediaContainer .lightbox-holographic-cosmos-layer,#lightboxMediaContainer .lightbox-holographic-grain-layer,#lightboxMediaContainer .lightbox-holographic-glitter-layer{position:absolute;inset:0;display:block;margin:0;border:0;pointer-events:none;background-repeat:no-repeat;-webkit-backface-visibility:hidden;backface-visibility:hidden;transform:translateZ(.01px);}
+#lightboxMediaContainer .lightbox-holographic-cosmos-bottom{
+ z-index:10;background-image:url("../assets/holographic/cosmos-bottom.png"),radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.38),rgba(174,206,255,.12) 34%,transparent 72%),linear-gradient(calc(118deg + var(--holo-angle,0deg)),#ffd86a 0%,#9ce98b 17%,#83e9e2 35%,#96baff 53%,#d2a0ff 70%,#ff9bd5 86%,#ffd86a 100%);
+ background-size:cover,160% 160%,360% 260%;background-position:center,var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-blend-mode:screen,screen,color-dodge;mix-blend-mode:color-dodge;
+ opacity:calc(.06 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .08));filter:brightness(.96) contrast(1.34) saturate(1.08);transition:opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-environment{
-  background-image:
-    url("../assets/holographic/cosmos-middle-trans.png"),
-    repeating-linear-gradient(
-      82deg,
-      hsl(53,65%,60%) 0%,
-      hsl(93,56%,50%) 8%,
-      hsl(176,54%,49%) 16%,
-      hsl(228,59%,55%) 24%,
-      hsl(283,60%,55%) 32%,
-      hsl(326,59%,51%) 40%,
-      hsl(283,60%,55%) 56%,
-      hsl(228,59%,55%) 72%,
-      hsl(176,54%,49%) 84%,
-      hsl(93,56%,50%) 92%,
-      hsl(53,65%,60%) 100%
-    );
-  background-size:cover,400% 900%;
-  background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%);
-  background-blend-mode:lighten,multiply;
-  mix-blend-mode:overlay;
-  opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .06));
-  filter:brightness(1.04) contrast(1.36) saturate(.88);
+#lightboxMediaContainer .lightbox-holographic-cosmos-middle{
+ z-index:11;background-image:url("../assets/holographic/cosmos-middle-trans.png"),linear-gradient(calc(126deg + var(--holo-angle,0deg)),transparent 18%,rgba(255,255,255,.07) 34%,rgba(190,232,255,.26) 45%,rgba(245,195,255,.16) 51%,rgba(255,255,255,.035) 60%,transparent 75%),radial-gradient(ellipse 34% 30% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(225,250,255,.25),transparent 70%);
+ background-size:cover,300% 240%,170% 170%;background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);background-blend-mode:lighten,screen,screen;mix-blend-mode:overlay;
+ opacity:calc(.04 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .40) + (var(--holo-tilt-strength,0) * .07));filter:brightness(1.03) contrast(1.26) saturate(1.08);transition:opacity 150ms ease-out;
 }
-#lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-glare{
-  background:
-    radial-gradient(ellipse 34% 30% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(223,250,255,.30) 0%,rgba(162,189,255,.12) 22%,transparent 70%),
-    linear-gradient(118deg,transparent 28%,rgba(255,255,255,.02) 39%,rgba(255,255,255,.12) 48%,rgba(175,227,255,.08) 52%,transparent 65%);
-  background-size:150% 150%,250% 220%;
-  background-position:var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
-  mix-blend-mode:screen;
-  opacity:calc(.01 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .12) + (var(--holo-tilt-strength,0) * .07));
-  filter:brightness(.94) contrast(1.22) saturate(1.08);
+#lightboxMediaContainer .lightbox-holographic-cosmos-top{
+ z-index:12;background-image:url("../assets/holographic/cosmos-top-trans.png"),linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 26%,rgba(255,255,255,.035) 39%,rgba(255,255,255,.24) 47%,rgba(178,229,255,.12) 51%,rgba(247,218,255,.055) 55%,transparent 68%);
+ background-size:cover,280% 230%;background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-blend-mode:screen,screen;mix-blend-mode:screen;
+ opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .30) + (var(--holo-tilt-strength,0) * .07));filter:brightness(1.02) contrast(1.26) saturate(1.04);transition:opacity 150ms ease-out;
+}
+#lightboxMediaContainer .lightbox-holographic-grain-layer{
+ z-index:17;background-image:url("../assets/holographic/grain.webp"),repeating-linear-gradient(calc(132deg + var(--holo-angle,0deg)),rgba(255,255,255,.05) 0 1px,transparent 1px 4px);
+ background-size:420px 420px,260% 220%;background-position:0 0,var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-repeat:repeat,no-repeat;background-blend-mode:soft-light,overlay;mix-blend-mode:soft-light;
+ opacity:calc(.018 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .12));
+}
+#lightboxMediaContainer .lightbox-holographic-glitter-layer{
+ z-index:18;background-image:url("../assets/holographic/glitter.png"),radial-gradient(ellipse 32% 27% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.48),transparent 76%),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 30%,rgba(255,255,255,.24) 47%,rgba(193,233,255,.11) 51%,transparent 68%);
+ background-size:cover,170% 170%,300% 240%;background-position:center,var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-blend-mode:screen,screen,color-dodge;mix-blend-mode:screen;
+ opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .08));filter:brightness(1.02) contrast(1.13) saturate(1.16);animation:holo-glitter-twinkle 3.2s ease-in-out infinite alternate;
 }
 #lightboxMediaContainer .lightbox-holographic[data-holo-style="cosmos"] .lightbox-holographic-sheen{
-  display:block!important;
-  background-image:
-    url("../assets/holographic/cosmos-top-trans.png"),
-    linear-gradient(112deg,transparent 15%,rgba(255,255,255,.02) 35%,rgba(255,255,255,.12) 47%,rgba(191,223,255,.06) 51%,transparent 68%);
-  background-size:cover,300% 240%;
-  background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%);
-  background-blend-mode:multiply,multiply;
-  mix-blend-mode:multiply;
-  opacity:calc(.015 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .22));
-  filter:brightness(1.02) contrast(1.42) saturate(.88);
-  animation-duration:8.6s;
+ z-index:35;display:block!important;background-image:linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 18%,rgba(255,255,255,.02) 35%,rgba(255,255,255,.16) 47%,rgba(185,226,255,.07) 52%,transparent 68%);background-size:300% 240%;background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%);mix-blend-mode:screen;
+ opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20) + (var(--holo-tilt-strength,0) * .06));animation-duration:8.6s;
 }
-
+@media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic-cosmos-layer,#lightboxMediaContainer .lightbox-holographic-grain-layer,#lightboxMediaContainer .lightbox-holographic-glitter-layer{animation:none!important;transition:none!important;}}

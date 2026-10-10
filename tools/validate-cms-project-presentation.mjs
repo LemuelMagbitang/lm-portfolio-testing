@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-01';
+import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-02';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'admin/admin.css'), 'utf8');
 const siteCss = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
+const renderer = fs.readFileSync(path.join(root, 'js/features/lightbox/media-renderer.js'), 'utf8');
+const previewRuntime = fs.readFileSync(path.join(root, 'admin/project-preview-runtime.js'), 'utf8');
+const modelViewer = fs.readFileSync(path.join(root, 'js/infrastructure/three/model-viewer.js'), 'utf8');
+const projectsData = JSON.parse(fs.readFileSync(path.join(root, 'data/projects.json'), 'utf8'));
 
 // Runtime regression checks: normalization must not erase the reverse-side foil switch.
 function normalizedBackFoilEnabled(holographic) {
@@ -39,6 +43,12 @@ assert.equal(
   false,
   'A clean custom reverse should remain foil-free unless enabled or given a back pattern/mask.'
 );
+const layeredFoil = normalizeProjectMedia({type:'image',src:'assets/projects/test/front.png',holographic:{style:'cosmos',glitterLayer:true,grainLayer:false}}).holographic;
+assert.equal(layeredFoil.glitterLayer, true, 'Glitter layer must survive normalization.');
+assert.equal(layeredFoil.grainLayer, false, 'Grain layer supports an explicit opt-out.');
+const legacyFoil = normalizeProjectMedia({type:'image',src:'assets/projects/test/front.png',holographic:{style:'cosmos'}}).holographic;
+assert.equal(legacyFoil.grainLayer, true, 'Old foil data keeps the legacy grain default.');
+assert.equal(legacyFoil.glitterLayer, false, 'Glitter remains opt-in for existing artwork.');
 
 for (const marker of [
   "project-list-item",
@@ -64,6 +74,11 @@ for (const marker of [
 assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must be lazy-loaded.');
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
+assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
+  'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
+assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node, src, \{[\s\S]*?thumbnail:true/.test(previewRuntime),
+  'CMS multimedia thumbnails are mounted lazily in static 3D mode.');
+assert.ok(/options\.thumbnail === true/.test(modelViewer), 'The 3D viewer supports static thumbnail rendering.');
 
 assert.ok(/let openUid\s*=\s*null/.test(admin), 'Projects must start with every project row closed.');
 assert.ok(/isOpen \? ' is-open' : ' is-collapsed'/.test(admin) || /isOpen \? ' is-open' : ' is-collapsed'/.test(admin.replace(/\n/g,'')),
@@ -76,6 +91,8 @@ assert.ok(css.includes('corner-shape:squircle'),
   'CMS Project presentation should progressively enhance rounded surfaces as squircles.');
 
 assert.ok(/function holographicControlHtml\(/.test(admin), 'CMS Projects must expose the holographic image control.');
+assert.ok(/data-holo-grain-layer/.test(admin) && /data-holo-glitter-layer/.test(admin),
+  'CMS foil settings expose independent grain and glitter layers.');
 assert.ok(/holo-style-intensity holo-main-controls/.test(admin) &&
   /<summary>Advanced foil options/.test(admin),
   'CMS foil controls should keep style/strength visible and tuck texture/mask/reverse options into Advanced.');
@@ -103,6 +120,16 @@ assert.ok(
   siteCss.includes('url("../assets/holographic/cosmos-middle-trans.png")') &&
   siteCss.includes('url("../assets/holographic/cosmos-top-trans.png")'),
   'The Cosmos foil profile must use all three uploaded texture maps.');
+assert.ok(renderer.includes("['cosmos-bottom', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-bottom']") &&
+  renderer.includes("['cosmos-middle', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-middle']") &&
+  renderer.includes("['cosmos-top', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-top']"),
+  'Cosmos maps must be separate DOM layers in bottom/middle/top order.');
+assert.ok(siteCss.includes('.lightbox-holographic-grain-layer') && siteCss.includes('url("../assets/holographic/grain.webp")') &&
+  siteCss.includes('.lightbox-holographic-glitter-layer') && siteCss.includes('url("../assets/holographic/glitter.png")'),
+  'Grain and glitter must be independently composited layers.');
+const cosmosDemo = projectsData.flatMap(project => project.media || []).find(item => item?.holographic?.style === 'cosmos');
+assert.ok(cosmosDemo?.holographic?.grainLayer === true && cosmosDemo?.holographic?.glitterLayer === true,
+  'The Cosmos sample artwork demonstrates both optional layers.');
 assert.ok(siteCss.includes('--holo-visual-intensity:calc(var(--holo-intensity,.7) * .68)'),
   'The visual foil intensity must be scaled separately from the CMS value to avoid clipping layered highlights.');
 assert.ok(/value="cosmos"/.test(admin) && /Cosmos galaxy foil/.test(admin),

@@ -53,6 +53,8 @@ function normalizeHolographicEffect(effect) {
   const backTextureModeValue = normalizeString(effect.backTextureMode).toLowerCase();
   const backTextureMode = ['tile', 'fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
   const backMask = back ? normalizeString(effect.backMask) : '';
+  const glitterLayer = effect.glitterLayer === true;
+  const grainLayer = effect.grainLayer !== false; // retain existing grain by default
   // Preserve the CMS reverse-side switch. Older project records have no explicit
   // switch, so keep their historical behavior: a back pattern or mask enables foil.
   const backFoilEnabled = back && (
@@ -60,7 +62,8 @@ function normalizeHolographicEffect(effect) {
     (effect.backFoilEnabled == null && Boolean(backTexture || backMask))
   );
 
-  if (!HOLOGRAPHIC_STYLES.has(style) && !texture && !back && !mask && !backTexture && !backMask && effect.intensity === undefined) {
+  if (!HOLOGRAPHIC_STYLES.has(style) && !texture && !back && !mask && !backTexture && !backMask &&
+      effect.intensity === undefined && effect.glitterLayer === undefined && effect.grainLayer === undefined) {
     return undefined;
   }
 
@@ -68,6 +71,8 @@ function normalizeHolographicEffect(effect) {
     style: HOLOGRAPHIC_STYLES.has(style) ? style : 'holographic',
     intensity,
     textureMode,
+    glitterLayer,
+    grainLayer,
     ...(back ? { backTextureMode } : {}),
     ...(texture ? { texture } : {}),
     ...(back ? { back, backFoilEnabled: Boolean(backFoilEnabled) } : {}),

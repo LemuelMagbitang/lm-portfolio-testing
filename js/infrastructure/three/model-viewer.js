@@ -107,6 +107,7 @@ export async function mountModelViewer(container, src, options = {}) {
   if (!container) throw new Error('3D viewer container is missing.');
   const view = container.ownerDocument?.defaultView || globalThis.window;
   const ownerDocument = container.ownerDocument || globalThis.document;
+  const thumbnailMode = options.thumbnail === true;
   let isMobileRenderProfile = () => false;
   let updateRenderProfile = () => {};
   if (container.__modelViewerCleanup) container.__modelViewerCleanup();
@@ -178,7 +179,7 @@ export async function mountModelViewer(container, src, options = {}) {
   activate.setAttribute('aria-hidden', 'true');
   activate.setAttribute('role', 'presentation');
   activate.innerHTML = '<span class="model-viewer-activate-content"><i class="fa-solid fa-cube" aria-hidden="true"></i><strong>CLICK FOR 3D VIEW</strong></span>';
-  container.appendChild(activate);
+  if (!thumbnailMode) container.appendChild(activate);
 
   const ui = document.createElement('div');
   ui.className = 'model-viewer-ui';
@@ -199,7 +200,7 @@ export async function mountModelViewer(container, src, options = {}) {
   back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>';
   back.hidden = true;
   ui.appendChild(back);
-  container.appendChild(ui);
+  if (!thumbnailMode) container.appendChild(ui);
 
   try {
     const loaded = await loadModel(url, ext);
@@ -218,16 +219,17 @@ export async function mountModelViewer(container, src, options = {}) {
       (Number(view?.innerWidth) > 0 && Number(view.innerWidth) < 768)
     );
     const initialMobileProfile = isMobileRenderProfile();
+    const reducedQualityProfile = initialMobileProfile || thumbnailMode;
     renderer = new THREE.WebGLRenderer({
-      antialias: !initialMobileProfile,
+      antialias: !reducedQualityProfile,
       alpha: true,
-      powerPreference: initialMobileProfile ? 'low-power' : 'high-performance',
+      powerPreference: reducedQualityProfile ? 'low-power' : 'high-performance',
       stencil: false
     });
     let appliedPixelRatio = 0;
     updateRenderProfile = () => {
       const mobileProfile = isMobileRenderProfile();
-      const maxPixelRatio = mobileProfile ? 1 : 1.5;
+      const maxPixelRatio = (mobileProfile || thumbnailMode) ? 1 : 1.5;
       const pixelRatio = Math.min(Number(view?.devicePixelRatio) || 1, maxPixelRatio);
       if (Math.abs(pixelRatio - appliedPixelRatio) > 0.01) {
         renderer.setPixelRatio(pixelRatio);
@@ -321,6 +323,7 @@ export async function mountModelViewer(container, src, options = {}) {
       mixers.push(mixer);
     }
 
+    if (!thumbnailMode) {
     // Passive media state: the shell is the tap target, while its WebGL
     // canvas is completely inert. We intentionally do not intercept pointer
     // movement or touch scrolling here, so the lightbox retains normal media
@@ -475,6 +478,21 @@ export async function mountModelViewer(container, src, options = {}) {
     renderer.domElement.style.touchAction = 'auto';
     container.dataset.ready = 'true';
     container.setAttribute('aria-busy', 'false');
+    } else {
+      controls.enabled = false;
+      renderLoopActive = false;
+      container.classList.remove('is-interactive');
+      container.dataset.interactive = 'false';
+      container.setAttribute('role', 'img');
+      container.setAttribute('aria-label', String(options.alt || '3D artwork preview'));
+      container.removeAttribute('tabindex');
+      renderer.domElement.removeAttribute('tabindex');
+      renderer.domElement.removeAttribute('aria-hidden');
+      renderer.domElement.style.pointerEvents = 'none';
+      renderer.domElement.style.touchAction = 'auto';
+      container.dataset.ready = 'true';
+      container.setAttribute('aria-busy', 'false');
+    }
   } catch (err) {
     if (!isCurrentMount()) return null;
     container.dataset.ready = 'false';
@@ -483,6 +501,7 @@ export async function mountModelViewer(container, src, options = {}) {
     if (label) label.textContent = '3D VIEW UNAVAILABLE';
     back.hidden = true;
     renderer?.dispose?.();
+    if (renderer?.domElement?.parentNode === container) renderer.domElement.remove();
     throw err;
   }
 
@@ -542,16 +561,18 @@ export async function mountModelViewer(container, src, options = {}) {
       renderOnce();
     }
   }
-  bindContainer(ownerDocument, 'visibilitychange', () => {
-    if (ownerDocument?.visibilityState === 'hidden') {
-      if (frameHandle) cancelAnimationFrame(frameHandle);
-      frameHandle = 0;
-    } else if (renderLoopActive && !frameHandle) {
-      clock.start();
-      lastRenderTimestamp = -Infinity;
-      frameHandle = requestAnimationFrame(render);
-    }
-  });
+  if (!thumbnailMode) {
+    bindContainer(ownerDocument, 'visibilitychange', () => {
+      if (ownerDocument?.visibilityState === 'hidden') {
+        if (frameHandle) cancelAnimationFrame(frameHandle);
+        frameHandle = 0;
+      } else if (renderLoopActive && !frameHandle) {
+        clock.start();
+        lastRenderTimestamp = -Infinity;
+        frameHandle = requestAnimationFrame(render);
+      }
+    });
+  }
 
   // The model is a static thumbnail until explicitly activated. This is a
   // major battery/GPU saving on mobile and also avoids hidden WebGL work in

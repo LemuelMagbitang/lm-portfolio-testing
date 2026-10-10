@@ -701,6 +701,8 @@ let renderVersion = 0;
 async function render(){
   const version = ++renderVersion;
   const section = currentSection;
+  disposeProjectListPreviews();
+  disposeProjectListPreviews = () => {};
   const isCurrentRender = () => version === renderVersion && section === currentSection;
 
   if(section === 'guide'){ if(isCurrentRender()) renderGuide(); return; }
@@ -2083,13 +2085,15 @@ function normalizeEditorHolographic(value){
   const backTextureModeValue = String(value.backTextureMode || 'fill').trim().toLowerCase();
   const backTextureMode = ['tile','fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
   const backMask = back ? String(value.backMask || '').trim() : '';
+  const glitterLayer = value.glitterLayer === true;
+  const grainLayer = value.grainLayer !== false;
   const backFoilEnabled = Boolean(back) && (
     value.backFoilEnabled === true ||
     (value.backFoilEnabled == null && Boolean(backTexture || backMask))
   );
   return {
     style: styles.has(style) ? style : 'holographic',
-    intensity, textureMode, ...(back ? {backTextureMode} : {}),
+    intensity, textureMode, glitterLayer, grainLayer, ...(back ? {backTextureMode} : {}),
     ...(texture ? {texture} : {}), ...(back ? {back, backFoilEnabled} : {}), ...(mask ? {mask} : {}),
     ...(backTexture ? {backTexture} : {}), ...(backMask ? {backMask} : {})
   };
@@ -2140,6 +2144,12 @@ function holographicControlHtml(holographic){
               <input data-holo-mask aria-label="Front foil mask source" value="${attr(value?.mask || '')}" placeholder="Choose a front mask PNG / SVG">
               <div class="holo-field-note">White reveals foil; black hides it. Front only.</div>
             </div>
+            <div class="field holo-surface-layers">
+              <label class="field-label">Additional surface layers</label>
+              <label class="media-bg-toggle"><input type="checkbox" data-holo-grain-layer ${value?.grainLayer !== false ? 'checked' : ''}> <span>Fine grain texture</span></label>
+              <label class="media-bg-toggle"><input type="checkbox" data-holo-glitter-layer ${value?.glitterLayer === true ? 'checked' : ''}> <span>Glitter / starfield overlay</span></label>
+              <p class="holo-field-note">These layers are masked to the artwork and respond to moving foil light. Grain stays enabled for older effects unless turned off.</p>
+            </div>
             <div class="field holo-back-source"><label class="field-label">Back card image <span style="opacity:.5">(optional)</span></label>
               <input data-holo-back aria-label="Custom reverse card image source" value="${attr(value?.back || '')}" placeholder="assets/projects/your-folder/back.png / .jpg / .svg">
             </div>
@@ -2176,6 +2186,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const intensityLabel=control.querySelector('[data-holo-intensity-value]'),textureInput=control.querySelector('[data-holo-texture]');
   const textureModeInput=control.querySelector('[data-holo-texture-mode]'),backInput=control.querySelector('[data-holo-back]');
   const maskInput=control.querySelector('[data-holo-mask]'),backOptions=control.querySelector('[data-holo-back-options]');
+  const grainLayerInput=control.querySelector('[data-holo-grain-layer]'),glitterLayerInput=control.querySelector('[data-holo-glitter-layer]');
   const backTextureInput=control.querySelector('[data-holo-back-texture]'),backTextureModeInput=control.querySelector('[data-holo-back-texture-mode]');
   const backMaskInput=control.querySelector('[data-holo-back-mask]');
   const backFoilInput=control.querySelector('[data-holo-back-enabled]');
@@ -2191,6 +2202,8 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
     if(backTextureModeInput)backTextureModeInput.value=value?.backTextureMode||'fill';
     if(backMaskInput)backMaskInput.value=value?.backMask||'';
     if(backFoilInput)backFoilInput.checked=!!value?.backFoilEnabled;
+    if(grainLayerInput)grainLayerInput.checked=value?.grainLayer!==false;
+    if(glitterLayerInput)glitterLayerInput.checked=value?.glitterLayer===true;
     updateIntensityAccessibility();syncVisibility();
   }
   function read(){
@@ -2201,6 +2214,8 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
       style:styleInput.value||'holographic',
       intensity:Math.max(0,Math.min(1,Number(intensityInput.value)||0)),
       textureMode:textureModeInput.value||'fill',
+      grainLayer:grainLayerInput ? grainLayerInput.checked : true,
+      glitterLayer:glitterLayerInput ? glitterLayerInput.checked : false,
       ...(textureInput.value.trim()?{texture:textureInput.value.trim()}:{}),
       ...(backSrc?{back:backSrc,backFoilEnabled:!!backFoilInput?.checked}:{}),
       ...(maskInput.value.trim()?{mask:maskInput.value.trim()}:{}),
@@ -2213,7 +2228,7 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   intensityInput.addEventListener('input',()=>{updateIntensityAccessibility();if(enabledInput.checked){setEffect(read());onChanged?.();}});
   const update=()=>{syncVisibility();if(enabledInput.checked){setEffect(read());onChanged?.();}};
   [textureInput,backInput,maskInput,backTextureInput,backMaskInput].filter(Boolean).forEach(el=>el.addEventListener('input',update));
-  [textureModeInput,backTextureModeInput].filter(Boolean).forEach(el=>el.addEventListener('change',update));
+  [textureModeInput,backTextureModeInput,grainLayerInput,glitterLayerInput].filter(Boolean).forEach(el=>el.addEventListener('change',update));
   backFoilInput?.addEventListener('change',update);
   root.__holoEditorSync=sync;sync();
 }
@@ -2946,39 +2961,44 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
 }
 
 function buildProjectListPreviewHtml(project){
-  const explicit = project?.thumbnail?.src
-    ? {
-        type: project.thumbnail.type || 'image',
-        src: project.thumbnail.src,
-        background: project.thumbnail.background || null
-      }
-    : null;
+  const explicit = project?.thumbnail?.src ? {
+    type: project.thumbnail.type || 'image',
+    src: project.thumbnail.src,
+    background: project.thumbnail.background || null,
+    orientation: project.thumbnail.orientation || 'auto'
+  } : null;
   const fallback = explicit ? null : computeFallbackThumb(project?.media || [], project?.thumbnail || {});
   const preview = explicit || fallback;
+  const type = String(preview?.type || project?.thumbnail?.type || project?.media?.[0]?.type || 'image').toLowerCase();
+  const source = String(preview?.src || '').trim();
+  const background = preview?.background && typeof preview.background === 'object' ? preview.background : null;
+  const orientation = String(preview?.orientation || 'auto');
+  const title = String(project?.title || 'Project artwork');
 
-  if (preview?.src && preview.type === 'image') {
-    const sourceError = validateMediaSource('image', preview.src);
-    if (!sourceError) {
-      return `<span class="project-collapsed-image-wrap"><img src="${attr(ghRawUrl(preview.src))}" alt="" loading="lazy" decoding="async"></span>`;
-    }
+  if (source && type === 'image' && !validateMediaSource('image', source)) {
+    return `<span class="project-collapsed-image-wrap"><img src="${attr(ghRawUrl(source))}" alt="" loading="lazy" decoding="async"></span>`;
   }
-
-  const type = preview?.type || project?.thumbnail?.type || project?.media?.[0]?.type || 'image';
-  const icons = {
-    video: 'fa-solid fa-film',
-    youtube: 'fa-brands fa-youtube',
-    lottie: 'fa-solid fa-wand-magic-sparkles',
-    model: 'fa-solid fa-cube',
-    image: 'fa-regular fa-image'
-  };
-  const label = {
-    video: 'VIDEO',
-    youtube: 'YOUTUBE',
-    lottie: 'LOTTIE',
-    model: '3D',
-    image: 'MEDIA'
-  };
+  if (source && ['video','lottie','model'].includes(type) && !validateMediaSource(type, source)) {
+    if (type === 'video') return `<span class="project-collapsed-image-wrap project-collapsed-media-wrap"><video class="project-collapsed-media" data-collapsed-preview-media data-preview-type="video" data-preview-src="${attr(source)}" muted loop playsinline preload="none" aria-label="${attr(title)}"></video></span>`;
+    if (type === 'lottie') return `<span class="project-collapsed-image-wrap project-collapsed-media-wrap"><lottie-player class="project-collapsed-media" data-collapsed-preview-media data-preview-type="lottie" data-preview-src="${attr(source)}" background="transparent" preserveAspectRatio="xMidYMid slice"></lottie-player></span>`;
+    return `<span class="project-collapsed-image-wrap project-collapsed-media-wrap"><div class="model-viewer-shell project-collapsed-model" data-collapsed-preview-media data-preview-type="model" data-preview-src="${attr(source)}" data-preview-orientation="${attr(orientation)}" data-preview-background="${attr(JSON.stringify(background || {}))}" role="img" aria-label="${attr(title)}"></div></span>`;
+  }
+  const icons = {video:'fa-solid fa-film',youtube:'fa-brands fa-youtube',lottie:'fa-solid fa-wand-magic-sparkles',model:'fa-solid fa-cube',image:'fa-regular fa-image'};
+  const label = {video:'VIDEO',youtube:'YOUTUBE',lottie:'LOTTIE',model:'3D',image:'MEDIA'};
   return `<span class="project-collapsed-placeholder"><i class="${icons[type] || icons.image}" aria-hidden="true"></i><span>${label[type] || 'MEDIA'}</span></span>`;
+}
+
+let projectListPreviewRuntimePromise = null;
+let disposeProjectListPreviews = () => {};
+function activateProjectListPreviews(root){
+  let disposed = false, cleanup = () => {};
+  if (!projectListPreviewRuntimePromise) projectListPreviewRuntimePromise = import('./project-preview-runtime.js?v=20261010-01');
+  projectListPreviewRuntimePromise.then(({mountProjectListPreviews}) => {
+    if (disposed || !root?.isConnected) return;
+    cleanup = mountProjectListPreviews(root, {resolveUrl:ghRawUrl});
+    if (disposed) cleanup();
+  }).catch(error => { if (!disposed) console.warn('CMS Projects: media thumbnail previews could not be mounted.', error); });
+  return () => { disposed = true; try { cleanup(); } catch (_) {} };
 }
 
 RENDERERS.projects = async function(data, isCurrent=()=>true){
@@ -3004,6 +3024,8 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
   let openUid = null;
 
   function paint(){
+    disposeProjectListPreviews();
+    disposeProjectListPreviews = () => {};
     content.innerHTML = sectionHead('Projects', 'Order here is the order on the page. Drag the handle to reorder, or click a project to expand and edit it.') + `
       <div id="projList"></div>
       <button class="add-btn" id="addProj"><i class="fa-solid fa-plus"></i> Add project</button>
@@ -3057,6 +3079,8 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
       if(isOpen) buildProjectBody(wrap.querySelector('[data-body]'), p, {filterDefs, badgeDefs});
       list.appendChild(wrap);
     });
+
+    disposeProjectListPreviews = activateProjectListPreviews(list);
 
     document.getElementById('addProj').addEventListener('click', ()=>{
       const p = {id:'',title:'',subtitle:'',badge:'',badges:[],filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
