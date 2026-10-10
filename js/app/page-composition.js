@@ -49,7 +49,7 @@ export async function createPortfolioApp({
   // explicitly warms the viewer module graph during startup when a project
   // contains 3D media so the first viewer open does not pay the module-load cost.
   const loadModelViewerModule = async () => (
-    import('../infrastructure/three/model-viewer.js?v=20261010-12')
+    import('../infrastructure/three/model-viewer.js?v=20261010-13')
   );
 
   const mountModelViewer = async (...args) => {
