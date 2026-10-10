@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261010-02';
-import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261010-01';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261010-03';
+import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261010-02';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js';
-import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261010-01';
+import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261010-02';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
   orientationFromAspectRatio,
   observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
-import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261010-01';
+import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261010-02';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js?v=20261004-01';
 
