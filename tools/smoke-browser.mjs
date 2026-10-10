@@ -1003,7 +1003,7 @@ try {
       // consuming the same tap as a foil flip. The following real pointer click
       // inside Inspect must still flip the foil to its mirrored reverse.
       await funkoHolo.click({ force: true });
-      const inspectMode = page.locator('#lightboxMediaContainer .lightbox-inspect-mode');
+      const inspectMode = page.locator('.lightbox-inspect-mode');
       await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
       const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
       await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
