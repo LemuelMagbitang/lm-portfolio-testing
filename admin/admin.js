@@ -9,6 +9,12 @@ let currentSection = 'hero';
 let dirty = {};           // { hero: bool, ... }
 let cache = {};           // { hero: { json, sha } }
 
+// Use the managed single-flight player loader for all CMS Lottie surfaces.
+// The project-row lifecycle imports this same module, sharing one in-flight load.
+void import('../js/infrastructure/lottie/player.js')
+  .then(({ensureLottiePlayer}) => ensureLottiePlayer())
+  .catch(() => false);
+
 function formatTimedValue(ms, unit){
   const n = Number(ms) || 0;
   return unit === 's' ? Number((n / 1000).toFixed(3)).toString() : Math.round(n).toString();

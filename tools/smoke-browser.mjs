@@ -9,6 +9,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 
 import { chromium } from 'playwright';
@@ -4868,17 +4869,39 @@ try {
       if (await rowLottiePreview.count() !== 1) {
         throw new Error('CMS project row did not render its configured Lottie thumbnail. Check thumbnail type/source handling independently from the media editor.');
       }
-      await page.waitForFunction(() => {
-        const row = Array.from(document.querySelectorAll('#projList .project-list-item'))
-          .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
-        const preview = row?.querySelector('.project-collapsed-preview');
-        const player = preview?.querySelector('[data-preview-type="lottie"]');
-        const rect = preview?.getBoundingClientRect();
-        return !!player && !!rect && rect.width > 0 && rect.height > 0 &&
-          player.dataset.previewState === 'ready' && player.hasAttribute('src') &&
-          !!window.customElements?.get?.('lottie-player') &&
-          !!player.shadowRoot?.querySelector('svg') && !!player.getLottie?.();
-      }, null, { timeout: 12000 });
+      try {
+        await page.waitForFunction(() => {
+          const row = Array.from(document.querySelectorAll('#projList .project-list-item'))
+            .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
+          const preview = row?.querySelector('.project-collapsed-preview');
+          const player = preview?.querySelector('[data-preview-type="lottie"]');
+          const rect = preview?.getBoundingClientRect();
+          return !!player && !!rect && rect.width > 0 && rect.height > 0 &&
+            player.dataset.previewState === 'ready' && player.hasAttribute('src') &&
+            !!window.customElements?.get?.('lottie-player') &&
+            !!player.shadowRoot?.querySelector('svg') && !!player.getLottie?.();
+        }, null, { timeout: 16000 });
+      } catch (error) {
+        const diagnostic = await page.evaluate(() => {
+          const row = Array.from(document.querySelectorAll('#projList .project-list-item'))
+            .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
+          const preview = row?.querySelector('.project-collapsed-preview');
+          const player = preview?.querySelector('[data-preview-type="lottie"]');
+          return {
+            state: player?.dataset.previewState || null,
+            active: player?.dataset.previewActive || null,
+            src: player?.getAttribute('src') || null,
+            customElementRegistered: !!window.customElements?.get?.('lottie-player'),
+            shadowRoot: !!player?.shadowRoot,
+            svgCount: player?.shadowRoot?.querySelectorAll('svg').length ?? 0,
+            hasGetLottie: typeof player?.getLottie === 'function',
+            lottieInstance: !!player?.getLottie?.(),
+            errorText: preview?.querySelector('.project-collapsed-preview-error')?.textContent || null,
+            html: player?.outerHTML?.slice(0, 500) || null
+          };
+        });
+        throw new Error('CMS Lottie thumbnail did not render: ' + JSON.stringify(diagnostic) + '; ' + error.message);
+      }
       await lottieThumbProject.locator('[data-toggle-open]').click();
       await page.waitForFunction(() => {
         const row = Array.from(document.querySelectorAll('#projList .project-list-item.is-open'))
@@ -5061,8 +5084,7 @@ try {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 440, h: 478, nm: 'Smoke', ddd: 0, assets: [], layers: [{ ddd: 0, ind: 1, ty: 4, nm: 'Visible smoke shape', sr: 1, ks: { o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [220, 239, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } }, ao: 0, shapes: [{ ty: 'rc', d: 1, s: { a: 0, k: [180, 180] }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 24 }, nm: 'Rectangle Path' }, { ty: 'fl', c: { a: 0, k: [0.2, 0.8, 1, 1] }, o: { a: 0, k: 100 }, r: 1, nm: 'Fill' }, { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, sk: { a: 0, k: 0 }, sa: { a: 0, k: 0 } }], ip: 0, op: 60, st: 0, bm: 0 }] })
-          });
+            body: readFileSync(new URL('../assets/projects/test/Sample.json', import.meta.url), 'utf8');
           return;
         }
         if (url.pathname.endsWith('.obj')) {
