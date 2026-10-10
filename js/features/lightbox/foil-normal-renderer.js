@@ -62,12 +62,17 @@ void main(){
   vec3 L=normalize(vec3((u_light.x-v_uv.x)*1.7,(u_light.y-v_uv.y)*1.7,0.82));
   vec3 V=vec3(0.0,0.0,1.0),H=normalize(L+V);
   float diffuse=max(dot(normal,L),0.0);
-  float specular=pow(max(dot(normal,H),0.0),25.0);
+  float halfAngle=max(dot(normal,H),0.0);
+  float broadSpecular=pow(halfAngle,8.0);
+  float specular=pow(halfAngle,25.0);
   float grazing=1.0-clamp(normal.z,0.0,1.0);
-  float hue=fract(u_phase+v_uv.x*0.48+v_uv.y*0.15+atan(normal.y,normal.x)*0.035+dot(normal,L)*0.11);
+  float fresnel=pow(grazing,2.2);
+  float hue=fract(u_phase+v_uv.x*0.48+v_uv.y*0.15+atan(normal.y,normal.x)*0.035+dot(normal,L)*0.15+fresnel*0.055+(u_light.x-u_light.y)*0.025);
   vec3 spectral=foilSpectrum(hue);
-  vec3 color=spectral*(0.16+specular*0.78+edge*0.28)+vec3(1.0)*specular*0.56+vec3(0.24,0.82,1.0)*edge*0.16;
-  float alpha=coverage*u_intensity*clamp(0.025+specular*0.48+edge*0.34+grazing*0.075,0.0,0.86);
+  // Keep the broad key-light response visible between sharp highlights; the
+  // grazing Fresnel term adds a restrained color return on steeper foil relief.
+  vec3 color=spectral*(0.13+diffuse*0.12+broadSpecular*0.20+specular*0.70+edge*0.24+fresnel*0.22)+vec3(1.0)*(broadSpecular*0.10+specular*0.48)+vec3(0.24,0.82,1.0)*(edge*0.14+fresnel*0.08);
+  float alpha=coverage*u_intensity*clamp(0.018+diffuse*0.028+broadSpecular*0.065+specular*0.42+edge*0.29+fresnel*0.11,0.0,0.84);
   gl_FragColor=vec4(color,alpha);
 }
 `;
@@ -117,7 +122,8 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     try{if(vertexBuffer)gl.deleteBuffer(vertexBuffer);}catch(_){}
     textures.forEach(t=>{try{gl.deleteTexture(t);}catch(_){}});return NOOP;
   }
-  function draw(){
+  let drawFrame = null;
+  function drawNow(){
     if(disposed||!ready||!uniform)return;
     const rect=canvas.getBoundingClientRect();if(!(rect.width>0&&rect.height>0))return;
     const dpr=Math.min(Math.max(Number(view?.devicePixelRatio)||1,0.65),0.85);
@@ -129,6 +135,17 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     gl.uniform1f(uniform.mapCount,loadedImages.length);gl.uniform1f(uniform.intensity,level);gl.uniform1f(uniform.phase,Number(phase)||0);gl.uniform2f(uniform.light,lightX,lightY);
     for(let i=0;i<4;i++){gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,textures[i]);const image=loadedImages[i];if(image)gl.uniform2f(uniform.texels[i],1/Math.max(1,image.naturalWidth||image.width),1/Math.max(1,image.naturalHeight||image.height));}
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  }
+  // Coalesce high-frequency pointer/touch/resize events to at most one GPU
+  // draw per animation frame instead of synchronously repainting each event.
+  function draw(){
+    if(disposed||!ready||!uniform||drawFrame!==null)return;
+    const requestFrame=view?.requestAnimationFrame;
+    if(typeof requestFrame!=='function'){drawNow();return;}
+    drawFrame=requestFrame.call(view,()=>{
+      drawFrame=null;
+      drawNow();
+    });
   }
   const handleResize=()=>draw(),RO=view?.ResizeObserver;
   if(typeof RO==='function'){resizeObserver=new RO(handleResize);resizeObserver.observe(canvas);}else view?.addEventListener?.('resize',handleResize,{passive:true});
@@ -146,7 +163,10 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
   return {
     setLight(x,y){lightX=Math.max(0,Math.min(1,Number(x)||0));lightY=Math.max(0,Math.min(1,Number(y)||0));draw();},
     destroy(){
-      if(disposed)return;disposed=true;ready=false;resizeObserver?.disconnect();view?.removeEventListener?.('resize',handleResize);
+      if(disposed)return;
+      disposed=true;ready=false;
+      if(drawFrame!==null){try{view?.cancelAnimationFrame?.(drawFrame);}catch(_){}drawFrame=null;}
+      resizeObserver?.disconnect();view?.removeEventListener?.('resize',handleResize);
       loadedImages.forEach(image=>{image.onload=null;image.onerror=null;image.src='';});loadedImages=[];
       textures.forEach(t=>{try{gl.deleteTexture(t);}catch(_){}});textures=[];
       try{if(vertexBuffer)gl.deleteBuffer(vertexBuffer);}catch(_){}
