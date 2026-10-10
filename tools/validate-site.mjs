@@ -490,14 +490,14 @@ function validateSharedCssCacheVersion() {
 
 function validateLightboxFeatureStylesheet() {
   const entryHtml = exists('index.html') ? readText('index.html') : '';
-  const links = [...entryHtml.matchAll(/<link\\b[^>]*>/gi)].map(match => match[0]);
+  const links = [...entryHtml.matchAll(/<link\b[^>]*>/gi)].map(match => match[0]);
   const baseIndex = links.findIndex(tag =>
-    /\\brel=['"]stylesheet['"]/i.test(tag) &&
-    /\\bhref=['"]css\\/style\\.css\\?v=[^'"]+['"]/i.test(tag)
+    /\brel=['"]stylesheet['"]/i.test(tag) &&
+    /\bhref=['"]css\/style\.css\?v=[^'"]+['"]/i.test(tag)
   );
   const featureIndex = links.findIndex(tag =>
-    /\\brel=['"]stylesheet['"]/i.test(tag) &&
-    /\\bhref=['"]css\\/features\\/lightbox\\.css\\?v=[^'"]+['"]/i.test(tag)
+    /\brel=['"]stylesheet['"]/i.test(tag) &&
+    /\bhref=['"]css\/features\/lightbox\.css\?v=[^'"]+['"]/i.test(tag)
   );
   if (baseIndex < 0 || featureIndex <= baseIndex) {
     err('CSS ownership: index.html must load css/features/lightbox.css after shared css/style.css.');
