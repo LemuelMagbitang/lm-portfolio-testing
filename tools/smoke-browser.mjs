@@ -5112,7 +5112,7 @@ try {
         window.__LM_CMS_SMOKE_ABOUT__ = encodedAbout;
       }, { encodedAbout: encoded });
 
-      await page.route('https://raw.githubusercontent.com/Smoke/TestRepo/**', async route => {
+      await page.route('**/Sample.json*', async route => {
         const url = new URL(route.request().url());
         if (url.pathname.endsWith('Sample.json')) {
           await route.fulfill({
