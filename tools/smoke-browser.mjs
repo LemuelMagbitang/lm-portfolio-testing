@@ -461,7 +461,7 @@ process.on('exit', () => stopServer(server));
 try {
   await waitForServer(`${BASE_URL}/`);
 
-  const browser = await chromium.launch({ headless: true, args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const browser = await chromium.launch({ headless: true, args: ['--enable-webgl', '--enable-unsafe-swiftshader'] });
 
   try {
     await smokePage(
