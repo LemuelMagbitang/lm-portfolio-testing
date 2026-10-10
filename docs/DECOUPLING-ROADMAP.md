@@ -309,3 +309,9 @@ This migration must not:
 - Group card lift is limited to hover-capable desktop pointers; touch layouts keep a calm resting presentation and open Inspect on tap. New media uses a restrained staggered, opacity-only entrance to preserve pointer hit targets during foil reflection, and a lightweight shimmer appears only while a 3D viewer reports `aria-busy=true`.
 - The regular 3D media shell has no decorative border or drop shadow. Browser smoke accepts the absence of a 3D background layer when a CMS item has no background configured, while still checking its z-index when present.
 - Cache identity targets: Lightbox entry/renderer `?v=20261010-16`, public stylesheet `?v=20261010-17`, and bootstrap/page-composition chain `20261010-20`; architecture and runtime-test expectations match these identities.
+
+
+### October 10, 2026 — Inspect viewport fix
+
+- The artwork Inspector is mounted at document level rather than inside the scrolling Lightbox media container, so its fixed viewport coordinates remain anchored to the device screen. Inspector selectors now target the portaled layer, and the root/body scroll is locked while it is open. The selected artwork remains centered, with description, gesture instruction, and Back control in the bottom stack.
+- Cache identities: Lightbox entry and renderer `?v=20261010-17`, public stylesheet `?v=20261010-20`, and bootstrap/page-composition chain `20261010-21`.

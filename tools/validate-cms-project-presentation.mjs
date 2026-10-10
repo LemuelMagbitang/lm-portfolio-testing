@@ -276,6 +276,7 @@ assert.ok(!admin.includes('value="flow"') &&
   !renderer.includes('inspectTrigger') &&
   !siteCss.includes('.lightbox-artwork-inspect-trigger') &&
   renderer.includes('lightbox-inspect-footer') &&
+  renderer.includes('documentRef.body.appendChild(overlay)') &&
   renderer.includes('buildInspectTransform') &&
   siteCss.includes('.lightbox-inspect-mode::before') &&
   siteCss.includes('.lightbox-inspect-footer') &&

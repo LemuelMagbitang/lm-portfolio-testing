@@ -1745,7 +1745,7 @@ export function createLightboxMediaRenderer({
     overlay.addEventListener('keydown',onKeyDown);
     const active={container,entry,placeholder,overlay,frame,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
     activeInspector=active;
-    container.appendChild(overlay);
+    documentRef.body.appendChild(overlay);
     try{back.focus({preventScroll:true});}catch(_){back.focus?.();}
     const animateOpen=()=>{
       if(activeInspector!==active||prefersReducedInspectMotion())return;
