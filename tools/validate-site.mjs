@@ -1266,7 +1266,7 @@ function validateCmsRegressionContracts() {
   if (!renderer.includes("import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261010-06';") ||
       !renderer.includes('createFoilNormalRenderer(normalCanvas, normalPatternUrls') ||
       !renderer.includes('holographicNormalControllers.get(surface)?.forEach(controller => controller.setLight') ||
-      !foilNormalRenderer.includes('vec3 blendFoilNormals') || !foilNormalRenderer.includes('heightAt3(v_uv') || !foilNormalRenderer.includes('destroy()')) {
+      !foilNormalRenderer.includes('vec3 blendFoilNormals') || !foilNormalRenderer.includes('heightAt3(tileUV') || !foilNormalRenderer.includes('destroy()')) {
     err('Lightbox foil normals: source-map slopes must blend into tilt-responsive lighting with a safe CSS fallback.');
   }
 
