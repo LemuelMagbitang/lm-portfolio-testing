@@ -1008,6 +1008,28 @@ try {
       const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
       await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
       await page.waitForTimeout(500); // let the card-to-viewport transition settle
+      const inspectorFoilLayers = await inspectedHolo.evaluate(el => {
+        const positionOf = selector => {
+          const node = el.querySelector(selector);
+          return node ? getComputedStyle(node).position : 'missing';
+        };
+        return {
+          surface: getComputedStyle(el).position,
+          inner: positionOf('.lightbox-holographic-inner'),
+          flip: positionOf('.lightbox-holographic-flip'),
+          frontFace: positionOf('.lightbox-holographic-front'),
+          pointerEvents: getComputedStyle(el).pointerEvents
+        };
+      });
+      if (
+        inspectorFoilLayers.surface !== 'relative' ||
+        inspectorFoilLayers.inner !== 'absolute' ||
+        inspectorFoilLayers.flip !== 'absolute' ||
+        inspectorFoilLayers.frontFace !== 'absolute' ||
+        inspectorFoilLayers.pointerEvents === 'none'
+      ) {
+        throw new Error('Portaled Inspector lost the holographic positioned-layer/interaction styles: ' + JSON.stringify(inspectorFoilLayers));
+      }
       if (await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
       }
