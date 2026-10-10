@@ -5,6 +5,8 @@
  * and project selection remain in the Lightbox controller.
  */
 
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261010-01';
+
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 
 export function createLightboxMediaRenderer({
@@ -20,6 +22,7 @@ export function createLightboxMediaRenderer({
 } = {}) {
   let youtubeMessageCleanup = null;
   const holographicCleanups = new Set();
+  const holographicNormalControllers = new WeakMap();
   const holographicMotionStates = new WeakMap();
   const youtubeFrameCache = new Map();
   const imageDimensionCache = new Map();
@@ -632,6 +635,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
+    holographicNormalControllers.get(surface)?.forEach(controller => controller.setLight(lightX / 100, 1 - (lightY / 100)));
   }
 
   function setHolographicTarget(surface, x, y) {
@@ -919,6 +923,27 @@ export function createLightboxMediaRenderer({
         });
         face.appendChild(texture);
       }
+
+      // Blend all available Cosmos maps and the custom foil pattern into one relief normal.
+      const normalPatternUrls = [
+        ...(config.style === 'cosmos' ? Object.values(HOLOGRAPHIC_COSMOS_MAPS).map(resolveAssetUrl) : []),
+        ...(faceTextureUrl ? [faceTextureUrl] : [])
+      ].filter(Boolean).slice(0, 4);
+      if (normalPatternUrls.length) {
+        const normalCanvas = documentRef.createElement('canvas');
+        normalCanvas.className = 'lightbox-holographic-normal-map';
+        normalCanvas.setAttribute('aria-hidden', 'true');
+        applyHolographicMask(normalCanvas, faceMaskUrl, faceArtworkUrl);
+        face.appendChild(normalCanvas);
+        const controller = createFoilNormalRenderer(normalCanvas, normalPatternUrls, {
+          intensity: config.intensity,
+          phase: isFront ? 0.17 : 0.43
+        });
+        const controllers = holographicNormalControllers.get(surface) || [];
+        controllers.push(controller);
+        holographicNormalControllers.set(surface, controllers);
+        controller.setLight(0.34, 0.74);
+      }
     });
 
     flip.append(front, back);
@@ -945,6 +970,8 @@ export function createLightboxMediaRenderer({
         windowRef?.cancelAnimationFrame?.(motion.frame);
       }
       holographicMotionStates.delete(surface);
+      holographicNormalControllers.get(surface)?.forEach(controller => { try { controller.destroy(); } catch (_) {} });
+      holographicNormalControllers.delete(surface);
       surface.removeEventListener('pointermove', onPointerMove);
       surface.removeEventListener('pointerdown', onPointerDown);
       surface.removeEventListener('pointerup', onPointerUp);

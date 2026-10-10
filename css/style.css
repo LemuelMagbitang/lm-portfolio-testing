@@ -5145,3 +5145,15 @@ footer > .footer-content p{
   #lightboxMediaContainer .lightbox-holographic-cosmos-middle,
   #lightboxMediaContainer .lightbox-holographic-cosmos-top { transition:none!important; }
 }
+
+
+/* Per-pixel normal-map highlight pass; CSS masks retain foil coverage and artwork alpha. */
+#lightboxMediaContainer .lightbox-holographic-normal-map{
+  position:absolute;inset:0;z-index:20;display:block;width:100%;height:100%;
+  border:0;margin:0;padding:0;pointer-events:none;background:transparent;
+  mix-blend-mode:screen;opacity:.92;image-rendering:auto;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+}
+@media(prefers-reduced-motion:reduce){
+  #lightboxMediaContainer .lightbox-holographic-normal-map{transition:none!important;}
+}
