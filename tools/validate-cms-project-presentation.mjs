@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-02';
-import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-04';
+import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
@@ -167,9 +167,9 @@ for (const marker of [
 assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must be lazy-loaded.');
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
-assert.ok(/project-preview-runtime\.js\?v=20261010-04/.test(admin),
+assert.ok(/project-preview-runtime\.js\?v=20261010-05/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
-assert.ok(/admin\.js\?v=20261010-08/.test(adminHtml),
+assert.ok(/admin\.js\?v=20261010-09/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
 assert.ok(/admin\.css\?v=20261010-04/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
@@ -184,6 +184,8 @@ assert.ok(/ensureLottiePlayer/.test(previewRuntime) &&
   /import\('\.\.\/js\/infrastructure\/lottie\/player\.js'\)/.test(previewRuntime) &&
   /Lottie preview unavailable/.test(previewRuntime),
   'CMS Lottie thumbnails must use the shared fallback loader and expose a useful failed-load state.');
+assert.ok(/typeof node\.load === 'function'\) node\.load\(src\)/.test(previewRuntime),
+  'Lazy CMS Lottie thumbnails must explicitly load sources assigned after component upgrade.');
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
   'CMS multimedia thumbnails are mounted lazily in static 3D mode.');
 assert.ok(/options\.thumbnail === true/.test(modelViewer), 'The 3D viewer supports static thumbnail rendering.');

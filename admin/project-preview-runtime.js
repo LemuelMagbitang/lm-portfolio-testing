@@ -129,6 +129,8 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
           node.dataset.previewState = 'error';
           return;
         }
+        if (node.updateComplete && typeof node.updateComplete.then === 'function') await node.updateComplete;
+        if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
         clearPreviewError(node);
         node.setAttribute('background','transparent');
         node.setAttribute('preserveAspectRatio','xMidYMid slice');
@@ -140,11 +142,14 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
           const finish = value => { if (settled) return; settled = true; node.removeEventListener('ready', onReady); node.removeEventListener('error', onError); clearTimeout(timer); resolve(value); };
           const onReady = () => finish(true);
           const onError = () => finish(false);
-          const timer = setTimeout(() => finish(false), 8000);
+          const timer = setTimeout(() => finish(false), 12000);
           node.addEventListener('ready', onReady, {once:true});
           node.addEventListener('error', onError, {once:true});
           node.setAttribute('src',src);
-          if (node.getLottie?.()) finish(true);
+          // lottie-player 2.0.12 loads src during firstUpdated. CMS thumbnails
+          // are upgraded before the lazy source is assigned, so attribute-only
+          // updates do not reliably start the animation. Use its public loader.
+          if (typeof node.load === 'function') node.load(src);
         });
         if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
         const animation = node.getLottie?.();
