@@ -17,6 +17,7 @@
       "focus": "50% 50%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -104,6 +105,7 @@
       "focus": "50% 30%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -215,6 +217,7 @@
       "focus": "50% 30%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -254,6 +257,7 @@
       "focus": "50% 50%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -317,6 +321,7 @@
       "focus": "50% 30%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -350,6 +355,7 @@
       "focus": "50% 50%",
       "zoom": 1.3
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "youtube",
@@ -401,6 +407,7 @@
       "focus": "50% 20%",
       "zoom": 1.05
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "youtube",
@@ -458,11 +465,19 @@
       "focus": "49% 45%",
       "zoom": 1
     },
+    "mediaGroups": [
+      {
+        "id": "test-1",
+        "name": "test 1",
+        "layout": "cards"
+      }
+    ],
     "media": [
       {
         "type": "image",
         "src": "assets/projects/funko-pop/Asset 4@4x.png",
         "caption": "Smooth Prism Foil",
+        "groupId": "test-1",
         "orientation": "square",
         "holographic": {
           "style": "holographic",
@@ -476,6 +491,7 @@
         "type": "image",
         "src": "assets/projects/funko-pop/miles morales@4x.png",
         "caption": "Fine Brush Foil",
+        "groupId": "test-1",
         "orientation": "",
         "holographic": {
           "style": "brushed",
@@ -489,6 +505,7 @@
         "type": "image",
         "src": "assets/projects/funko-pop/mittens@4x.png",
         "caption": "Vertical Light Beams",
+        "groupId": "test-1",
         "orientation": "",
         "holographic": {
           "style": "beams",
@@ -502,6 +519,7 @@
         "type": "image",
         "src": "assets/projects/funko-pop/peter b@4x.png",
         "caption": "Crosshatch Foil",
+        "groupId": "test-1",
         "orientation": "",
         "holographic": {
           "style": "crosshatch",
@@ -515,6 +533,7 @@
         "type": "image",
         "src": "assets/projects/funko-pop/miguel o_hara@4x.png",
         "caption": "Shattered Ice",
+        "groupId": "test-1",
         "orientation": "",
         "holographic": {
           "style": "shattered",
@@ -609,6 +628,7 @@
       "focus": "50% 50%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -660,6 +680,7 @@
       "focus": "50% 30%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -723,6 +744,7 @@
       "focus": "50% 30%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "image",
@@ -762,6 +784,7 @@
       "focus": "50% 50%",
       "zoom": 1
     },
+    "mediaGroups": [],
     "media": [
       {
         "type": "lottie",
