@@ -8,7 +8,7 @@
  */
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
-import { normalizeProjects } from '../../data/project-normalizer.js?v=20261010-02';
+import { normalizeProjects } from '../../data/project-normalizer.js?v=20261010-03';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
 

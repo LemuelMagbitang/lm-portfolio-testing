@@ -12,7 +12,7 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../features/projects/index.js?v=20261010-03';
+} from '../features/projects/index.js?v=20261010-04';
 import { initNavigation } from '../features/navigation/index.js?v=20261009-01';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
@@ -20,8 +20,8 @@ import { initForms } from '../features/forms/index.js?v=20261010-03';
 import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
 
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261010-01';
-import { initFooterAnimation } from '../features/footer/index.js?v=20261010-01';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261010-02';
+import { initFooterAnimation } from '../features/footer/index.js?v=20261010-02';
 import { initLightbox } from '../features/lightbox/index.js?v=20261010-12';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 
@@ -49,7 +49,7 @@ export async function createPortfolioApp({
   // explicitly warms the viewer module graph during startup when a project
   // contains 3D media so the first viewer open does not pay the module-load cost.
   const loadModelViewerModule = async () => (
-    import('../infrastructure/three/model-viewer.js?v=20261010-15')
+    import('../infrastructure/three/model-viewer.js?v=20261010-16')
   );
 
   const mountModelViewer = async (...args) => {
