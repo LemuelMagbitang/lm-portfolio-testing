@@ -81,6 +81,20 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     }
     node.dataset.previewState='idle';
   }
+  function setPreviewError(node, message) {
+    const surface = node?.parentElement?.parentElement;
+    if (!surface) return;
+    let note = surface.querySelector?.('.project-collapsed-preview-error');
+    if (!note) {
+      note = doc.createElement('span');
+      note.className = 'project-collapsed-preview-error';
+      surface.appendChild(note);
+    }
+    note.textContent = message;
+  }
+  function clearPreviewError(node) {
+    node?.parentElement?.parentElement?.querySelector?.('.project-collapsed-preview-error')?.remove();
+  }
   function activate(node) {
     if(!ownsNode(node)||node.dataset.previewActive==='true'||node.dataset.previewState==='loading')return;
     const type=String(node.dataset.previewType||'').toLowerCase(),src=sourceUrl(node);
@@ -92,9 +106,40 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
       active.set(node,{type:'video'});node.dataset.previewState='ready';return;
     }
     if(type==='lottie') {
-      node.setAttribute('background','transparent');node.setAttribute('preserveAspectRatio','xMidYMid slice');
-      node.setAttribute('autoplay','');node.setAttribute('loop','');node.setAttribute('src',src);
-      active.set(node,{type:'lottie'});node.dataset.previewState='ready';return;
+      const job = (async () => {
+        let playerAvailable = !!view?.customElements?.get?.('lottie-player');
+        if (!playerAvailable) {
+          try {
+            // The CMS has a direct CDN script for the common path. Retry via
+            // the shared adapter if that request failed or the definition is
+            // not ready yet, rather than leaving a valid thumbnail blank.
+            const {ensureLottiePlayer} = await import('../js/infrastructure/lottie/player.js');
+            playerAvailable = await ensureLottiePlayer();
+          } catch (_) {
+            playerAvailable = false;
+          }
+        }
+        if (!ownsNode(node) || node.dataset.previewActive !== 'true') return;
+        if (!playerAvailable) {
+          setPreviewError(node, 'Lottie preview unavailable');
+          node.dataset.previewState = 'error';
+          return;
+        }
+        clearPreviewError(node);
+        node.setAttribute('background','transparent');
+        node.setAttribute('preserveAspectRatio','xMidYMid slice');
+        node.setAttribute('autoplay','');
+        node.setAttribute('loop','');
+        node.setAttribute('src',src);
+        active.set(node,{type:'lottie'});
+        node.dataset.previewState='ready';
+      })();
+      void job.catch(() => {
+        if (!ownsNode(node) || node.dataset.previewActive !== 'true') return;
+        setPreviewError(node, 'Lottie preview unavailable');
+        node.dataset.previewState = 'error';
+      });
+      return;
     }
     const job=modelQueue.then(async()=>{
       if(!ownsNode(node)||node.dataset.previewActive!=='true')return;
