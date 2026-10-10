@@ -293,3 +293,11 @@ This migration must not:
 
 
 - Latest UI cache identities: public Lightbox entry/renderer `?v=20261010-14`, public stylesheet `?v=20261010-15`, CMS admin JavaScript `?v=20261010-12`, project normalizer `?v=20261010-04`, and bootstrap/page-composition chain `20261010-18`.
+
+
+### October 10, 2026 — fullscreen Inspect and Cosmos visibility update
+
+- Horizontal Stack and Horizontal Card Layout retain their current responsive row/layered behavior. The grouped-card Inspector now has a dedicated touch-friendly control, a fitted full-screen media stage, description and usage hints, a Back action, and an origin-to-viewport expansion / reverse transition. Artwork keeps its declared aspect ratio; reduced-motion preferences bypass the transition.
+- Cosmos lower, middle, and upper CSS passes now use more visible resting opacity and independent blend choices so the material has depth without depending on device tilt to reveal the lower layers.
+- Cache contract current at this change: Lightbox public entry and media renderer `?v=20261010-15`, shared public stylesheet `?v=20261010-16`, app bootstrap/page-composition chain `20261010-19`, CMS `admin.js?v=20261010-12`, project normalizer `?v=20261010-04`. The architecture validator's canonical module map must stay aligned with the public entry/renderer cache identities.
+- CI audit for `cd5621d0c1f134bed4057f328e4a2b9e32dd41ec`: site-data/path/JavaScript validation, build, deploy, and build-status reporting passed; the architecture boundary step failed because its canonical Lightbox cache keys still expected `20261010-14`. This update aligns the guard with the intentional `20261010-15` module identity.
