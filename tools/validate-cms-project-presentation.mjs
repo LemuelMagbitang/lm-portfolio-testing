@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-02';
+import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-03';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261010-06';
 
@@ -244,7 +244,42 @@ await Promise.resolve();
 assert.notEqual(foilCanvas.dataset.normalMapStatus, 'ready', 'A destroyed renderer must not become ready after pending image requests resolve.');
 
 
+const groupedProject = normalizeProject({
+  id:'group-contract-test',title:'Group contract',subtitle:'Optional layout groups',
+  mediaGroups:[{id:'studies',name:'Studies',layout:'grid'}],
+  media:[
+    {type:'image',src:'assets/projects/test/one.jpg',groupId:'studies'},
+    {type:'image',src:'assets/projects/test/two.jpg',groupId:'missing-group'}
+  ]
+});
+assert.deepEqual(groupedProject.mediaGroups,[{id:'studies',name:'Studies',layout:'grid'}],
+  'Valid project groups must survive normalization.');
+assert.equal(groupedProject.media[0].groupId,'studies',
+  'Artwork membership must survive normalization.');
+assert.equal(groupedProject.media[1].groupId,undefined,
+  'Unknown group references must fall back to the default ungrouped presentation.');
+assert.ok(renderer.includes('function openArtworkInspect') &&
+  renderer.includes('lightbox-artwork-group-items') &&
+  renderer.includes('data-artwork-inspect-trigger'),
+  'The Lightbox runtime must render group containers and provide an explicit Inspect Mode action.');
+assert.ok(siteCss.includes('data-artwork-layout="grid"') &&
+  siteCss.includes('data-artwork-layout="stack"') &&
+  siteCss.includes('data-artwork-layout="cards"') &&
+  siteCss.includes('data-artwork-layout="flow"') &&
+  siteCss.includes('backdrop-filter:blur(8px)'),
+  'The public Lightbox must support all four group layouts plus the dimmed/blurred Inspect backdrop.');
+assert.ok(foilNormalRendererSource.includes('uniform float u_uvScale;') &&
+  foilNormalRendererSource.includes('fract(v_uv*u_uvScale)') &&
+  renderer.includes("uvScale: config.style === 'cosmos' ? 2"),
+  'Cosmos color maps, mask tiling and shader relief must share the 2x2 tile scale.');
+
 for (const marker of [
+  "data-artwork-groups",
+  "data-media-select",
+  "data-group-apply",
+  "data-group-target",
+  "data-edit-group-layout",
+  "Remove group &amp; ungroup artwork",
   "project-list-item",
   "project-card-head",
   "project-collapsed-preview",
@@ -334,7 +369,7 @@ assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
   renderer.includes("'cosmos-top': 'assets/holographic/cosmos-top-trans.png'"),
   'Each Cosmos layer must have its own source luminance map.');
 assert.ok(renderer.includes("modes.push('luminance')") &&
-  renderer.includes("applyFaceHolographicMask(layer, mapUrl, { size: '280px auto', repeat: 'repeat', position: '0 0' })"),
+  renderer.includes("applyFaceHolographicMask(layer, mapUrl, { size: '50% 50%', repeat: 'repeat', position: '0 0' })"),
   'Cosmos grayscale values must drive spectral layer coverage through luminance masks.');
 assert.ok(renderer.includes("['cosmos-bottom', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-bottom']") &&
   renderer.includes("['cosmos-middle', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-middle']") &&

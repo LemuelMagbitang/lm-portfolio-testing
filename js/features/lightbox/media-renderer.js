@@ -33,6 +33,7 @@ export function createLightboxMediaRenderer({
   let youtubePreloadRoot = null;
   let mediaPreloadRoot = null;
   let destroyed = false;
+  let activeInspector = null;
   const activePreloadCleanups = new Set();
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
@@ -1627,13 +1628,94 @@ export function createLightboxMediaRenderer({
     return null;
   }
 
+  function closeArtworkInspect() {
+    const active = activeInspector;
+    if (!active) return;
+    activeInspector = null;
+    active.overlay.removeEventListener('click', active.onBackdropClick);
+    active.overlay.removeEventListener('keydown', active.onKeyDown);
+    if (active.placeholder?.parentNode) active.placeholder.replaceWith(active.entry);
+    active.overlay.remove();
+    try { active.focusTarget?.focus?.({preventScroll:true}); }
+    catch (_) { try { active.focusTarget?.focus?.(); } catch (_) {} }
+  }
+
+  function openArtworkInspect(container, entry, project, focusTarget) {
+    if (!entry?.parentNode || !container) return;
+    if (activeInspector) closeArtworkInspect();
+    const parent = entry.parentNode;
+    const placeholder = documentRef.createElement('div');
+    placeholder.className = 'lightbox-inspect-placeholder';
+    const rect = entry.getBoundingClientRect?.();
+    if (rect?.width) placeholder.style.width = Math.round(rect.width) + 'px';
+    if (rect?.height) placeholder.style.height = Math.round(rect.height) + 'px';
+    placeholder.setAttribute('aria-hidden', 'true');
+    parent.insertBefore(placeholder, entry);
+
+    const overlay = documentRef.createElement('div');
+    overlay.className = 'lightbox-inspect-mode';
+    overlay.dataset.inspectMode = 'true';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Inspect artwork in ' + String(project.title || 'this project'));
+    const panel = documentRef.createElement('div');
+    panel.className = 'lightbox-inspect-panel';
+    const toolbar = documentRef.createElement('div');
+    toolbar.className = 'lightbox-inspect-toolbar';
+    const title = documentRef.createElement('strong');
+    title.textContent = String(entry.querySelector('.media-caption')?.textContent || project.title || 'Artwork detail');
+    const back = documentRef.createElement('button');
+    back.type = 'button';
+    back.className = 'lightbox-inspect-back';
+    back.textContent = 'Back to gallery';
+    back.setAttribute('aria-label', 'Close Inspect Mode and return to the artwork group');
+    back.addEventListener('click', closeArtworkInspect);
+    const stage = documentRef.createElement('div');
+    stage.className = 'lightbox-inspect-stage';
+    toolbar.append(title, back);
+    stage.appendChild(entry);
+    panel.append(toolbar, stage);
+    overlay.appendChild(panel);
+    const onBackdropClick = event => {
+      if (event.target === overlay) closeArtworkInspect();
+    };
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeArtworkInspect();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusables = Array.from(overlay.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]'))
+        .filter(node => !node.closest('[hidden],[inert]'));
+      if (!focusables.length) { event.preventDefault(); back.focus(); return; }
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (event.shiftKey && documentRef.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && documentRef.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    overlay.addEventListener('click', onBackdropClick);
+    overlay.addEventListener('keydown', onKeyDown);
+    activeInspector = {container,entry,placeholder,overlay,focusTarget:focusTarget || back,onBackdropClick,onKeyDown};
+    container.appendChild(overlay);
+    try { back.focus({preventScroll:true}); } catch (_) { back.focus?.(); }
+  }
+
   function renderProjectMedia(container, project = {}) {
     if (!container) return 0;
 
     const mediaList = Array.isArray(project.media) && project.media.length
       ? project.media
       : (project.thumbnail?.src ? [{ ...project.thumbnail }] : []);
-
+    const groups = new Map(
+      (Array.isArray(project.mediaGroups) ? project.mediaGroups : [])
+        .filter(group => group && typeof group === 'object' && String(group.id || '').trim())
+        .map(group => [String(group.id), {
+          id:String(group.id), name:String(group.name || group.id),
+          layout:['grid','stack','cards','flow'].includes(group.layout) ? group.layout : 'grid'
+        }])
+    );
+    const groupNodes = new Map();
     let rendered = 0;
     container.dataset.mediaDensity = mediaList.length > 2 ? 'multi' : 'single';
     container.setAttribute(
@@ -1643,7 +1725,48 @@ export function createLightboxMediaRenderer({
     mediaList.forEach((item, index) => {
       const entry = renderItem(item, project, index);
       if (!entry) return;
-      container.appendChild(entry);
+      const group = groups.get(String(item.groupId || ''));
+      let destination = container;
+      if (group) {
+        let section = groupNodes.get(group.id);
+        if (!section) {
+          section = documentRef.createElement('section');
+          section.className = 'lightbox-artwork-group';
+          section.dataset.artworkGroup = group.id;
+          section.dataset.artworkLayout = group.layout;
+          section.setAttribute('role', 'region');
+          section.setAttribute('aria-label', 'Artwork Group: ' + group.name);
+          const heading = documentRef.createElement('h3');
+          heading.className = 'lightbox-artwork-group-title';
+          heading.textContent = group.name;
+          const items = documentRef.createElement('div');
+          items.className = 'lightbox-artwork-group-items';
+          section.append(heading, items);
+          container.appendChild(section);
+          groupNodes.set(group.id, section);
+        }
+        destination = section.querySelector('.lightbox-artwork-group-items') || section;
+        entry.classList.add('has-artwork-inspector');
+        const inspect = documentRef.createElement('button');
+        inspect.type = 'button';
+        inspect.className = 'lightbox-artwork-inspect-trigger';
+        inspect.dataset.artworkInspectTrigger = 'true';
+        inspect.textContent = 'Inspect';
+        inspect.setAttribute('aria-label', 'Inspect ' + String(item.caption || project.title || 'artwork'));
+        inspect.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          openArtworkInspect(container, entry, project, inspect);
+        });
+        entry.appendChild(inspect);
+        entry.addEventListener('click', event => {
+          if (event.target.closest?.('[data-artwork-inspect-trigger]')) return;
+          // Preserve foil flip, video playback, YouTube and explicit control input.
+          if (event.target.closest?.('.lightbox-holographic,button,a,input,select,textarea,video,iframe,canvas')) return;
+          openArtworkInspect(container, entry, project, inspect);
+        });
+      }
+      destination.appendChild(entry);
       const video = entry.querySelector("video");
       if (video) bindPlaybackHandoff(container, video, "video");
       const youtube = entry.querySelector("iframe[data-lm-youtube]");
@@ -1652,15 +1775,13 @@ export function createLightboxMediaRenderer({
     });
 
     const youtubeFrames = container.querySelectorAll('iframe[data-lm-youtube]');
-    if (youtubeFrames.length) {
-      bindYouTubeStateHandoff(container);
-    }
-
+    if (youtubeFrames.length) bindYouTubeStateHandoff(container);
     return rendered;
   }
 
   function destroy() {
     destroyed = true;
+    if (activeInspector) closeArtworkInspect();
     Array.from(holographicCleanups).reverse().forEach(cleanup => {
       try { cleanup(); } catch (_) {}
       holographicCleanups.delete(cleanup);
@@ -1695,6 +1816,7 @@ export function createLightboxMediaRenderer({
 
   function dispose(container) {
     if (!container) return;
+    if (activeInspector?.container === container) closeArtworkInspect();
     Array.from(holographicCleanups).reverse().forEach(cleanup => {
       try { cleanup(); } catch (_) {}
       holographicCleanups.delete(cleanup);
