@@ -1005,13 +1005,15 @@ try {
       await funkoHolo.click({ force: true });
       const inspectMode = page.locator('#lightboxMediaContainer .lightbox-inspect-mode');
       await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
+      const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
+      await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
       await page.waitForTimeout(500); // let the card-to-viewport transition settle
-      if (await funkoHolo.evaluate(el => el.classList.contains('is-flipped'))) {
+      if (await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
       }
-      await funkoHolo.click({ force: true });
-      if (!(await funkoHolo.evaluate(el => el.classList.contains('is-flipped')))) {
-        throw new Error('Uploaded artwork did not flip to its default mirrored reverse inside Inspect.');
+      await inspectedHolo.click({ force: true });
+      if (!(await inspectedHolo.evaluate(el => el.classList.contains('is-flipped')))) {
+        throw new Error('Inspected artwork did not flip to its default mirrored reverse inside Inspect.');
       }
       await page.locator('#lightboxClose').first().click();
       await page.waitForTimeout(100);
