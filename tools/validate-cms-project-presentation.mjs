@@ -10,6 +10,7 @@ const adminHtml = fs.readFileSync(path.join(root, 'admin/index.html'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'admin/admin.css'), 'utf8');
 const siteCss = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 const renderer = fs.readFileSync(path.join(root, 'js/features/lightbox/media-renderer.js'), 'utf8');
+const foilNormalRendererSource = fs.readFileSync(path.join(root, 'js/features/lightbox/foil-normal-renderer.js'), 'utf8');
 const previewRuntime = fs.readFileSync(path.join(root, 'admin/project-preview-runtime.js'), 'utf8');
 const modelViewer = fs.readFileSync(path.join(root, 'js/infrastructure/three/model-viewer.js'), 'utf8');
 const projectsData = JSON.parse(fs.readFileSync(path.join(root, 'data/projects.json'), 'utf8'));
@@ -142,6 +143,18 @@ assert.equal(layeredFoil.grainLayer, false, 'Grain layer supports an explicit op
 const legacyFoil = normalizeProjectMedia({type:'image',src:'assets/projects/test/front.png',holographic:{style:'cosmos'}}).holographic;
 assert.equal(legacyFoil.grainLayer, true, 'Old foil data keeps the legacy grain default.');
 assert.equal(legacyFoil.glitterLayer, false, 'Glitter remains opt-in for existing artwork.');
+
+assert.ok(
+  foilNormalRendererSource.includes('float broadSpecular=') &&
+  foilNormalRendererSource.includes('float fresnel=') &&
+  foilNormalRendererSource.includes('diffuse*0.12'),
+  'Foil relief should combine broad diffuse reflection with a grazing-angle Fresnel response.'
+);
+assert.ok(
+  foilNormalRendererSource.includes('view?.requestAnimationFrame') &&
+  foilNormalRendererSource.includes('cancelAnimationFrame'),
+  'Foil redraws should be frame-coalesced and pending animation frames cancelled on teardown.'
+);
 
 for (const marker of [
   "project-list-item",
