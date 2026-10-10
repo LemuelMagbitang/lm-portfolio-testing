@@ -34,6 +34,8 @@ export function createLightboxMediaRenderer({
   let mediaPreloadRoot = null;
   let destroyed = false;
   let activeInspector = null;
+  const artworkGroupLayoutCleanups = new Set();
+  const artworkGroupInteractionCleanups = new Set();
   const activePreloadCleanups = new Set();
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
@@ -1706,9 +1708,143 @@ export function createLightboxMediaRenderer({
     try { back.focus({preventScroll:true}); } catch (_) { back.focus?.(); }
   }
 
+  function measureArtworkGroupLayout(record) {
+    const {section, items, requestedLayout, entries} = record;
+    if (!section?.isConnected || !items) return;
+    const allFoil = entries.length > 0 && entries.every(entry => entry.dataset.artworkFoil === 'true');
+    section.dataset.artworkAllFoil = allFoil ? 'true' : 'false';
+
+    // Only foil artwork uses the responsive horizontal-to-layered treatment.
+    // Mixed or non-foil groups fall back to the clean grid instead of hiding
+    // artwork beneath overlapping cards.
+    if (requestedLayout === 'grid' || !allFoil) {
+      section.dataset.artworkEffectiveLayout = 'grid';
+      return;
+    }
+
+    const computed = windowRef?.getComputedStyle?.(items);
+    const gap = Number.parseFloat(computed?.columnGap || computed?.gap) || 18;
+    const targetHeight = entries.reduce((maxHeight, entry) => {
+      const stage = entry.querySelector('.lightbox-artwork');
+      return Math.max(maxHeight, Number.parseFloat(windowRef?.getComputedStyle?.(stage)?.height) || 0);
+    }, 0);
+    const naturalWidth = entries.reduce((total, entry) => {
+      const stage = entry.querySelector('.lightbox-artwork');
+      const storedRatio = Number.parseFloat(stage?.style?.getPropertyValue('--lightbox-artwork-ratio'));
+      const actualRatio = storedRatio > 0 ? storedRatio : 1;
+      return total + (targetHeight > 0 ? targetHeight * actualRatio : (stage?.getBoundingClientRect?.().width || 240));
+    }, 0) + Math.max(0, entries.length - 1) * gap;
+
+    const narrowViewport = Boolean(windowRef?.matchMedia?.('(max-width: 760px)')?.matches);
+    const exceedsAvailableWidth = naturalWidth > (items.clientWidth || 0) + 2;
+    section.dataset.artworkEffectiveLayout = narrowViewport || exceedsAvailableWidth ? 'layered' : 'horizontal';
+  }
+
+  function watchArtworkGroupLayout(container, record) {
+    const apply = () => measureArtworkGroupLayout(record);
+    const onResize = () => apply();
+    const Observer = windowRef?.ResizeObserver;
+    let observer = null;
+    if (typeof Observer === 'function') {
+      observer = new Observer(apply);
+      observer.observe(record.items);
+      record.entries.forEach(entry => {
+        const stage = entry.querySelector('.lightbox-artwork');
+        if (stage) observer.observe(stage);
+      });
+    }
+    windowRef?.addEventListener?.('resize', onResize, {passive:true});
+    const frame = windowRef?.requestAnimationFrame?.(apply);
+    const cleanup = () => {
+      observer?.disconnect();
+      windowRef?.removeEventListener?.('resize', onResize);
+      if (frame !== undefined) windowRef?.cancelAnimationFrame?.(frame);
+    };
+    artworkGroupLayoutCleanups.add({container, cleanup});
+    apply();
+  }
+
+  function disposeArtworkGroupLayouts(container = null) {
+    Array.from(artworkGroupLayoutCleanups).forEach(record => {
+      if (container && record.container !== container) return;
+      try { record.cleanup(); } catch (_) {}
+      artworkGroupLayoutCleanups.delete(record);
+    });
+  }
+
+  function bindGroupedArtworkInteractions(container, entry, project, section) {
+    entry.classList.add('has-artwork-inspector');
+    entry.tabIndex = 0;
+    entry.setAttribute('aria-label', String(entry.querySelector('img')?.alt || entry.querySelector('iframe')?.title || entry.querySelector('.media-caption')?.textContent || project.title || 'Artwork') + '. Press Enter to inspect.');
+    let holdTimer = null;
+    let pointerStart = null;
+    let holdOpened = false;
+    const clearHoldTimer = () => {
+      if (holdTimer !== null) {
+        windowRef?.clearTimeout?.(holdTimer);
+        holdTimer = null;
+      }
+    };
+    const onPointerDown = event => {
+      if (!['horizontal','layered'].includes(section.dataset.artworkEffectiveLayout)) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (event.target.closest?.('button,a,input,select,textarea,video,iframe,canvas,.lightbox-inspect-back')) return;
+      clearHoldTimer();
+      holdOpened = false;
+      pointerStart = {x:Number(event.clientX)||0,y:Number(event.clientY)||0};
+      holdTimer = windowRef?.setTimeout?.(() => {
+        holdTimer = null;
+        holdOpened = true;
+        openArtworkInspect(container, entry, project, entry);
+      }, 520);
+    };
+    const onPointerMove = event => {
+      if (!pointerStart || holdTimer === null) return;
+      const dx = (Number(event.clientX)||0) - pointerStart.x;
+      const dy = (Number(event.clientY)||0) - pointerStart.y;
+      if (Math.hypot(dx,dy) > 10) {
+        clearHoldTimer();
+        pointerStart = null;
+      }
+    };
+    const onPointerUp = () => {
+      clearHoldTimer();
+      pointerStart = null;
+    };
+    entry.addEventListener('pointerdown', onPointerDown, {passive:true});
+    entry.addEventListener('pointermove', onPointerMove, {passive:true});
+    entry.addEventListener('pointerup', onPointerUp, {passive:true});
+    entry.addEventListener('pointercancel', onPointerUp, {passive:true});
+    entry.addEventListener('click', event => {
+      if (holdOpened) {
+        holdOpened = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      // Clicking a foil surface continues to flip the card. Inspection is a
+      // press-and-hold interaction for foil cards and a direct click for
+      // non-foil artwork; there is no always-visible Inspect button.
+      if (event.target.closest?.('.lightbox-holographic')) return;
+      if (event.target.closest?.('button,a,input,select,textarea,video,iframe,canvas')) return;
+      openArtworkInspect(container, entry, project, entry);
+    });
+    entry.addEventListener('keydown', event => {
+      if (event.target !== entry || !['Enter',' '].includes(event.key)) return;
+      event.preventDefault();
+      openArtworkInspect(container, entry, project, entry);
+    });
+    artworkGroupInteractionCleanups.add(() => {
+      clearHoldTimer();
+      entry.removeEventListener('pointerdown', onPointerDown);
+      entry.removeEventListener('pointermove', onPointerMove);
+      entry.removeEventListener('pointerup', onPointerUp);
+      entry.removeEventListener('pointercancel', onPointerUp);
+    });
+  }
+
   function renderProjectMedia(container, project = {}) {
     if (!container) return 0;
-
     const mediaList = Array.isArray(project.media) && project.media.length
       ? project.media
       : (project.thumbnail?.src ? [{ ...project.thumbnail }] : []);
@@ -1717,77 +1853,65 @@ export function createLightboxMediaRenderer({
         .filter(group => group && typeof group === 'object' && String(group.id || '').trim())
         .map(group => [String(group.id), {
           id:String(group.id), name:String(group.name || group.id),
-          layout:['grid','stack','cards','flow'].includes(group.layout) ? group.layout : 'grid'
+          layout:['grid','stack','cards'].includes(group.layout) ? group.layout : 'grid'
         }])
     );
-    const groupNodes = new Map();
+    const groupRecords = new Map();
     let rendered = 0;
     container.dataset.mediaDensity = mediaList.length > 2 ? 'multi' : 'single';
     container.setAttribute(
       'data-has-youtube',
       mediaList.some(item => String(item?.type || '').toLowerCase() === 'youtube') ? 'true' : 'false'
     );
+
     mediaList.forEach((item, index) => {
       const entry = renderItem(item, project, index);
       if (!entry) return;
       const group = groups.get(String(item.groupId || ''));
       let destination = container;
+
       if (group) {
-        let section = groupNodes.get(group.id);
-        if (!section) {
-          section = documentRef.createElement('section');
+        let record = groupRecords.get(group.id);
+        if (!record) {
+          const section = documentRef.createElement('section');
           section.className = 'lightbox-artwork-group';
           section.dataset.artworkGroup = group.id;
           section.dataset.artworkLayout = group.layout;
+          section.dataset.artworkEffectiveLayout = 'grid';
           section.setAttribute('role', 'region');
           section.setAttribute('aria-label', 'Artwork Group: ' + group.name);
-          const heading = documentRef.createElement('h3');
-          heading.className = 'lightbox-artwork-group-title';
-          heading.textContent = group.name;
           const items = documentRef.createElement('div');
           items.className = 'lightbox-artwork-group-items';
-          section.append(heading, items);
+          section.appendChild(items);
           container.appendChild(section);
-          groupNodes.set(group.id, section);
+          record = {section,items,requestedLayout:group.layout,entries:[]};
+          groupRecords.set(group.id,record);
         }
-        destination = section.querySelector('.lightbox-artwork-group-items') || section;
-        entry.classList.add('has-artwork-inspector');
-        const inspect = documentRef.createElement('button');
-        inspect.type = 'button';
-        inspect.className = 'lightbox-artwork-inspect-trigger';
-        inspect.dataset.artworkInspectTrigger = 'true';
-        inspect.textContent = 'Inspect';
-        inspect.setAttribute('aria-label', 'Inspect ' + String(item.caption || project.title || 'artwork'));
-        inspect.addEventListener('click', event => {
-          event.preventDefault();
-          event.stopPropagation();
-          openArtworkInspect(container, entry, project, inspect);
-        });
-        entry.appendChild(inspect);
-        entry.addEventListener('click', event => {
-          if (event.target.closest?.('[data-artwork-inspect-trigger]')) return;
-          // Preserve foil flip, video playback, YouTube and explicit control input.
-          if (event.target.closest?.('button,a,input,select,textarea,video,iframe,canvas')) return;
-          // A foil-surface click keeps its flip behavior and also opens the requested inspector.
-          openArtworkInspect(container, entry, project, inspect);
-        });
+        record.entries.push(entry);
+        entry.dataset.artworkFoil = entry.querySelector('.lightbox-holographic') ? 'true' : 'false';
+        bindGroupedArtworkInteractions(container, entry, project, record.section);
+        destination = record.items;
       }
+
       destination.appendChild(entry);
-      const video = entry.querySelector("video");
-      if (video) bindPlaybackHandoff(container, video, "video");
-      const youtube = entry.querySelector("iframe[data-lm-youtube]");
-      if (youtube) bindPlaybackHandoff(container, youtube, "youtube");
+      const video = entry.querySelector('video');
+      if (video) bindPlaybackHandoff(container, video, 'video');
+      const youtube = entry.querySelector('iframe[data-lm-youtube]');
+      if (youtube) bindPlaybackHandoff(container, youtube, 'youtube');
       rendered += 1;
     });
 
+    groupRecords.forEach(record => watchArtworkGroupLayout(container, record));
     const youtubeFrames = container.querySelectorAll('iframe[data-lm-youtube]');
     if (youtubeFrames.length) bindYouTubeStateHandoff(container);
     return rendered;
   }
-
   function destroy() {
     destroyed = true;
     if (activeInspector) closeArtworkInspect();
+    disposeArtworkGroupLayouts();
+    artworkGroupInteractionCleanups.forEach(cleanup => { try { cleanup(); } catch (_) {} });
+    artworkGroupInteractionCleanups.clear();
     Array.from(holographicCleanups).reverse().forEach(cleanup => {
       try { cleanup(); } catch (_) {}
       holographicCleanups.delete(cleanup);
@@ -1823,6 +1947,9 @@ export function createLightboxMediaRenderer({
   function dispose(container) {
     if (!container) return;
     if (activeInspector?.container === container) closeArtworkInspect();
+    disposeArtworkGroupLayouts(container);
+    artworkGroupInteractionCleanups.forEach(cleanup => { try { cleanup(); } catch (_) {} });
+    artworkGroupInteractionCleanups.clear();
     Array.from(holographicCleanups).reverse().forEach(cleanup => {
       try { cleanup(); } catch (_) {}
       holographicCleanups.delete(cleanup);
