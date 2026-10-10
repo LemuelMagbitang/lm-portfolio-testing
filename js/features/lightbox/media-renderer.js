@@ -926,7 +926,7 @@ export function createLightboxMediaRenderer({
 
       // Blend all available Cosmos maps and the custom foil pattern into one relief normal.
       const normalPatternUrls = [
-        ...(config.style === 'cosmos' ? Object.values(HOLOGRAPHIC_COSMOS_MAPS).map(resolveAssetUrl) : []),
+        ...(config.style === 'cosmos' ? Object.values(HOLOGRAPHIC_COSMOS_MAPS).map(path => resolveAssetUrl(path)) : []),
         ...(faceTextureUrl ? [faceTextureUrl] : [])
       ].filter(Boolean).slice(0, 4);
       if (normalPatternUrls.length) {
