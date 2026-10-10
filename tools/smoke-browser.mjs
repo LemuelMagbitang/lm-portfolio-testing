@@ -5084,6 +5084,7 @@ try {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
+            headers: { 'Access-Control-Allow-Origin': '*' },
             body: readFileSync(new URL('../assets/projects/test/Sample.json', import.meta.url), 'utf8')
           });
           return;
