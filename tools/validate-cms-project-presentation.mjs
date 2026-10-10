@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-03';
+import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-04';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261010-06';
 
@@ -260,17 +260,24 @@ assert.equal(groupedProject.media[1].groupId,undefined,
   'Unknown group references must fall back to the default ungrouped presentation.');
 assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes('lightbox-artwork-group-items') &&
-  renderer.includes('data-artwork-inspect-trigger'),
-  'The Lightbox runtime must render group containers and provide an explicit Inspect Mode action.');
-assert.ok(siteCss.includes('data-artwork-layout="grid"') &&
-  siteCss.includes('data-artwork-layout="stack"') &&
-  siteCss.includes('data-artwork-layout="cards"') &&
-  siteCss.includes('data-artwork-layout="flow"') &&
-  siteCss.includes('backdrop-filter:blur(8px)'),
-  'The public Lightbox must support all four group layouts plus the dimmed/blurred Inspect backdrop.');
-assert.ok(siteCss.includes('#lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-artwork-group-items{display:flex;overflow-x:auto;') &&
-  siteCss.includes('flex:0 0 min(32%,320px)'),
-  'Horizontal Card Layout must render as a scrollable row of compact cards, separate from the larger Horizontal Stack.');
+  renderer.includes('holdOpened = true') &&
+  renderer.includes("event.target.closest?.('.lightbox-holographic')"),
+  'Grouped artwork must inspect on selection/hold while preserving the foil flip click.');
+assert.ok(siteCss.includes('data-artwork-effective-layout="grid"') &&
+  siteCss.includes('data-artwork-effective-layout="horizontal"') &&
+  siteCss.includes('data-artwork-effective-layout="layered"') &&
+  siteCss.includes('backdrop-filter:blur(8px)') &&
+  siteCss.includes('background:transparent;box-shadow:none;'),
+  'Artwork groups must use only the clean grid/horizontal/layered presentation states with a blurred Inspector backdrop.');
+assert.ok(!admin.includes('value="flow"') &&
+  !/textContent\s*=\s*['"]Inspect['"]/.test(renderer) &&
+  !siteCss.includes('data-artwork-layout="flow"'),
+  'Flow layout, visible Inspect buttons and legacy flow styling must not remain in the active presentation contract.');
+assert.ok(siteCss.includes('data-artwork-effective-layout="layered" .lightbox-artwork-group-items') &&
+  siteCss.includes('flex-flow:row wrap') &&
+  siteCss.includes('overflow:visible') &&
+  siteCss.includes('height:clamp(210px,42svh,360px)'),
+  'Responsive layered cards must wrap without a horizontal scroller and keep equal-height, aspect-aware artwork frames.');
 assert.ok(foilNormalRendererSource.includes('uniform float u_uvScale;') &&
   foilNormalRendererSource.includes('fract(v_uv*u_uvScale)') &&
   renderer.includes("uvScale: config.style === 'cosmos' ? 2"),

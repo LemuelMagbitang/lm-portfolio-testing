@@ -36,7 +36,7 @@ const canonicalModuleQueries = new Map([
   ['features/lightbox/index.js', '?v=20261010-13'],
   ['features/lightbox/media-renderer.js', '?v=20261010-13'],
   ['features/lightbox/foil-normal-renderer.js', '?v=20261010-06'],
-  ['data/project-normalizer.js', '?v=20261010-03']
+  ['data/project-normalizer.js', '?v=20261010-04']
 ]);
 
 for (const legacy of legacyRootModules) {

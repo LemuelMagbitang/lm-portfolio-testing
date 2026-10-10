@@ -17,7 +17,7 @@ const SUPPORTED_MEDIA = new Set(['image', 'video', 'youtube', 'lottie', 'model']
 const SUPPORTED_MODEL_EXT = new Set(['obj', 'gltf', 'glb', 'fbx']);
 const ORIENTATIONS = new Set(['', 'auto', 'landscape', 'portrait', 'square']);
 const SUPPORTED_HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
-const SUPPORTED_ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','flow']);
+const SUPPORTED_ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards']);
 
 function readText(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');

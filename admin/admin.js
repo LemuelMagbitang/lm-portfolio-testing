@@ -2303,7 +2303,7 @@ function serializeProjectEditorModel(project){
     mediaGroups:(Array.isArray(project.mediaGroups) ? project.mediaGroups : []).map(group => ({
       id:String(group.id || ''),
       name:String(group.name || ''),
-      layout:['grid','stack','cards','flow'].includes(group.layout) ? group.layout : 'grid'
+      layout:['grid','stack','cards'].includes(group.layout) ? group.layout : 'grid'
     })).filter(group => group.id && group.name),
     media:(Array.isArray(project.media) ? project.media : []).map(media => ({
       type:media.type,
@@ -2333,7 +2333,7 @@ function buildProjectBody(el, p, options = {}){
     ? p.mediaGroups.filter(group => group && typeof group === 'object').map(group => ({
         id:String(group.id || ''),
         name:String(group.name || ''),
-        layout:['grid','stack','cards','flow'].includes(group.layout) ? group.layout : 'grid'
+        layout:['grid','stack','cards'].includes(group.layout) ? group.layout : 'grid'
       })).filter(group => group.id && group.name)
     : [];
   const validArtworkGroupIds = new Set(p.mediaGroups.map(group => group.id));
@@ -2411,7 +2411,7 @@ function buildProjectBody(el, p, options = {}){
         </div>
         <div class="row artwork-group-create-row">
           <div class="field"><label class="field-label" for="artworkGroupName">New group name</label><input id="artworkGroupName" data-new-group-name maxlength="80" placeholder="e.g. Character studies"></div>
-          <div class="field"><label class="field-label" for="artworkGroupLayout">Layout</label><select id="artworkGroupLayout" data-new-group-layout><option value="grid">Grid / Tiling (columns)</option><option value="stack">Horizontal Stack</option><option value="cards">Horizontal Card Layout</option><option value="flow">Flow Layout</option></select></div>
+          <div class="field"><label class="field-label" for="artworkGroupLayout">Layout</label><select id="artworkGroupLayout" data-new-group-layout><option value="grid">Grid / Tiling (columns)</option><option value="stack">Horizontal Stack</option><option value="cards">Horizontal Card Layout</option></select></div>
           <div class="field"><label class="field-label" for="artworkGroupTarget">Add to existing group</label><select id="artworkGroupTarget" data-group-target><option value="">Create a new group…</option></select></div>
         </div>
         <div class="artwork-group-actions">
@@ -2672,7 +2672,7 @@ function buildProjectBody(el, p, options = {}){
       const baseId = slugify(name) || 'artwork-group';
       let id = baseId, suffix = 2;
       while (p.mediaGroups.some(group => group.id === id)) id = `${baseId}-${suffix++}`;
-      target = {id, name, layout:['grid','stack','cards','flow'].includes(groupLayoutInput?.value) ? groupLayoutInput.value : 'grid'};
+      target = {id, name, layout:['grid','stack','cards'].includes(groupLayoutInput?.value) ? groupLayoutInput.value : 'grid'};
       p.mediaGroups.push(target);
       if (groupNameInput) groupNameInput.value = '';
       if (groupTarget) groupTarget.value = target.id;

@@ -9,7 +9,7 @@
 const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 const HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
-const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','flow']);
+const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards']);
 function normalizeMediaGroups(groups) {
   if (!Array.isArray(groups)) return [];
   const seen = new Set();
