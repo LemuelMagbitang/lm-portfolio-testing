@@ -4876,7 +4876,8 @@ try {
         const rect = preview?.getBoundingClientRect();
         return !!player && !!rect && rect.width > 0 && rect.height > 0 &&
           player.dataset.previewState === 'ready' && player.hasAttribute('src') &&
-          !!window.customElements?.get?.('lottie-player');
+          !!window.customElements?.get?.('lottie-player') &&
+          !!player.shadowRoot?.querySelector('svg') && !!player.getLottie?.();
       }, null, { timeout: 12000 });
       await lottieThumbProject.locator('[data-toggle-open]').click();
       await page.waitForFunction(() => {
@@ -5060,7 +5061,7 @@ try {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 440, h: 478, nm: 'Smoke', ddd: 0, assets: [], layers: [] })
+            body: JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 440, h: 478, nm: 'Smoke', ddd: 0, assets: [], layers: [{ ddd: 0, ind: 1, ty: 4, nm: 'Visible smoke shape', sr: 1, ks: { o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [220, 239, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } }, ao: 0, shapes: [{ ty: 'rc', d: 1, s: { a: 0, k: [180, 180] }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 24 }, nm: 'Rectangle Path' }, { ty: 'fl', c: { a: 0, k: [0.2, 0.8, 1, 1] }, o: { a: 0, k: 100 }, r: 1, nm: 'Fill' }, { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 }, sk: { a: 0, k: 0 }, sa: { a: 0, k: 0 } }], ip: 0, op: 60, st: 0, bm: 0 }] })
           });
           return;
         }

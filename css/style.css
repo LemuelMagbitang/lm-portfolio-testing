@@ -5108,3 +5108,40 @@ footer > .footer-content p{
  opacity:calc(.02 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .20) + (var(--holo-tilt-strength,0) * .06));animation-duration:8.6s;
 }
 @media(prefers-reduced-motion:reduce){#lightboxMediaContainer .lightbox-holographic-cosmos-layer,#lightboxMediaContainer .lightbox-holographic-grain-layer,#lightboxMediaContainer .lightbox-holographic-glitter-layer{animation:none!important;transition:none!important;}}
+
+
+/* Pattern relief pass: source maps contribute visible material detail as well as
+   luminance coverage. Tilt-following highlights and opposed shadows add shallow
+   height cues while preserving the established card silhouette and textures. */
+#lightboxMediaContainer .lightbox-holographic-cosmos-bottom,
+#lightboxMediaContainer .lightbox-holographic-cosmos-middle,
+#lightboxMediaContainer .lightbox-holographic-cosmos-top {
+  background-repeat:no-repeat;
+  transition:filter 150ms ease-out,opacity 150ms ease-out;
+}
+#lightboxMediaContainer .lightbox-holographic-cosmos-bottom {
+  background-image:url("../assets/holographic/cosmos-bottom.png"),conic-gradient(from calc(138deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#ffe875 0deg,#b8ff5c 42deg,#42f2c7 86deg,#48d7ff 130deg,#7583ff 175deg,#db65ff 220deg,#ff5da8 265deg,#ff9a69 315deg,#ffe875 360deg),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.34) 29%,rgba(255,255,255,.05) 38%,rgba(255,255,255,.42) 47%,rgba(131,238,255,.20) 52%,rgba(0,5,24,.12) 61%,transparent 72%),radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.62),rgba(174,230,255,.18) 34%,transparent 72%);
+  background-size:100% 100%,210% 190%,340% 280%,160% 160%;
+  background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
+  background-blend-mode:soft-light,screen,screen,screen;
+  filter:brightness(1.02) contrast(1.48) saturate(1.62);
+}
+#lightboxMediaContainer .lightbox-holographic-cosmos-middle {
+  background-image:url("../assets/holographic/cosmos-middle-trans.png"),conic-gradient(from calc(218deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#45fff2 0deg,#45c6ff 45deg,#777cff 90deg,#cf69ff 135deg,#ff73d8 180deg,#fff6b7 220deg,#5dffd0 265deg,#439fff 315deg,#45fff2 360deg),linear-gradient(calc(126deg + var(--holo-angle,0deg)),transparent 16%,rgba(2,8,28,.30) 28%,rgba(255,255,255,.05) 35%,rgba(207,249,255,.46) 46%,rgba(247,195,255,.25) 52%,rgba(2,8,28,.12) 63%,transparent 76%),radial-gradient(ellipse 34% 30% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(238,255,255,.72),rgba(195,219,255,.20) 35%,transparent 72%);
+  background-size:100% 100%,230% 220%,300% 240%,170% 170%;
+  background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
+  background-blend-mode:soft-light,screen,screen,screen;
+  filter:brightness(1.02) contrast(1.52) saturate(1.68);
+}
+#lightboxMediaContainer .lightbox-holographic-cosmos-top {
+  background-image:url("../assets/holographic/cosmos-top-trans.png"),conic-gradient(from calc(318deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#fff5ff 0deg,#63f6ff 38deg,#567eff 84deg,#ef5dff 128deg,#ff8bc8 174deg,#ffffff 222deg,#ffe47a 276deg,#58fff1 326deg,#fff5ff 360deg),linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.26) 30%,rgba(255,255,255,.08) 39%,rgba(255,255,255,.58) 47%,rgba(178,239,255,.28) 51%,rgba(247,218,255,.11) 56%,rgba(0,5,24,.10) 64%,transparent 74%);
+  background-size:100% 100%,250% 230%,280% 230%;
+  background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
+  background-blend-mode:soft-light,screen,screen;
+  filter:brightness(1.04) contrast(1.6) saturate(1.78);
+}
+@media(prefers-reduced-motion:reduce) {
+  #lightboxMediaContainer .lightbox-holographic-cosmos-bottom,
+  #lightboxMediaContainer .lightbox-holographic-cosmos-middle,
+  #lightboxMediaContainer .lightbox-holographic-cosmos-top { transition:none!important; }
+}

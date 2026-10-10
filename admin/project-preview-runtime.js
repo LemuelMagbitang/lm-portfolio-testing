@@ -11,6 +11,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
   let disposed = false;
   const visible = new Set(), active = new Map();
   let modelQueue = Promise.resolve();
+  const activationGeneration = new WeakMap();
   const fallbackScrollOptions = {capture:true,passive:true};
   let fallbackFrame = 0;
   function setNodeVisibility(node, isVisible) {
@@ -65,6 +66,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     } catch (_) { return null; }
   }
   function deactivate(node) {
+    activationGeneration.set(node, (activationGeneration.get(node) || 0) + 1);
     const resource=active.get(node); active.delete(node); node.dataset.previewActive='false';
     if(resource?.type==='video') {
       try{node.pause();}catch(_){} node.removeAttribute('src'); try{node.load();}catch(_){}
@@ -99,6 +101,8 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     if(!ownsNode(node)||node.dataset.previewActive==='true'||node.dataset.previewState==='loading')return;
     const type=String(node.dataset.previewType||'').toLowerCase(),src=sourceUrl(node);
     if(!src||!['video','lottie','model'].includes(type))return;
+    const generation = (activationGeneration.get(node) || 0) + 1;
+    activationGeneration.set(node, generation);
     node.dataset.previewActive='true';node.dataset.previewState='loading';
     if(type==='video') {
       node.muted=true;node.loop=true;node.autoplay=true;node.playsInline=true;node.preload='metadata';node.src=src;
@@ -119,7 +123,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
             playerAvailable = false;
           }
         }
-        if (!ownsNode(node) || node.dataset.previewActive !== 'true') return;
+        if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
         if (!playerAvailable) {
           setPreviewError(node, 'Lottie preview unavailable');
           node.dataset.previewState = 'error';
@@ -128,9 +132,28 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
         clearPreviewError(node);
         node.setAttribute('background','transparent');
         node.setAttribute('preserveAspectRatio','xMidYMid slice');
+        node.setAttribute('renderer','svg');
         node.setAttribute('autoplay','');
         node.setAttribute('loop','');
-        node.setAttribute('src',src);
+        const rendered = await new Promise(resolve => {
+          let settled = false;
+          const finish = value => { if (settled) return; settled = true; node.removeEventListener('ready', onReady); node.removeEventListener('error', onError); clearTimeout(timer); resolve(value); };
+          const onReady = () => finish(true);
+          const onError = () => finish(false);
+          const timer = setTimeout(() => finish(false), 8000);
+          node.addEventListener('ready', onReady, {once:true});
+          node.addEventListener('error', onError, {once:true});
+          node.setAttribute('src',src);
+          if (node.getLottie?.()) finish(true);
+        });
+        if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
+        const animation = node.getLottie?.();
+        const svg = node.shadowRoot?.querySelector?.('svg');
+        if (!rendered || !animation || !svg) {
+          setPreviewError(node, 'Lottie preview failed to render');
+          node.dataset.previewState = 'error';
+          return;
+        }
         active.set(node,{type:'lottie'});
         node.dataset.previewState='ready';
       })();
