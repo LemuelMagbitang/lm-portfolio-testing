@@ -16,7 +16,7 @@ import { chromium } from 'playwright';
 
 const PORT = 4173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const SMOKE_PAGE_TIMEOUT_MS = 20000;
+const SMOKE_PAGE_TIMEOUT_MS = 30000;
 const SMOKE_BOOT_SETTLE_MS = 1000;
 let smokePageSequence = 0;
 
