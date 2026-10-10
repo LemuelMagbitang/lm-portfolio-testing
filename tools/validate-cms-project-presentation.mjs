@@ -273,11 +273,15 @@ assert.ok(!admin.includes('value="flow"') &&
   !/textContent\s*=\s*['"]Inspect['"]/.test(renderer) &&
   !siteCss.includes('data-artwork-layout="flow"'),
   'Flow layout, visible Inspect buttons and legacy flow styling must not remain in the active presentation contract.');
-assert.ok(siteCss.includes('data-artwork-effective-layout="layered" .lightbox-artwork-group-items') &&
+assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-artwork-group-items') &&
   siteCss.includes('flex-flow:row wrap') &&
   siteCss.includes('overflow:visible') &&
-  siteCss.includes('height:clamp(210px,42svh,360px)'),
+  siteCss.includes('height:clamp(210px,42svh,360px)') &&
+  siteCss.includes('overflow:visible;padding:0;margin:0;'),
   'Responsive layered cards must wrap without a horizontal scroller and keep equal-height, aspect-aware artwork frames.');
+assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
+  !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
+  'Grouped artwork presentation must not use horizontal gallery scrolling.');
 assert.ok(foilNormalRendererSource.includes('uniform float u_uvScale;') &&
   foilNormalRendererSource.includes('fract(v_uv*u_uvScale)') &&
   renderer.includes("uvScale: config.style === 'cosmos' ? 2"),

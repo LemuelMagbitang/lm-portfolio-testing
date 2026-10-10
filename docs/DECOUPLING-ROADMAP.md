@@ -279,3 +279,11 @@ This migration must not:
 - CMS Project media supports optional `mediaGroups` records and `groupId` membership. Layout strategies are `grid`, `stack`, `cards`, and `flow`; projects without grouping metadata continue to render in the original linear Lightbox list.
 - Grouped artwork can open in an accessible Inspect Mode, with explicit Back, Escape/backdrop dismissal, focus restoration, and a dark 68% overlay with 8px blur. Keyboard and real-device testing is still needed after CI.
 - Cache identities for Lightbox entry/renderer are now `20261010-13` and shared CSS is `20261010-12`; the normalizer is `?v=20261010-03`, the project loader is `?v=20261010-03`, and Projects index/browser runtime are `?v=20261010-04`; the bootstrap/page-composition chain is `20261010-17`.
+
+
+### Artwork group interaction refinement
+
+- Retired the Flow layout and the permanent Inspect button from the CMS/public Lightbox contract. Only Grid/Tiling, Horizontal Stack, and Horizontal Card Layout remain selectable.
+- Grouped galleries no longer have a decorative background or border and do not horizontally scroll. Per-artwork captions and foil front/back prompts are hidden until the visitor inspects an item.
+- Horizontal choices now use a single responsive rule: all-foil groups render in a horizontal row when it fits and transition to a wrapping, overlapping card presentation when the row is too wide or the viewport is narrow. Groups with any non-foil items fall back to the clean grid.
+- Hover raises cards with eased transforms; holding a foil card opens Inspect Mode while a normal click remains dedicated to flipping the foil.
