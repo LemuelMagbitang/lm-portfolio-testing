@@ -461,7 +461,7 @@ process.on('exit', () => stopServer(server));
 try {
   await waitForServer(`${BASE_URL}/`);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 
   try {
     await smokePage(
@@ -568,6 +568,23 @@ try {
             textureState.repeat === 'repeat' || textureState.repeat === 'repeat repeat' ||
             textureState.tag !== 'SPAN') {
           throw new Error('Full-card foil textures must fill the whole face as a texture overlay, not a mask.');
+        }
+        const customNormalCanvas = holographic.locator('.lightbox-holographic-front .lightbox-holographic-normal-map').first();
+        await customNormalCanvas.waitFor({ state: 'attached', timeout: 3000 });
+        await page.waitForFunction(() => {
+          const canvas = document.querySelector('#lightboxMediaContainer .lightbox-holographic-front .lightbox-holographic-normal-map');
+          return !!canvas && !!canvas.dataset.normalMapStatus && canvas.dataset.normalMapStatus !== 'loading';
+        }, null, { timeout: 6000 });
+        const customNormalState = await customNormalCanvas.evaluate(canvas => ({
+          status: canvas.dataset.normalMapStatus,
+          patterns: Number(canvas.dataset.normalMapPatternCount),
+          loaded: Number(canvas.dataset.normalMapLoadedCount),
+          width: canvas.width,
+          height: canvas.height
+        }));
+        if (customNormalState.status !== 'ready' || customNormalState.patterns !== 1 ||
+            customNormalState.loaded !== 1 || customNormalState.width < 1 || customNormalState.height < 1) {
+          throw new Error('Custom foil height map did not reach the WebGL normal renderer: ' + JSON.stringify(customNormalState));
         }
 
         // Quick movement must remain a normal Lightbox gesture: no foil
@@ -810,6 +827,23 @@ try {
         for (const asset of ['cosmos-bottom.png', 'cosmos-middle-trans.png', 'cosmos-top-trans.png']) {
           const response = await page.request.get(`${BASE_URL}/assets/holographic/${asset}`);
           if (!response.ok()) throw new Error('Cosmos texture asset is not reachable: ' + asset + ' (' + response.status() + ')');
+        }
+        const cosmosNormalCanvas = cosmosHolographic.locator('.lightbox-holographic-front .lightbox-holographic-normal-map').first();
+        await cosmosNormalCanvas.waitFor({ state: 'attached', timeout: 3000 });
+        await page.waitForFunction(() => {
+          const canvas = document.querySelector('#lightboxMediaContainer .lightbox-holographic-front .lightbox-holographic-normal-map');
+          return canvas?.dataset.normalMapStatus === 'ready';
+        }, null, { timeout: 8000 });
+        const cosmosNormalState = await cosmosNormalCanvas.evaluate(canvas => ({
+          status: canvas.dataset.normalMapStatus,
+          patterns: Number(canvas.dataset.normalMapPatternCount),
+          loaded: Number(canvas.dataset.normalMapLoadedCount),
+          width: canvas.width,
+          height: canvas.height
+        }));
+        if (cosmosNormalState.status !== 'ready' || cosmosNormalState.patterns !== 3 ||
+            cosmosNormalState.loaded !== 3 || cosmosNormalState.width < 1 || cosmosNormalState.height < 1) {
+          throw new Error('All three Cosmos patterns must be blended by the WebGL normal renderer: ' + JSON.stringify(cosmosNormalState));
         }
         await page.locator('#lightboxClose').first().click();
         await page.waitForTimeout(100);

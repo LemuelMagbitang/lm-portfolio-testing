@@ -5,7 +5,7 @@
  * and project selection remain in the Lightbox controller.
  */
 
-import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261010-01';
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261010-02';
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 

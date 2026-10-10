@@ -81,6 +81,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
   let disposed=false,ready=false,textures=[],loadedImages=[],resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74;
   const level=Math.max(0,Math.min(1,Number(intensity)||0));
   const mapUrls=Array.from(new Set((patternUrls||[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,4);
+  canvas.dataset.normalMapPatternCount=String(mapUrls.length);
   canvas.dataset.normalMapStatus='loading';
   function compileShader(type,source){
     const shader=gl.createShader(type);if(!shader)throw new Error('Unable to allocate foil shader.');
@@ -136,6 +137,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     if(typeof ImageCtor!=='function'||!mapUrls.length){canvas.dataset.normalMapStatus='unavailable';return;}
     const requests=mapUrls.map(url=>new Promise(resolve=>{const image=new ImageCtor();image.decoding='async';image.crossOrigin='anonymous';image.onload=()=>resolve(image);image.onerror=()=>resolve(null);image.src=url;}));
     const results=await Promise.all(requests);if(disposed)return;loadedImages=results.filter(Boolean);
+    canvas.dataset.normalMapLoadedCount=String(loadedImages.length);
     if(!loadedImages.length){canvas.dataset.normalMapStatus='unavailable';return;}
     for(let i=0;i<loadedImages.length;i++){try{gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,textures[i]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,loadedImages[i]);}catch(_){loadedImages=[];canvas.dataset.normalMapStatus='unavailable';return;}}
     ready=true;canvas.dataset.normalMapStatus='ready';draw();
