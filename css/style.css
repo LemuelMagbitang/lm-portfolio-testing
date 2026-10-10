@@ -5421,6 +5421,11 @@ footer > .footer-content p{
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:nth-child(4n+2){transform:translate3d(0,2px,0) rotate(1.6deg);}
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:nth-child(4n+3){transform:translate3d(0,-1px,0) rotate(-1deg);}
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:nth-child(4n+4){transform:translate3d(0,2px,0) rotate(2deg);}
+#lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:hover,
+#lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="layered"] .lightbox-media-item:focus-visible{
+  z-index:200;transform:translate3d(0,-12px,0) rotate(0deg) scale(1.035);
+  filter:drop-shadow(0 18px 22px rgba(0,0,0,.34));
+}
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.has-artwork-inspector:focus-visible{
   outline:2px solid rgba(255,255,255,.7);outline-offset:5px;border-radius:10px;
 }

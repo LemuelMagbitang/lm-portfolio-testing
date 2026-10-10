@@ -290,3 +290,6 @@ This migration must not:
 
 
 - Equal-height group artwork frames use a responsive shared height. Media uses `object-fit:contain` and the intrinsic aspect-ratio contract, so square and portrait artwork is not stretched. The mobile layered cards keep at least roughly three-quarters of a typical card visible rather than hiding the artwork behind the next card.
+
+
+- Latest UI cache identities: public Lightbox entry/renderer `?v=20261010-14`, public stylesheet `?v=20261010-15`, CMS admin JavaScript `?v=20261010-12`, project normalizer `?v=20261010-04`, and bootstrap/page-composition chain `20261010-18`.

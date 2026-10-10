@@ -2619,7 +2619,7 @@ function buildProjectBody(el, p, options = {}){
             <option value="grid" ${group.layout==='grid'?'selected':''}>Grid / Tiling</option>
             <option value="stack" ${group.layout==='stack'?'selected':''}>Horizontal Stack</option>
             <option value="cards" ${group.layout==='cards'?'selected':''}>Horizontal Card Layout</option>
-            <option value="flow" ${group.layout==='flow'?'selected':''}>Flow Layout</option>
+
           </select></div>
           <div class="artwork-group-card-meta"><span>${count} artwork${count===1?'':'s'}</span><button type="button" data-remove-group>Remove group &amp; ungroup artwork</button></div>
         </div>
