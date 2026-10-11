@@ -1313,7 +1313,7 @@ try {
         }
       }
 
-      if (heroSlides > 1) {}
+      if (heroSlides > 1) {
         await page.waitForTimeout(3800);
         const activeSlides = await page.locator('#heroBanner .slide.active').count();
         if (activeSlides !== 1) throw new Error(`Works Hero loop has invalid active-slide state (found ${activeSlides}).`);
@@ -2900,7 +2900,7 @@ try {
         }
       }
 
-      const footerSocialCenter = await page.evaluate(() => {}
+      const footerSocialCenter = await page.evaluate(() => {
         const footer = document.querySelector('footer')?.getBoundingClientRect();
         const row = document.querySelector('footer .social-icons')?.getBoundingClientRect();
         return {
