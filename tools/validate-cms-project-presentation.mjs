@@ -271,7 +271,7 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes("footer.append(description,back)") &&
   renderer.includes("if(foilHint)footer.appendChild(foilHint)") &&
   !renderer.includes('Tap to flip · Move to explore the light.') &&
-  renderer.includes("back.innerHTML='<span aria-hidden=\"true\">←</span>'") &&
+  renderer.includes(`back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>'`) &&
   !renderer.includes('inspectTrigger') &&
   !renderer.includes('holdOpened = true'),
   'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil flips remain available inside Inspect.');
