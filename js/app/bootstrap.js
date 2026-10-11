@@ -35,8 +35,10 @@ export async function bootstrapPortfolioApp({
   // a stale layout. We restore the expected native behavior after the exact
   // anchor has been settled by the composed page.
   if (hasInitialHash && windowRef?.history) {
+    // Disable automatic fragment restoration while the composed page is still
+    // moving into place, but don't force the viewport to the top. The final
+    // target is reached with one intentional smooth-scroll after composition.
     try { windowRef.history.scrollRestoration = 'manual'; } catch (_) {}
-    windowRef.scrollTo?.(0, 0);
   }
 
 
