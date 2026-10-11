@@ -4815,6 +4815,10 @@ try {
           mediaRadius: mediaStyle.borderRadius,
           mediaPosition: mediaStyle.position,
           mediaDisplay: mediaStyle.display,
+          contentBackgroundAlpha: (() => {
+            const match = contentStyle.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
+            return match ? Number(match[1]) : 0;
+          })(),
           contentPosition: contentStyle.position,
           contentZ: contentStyle.zIndex,
           foreground: footerStyle.getPropertyValue('--footer-foreground').trim(),
@@ -4836,17 +4840,18 @@ try {
       if (footerLayout.contentPosition!=='relative' || footerLayout.contentZ!=='6') {
         throw new Error('Footer content is not layered above the artwork/fade: '+JSON.stringify(footerLayout));
       }
-      if (footerAnimation.showFooterMessage) {
-        if (footerAnimation.slides < 1 || footerLayout.mediaDisplay === 'none' ||
-            footerLayout.mediaHeight < footerLayout.footerHeight - 1 || footerLayout.footerHeight < 420 ||
-            footerLayout.fadeDisplay === 'none') {
-          throw new Error('Enabled footer message must reveal a full-stage animated artwork backdrop: ' +
-            JSON.stringify({ ...footerAnimation, ...footerLayout }));
-        }
-      } else if (footerAnimation.slides !== 0 ||
-          footerLayout.mediaDisplay !== 'none' || footerLayout.fadeDisplay !== 'none' ||
-          footerLayout.mediaHeight > 1) {
-        throw new Error('Disabled footer message must remove the artwork/fade layers without collapsing the footer: ' +
+      if (footerAnimation.slides < 1 || footerAnimation.hidden ||
+          footerLayout.mediaDisplay === 'none' || footerLayout.mediaHeight < footerLayout.footerHeight - 1 ||
+          footerLayout.footerHeight < 420 || footerLayout.fadeDisplay === 'none') {
+        throw new Error('Footer artwork and readability fade must keep looping regardless of quote visibility: ' +
+          JSON.stringify({ ...footerAnimation, ...footerLayout }));
+      }
+      if (footerAnimation.showFooterMessage && footerLayout.contentBackgroundAlpha < 0.1) {
+        throw new Error('Footer content must gain a translucent black scrim while its quote is enabled: ' +
+          JSON.stringify({ ...footerAnimation, ...footerLayout }));
+      }
+      if (!footerAnimation.showFooterMessage && footerLayout.contentBackgroundAlpha > 0.01) {
+        throw new Error('Footer content scrim must be transparent while its quote is disabled: ' +
           JSON.stringify({ ...footerAnimation, ...footerLayout }));
       }
       if (footerLayout.footerColor !== 'rgb(255, 255, 255)') {
@@ -5107,6 +5112,13 @@ try {
           mediaDisplay: mediaStyle?.display || 'none',
           mediaHeight: media?.getBoundingClientRect().height || 0,
           slides: media?.querySelectorAll('.footer-animation-slide').length || 0,
+          activeSlides: media?.querySelectorAll('.footer-animation-slide.active').length || 0,
+          contentBackgroundAlpha: (() => {
+            const style = content ? getComputedStyle(content) : null;
+            const match = style?.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
+            return match ? Number(match[1]) : 0;
+          })(),
+          hasMessage: !!content?.querySelector('.footer-hero-message'),
           footerHeight: footer?.getBoundingClientRect().height || 0,
           fadePosition: fadeStyle?.position || '',
           fadeZ: fadeStyle?.zIndex || '',
@@ -5117,15 +5129,18 @@ try {
         };
       });
       if (!aboutFooter.exists) throw new Error('About page footer surface is missing.');
-      if (aboutFooter.showFooterMessage) {
-        if (aboutFooter.mediaHidden || aboutFooter.mediaDisplay === 'none' ||
-            aboutFooter.slides < 1 || aboutFooter.mediaHeight < aboutFooter.footerHeight - 1) {
-          throw new Error('About footer artwork should fill the footer while the message toggle is enabled: '+
-            JSON.stringify(aboutFooter));
-        }
-      } else if (aboutFooter.slides !== 0 || aboutFooter.mediaDisplay !== 'none' || aboutFooter.fadeDisplay !== 'none') {
-        throw new Error('About footer artwork/fade should be absent while the footer message toggle is disabled: '+
+      if (aboutFooter.mediaHidden || aboutFooter.mediaDisplay === 'none' ||
+          aboutFooter.slides < 1 || aboutFooter.activeSlides !== 1 ||
+          aboutFooter.mediaHeight < aboutFooter.footerHeight - 1) {
+        throw new Error('About footer artwork must fill the footer and keep one active loop slide regardless of quote visibility: '+
           JSON.stringify(aboutFooter));
+      }
+      if (aboutFooter.showFooterMessage) {
+        if (!aboutFooter.hasMessage || aboutFooter.contentBackgroundAlpha < 0.1) {
+          throw new Error('About footer quote must appear over the footer-content scrim when enabled: '+JSON.stringify(aboutFooter));
+        }
+      } else if (aboutFooter.hasMessage || aboutFooter.contentBackgroundAlpha > 0.01) {
+        throw new Error('About footer quote and scrim must be absent when the quote toggle is disabled: '+JSON.stringify(aboutFooter));
       }
       if (aboutFooter.footerHeight < 420 || aboutFooter.fadePosition !== 'absolute' ||
           aboutFooter.fadeZ !== '1' || aboutFooter.contentZ !== '6') {

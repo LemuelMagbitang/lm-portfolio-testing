@@ -1039,12 +1039,13 @@ function validateBootstrapHardening() {
 
   if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
       !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition) ||
+      !/crossfadeMs:\s*settings\.heroTiming\.crossfadeMs/.test(composition) ||
       !/messageFadeMs:\s*settings\.heroTiming\.fadeMs/.test(composition) ||
-      !/messageAutoRotateMs:\s*settings\.heroTiming\.autoRotateMs/.test(composition) ||
+      /messageAutoRotateMs:\s*settings\.heroTiming\.autoRotateMs/.test(composition) ||
       !/showHeroMessage:\s*settings\.showHeroMessage/.test(composition) ||
       !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition) ||
-      !/root\.getElementById\('footerAnimation'\) && settings\.showFooterMessage/.test(composition)) {
-    err('Composition: normalized timing and independent footer visibility must be passed through.');
+      !/const footerPromise = root\.getElementById\('footerAnimation'\)\s*\?\s*initFooterAnimation\(/.test(composition)) {
+    err('Composition: artwork timing and message toggles must be passed through while footer animation remains independent.');
   }
 
   if (!/hero-section, #heroBanner, #heroBannerAbout/.test(composition)) {
@@ -1072,22 +1073,30 @@ function validateBootstrapHardening() {
     err('Hero: message visibility must also toggle content-driven hero sizing.');
   }
   if (!/footerElement\.classList\.toggle\('footer--message-enabled', showFooterMessage\)/.test(hero)) {
-    err('Hero/footer message: full-footer artwork must follow footer-message visibility.');
+    err('Hero/footer scrim must follow footer-message visibility while artwork continues independently.');
   }
   const heroCss = exists('css/style.css') ? readText('css/style.css') : '';
+  const heroQuoteRule = (heroCss.match(/\.hero-quote\s*\{[^}]*\}/) || [])[0] || '';
+  const footerAnimationIsHiddenByMessageToggle =
+    /footer:not\(\.footer--message-enabled\)\s*>\s*\.footer-animation[\s\S]*?display\s*:\s*none\s*!important/.test(heroCss);
   if (!/\.hero-section:has\(\.hero-quote:not\(\[hidden\]\)\)/.test(heroCss) ||
-      !/\.hero-quote\s*\{[\s\S]*?background:\s*rgba\(0,\s*0,\s*0,\s*0\.42\)/.test(heroCss) ||
+      !heroQuoteRule ||
+      /(?:^|\n)\s*(?:background(?:-color)?|border(?:-[\w-]+)?|border-radius)\s*:/.test(heroQuoteRule) ||
       !/\.hero-quote \{ padding: clamp\(22px, 5\.4vw, 30px\) 24px; \}/.test(heroCss) ||
       !/footerMessageRoot\.classList\.add\('hero-quote'\)/.test(hero) ||
       !/\.footer-content \.footer-hero-message\s*\{[^}]*margin:\s*0 auto clamp\(36px,5vw,64px\)/.test(heroCss) ||
       /\.hero-quote\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
       /\.footer-content \.footer-hero-message\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
+      !/footer\.footer--message-enabled\s*>\s*\.footer-content\s*\{[^}]*background:\s*rgba\(0,\s*0,\s*0,\s*\.42\)/.test(heroCss) ||
       !/\.footer-content > p\s*\{\s*color:inherit;margin:0;\s*\}/.test(heroCss) ||
       !/\.footer-content > p \{ text-align: center; \}/.test(heroCss) ||
       !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner::after\s*\{\s*background:\s*transparent;\s*\}/.test(heroCss) ||
       !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner \.slide\.active\s*\{\s*opacity:\s*1;\s*\}/.test(heroCss) ||
-      !/footer:not\(\.footer--message-enabled\) > \.footer-animation,[\s\S]*?display:none !important/.test(heroCss)) {
-    err('Hero/footer message: disabled-state clarity, conditional footer backdrop, panel styling, and spacing must remain wired.');
+      footerAnimationIsHiddenByMessageToggle) {
+    err('Hero/footer message: transparent quote, conditional footer-content scrim, independent artwork visibility, and spacing must remain wired.');
+  }
+  if (/messageAutoRotateMs|messageRotationTimer|fadeToMessageSet/.test(hero)) {
+    err('Hero/footer messages must be randomly selected once per page load and must not auto-rotate.');
   }
   if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
     err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');
