@@ -4908,27 +4908,48 @@ try {
         }
       }
 
-      const aboutFooter = await page.evaluate(() => {
+      const aboutFooter = await page.evaluate(async () => {
+        let showFooterMessage = false;
+        try {
+          const response = await fetch('/data/settings.json');
+          const settings = response.ok ? await response.json() : {};
+          showFooterMessage = settings.showFooterMessage === true;
+        } catch (_) {}
         const footer = document.querySelector('footer');
         const media = document.querySelector('#footerAnimation');
         const fade = document.querySelector('.footer-fade');
         const content = document.querySelector('.footer-content');
+        const mediaStyle = media ? getComputedStyle(media) : null;
+        const fadeStyle = fade ? getComputedStyle(fade) : null;
         return {
+          showFooterMessage,
           exists: !!footer && !!media && !!fade && !!content,
           mediaHidden: !!media?.hidden,
+          mediaDisplay: mediaStyle?.display || 'none',
+          mediaHeight: media?.getBoundingClientRect().height || 0,
           slides: media?.querySelectorAll('.footer-animation-slide').length || 0,
           footerHeight: footer?.getBoundingClientRect().height || 0,
-          fadePosition: fade ? getComputedStyle(fade).position : '',
-          fadeZ: fade ? getComputedStyle(fade).zIndex : '',
+          fadePosition: fadeStyle?.position || '',
+          fadeZ: fadeStyle?.zIndex || '',
+          fadeDisplay: fadeStyle?.display || 'none',
           contentZ: content ? getComputedStyle(content).zIndex : '',
           contentColor: content ? getComputedStyle(content).color : '',
           socialColors: Array.from(document.querySelectorAll('footer .social-icons a')).map(a => getComputedStyle(a).color)
         };
       });
-      if (!aboutFooter.exists || aboutFooter.mediaHidden || aboutFooter.slides < 1) {
-        throw new Error('About page footer artwork is missing or hidden: '+JSON.stringify(aboutFooter));
+      if (!aboutFooter.exists) throw new Error('About page footer surface is missing.');
+      if (aboutFooter.showFooterMessage) {
+        if (aboutFooter.mediaHidden || aboutFooter.mediaDisplay === 'none' ||
+            aboutFooter.slides < 1 || aboutFooter.mediaHeight < aboutFooter.footerHeight - 1) {
+          throw new Error('About footer artwork should fill the footer while the message toggle is enabled: '+
+            JSON.stringify(aboutFooter));
+        }
+      } else if (aboutFooter.slides !== 0 || aboutFooter.mediaDisplay !== 'none' || aboutFooter.fadeDisplay !== 'none') {
+        throw new Error('About footer artwork/fade should be absent while the footer message toggle is disabled: '+
+          JSON.stringify(aboutFooter));
       }
-      if (aboutFooter.footerHeight < 420 || aboutFooter.fadePosition !== 'absolute' || aboutFooter.fadeZ !== '1' || aboutFooter.contentZ !== '6') {
+      if (aboutFooter.footerHeight < 420 || aboutFooter.fadePosition !== 'absolute' ||
+          aboutFooter.fadeZ !== '1' || aboutFooter.contentZ !== '6') {
         throw new Error('About page footer layer geometry is incorrect: '+JSON.stringify(aboutFooter));
       }
       if (aboutFooter.contentColor !== 'rgb(255, 255, 255)' ||
