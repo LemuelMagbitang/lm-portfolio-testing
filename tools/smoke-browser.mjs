@@ -1568,7 +1568,7 @@ try {
       await modelCard.click();
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
 
-      const modelShell = page.locator('#lightbox .lightbox-model-viewer').first();
+      const modelShell = page.locator('.lightbox-model-viewer').first();
       await modelShell.waitFor({ state: 'visible', timeout: 7000 });
 
       const activationBeforeReady = modelShell.locator('.model-viewer-activate-content').first();
@@ -1735,16 +1735,16 @@ try {
       await modelShell.scrollIntoViewIfNeeded();
       const lightboxScrollBefore3DInspect = await page.locator('#lightbox').evaluate(el => el.scrollTop);
       await modelShell.click();
-      await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
+      await page.locator('.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
 
-      const modelBack = page.locator('#lightbox .model-viewer-back').first();
+      const modelBack = page.locator('.lightbox-3d-focus-overlay .model-viewer-back').first();
       if (await modelBack.isVisible().catch(() => false) !== true) {
         throw new Error('3D interactive mode did not expose its Back control.');
       }
 
       try {
         await page.waitForFunction(() => {
-          const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+          const el = document.querySelector('.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive');
           if (!el) return false;
           const r = el.getBoundingClientRect();
           return Math.abs(r.width - innerWidth) <= 2 &&
@@ -1752,7 +1752,7 @@ try {
         }, null, { timeout: 1500 });
       } catch (error) {
         const debug = await page.evaluate(() => {
-          const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+          const el = document.querySelector('.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive');
           const chain = [];
           let node = el;
           while (node && chain.length < 8) {
@@ -1794,7 +1794,7 @@ try {
 
       const focused3DTouchContract = await page.evaluate(() => {
         const modal = document.querySelector('#lightbox.is-3d-focused');
-        const canvas = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive canvas');
+        const canvas = document.querySelector('.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive canvas');
         if (!modal || !canvas) return null;
         const event = new Event('touchmove', { bubbles: true, cancelable: true });
         canvas.dispatchEvent(event);
@@ -1894,7 +1894,7 @@ try {
       const focusedDescriptionState = await page.evaluate(() => {
         const modalDescription = document.querySelector('#modalDesc');
         const fullDescription = document.querySelector('#modalFullDesc');
-        const caption = document.querySelector('#lightbox .is-3d-focus-target .media-caption');
+        const caption = document.querySelector('.lightbox-3d-focus-overlay .is-3d-focus-target .media-caption');
         const read = el => {
           const style = el ? getComputedStyle(el) : null;
           return {
@@ -1939,7 +1939,7 @@ try {
       // fixed-position/ResizeObserver regressions without altering the grid.
       await page.setViewportSize({ width: 390, height: 844 });
       await page.waitForFunction(() => {
-        const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+        const el = document.querySelector('.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive');
         if (!el) return false;
         const r = el.getBoundingClientRect();
         return Math.abs(r.width - innerWidth) <= 2 &&
@@ -1975,7 +1975,7 @@ try {
 
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.waitForFunction(() => {
-        const el = document.querySelector('#lightbox .lightbox-model-viewer.is-interactive');
+        const el = document.querySelector('.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive');
         if (!el) return false;
         const r = el.getBoundingClientRect();
         return Math.abs(r.width - innerWidth) <= 2 &&
