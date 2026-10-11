@@ -4,6 +4,13 @@
 
 The Curated Views CMS editor and public hash-route resolver are enabled on the projects-runtime-cutover branch. A saved slug such as `/#test-portfolio` resolves before cards mount, then renders the ordered project set through the existing Projects, Gallery, and Lightbox pipeline. Main Portfolio remains the source of truth for referenced projects; curated-only projects stay scoped to their owning view.
 
+
+## Latest verification — October 12, 2026 PHT
+
+The incident screenshots were captured around 23:19 PHT on October 11, before public routing was implemented in commit `5f9f480` (23:43 PHT). The current branch head `775674d` has a successful site-validation run [#38153475647](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38153475647), including the Curated View resolver test and browser smoke scenario #22 for `/#test-portfolio`. The Pages build/deploy run [#38153475848](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38153475848) also succeeded for the same commit.
+
+Automated test-repository and deployment checks are green. A fresh user-side browser reload remains useful to confirm the visible published result in the user’s browser; do not treat the earlier screenshot as evidence that the current deployed route is still broken.
+
 ## Purpose
 
 Curated Views are saved, unlisted presentations of the same portfolio application. They do not create another website, another gallery system, or another copy of the main project database.
@@ -79,7 +86,7 @@ Contract rules:
 - Both project kinds use the same normalized project/media contract. The distinction is ownership, not rendering format.
 - The validator checks local media/background references and supported media types for curated-owned projects.
 
-The registry is intentionally initialized empty until an author creates a view. The CMS editor and persistence path are now implemented; the public runtime resolver remains a later phase. Main Portfolio behavior is unchanged.
+The registry starts empty in a clean branch until an author creates a view. The active testing branch currently contains a QA view named `test portfolio` with the slug `test-portfolio`. Public hash routing is implemented: the resolver validates the requested slug, builds the ordered project set before cards mount, and hands that set to the shared Projects/Gallery/Lightbox pipeline. The Main Portfolio remains the default without a valid Curated View hash.
 
 ## Shared project editor boundary
 
@@ -90,9 +97,9 @@ The current CMS now isolates two reusable editor operations:
 - `validateProjectEditorModel(project, { requireFilters })`
 - `serializeProjectEditorModel(project)`
 
-Main Portfolio currently calls the validator with `requireFilters: true`. Curated Views can later call the same editor with filters disabled without creating a second project schema or serializer.
+Main Portfolio calls the validator with `requireFilters: true`. Curated Views uses the same project editor and serializer with filters disabled, then embeds the serialized project in its owning record in `data/curated-views.json`. This keeps one project schema while preserving ownership boundaries.
 
-This is currently an editor/persistence boundary. The Curated Views CMS UI is enabled, while public Curated View runtime routing is intentionally deferred until its resolver contract is implemented.
+The CMS and public runtime boundaries are implemented. The public route resolves the initial URL hash before the shared project loader mounts cards; only view-selected projects are rendered, Curated-only projects stay view-scoped, Gallery filters are hidden within the Curated View, and Lightbox uses the active view’s project set. Unknown hashes do not resolve to a Curated View.
 
 ## CMS behavior
 
