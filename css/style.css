@@ -3409,6 +3409,7 @@ footer{
   text-wrap:pretty;text-shadow:0 2px 14px rgba(0,0,0,.7);
   transform:translateX(-50%);pointer-events:none;
 }
+.lightbox-3d-focus-overlay .is-3d-focus-target .media-caption{display:none!important;}
 .lightbox-3d-focus-overlay .is-3d-focus-target .model-viewer-ui{z-index:40;}
 
 /* The project-level chevrons/X are a sibling of the Lightbox modal. In 3D
