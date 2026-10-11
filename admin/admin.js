@@ -1607,6 +1607,8 @@ RENDERERS.settings = function(data){
   s.web3forms = s.web3forms || {projectKey:'', reviewKey:''};
   s.socials = s.socials && typeof s.socials === 'object' ? s.socials : {};
   s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
+  s.showHeroMessage = s.showHeroMessage !== false;
+  s.showFooterMessage = s.showFooterMessage === true;
   s.ogImage = s.ogImage || 'assets/projects/site/og-image.jpg';
   s.ogImageVersion = Math.max(1, Number(s.ogImageVersion) || 2);
   s.ogImageAlt = s.ogImageAlt || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio';
@@ -1621,6 +1623,8 @@ RENDERERS.settings = function(data){
       ${toggleRow('formsEnabled.review','"Leave a Review" form','Shows the form when on; shows an Email Me button when off.', s.formsEnabled.review)}
       ${toggleRow('showReviews','Reviews section','Shows or hides the whole client-reviews strip above the footer.', s.showReviews)}
       ${toggleRow('showSoftwareLogos','Software skill logos','Shows every Software Skill (About page) as its logo instead of its name. One switch for the whole list — set a specific logo per skill from the About page itself.', s.showSoftwareLogos)}
+      ${toggleRow('showHeroMessage','Hero message in hero','Show or hide the rotating statement over the homepage hero artwork.', s.showHeroMessage)}
+      ${toggleRow('showFooterMessage','Hero message in footer','Show the current hero statement above the footer links. The footer grows naturally with longer messages.', s.showFooterMessage)}
     </div>
 
     <div class="panel">
@@ -1819,6 +1823,8 @@ RENDERERS.settings = function(data){
     formsEnabled: { project: s.formsEnabled.project, review: s.formsEnabled.review },
     showReviews: s.showReviews,
     showSoftwareLogos: s.showSoftwareLogos,
+    showHeroMessage: s.showHeroMessage,
+    showFooterMessage: s.showFooterMessage,
     web3forms: { projectKey: val('s_pkey'), reviewKey: val('s_rkey') },
     redirectUrl: val('s_redirect'),
     contactEmail: val('s_email'),
