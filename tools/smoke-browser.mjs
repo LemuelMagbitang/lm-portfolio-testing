@@ -1209,6 +1209,9 @@ try {
       // Inspect moves this same node back into the Lightbox group, so a locator
       // scoped to the now-detached Inspector cannot be used to reacquire it.
       const flippedSurfaceHandle = await inspectedHolo.elementHandle();
+      const flippedFaceLabelHandle = await inspectMode
+        .locator('.lightbox-holographic-hint [data-holo-face-label]')
+        .elementHandle();
       // The Inspector is portaled above the Lightbox. Close it through its own
       // Back control before interacting with the Lightbox close button beneath it.
       await inspectMode.locator('.lightbox-inspect-back').click();
@@ -1225,9 +1228,11 @@ try {
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
       const disposedFoilState = await flippedSurfaceHandle.evaluate(el => ({
         flipped: el.classList.contains('is-flipped'),
-        pressed: el.getAttribute('aria-pressed'),
-        face: el.querySelector('[data-holo-face-label]')?.textContent?.trim() || ''
+        pressed: el.getAttribute('aria-pressed')
       }));
+      // The hint is a sibling of the surface and is removed by disposal. Its
+      // retained handle proves cleanup restored FRONT before removing the hint.
+      disposedFoilState.face = await flippedFaceLabelHandle.evaluate(el => el.textContent?.trim() || '');
       if (disposedFoilState.flipped || disposedFoilState.pressed !== 'false' || disposedFoilState.face !== 'FRONT') {
         throw new Error('Closing the Lightbox did not reset the flipped foil state to FRONT: ' + JSON.stringify(disposedFoilState));
       }
