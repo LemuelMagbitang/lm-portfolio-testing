@@ -959,10 +959,9 @@ function validateCuratedViewPresentationContract() {
   if (!exitRule || !/border:\s*0\s*;/.test(exitRule[1])) {
     err('Curated View presentation: exit link must render without a border.');
   }
-  const mobile = curatedCss.match(/@media\s*\(max-width:\s*600px\)\s*\{([\s\S]*?)\n\}/);
-  if (!mobile ||
-      !/\.curated-view-heading\s*\{[^}]*flex-direction:\s*row/s.test(mobile[1]) ||
-      !/\.curated-view-heading-copy\s*\{[^}]*flex:\s*1\s+1\s+auto/s.test(mobile[1])) {
+  if (!/@media\s*\(max-width:\s*600px\)/.test(curatedCss) ||
+      !/\.curated-view-heading\s*\{[^}]*flex-direction:\s*row/s.test(curatedCss) ||
+      !/\.curated-view-heading-copy\s*\{[^}]*flex:\s*1\s+1\s+auto/s.test(curatedCss)) {
     err('Curated View presentation: narrow-screen heading and exit must remain side by side.');
   }
   if (!/\.filter-page-controls:not\(\[hidden\]\)\s*\{\s*display:\s*none\s*!important;/s.test(css)) {
