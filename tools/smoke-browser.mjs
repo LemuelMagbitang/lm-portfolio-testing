@@ -1205,36 +1205,109 @@ try {
       if ((inspectedFace || '').trim() !== 'BACK') {
         throw new Error('The native foil hint did not switch from FRONT to BACK after flipping inside Inspect.');
       }
-      // Capture the actual artwork node while it is still inside Inspect. Closing
-      // Inspect moves this same node back into the Lightbox group, so a locator
-      // scoped to the now-detached Inspector cannot be used to reacquire it.
+      // Keep handles to the actual foil surface and sibling face label across
+      // Inspector teardown. These are the stateful nodes whose reset matters.
       const flippedSurfaceHandle = await inspectedHolo.elementHandle();
       const flippedFaceLabelHandle = await inspectMode
         .locator('.lightbox-holographic-hint [data-holo-face-label]')
         .elementHandle();
-      // The Inspector is portaled above the Lightbox. Close it through its own
-      // Back control before interacting with the Lightbox close button beneath it.
-      await inspectMode.locator('.lightbox-inspect-back').click();
+
+      // Escape must exit Inspect and reset the artwork instead of leaving it on BACK.
+      await page.keyboard.press('Escape');
       await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
       await page.waitForTimeout(50);
-      const lightboxScrollAfterInspectorClose = await lightboxScrollHost.evaluate(el => el.scrollTop);
-      if (Math.abs(lightboxScrollAfterInspectorClose - lightboxScrollBeforeInspect) > 1) {
-        throw new Error('Closing foil Inspect changed the Lightbox scroll position: ' +
-          JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterInspectorClose }));
+      const escapeExitState = await flippedSurfaceHandle.evaluate(el => ({
+        flipped: el.classList.contains('is-flipped'),
+        pressed: el.getAttribute('aria-pressed')
+      }));
+      escapeExitState.face = await flippedFaceLabelHandle.evaluate(el => el.textContent?.trim() || '');
+      if (escapeExitState.flipped || escapeExitState.pressed !== 'false' || escapeExitState.face !== 'FRONT') {
+        throw new Error('Escape did not reset Inspect artwork to FRONT: ' + JSON.stringify(escapeExitState));
       }
-      // Disposal must restore the front state and accessible hint before the
-      // grouped artwork DOM is discarded.
+      const escapeFocusState = await page.evaluate(() => {
+        const target = document.activeElement;
+        const style = target ? getComputedStyle(target) : null;
+        return {
+          returnsToGroupItem: Boolean(target?.classList.contains('is-grouped-artwork-interactive')),
+          suppressClass: Boolean(target?.classList.contains('is-inspect-focus-return')),
+          outlineStyle: style?.outlineStyle || '',
+          outlineWidth: Number.parseFloat(style?.outlineWidth || '0')
+        };
+      });
+      if (!escapeFocusState.returnsToGroupItem || !escapeFocusState.suppressClass ||
+          escapeFocusState.outlineStyle !== 'none' || escapeFocusState.outlineWidth > 0) {
+        throw new Error('Escape left an unexpected artwork focus outline: ' + JSON.stringify(escapeFocusState));
+      }
+      const lightboxScrollAfterEscape = await lightboxScrollHost.evaluate(el => el.scrollTop);
+      if (Math.abs(lightboxScrollAfterEscape - lightboxScrollBeforeInspect) > 1) {
+        throw new Error('Escape from foil Inspect changed Lightbox scroll: ' +
+          JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterEscape }));
+      }
+
+      // Reopen from the group, flip again, then activate Inspect Back with
+      // the keyboard. Both keyboard exit paths must reset to FRONT.
+      await funkoHolo.click({ force: true });
+      await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
+      await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
+      await page.waitForTimeout(500);
+      const reopenedFace = await inspectMode.locator('.lightbox-holographic-hint [data-holo-face-label]').textContent();
+      if ((reopenedFace || '').trim() !== 'FRONT' ||
+          await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
+        throw new Error('Reopened Inspect did not start on FRONT.');
+      }
+      await inspectedHolo.click({ force: true });
+      const secondFlipState = await inspectedHolo.evaluate(el => ({
+        flipped: el.classList.contains('is-flipped'),
+        pressed: el.getAttribute('aria-pressed')
+      }));
+      const secondFlipFace = await inspectMode.locator('.lightbox-holographic-hint [data-holo-face-label]').textContent();
+      if (!secondFlipState.flipped || secondFlipState.pressed !== 'true' || (secondFlipFace || '').trim() !== 'BACK') {
+        throw new Error('Foil could not flip to BACK before the keyboard Back test.');
+      }
+      await page.keyboard.press('Tab');
+      const inspectorBackFocused = await page.evaluate(() => document.activeElement?.matches('.lightbox-inspect-back') || false);
+      if (!inspectorBackFocused) throw new Error('Keyboard focus did not reach the Inspector Back control.');
+      await page.keyboard.press('Enter');
+      await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
+      await page.waitForTimeout(50);
+      const backExitState = await flippedSurfaceHandle.evaluate(el => ({
+        flipped: el.classList.contains('is-flipped'),
+        pressed: el.getAttribute('aria-pressed')
+      }));
+      backExitState.face = await flippedFaceLabelHandle.evaluate(el => el.textContent?.trim() || '');
+      if (backExitState.flipped || backExitState.pressed !== 'false' || backExitState.face !== 'FRONT') {
+        throw new Error('Keyboard activation of Inspector Back did not reset artwork to FRONT: ' + JSON.stringify(backExitState));
+      }
+      const backFocusState = await page.evaluate(() => {
+        const target = document.activeElement;
+        const style = target ? getComputedStyle(target) : null;
+        return {
+          returnsToGroupItem: Boolean(target?.classList.contains('is-grouped-artwork-interactive')),
+          suppressClass: Boolean(target?.classList.contains('is-inspect-focus-return')),
+          outlineStyle: style?.outlineStyle || '',
+          outlineWidth: Number.parseFloat(style?.outlineWidth || '0')
+        };
+      });
+      if (!backFocusState.returnsToGroupItem || !backFocusState.suppressClass ||
+          backFocusState.outlineStyle !== 'none' || backFocusState.outlineWidth > 0) {
+        throw new Error('Keyboard Back left an unexpected artwork focus outline: ' + JSON.stringify(backFocusState));
+      }
+      const lightboxScrollAfterBack = await lightboxScrollHost.evaluate(el => el.scrollTop);
+      if (Math.abs(lightboxScrollAfterBack - lightboxScrollBeforeInspect) > 1) {
+        throw new Error('Keyboard Back changed Lightbox scroll: ' +
+          JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterBack }));
+      }
+
+      // The Lightbox must remain closable after either keyboard Inspector exit.
       await page.locator('#lightboxClose').first().click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
       const disposedFoilState = await flippedSurfaceHandle.evaluate(el => ({
         flipped: el.classList.contains('is-flipped'),
         pressed: el.getAttribute('aria-pressed')
       }));
-      // The hint is a sibling of the surface and is removed by disposal. Its
-      // retained handle proves cleanup restored FRONT before removing the hint.
       disposedFoilState.face = await flippedFaceLabelHandle.evaluate(el => el.textContent?.trim() || '');
       if (disposedFoilState.flipped || disposedFoilState.pressed !== 'false' || disposedFoilState.face !== 'FRONT') {
-        throw new Error('Closing the Lightbox did not reset the flipped foil state to FRONT: ' + JSON.stringify(disposedFoilState));
+        throw new Error('Closing the Lightbox did not reset the foil state to FRONT: ' + JSON.stringify(disposedFoilState));
       }
     }, { width: 1280, height: 900 });
 

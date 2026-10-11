@@ -53,6 +53,13 @@
   outline:none!important;
   outline-offset:0;
 }
+/* Keyboard exit returns focus to the originating group wrapper. Its normal
+   card-sized ring obscures the artwork at the handoff; restore the usual
+   focus styling on the user's next key/pointer interaction or focus change. */
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-inspect-focus-return:focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+}
 @media(max-width:760px){
   #lightboxMediaContainer .lightbox-artwork-group-items{padding:12px;}
   #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork{padding:6px;}

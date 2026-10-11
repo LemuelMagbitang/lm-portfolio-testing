@@ -507,6 +507,7 @@ function validateLightboxFeatureStylesheet() {
   if (!featureCss.includes('.lightbox-inspect-mode{z-index:10002;isolation:isolate;}') ||
       !featureCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') ||
       !featureCss.includes('.lightbox-inspect-mode .lightbox-holographic:focus-visible{') ||
+      !featureCss.includes('.lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-inspect-focus-return:focus-visible{') ||
       !featureCss.includes('outline:none!important;') ||
       !featureCss.includes('object-fit:contain;object-position:center;') ||
       !featureCss.includes('overflow:visible;')) {

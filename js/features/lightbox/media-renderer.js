@@ -1715,6 +1715,18 @@ export function createLightboxMediaRenderer({
     const active=activeInspector;
     if(!active||active.isClosing)return;
     const immediate=options===true||options?.immediate===true;
+
+    // Inspect Mode is a temporary magnified view, not a persistent flip state.
+    // Return grouped artwork to FRONT whenever Inspect is exited via Back,
+    // Escape, or the backdrop.
+    const foilSurface=active.entry?.querySelector('.lightbox-holographic');
+    if(foilSurface){
+      foilSurface.classList.remove('is-flipped');
+      foilSurface.setAttribute('aria-pressed','false');
+    }
+    const faceLabel=active.foilHint?.querySelector('[data-holo-face-label]');
+    if(faceLabel)faceLabel.textContent='FRONT';
+
     const finishClose=()=>{
       if(activeInspector!==active)return;
       activeInspector=null;
@@ -1727,8 +1739,25 @@ export function createLightboxMediaRenderer({
       active.overlay.remove();
       active.restoreLightboxScroll?.();
       windowRef.requestAnimationFrame(()=>{active.restoreLightboxScroll?.();windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());});
-      try{active.focusTarget?.focus?.({preventScroll:true});}
-      catch(_){try{active.focusTarget?.focus?.();}catch(__){}}
+
+      // Keyboard closure returns focus to the originating group item. Avoid a
+      // persistent card-sized ring at that handoff, but restore normal focus
+      // indication as soon as the user navigates or interacts again.
+      const focusTarget=active.focusTarget;
+      if(options?.viaKeyboard&&focusTarget?.classList?.contains('is-grouped-artwork-interactive')){
+        focusTarget.classList.add('is-inspect-focus-return');
+        const clearFocusReturn=()=>{
+          focusTarget.classList.remove('is-inspect-focus-return');
+          focusTarget.removeEventListener('keydown',clearFocusReturn,true);
+          focusTarget.removeEventListener('pointerdown',clearFocusReturn,true);
+          focusTarget.removeEventListener('focusout',clearFocusReturn);
+        };
+        focusTarget.addEventListener('keydown',clearFocusReturn,true);
+        focusTarget.addEventListener('pointerdown',clearFocusReturn,true);
+        focusTarget.addEventListener('focusout',clearFocusReturn,{once:true});
+      }
+      try{focusTarget?.focus?.({preventScroll:true});}
+      catch(_){try{focusTarget?.focus?.();}catch(__){}}
     };
     if(!immediate&&!prefersReducedInspectMotion()&&typeof active.frame?.animate==='function'&&active.placeholder?.isConnected){
       const currentRect=active.frame.getBoundingClientRect?.(),returnRect=active.placeholder.getBoundingClientRect?.();
@@ -1802,7 +1831,7 @@ export function createLightboxMediaRenderer({
     back.className='model-viewer-back lightbox-inspect-back';
     back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>';
     back.setAttribute('aria-label','Close Inspect Mode and return to the artwork group');
-    back.addEventListener('click',()=>closeArtworkInspect());
+    back.addEventListener('click',event=>closeArtworkInspect({viaKeyboard:event.detail===0}));
     stage.appendChild(frame);
     if(foilHint)footer.appendChild(foilHint);
     footer.append(description,back);
@@ -1810,7 +1839,7 @@ export function createLightboxMediaRenderer({
     overlay.appendChild(panel);
     const onBackdropClick=event=>{if(event.target===overlay)closeArtworkInspect();};
     const onKeyDown=event=>{
-      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtworkInspect();return;}
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtworkInspect({viaKeyboard:true});return;}
       if(event.key!=='Tab')return;
       event.stopPropagation();
       const focusables=Array.from(overlay.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]'))

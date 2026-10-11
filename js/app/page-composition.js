@@ -22,7 +22,7 @@ import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-06';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
-import { initLightbox } from '../features/lightbox/index.js?v=20261011-08';
+import { initLightbox } from '../features/lightbox/index.js?v=20261011-09';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 
 export async function createPortfolioApp({
