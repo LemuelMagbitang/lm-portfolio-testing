@@ -1220,8 +1220,24 @@ try {
       const firstActiveSlide = await page.locator('#heroBanner .slide.active').first().getAttribute('class').catch(() => '');
       if (!firstActiveSlide) throw new Error('Works Hero has no active artwork slide.');
 
+      const messageSettings = await page.evaluate(async () => {
+        try {
+          const response = await fetch('/data/settings.json');
+          return response.ok ? await response.json() : {};
+        } catch (_) { return {}; }
+      });
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
-      if (!heroText?.trim()) throw new Error('Works Hero rendered no message text.');
+      const heroMessageHidden = await page.locator('#heroQuote').isHidden().catch(() => false);
+      if (messageSettings.showHeroMessage !== false && !heroText?.trim()) {
+        throw new Error('Works Hero rendered no message text while showHeroMessage is enabled.');
+      }
+      if (messageSettings.showHeroMessage === false && !heroMessageHidden) {
+        throw new Error('Works Hero message should be hidden while showHeroMessage is disabled.');
+      }
+      if (messageSettings.showFooterMessage === true) {
+        const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
+        if (!footerMessage?.trim()) throw new Error('Works footer message is missing while showFooterMessage is enabled.');
+      }
 
       if (heroSlides > 1) {
         await page.waitForTimeout(3800);
@@ -2729,8 +2745,24 @@ try {
       await allFilter.click();
       await page.waitForTimeout(120);
 
+      const messageSettings = await page.evaluate(async () => {
+        try {
+          const response = await fetch('/data/settings.json');
+          return response.ok ? await response.json() : {};
+        } catch (_) { return {}; }
+      });
       const heroText = await page.locator('#heroQuoteText').textContent().catch(() => '');
-      if (!heroText?.trim()) throw new Error('Mobile/tablet Works Hero message is missing.');
+      const heroMessageHidden = await page.locator('#heroQuote').isHidden().catch(() => false);
+      if (messageSettings.showHeroMessage !== false && !heroText?.trim()) {
+        throw new Error('Mobile/tablet Works Hero message is missing while showHeroMessage is enabled.');
+      }
+      if (messageSettings.showHeroMessage === false && !heroMessageHidden) {
+        throw new Error('Mobile/tablet Works Hero message should be hidden while showHeroMessage is disabled.');
+      }
+      if (messageSettings.showFooterMessage === true) {
+        const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
+        if (!footerMessage?.trim()) throw new Error('Mobile/tablet footer message is missing while showFooterMessage is enabled.');
+      }
 
       const footerSocialCenter = await page.evaluate(() => {
         const footer = document.querySelector('footer')?.getBoundingClientRect();
