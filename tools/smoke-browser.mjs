@@ -1215,8 +1215,20 @@ try {
         throw new Error('Closing foil Inspect changed the Lightbox scroll position: ' +
           JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterInspectorClose }));
       }
+      // Keep a handle to the flipped node while Lightbox teardown runs.
+      // Disposal must restore the front state and accessible hint before the
+      // grouped artwork DOM is discarded.
+      const flippedSurfaceHandle = await inspectedHolo.elementHandle();
       await page.locator('#lightboxClose').first().click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
+      const disposedFoilState = await flippedSurfaceHandle.evaluate(el => ({
+        flipped: el.classList.contains('is-flipped'),
+        pressed: el.getAttribute('aria-pressed'),
+        face: el.querySelector('[data-holo-face-label]')?.textContent?.trim() || ''
+      }));
+      if (disposedFoilState.flipped || disposedFoilState.pressed !== 'false' || disposedFoilState.face !== 'FRONT') {
+        throw new Error('Closing the Lightbox did not reset the flipped foil state to FRONT: ' + JSON.stringify(disposedFoilState));
+      }
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
