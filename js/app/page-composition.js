@@ -45,18 +45,18 @@ function applyCuratedViewPresentation(root, resolution) {
   heading.setAttribute('aria-label', 'Curated portfolio');
   const copy = root.createElement('div');
   copy.className = 'curated-view-heading-copy';
-  const eyebrow = root.createElement('p');
-  eyebrow.className = 'curated-view-eyebrow';
-  eyebrow.textContent = 'UNLISTED PORTFOLIO';
   const title = root.createElement('h1');
   title.textContent = String(view.name || 'Curated Portfolio');
-  copy.append(eyebrow, title);
+  copy.append(title);
 
   const exit = root.createElement('a');
   exit.className = 'curated-view-exit';
   const windowRef = root.defaultView || globalThis.window;
   exit.href = String(windowRef?.location?.pathname || '/') + String(windowRef?.location?.search || '');
-  exit.textContent = 'View full portfolio';
+  const exitIcon = root.createElement('i');
+  exitIcon.className = 'fa-solid fa-arrow-left';
+  exitIcon.setAttribute('aria-hidden', 'true');
+  exit.append(exitIcon, root.createTextNode('View full portfolio'));
   exit.setAttribute('aria-label', 'Leave this curated portfolio and view all projects');
   heading.append(copy, exit);
 
