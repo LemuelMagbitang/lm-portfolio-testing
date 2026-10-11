@@ -32,7 +32,9 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   heroTiming: Object.freeze({
     loopMode: 'latest',
     transitionStyle: 'kenburns',
-    crossfadeMs: 3500
+    crossfadeMs: 3500,
+    fadeMs: 600,
+    autoRotateMs: 9000
   }),
   web3forms: Object.freeze({ projectKey: '', reviewKey: '' }),
   redirectUrl: '',
@@ -95,6 +97,14 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
   const crossfadeMs = Number.isFinite(numericCrossfade) && numericCrossfade >= 500
     ? numericCrossfade
     : defaults.heroTiming.crossfadeMs;
+  const numericFade = Number(hero.fadeMs);
+  const fadeMs = Number.isFinite(numericFade) && numericFade >= 0
+    ? numericFade
+    : defaults.heroTiming.fadeMs;
+  const numericAutoRotate = Number(hero.autoRotateMs);
+  const autoRotateMs = Number.isFinite(numericAutoRotate) && numericAutoRotate >= 0
+    ? numericAutoRotate
+    : defaults.heroTiming.autoRotateMs;
 
   return {
     protectionEnabled: booleanValue(source.protectionEnabled, defaults.protectionEnabled),
@@ -109,7 +119,9 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
     heroTiming: {
       loopMode,
       transitionStyle,
-      crossfadeMs
+      crossfadeMs,
+      fadeMs,
+      autoRotateMs
     },
     web3forms: {
       projectKey: stringValue(web3forms.projectKey),

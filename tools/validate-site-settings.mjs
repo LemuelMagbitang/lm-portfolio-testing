@@ -16,10 +16,16 @@ assert.ok(SOCIAL_PLATFORMS.every(platform => platform.label && platform.icon));
 const defaults = normalizeSiteSettings({});
 assert.equal(defaults.showHeroMessage, true, 'Hero message should remain visible by default.');
 assert.equal(defaults.showFooterMessage, false, 'Footer quote should remain opt-in by default.');
+assert.equal(defaults.heroTiming.fadeMs, 600, 'Message fade timing should have a stable default.');
+assert.equal(defaults.heroTiming.autoRotateMs, 9000, 'Message loop should rotate by default.');
 
 const explicitMessageToggles = normalizeSiteSettings({ showHeroMessage: false, showFooterMessage: true });
 assert.equal(explicitMessageToggles.showHeroMessage, false, 'CMS can disable the hero message.');
 assert.equal(explicitMessageToggles.showFooterMessage, true, 'CMS can enable the footer message.');
+const explicitMessageTiming = normalizeSiteSettings({ heroTiming: { fadeMs: 420, autoRotateMs: 7000 } });
+assert.equal(explicitMessageTiming.heroTiming.fadeMs, 420, 'CMS message fade timing must be preserved.');
+assert.equal(explicitMessageTiming.heroTiming.autoRotateMs, 7000, 'CMS message rotation timing must be preserved.');
+assert.equal(normalizeSiteSettings({ heroTiming: { autoRotateMs: 0 } }).heroTiming.autoRotateMs, 0, 'CMS can explicitly disable message rotation.');
 
 const settings = normalizeSiteSettings({
   contactEmail: 'artist@example.com',

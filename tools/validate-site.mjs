@@ -1039,9 +1039,12 @@ function validateBootstrapHardening() {
 
   if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
       !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition) ||
+      !/messageFadeMs:\s*settings\.heroTiming\.fadeMs/.test(composition) ||
+      !/messageAutoRotateMs:\s*settings\.heroTiming\.autoRotateMs/.test(composition) ||
       !/showHeroMessage:\s*settings\.showHeroMessage/.test(composition) ||
-      !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition)) {
-    err('Composition: Hero timing must use the Hero feature option names loopMode and transitionStyle.');
+      !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition) ||
+      !/root\.getElementById\('footerAnimation'\) && settings\.showFooterMessage/.test(composition)) {
+    err('Composition: normalized timing and independent footer visibility must be passed through.');
   }
 
   if (!/hero-section, #heroBanner, #heroBannerAbout/.test(composition)) {
@@ -1068,12 +1071,19 @@ function validateBootstrapHardening() {
       !/heroSection\.classList\.toggle\('hero-section--message', showHeroMessage\)/.test(hero)) {
     err('Hero: message visibility must also toggle content-driven hero sizing.');
   }
+  if (!/footerElement\.classList\.toggle\('footer--message-enabled', showFooterMessage\)/.test(hero)) {
+    err('Hero/footer message: full-footer artwork must follow footer-message visibility.');
+  }
   const heroCss = exists('css/style.css') ? readText('css/style.css') : '';
   if (!/\.hero-section:has\(\.hero-quote:not\(\[hidden\]\)\)/.test(heroCss) ||
       !/\.hero-quote\s*\{[\s\S]*?background:\s*rgba\(0,\s*0,\s*0,\s*0\.42\)/.test(heroCss) ||
       !/\.hero-quote \{ padding: clamp\(22px, 5\.4vw, 30px\) 24px; \}/.test(heroCss) ||
-      !/\.footer-content \.footer-hero-message\s*\{[\s\S]*?background:rgba\(0,0,0,\.42\)/.test(heroCss)) {
-    err('Hero/footer message: grouped translucent panels, responsive padding, and hidden-state sizing must remain wired.');
+      !/\.footer-content \.footer-hero-message\s*\{[\s\S]*?background:rgba\(0,0,0,\.42\)/.test(heroCss) ||
+      !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner::after\s*\{\s*background:\s*transparent;\s*\}/.test(heroCss) ||
+      !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner \.slide\.active\s*\{\s*opacity:\s*1;\s*\}/.test(heroCss) ||
+      !/footer:not\(\.footer--message-enabled\) > \.footer-animation,[\s\S]*?display:none !important/.test(heroCss) ||
+      !/\.footer-content \.footer-hero-message\s*\{[\s\S]*?text-align:left;[\s\S]*?margin:0 auto clamp\(28px,4vw,48px\)/.test(heroCss)) {
+    err('Hero/footer message: disabled-state clarity, conditional footer backdrop, panel styling, and spacing must remain wired.');
   }
   if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
     err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');

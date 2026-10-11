@@ -144,34 +144,22 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
   function pickHeroMessage(messages, exclude = -1) {
     if (messages.length <= 1) return 0;
-
-    const weights = messages.map(item => item.weight);
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
-    let chosen = 0;
-
-    if (total <= 0) {
-      chosen = Math.floor(Math.random() * messages.length);
-    } else {
-      let roll = Math.random() * total;
-      for (let i = 0; i < messages.length; i += 1) {
-        roll -= weights[i];
-        if (roll <= 0) {
-          chosen = i;
-          break;
-        }
-      }
+    const excluded = exclude instanceof Set
+      ? exclude
+      : new Set(Number.isInteger(exclude) && exclude >= 0 ? [exclude] : []);
+    let candidates = messages.map((_, index) => index).filter(index => !excluded.has(index));
+    if (!candidates.length) candidates = messages.map((_, index) => index);
+    const weighted = candidates
+      .map(index => ({ index, weight: Math.max(0, Number(messages[index].weight) || 0) }))
+      .filter(item => item.weight > 0);
+    const total = weighted.reduce((sum, item) => sum + item.weight, 0);
+    if (total <= 0) return candidates[Math.floor(Math.random() * candidates.length)];
+    let roll = Math.random() * total;
+    for (const item of weighted) {
+      roll -= item.weight;
+      if (roll < 0) return item.index;
     }
-
-    if (chosen === exclude) {
-      const alternatives = messages
-        .map((_, i) => i)
-        .filter(i => i !== exclude && messages[i].weight > 0);
-      if (alternatives.length) {
-        chosen = alternatives[Math.floor(Math.random() * alternatives.length)];
-      }
-    }
-
-    return chosen;
+    return weighted[weighted.length - 1].index;
   }
 
   function buildHeroMessageView(documentRef, root) {
@@ -283,6 +271,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
     const heroMessageRoot = showHeroMessage ? heroMessageCandidate : null;
 
     const footerContent = documentRef.querySelector('.footer-content');
+    const footerElement = footerContent?.closest('footer');
+    if (footerElement) footerElement.classList.toggle('footer--message-enabled', showFooterMessage);
     let footerMessageRoot = footerContent?.querySelector('.footer-hero-message') || null;
     if (showFooterMessage && footerContent) {
       if (!footerMessageRoot) {
@@ -297,34 +287,44 @@ import { createLifecycle } from '../../core/lifecycle.js';
       footerMessageRoot = null;
     }
 
-    const messageViews = [
-      heroMessageRoot ? buildHeroMessageView(documentRef, heroMessageRoot) : null,
-      footerMessageRoot ? buildHeroMessageView(documentRef, footerMessageRoot) : null
-    ].filter(Boolean);
+    const messageTargets = [
+      { key: 'hero', root: heroMessageRoot },
+      { key: 'footer', root: footerMessageRoot }
+    ].filter(target => target.root)
+      .map(target => ({ ...target, view: buildHeroMessageView(documentRef, target.root) }));
 
-    if (messageViews.length) {
+    if (messageTargets.length) {
       let messages = [{ label: 'LM.', text: 'Open for freelance work.', author: '', source: '', weight: 1 }];
-      let currentMessage = -1;
-
-      const fadeToMessage = (index, animate = true) => {
-        const item = messages[index];
-        if (!item) return;
-        currentMessage = index;
+      const currentMessageByKey = new Map();
+      const chooseMessageSet = () => {
+        const usedIndices = new Set();
+        return messageTargets.map(target => {
+          const excluded = new Set(usedIndices);
+          const current = currentMessageByKey.get(target.key);
+          if (messages.length > 1 && Number.isInteger(current)) excluded.add(current);
+          let index = pickHeroMessage(messages, excluded);
+          if (messages.length > 1 && usedIndices.has(index)) {
+            const alternatives = messages.map((_, candidate) => candidate).filter(candidate => !usedIndices.has(candidate));
+            if (alternatives.length) index = alternatives[Math.floor(Math.random() * alternatives.length)];
+          }
+          usedIndices.add(index);
+          currentMessageByKey.set(target.key, index);
+          return { target, item: messages[index] };
+        });
+      };
+      const fadeToMessageSet = (animate = true) => {
+        const selections = chooseMessageSet();
+        if (!selections.length) return;
         if (!animate) {
-          messageViews.forEach(view => renderHeroMessage(view, item));
+          selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
           return;
         }
-
         windowRef.clearTimeout(messageFadeTimer);
-        if (footerHeightAnimation) {
-          try { footerHeightAnimation.cancel(); } catch (_) {}
-          footerHeightAnimation = null;
-        }
-        const footerElement = footerContent?.closest('footer');
+        if (footerHeightAnimation) { try { footerHeightAnimation.cancel(); } catch (_) {} footerHeightAnimation = null; }
         const previousFooterHeight = footerElement?.getBoundingClientRect?.().height || 0;
-        messageViews.forEach(view => { view.root.style.opacity = '0'; });
+        messageTargets.forEach(({ view }) => { view.root.style.opacity = '0'; });
         messageFadeTimer = windowRef.setTimeout(() => {
-          messageViews.forEach(view => renderHeroMessage(view, item));
+          selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
           const nextFooterHeight = footerElement?.getBoundingClientRect?.().height || 0;
           if (footerElement && previousFooterHeight > 0 &&
               Math.abs(nextFooterHeight - previousFooterHeight) > 2 &&
@@ -334,34 +334,21 @@ import { createLifecycle } from '../../core/lifecycle.js';
                 [{ height: previousFooterHeight + 'px' }, { height: nextFooterHeight + 'px' }],
                 { duration: 360, easing: 'cubic-bezier(.22,1,.36,1)' }
               );
-              footerHeightAnimation.onfinish = () => {
-                try { footerHeightAnimation?.cancel?.(); } catch (_) {}
-                footerHeightAnimation = null;
-              };
+              footerHeightAnimation.onfinish = () => { try { footerHeightAnimation?.cancel?.(); } catch (_) {} footerHeightAnimation = null; };
             } catch (_) { footerHeightAnimation = null; }
           }
-          windowRef.requestAnimationFrame(() => messageViews.forEach(view => { view.root.style.opacity = '1'; }));
+          windowRef.requestAnimationFrame(() => messageTargets.forEach(({ view }) => { view.root.style.opacity = '1'; }));
         }, config.messageFadeMs);
       };
-
-      fadeToMessage(pickHeroMessage(messages), false);
-      windowRef.requestAnimationFrame(() => messageViews.forEach(view => { view.root.style.opacity = '1'; }));
-
+      fadeToMessageSet(false);
+      windowRef.requestAnimationFrame(() => messageTargets.forEach(({ view }) => { view.root.style.opacity = '1'; }));
       try {
         const rawMessages = await loadJson(heroMessagesUrl, null, { resolveUrl: resolveAssetUrl });
         const cmsMessages = normalizeHeroMessages(rawMessages);
-        if (cmsMessages.length) {
-          messages = cmsMessages;
-          fadeToMessage(pickHeroMessage(messages, currentMessage));
-        }
-      } catch (err) {
-        console.warn('Hero messages: could not load', heroMessagesUrl, err);
-      }
-
+        if (cmsMessages.length) { messages = cmsMessages; fadeToMessageSet(true); }
+      } catch (err) { console.warn('Hero messages: could not load', heroMessagesUrl, err); }
       if (config.messageAutoRotateMs > 0 && messages.length > 1) {
-        messageRotationTimer = windowRef.setInterval(() => {
-          fadeToMessage(pickHeroMessage(messages, currentMessage));
-        }, config.messageAutoRotateMs);
+        messageRotationTimer = windowRef.setInterval(() => fadeToMessageSet(true), config.messageAutoRotateMs);
       }
     }
 

@@ -1249,10 +1249,16 @@ try {
       const heroMessageLayout = await page.locator('#heroQuote').evaluate(el => {
         const style = getComputedStyle(el);
         const match = style.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
+        const heroSection = el.closest('.hero-section');
+        const banner = heroSection?.querySelector('.hero-banner');
+        const overlay = banner ? getComputedStyle(banner, '::after') : null;
+        const activeSlide = banner?.querySelector('.slide.active');
         return {
           backgroundAlpha: match ? Number(match[1]) : 0,
           paddingTop: parseFloat(style.paddingTop) || 0,
-          dynamicSizing: Boolean(el.closest('.hero-section')?.classList.contains('hero-section--message'))
+          dynamicSizing: Boolean(heroSection?.classList.contains('hero-section--message')),
+          overlayImage: overlay?.backgroundImage || 'none',
+          activeArtworkOpacity: activeSlide ? Number.parseFloat(getComputedStyle(activeSlide).opacity) : 0
         };
       }).catch(() => ({ backgroundAlpha: 0, paddingTop: 0, dynamicSizing: false }));
       if (heroMessageLayout.backgroundAlpha < 0.1) throw new Error('Works Hero message group is missing its translucent background.');
@@ -1263,6 +1269,14 @@ try {
       if (messageSettings.showHeroMessage !== false && !heroMessageLayout.dynamicSizing) {
         throw new Error('Works Hero did not enable message-driven sizing with its message.');
       }
+      if (messageSettings.showHeroMessage === false &&
+          (heroMessageLayout.overlayImage !== 'none' || heroMessageLayout.activeArtworkOpacity < 0.99)) {
+        throw new Error('Works Hero artwork should be full-color with no dark overlay while its message is disabled: ' + JSON.stringify(heroMessageLayout));
+      }
+      if (messageSettings.showHeroMessage !== false &&
+          (!heroMessageLayout.overlayImage.includes('linear-gradient') || heroMessageLayout.activeArtworkOpacity > 0.6)) {
+        throw new Error('Works Hero must keep its readability overlay when the message is enabled: ' + JSON.stringify(heroMessageLayout));
+      }
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
         if (!footerMessage?.trim()) throw new Error('Works footer message is missing while showFooterMessage is enabled.');
@@ -1271,9 +1285,35 @@ try {
           return match ? Number(match[1]) : 0;
         }).catch(() => 0);
         if (footerPanelAlpha < 0.1) throw new Error('Works footer message group is missing its translucent background.');
+        const footerMessageLayout = await page.locator('footer .footer-hero-message').evaluate(el => {
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          const social = el.closest('footer')?.querySelector('.social-icons')?.getBoundingClientRect();
+          const footer = el.closest('footer');
+          return {
+            textAlign: style.textAlign,
+            marginBottom: parseFloat(style.marginBottom) || 0,
+            socialGap: social ? social.top - rect.bottom : 0,
+            backdropClass: Boolean(footer?.classList.contains('footer--message-enabled')),
+            animationDisplay: footer ? getComputedStyle(footer.querySelector('.footer-animation')).display : 'none',
+            fadeDisplay: footer ? getComputedStyle(footer.querySelector('.footer-fade')).display : 'none'
+          };
+        });
+        if (footerMessageLayout.textAlign !== 'left') throw new Error('Footer quote should follow the left-aligned hero message layout.');
+        if (footerMessageLayout.marginBottom < 24 || footerMessageLayout.socialGap < 24) throw new Error('Footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
+        if (!footerMessageLayout.backdropClass || footerMessageLayout.animationDisplay === 'none' || footerMessageLayout.fadeDisplay === 'none') throw new Error('Footer message should enable its full-bleed looping artwork backdrop.');
+      } else {
+        const footerBackdrop = await page.locator('footer').evaluate(el => ({
+          enabled: el.classList.contains('footer--message-enabled'),
+          animationDisplay: getComputedStyle(el.querySelector('.footer-animation')).display,
+          fadeDisplay: getComputedStyle(el.querySelector('.footer-fade')).display
+        }));
+        if (footerBackdrop.enabled || footerBackdrop.animationDisplay !== 'none' || footerBackdrop.fadeDisplay !== 'none') {
+          throw new Error('Works footer backdrop should be disabled when the footer message is off: ' + JSON.stringify(footerBackdrop));
+        }
       }
 
-      if (heroSlides > 1) {
+      if (heroSlides > 1) {}
         await page.waitForTimeout(3800);
         const activeSlides = await page.locator('#heroBanner .slide.active').count();
         if (activeSlides !== 1) throw new Error(`Works Hero loop has invalid active-slide state (found ${activeSlides}).`);
@@ -2796,10 +2836,16 @@ try {
       const heroMessageLayout = await page.locator('#heroQuote').evaluate(el => {
         const style = getComputedStyle(el);
         const match = style.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
+        const heroSection = el.closest('.hero-section');
+        const banner = heroSection?.querySelector('.hero-banner');
+        const overlay = banner ? getComputedStyle(banner, '::after') : null;
+        const activeSlide = banner?.querySelector('.slide.active');
         return {
           backgroundAlpha: match ? Number(match[1]) : 0,
           paddingTop: parseFloat(style.paddingTop) || 0,
-          dynamicSizing: Boolean(el.closest('.hero-section')?.classList.contains('hero-section--message'))
+          dynamicSizing: Boolean(heroSection?.classList.contains('hero-section--message')),
+          overlayImage: overlay?.backgroundImage || 'none',
+          activeArtworkOpacity: activeSlide ? Number.parseFloat(getComputedStyle(activeSlide).opacity) : 0
         };
       }).catch(() => ({ backgroundAlpha: 0, paddingTop: 0, dynamicSizing: false }));
       if (heroMessageLayout.backgroundAlpha < 0.1) throw new Error('Mobile/tablet Hero message group is missing its translucent background.');
@@ -2810,6 +2856,14 @@ try {
       if (messageSettings.showHeroMessage !== false && !heroMessageLayout.dynamicSizing) {
         throw new Error('Mobile/tablet Hero did not enable message-driven sizing with its message.');
       }
+      if (messageSettings.showHeroMessage === false &&
+          (heroMessageLayout.overlayImage !== 'none' || heroMessageLayout.activeArtworkOpacity < 0.99)) {
+        throw new Error('Mobile/tablet Hero artwork should be full-color with no dark overlay while its message is disabled: ' + JSON.stringify(heroMessageLayout));
+      }
+      if (messageSettings.showHeroMessage !== false &&
+          (!heroMessageLayout.overlayImage.includes('linear-gradient') || heroMessageLayout.activeArtworkOpacity > 0.6)) {
+        throw new Error('Mobile/tablet Hero must keep its readability overlay when the message is enabled: ' + JSON.stringify(heroMessageLayout));
+      }
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
         if (!footerMessage?.trim()) throw new Error('Mobile/tablet footer message is missing while showFooterMessage is enabled.');
@@ -2818,9 +2872,35 @@ try {
           return match ? Number(match[1]) : 0;
         }).catch(() => 0);
         if (footerPanelAlpha < 0.1) throw new Error('Mobile/tablet footer message group is missing its translucent background.');
+        const footerMessageLayout = await page.locator('footer .footer-hero-message').evaluate(el => {
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          const social = el.closest('footer')?.querySelector('.social-icons')?.getBoundingClientRect();
+          const footer = el.closest('footer');
+          return {
+            textAlign: style.textAlign,
+            marginBottom: parseFloat(style.marginBottom) || 0,
+            socialGap: social ? social.top - rect.bottom : 0,
+            backdropClass: Boolean(footer?.classList.contains('footer--message-enabled')),
+            animationDisplay: footer ? getComputedStyle(footer.querySelector('.footer-animation')).display : 'none',
+            fadeDisplay: footer ? getComputedStyle(footer.querySelector('.footer-fade')).display : 'none'
+          };
+        });
+        if (footerMessageLayout.textAlign !== 'left') throw new Error('Mobile/tablet footer quote should follow the left-aligned hero message layout.');
+        if (footerMessageLayout.marginBottom < 24 || footerMessageLayout.socialGap < 24) throw new Error('Mobile/tablet footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
+        if (!footerMessageLayout.backdropClass || footerMessageLayout.animationDisplay === 'none' || footerMessageLayout.fadeDisplay === 'none') throw new Error('Mobile/tablet footer message should enable its full-bleed looping artwork backdrop.');
+      } else {
+        const footerBackdrop = await page.locator('footer').evaluate(el => ({
+          enabled: el.classList.contains('footer--message-enabled'),
+          animationDisplay: getComputedStyle(el.querySelector('.footer-animation')).display,
+          fadeDisplay: getComputedStyle(el.querySelector('.footer-fade')).display
+        }));
+        if (footerBackdrop.enabled || footerBackdrop.animationDisplay !== 'none' || footerBackdrop.fadeDisplay !== 'none') {
+          throw new Error('Mobile/tablet footer backdrop should be disabled when the footer message is off: ' + JSON.stringify(footerBackdrop));
+        }
       }
 
-      const footerSocialCenter = await page.evaluate(() => {
+      const footerSocialCenter = await page.evaluate(() => {}
         const footer = document.querySelector('footer')?.getBoundingClientRect();
         const row = document.querySelector('footer .social-icons')?.getBoundingClientRect();
         return {

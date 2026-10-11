@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 10, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted visual bug/glitch fixes, structural decoupling, CMS/Lighbox polish, optimization, and cross-device verification.
+As of October 11, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted visual bug/glitch fixes, structural decoupling, CMS/Lighbox polish, optimization, and cross-device verification.
 
 - `js/script.js` is a 19-line browser entrypoint; startup and page wiring live in `js/app/bootstrap.js` and `js/app/page-composition.js`.
 - Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings have explicit feature entry points.
@@ -367,3 +367,13 @@ This migration must not:
 - **Verification status (Oct 11):** source checkpoint `3e18efeebd9838af3104fc3c3d3c9aacf6516161` passed the [Validate portfolio workflow](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38119647704) and [Pages build/deployment](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38119647507). All 31 browser smoke scenarios passed alongside the data, settings, architecture, lifecycle, and syntax contracts. The mobile gallery assertion measures CSS grid tracks/layout offsets rather than animation-affected visual bounds; the native-swipe test settles the foil to center before checking scroll behavior. This is validation of the test-repository branch, not a production promotion.
 - **Next gate:** do a real-phone visual pass against the test-branch preview: toggle hero and footer messages independently; check longer message wrapping and panel sizing; test foil tilt/flip/Back and 3D Back/Escape without scroll jumps; verify Start a Project / Leave a Review transitions and reduced-motion behavior. Fix only observed regressions. Keep production/legacy deployment repositories untouched; no broad redesign is planned.
 
+
+
+### October 11, 2026 — Clear hero artwork and independent footer-message presentation
+
+- **Hero toggle:** when `showHeroMessage` is false, remove the Works hero gradient overlay and restore active-slide opacity to 1. The About portrait/bio hero retains its intentional overlay.
+- **Footer styling:** the optional footer quote now follows the hero message's left-aligned translucent-panel language, responsive padding, and label/text/credit order. Extra spacing separates it from the social icons and copyright.
+- **Distinct content:** hero and footer select separate entries from the shared normalized message bank when multiple entries exist. They randomize on refresh, avoid repeating their own immediately previous entry when alternatives exist, and rotate using normalized `heroTiming.autoRotateMs`.
+- **Conditional footer backdrop:** footer artwork loop/fade appear only while `showFooterMessage` is enabled; otherwise the footer returns to its plain base background.
+- **Settings/cache contracts:** preserve `fadeMs` and `autoRotateMs`, default message rotation to 9 seconds, and bump public CSS/Hero/bootstrap/composition/entrypoint cache identities.
+- **Next gate:** validate full-color hero art with the message off, footer alignment and spacing on desktop/mobile, distinct quotes when both toggles are enabled, and footer backdrop on/off behavior. Do not change the deployed legacy repository.

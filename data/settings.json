@@ -23,7 +23,7 @@
   "siteDescription": "2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.",
   "heroTiming": {
     "fadeMs": 600,
-    "autoRotateMs": 0,
+    "autoRotateMs": 9000,
     "crossfadeMs": 3500,
     "kenBurnsFromScale": 1,
     "kenBurnsToScale": 1.15,
