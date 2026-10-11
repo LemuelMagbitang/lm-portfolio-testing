@@ -736,14 +736,21 @@ try {
 
         const nativeQuickBox = await holographic.boundingBox();
         if (!nativeQuickBox) throw new Error('Native-touch holographic fixture lost its geometry.');
+        // Prior synthetic pointer tests can leave the foil easing toward center.
+        // Start the native-scroll probe from a settled baseline so an unrelated
+        // recovery animation cannot make the gesture assertion fail.
+        await holographic.dispatchEvent('pointerleave');
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          if (!el) return false;
+          const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
+          const y = Number.parseFloat(el.style.getPropertyValue('--holo-y'));
+          return Number.isFinite(x) && Number.isFinite(y) &&
+            Math.abs(x - 50) < 0.25 && Math.abs(y - 50) < 0.25;
+        }, null, { timeout: 1500 });
         const quickStartX = nativeQuickBox.x + nativeQuickBox.width * 0.5;
         const quickStartY = nativeQuickBox.y + nativeQuickBox.height * 0.5;
         const quickScrollBefore = await nativeTouchScrollHost.evaluate(el => el.scrollTop);
-        const quickFoilBefore = await holographic.evaluate(el => ({
-          engaged: el.classList.contains('is-holo-touch-engaged'),
-          x: el.style.getPropertyValue('--holo-x'),
-          y: el.style.getPropertyValue('--holo-y')
-        }));
         await dispatchTouch('touchStart', 91, quickStartX, quickStartY);
         await page.waitForTimeout(55);
         await dispatchTouch('touchMove', 91, quickStartX + 2, quickStartY - 42);
@@ -760,22 +767,13 @@ try {
         ]);
         const quickFoilX = Number.parseFloat(quickNativeState[1].x);
         const quickFoilY = Number.parseFloat(quickNativeState[1].y);
-        const quickFoilBeforeX = Number.parseFloat(quickFoilBefore.x);
-        const quickFoilBeforeY = Number.parseFloat(quickFoilBefore.y);
         if (quickNativeState[0] < quickScrollBefore + 4 ||
             quickNativeState[1].engaged ||
-            quickFoilBefore.engaged ||
             !Number.isFinite(quickFoilX) || !Number.isFinite(quickFoilY) ||
-            !Number.isFinite(quickFoilBeforeX) || !Number.isFinite(quickFoilBeforeY) ||
-            Math.abs(quickFoilX - quickFoilBeforeX) > 1.5 ||
-            Math.abs(quickFoilY - quickFoilBeforeY) > 1.5) {
+            Math.abs(quickFoilX - 50) > 1.5 ||
+            Math.abs(quickFoilY - 50) > 1.5) {
           throw new Error('A quick native mobile swipe was not preserved as normal Lightbox scrolling: ' +
-            JSON.stringify({
-              scrollBefore: quickScrollBefore,
-              scrollAfter: quickNativeState[0],
-              foilBefore: quickFoilBefore,
-              foilAfter: quickNativeState[1]
-            }));
+            JSON.stringify({ scrollBefore: quickScrollBefore, scrollAfter: quickNativeState[0], foil: quickNativeState[1] }));
         }
 
         const heldNativeBox = await holographic.boundingBox();
