@@ -1001,6 +1001,13 @@ export function createLightboxMediaRenderer({
 
     const cleanup = () => {
       clearTouchGesture();
+      // A foil's flipped state belongs to the current Lightbox session. Reset
+      // it before the media node is disposed or moved to a preload/teardown path.
+      // This keeps a reused grouped-artwork node from reopening on its reverse.
+      surface.classList.remove('is-flipped');
+      surface.setAttribute('aria-pressed', 'false');
+      const faceLabel = surface.__lightboxHoloHint?.querySelector('[data-holo-face-label]');
+      if (faceLabel) faceLabel.textContent = 'FRONT';
       const motion = holographicMotionStates.get(surface);
       if (motion?.frame !== null && motion?.frame !== undefined) {
         windowRef?.cancelAnimationFrame?.(motion.frame);
