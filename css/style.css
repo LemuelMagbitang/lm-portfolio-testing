@@ -4214,9 +4214,10 @@ footer > .footer-content p{
   .social-icons a:hover{transform:translateY(-3px);}
 }
 @media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
   .nav-links a,.filter-tabs .tab-btn,.btn-show-more,.submit-btn,.email-me-btn,
   .social-icons a,.contact-mobile-tab,.hamburger,
-  .footer-content .footer-hero-message{transition:none!important;}
+  .footer-content .footer-hero-message,.contact-mobile-tabs::before{transition:none!important;}
   .nav-links a:active,.filter-tabs .tab-btn:active,.btn-show-more:active,
   .submit-btn:active,.email-me-btn:active,.social-icons a:active,
   .contact-mobile-tab:active,.hamburger:active{transform:none;}
