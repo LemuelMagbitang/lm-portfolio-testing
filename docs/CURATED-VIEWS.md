@@ -7,7 +7,7 @@ The Curated Views CMS editor and public hash-route resolver are enabled on the p
 
 ## Latest verification — October 12, 2026 PHT
 
-The incident screenshots were captured around 23:19 PHT on October 11, before public routing was implemented in commit `5f9f480` (23:43 PHT). The current branch head `775674d` has a successful site-validation run [#38153475647](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38153475647), including the Curated View resolver test and browser smoke scenario #22 for `/#test-portfolio`. The Pages build/deploy run [#38153475848](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38153475848) also succeeded for the same commit.
+The incident screenshots were captured around 23:19 PHT on October 11, before public routing was implemented in commit `5f9f480` (23:43 PHT). The runtime-code verification baseline `775674d` has a successful site-validation run [#38153475647](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38153475647), including the Curated View resolver test and browser smoke scenario #22 for `/#test-portfolio`. The Pages build/deploy run [#38153475848](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38153475848) also succeeded for the same commit.
 
 Automated test-repository and deployment checks are green. A fresh user-side browser reload remains useful to confirm the visible published result in the user’s browser; do not treat the earlier screenshot as evidence that the current deployed route is still broken.
 
