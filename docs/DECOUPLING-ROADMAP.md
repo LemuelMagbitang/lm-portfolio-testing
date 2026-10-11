@@ -377,3 +377,12 @@ This migration must not:
 - **Conditional footer backdrop:** footer artwork loop/fade appear only while `showFooterMessage` is enabled; otherwise the footer returns to its plain base background.
 - **Settings/cache contracts:** preserve `fadeMs` and `autoRotateMs`, default message rotation to 9 seconds, and bump public CSS/Hero/bootstrap/composition/entrypoint cache identities.
 - **Next gate:** validate full-color hero art with the message off, footer alignment and spacing on desktop/mobile, distinct quotes when both toggles are enabled, and footer backdrop on/off behavior. Do not change the deployed legacy repository.
+
+
+### October 11, 2026 — Match footer message to the hero layer system
+
+- **Layer contract:** artwork/media loop stays at the base; the quote is one grouped layer whose own panel is translucent black (`rgba(0,0,0,.42)), with the message label, statement, and attribution inside it. Text stays above the panel; panel tint does not blur the artwork below it.
+- **No frosted-glass treatment:** removed `backdrop-filter: blur(3px)` from the shared hero quote and removed the footer's duplicate blur/style overrides.
+- **Shared visual component:** the optional footer quote now also carries `.hero-quote`, so the exact hero panel, typography, responsive padding, and text hierarchy are reused. The footer-specific exception is only a bottom margin of `clamp(36px,5vw,64px)` before the independent social/copyright group.
+- **Regression guards:** the browser smoke suite checks no blur on the hero quote in desktop/mobile contexts and verifies that the footer quote shares the hero class and maintains the social-row gap. Static validation enforces the shared class and no-blur CSS contract.
+- **Next gate:** confirm the visual result on desktop and phone; keep the looping background, panel layer, and footer social/copyright group separate. Production remains untouched.

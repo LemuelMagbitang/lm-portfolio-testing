@@ -287,6 +287,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
       footerMessageRoot = null;
     }
 
+    if (footerMessageRoot) footerMessageRoot.classList.add('hero-quote');
+
     const messageTargets = [
       { key: 'hero', root: heroMessageRoot },
       { key: 'footer', root: footerMessageRoot }

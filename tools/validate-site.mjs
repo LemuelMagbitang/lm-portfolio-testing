@@ -1078,11 +1078,13 @@ function validateBootstrapHardening() {
   if (!/\.hero-section:has\(\.hero-quote:not\(\[hidden\]\)\)/.test(heroCss) ||
       !/\.hero-quote\s*\{[\s\S]*?background:\s*rgba\(0,\s*0,\s*0,\s*0\.42\)/.test(heroCss) ||
       !/\.hero-quote \{ padding: clamp\(22px, 5\.4vw, 30px\) 24px; \}/.test(heroCss) ||
-      !/\.footer-content \.footer-hero-message\s*\{[\s\S]*?background:rgba\(0,0,0,\.42\)/.test(heroCss) ||
+      !/footerMessageRoot\.classList\.add\('hero-quote'\)/.test(hero) ||
+      !/\.footer-content \.footer-hero-message\s*\{[^}]*margin:\s*0 auto clamp\(36px,5vw,64px\)/.test(heroCss) ||
+      /\.hero-quote\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
+      /\.footer-content \.footer-hero-message\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
       !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner::after\s*\{\s*background:\s*transparent;\s*\}/.test(heroCss) ||
       !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner \.slide\.active\s*\{\s*opacity:\s*1;\s*\}/.test(heroCss) ||
-      !/footer:not\(\.footer--message-enabled\) > \.footer-animation,[\s\S]*?display:none !important/.test(heroCss) ||
-      !/\.footer-content \.footer-hero-message\s*\{[\s\S]*?text-align:left;[\s\S]*?margin:0 auto clamp\(28px,4vw,48px\)/.test(heroCss)) {
+      !/footer:not\(\.footer--message-enabled\) > \.footer-animation,[\s\S]*?display:none !important/.test(heroCss)) {
     err('Hero/footer message: disabled-state clarity, conditional footer backdrop, panel styling, and spacing must remain wired.');
   }
   if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {

@@ -20,7 +20,7 @@ import { initForms } from '../features/forms/index.js?v=20261011-01';
 import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-04';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-05';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261010-02';
 import { initLightbox } from '../features/lightbox/index.js?v=20261011-08';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';

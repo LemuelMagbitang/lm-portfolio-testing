@@ -1258,11 +1258,13 @@ try {
           paddingTop: parseFloat(style.paddingTop) || 0,
           dynamicSizing: Boolean(heroSection?.classList.contains('hero-section--message')),
           overlayImage: overlay?.backgroundImage || 'none',
-          activeArtworkOpacity: activeSlide ? Number.parseFloat(getComputedStyle(activeSlide).opacity) : 0
+          activeArtworkOpacity: activeSlide ? Number.parseFloat(getComputedStyle(activeSlide).opacity) : 0,
+          backdropFilter: style.backdropFilter || 'none'
         };
       }).catch(() => ({ backgroundAlpha: 0, paddingTop: 0, dynamicSizing: false }));
       if (heroMessageLayout.backgroundAlpha < 0.1) throw new Error('Works Hero message group is missing its translucent background.');
       if (heroMessageLayout.paddingTop < 18) throw new Error('Works Hero message group has insufficient vertical padding.');
+      if (heroMessageLayout.backdropFilter !== 'none') throw new Error('Works Hero quote panel must not blur the artwork behind it.');
       if (messageSettings.showHeroMessage === false && heroMessageLayout.dynamicSizing) {
         throw new Error('Works Hero should not retain message-driven sizing while its message is disabled.');
       }
@@ -1292,6 +1294,8 @@ try {
           const footer = el.closest('footer');
           return {
             textAlign: style.textAlign,
+            backdropFilter: style.backdropFilter || 'none',
+            messageClass: el.classList.contains('hero-quote'),
             marginBottom: parseFloat(style.marginBottom) || 0,
             socialGap: social ? social.top - rect.bottom : 0,
             backdropClass: Boolean(footer?.classList.contains('footer--message-enabled')),
@@ -1300,7 +1304,8 @@ try {
           };
         });
         if (footerMessageLayout.textAlign !== 'left') throw new Error('Footer quote should follow the left-aligned hero message layout.');
-        if (footerMessageLayout.marginBottom < 24 || footerMessageLayout.socialGap < 24) throw new Error('Footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
+        if (footerMessageLayout.backdropFilter !== 'none' || !footerMessageLayout.messageClass) throw new Error('Footer quote must reuse the sharp, unblurred hero message panel styling.');
+        if (footerMessageLayout.marginBottom < 32 || footerMessageLayout.socialGap < 32) throw new Error('Footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
         if (!footerMessageLayout.backdropClass || footerMessageLayout.animationDisplay === 'none' || footerMessageLayout.fadeDisplay === 'none') throw new Error('Footer message should enable its full-bleed looping artwork backdrop.');
       } else {
         const footerBackdrop = await page.locator('footer').evaluate(el => ({
@@ -2845,11 +2850,13 @@ try {
           paddingTop: parseFloat(style.paddingTop) || 0,
           dynamicSizing: Boolean(heroSection?.classList.contains('hero-section--message')),
           overlayImage: overlay?.backgroundImage || 'none',
-          activeArtworkOpacity: activeSlide ? Number.parseFloat(getComputedStyle(activeSlide).opacity) : 0
+          activeArtworkOpacity: activeSlide ? Number.parseFloat(getComputedStyle(activeSlide).opacity) : 0,
+          backdropFilter: style.backdropFilter || 'none'
         };
       }).catch(() => ({ backgroundAlpha: 0, paddingTop: 0, dynamicSizing: false }));
       if (heroMessageLayout.backgroundAlpha < 0.1) throw new Error('Mobile/tablet Hero message group is missing its translucent background.');
       if (heroMessageLayout.paddingTop < 18) throw new Error('Mobile/tablet Hero message group has insufficient vertical padding.');
+      if (heroMessageLayout.backdropFilter !== 'none') throw new Error('Mobile/tablet Hero quote panel must not blur the artwork behind it.');
       if (messageSettings.showHeroMessage === false && heroMessageLayout.dynamicSizing) {
         throw new Error('Mobile/tablet Hero should not retain message-driven sizing while its message is disabled.');
       }
@@ -2879,6 +2886,8 @@ try {
           const footer = el.closest('footer');
           return {
             textAlign: style.textAlign,
+            backdropFilter: style.backdropFilter || 'none',
+            messageClass: el.classList.contains('hero-quote'),
             marginBottom: parseFloat(style.marginBottom) || 0,
             socialGap: social ? social.top - rect.bottom : 0,
             backdropClass: Boolean(footer?.classList.contains('footer--message-enabled')),
@@ -2887,7 +2896,8 @@ try {
           };
         });
         if (footerMessageLayout.textAlign !== 'left') throw new Error('Mobile/tablet footer quote should follow the left-aligned hero message layout.');
-        if (footerMessageLayout.marginBottom < 24 || footerMessageLayout.socialGap < 24) throw new Error('Mobile/tablet footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
+        if (footerMessageLayout.backdropFilter !== 'none' || !footerMessageLayout.messageClass) throw new Error('Mobile/tablet footer quote must reuse the sharp, unblurred hero message panel styling.');
+        if (footerMessageLayout.marginBottom < 32 || footerMessageLayout.socialGap < 32) throw new Error('Mobile/tablet footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
         if (!footerMessageLayout.backdropClass || footerMessageLayout.animationDisplay === 'none' || footerMessageLayout.fadeDisplay === 'none') throw new Error('Mobile/tablet footer message should enable its full-bleed looping artwork backdrop.');
       } else {
         const footerBackdrop = await page.locator('footer').evaluate(el => ({

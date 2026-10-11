@@ -299,8 +299,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   background: rgba(0, 0, 0, 0.42);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 3px;
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
   opacity: 0;
   transition: opacity 0.6s ease;
 }
@@ -2983,62 +2981,10 @@ footer{
 /* Optional quote from the same CMS source as the hero. This block has no fixed
    height: long text naturally expands the footer and the background follows. */
 .footer-content .footer-hero-message{
-  box-sizing:border-box;
-  width:100%;
-  max-width:1400px;
-  padding:clamp(22px,3.4vw,40px) 24px;
-  text-align:left;
-  margin:0 auto clamp(28px,4vw,48px);
-  background:rgba(0,0,0,.42);
-  border:1px solid rgba(255,255,255,.07);
-  border-radius:3px;
-  -webkit-backdrop-filter:blur(3px);
-  backdrop-filter:blur(3px);
-  opacity:0;
-  transition:opacity .45s ease;
-}
-.footer-content .footer-hero-message.is-ready{opacity:1;}
-.footer-content .footer-hero-message .hero-quote-label{
-  justify-content:flex-start;
-  gap:10px;
-  margin:0 0 16px;
-  font-size:.66rem;
-  letter-spacing:.2em;
-}
-.footer-content .footer-hero-message .hero-quote-label::before{width:42px;}
-.footer-content .footer-hero-message .hero-quote-text{
-  max-width:60ch;
-  margin:0 0 18px;
-  font-size:clamp(1.35rem,2.8vw,2.5rem);
-  line-height:1.14;
-  letter-spacing:-.018em;
-  text-wrap:balance;
-}
-.footer-content .footer-hero-message .hero-quote-author{
-  max-width:60ch;
-  margin:0;
-  padding-top:14px;
-  font-size:.66rem;
-  letter-spacing:.12em;
-}
-@media(max-width:767px){
-  .footer-content .footer-hero-message{
-    width:100%;
-    padding:clamp(22px,5.4vw,30px) 24px;
-  }
-  .footer-content .footer-hero-message .hero-quote-label{margin-bottom:16px;font-size:.6rem;}
-  .footer-content .footer-hero-message .hero-quote-label::before{width:26px;}
-  .footer-content .footer-hero-message .hero-quote-text{
-    max-width:18ch;
-    margin-bottom:24px;
-    font-size:clamp(1.75rem,8.2vw,2.6rem);
-    line-height:1.14;
-  }
-  .footer-content .footer-hero-message .hero-quote-author{
-    max-width:22ch;
-    font-size:.66rem;
-    padding-top:14px;
-  }
+  /* The root also carries .hero-quote, so its panel and typography stay
+     identical to the hero. This is the only footer-specific exception:
+     clear separation before the independent social/copyright group. */
+  margin:0 auto clamp(36px,5vw,64px);
 }
 @media (prefers-reduced-motion:reduce){
   .footer-animation-slide{transition:none;}
