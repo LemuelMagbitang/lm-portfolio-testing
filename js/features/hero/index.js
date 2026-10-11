@@ -188,9 +188,10 @@ import { createLifecycle } from '../../core/lifecycle.js';
       return element;
     };
 
-    const label = ensure('heroQuoteLabel', 'hero-quote-label', 'span');
-    const text = ensure('heroQuoteText', 'hero-quote-text', 'p');
-    const author = ensure('heroQuoteAuthor', 'hero-quote-author', 'span');
+    const isFooterMessage = root.classList.contains('footer-hero-message');
+    const label = ensure(isFooterMessage ? 'footerQuoteLabel' : 'heroQuoteLabel', 'hero-quote-label', 'span');
+    const text = ensure(isFooterMessage ? 'footerQuoteText' : 'heroQuoteText', 'hero-quote-text', 'p');
+    const author = ensure(isFooterMessage ? 'footerQuoteAuthor' : 'heroQuoteAuthor', 'hero-quote-author', 'span');
 
     root.append(label, text, author);
     return { root, label, text, author };
