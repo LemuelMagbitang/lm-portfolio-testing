@@ -2209,8 +2209,31 @@ try {
         throw new Error('Focused 3D global Lightbox controls did not remain on normal compositing: '+focusedCloseContrast);
       }
 
-      const backFocused = await modelBack.evaluate(el => document.activeElement === el);
-      if (!backFocused) throw new Error('3D activation did not move keyboard focus to the Back control.');
+      // The viewer focuses its Back control in requestAnimationFrame after
+      // activating the interactive mode. Wait for that scheduled accessibility
+      // transition instead of sampling document.activeElement before the frame.
+      try {
+        await page.waitForFunction(() => {
+          const back = document.querySelector('.lightbox-3d-focus-overlay .model-viewer-back');
+          return !!back && document.activeElement === back;
+        }, null, { timeout: 1200 });
+      } catch (_) {
+        const focusState = await page.evaluate(() => {
+          const back = document.querySelector('.lightbox-3d-focus-overlay .model-viewer-back');
+          const active = document.activeElement;
+          return {
+            backExists: !!back,
+            backHidden: !!back?.hidden,
+            backConnected: !!back?.isConnected,
+            activeTag: active?.tagName || '',
+            activeId: active?.id || '',
+            activeClass: typeof active?.className === 'string' ? active.className : '',
+            activeIsBack: !!back && active === back
+          };
+        });
+        throw new Error('3D activation did not move keyboard focus to the Back control after the scheduled focus frame: ' +
+          JSON.stringify(focusState));
+      }
 
       // Focused 3D mode must remain viewport-bound when a responsive browser
       // changes dimensions while the viewer is already active. This catches
