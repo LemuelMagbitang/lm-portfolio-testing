@@ -505,7 +505,7 @@ function validateLightboxFeatureStylesheet() {
 
   const featureCss = exists('css/features/lightbox.css') ? readText('css/features/lightbox.css') : '';
   if (!featureCss.includes('.lightbox-inspect-mode{z-index:10002;isolation:isolate;}') ||
-      !featureCss.includes('.lightbox-inspect-frame .lightbox-holographic-hint{') ||
+      !featureCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') ||
       !featureCss.includes('object-fit:contain;object-position:center;') ||
       !featureCss.includes('overflow:visible;')) {
     err('CSS ownership: grouped artwork fit, Inspect stacking and foil hint rules must remain in css/features/lightbox.css.');
@@ -615,6 +615,9 @@ const reviews = parseJson('data/reviews.json', []);
 const heroMessages = parseJson('data/hero.json', []);
 validateReviews(reviews);
 validateHeroMessages(heroMessages);
+
+if (typeof settings?.showHeroMessage !== 'boolean') err('data/settings.json: showHeroMessage must be a boolean.');
+if (typeof settings?.showFooterMessage !== 'boolean') err('data/settings.json: showFooterMessage must be a boolean.');
 
 if (settings?.heroTiming) {
   const timing = settings.heroTiming;
@@ -1035,7 +1038,9 @@ function validateBootstrapHardening() {
   }
 
   if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
-      !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition)) {
+      !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition) ||
+      !/showHeroMessage:\s*settings\.showHeroMessage/.test(composition) ||
+      !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition)) {
     err('Composition: Hero timing must use the Hero feature option names loopMode and transitionStyle.');
   }
 
