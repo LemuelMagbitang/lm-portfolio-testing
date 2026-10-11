@@ -1518,8 +1518,23 @@ export function createLightboxMediaRenderer({
             setAspectRatio(modelEntry.querySelector('.lightbox-artwork'), width, height);
           },
           onActivate: () => {
-            // Focus mode overlays the current Lightbox position; entering the
-            // interactive viewer must not rewrite the scroller's scroll anchor.
+            // Keep a same-size in-flow placeholder while the viewer becomes
+            // viewport-fixed. That preserves the Lightbox's scroll geometry
+            // instead of letting its scrollTop clamp when this item leaves flow.
+            if (!modelEntry.querySelector('.lightbox-3d-focus-placeholder') &&
+                modelEntry.parentNode) {
+              const rect = modelEntry.getBoundingClientRect();
+              const placeholder = documentRef.createElement('div');
+              placeholder.className = 'lightbox-3d-focus-placeholder';
+              placeholder.setAttribute('aria-hidden', 'true');
+              placeholder.style.width = Math.ceil(rect.width) + 'px';
+              placeholder.style.height = Math.ceil(rect.height) + 'px';
+              placeholder.style.flex = '0 0 auto';
+              placeholder.style.boxSizing = 'border-box';
+              placeholder.style.visibility = 'hidden';
+              placeholder.style.pointerEvents = 'none';
+              modelEntry.parentNode.insertBefore(placeholder, modelEntry);
+            }
             lightbox.classList.add('is-3d-focused');
             modelEntry.classList.add('is-3d-focus-target');
             if (lightboxControls) {
@@ -1530,15 +1545,15 @@ export function createLightboxMediaRenderer({
             documentRef.body.classList.add('lm-3d-focus-open');
           },
           onDeactivate: () => {
-            lightbox?.classList.remove('is-3d-focused');
             modelEntry.classList.remove('is-3d-focus-target');
+            modelEntry.parentNode?.querySelector?.('.lightbox-3d-focus-placeholder')?.remove();
+            lightbox?.classList.remove('is-3d-focused');
             if (lightboxControls) {
               lightboxControls.classList.remove('is-3d-controls-disabled');
               lightboxControls.inert = false;
             }
             documentRef.documentElement.classList.remove('lm-3d-focus-open');
             documentRef.body.classList.remove('lm-3d-focus-open');
-
           }
         });
       })
