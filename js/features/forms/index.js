@@ -35,6 +35,16 @@ export function initForms({
   function setActiveContactTab(kind, focusPanel = false) {
     if (!contactTabs.length || !contactPanels.length) return;
     const targetKind = kind === 'review' ? 'review' : 'project';
+    const previousPanel = contactPanels.find(panel => panel.classList.contains('is-contact-active'));
+    const nextPanel = contactPanels.find(panel => panel.getAttribute('data-contact-panel') === targetKind);
+    const grid = root.querySelector('#contact-section .contact-grid');
+    const windowRef = root?.defaultView || globalThis.window;
+    const shouldAnimate = Boolean(
+      windowRef?.matchMedia?.('(max-width: 767px)')?.matches &&
+      !windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches &&
+      previousPanel && nextPanel && previousPanel !== nextPanel && grid
+    );
+    const previousHeight = shouldAnimate ? grid.getBoundingClientRect().height : 0;
 
     contactTabs.forEach(tab => {
       const active = tab.getAttribute('data-contact-tab') === targetKind;
@@ -48,11 +58,35 @@ export function initForms({
     contactPanels.forEach(panel => {
       const active = panel.getAttribute('data-contact-panel') === targetKind;
       panel.classList.toggle('is-contact-active', active);
+      if (active) panel.setAttribute('aria-hidden', 'false');
+      else panel.setAttribute('aria-hidden', 'true');
     });
 
+    if (shouldAnimate) {
+      const nextHeight = nextPanel.getBoundingClientRect().height;
+      grid.style.height = previousHeight + 'px';
+      grid.style.overflow = 'hidden';
+      const heightAnimation = grid.animate(
+        [{ height: previousHeight + 'px' }, { height: nextHeight + 'px' }],
+        { duration: 340, easing: 'cubic-bezier(.22,1,.36,1)' }
+      );
+      heightAnimation.onfinish = () => {
+        grid.style.removeProperty('height');
+        grid.style.removeProperty('overflow');
+        heightAnimation.cancel();
+      };
+      const panelAnimation = nextPanel.animate(
+        [{ opacity: 0, transform: 'translate3d(0,8px,0)' }, { opacity: 1, transform: 'translate3d(0,0,0)' }],
+        { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' }
+      );
+      panelAnimation.onfinish = () => panelAnimation.cancel();
+    }
+
     if (focusPanel) {
-      const panel = contactPanels.find(item => item.getAttribute('data-contact-panel') === targetKind);
-      panel?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+      nextPanel?.scrollIntoView?.({
+        block: 'nearest',
+        behavior: windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth'
+      });
     }
   }
 
