@@ -57,12 +57,42 @@ function normalizeLocalRef(value) {
   return raw.replace(/^\.\//, '').replace(/^\/+/, '').split(/[?#]/)[0];
 }
 
+function localRefEscapesSiteRoot(value) {
+  const normalized = String(value || '').replace(/\\/g, '/');
+  if (!normalized) return false;
+
+  // CMS media paths are published as site-root-relative URLs. Parent-directory
+  // segments can resolve differently across local validation, GitHub Pages, and
+  // nested routes, so reject them even if they happen to resolve inside this repo.
+  if (normalized.split('/').some(segment => segment === '..')) return true;
+
+  const target = path.resolve(ROOT, normalized);
+  return target !== ROOT && !target.startsWith(ROOT + path.sep);
+}
+
 function checkLocalRef(value, where) {
   const local = normalizeLocalRef(value);
   if (!local) return;
-  if (!exists(local)) err(`${where}: missing local file "${local}".`);
+  if (localRefEscapesSiteRoot(local)) {
+    err(where + ': local file reference must not contain parent-directory segments or escape the site root ("' + local + '").');
+    return;
+  }
+  if (!exists(local)) err(where + ': missing local file "' + local + '".');
 }
 
+// Keep a few path-shape cases near the implementation so edits cannot silently
+// weaken the CMS/local-asset boundary before the full data checks run.
+for (const [value, expected] of [
+  ['assets/projects/example.webp', false],
+  ['/assets/projects/example.webp', false],
+  ['../private/data.json', true],
+  ['assets/../../admin/admin.js', true],
+  ['assets\\..\\admin\\admin.js', true]
+]) {
+  if (localRefEscapesSiteRoot(value) !== expected) {
+    err('Local asset path boundary regression for "' + value + '".');
+  }
+}
 function extension(value) {
   return path.extname(String(value || '').split(/[?#]/)[0]).slice(1).toLowerCase();
 }
