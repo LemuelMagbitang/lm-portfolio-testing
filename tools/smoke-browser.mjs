@@ -105,21 +105,35 @@ async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
       const heading = document.querySelector('#contact-start');
       const group = document.querySelector('#contact-section .contact-grid');
       const nav = document.querySelector('.navbar');
-      if (!heading || !group || !nav) return false;
+      const scrolling = document.scrollingElement || document.documentElement;
+      if (!heading || !group || !nav || !scrolling) return false;
 
       const headingRect = heading.getBoundingClientRect();
       const groupRect = group.getBoundingClientRect();
       const navbarHeight = nav.getBoundingClientRect().height || 0;
-      // Match the final assertion below so the wait cannot demand tighter
-      // centering than the responsive layout is subsequently allowed.
       const viewportHeight = Number(window.innerHeight) || Number(window.visualViewport?.height) || 0;
+      const scrollY = Number(window.scrollY) || Number(scrolling.scrollTop) || 0;
+      const documentHeight = Math.max(
+        Number(document.documentElement?.scrollHeight) || 0,
+        Number(document.body?.scrollHeight) || 0
+      );
+      const maxScrollY = Math.max(0, documentHeight - viewportHeight);
       const usableTop = Math.max(navbarHeight + 24, 24);
       const usableCenter = usableTop + Math.max(1, viewportHeight - usableTop) / 2;
-      const groupCenter = groupRect.top + groupRect.height / 2;
-      const headingClear = headingRect.top >= usableTop - 2;
-      const centerDelta = Math.abs(groupCenter - usableCenter);
+      const groupCenterDocumentY = scrollY + groupRect.top + groupRect.height / 2;
+      const desiredScrollY = groupCenterDocumentY - usableCenter;
+      const headingSafeScrollY = scrollY + headingRect.top - usableTop;
+      const expectedScrollY = Math.max(
+        0,
+        Math.min(maxScrollY, Math.min(desiredScrollY, headingSafeScrollY))
+      );
 
-      return headingClear && centerDelta <= 130;
+      // Wait for the browser's smooth-scroll animation to reach its computed
+      // destination. A loose positional threshold can pass while the page is
+      // still moving and make the immediately following assertion flaky.
+      const reachedTarget = Math.abs(scrollY - expectedScrollY) <= 2;
+      const headingClear = headingRect.top >= usableTop - 2;
+      return reachedTarget && headingClear;
     }, null, { timeout: timeoutMs });
   } catch (error) {
     const snapshot = await page.evaluate(() => {
@@ -131,15 +145,29 @@ async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
       const groupRect = group?.getBoundingClientRect();
       const navbarHeight = nav?.getBoundingClientRect().height || 0;
       const viewportHeight = Number(window.innerHeight) || Number(window.visualViewport?.height) || 0;
+      const scrollY = Number(window.scrollY) || Number(scrolling?.scrollTop) || 0;
+      const documentHeight = Math.max(
+        Number(document.documentElement?.scrollHeight) || 0,
+        Number(document.body?.scrollHeight) || 0
+      );
+      const maxScrollY = Math.max(0, documentHeight - viewportHeight);
       const usableTop = Math.max(navbarHeight + 24, 24);
       const usableCenter = usableTop + Math.max(1, viewportHeight - usableTop) / 2;
       const groupCenter = groupRect ? groupRect.top + groupRect.height / 2 : null;
-      const maxScrollY = Math.max(0, Number(scrolling?.scrollHeight) - viewportHeight);
+      const groupCenterDocumentY = groupRect ? scrollY + groupCenter : null;
+      const desiredScrollY = groupCenterDocumentY === null ? null : groupCenterDocumentY - usableCenter;
+      const headingSafeScrollY = headingRect ? scrollY + headingRect.top - usableTop : null;
+      const expectedScrollY = desiredScrollY === null || headingSafeScrollY === null
+        ? null
+        : Math.max(0, Math.min(maxScrollY, Math.min(desiredScrollY, headingSafeScrollY)));
       return {
         hash: window.location.hash,
+        viewportWidth: Number(window.innerWidth) || 0,
         viewportHeight,
-        scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
+        scrollY,
         maxScrollY,
+        expectedScrollY,
+        scrollDelta: expectedScrollY === null ? null : Math.abs(scrollY - expectedScrollY),
         headingTop: headingRect?.top ?? null,
         headingClear: headingRect ? headingRect.top >= usableTop - 2 : false,
         groupTop: groupRect?.top ?? null,
@@ -148,7 +176,7 @@ async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
         navbarHeight
       };
     });
-    throw new Error('Contact viewport did not settle within the accepted responsive bounds: ' +
+    throw new Error('Contact viewport did not settle at the computed scroll target: ' +
       JSON.stringify(snapshot) + '; ' + error.message);
   }
 }
