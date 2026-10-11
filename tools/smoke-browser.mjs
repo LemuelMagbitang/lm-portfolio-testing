@@ -4451,6 +4451,33 @@ try {
         throw new Error('Mobile Curated View presentation regression: ' + JSON.stringify(state));
       }
     }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/#test-portfolio', async page => {
+      await page.waitForFunction(() => document.body.dataset.curatedViewSlug === 'test-portfolio');
+      const state = await page.evaluate(() => {
+        const heading = document.querySelector('.curated-view-heading');
+        const copy = document.querySelector('.curated-view-heading-copy');
+        const exit = document.querySelector('.curated-view-exit');
+        const controls = document.querySelector('.filter-page-controls');
+        if (controls) controls.hidden = false;
+        const copyRect = copy?.getBoundingClientRect();
+        const exitRect = exit?.getBoundingClientRect();
+        const headingRect = heading?.getBoundingClientRect();
+        return {
+          direction: heading ? getComputedStyle(heading).flexDirection : '',
+          copyRight: copyRect?.right ?? null,
+          exitLeft: exitRect?.left ?? null,
+          controlsDisplay: controls ? getComputedStyle(controls).display : 'missing',
+          headingBottom: headingRect?.bottom ?? null,
+          exitBottom: exitRect?.bottom ?? null
+        };
+      });
+      if (state.direction !== 'row' || state.copyRight === null || state.exitLeft === null ||
+          state.exitLeft < state.copyRight - 1 || state.controlsDisplay !== 'none' ||
+          state.headingBottom === null || state.exitBottom === null || state.exitBottom > state.headingBottom + 1) {
+        throw new Error('Narrow mobile Curated View layout regression at 320px: ' + JSON.stringify(state));
+      }
+    }, { width: 320, height: 568 });
     await smokePage(browser, '/', async page => {
       const nonAllFilter = page.locator('.filter-tabs .filter-btn:not([data-filter="all"])').first();
       if (await nonAllFilter.count() !== 1) throw new Error('Desktop Gallery reset smoke fixture has no non-ALL filter.');
