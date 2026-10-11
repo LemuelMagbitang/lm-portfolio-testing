@@ -65,6 +65,9 @@ jobs:
       - name: Test CMS atomic-save conflict handling
         run: node tools/test-cms-atomic-save.mjs
 
+      - name: Test CMS Media Library folder rename
+        run: node tools/test-cms-media-rename.mjs
+
       - name: Validate Projects runtime composition
         run: node tools/validate-project-runtime.mjs
 

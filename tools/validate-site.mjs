@@ -1376,6 +1376,14 @@ function validateCmsRegressionContracts() {
       !/if\(version !== renderVersion \|\| section !== currentSection\) return;/.test(admin)) {
     err('CMS render: asynchronous section loads must be guarded against stale navigation responses.');
   }
+  const mediaReferenceBlock = admin.slice(
+    admin.indexOf('const MEDIA_REFERENCE_FILES = ['),
+    admin.indexOf('async function renameMediaFolder(', admin.indexOf('const MEDIA_REFERENCE_FILES = ['))
+  );
+  if (!mediaReferenceBlock.includes("'data/curated-views.json'") ||
+      !mediaReferenceBlock.includes("'data/footer-loop.json'")) {
+    err('CMS Media Library: folder renames must update Curated View-owned project media and footer animation references.');
+  }
   if (!admin.includes('const cacheKey = version || mediaTreeShaByPath?.get(assetPath)') ||
       !admin.includes('await loadMediaTree(true)') ||
       !admin.includes('const existingIndex = uploadTree.findIndex') ||
