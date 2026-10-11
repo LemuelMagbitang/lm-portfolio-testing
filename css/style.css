@@ -3255,18 +3255,11 @@ footer{
    Global X / project navigation remain visually subordinate to the model,
    so they read as lightbox controls rather than OrbitControls. */
 .lightbox-modal.is-3d-focused{
-  /* Focus mode is a device-bound interaction surface, not another scroll
-     position inside the Lightbox. Lock the Lightbox viewport itself while the
-     model owns all pointer/touch interaction. */
-  position:fixed;
-  inset:0;
-  width:100dvw;
-  max-width:none;
-  height:100dvh;
-  overflow:hidden!important;
+  /* Keep the existing modal scroller and its natural content geometry. The
+     focused viewer and veil are fixed overlays; a same-size placeholder keeps
+     the selected media's former space so the current scroll offset survives. */
   overflow-x:hidden;
-  overflow-y:hidden;
-  padding:0;
+  overflow-y:auto;
   touch-action:none;
   overscroll-behavior:none;
   overflow-anchor:none;
@@ -3279,10 +3272,6 @@ footer{
   z-index:1;
   width:100%;
   max-width:none;
-  min-height:100dvh;
-  height:100dvh;
-  margin:0;
-  gap:0;
 }
 .lightbox-modal.is-3d-focused .modal-interior::before{
   content:"";
