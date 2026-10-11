@@ -13,6 +13,14 @@ assert.ok(keys.includes('dribbble'));
 assert.ok(keys.includes('vimeo'));
 assert.ok(SOCIAL_PLATFORMS.every(platform => platform.label && platform.icon));
 
+const defaults = normalizeSiteSettings({});
+assert.equal(defaults.showHeroMessage, true, 'Hero message should remain visible by default.');
+assert.equal(defaults.showFooterMessage, false, 'Footer quote should remain opt-in by default.');
+
+const explicitMessageToggles = normalizeSiteSettings({ showHeroMessage: false, showFooterMessage: true });
+assert.equal(explicitMessageToggles.showHeroMessage, false, 'CMS can disable the hero message.');
+assert.equal(explicitMessageToggles.showFooterMessage, true, 'CMS can enable the footer message.');
+
 const settings = normalizeSiteSettings({
   contactEmail: 'artist@example.com',
   socials: {
