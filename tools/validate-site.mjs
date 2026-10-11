@@ -1400,6 +1400,12 @@ function validateCmsRegressionContracts() {
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
   if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
+  if (!/async getFile\(path, ref=conn\.branch\)/.test(admin) ||
+      !admin.includes("GH.getFile(file.path, parentSha)") ||
+      !admin.includes("expectedSha: previous.sha ?? null") ||
+      !admin.includes("JSON.stringify(fresh.json) !== JSON.stringify(parsed)")) {
+    err('CMS atomic saves: file revisions must be checked against the parent commit and post-save content verified before clearing dirty state.');
+  }
   if (!/async\s+(?:function\s+)?updateBranch\(commitSha\)/.test(admin) ||
       !/body:JSON\.stringify\(\{sha:commitSha,force:false\}\)/.test(admin) ||
       !/await GH\.updateBranch\(newCommit\.sha\)/.test(admin)) {

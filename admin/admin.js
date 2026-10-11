@@ -324,8 +324,8 @@ function githubFetch(url, init = {}) {
 }
 
 const GH = {
-  async getFile(path){
-    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
+  async getFile(path, ref=conn.branch){
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(ref)}`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) return { json: null, sha: null, missing: true };
     if(!res.ok){
@@ -472,6 +472,15 @@ const GH = {
       throw new Error(e.message || `GitHub error ${commitRes.status}`);
     }
     const commitData = await commitRes.json();
+    // Compare cached file versions against the exact parent commit. Reading the
+    // branch name here would allow a concurrent update to slip between checks.
+    for (const file of safeFiles) {
+      if (!Object.prototype.hasOwnProperty.call(file, 'expectedSha')) continue;
+      const current = await GH.getFile(file.path, parentSha);
+      if ((current.sha ?? null) !== (file.expectedSha ?? null)) {
+        throw new Error(`The repository changed since this editor loaded ${file.path}. Reload the CMS and review the current content before saving again.`);
+      }
+    }
     const latestParentSha = await GH.getBranchHead();
     if (latestParentSha !== parentSha) {
       throw new Error('The repository changed while saving. Reload the CMS and review the current content before saving again.');
@@ -737,12 +746,35 @@ async function saveSection(name, obj, commitMessage){
 // deployment instead of a chain of superseding deployments.
 async function saveSectionsAtomic(files, message){
   if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
-  const commit = await GH.commitFiles(files, message);
-  for(const file of files){
-    const parsed = JSON.parse(file.content);
-    const fresh = await GH.getFile(file.path);
-    cache[file.name] = { json: parsed, sha: fresh.sha, missing:false };
-    dirty[file.name] = false;
+  const versionedFiles = files.map(file => {
+    const previous = cache[file.name];
+    if (!previous || !Object.prototype.hasOwnProperty.call(previous, 'sha')) {
+      throw new Error(`Couldn't verify the original version of ${file.path}. Reload the CMS before saving again.`);
+    }
+    return { ...file, expectedSha: previous.sha ?? null };
+  });
+  const commit = await GH.commitFiles(versionedFiles, message);
+  // Once the commit lands, remain dirty until every written file has been
+  // read back and verified. A concurrent follow-up edit must not be paired
+  // with this editor's older JSON in the cache.
+  for (const file of files) dirty[file.name] = true;
+  const snapshots = [];
+  try {
+    for (const file of files) {
+      const parsed = JSON.parse(file.content);
+      const fresh = await GH.getFile(file.path);
+      if (fresh.missing || JSON.stringify(fresh.json) !== JSON.stringify(parsed)) {
+        throw new Error(`The commit was created, but the repository now contains different content for ${file.path}. Reload the CMS and review the current content before saving again.`);
+      }
+      snapshots.push({ name: file.name, json: parsed, sha: fresh.sha });
+    }
+  } catch (error) {
+    updateDirtyDots();
+    throw error;
+  }
+  for (const snapshot of snapshots) {
+    cache[snapshot.name] = { json: snapshot.json, sha: snapshot.sha, missing:false };
+    dirty[snapshot.name] = false;
   }
   updateDirtyDots();
   return commit.sha;
@@ -902,8 +934,8 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
       const sr=await loadSection('settings');
       const next={...(sr.json||{}),heroTiming:{...(sr.json?.heroTiming||{}),loopMode:obj.mode,transitionStyle:obj.transition,crossfadeMs:obj.interval}};
       commitSha=await saveSectionsAtomic([
-        {name:'heroLoop',path:SECTIONS.heroLoop.file,content:JSON.stringify(obj.items||[],null,2)+'\\n',encoding:'utf-8'},
-        {name:'settings',path:SECTIONS.settings.file,content:JSON.stringify(next,null,2)+'\\n',encoding:'utf-8'}
+        {name:'heroLoop',path:SECTIONS.heroLoop.file,content:JSON.stringify(obj.items||[],null,2)+'\n',encoding:'utf-8'},
+        {name:'settings',path:SECTIONS.settings.file,content:JSON.stringify(next,null,2)+'\n',encoding:'utf-8'}
       ],'CMS: update hero loop and transition settings');
       toast(`Saved — hero loop and transition settings committed to ${conn.branch}.`);
     }else{

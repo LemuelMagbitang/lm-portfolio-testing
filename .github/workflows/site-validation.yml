@@ -62,6 +62,9 @@ jobs:
       - name: Test CMS path and write safety
         run: node tools/test-cms-path-safety.mjs
 
+      - name: Test CMS atomic-save conflict handling
+        run: node tools/test-cms-atomic-save.mjs
+
       - name: Validate Projects runtime composition
         run: node tools/validate-project-runtime.mjs
 

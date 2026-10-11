@@ -349,7 +349,7 @@ assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 assert.ok(/project-preview-runtime\.js\?v=20261010-05/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
-assert.ok(/admin\.js\?v=20261011-03/.test(adminHtml),
+assert.ok(/admin\.js\?v=20261011-04/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
 assert.ok(/admin\.css\?v=20261010-05/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
