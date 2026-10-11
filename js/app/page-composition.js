@@ -25,7 +25,7 @@ import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
 import { initLightbox } from '../features/lightbox/index.js?v=20261011-10';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 import { normalizeProjects } from '../data/project-normalizer.js?v=20261010-04';
-import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/resolver.js?v=20261011-01';
+import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 
 function applyCuratedViewPresentation(root, resolution) {
   const body = root?.body;
