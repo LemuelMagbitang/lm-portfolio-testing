@@ -506,6 +506,8 @@ function validateLightboxFeatureStylesheet() {
   const featureCss = exists('css/features/lightbox.css') ? readText('css/features/lightbox.css') : '';
   if (!featureCss.includes('.lightbox-inspect-mode{z-index:10002;isolation:isolate;}') ||
       !featureCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') ||
+      !featureCss.includes('.lightbox-inspect-mode .lightbox-holographic:focus-visible{') ||
+      !featureCss.includes('outline:none!important;') ||
       !featureCss.includes('object-fit:contain;object-position:center;') ||
       !featureCss.includes('overflow:visible;')) {
     err('CSS ownership: grouped artwork fit, Inspect stacking and foil hint rules must remain in css/features/lightbox.css.');
