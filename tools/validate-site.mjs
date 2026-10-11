@@ -61,10 +61,18 @@ function localRefEscapesSiteRoot(value) {
   const normalized = String(value || '').replace(/\\/g, '/');
   if (!normalized) return false;
 
-  // CMS media paths are published as site-root-relative URLs. Parent-directory
-  // segments can resolve differently across local validation, GitHub Pages, and
-  // nested routes, so reject them even if they happen to resolve inside this repo.
-  if (normalized.split('/').some(segment => segment === '..')) return true;
+  // Browser URL parsing can normalize percent-encoded dot segments and slashes
+  // before the request reaches GitHub Pages. Check both the literal path and its
+  // single URL-decoded form so encoded traversal cannot bypass this repository check.
+  const pathsToInspect = [normalized];
+  try {
+    pathsToInspect.push(decodeURIComponent(normalized).replace(/\\/g, '/'));
+  } catch (_) {
+    // Malformed escapes will still be rejected by normal local-file existence checks.
+  }
+  if (pathsToInspect.some(candidate => candidate.split('/').some(segment => segment === '..'))) {
+    return true;
+  }
 
   const target = path.resolve(ROOT, normalized);
   return target !== ROOT && !target.startsWith(ROOT + path.sep);
@@ -87,7 +95,9 @@ for (const [value, expected] of [
   ['/assets/projects/example.webp', false],
   ['../private/data.json', true],
   ['assets/../../admin/admin.js', true],
-  ['assets\\..\\admin\\admin.js', true]
+  ['assets\\..\\admin\\admin.js', true],
+  ['assets/%2e%2e/admin/admin.js', true],
+  ['assets%2F%2e%2e%2Fadmin/admin.js', true]
 ]) {
   if (localRefEscapesSiteRoot(normalizeLocalRef(value)) !== expected) {
     err('Local asset path boundary regression for "' + value + '".');
