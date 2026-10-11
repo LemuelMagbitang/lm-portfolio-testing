@@ -12,7 +12,7 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../features/projects/index.js?v=20261010-04';
+} from '../features/projects/index.js?v=20261011-05';
 import { initNavigation } from '../features/navigation/index.js?v=20261011-02';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
@@ -24,6 +24,55 @@ import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-06';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
 import { initLightbox } from '../features/lightbox/index.js?v=20261011-10';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
+import { normalizeProjects } from '../data/project-normalizer.js?v=20261010-04';
+import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/resolver.js?v=20261011-01';
+
+function applyCuratedViewPresentation(root, resolution) {
+  const body = root?.body;
+  root?.getElementById?.('curatedViewHeading')?.remove();
+  root?.getElementById?.('curatedViewEmpty')?.remove();
+  body?.classList?.remove('is-curated-view', 'is-curated-view-empty');
+  if (body?.dataset) delete body.dataset.curatedViewSlug;
+  if (!resolution?.view) return;
+
+  const view = resolution.view;
+  body?.classList?.add('is-curated-view');
+  if (body?.dataset) body.dataset.curatedViewSlug = String(view.slug || '');
+
+  const heading = root.createElement('section');
+  heading.id = 'curatedViewHeading';
+  heading.className = 'curated-view-heading';
+  heading.setAttribute('aria-label', 'Curated portfolio');
+  const copy = root.createElement('div');
+  copy.className = 'curated-view-heading-copy';
+  const eyebrow = root.createElement('p');
+  eyebrow.className = 'curated-view-eyebrow';
+  eyebrow.textContent = 'UNLISTED PORTFOLIO';
+  const title = root.createElement('h1');
+  title.textContent = String(view.name || 'Curated Portfolio');
+  copy.append(eyebrow, title);
+
+  const exit = root.createElement('a');
+  exit.className = 'curated-view-exit';
+  const windowRef = root.defaultView || globalThis.window;
+  exit.href = String(windowRef?.location?.pathname || '/') + String(windowRef?.location?.search || '');
+  exit.textContent = 'View full portfolio';
+  exit.setAttribute('aria-label', 'Leave this curated portfolio and view all projects');
+  heading.append(copy, exit);
+
+  const filters = root.querySelector('.filter-tabs');
+  if (filters?.insertAdjacentElement) filters.insertAdjacentElement('afterend', heading);
+  else root.querySelector('.portfolio-wrapper')?.prepend(heading);
+
+  if (!Array.isArray(resolution.projects) || resolution.projects.length === 0) {
+    body?.classList?.add('is-curated-view-empty');
+    const empty = root.createElement('p');
+    empty.id = 'curatedViewEmpty';
+    empty.className = 'curated-view-empty';
+    empty.textContent = 'No available projects have been added to this curated portfolio yet.';
+    heading.insertAdjacentElement('afterend', empty);
+  }
+}
 
 export async function createPortfolioApp({
   root = globalThis.document,
@@ -57,6 +106,28 @@ export async function createPortfolioApp({
     return module.mountModelViewer(...args);
   };
 
+  let activeCuratedViewSlug = '';
+  let lightboxFeature = null;
+  let galleryFeatureRef = null;
+  let pendingProjectOpen = null;
+  let mainProjectModels = [];
+
+  const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
+  const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
+  const hasProjectGallery = !!root.getElementById('portfolioGrid');
+  const curatedViewsPromise = loadCmsJson('data/curated-views.json', [], { resolveUrl: siteAssetUrl })
+    .then(raw => {
+      const views = Array.isArray(raw) ? raw : [];
+      activeCuratedViewSlug = resolveCuratedViewSlug(currentHash, views);
+      return views;
+    })
+    .catch(error => {
+      console.warn('Curated Views: registry could not be loaded.', error);
+      activeCuratedViewSlug = '';
+      return [];
+    });
+  const navigation = initNavigation({ root, getCuratedViewSlug: () => activeCuratedViewSlug });
+
   const settingsPromise = initSiteSettings({
     url: config.urls.settings,
     root,
@@ -65,38 +136,45 @@ export async function createPortfolioApp({
     getSiteRootUrl
   });
 
-  const navigation = initNavigation({ root });
-
-  let lightboxFeature = null;
-  let galleryFeatureRef = null;
-  let pendingProjectOpen = null;
-
-  const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
-  const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
-  const hasProjectGallery = !!root.getElementById('portfolioGrid');
+  const mainProjectsPayloadPromise = hasProjectGallery && config.urls.projects
+    ? loadCmsJson(config.urls.projects, null, { resolveUrl: siteAssetUrl })
+    : Promise.resolve(null);
   const projectsPromise = hasProjectGallery && config.urls.projects
-    ? mountProjects({
-        url: config.urls.projects,
-        documentRef: root,
-        getGrid: () => root.getElementById('portfolioGrid'),
-        applyMediaBackground,
-        waitForThumbnailReadiness: !initialContactNavigation,
-        onCardActivate: details => {
-          if (lightboxFeature?.openCard) {
-            const activationInput = details.event?.type === 'keydown' ||
-              (details.event?.type === 'click' && Number(details.event.detail) === 0)
-              ? 'keyboard'
-              : (details.event ? 'pointer' : 'keyboard');
-            lightboxFeature.openCard(details.card, {
-              initialMediaIndex: details.initialMediaIndex,
-              activationInput
-            });
-          } else {
-            pendingProjectOpen = details;
+    ? Promise.all([mainProjectsPayloadPromise, curatedViewsPromise]).then(([mainPayload, views]) => {
+        mainProjectModels = normalizeProjects(mainPayload);
+        const curatedResolution = resolveCuratedView({ hash: currentHash, views, mainProjects: mainPayload });
+        const projectPayload = curatedResolution ? curatedResolution.projects : mainPayload;
+        activeCuratedViewSlug = curatedResolution?.view?.slug || '';
+        applyCuratedViewPresentation(root, curatedResolution);
+        return mountProjects({
+          url: config.urls.projects,
+          projectData: projectPayload,
+          loadJson: loadCmsJson,
+          resolveAssetUrl: siteAssetUrl,
+          documentRef: root,
+          getGrid: () => root.getElementById('portfolioGrid'),
+          applyMediaBackground,
+          waitForThumbnailReadiness: !initialContactNavigation,
+          onCardActivate: details => {
+            if (lightboxFeature?.openCard) {
+              const activationInput = details.event?.type === 'keydown' ||
+                (details.event?.type === 'click' && Number(details.event.detail) === 0)
+                ? 'keyboard'
+                : (details.event ? 'pointer' : 'keyboard');
+              lightboxFeature.openCard(details.card, {
+                initialMediaIndex: details.initialMediaIndex,
+                activationInput
+              });
+            } else {
+              pendingProjectOpen = details;
+            }
           }
-        }
+        });
       })
-    : Promise.resolve(false);
+    : curatedViewsPromise.then(views => {
+        activeCuratedViewSlug = resolveCuratedViewSlug(currentHash, views);
+        return false;
+      });
 
   const reviewsPromise = initReviews({
     url: config.urls.reviews,
@@ -212,7 +290,7 @@ export async function createPortfolioApp({
         ensureMediaBackgroundHelper,
         applyMediaBackground,
         parseYouTubeUrl,
-        getProjects,
+        getProjects: () => mainProjectModels.slice(),
         prefersReducedMotion: runtime.prefersReducedMotion
       }).catch(error => {
         console.warn('Hero: initialization failed', error);
@@ -226,7 +304,7 @@ export async function createPortfolioApp({
         footerLoopUrl: config.urls.footerLoop || 'data/footer-loop.json',
         heroLoopUrl: config.urls.heroLoop,
         projectsUrl: config.urls.projects,
-        projects: projectModels.length ? projectModels : null,
+        projects: mainProjectModels.length ? mainProjectModels : null,
         heroTiming: settings.heroTiming,
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl,

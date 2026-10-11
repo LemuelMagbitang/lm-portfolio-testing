@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261011-18'
+  cacheVersion = '20261011-19'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -97,11 +97,20 @@ export async function bootstrapPortfolioApp({
     try { id = decodeURIComponent(rawHash); } catch (_) {}
 
     let target = root.getElementById(id);
+    const curatedSlug = String(root.body?.dataset?.curatedViewSlug || '');
+    if (!target && curatedSlug && id === curatedSlug) {
+      target = root.getElementById('curatedViewHeading') || root.querySelector('.portfolio-wrapper');
+    }
     const isContactTarget = id === 'contact-start' || id === 'contact-section';
     if (isContactTarget) {
       target = root.getElementById('contact-start') || root.getElementById('contact-section') || target;
     }
-    if (!target) return;
+    if (!target) {
+      if (hasInitialHash && windowRef?.history) {
+        try { windowRef.history.scrollRestoration = 'auto'; } catch (_) {}
+      }
+      return;
+    }
 
     // Let the composed content settle before calculating the final anchor.
     // Only issue one scroll command: re-applying scrollTop every frame would

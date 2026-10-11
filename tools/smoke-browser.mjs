@@ -4388,6 +4388,40 @@ try {
       }
     }, { width: 1280, height: 900 });
 
+
+    await smokePage(browser, '/#test-portfolio', async page => {
+      await page.waitForFunction(() => document.body.classList.contains('is-curated-view') &&
+        document.body.dataset.curatedViewSlug === 'test-portfolio');
+      await page.waitForFunction(() => document.querySelectorAll('#portfolioGrid .project-card').length === 3);
+      const state = await page.evaluate(() => ({
+        slug: document.body.dataset.curatedViewSlug || '',
+        heading: document.querySelector('#curatedViewHeading h1')?.textContent?.trim() || '',
+        filters: getComputedStyle(document.querySelector('.filter-tabs')).display,
+        ids: Array.from(document.querySelectorAll('#portfolioGrid .project-card')).map(card => card.dataset.projectId || '')
+      }));
+      const expected = ['funko-pop-test', 'test-project', 'test-project-on-curated-view'];
+      if (state.slug !== 'test-portfolio' || state.heading !== 'test portfolio' ||
+          state.filters !== 'none' || JSON.stringify(state.ids) !== JSON.stringify(expected)) {
+        throw new Error('Direct Curated View route did not render the saved ordered project set: ' + JSON.stringify(state));
+      }
+      await page.locator('#portfolioGrid [data-project-id="test-project-on-curated-view"]').click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 5000 });
+      const title = await page.locator('#modalTitle').textContent();
+      if (title?.trim() !== 'Test project on curated view') {
+        throw new Error('Curated-only card did not resolve to its own Lightbox project model: ' + title);
+      }
+      await page.locator('#lightboxClose').click();
+      await page.locator('.curated-view-exit').click();
+      await page.waitForFunction(() => !document.body.classList.contains('is-curated-view') &&
+        !window.location.hash && document.querySelectorAll('#portfolioGrid .project-card').length > 3);
+      if (await page.locator('#portfolioGrid [data-project-id="test-project-on-curated-view"]').count() !== 0) {
+        throw new Error('A Curated-only project leaked into Main Portfolio after leaving the view.');
+      }
+      if (await page.locator('.filter-tabs').evaluate(el => getComputedStyle(el).display) === 'none') {
+        throw new Error('Leaving a Curated View did not restore normal Gallery filters.');
+      }
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/', async page => {
       const nonAllFilter = page.locator('.filter-tabs .filter-btn:not([data-filter="all"])').first();
       if (await nonAllFilter.count() !== 1) throw new Error('Desktop Gallery reset smoke fixture has no non-ALL filter.');

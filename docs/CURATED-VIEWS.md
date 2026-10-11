@@ -2,7 +2,7 @@
 
 ## Current implementation status
 
-The Curated Views CMS editor is now enabled on the projects-runtime-cutover branch. Public Curated View hash routing/rendering is intentionally not enabled yet; the CMS and persistence contract are being hardened first.
+The Curated Views CMS editor and public hash-route resolver are enabled on the projects-runtime-cutover branch. A saved slug such as `/#test-portfolio` resolves before cards mount, then renders the ordered project set through the existing Projects, Gallery, and Lightbox pipeline. Main Portfolio remains the source of truth for referenced projects; curated-only projects stay scoped to their owning view.
 
 ## Purpose
 

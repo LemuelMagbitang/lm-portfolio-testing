@@ -8,7 +8,7 @@
  * scoped to the portfolio pages only.
  */
 
-export function initNavigation({ root = globalThis.document } = {}) {
+export function initNavigation({ root = globalThis.document, getCuratedViewSlug = () => '' } = {}) {
   const menuButton = root?.querySelector('.hamburger, .menu-button');
   const mobileMenu = root?.querySelector('.nav-links, .mobile-menu');
   const mobileMenuLinks = Array.from(
@@ -126,6 +126,24 @@ export function initNavigation({ root = globalThis.document } = {}) {
     try { url = new URL(link.getAttribute('href') || '', windowRef.location.href); }
     catch (_) { return; }
 
+    let curatedSlug = '';
+    try { curatedSlug = String(getCuratedViewSlug?.() || '').trim().toLowerCase(); } catch (_) {}
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(curatedSlug)) curatedSlug = '';
+    // An unlisted view should survive Works <-> About navigation.
+    if (curatedSlug && url.origin === windowRef.location.origin && !url.hash) {
+      if (normalizedPagePath(url.pathname) === normalizedPagePath(windowRef.location.pathname)) {
+        event.preventDefault();
+        event.stopImmediatePropagation?.();
+        close();
+        try { windowRef.history.replaceState(null, '', url.pathname + url.search + '#' + encodeURIComponent(curatedSlug)); } catch (_) {}
+        try { windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home')); } catch (_) {}
+        const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+        return;
+      }
+      link.setAttribute('href', url.pathname + url.search + '#' + encodeURIComponent(curatedSlug));
+      return;
+    }
     if (
       url.origin !== windowRef.location.origin ||
       url.hash ||

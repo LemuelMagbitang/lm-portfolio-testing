@@ -1368,6 +1368,25 @@ function validateResponsiveUiContracts() {
   }
 }
 
+function validateCuratedViewRuntimeContract() {
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const resolver = exists('js/features/curated-views/resolver.js') ? readText('js/features/curated-views/resolver.js') : '';
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const loader = exists('js/features/projects/project-loader.js') ? readText('js/features/projects/project-loader.js') : '';
+  if (!composition.includes('resolveCuratedView({ hash: currentHash, views, mainProjects: mainPayload })') ||
+      !composition.includes('projectData: projectPayload') ||
+      !composition.includes('mainProjectModels.slice()') ||
+      !resolver.includes('export function resolveCuratedView(') ||
+      !resolver.includes("entry.source === 'main'") ||
+      !resolver.includes("entry.source !== 'curated'") ||
+      !navigation.includes('getCuratedViewSlug') ||
+      !bootstrap.includes("root.getElementById('curatedViewHeading')") ||
+      !loader.includes('projectData !== undefined')) {
+    err('Curated View runtime: hash resolution, ordered payloads, navigation context, and shared Projects loading must remain connected.');
+  }
+}
+
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   if (!/let renderVersion = 0;/.test(admin) ||
@@ -1587,6 +1606,7 @@ function validateCmsRegressionContracts() {
   }
 }
 
+validateCuratedViewRuntimeContract();
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
 validateFeatureModuleCacheGraph();
