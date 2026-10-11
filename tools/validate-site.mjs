@@ -942,6 +942,33 @@ function validateGalleryContract() {
   }
 }
 
+function validateCuratedViewPresentationContract() {
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const curatedCssStart = css.indexOf('/* Public Curated View presentation:');
+  const curatedCss = curatedCssStart >= 0 ? css.slice(curatedCssStart) : '';
+
+  if (composition.includes('curated-view-eyebrow') || composition.includes('UNLISTED PORTFOLIO')) {
+    err('Curated View presentation: remove the redundant unlisted eyebrow from the heading.');
+  }
+  if (!composition.includes("exitIcon.className = 'fa-solid fa-arrow-left'") ||
+      !composition.includes("exit.append(exitIcon, root.createTextNode('View full portfolio'))")) {
+    err('Curated View presentation: full-portfolio exit must include an accessible, decorative back arrow.');
+  }
+  const exitRule = curatedCss.match(/\.curated-view-exit\s*\{([^}]*)\}/);
+  if (!exitRule || !/border:\s*0\s*;/.test(exitRule[1])) {
+    err('Curated View presentation: exit link must render without a border.');
+  }
+  const mobile = curatedCss.match(/@media\s*\(max-width:\s*600px\)\s*\{([\s\S]*?)\n\}/);
+  if (!mobile ||
+      !/\.curated-view-heading\s*\{[^}]*flex-direction:\s*row/s.test(mobile[1]) ||
+      !/\.curated-view-heading-copy\s*\{[^}]*flex:\s*1\s+1\s+auto/s.test(mobile[1])) {
+    err('Curated View presentation: narrow-screen heading and exit must remain side by side.');
+  }
+  if (!/\.filter-page-controls:not\(\[hidden\]\)\s*\{\s*display:\s*none\s*!important;/s.test(css)) {
+    err('Gallery: small-screen filter page controls must remain hidden.');
+  }
+}
 function validateModuleScriptContract() {
   const pages = [
     ['index.html', 'js/script.js'],
@@ -1607,6 +1634,7 @@ function validateCmsRegressionContracts() {
 }
 
 validateCuratedViewRuntimeContract();
+validateCuratedViewPresentationContract();
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
 validateFeatureModuleCacheGraph();
