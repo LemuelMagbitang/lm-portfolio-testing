@@ -999,6 +999,10 @@ try {
         throw new Error('Desktop holographic pointer movement did not drive the inverse foil reflection: ' + JSON.stringify(desktopTiltState));
       }
 
+      // Inspect must be layered over the existing Lightbox scroll position,
+      // not trigger anchor reconciliation when the foil card is moved to body.
+      const lightboxScrollHost = page.locator('#lightbox').first();
+      const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       // A tap on grouped artwork opens the full-screen Inspector without
       // consuming the same tap as a foil flip. The following real pointer click
       // inside Inspect must still flip the foil to its mirrored reverse.
@@ -1008,6 +1012,11 @@ try {
       const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
       await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
       await page.waitForTimeout(500); // let the card-to-viewport transition settle
+      const lightboxScrollAfterInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
+      if (Math.abs(lightboxScrollAfterInspect - lightboxScrollBeforeInspect) > 1) {
+        throw new Error('Opening foil Inspect changed the Lightbox scroll position: ' +
+          JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterInspect }));
+      }
       const inspectorFoilLayers = await inspectedHolo.evaluate(el => {
         const positionOf = selector => {
           const node = el.querySelector(selector);
@@ -1059,9 +1068,11 @@ try {
           projectDescriptionLeaked: (description?.textContent || '').includes('this is a funko pop in 2d'),
           hasDuplicateTitle: Boolean(overlay.querySelector('.lightbox-inspect-title')),
           hintDisplay: hint ? getComputedStyle(hint).display : 'missing',
+          hintInFooter: Boolean(hint && hint.parentElement?.classList.contains('lightbox-inspect-footer')),
+          hintBeforeDescription: Boolean(hint && description && hint.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING),
           face,
           action,
-          backText: back?.textContent?.trim() || '',
+          backIcon: Boolean(back?.querySelector('i.fa-arrow-left')),
           backLabel: back?.getAttribute('aria-label') || '',
           backWidth: Number.parseFloat(backStyle?.width || '0'),
           backHeight: Number.parseFloat(backStyle?.height || '0'),
@@ -1077,9 +1088,11 @@ try {
           inspectorPresentation.hasDuplicateTitle ||
           inspectorPresentation.hintDisplay === 'missing' ||
           inspectorPresentation.hintDisplay === 'none' ||
+          !inspectorPresentation.hintInFooter ||
+          !inspectorPresentation.hintBeforeDescription ||
           inspectorPresentation.face !== 'FRONT' ||
           inspectorPresentation.action !== 'CLICK / MOVE' ||
-          inspectorPresentation.backText !== '←' ||
+          !inspectorPresentation.backIcon ||
           !inspectorPresentation.backLabel ||
           inspectorPresentation.backWidth < 44 ||
           inspectorPresentation.backHeight < 44 ||
@@ -1101,6 +1114,11 @@ try {
       // Back control before interacting with the Lightbox close button beneath it.
       await inspectMode.locator('.lightbox-inspect-back').click();
       await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
+      const lightboxScrollAfterInspectorClose = await lightboxScrollHost.evaluate(el => el.scrollTop);
+      if (Math.abs(lightboxScrollAfterInspectorClose - lightboxScrollBeforeInspect) > 1) {
+        throw new Error('Closing foil Inspect changed the Lightbox scroll position: ' +
+          JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterInspectorClose }));
+      }
       await page.locator('#lightboxClose').first().click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
     }, { width: 1280, height: 900 });
