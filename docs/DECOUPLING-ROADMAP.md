@@ -346,3 +346,12 @@ This migration must not:
 - The extraction is intentionally narrow: underlying Lightbox layout, foil materials and historical preset rules remain in the shared stylesheet until each group can be moved with a clear owner and browser contract.
 - `tools/validate-site.mjs` now checks that the feature stylesheet loads after the base, that the extracted fit/stacking/hint rules remain owned by the feature file, and that the moved override blocks are not reintroduced at the shared stylesheet's end.
 - **Next gate:** finish static/browser validation on the new branch head; after it passes, compare the latest grouped grid/horizontal/layered Lightbox against the recorded visual baseline on desktop and real touch devices. Continue CSS extraction only after that visual pass.
+
+### October 11, 2026 — Recursive path-audit coverage follow-up
+
+- After `722d1c684fabc48a94716518d505c48a2ec0edde` corrected the stylesheet-order validator regex, follow-up commit `dbc382880895d6c39cc97f5a8b3d4bd2657107cd` expanded `scanSourceForBadPatterns()` in `tools/validate-site.mjs`.
+- The path-regression scan now recursively includes all `.js`/`.mjs` files under `js/` and all `.css` files under `css/`, plus the Works, About, 404, success, Admin, and existing workflow entrypoints. This closes the blind spot created by keeping a fixed list of retired root-level runtime files.
+- Targeted source-contract checks confirm the Lightbox feature stylesheet is loaded after the shared stylesheet, the feature-owned Inspector rules remain in `css/features/lightbox.css`, and public shared/runtime cache identities remain aligned.
+- **Verification status:** the complete repository validation and Playwright smoke workflow has not been independently confirmed for `dbc3828`; the connected commit-status/workflow lookups did not provide a run result. Treat this as a committed audit improvement, not a green CI gate.
+- **Next gate:** run the complete validation workflow and all browser smoke scenarios at the current branch head. If green, compare grouped grid/horizontal/layered artwork and foil tilt against `foil-test-screenrecord/2026-10-10 18-55-17.mp4`; then check Inspect/Back/flip, 3D inspection, and mobile YouTube first-tap on physical devices. Continue CSS extraction only after that visual/device pass. Do not promote to the deployed legacy repository without explicit instruction.
+
