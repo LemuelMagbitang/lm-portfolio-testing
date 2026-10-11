@@ -163,8 +163,8 @@ assert.equal(projectTab.focused, true);
 
 mobileQuery.matches = true;
 resizeHandlers.forEach(handler => handler());
-assert.equal(projectPanel.getAttribute('aria-hidden'), 'true', 'Inactive mobile panel must be hidden from the accessibility tree');
-assert.equal(reviewPanel.getAttribute('aria-hidden'), 'false', 'Active mobile panel must remain accessible');
+assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Active mobile panel must remain accessible after returning Home');
+assert.equal(reviewPanel.getAttribute('aria-hidden'), 'true', 'Inactive mobile panel must be hidden from the accessibility tree');
 
 mobileQuery.matches = false;
 resizeHandlers.forEach(handler => handler());
