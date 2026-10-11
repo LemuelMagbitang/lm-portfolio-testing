@@ -89,7 +89,7 @@ for (const [value, expected] of [
   ['assets/../../admin/admin.js', true],
   ['assets\\..\\admin\\admin.js', true]
 ]) {
-  if (localRefEscapesSiteRoot(value) !== expected) {
+  if (localRefEscapesSiteRoot(normalizeLocalRef(value)) !== expected) {
     err('Local asset path boundary regression for "' + value + '".');
   }
 }
