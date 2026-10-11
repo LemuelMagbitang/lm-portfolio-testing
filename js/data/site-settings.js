@@ -27,6 +27,8 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   formsEnabled: Object.freeze({ project: true, review: true }),
   showReviews: false,
   showSoftwareLogos: false,
+  showHeroMessage: true,
+  showFooterMessage: false,
   heroTiming: Object.freeze({
     loopMode: 'latest',
     transitionStyle: 'kenburns',
@@ -102,6 +104,8 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
     },
     showReviews: booleanValue(source.showReviews, defaults.showReviews),
     showSoftwareLogos: booleanValue(source.showSoftwareLogos, defaults.showSoftwareLogos),
+    showHeroMessage: booleanValue(source.showHeroMessage, defaults.showHeroMessage),
+    showFooterMessage: booleanValue(source.showFooterMessage, defaults.showFooterMessage),
     heroTiming: {
       loopMode,
       transitionStyle,
