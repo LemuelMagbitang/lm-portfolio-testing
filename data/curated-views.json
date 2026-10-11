@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "id": "test-portfolio",
+    "name": "test portfolio",
+    "slug": "test-portfolio",
+    "projects": [
+      {
+        "source": "main",
+        "projectId": "funko-pop-test"
+      },
+      {
+        "source": "main",
+        "projectId": "test-project"
+      }
+    ]
+  }
+]
