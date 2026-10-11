@@ -99,6 +99,30 @@ async function configureLogoRoutes(page) {
   });
 }
 
+async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
+  await page.waitForFunction(() => {
+    const heading = document.querySelector('#contact-start');
+    const group = document.querySelector('#contact-section .contact-grid');
+    const nav = document.querySelector('.navbar');
+    const scrolling = document.scrollingElement || document.documentElement;
+    if (!heading || !group || !nav || !scrolling) return false;
+
+    const headingRect = heading.getBoundingClientRect();
+    const groupRect = group.getBoundingClientRect();
+    const navbarHeight = nav.getBoundingClientRect().height || 0;
+    const viewportHeight = Number(window.visualViewport?.height) || Number(window.innerHeight) || 0;
+    const usableTop = Math.max(navbarHeight + 24, 24);
+    const usableCenter = usableTop + Math.max(1, viewportHeight - usableTop) / 2;
+    const groupCenter = groupRect.top + groupRect.height / 2;
+    const maxScrollY = Math.max(0, Number(scrolling.scrollHeight) - viewportHeight);
+    const scrollY = Number(window.scrollY) || Number(scrolling.scrollTop) || 0;
+    const clampedAtDocumentBottom = Math.abs(scrollY - maxScrollY) <= 2;
+
+    return (clampedAtDocumentBottom || Math.abs(groupCenter - usableCenter) <= 130) &&
+      headingRect.top >= usableTop - 2;
+  }, null, { timeout: timeoutMs });
+}
+
 async function assertPublicFilterNavigation(page, { href, expectedHash, label }) {
   const link = page.locator(`.nav-links a[href="${href}"]`).first();
   if (await link.count() !== 1) {
@@ -3882,7 +3906,7 @@ try {
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
       if (await contact.count() !== 1) throw new Error('Works page Contact navigation link is missing.');
       await contact.click();
-      await page.waitForTimeout(120);
+      await waitForContactViewportAlignment(page);
       const box = await page.locator('#contact-start').first().boundingBox();
       const contactPosition = await page.evaluate(() => {
         const heading = document.querySelector('#contact-start');
@@ -3922,7 +3946,7 @@ try {
         throw new Error('Works page Contact navigation does not target the exact Start a Project anchor.');
       }
       await contact.click();
-      await page.waitForTimeout(120);
+      await waitForContactViewportAlignment(page);
       const box = await page.locator('#contact-start').first().boundingBox();
       const contactPosition = await page.evaluate(() => {
         const heading = document.querySelector('#contact-start');
@@ -4008,7 +4032,7 @@ try {
     await smokePage(browser, '/', async page => {
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
       await contact.click();
-      await page.waitForTimeout(120);
+      await waitForContactViewportAlignment(page);
 
       const desktopContact = await page.evaluate(() => {
         const group = document.querySelector('#contact-section .contact-grid');
@@ -4642,7 +4666,7 @@ try {
         state: 'attached',
         timeout: 6000
       });
-      await page.waitForTimeout(120);
+      await waitForContactViewportAlignment(page);
       const contactPosition = await page.evaluate(() => {
         const group=document.querySelector('#contact-section .contact-grid');
         const heading=document.querySelector('#contact-start');
@@ -4695,7 +4719,7 @@ try {
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
       if (await contact.count() !== 1) throw new Error('Mobile Works Contact navigation link is missing.');
       await contact.click();
-      await page.waitForTimeout(160);
+      await waitForContactViewportAlignment(page);
       if (await page.locator('.nav-links.active, .nav-links.is-open').count() > 0) {
         throw new Error('Mobile Contact navigation left the hamburger menu open.');
       }
