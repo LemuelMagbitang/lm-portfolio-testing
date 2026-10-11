@@ -1002,6 +1002,7 @@ try {
       // Inspect must be layered over the existing Lightbox scroll position,
       // not trigger anchor reconciliation when the foil card is moved to body.
       const lightboxScrollHost = page.locator('#lightbox').first();
+      await funkoHolo.scrollIntoViewIfNeeded();
       const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       // A tap on grouped artwork opens the full-screen Inspector without
       // consuming the same tap as a foil flip. The following real pointer click
@@ -1114,6 +1115,7 @@ try {
       // Back control before interacting with the Lightbox close button beneath it.
       await inspectMode.locator('.lightbox-inspect-back').click();
       await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
+      await page.waitForTimeout(50);
       const lightboxScrollAfterInspectorClose = await lightboxScrollHost.evaluate(el => el.scrollTop);
       if (Math.abs(lightboxScrollAfterInspectorClose - lightboxScrollBeforeInspect) > 1) {
         throw new Error('Closing foil Inspect changed the Lightbox scroll position: ' +
@@ -1730,6 +1732,7 @@ try {
         throw new Error('3D artwork caption is hidden before entering focused 3D inspection.');
       }
 
+      await modelShell.scrollIntoViewIfNeeded();
       const lightboxScrollBefore3DInspect = await page.locator('#lightbox').evaluate(el => el.scrollTop);
       await modelShell.click();
       await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
