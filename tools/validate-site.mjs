@@ -1064,6 +1064,17 @@ function validateBootstrapHardening() {
   if (!/dataset\.component = 'portfolio-hero'/.test(hero)) {
     err('Hero: explicit component marker is missing.');
   }
+  if (!/heroMessageCandidate\.hidden = !showHeroMessage/.test(hero) ||
+      !/heroSection\.classList\.toggle\('hero-section--message', showHeroMessage\)/.test(hero)) {
+    err('Hero: message visibility must also toggle content-driven hero sizing.');
+  }
+  const heroCss = exists('css/style.css') ? readText('css/style.css') : '';
+  if (!/\.hero-section:has\(\.hero-quote:not\(\[hidden\]\)\)/.test(heroCss) ||
+      !/\.hero-quote\s*\{[\s\S]*?background:\s*rgba\(0,\s*0,\s*0,\s*0\.42\)/.test(heroCss) ||
+      !/\.hero-quote \{ padding: clamp\(22px, 5\.4vw, 30px\) 24px; \}/.test(heroCss) ||
+      !/\.footer-content \.footer-hero-message\s*\{[\s\S]*?background:rgba\(0,0,0,\.42\)/.test(heroCss)) {
+    err('Hero/footer message: grouped translucent panels, responsive padding, and hidden-state sizing must remain wired.');
+  }
   if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
     err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');
   }
