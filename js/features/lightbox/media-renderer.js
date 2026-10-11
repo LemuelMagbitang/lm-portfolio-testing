@@ -1499,6 +1499,7 @@ export function createLightboxMediaRenderer({
     // during focus. The caption remains outside the full-screen model shell.
     const modelEntry = buildMediaEntry(modelWrap, item.caption || item.description, null);
     modelEntry.classList.add('is-3d-media-item');
+    let modelFocusPlaceholder = null;
 
     if (typeof mountModelViewer !== 'function') {
       modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
@@ -1521,8 +1522,7 @@ export function createLightboxMediaRenderer({
             // Keep a same-size in-flow placeholder while the viewer becomes
             // viewport-fixed. That preserves the Lightbox's scroll geometry
             // instead of letting its scrollTop clamp when this item leaves flow.
-            if (!modelEntry.querySelector('.lightbox-3d-focus-placeholder') &&
-                modelEntry.parentNode) {
+            if (!modelFocusPlaceholder && modelEntry.parentNode) {
               const rect = modelEntry.getBoundingClientRect();
               const placeholder = documentRef.createElement('div');
               placeholder.className = 'lightbox-3d-focus-placeholder';
@@ -1533,6 +1533,7 @@ export function createLightboxMediaRenderer({
               placeholder.style.boxSizing = 'border-box';
               placeholder.style.visibility = 'hidden';
               placeholder.style.pointerEvents = 'none';
+              modelFocusPlaceholder = placeholder;
               modelEntry.parentNode.insertBefore(placeholder, modelEntry);
             }
             lightbox.classList.add('is-3d-focused');
@@ -1546,7 +1547,8 @@ export function createLightboxMediaRenderer({
           },
           onDeactivate: () => {
             modelEntry.classList.remove('is-3d-focus-target');
-            modelEntry.parentNode?.querySelector?.('.lightbox-3d-focus-placeholder')?.remove();
+            if (modelFocusPlaceholder?.parentNode) modelFocusPlaceholder.remove();
+            modelFocusPlaceholder = null;
             lightbox?.classList.remove('is-3d-focused');
             if (lightboxControls) {
               lightboxControls.classList.remove('is-3d-controls-disabled');
