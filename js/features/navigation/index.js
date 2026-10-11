@@ -193,14 +193,12 @@ export function initNavigation({ root = globalThis.document } = {}) {
       windowRef.history.pushState(null, '', url.pathname + url.search + url.hash);
     } catch (_) {}
 
-    // Correct across paint boundaries after the menu closes, with no delayed
-    // second-stage timers that make the Contact landing visibly drift.
-    scrollSamePageContact();
+    // Issue one scroll command. Repeated smooth-scroll requests on adjacent
+    // animation frames continually restart the motion and can look like a snap.
     if (typeof windowRef.requestAnimationFrame === 'function') {
-      windowRef.requestAnimationFrame(() => {
-        scrollSamePageContact();
-        windowRef.requestAnimationFrame(() => scrollSamePageContact());
-      });
+      windowRef.requestAnimationFrame(scrollSamePageContact);
+    } else {
+      scrollSamePageContact();
     }
   }
 
