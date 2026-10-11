@@ -269,11 +269,15 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes("touchAction.textContent = 'HOLD + MOVE'") &&
   renderer.includes("faceLabel.textContent = isBack ? 'BACK' : 'FRONT'") &&
   renderer.includes("footer.append(description,back)") &&
+  renderer.includes("if(foilHint)footer.appendChild(foilHint)") &&
   !renderer.includes('Tap to flip · Move to explore the light.') &&
   renderer.includes("back.innerHTML='<span aria-hidden=\"true\">←</span>'") &&
   !renderer.includes('inspectTrigger') &&
   !renderer.includes('holdOpened = true'),
   'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil flips remain available inside Inspect.');
+const focused3dActivation = renderer.match(/onActivate:\s*\(\)\s*=>\s*\{([\\s\\S]*?)\},\s*onDeactivate:/)?.[1] || '';
+assert.ok(focused3dActivation && !/lightbox\\.scrollTop|pre3dScrollTop/.test(focused3dActivation),
+  'Entering the 3D inspection layer must not rewrite the Lightbox scroll position.');
 assert.ok(siteCss.includes('data-artwork-effective-layout="grid"') &&
   siteCss.includes('data-artwork-effective-layout="horizontal"') &&
   siteCss.includes('data-artwork-effective-layout="layered"') &&
@@ -298,7 +302,7 @@ assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-a
   siteCss.includes('height:clamp(200px,38svh,320px)') &&
   siteCss.includes('overflow:visible;padding:0;margin:0;') &&
   lightboxCss.includes('z-index:10002;') &&
-  lightboxCss.includes('.lightbox-inspect-frame .lightbox-holographic-hint{'),
+  lightboxCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{'),
   'Responsive layered cards must wrap without a horizontal scroller and keep equal-height, aspect-aware artwork frames.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
@@ -340,7 +344,7 @@ assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 assert.ok(/project-preview-runtime\.js\?v=20261010-05/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
-assert.ok(/admin\.js\?v=20261010-12/.test(adminHtml),
+assert.ok(/admin\.js\?v=20261011-01/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
 assert.ok(/admin\.css\?v=20261010-05/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
