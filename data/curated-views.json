@@ -11,6 +11,33 @@
       {
         "source": "main",
         "projectId": "test-project"
+      },
+      {
+        "source": "curated",
+        "project": {
+          "id": "test-project-on-curated-view",
+          "title": "Test project on curated view",
+          "subtitle": "lalalalala",
+          "badge": "",
+          "badges": [],
+          "filters": [],
+          "description": "lorem ipsum",
+          "thumbnail": {
+            "type": "image",
+            "src": "",
+            "focus": "50% 50%",
+            "zoom": 1
+          },
+          "mediaGroups": [],
+          "media": [
+            {
+              "type": "image",
+              "src": "assets/projects/personal-illustrations/genshin-2d-illustrations/columbina-illustration.jpg",
+              "caption": "Collumbinaaaaaa",
+              "orientation": ""
+            }
+          ]
+        }
       }
     ]
   }
