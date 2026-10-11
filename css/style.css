@@ -2965,6 +2965,30 @@ footer{
 }
 .footer-content .social-icons a{color:inherit;}
 .footer-content p{color:inherit;margin:0;}
+/* Optional quote from the same CMS source as the hero. This block has no fixed
+   height: long text naturally expands the footer and the background follows. */
+.footer-content .footer-hero-message{
+  width:min(100%,820px);max-width:820px;margin:0 auto;padding:0;
+  text-align:center;opacity:0;transition:opacity .45s ease;
+}
+.footer-content .footer-hero-message.is-ready{opacity:1;}
+.footer-content .footer-hero-message .hero-quote-label{
+  justify-content:center;gap:10px;margin:0 auto 12px;font-size:.62rem;letter-spacing:.2em;
+}
+.footer-content .footer-hero-message .hero-quote-label::before{width:24px;}
+.footer-content .footer-hero-message .hero-quote-text{
+  max-width:42ch;margin:0 auto 14px;font-size:clamp(1.05rem,2.3vw,1.8rem);
+  line-height:1.24;letter-spacing:-.018em;text-wrap:balance;
+}
+.footer-content .footer-hero-message .hero-quote-author{
+  max-width:42ch;margin:0 auto;padding-top:10px;font-size:.62rem;letter-spacing:.12em;
+}
+@media(max-width:767px){
+  .footer-content .footer-hero-message{width:100%;}
+  .footer-content .footer-hero-message .hero-quote-label{margin-bottom:9px;font-size:.56rem;}
+  .footer-content .footer-hero-message .hero-quote-text{font-size:clamp(1rem,4.5vw,1.3rem);line-height:1.28;margin-bottom:11px;}
+  .footer-content .footer-hero-message .hero-quote-author{font-size:.56rem;padding-top:8px;}
+}
 @media (prefers-reduced-motion:reduce){
   .footer-animation-slide{transition:none;}
   .footer-animation.transition-kenburns .footer-animation-slide.active img,
@@ -4174,6 +4198,29 @@ footer > .footer-content p{
 }
 
 
+
+/* Fluid micro-interactions. Keep properties explicit so media viewers and
+   Lightbox geometry do not inherit broad transition:all rules. */
+.nav-links a,.filter-tabs .tab-btn,.btn-show-more,.submit-btn,.email-me-btn,
+.social-icons a,.contact-mobile-tab,.hamburger{
+  transition:color .22s ease,background-color .22s ease,border-color .22s ease,
+    box-shadow .26s ease,transform .26s cubic-bezier(.22,1,.36,1),opacity .22s ease;
+}
+.nav-links a:active,.filter-tabs .tab-btn:active,.btn-show-more:active,
+.submit-btn:active,.email-me-btn:active,.social-icons a:active,
+.contact-mobile-tab:active,.hamburger:active{transform:scale(.975);}
+@media(hover:hover) and (pointer:fine){
+  .btn-show-more:hover,.submit-btn:hover,.email-me-btn:hover{transform:translateY(-2px);}
+  .social-icons a:hover{transform:translateY(-3px);}
+}
+@media(prefers-reduced-motion:reduce){
+  .nav-links a,.filter-tabs .tab-btn,.btn-show-more,.submit-btn,.email-me-btn,
+  .social-icons a,.contact-mobile-tab,.hamburger,
+  .footer-content .footer-hero-message{transition:none!important;}
+  .nav-links a:active,.filter-tabs .tab-btn:active,.btn-show-more:active,
+  .submit-btn:active,.email-me-btn:active,.social-icons a:active,
+  .contact-mobile-tab:active,.hamburger:active{transform:none;}
+}
 
 /* ============================================================
    FINAL UI PASS 4 — stable navigation, clean software marks, and hit testing
