@@ -1384,6 +1384,13 @@ function validateCmsRegressionContracts() {
       !mediaReferenceBlock.includes("'data/footer-loop.json'")) {
     err('CMS Media Library: folder renames must update Curated View-owned project media and footer animation references.');
   }
+  if (!/async getTree\\(ref=conn\\.branch\\)/.test(admin) ||
+      !/async getTextFile\\(path, ref=conn\\.branch\\)/.test(admin) ||
+      !admin.includes('const tree=await GH.getTree(parentSha);') ||
+      !admin.includes('GH.getTextFile(filePath,parentSha)') ||
+      !/ghCommitTreeEntries\\(entries,[^\\n]+,parentSha\\)/.test(admin)) {
+    err('CMS Media Library: folder renames must read the asset tree and references from one immutable commit snapshot before writing.');
+  }
   if (!admin.includes('const cacheKey = version || mediaTreeShaByPath?.get(assetPath)') ||
       !admin.includes('await loadMediaTree(true)') ||
       !admin.includes('const existingIndex = uploadTree.findIndex') ||

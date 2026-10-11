@@ -367,8 +367,8 @@ const GH = {
     if(!res.ok) throw new Error(`Could not reach GitHub (error ${res.status}).`);
     return res.json();
   },
-  async getTree(){
-    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/trees/${encodeURIComponent(conn.branch)}?recursive=1`;
+  async getTree(ref=conn.branch){
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(!res.ok){
       const e = await res.json().catch(()=>({}));
@@ -377,8 +377,8 @@ const GH = {
     const data = await res.json();
     return data.tree || [];
   },
-  async getTextFile(path){
-    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(conn.branch)}`;
+  async getTextFile(path, ref=conn.branch){
+    const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}?ref=${encodeURIComponent(ref)}`;
     const res = await githubFetch(url, { headers: authHeaders() });
     if(res.status === 404) throw new Error(`${path} was not found in the repository.`);
     if(!res.ok){
@@ -4057,7 +4057,12 @@ async function renameMediaFolder(oldPath,onDone){
   const parent=oldPath.includes('/') ? oldPath.slice(0,oldPath.lastIndexOf('/')) : '';
   const newPath=joinRepoPath(parent,name);
   if(newPath===oldPath) return;
-  const tree=await loadMediaTree(true);
+  // Use one immutable snapshot for the media tree and all reference files.
+  // If the branch advances while confirmation is open, the final non-forced
+  // ref update rejects the stale snapshot instead of overwriting newer data.
+  const parentSha=await GH.getBranchHead();
+  if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
+  const tree=await GH.getTree(parentSha);
   if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){ toast('That destination already exists.',true); return; }
   const prefix=oldPath+'/';
   const moving=tree.filter(item=>item.type==='blob' && item.path.startsWith(prefix));
@@ -4073,7 +4078,7 @@ async function renameMediaFolder(oldPath,onDone){
   const changedReferenceFiles=[];
   for(const filePath of MEDIA_REFERENCE_FILES){
     try{
-      const current=await GH.getTextFile(filePath);
+      const current=await GH.getTextFile(filePath,parentSha);
       if(!current.text.includes(oldPath)) continue;
       const next=current.text.split(oldPath).join(newPath);
       if(next===current.text) continue;
@@ -4091,7 +4096,7 @@ async function renameMediaFolder(oldPath,onDone){
     : 'No existing site/data references to this folder were found.';
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”? '+referenceNote)) return;
 
-  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath} and update references`);
+  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath} and update references`,parentSha);
   setMediaTreeCache(null);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
@@ -4100,11 +4105,12 @@ async function renameMediaFolder(oldPath,onDone){
   if(onDone) onDone(newPath);
 }
 
-async function ghCommitTreeEntries(entries,message){
+async function ghCommitTreeEntries(entries,message,parentSha){
   if(!entries.length) throw new Error('Nothing to commit.');
-  const parentSha=await GH.getBranchHead();
+  if(!parentSha) parentSha=await GH.getBranchHead();
+  if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
   const commitUrl=`https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
-  const res=await fetch(commitUrl,{headers:authHeaders()});
+  const res=await githubFetch(commitUrl,{headers:authHeaders()});
   if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.message||`GitHub error ${res.status}`);}
   const base=(await res.json()).tree.sha;
   const treeSha=await GH.createTree(base,entries);

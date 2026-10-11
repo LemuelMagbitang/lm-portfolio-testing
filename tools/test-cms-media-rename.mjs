@@ -34,7 +34,8 @@ const referenceContents = {
   'data/footer-loop.json': footerLoop
 };
 const blobs = new Map();
-const calls = { entries: null, message: '', refreshed: false, toast: [] };
+const calls = { entries: null, message: '', parentSha: '', treeRef: '', textRefs: [], refreshed: false, toast: [] };
+const snapshotSha = 'rename-snapshot-commit';
 let blobNumber = 0;
 const tree = [{
   type: 'blob',
@@ -54,7 +55,13 @@ const tree = [{
 }];
 
 const GH = {
-  async getTextFile(filePath) {
+  async getBranchHead() { return snapshotSha; },
+  async getTree(ref) {
+    calls.treeRef = ref;
+    return tree;
+  },
+  async getTextFile(filePath, ref) {
+    calls.textRefs.push({ filePath, ref });
     return { text: referenceContents[filePath] || '{}', sha: 'sha-' + filePath };
   },
   async createBlob(content) {
@@ -75,9 +82,10 @@ const context = {
   safeFolderName: value => String(value || '').trim(),
   joinRepoPath: (parent, name) => parent ? parent + '/' + name : name,
   loadMediaTree: async () => tree,
-  ghCommitTreeEntries: async (entries, message) => {
+  ghCommitTreeEntries: async (entries, message, parentSha) => {
     calls.entries = entries;
     calls.message = message;
+    calls.parentSha = parentSha;
     return { sha: 'test-commit-sha' };
   },
   setMediaTreeCache: () => { calls.refreshed = true; },
@@ -94,6 +102,10 @@ assert.ok(harness.MEDIA_REFERENCE_FILES.includes('data/footer-loop.json'),
 
 await harness.renameMediaFolder(oldPath, () => {});
 assert.ok(Array.isArray(calls.entries), 'Rename should create one tree commit containing moves and reference updates.');
+assert.equal(calls.treeRef, snapshotSha, 'Media asset tree must be read from the captured parent commit.');
+assert.equal(calls.parentSha, snapshotSha, 'Rename commit must use the same parent commit as its reads.');
+assert.ok(calls.textRefs.length > 0 && calls.textRefs.every(item => item.ref === snapshotSha),
+  'Every reference file must be read from the same captured parent commit.');
 
 for (const filePath of ['data/curated-views.json', 'data/footer-loop.json']) {
   const entry = calls.entries.find(item => item.path === filePath);
