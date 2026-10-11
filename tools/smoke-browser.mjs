@@ -1205,6 +1205,10 @@ try {
       if ((inspectedFace || '').trim() !== 'BACK') {
         throw new Error('The native foil hint did not switch from FRONT to BACK after flipping inside Inspect.');
       }
+      // Capture the actual artwork node while it is still inside Inspect. Closing
+      // Inspect moves this same node back into the Lightbox group, so a locator
+      // scoped to the now-detached Inspector cannot be used to reacquire it.
+      const flippedSurfaceHandle = await inspectedHolo.elementHandle();
       // The Inspector is portaled above the Lightbox. Close it through its own
       // Back control before interacting with the Lightbox close button beneath it.
       await inspectMode.locator('.lightbox-inspect-back').click();
@@ -1215,10 +1219,8 @@ try {
         throw new Error('Closing foil Inspect changed the Lightbox scroll position: ' +
           JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterInspectorClose }));
       }
-      // Keep a handle to the flipped node while Lightbox teardown runs.
       // Disposal must restore the front state and accessible hint before the
       // grouped artwork DOM is discarded.
-      const flippedSurfaceHandle = await inspectedHolo.elementHandle();
       await page.locator('#lightboxClose').first().click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
       const disposedFoilState = await flippedSurfaceHandle.evaluate(el => ({
