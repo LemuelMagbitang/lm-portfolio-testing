@@ -162,6 +162,24 @@ import { createLifecycle } from '../../core/lifecycle.js';
     return weighted[weighted.length - 1].index;
   }
 
+  function readLastMessageIndex(key, windowRef) {
+    try {
+      const raw = windowRef?.localStorage?.getItem(key);
+      const index = raw === null || raw === undefined ? -1 : Number.parseInt(raw, 10);
+      return Number.isInteger(index) && index >= 0 ? index : -1;
+    } catch (_) {
+      return -1;
+    }
+  }
+
+  function rememberMessageIndex(key, index, windowRef) {
+    try {
+      windowRef?.localStorage?.setItem(key, String(index));
+    } catch (_) {
+      // Keep random selection working when storage is unavailable.
+    }
+  }
+
   function buildHeroMessageView(documentRef, root) {
     if (!root) return null;
 
@@ -240,8 +258,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       loopMode: ['latest','manual','mixed'].includes(options.loopMode) ? options.loopMode : 'latest',
       transitionStyle: ['kenburns','fade','none'].includes(options.transitionStyle) ? options.transitionStyle : 'kenburns',
       crossfadeMs: Number.isFinite(Number(options.crossfadeMs)) && Number(options.crossfadeMs) >= 500 ? Number(options.crossfadeMs) : 3500,
-      messageFadeMs: Number.isFinite(Number(options.messageFadeMs)) && Number(options.messageFadeMs) >= 0 ? Number(options.messageFadeMs) : 600,
-      messageAutoRotateMs: Number.isFinite(Number(options.messageAutoRotateMs)) && Number(options.messageAutoRotateMs) >= 0 ? Number(options.messageAutoRotateMs) : 0
+      messageFadeMs: Number.isFinite(Number(options.messageFadeMs)) && Number(options.messageFadeMs) >= 0 ? Number(options.messageFadeMs) : 600
     };
     const heroContainer = documentRef.getElementById('heroBanner') || documentRef.getElementById('heroBannerAbout');
     if (!heroContainer) return;
@@ -252,12 +269,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
     let latestSources = [];
     let manualSources = [];
     let sources = [];
-    let messageRotationTimer = null;
-    let messageFadeTimer = null;
-    let footerHeightAnimation = null;
-    lifecycle.add(() => windowRef.clearInterval(messageRotationTimer));
-    lifecycle.add(() => windowRef.clearTimeout(messageFadeTimer));
-    lifecycle.add(() => { try { footerHeightAnimation?.cancel?.(); } catch (_) {} footerHeightAnimation = null; });
+
 
 
     const showHeroMessage = options.showHeroMessage !== false;
@@ -297,61 +309,34 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
     if (messageTargets.length) {
       let messages = [{ label: 'LM.', text: 'Open for freelance work.', author: '', source: '', weight: 1 }];
-      const currentMessageByKey = new Map();
-      const chooseMessageSet = () => {
-        const usedIndices = new Set();
-        return messageTargets.map(target => {
-          const excluded = new Set(usedIndices);
-          const current = currentMessageByKey.get(target.key);
-          if (messages.length > 1 && Number.isInteger(current)) excluded.add(current);
-          let index = pickHeroMessage(messages, excluded);
-          if (messages.length > 1 && usedIndices.has(index)) {
-            const alternatives = messages.map((_, candidate) => candidate).filter(candidate => !usedIndices.has(candidate));
-            if (alternatives.length) index = alternatives[Math.floor(Math.random() * alternatives.length)];
-          }
-          usedIndices.add(index);
-          currentMessageByKey.set(target.key, index);
-          return { target, item: messages[index] };
-        });
-      };
-      const fadeToMessageSet = (animate = true) => {
-        const selections = chooseMessageSet();
-        if (!selections.length) return;
-        if (!animate) {
-          selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
-          return;
-        }
-        windowRef.clearTimeout(messageFadeTimer);
-        if (footerHeightAnimation) { try { footerHeightAnimation.cancel(); } catch (_) {} footerHeightAnimation = null; }
-        const previousFooterHeight = footerElement?.getBoundingClientRect?.().height || 0;
-        messageTargets.forEach(({ view }) => { view.root.style.opacity = '0'; });
-        messageFadeTimer = windowRef.setTimeout(() => {
-          selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
-          const nextFooterHeight = footerElement?.getBoundingClientRect?.().height || 0;
-          if (footerElement && previousFooterHeight > 0 &&
-              Math.abs(nextFooterHeight - previousFooterHeight) > 2 &&
-              typeof footerElement.animate === 'function' && !isReducedMotion()) {
-            try {
-              footerHeightAnimation = footerElement.animate(
-                [{ height: previousFooterHeight + 'px' }, { height: nextFooterHeight + 'px' }],
-                { duration: 360, easing: 'cubic-bezier(.22,1,.36,1)' }
-              );
-              footerHeightAnimation.onfinish = () => { try { footerHeightAnimation?.cancel?.(); } catch (_) {} footerHeightAnimation = null; };
-            } catch (_) { footerHeightAnimation = null; }
-          }
-          windowRef.requestAnimationFrame(() => messageTargets.forEach(({ view }) => { view.root.style.opacity = '1'; }));
-        }, config.messageFadeMs);
-      };
-      fadeToMessageSet(false);
-      windowRef.requestAnimationFrame(() => messageTargets.forEach(({ view }) => { view.root.style.opacity = '1'; }));
       try {
         const rawMessages = await loadJson(heroMessagesUrl, null, { resolveUrl: resolveAssetUrl });
         const cmsMessages = normalizeHeroMessages(rawMessages);
-        if (cmsMessages.length) { messages = cmsMessages; fadeToMessageSet(true); }
-      } catch (err) { console.warn('Hero messages: could not load', heroMessagesUrl, err); }
-      if (config.messageAutoRotateMs > 0 && messages.length > 1) {
-        messageRotationTimer = windowRef.setInterval(() => fadeToMessageSet(true), config.messageAutoRotateMs);
+        if (cmsMessages.length) messages = cmsMessages;
+      } catch (err) {
+        console.warn('Hero messages: could not load', heroMessagesUrl, err);
       }
+
+      // Select once from the settled CMS list per page load. Artwork keeps
+      // looping independently; quote copy has no timer. Avoid repeating the
+      // last choice across refreshes when localStorage is available.
+      const usedIndices = new Set();
+      const selections = messageTargets.map(target => {
+        const storageKey = target.key === 'hero' ? 'lm:lastHeroMessage' : 'lm:lastFooterMessage';
+        const previousIndex = readLastMessageIndex(storageKey, windowRef);
+        const excluded = new Set(usedIndices);
+        if (messages.length > 1 && previousIndex >= 0 && previousIndex < messages.length) excluded.add(previousIndex);
+        const index = pickHeroMessage(messages, excluded);
+        usedIndices.add(index);
+        rememberMessageIndex(storageKey, index, windowRef);
+        target.view.root.style.transitionDuration = config.messageFadeMs + 'ms';
+        return { target, item: messages[index] };
+      });
+
+      selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
+      windowRef.requestAnimationFrame(() => {
+        messageTargets.forEach(({ view }) => { view.root.style.opacity = '1'; });
+      });
     }
 
     // Load the CMS-curated manual list from the configured URL. A file path
