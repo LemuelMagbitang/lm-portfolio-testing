@@ -4111,7 +4111,7 @@ try {
       // against the animated hero. Dispatch the real click event so the
       // production navigation listener runs deterministically.
       await contact.dispatchEvent('click');
-      await page.waitForTimeout(120);
+      await waitForContactViewportAlignment(page);
 
       const mobileContact = await page.evaluate(() => {
         const group = document.querySelector('#contact-section .contact-grid');
