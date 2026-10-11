@@ -1231,11 +1231,11 @@ try {
           returnsToGroupItem: Boolean(target?.classList.contains('is-grouped-artwork-interactive')),
           suppressClass: Boolean(target?.classList.contains('is-inspect-focus-return')),
           outlineStyle: style?.outlineStyle || '',
-          outlineWidth: Number.parseFloat(style?.outlineWidth || '0')
+          boxShadow: style?.boxShadow || ''
         };
       });
       if (!escapeFocusState.returnsToGroupItem || !escapeFocusState.suppressClass ||
-          escapeFocusState.outlineStyle !== 'none' || escapeFocusState.outlineWidth > 0) {
+          escapeFocusState.outlineStyle !== 'none' || escapeFocusState.boxShadow !== 'none') {
         throw new Error('Escape left an unexpected artwork focus outline: ' + JSON.stringify(escapeFocusState));
       }
       const lightboxScrollAfterEscape = await lightboxScrollHost.evaluate(el => el.scrollTop);
@@ -1285,11 +1285,11 @@ try {
           returnsToGroupItem: Boolean(target?.classList.contains('is-grouped-artwork-interactive')),
           suppressClass: Boolean(target?.classList.contains('is-inspect-focus-return')),
           outlineStyle: style?.outlineStyle || '',
-          outlineWidth: Number.parseFloat(style?.outlineWidth || '0')
+          boxShadow: style?.boxShadow || ''
         };
       });
       if (!backFocusState.returnsToGroupItem || !backFocusState.suppressClass ||
-          backFocusState.outlineStyle !== 'none' || backFocusState.outlineWidth > 0) {
+          backFocusState.outlineStyle !== 'none' || backFocusState.boxShadow !== 'none') {
         throw new Error('Keyboard Back left an unexpected artwork focus outline: ' + JSON.stringify(backFocusState));
       }
       const lightboxScrollAfterBack = await lightboxScrollHost.evaluate(el => el.scrollTop);
