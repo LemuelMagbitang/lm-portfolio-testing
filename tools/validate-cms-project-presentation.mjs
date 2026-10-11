@@ -275,8 +275,8 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   !renderer.includes('inspectTrigger') &&
   !renderer.includes('holdOpened = true'),
   'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil flips remain available inside Inspect.');
-const focused3dActivation = renderer.match(/onActivate:\s*\(\)\s*=>\s*\{([\\s\\S]*?)\},\s*onDeactivate:/)?.[1] || '';
-assert.ok(focused3dActivation && !/lightbox\\.scrollTop|pre3dScrollTop/.test(focused3dActivation),
+const focused3dActivation = renderer.match(/onActivate:\s*\(\)\s*=>\s*\{([\s\S]*?)\},\s*onDeactivate:/)?.[1] || '';
+assert.ok(focused3dActivation && !/lightbox\.scrollTop|pre3dScrollTop/.test(focused3dActivation),
   'Entering the 3D inspection layer must not rewrite the Lightbox scroll position.');
 assert.ok(siteCss.includes('data-artwork-effective-layout="grid"') &&
   siteCss.includes('data-artwork-effective-layout="horizontal"') &&
