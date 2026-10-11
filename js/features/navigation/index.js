@@ -107,12 +107,8 @@ export function initNavigation({ root = globalThis.document } = {}) {
     const maxScrollY = Math.max(0, documentHeight - viewportHeight);
     const targetY = Math.max(0, Math.min(maxScrollY, Math.min(desiredY, headingSafeY)));
 
-    const scrollingElement = root.scrollingElement || root.documentElement;
-    [scrollingElement, root.documentElement, root.body].filter(Boolean).forEach(element => {
-      element.scrollTop = targetY;
-    });
-    try { windowRef.scrollTo({ left: 0, top: targetY, behavior: 'instant' }); }
-    catch (_) { windowRef.scrollTo(0, targetY); }
+    const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    windowRef.scrollTo({ left: 0, top: targetY, behavior: reducedMotion ? 'auto' : 'smooth' });
   }
 
   function normalizedPagePath(pathname) {
@@ -154,40 +150,10 @@ export function initNavigation({ root = globalThis.document } = {}) {
       windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home'));
     } catch (_) {}
 
-    const resetHomeScroll = () => {
-      const scrollingElement = root.scrollingElement || root.documentElement;
-
-      // Clear every standards/legacy document scroll surface. A single reset
-      // is not enough when a smooth-scroll animation was already in flight or
-      // Gallery's home-state render is still settling its layout.
-      [scrollingElement, root.documentElement, root.body]
-        .filter(Boolean)
-        .forEach(element => {
-          element.scrollLeft = 0;
-          element.scrollTop = 0;
-        });
-
-      // Override the site's global smooth-scroll setting for this navigation.
-      // Direct scrollTop writes above also provide a fallback for engines that
-      // do not support the "instant" ScrollBehavior option.
-      try {
-        windowRef.scrollTo({ left: 0, top: 0, behavior: 'instant' });
-      } catch (_) {
-        try { windowRef.scrollTo(0, 0); } catch (_) {}
-      }
-    };
-
-    // Reset synchronously for immediate feedback, then repeat across two paint
-    // frames. This cancels a pre-existing scroll animation that could otherwise
-    // resume after the first reset and ensures the destination remains at the
-    // top after Gallery has applied its home/ALL presentation.
-    resetHomeScroll();
-    if (typeof windowRef.requestAnimationFrame === 'function') {
-      windowRef.requestAnimationFrame(() => {
-        resetHomeScroll();
-        windowRef.requestAnimationFrame(resetHomeScroll);
-      });
-    }
+    // Smooth-scroll the document once. Repeated direct scrollTop writes
+    // would cancel this animation and make the logo feel like a snap-to-top.
+    const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
   }
 
   function handleSamePageContactNavigation(event) {
