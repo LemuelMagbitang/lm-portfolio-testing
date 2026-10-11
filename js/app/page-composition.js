@@ -13,16 +13,16 @@ import {
   getCardForProject,
   destroyProjects
 } from '../features/projects/index.js?v=20261010-04';
-import { initNavigation } from '../features/navigation/index.js?v=20261009-01';
+import { initNavigation } from '../features/navigation/index.js?v=20261011-01';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
 import { initForms } from '../features/forms/index.js?v=20261010-03';
-import { initSiteSettings } from '../features/settings/index.js?v=20261008-01';
+import { initSiteSettings } from '../features/settings/index.js?v=20261011-01';
 
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261010-02';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-01';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261010-02';
-import { initLightbox } from '../features/lightbox/index.js?v=20261011-03';
+import { initLightbox } from '../features/lightbox/index.js?v=20261011-04';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 
 export async function createPortfolioApp({
@@ -202,6 +202,8 @@ export async function createPortfolioApp({
         loopMode: settings.heroTiming.loopMode,
         transitionStyle: settings.heroTiming.transitionStyle,
         crossfadeMs: settings.heroTiming.crossfadeMs,
+        showHeroMessage: settings.showHeroMessage,
+        showFooterMessage: settings.showFooterMessage,
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl,
         getSiteRootUrl,
