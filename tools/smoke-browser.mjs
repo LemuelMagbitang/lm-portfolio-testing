@@ -1846,7 +1846,7 @@ try {
       });
       if (!focused3DScrollContract ||
           focused3DScrollContract.position !== 'fixed' ||
-          focused3DScrollContract.overflowY !== 'hidden' ||
+          focused3DScrollContract.overflowY !== 'auto' ||
           focused3DScrollContract.overflowX !== 'hidden' ||
           focused3DScrollContract.touchAction !== 'none' ||
           focused3DScrollContract.overscrollBehavior !== 'none' ||
