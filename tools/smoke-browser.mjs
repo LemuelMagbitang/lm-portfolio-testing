@@ -118,7 +118,7 @@ async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
     const scrollY = Number(window.scrollY) || Number(scrolling.scrollTop) || 0;
     const clampedAtDocumentBottom = Math.abs(scrollY - maxScrollY) <= 2;
 
-    return (clampedAtDocumentBottom || Math.abs(groupCenter - usableCenter) <= 130) &&
+    return (clampedAtDocumentBottom || Math.abs(groupCenter - usableCenter) <= 20) &&
       headingRect.top >= usableTop - 2;
   }, null, { timeout: timeoutMs });
 }
