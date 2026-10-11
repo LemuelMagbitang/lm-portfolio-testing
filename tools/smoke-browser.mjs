@@ -3735,7 +3735,7 @@ try {
 
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
       await page.locator('.nav-links .nav-dropdown-toggle').first().click();
-      await page.waitForTimeout(80);
+      await page.waitForFunction(() => Math.abs(window.scrollY) <= 8, null, { timeout: 5000 });
       const worksReset = await page.evaluate(() => ({
         scrollY: window.scrollY,
         hash: window.location.hash,
@@ -3771,7 +3771,7 @@ try {
         window.scrollTo(0, document.body.scrollHeight);
       });
       await page.locator('.nav-logo').first().click();
-      await page.waitForTimeout(60);
+      await page.waitForFunction(() => Math.abs(window.scrollY) <= 8, null, { timeout: 5000 });
       const logoReset = await page.evaluate(() => ({
         scrollY: window.scrollY,
         hash: window.location.hash,
