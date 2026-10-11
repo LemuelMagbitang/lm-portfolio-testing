@@ -4397,12 +4397,18 @@ try {
         slug: document.body.dataset.curatedViewSlug || '',
         heading: document.querySelector('#curatedViewHeading h1')?.textContent?.trim() || '',
         filters: getComputedStyle(document.querySelector('.filter-tabs')).display,
-        ids: Array.from(document.querySelectorAll('#portfolioGrid .project-card')).map(card => card.dataset.projectId || '')
+        ids: Array.from(document.querySelectorAll('#portfolioGrid .project-card')).map(card => card.dataset.projectId || ''),
+        eyebrowCount: document.querySelectorAll('.curated-view-eyebrow').length,
+        exitBorder: getComputedStyle(document.querySelector('.curated-view-exit')).borderTopWidth,
+        exitIcon: document.querySelector('.curated-view-exit i')?.className || ''
       }));
       const expected = ['funko-pop-test', 'test-project', 'test-project-on-curated-view'];
       if (state.slug !== 'test-portfolio' || state.heading !== 'test portfolio' ||
           state.filters !== 'none' || JSON.stringify(state.ids) !== JSON.stringify(expected)) {
         throw new Error('Direct Curated View route did not render the saved ordered project set: ' + JSON.stringify(state));
+      }
+      if (state.eyebrowCount !== 0 || state.exitBorder !== '0px' || !state.exitIcon.includes('fa-arrow-left')) {
+        throw new Error('Curated View heading/exit presentation regression: ' + JSON.stringify(state));
       }
       await page.locator('#portfolioGrid [data-project-id="test-project-on-curated-view"]').click();
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 5000 });
@@ -4422,6 +4428,29 @@ try {
       }
     }, { width: 1280, height: 900 });
 
+    await smokePage(browser, '/#test-portfolio', async page => {
+      await page.waitForFunction(() => document.body.dataset.curatedViewSlug === 'test-portfolio');
+      const state = await page.evaluate(() => {
+        const heading = document.querySelector('.curated-view-heading');
+        const copy = document.querySelector('.curated-view-heading-copy');
+        const controls = document.querySelector('.filter-page-controls');
+        if (controls) controls.hidden = false;
+        const headingStyle = heading ? getComputedStyle(heading) : null;
+        const copyRect = copy?.getBoundingClientRect();
+        const exitRect = document.querySelector('.curated-view-exit')?.getBoundingClientRect();
+        return {
+          direction: headingStyle?.flexDirection || '',
+          copyRight: copyRect?.right ?? null,
+          exitLeft: exitRect?.left ?? null,
+          controlsDisplay: controls ? getComputedStyle(controls).display : 'missing',
+          eyebrowCount: document.querySelectorAll('.curated-view-eyebrow').length
+        };
+      });
+      if (state.direction !== 'row' || state.copyRight === null || state.exitLeft === null ||
+          state.exitLeft < state.copyRight - 1 || state.controlsDisplay !== 'none' || state.eyebrowCount !== 0) {
+        throw new Error('Mobile Curated View presentation regression: ' + JSON.stringify(state));
+      }
+    }, { width: 390, height: 844 });
     await smokePage(browser, '/', async page => {
       const nonAllFilter = page.locator('.filter-tabs .filter-btn:not([data-filter="all"])').first();
       if (await nonAllFilter.count() !== 1) throw new Error('Desktop Gallery reset smoke fixture has no non-ALL filter.');
