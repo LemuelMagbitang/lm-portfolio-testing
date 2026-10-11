@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
 const start = admin.indexOf('const MEDIA_REFERENCE_FILES = [');
-const end = admin.indexOf('async function ghCommitTreeEntries(entries,message){', start);
+const end = admin.indexOf('async function ghCommitTreeEntries(entries,message,parentSha){', start);
 assert.ok(start >= 0 && end > start, 'Media rename reference list and operation must remain testable together.');
 const source = admin.slice(start, end) + '\n({ MEDIA_REFERENCE_FILES, renameMediaFolder })';
 
