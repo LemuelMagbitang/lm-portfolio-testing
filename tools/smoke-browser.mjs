@@ -4772,7 +4772,7 @@ try {
         const rect = panel?.getBoundingClientRect();
         const socialRect = social?.getBoundingClientRect();
         const panelStyle = panel ? getComputedStyle(panel) : null;
-        const panelAlpha = panelStyle?.backgroundColor.match(/rgba?\\([^)]*,\\s*([\\d.]+)\\s*\\)$/);
+        const panelAlpha = panelStyle?.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
         return {
           heroMessageHidden: heroQuote?.hidden === true,
           heroOverlay: heroBanner ? getComputedStyle(heroBanner, '::after').backgroundImage : '',
