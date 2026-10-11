@@ -265,8 +265,10 @@ import { createLifecycle } from '../../core/lifecycle.js';
     let sources = [];
     let messageRotationTimer = null;
     let messageFadeTimer = null;
+    let footerHeightAnimation = null;
     lifecycle.add(() => windowRef.clearInterval(messageRotationTimer));
     lifecycle.add(() => windowRef.clearTimeout(messageFadeTimer));
+    lifecycle.add(() => { try { footerHeightAnimation?.cancel?.(); } catch (_) {} footerHeightAnimation = null; });
 
 
     const showHeroMessage = options.showHeroMessage !== false;
@@ -309,9 +311,30 @@ import { createLifecycle } from '../../core/lifecycle.js';
         }
 
         windowRef.clearTimeout(messageFadeTimer);
+        if (footerHeightAnimation) {
+          try { footerHeightAnimation.cancel(); } catch (_) {}
+          footerHeightAnimation = null;
+        }
+        const footerElement = footerContent?.closest('footer');
+        const previousFooterHeight = footerElement?.getBoundingClientRect?.().height || 0;
         messageViews.forEach(view => { view.root.style.opacity = '0'; });
         messageFadeTimer = windowRef.setTimeout(() => {
           messageViews.forEach(view => renderHeroMessage(view, item));
+          const nextFooterHeight = footerElement?.getBoundingClientRect?.().height || 0;
+          if (footerElement && previousFooterHeight > 0 &&
+              Math.abs(nextFooterHeight - previousFooterHeight) > 2 &&
+              typeof footerElement.animate === 'function' && !isReducedMotion()) {
+            try {
+              footerHeightAnimation = footerElement.animate(
+                [{ height: previousFooterHeight + 'px' }, { height: nextFooterHeight + 'px' }],
+                { duration: 360, easing: 'cubic-bezier(.22,1,.36,1)' }
+              );
+              footerHeightAnimation.onfinish = () => {
+                try { footerHeightAnimation?.cancel?.(); } catch (_) {}
+                footerHeightAnimation = null;
+              };
+            } catch (_) { footerHeightAnimation = null; }
+          }
           windowRef.requestAnimationFrame(() => messageViews.forEach(view => { view.root.style.opacity = '1'; }));
         }, config.messageFadeMs);
       };
