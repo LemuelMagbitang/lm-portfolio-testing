@@ -164,6 +164,7 @@ export async function mountModelViewer(container, src, options = {}) {
   let lastSize = { width: 0, height: 0 };
   let renderLoopActive = false;
   let focusScrollCleanup = null;
+  let keydownCleanup = null;
 
   // Container-level interaction listeners belong to this mount instance.
   // Keeping explicit removers prevents duplicate gesture/wheel/activation
@@ -441,8 +442,9 @@ export async function mountModelViewer(container, src, options = {}) {
         try { container.focus({ preventScroll: true }); } catch (_) { container.focus(); }
       });
     };
-    document.addEventListener('keydown', onDocumentKeydown, true);
-    container.__modelViewerKeydownCleanup = () => document.removeEventListener('keydown', onDocumentKeydown, true);
+    ownerDocument.addEventListener('keydown', onDocumentKeydown, true);
+    keydownCleanup = () => ownerDocument.removeEventListener('keydown', onDocumentKeydown, true);
+    container.__modelViewerKeydownCleanup = keydownCleanup;
 
     // Explicitly pass wheel movement to the lightbox scroller while passive.
     // This makes scrolling dependable even in browsers that treat a WebGL
@@ -494,14 +496,61 @@ export async function mountModelViewer(container, src, options = {}) {
       container.setAttribute('aria-busy', 'false');
     }
   } catch (err) {
-    if (!isCurrentMount()) return null;
+    const ownsContainer = isCurrentMount();
+
+    // Initialization can fail after a renderer, controls, model, or listeners
+    // have already been allocated. Roll those resources back even if a newer
+    // mount has taken ownership of the same container while this one was loading.
+    disposed = true;
+    renderLoopActive = false;
+    if (frameHandle) {
+      cancelAnimationFrame(frameHandle);
+      frameHandle = 0;
+    }
+    try { resizeObserver?.disconnect(); } catch (_) {}
+    try { controls?.dispose?.(); } catch (_) {}
+    try { focusScrollCleanup?.(); } catch (_) {}
+    focusScrollCleanup = null;
+    try { keydownCleanup?.(); } catch (_) {}
+    if (container.__modelViewerKeydownCleanup === keydownCleanup) {
+      delete container.__modelViewerKeydownCleanup;
+    }
+    containerCleanup.splice(0).reverse().forEach(remove => {
+      try { remove(); } catch (_) {}
+    });
+    mixers.forEach(mixer => {
+      try {
+        mixer.stopAllAction?.();
+        if (root) mixer.uncacheRoot?.(root);
+      } catch (_) {}
+    });
+    try { disposeObject(root); } catch (_) {}
+    scene.clear();
+    try { renderer?.dispose?.(); } catch (_) {}
+    if (renderer?.domElement?.parentNode === container) renderer.domElement.remove();
+
+    // A stale mount may release only its own resources; it must not rewrite the
+    // newer mount's accessibility state or remove its background layers.
+    if (!ownsContainer) return null;
+
     container.dataset.ready = 'false';
+    container.dataset.interactive = 'false';
+    container.classList.remove('is-interactive');
     container.setAttribute('aria-busy', 'false');
+    container.setAttribute('role', 'img');
+    container.setAttribute('aria-label', '3D view unavailable');
+    container.removeAttribute('tabindex');
+    container.removeAttribute('aria-expanded');
     const label = activate.querySelector('strong');
     if (label) label.textContent = '3D VIEW UNAVAILABLE';
     back.hidden = true;
-    renderer?.dispose?.();
-    if (renderer?.domElement?.parentNode === container) renderer.domElement.remove();
+    const bgLayer = container.querySelector(':scope > .lm-media-background-layer');
+    if (bgLayer) bgLayer.remove();
+    const bgOverlay = container.querySelector(':scope > .lm-media-background-overlay');
+    if (bgOverlay) bgOverlay.remove();
+    if (container.__modelViewerMountToken === mountToken) {
+      delete container.__modelViewerMountToken;
+    }
     throw err;
   }
 
@@ -589,18 +638,18 @@ export async function mountModelViewer(container, src, options = {}) {
     controls.dispose();
     focusScrollCleanup?.();
     focusScrollCleanup = null;
-    container.__modelViewerKeydownCleanup?.();
+    keydownCleanup?.();
+    if (container.__modelViewerKeydownCleanup === keydownCleanup) delete container.__modelViewerKeydownCleanup;
     containerCleanup.splice(0).reverse().forEach(remove => {
       try { remove(); } catch (_) {}
     });
-    delete container.__modelViewerKeydownCleanup;
     disposeObject(root);
     scene.clear();
     renderer.dispose();
     if (renderer.domElement.parentNode === container) renderer.domElement.remove();
     const bgLayer=container.querySelector(':scope > .lm-media-background-layer'); if(bgLayer) bgLayer.remove();
     const bgOverlay=container.querySelector(':scope > .lm-media-background-overlay'); if(bgOverlay) bgOverlay.remove();
-    delete container.__modelViewerCleanup;
+    if (container.__modelViewerCleanup === cleanup) delete container.__modelViewerCleanup;
     if (container.__modelViewerMountToken === mountToken) {
       delete container.__modelViewerMountToken;
     }

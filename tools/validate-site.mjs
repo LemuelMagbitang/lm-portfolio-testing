@@ -823,6 +823,9 @@ function validateLightboxLifecycle() {
   const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
     ? readText('js/features/lightbox/media-renderer.js')
     : '';
+  const modelViewer = exists('js/infrastructure/three/model-viewer.js')
+    ? readText('js/infrastructure/three/model-viewer.js')
+    : '';
   const legacy = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
 
   if (legacy) {
@@ -852,8 +855,34 @@ function validateLightboxLifecycle() {
       /\.project-media-list|\.glass-info|\.project-description/.test(source)) {
     err('Lightbox: project content must come from the normalized Projects contract, not card markup.');
   }
-}
 
+  const failureStart = modelViewer.indexOf('  } catch (err) {');
+  const failureEnd = modelViewer.indexOf('\n\n  const resizeViewer = () => {', failureStart);
+  const failurePath = failureStart >= 0 && failureEnd > failureStart
+    ? modelViewer.slice(failureStart, failureEnd)
+    : '';
+  const failureCleanupTokens = [
+    'const ownsContainer = isCurrentMount();',
+    'resizeObserver?.disconnect();',
+    'controls?.dispose?.();',
+    'focusScrollCleanup?.();',
+    'keydownCleanup?.();',
+    'containerCleanup.splice(0).reverse()',
+    'mixers.forEach(mixer =>',
+    'disposeObject(root)',
+    'renderer?.dispose?.()',
+    'if (!ownsContainer) return null;'
+  ];
+  if (!failurePath || failureCleanupTokens.some(token => !failurePath.includes(token))) {
+    err('3D viewer: partial initialization failures must release the model, renderer, controls, and owned listeners.');
+  } else {
+    const staleReturn = failurePath.indexOf('if (!ownsContainer) return null;');
+    const cleanupEnd = Math.max(...failureCleanupTokens.slice(0, -1).map(token => failurePath.indexOf(token)));
+    if (staleReturn < cleanupEnd) {
+      err('3D viewer: stale mounts must release their resources before returning without mutating the newer mount.');
+    }
+  }
+}
 function validateGalleryContract() {
   const source = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
   const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
