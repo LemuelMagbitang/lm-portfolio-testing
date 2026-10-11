@@ -1234,9 +1234,21 @@ try {
       if (messageSettings.showHeroMessage === false && !heroMessageHidden) {
         throw new Error('Works Hero message should be hidden while showHeroMessage is disabled.');
       }
+      if (messageSettings.showHeroMessage !== false) {
+        const heroPanelAlpha = await page.locator('#heroQuote').evaluate(el => {
+          const match = getComputedStyle(el).backgroundColor.match(/rgba?\\([^)]*,\\s*([\\d.]+)\\s*\\)$/);
+          return match ? Number(match[1]) : 0;
+        }).catch(() => 0);
+        if (heroPanelAlpha < 0.1) throw new Error('Works Hero message group is missing its translucent background.');
+      }
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
         if (!footerMessage?.trim()) throw new Error('Works footer message is missing while showFooterMessage is enabled.');
+        const footerPanelAlpha = await page.locator('footer .footer-hero-message').evaluate(el => {
+          const match = getComputedStyle(el).backgroundColor.match(/rgba?\\([^)]*,\\s*([\\d.]+)\\s*\\)$/);
+          return match ? Number(match[1]) : 0;
+        }).catch(() => 0);
+        if (footerPanelAlpha < 0.1) throw new Error('Works footer message group is missing its translucent background.');
       }
 
       if (heroSlides > 1) {
@@ -2759,9 +2771,21 @@ try {
       if (messageSettings.showHeroMessage === false && !heroMessageHidden) {
         throw new Error('Mobile/tablet Works Hero message should be hidden while showHeroMessage is disabled.');
       }
+      if (messageSettings.showHeroMessage !== false) {
+        const heroPanelAlpha = await page.locator('#heroQuote').evaluate(el => {
+          const match = getComputedStyle(el).backgroundColor.match(/rgba?\\([^)]*,\\s*([\\d.]+)\\s*\\)$/);
+          return match ? Number(match[1]) : 0;
+        }).catch(() => 0);
+        if (heroPanelAlpha < 0.1) throw new Error('Mobile/tablet Hero message group is missing its translucent background.');
+      }
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
         if (!footerMessage?.trim()) throw new Error('Mobile/tablet footer message is missing while showFooterMessage is enabled.');
+        const footerPanelAlpha = await page.locator('footer .footer-hero-message').evaluate(el => {
+          const match = getComputedStyle(el).backgroundColor.match(/rgba?\\([^)]*,\\s*([\\d.]+)\\s*\\)$/);
+          return match ? Number(match[1]) : 0;
+        }).catch(() => 0);
+        if (footerPanelAlpha < 0.1) throw new Error('Mobile/tablet footer message group is missing its translucent background.');
       }
 
       const footerSocialCenter = await page.evaluate(() => {
