@@ -291,6 +291,8 @@ assert.ok(!admin.includes('value="flow"') &&
   renderer.includes('documentRef.body.appendChild(overlay)') &&
   renderer.includes('modelFocusPlaceholder.replaceWith(modelEntry)') &&
   renderer.includes('modelFocusOverlay.appendChild(modelEntry)') &&
+  renderer.includes('lightbox-3d-scroll-preservation-spacer') &&
+  renderer.includes('restoreModelFocusScroll(scrollTarget)') &&
   renderer.includes('buildInspectTransform') &&
   siteCss.includes('.lightbox-inspect-mode::before') &&
   siteCss.includes('.lightbox-3d-focus-overlay::before') &&
