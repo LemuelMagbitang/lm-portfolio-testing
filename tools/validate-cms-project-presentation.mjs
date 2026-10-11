@@ -289,8 +289,11 @@ assert.ok(!admin.includes('value="flow"') &&
   !siteCss.includes('.lightbox-artwork-inspect-trigger') &&
   renderer.includes('lightbox-inspect-footer') &&
   renderer.includes('documentRef.body.appendChild(overlay)') &&
+  renderer.includes('modelFocusPlaceholder.replaceWith(modelEntry)') &&
+  renderer.includes('modelFocusOverlay.appendChild(modelEntry)') &&
   renderer.includes('buildInspectTransform') &&
   siteCss.includes('.lightbox-inspect-mode::before') &&
+  siteCss.includes('.lightbox-3d-focus-overlay::before') &&
   siteCss.includes('.lightbox-inspect-footer') &&
   siteCss.includes('background:transparent!important;') &&
   siteCss.includes('@media (hover:hover) and (pointer:fine)') &&
