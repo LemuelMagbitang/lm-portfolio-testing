@@ -4,7 +4,7 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../js/features/projects/project-loader.js?v=20261010-03';
+} from '../js/features/projects/project-loader.js?v=20261011-04';
 
 function createHarness(initialChildren = []) {
   const grid = {
@@ -142,6 +142,30 @@ destroyProjects();
   assert.equal(effect?.backTexture, 'back-foil.svg', 'Projects normalization must retain the reverse-side foil pattern');
   assert.equal(effect?.backTextureMode, 'tile', 'Projects normalization must retain reverse pattern mapping');
   assert.equal(effect?.backMask, 'back-mask.svg', 'Projects normalization must retain the independent reverse mask');
+}
+
+
+{
+  destroyProjects();
+  const harness = createHarness();
+  let networkLoads = 0;
+  const curatedPayload = [
+    { id: 'main-reference', title: 'Main Reference', media: [{ type: 'image', src: 'main.jpg' }] },
+    { id: 'curated-only', title: 'Curated Only', media: [{ type: 'image', src: 'curated.jpg' }] }
+  ];
+  const mountedCurated = await loadProjects({
+    url: 'data/projects.json',
+    projectData: curatedPayload,
+    loadJson: async () => { networkLoads += 1; return []; },
+    resolveUrl: value => value,
+    buildCard: harness.buildCard,
+    getGrid: () => harness.grid,
+    createFragment: harness.createFragment
+  });
+  assert.equal(mountedCurated, true);
+  assert.equal(networkLoads, 0, 'Pre-resolved Curated View payloads must not trigger a second Main Projects fetch.');
+  assert.deepEqual(getProjects().map(project => project.id), ['main-reference', 'curated-only']);
+  assert.equal(getCardForProject('curated-only')?.id, 'curated-only');
 }
 
 console.log('LM. project-loader contract test passed.');

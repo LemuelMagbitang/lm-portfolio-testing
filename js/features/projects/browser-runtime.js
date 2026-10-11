@@ -12,7 +12,7 @@
  * without coupling the Projects feature to one runtime implementation.
  */
 
-import { loadProjects } from './project-loader.js?v=20261010-03';
+import { loadProjects } from './project-loader.js?v=20261011-04';
 import { buildProjectCardElement } from './project-card.js?v=20261006-02';
 import { waitForProjectThumbnailReadiness } from './project-thumbnail.js?v=20261005-04';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
@@ -21,6 +21,7 @@ import { parseYouTubeUrl as defaultParseYouTubeUrl } from '../../infrastructure/
 
 export async function mountProjects({
   url,
+  projectData,
   documentRef = globalThis.document,
   loadJson = loadCmsJson,
   resolveAssetUrl = siteAssetUrl,
@@ -43,6 +44,7 @@ export async function mountProjects({
 
   const mounted = await loadProjects({
     url,
+    projectData,
     loadJson,
     resolveUrl: resolveAssetUrl,
     getGrid,

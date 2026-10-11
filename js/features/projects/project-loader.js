@@ -52,6 +52,7 @@ export function destroyProjects() {
 
 export async function loadProjects({
   url,
+  projectData,
   loadJson,
   resolveUrl,
   buildCard,
@@ -59,7 +60,7 @@ export async function loadProjects({
   createFragment
 } = {}) {
   if (
-    !url ||
+    (!url && projectData === undefined) ||
     typeof loadJson !== 'function' ||
     typeof buildCard !== 'function' ||
     typeof getGrid !== 'function' ||
@@ -73,7 +74,9 @@ export async function loadProjects({
   const loadToken = ++projectLoadToken;
 
   try {
-    const raw = await loadJson(url, null, { resolveUrl });
+    const raw = projectData !== undefined
+      ? projectData
+      : await loadJson(url, null, { resolveUrl });
     const hasProjectCollection =
       Array.isArray(raw) ||
       Array.isArray(raw?.projects);
