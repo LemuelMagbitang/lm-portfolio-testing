@@ -1501,6 +1501,39 @@ export function createLightboxMediaRenderer({
     modelEntry.classList.add('is-3d-media-item');
     let modelFocusPlaceholder = null;
     let modelFocusOverlay = null;
+    let modelFocusScrollTop = 0;
+    let previousOverflowAnchor = null;
+    let modelFocusScrollSpacer = null;
+    const restoreModelFocusScroll = targetScrollTop => {
+      if (!lightbox?.isConnected) return;
+      const desired = Math.max(0, Number(targetScrollTop) || 0);
+      let maximum = Math.max(0, lightbox.scrollHeight - lightbox.clientHeight);
+      if (desired > maximum + 1) {
+        const mediaContainer = documentRef.getElementById('lightboxMediaContainer');
+        if (mediaContainer?.isConnected) {
+          if (!modelFocusScrollSpacer?.isConnected) {
+            modelFocusScrollSpacer = documentRef.createElement('div');
+            modelFocusScrollSpacer.className = 'lightbox-3d-scroll-preservation-spacer';
+            modelFocusScrollSpacer.setAttribute('aria-hidden', 'true');
+            modelFocusScrollSpacer.style.width = '100%';
+            modelFocusScrollSpacer.style.height = '0px';
+            modelFocusScrollSpacer.style.flex = '0 0 auto';
+            modelFocusScrollSpacer.style.visibility = 'hidden';
+            modelFocusScrollSpacer.style.pointerEvents = 'none';
+            mediaContainer.appendChild(modelFocusScrollSpacer);
+          }
+          const currentSpacerHeight = Number.parseFloat(modelFocusScrollSpacer.style.height) || 0;
+          modelFocusScrollSpacer.style.height = (currentSpacerHeight + desired - maximum) + 'px';
+          maximum = Math.max(0, lightbox.scrollHeight - lightbox.clientHeight);
+          const remaining = desired - maximum;
+          if (remaining > 1) {
+            const adjustedSpacerHeight = Number.parseFloat(modelFocusScrollSpacer.style.height) || 0;
+            modelFocusScrollSpacer.style.height = (adjustedSpacerHeight + remaining) + 'px';
+          }
+        }
+      }
+      lightbox.scrollTop = desired;
+    };
 
     if (typeof mountModelViewer !== 'function') {
       modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
@@ -1520,6 +1553,11 @@ export function createLightboxMediaRenderer({
             setAspectRatio(modelEntry.querySelector('.lightbox-artwork'), width, height);
           },
           onActivate: () => {
+            modelFocusScrollTop = Number(lightbox?.scrollTop) || 0;
+            if (lightbox && previousOverflowAnchor === null) {
+              previousOverflowAnchor = lightbox.style.overflowAnchor;
+              lightbox.style.overflowAnchor = 'none';
+            }
             // Keep a same-size in-flow placeholder while the viewer becomes
             // viewport-fixed. That preserves the Lightbox's scroll geometry
             // instead of letting its scrollTop clamp when this item leaves flow.
@@ -1556,6 +1594,7 @@ export function createLightboxMediaRenderer({
             documentRef.body.classList.add('lm-3d-focus-open');
           },
           onDeactivate: () => {
+            const scrollTarget = modelFocusScrollTop;
             modelEntry.classList.remove('is-3d-focus-target');
             if (modelFocusPlaceholder?.parentNode) modelFocusPlaceholder.replaceWith(modelEntry);
             modelFocusPlaceholder = null;
@@ -1568,6 +1607,22 @@ export function createLightboxMediaRenderer({
             }
             documentRef.documentElement.classList.remove('lm-3d-focus-open');
             documentRef.body.classList.remove('lm-3d-focus-open');
+
+            // A loaded model can refine its passive aspect ratio while it is
+            // focused. If that shortens the gallery near its bottom, retain a
+            // hidden trailing spacer so the original scroll offset remains
+            // reachable instead of clamping to the new maximum.
+            restoreModelFocusScroll(scrollTarget);
+            windowRef.requestAnimationFrame(() => {
+              restoreModelFocusScroll(scrollTarget);
+              windowRef.requestAnimationFrame(() => {
+                restoreModelFocusScroll(scrollTarget);
+                if (lightbox && previousOverflowAnchor !== null) {
+                  lightbox.style.overflowAnchor = previousOverflowAnchor;
+                  previousOverflowAnchor = null;
+                }
+              });
+            });
           }
         });
       })
