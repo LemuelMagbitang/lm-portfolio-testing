@@ -42,7 +42,8 @@ export function initForms({
     const shouldAnimate = Boolean(
       windowRef?.matchMedia?.('(max-width: 767px)')?.matches &&
       !windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches &&
-      previousPanel && nextPanel && previousPanel !== nextPanel && grid
+      previousPanel && nextPanel && previousPanel !== nextPanel && grid &&
+      typeof grid.animate === 'function' && typeof nextPanel.animate === 'function'
     );
     const previousHeight = shouldAnimate ? grid.getBoundingClientRect().height : 0;
 
