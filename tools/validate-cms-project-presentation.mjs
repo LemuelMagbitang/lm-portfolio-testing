@@ -369,7 +369,7 @@ assert.ok(/typeof node\.load === 'function'\) node\.load\(src\)/.test(previewRun
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
   'CMS multimedia thumbnails are mounted lazily in static 3D mode.');
 assert.ok(/options\.thumbnail === true/.test(modelViewer), 'The 3D viewer supports static thumbnail rendering.');
-assert.ok(/model-viewer\.js\?v=20261010-12/.test(admin),
+assert.ok(/model-viewer\.js\?v=20261011-18/.test(admin),
   'The expanded CMS 3D editor must use the same current viewer module as collapsed thumbnails.');
 
 assert.ok(/let openUid\s*=\s*null/.test(admin), 'Projects must start with every project row closed.');
