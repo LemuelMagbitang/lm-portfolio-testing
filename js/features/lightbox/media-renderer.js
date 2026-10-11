@@ -1518,12 +1518,8 @@ export function createLightboxMediaRenderer({
             setAspectRatio(modelEntry.querySelector('.lightbox-artwork'), width, height);
           },
           onActivate: () => {
-            const currentScroll = lightbox.scrollTop;
-            lightbox.dataset.pre3dScrollTop = String(currentScroll);
-            // The interactive 3D state always begins at its own viewport
-            // origin. The previous Lightbox scroll position is restored only
-            // when Back/Escape exits this focused environment.
-            lightbox.scrollTop = 0;
+            // Focus mode overlays the current Lightbox position; entering the
+            // interactive viewer must not rewrite the scroller's scroll anchor.
             lightbox.classList.add('is-3d-focused');
             modelEntry.classList.add('is-3d-focus-target');
             if (lightboxControls) {
@@ -1532,18 +1528,6 @@ export function createLightboxMediaRenderer({
             }
             documentRef.documentElement.classList.add('lm-3d-focus-open');
             documentRef.body.classList.add('lm-3d-focus-open');
-
-            // Focus mode owns the viewport completely. Reassert zero after
-            // the class/layout change as Chromium can otherwise restore the
-            // old media-list scroll anchor on the following paint.
-            lightbox.scrollTop = 0;
-            windowRef.requestAnimationFrame(() => {
-              if (!lightbox?.classList.contains('is-3d-focused')) return;
-              lightbox.scrollTop = 0;
-              windowRef.requestAnimationFrame(() => {
-                if (lightbox?.classList.contains('is-3d-focused')) lightbox.scrollTop = 0;
-              });
-            });
           },
           onDeactivate: () => {
             lightbox?.classList.remove('is-3d-focused');
@@ -1555,11 +1539,6 @@ export function createLightboxMediaRenderer({
             documentRef.documentElement.classList.remove('lm-3d-focus-open');
             documentRef.body.classList.remove('lm-3d-focus-open');
 
-            const previousScroll = Number(lightbox?.dataset.pre3dScrollTop);
-            if (Number.isFinite(previousScroll)) {
-              windowRef.requestAnimationFrame(() => { lightbox.scrollTop = previousScroll; });
-            }
-            if (lightbox) delete lightbox.dataset.pre3dScrollTop;
           }
         });
       })
@@ -1653,7 +1632,10 @@ export function createLightboxMediaRenderer({
       try{active.openAnimation?.cancel?.();}catch(_){}
       try{active.overlayAnimation?.cancel?.();}catch(_){}
       if(active.placeholder?.parentNode)active.placeholder.replaceWith(active.entry);
+      if(active.foilHintPlaceholder?.parentNode&&active.foilHint)active.foilHintPlaceholder.replaceWith(active.foilHint);
       active.overlay.remove();
+      active.restoreLightboxScroll?.();
+      windowRef.requestAnimationFrame(()=>{active.restoreLightboxScroll?.();windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());});
       try{active.focusTarget?.focus?.({preventScroll:true});}
       catch(_){try{active.focusTarget?.focus?.();}catch(__){}}
     };
@@ -1682,6 +1664,18 @@ export function createLightboxMediaRenderer({
     if(!entry?.parentNode||!container)return;
     if(activeInspector)closeArtworkInspect({immediate:true});
     const parent=entry.parentNode,originRect=entry.getBoundingClientRect?.();
+    const lightbox=container.closest?.('#lightbox')||documentRef.getElementById('lightbox');
+    const lightboxScrollTop=Number(lightbox?.scrollTop)||0;
+    const restoreLightboxScroll=()=>{if(lightbox&&lightbox.isConnected)lightbox.scrollTop=lightboxScrollTop;};
+    const foilHint=entry.querySelector('.lightbox-holographic-hint');
+    let foilHintPlaceholder=null;
+    if(foilHint?.parentNode){
+      foilHintPlaceholder=documentRef.createElement('span');
+      foilHintPlaceholder.className='lightbox-inspect-hint-placeholder';
+      foilHintPlaceholder.hidden=true;
+      foilHintPlaceholder.setAttribute('aria-hidden','true');
+      foilHint.parentNode.insertBefore(foilHintPlaceholder,foilHint);
+    }
     const placeholder=documentRef.createElement('div');
     placeholder.className='lightbox-inspect-placeholder';
     if(originRect?.width)placeholder.style.width=Math.ceil(originRect.width)+'px';
@@ -1715,10 +1709,11 @@ export function createLightboxMediaRenderer({
     const back=documentRef.createElement('button');
     back.type='button';
     back.className='model-viewer-back lightbox-inspect-back';
-    back.innerHTML='<span aria-hidden="true">←</span>';
+    back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>';
     back.setAttribute('aria-label','Close Inspect Mode and return to the artwork group');
     back.addEventListener('click',()=>closeArtworkInspect());
     stage.appendChild(frame);
+    if(foilHint)footer.appendChild(foilHint);
     footer.append(description,back);
     panel.append(stage,footer);
     overlay.appendChild(panel);
@@ -1736,9 +1731,11 @@ export function createLightboxMediaRenderer({
     };
     overlay.addEventListener('click',onBackdropClick);
     overlay.addEventListener('keydown',onKeyDown);
-    const active={container,entry,placeholder,overlay,frame,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
+    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,overlay,frame,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
     activeInspector=active;
     documentRef.body.appendChild(overlay);
+    restoreLightboxScroll();
+    windowRef.requestAnimationFrame(()=>{restoreLightboxScroll();windowRef.requestAnimationFrame(restoreLightboxScroll);});
     try{back.focus({preventScroll:true});}catch(_){back.focus?.();}
     const animateOpen=()=>{
       if(activeInspector!==active||prefersReducedInspectMotion())return;
