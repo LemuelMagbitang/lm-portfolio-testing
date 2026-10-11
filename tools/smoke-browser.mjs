@@ -4569,11 +4569,13 @@ try {
           active: tabRow?.getAttribute('data-active') || '',
           indicatorBackground: tabRow ? getComputedStyle(tabRow, '::before').backgroundColor : '',
           indicatorTransition: tabRow ? getComputedStyle(tabRow, '::before').transitionProperty : '',
-          panelIds: panels.map(panel => ({ id: panel.id, display: getComputedStyle(panel).display }))
+          panelIds: panels.map(panel => ({ id: panel.id, display: getComputedStyle(panel).display, ariaHidden: panel.getAttribute('aria-hidden') }))
         };
       });
       if (mobileContactTabs.tabCount !== 2 || mobileContactTabs.activeTabs !== 1 ||
-          mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'grid') {
+          mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'grid' ||
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactProjectPanel')?.ariaHidden !== 'false' ||
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.ariaHidden !== 'true') {
         throw new Error('Mobile Contact did not collapse into a single active tab panel: '+JSON.stringify(mobileContactTabs));
       }
 
@@ -4587,6 +4589,8 @@ try {
           reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
           projectDisplay: getComputedStyle(document.querySelector('#contactProjectPanel')).display,
           reviewDisplay: getComputedStyle(document.querySelector('#contactReviewPanel')).display,
+          projectAriaHidden: document.querySelector('#contactProjectPanel')?.getAttribute('aria-hidden'),
+          reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden'),
           active: rail?.getAttribute('data-active') || '',
           indicatorBackground: indicator?.backgroundColor || '',
           indicatorTransition: indicator?.transitionProperty || '',
@@ -4595,11 +4599,28 @@ try {
       });
       if (reviewTabState.projectTab !== 'false' || reviewTabState.reviewTab !== 'true' ||
           reviewTabState.projectDisplay !== 'none' || reviewTabState.reviewDisplay === 'none' ||
+          reviewTabState.projectAriaHidden !== 'true' || reviewTabState.reviewAriaHidden !== 'false' ||
           reviewTabState.active !== 'review' ||
           reviewTabState.indicatorBackground !== 'rgb(255, 255, 255)' ||
           !reviewTabState.indicatorTransition.includes('transform')) {
         throw new Error('Mobile Contact tab switching did not activate the sliding review state: '+JSON.stringify(reviewTabState));
       }
+      const contactViewportBeforeDesktopCheck = page.viewportSize() || await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+      await page.setViewportSize({ width: 1280, height: contactViewportBeforeDesktopCheck.height });
+      await page.waitForTimeout(40);
+      const desktopContactA11y = await page.evaluate(() => ({
+        projectDisplay: getComputedStyle(document.querySelector('#contactProjectPanel')).display,
+        reviewDisplay: getComputedStyle(document.querySelector('#contactReviewPanel')).display,
+        projectAriaHidden: document.querySelector('#contactProjectPanel')?.getAttribute('aria-hidden'),
+        reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden')
+      }));
+      if (desktopContactA11y.projectDisplay === 'none' || desktopContactA11y.reviewDisplay === 'none' ||
+          desktopContactA11y.projectAriaHidden !== 'false' || desktopContactA11y.reviewAriaHidden !== 'false') {
+        throw new Error('Desktop Contact rendered both panels but hid one from assistive technology: '+JSON.stringify(desktopContactA11y));
+      }
+      await page.setViewportSize(contactViewportBeforeDesktopCheck);
+      await page.waitForTimeout(40);
+
       const contactTabStyles=await page.locator('.contact-mobile-tab').evaluateAll(tabs=>tabs.map(tab=>{
         const s=getComputedStyle(tab);
         return {border:s.borderStyle,width:s.borderWidth};

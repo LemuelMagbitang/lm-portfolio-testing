@@ -15,12 +15,23 @@ export function initForms({
 
   const contactTabs = Array.from(root?.querySelectorAll?.('.contact-mobile-tab') || []);
   const contactPanels = Array.from(root?.querySelectorAll?.('[data-contact-panel]') || []);
+  const windowRef = root?.defaultView || globalThis.window;
 
   function applyFormToggle(form, emailButton, enabled) {
     if (!form || !emailButton) return;
     form.style.display = enabled ? '' : 'none';
     emailButton.style.display = enabled ? 'none' : '';
   }
+
+  function syncContactPanelAccessibility() {
+    const isMobile = Boolean(windowRef?.matchMedia?.('(max-width: 767px)')?.matches);
+    contactPanels.forEach(panel => {
+      const hidden = isMobile && !panel.classList?.contains?.('is-contact-active');
+      panel.setAttribute('aria-hidden', String(Boolean(hidden)));
+    });
+  }
+
+  const contactResizeHandler = () => syncContactPanelAccessibility();
 
   function routeToEmail(emailButton) {
     const href = emailButton?.getAttribute('href') || '';
@@ -38,7 +49,6 @@ export function initForms({
     const previousPanel = contactPanels.find(panel => panel.classList.contains('is-contact-active'));
     const nextPanel = contactPanels.find(panel => panel.getAttribute('data-contact-panel') === targetKind);
     const grid = root.querySelector('#contact-section .contact-grid');
-    const windowRef = root?.defaultView || globalThis.window;
     const shouldAnimate = Boolean(
       windowRef?.matchMedia?.('(max-width: 767px)')?.matches &&
       !windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches &&
@@ -59,9 +69,8 @@ export function initForms({
     contactPanels.forEach(panel => {
       const active = panel.getAttribute('data-contact-panel') === targetKind;
       panel.classList.toggle('is-contact-active', active);
-      if (active) panel.setAttribute('aria-hidden', 'false');
-      else panel.setAttribute('aria-hidden', 'true');
     });
+    syncContactPanelAccessibility();
 
     if (shouldAnimate) {
       const nextHeight = nextPanel.getBoundingClientRect().height;
@@ -99,6 +108,7 @@ export function initForms({
   });
 
   if (contactTabs.length && contactPanels.length) {
+    windowRef?.addEventListener?.('resize', contactResizeHandler);
     setActiveContactTab('project');
   }
 
@@ -126,6 +136,7 @@ export function initForms({
       if (kind === 'review') setReviewEnabled(enabled);
     },
     cleanup() {
+      windowRef?.removeEventListener?.('resize', contactResizeHandler);
       projectEmailBtn?.removeEventListener('click', projectEmailHandler);
       reviewEmailBtn?.removeEventListener('click', reviewEmailHandler);
       contactTabHandlers.forEach((handler, tab) => tab.removeEventListener('click', handler));
