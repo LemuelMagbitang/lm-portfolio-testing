@@ -2839,17 +2839,33 @@ try {
         throw new Error('Mobile Works gallery did not become full-bleed.');
       }
 
-      const firstRowBoxes = await page.locator('#portfolioGrid .project-card').evaluateAll(cards => cards.slice(0, 2).map(card => {
-        const r = card.getBoundingClientRect();
-        return { x: r.x, y: r.y, width: r.width };
-      }));
+      // Check layout geometry rather than transformed visual bounds: cards can
+      // still be mid-transition after filter interaction, and getBoundingClientRect()
+      // includes transform/scale effects that do not change CSS grid track sizing.
+      const firstRowLayout = await page.locator('#portfolioGrid').evaluate(grid => {
+        const cards = Array.from(grid.querySelectorAll('.project-card'));
+        const columns = getComputedStyle(grid).gridTemplateColumns
+          .trim()
+          .split(/\s+/)
+          .map(value => Number.parseFloat(value));
+        return {
+          columns,
+          firstRow: cards.slice(0, 2).map(card => ({
+            left: card.offsetLeft,
+            top: card.offsetTop,
+            width: card.offsetWidth
+          }))
+        };
+      });
       if (
-        firstRowBoxes.length < 2 ||
-        Math.abs(firstRowBoxes[0].y - firstRowBoxes[1].y) > 2 ||
-        Math.abs(firstRowBoxes[0].x - firstRowBoxes[1].x) < 2 ||
-        Math.abs(firstRowBoxes[0].width - firstRowBoxes[1].width) > 2
+        firstRowLayout.columns.length !== 2 ||
+        Math.abs(firstRowLayout.columns[0] - firstRowLayout.columns[1]) > 2 ||
+        firstRowLayout.firstRow.length < 2 ||
+        Math.abs(firstRowLayout.firstRow[0].top - firstRowLayout.firstRow[1].top) > 2 ||
+        Math.abs(firstRowLayout.firstRow[0].left - firstRowLayout.firstRow[1].left) < 2 ||
+        Math.abs(firstRowLayout.firstRow[0].width - firstRowLayout.firstRow[1].width) > 2
       ) {
-        throw new Error('Mobile Works gallery did not render its first row as two equal columns.');
+        throw new Error('Mobile Works gallery did not render its first row as two equal columns: ' + JSON.stringify(firstRowLayout));
       }
 
       const mobileCardMotion = await page.locator('#portfolioGrid .project-card').first().evaluate(el => {
