@@ -13,4 +13,7 @@ Use the same incident slug for a screenshot and recording that describe the same
 
 ## Current report
 
-- `2026-10-11_foil-inspect-keyboard-exit_screenshot.png` — holographic foil Inspect Mode keyboard exit and focus-outline regression.
+- `Screenshot 2026-10-11 231918.png` — the public URL `https://lemuelmagbitang.github.io/lm-portfolio-testing/#test-portfolio` displayed the Main Portfolio instead of the saved Curated View.
+- `Screenshot 2026-10-11 231937.png` — the CMS Curated Views editor showing `test portfolio`, the `#test-portfolio` slug, and three saved project entries.
+
+These two screenshots are the current evidence for the Curated View route incident. The older Inspector screenshot referenced in the previous README text (`2026-10-11_foil-inspect-keyboard-exit_screenshot.png`) is not present at that path in the active branch, so no current evidence image was deleted.
