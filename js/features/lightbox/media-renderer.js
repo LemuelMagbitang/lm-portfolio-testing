@@ -1798,8 +1798,36 @@ export function createLightboxMediaRenderer({
     }
     const placeholder=documentRef.createElement('div');
     placeholder.className='lightbox-inspect-placeholder';
-    if(originRect?.width)placeholder.style.width=Math.ceil(originRect.width)+'px';
-    if(originRect?.height)placeholder.style.height=Math.ceil(originRect.height)+'px';
+
+    // The Inspector moves the original media item out of its flex/grid group.
+    // Keep the placeholder's *layout box* (not the transformed visual bounds)
+    // and the layout properties that determine wrapping/overlap. getBoundingClientRect
+    // includes rotation and hover transforms, so using it as width/height makes
+    // a layered foil card consume extra flex space and can wrap the last sibling.
+    const entryStyle=windowRef?.getComputedStyle?.(entry);
+    const layoutWidth=Number(entry.offsetWidth)||Number.parseFloat(entryStyle?.width)||originRect?.width||0;
+    const layoutHeight=Number(entry.offsetHeight)||Number.parseFloat(entryStyle?.height)||originRect?.height||0;
+    placeholder.style.boxSizing='border-box';
+    if(layoutWidth>0)placeholder.style.width=layoutWidth+'px';
+    if(layoutHeight>0)placeholder.style.height=layoutHeight+'px';
+    if(entryStyle){
+      placeholder.style.flex=entryStyle.flex;
+      placeholder.style.order=entryStyle.order;
+      placeholder.style.alignSelf=entryStyle.alignSelf;
+      placeholder.style.justifySelf=entryStyle.justifySelf;
+      placeholder.style.minWidth=entryStyle.minWidth;
+      placeholder.style.maxWidth=entryStyle.maxWidth;
+      placeholder.style.minHeight=entryStyle.minHeight;
+      placeholder.style.maxHeight=entryStyle.maxHeight;
+      placeholder.style.marginBlockStart=entryStyle.marginBlockStart;
+      placeholder.style.marginBlockEnd=entryStyle.marginBlockEnd;
+      placeholder.style.marginInlineStart=entryStyle.marginInlineStart;
+      placeholder.style.marginInlineEnd=entryStyle.marginInlineEnd;
+      // Transform doesn't affect flex sizing, but keeps the invisible placeholder's
+      // visual rectangle aligned with the card for the closing transition.
+      placeholder.style.transform=entryStyle.transform;
+      placeholder.style.transformOrigin=entryStyle.transformOrigin;
+    }
     placeholder.setAttribute('aria-hidden','true');
     parent.insertBefore(placeholder,entry);
 

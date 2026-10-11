@@ -1096,7 +1096,32 @@ try {
       // Inspect must be layered over the existing Lightbox scroll position,
       // not trigger anchor reconciliation when the foil card is moved to body.
       const lightboxScrollHost = page.locator('#lightbox').first();
+      const artworkGroupItems = page.locator('#lightboxMediaContainer .lightbox-artwork-group-items').first();
       await funkoHolo.scrollIntoViewIfNeeded();
+      await funkoHolo.hover();
+      await page.waitForTimeout(650); // let staggered card and hover transforms settle
+      const readArtworkGroupLayout = () => artworkGroupItems.evaluate(items => ({
+        layout: items.closest('.lightbox-artwork-group')?.dataset.artworkEffectiveLayout || '',
+        width: items.clientWidth,
+        children: Array.from(items.children).map((el, index) => {
+          const rect = el.getBoundingClientRect();
+          return {
+            index,
+            placeholder: el.classList.contains('lightbox-inspect-placeholder'),
+            caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+          };
+        })
+      }));
+      const groupBeforeInspect = await readArtworkGroupLayout();
+      const targetGroupIndex = groupBeforeInspect.children.findIndex(child => child.caption === 'Smooth Prism Foil');
+      if (targetGroupIndex < 0 || groupBeforeInspect.children.length < 2) {
+        throw new Error('Holographic Inspector regression fixture must have multiple grouped artwork items: ' +
+          JSON.stringify(groupBeforeInspect));
+      }
       const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       // A tap on grouped artwork opens the full-screen Inspector without
       // consuming the same tap as a foil flip. The following real pointer click
@@ -1107,6 +1132,28 @@ try {
       const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
       await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
       await page.waitForTimeout(500); // let the card-to-viewport transition settle
+      const groupDuringInspect = await readArtworkGroupLayout();
+      if (groupDuringInspect.layout !== groupBeforeInspect.layout ||
+          groupDuringInspect.width !== groupBeforeInspect.width ||
+          groupDuringInspect.children.length !== groupBeforeInspect.children.length) {
+        throw new Error('Opening Inspect changed the artwork group layout or child count: ' +
+          JSON.stringify({ before: groupBeforeInspect, during: groupDuringInspect }));
+      }
+      for (let i = 0; i < groupBeforeInspect.children.length; i += 1) {
+        const before = groupBeforeInspect.children[i];
+        const during = groupDuringInspect.children[i];
+        const target = i === targetGroupIndex;
+        if (target ? !during.placeholder : (during.placeholder || during.caption !== before.caption)) {
+          throw new Error('Inspect did not preserve the original grouped artwork order: ' +
+            JSON.stringify({ index: i, before, during }));
+        }
+        for (const coordinate of ['left', 'top', 'width', 'height']) {
+          if (Math.abs(before[coordinate] - during[coordinate]) > 2) {
+            throw new Error('Opening Inspect reflowed grouped artwork (' + coordinate + ' changed): ' +
+              JSON.stringify({ index: i, before, during, groupLayout: groupBeforeInspect.layout }));
+          }
+        }
+      }
       const lightboxScrollAfterInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       if (Math.abs(lightboxScrollAfterInspect - lightboxScrollBeforeInspect) > 1) {
         throw new Error('Opening foil Inspect changed the Lightbox scroll position: ' +
