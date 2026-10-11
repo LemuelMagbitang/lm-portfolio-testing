@@ -1500,6 +1500,7 @@ export function createLightboxMediaRenderer({
     const modelEntry = buildMediaEntry(modelWrap, item.caption || item.description, null);
     modelEntry.classList.add('is-3d-media-item');
     let modelFocusPlaceholder = null;
+    let modelFocusOverlay = null;
 
     if (typeof mountModelViewer !== 'function') {
       modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
@@ -1536,6 +1537,15 @@ export function createLightboxMediaRenderer({
               modelFocusPlaceholder = placeholder;
               modelEntry.parentNode.insertBefore(placeholder, modelEntry);
             }
+            if (!modelFocusOverlay) {
+              modelFocusOverlay = documentRef.createElement('div');
+              modelFocusOverlay.className = 'lightbox-3d-focus-overlay';
+              modelFocusOverlay.setAttribute('role', 'dialog');
+              modelFocusOverlay.setAttribute('aria-modal', 'true');
+              modelFocusOverlay.setAttribute('aria-label', `Inspect ${project.title || '3D artwork'}`);
+              documentRef.body.appendChild(modelFocusOverlay);
+            }
+            modelFocusOverlay.appendChild(modelEntry);
             lightbox.classList.add('is-3d-focused');
             modelEntry.classList.add('is-3d-focus-target');
             if (lightboxControls) {
@@ -1547,8 +1557,10 @@ export function createLightboxMediaRenderer({
           },
           onDeactivate: () => {
             modelEntry.classList.remove('is-3d-focus-target');
-            if (modelFocusPlaceholder?.parentNode) modelFocusPlaceholder.remove();
+            if (modelFocusPlaceholder?.parentNode) modelFocusPlaceholder.replaceWith(modelEntry);
             modelFocusPlaceholder = null;
+            modelFocusOverlay?.remove();
+            modelFocusOverlay = null;
             lightbox?.classList.remove('is-3d-focused');
             if (lightboxControls) {
               lightboxControls.classList.remove('is-3d-controls-disabled');
