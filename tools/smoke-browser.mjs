@@ -4579,6 +4579,33 @@ try {
         throw new Error('Mobile Contact did not collapse into a single active tab panel: '+JSON.stringify(mobileContactTabs));
       }
 
+      await page.locator('#contactTabProject').focus();
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(40);
+      const arrowContactState = await page.evaluate(() => ({
+        projectTab: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+        reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
+        focusedTab: document.activeElement?.id || '',
+        projectAriaHidden: document.querySelector('#contactProjectPanel')?.getAttribute('aria-hidden'),
+        reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden')
+      }));
+      if (arrowContactState.projectTab !== 'false' || arrowContactState.reviewTab !== 'true' ||
+          arrowContactState.focusedTab !== 'contactTabReview' ||
+          arrowContactState.projectAriaHidden !== 'true' || arrowContactState.reviewAriaHidden !== 'false') {
+        throw new Error('Mobile Contact arrow-key navigation did not activate and focus the review tab: '+JSON.stringify(arrowContactState));
+      }
+      await page.keyboard.press('Home');
+      await page.waitForTimeout(40);
+      const homeContactState = await page.evaluate(() => ({
+        projectTab: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+        reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
+        focusedTab: document.activeElement?.id || ''
+      }));
+      if (homeContactState.projectTab !== 'true' || homeContactState.reviewTab !== 'false' ||
+          homeContactState.focusedTab !== 'contactTabProject') {
+        throw new Error('Mobile Contact Home key did not return focus to the first tab: '+JSON.stringify(homeContactState));
+      }
+
       await page.locator('#contactTabReview').click();
       await page.waitForTimeout(40);
       const reviewTabState = await page.evaluate(() => {

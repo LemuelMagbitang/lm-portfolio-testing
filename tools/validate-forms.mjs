@@ -74,6 +74,8 @@ function makeContactElement(attributes = {}, active = false) {
   return {
     parentElement: null,
     tabIndex: 0,
+    focused: false,
+    focus() { this.focused = true; },
     classList: {
       contains(name) { return classes.has(name); },
       toggle(name, enabled) {
@@ -90,6 +92,9 @@ function makeContactElement(attributes = {}, active = false) {
     },
     click() {
       for (const handler of listeners.get('click') || []) handler();
+    },
+    dispatch(type, event = {}) {
+      for (const handler of listeners.get(type) || []) handler(event);
     },
     getAttribute(name) { return values.has(name) ? values.get(name) : null; },
     setAttribute(name, value) { values.set(name, String(value)); }
@@ -139,6 +144,22 @@ assert.equal(reviewPanel.getAttribute('aria-hidden'), 'false', 'Desktop must exp
 reviewTab.click();
 assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Both desktop panels must remain accessible after tab state changes');
 assert.equal(reviewPanel.getAttribute('aria-hidden'), 'false', 'The visible desktop review panel must remain accessible');
+
+let arrowDefaultPrevented = false;
+reviewTab.dispatch('keydown', { key: 'ArrowRight', preventDefault() { arrowDefaultPrevented = true; } });
+assert.equal(arrowDefaultPrevented, true, 'Horizontal tab arrow keys must prevent page scrolling');
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'ArrowRight from the last tab must wrap to the first tab');
+assert.equal(reviewTab.getAttribute('aria-selected'), 'false');
+assert.equal(projectTab.tabIndex, 0);
+assert.equal(projectTab.focused, true, 'Arrow navigation must move focus to the newly active tab');
+
+projectTab.dispatch('keydown', { key: 'End', preventDefault() {} });
+assert.equal(reviewTab.getAttribute('aria-selected'), 'true', 'End must activate the final contact tab');
+assert.equal(reviewTab.focused, true);
+
+reviewTab.dispatch('keydown', { key: 'Home', preventDefault() {} });
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Home must activate the first contact tab');
+assert.equal(projectTab.focused, true);
 
 mobileQuery.matches = true;
 resizeHandlers.forEach(handler => handler());

@@ -101,10 +101,30 @@ export function initForms({
   }
 
   const contactTabHandlers = new Map();
+  const contactTabKeyHandlers = new Map();
   contactTabs.forEach(tab => {
     const handler = () => setActiveContactTab(tab.getAttribute('data-contact-tab') || 'project');
+    const keyHandler = event => {
+      const currentIndex = contactTabs.indexOf(tab);
+      const key = event?.key;
+      let nextIndex;
+
+      if (key === 'ArrowRight') nextIndex = (currentIndex + 1) % contactTabs.length;
+      else if (key === 'ArrowLeft') nextIndex = (currentIndex - 1 + contactTabs.length) % contactTabs.length;
+      else if (key === 'Home') nextIndex = 0;
+      else if (key === 'End') nextIndex = contactTabs.length - 1;
+      else return;
+
+      event?.preventDefault?.();
+      const nextTab = contactTabs[nextIndex];
+      if (!nextTab) return;
+      setActiveContactTab(nextTab.getAttribute('data-contact-tab') || 'project');
+      nextTab.focus?.();
+    };
     contactTabHandlers.set(tab, handler);
+    contactTabKeyHandlers.set(tab, keyHandler);
     tab.addEventListener('click', handler);
+    tab.addEventListener('keydown', keyHandler);
   });
 
   if (contactTabs.length && contactPanels.length) {
@@ -141,6 +161,8 @@ export function initForms({
       reviewEmailBtn?.removeEventListener('click', reviewEmailHandler);
       contactTabHandlers.forEach((handler, tab) => tab.removeEventListener('click', handler));
       contactTabHandlers.clear();
+      contactTabKeyHandlers.forEach((handler, tab) => tab.removeEventListener('keydown', handler));
+      contactTabKeyHandlers.clear();
     }
   };
 }
