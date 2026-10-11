@@ -4798,6 +4798,7 @@ try {
           active: tabRow?.getAttribute('data-active') || '',
           indicatorBackground: tabRow ? getComputedStyle(tabRow, '::before').backgroundColor : '',
           indicatorTransition: tabRow ? getComputedStyle(tabRow, '::before').transitionProperty : '',
+          touchAction: tabStyle?.touchAction || '',
           panelIds: panels.map(panel => ({
             id: panel.id,
             display: getComputedStyle(panel).display,
@@ -4816,6 +4817,56 @@ try {
           mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.role !== 'tabpanel' ||
           mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.labelledBy !== 'contactTabReview') {
         throw new Error('Mobile Contact did not collapse into a single active tab panel: '+JSON.stringify(mobileContactTabs));
+      }
+      if (mobileContactTabs.touchAction !== 'pan-y') {
+        throw new Error('Mobile Contact tab rail must preserve vertical scrolling while accepting horizontal swipes: ' +
+          JSON.stringify({ touchAction: mobileContactTabs.touchAction }));
+      }
+
+      // Dispatch touch-pointer input against the real tab rail to verify that
+      // swipe events are bound and update both tab state and panel semantics.
+      const contactTabRail = page.locator('.contact-mobile-tabs');
+      const contactRailBox = await contactTabRail.boundingBox();
+      if (!contactRailBox) throw new Error('Mobile Contact tab rail has no measurable hit area.');
+      const contactRailY = contactRailBox.y + contactRailBox.height / 2;
+      const swipeContactRail = async (pointerId, startX, endX) => {
+        await contactTabRail.dispatchEvent('pointerdown', {
+          pointerType: 'touch', isPrimary: true, pointerId, button: 0, buttons: 1,
+          clientX: startX, clientY: contactRailY
+        });
+        await contactTabRail.dispatchEvent('pointerup', {
+          pointerType: 'touch', isPrimary: true, pointerId, button: 0, buttons: 0,
+          clientX: endX, clientY: contactRailY + 2
+        });
+      };
+      const railStartX = contactRailBox.x + contactRailBox.width * 0.74;
+      await swipeContactRail(731, railStartX, railStartX - 54);
+      await page.waitForTimeout(20);
+      const contactSwipeLeft = await page.evaluate(() => ({
+        active: document.querySelector('.contact-mobile-tabs')?.getAttribute('data-active') || '',
+        projectSelected: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+        reviewSelected: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
+        projectHidden: document.querySelector('#contactProjectPanel')?.getAttribute('aria-hidden'),
+        reviewHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden')
+      }));
+      if (contactSwipeLeft.active !== 'review' || contactSwipeLeft.projectSelected !== 'false' ||
+          contactSwipeLeft.reviewSelected !== 'true' || contactSwipeLeft.projectHidden !== 'true' ||
+          contactSwipeLeft.reviewHidden !== 'false') {
+        throw new Error('Swiping left on mobile Contact tabs did not activate Leave a Review: ' +
+          JSON.stringify(contactSwipeLeft));
+      }
+
+      await swipeContactRail(732, railStartX - 54, railStartX);
+      await page.waitForTimeout(20);
+      const contactSwipeRight = await page.evaluate(() => ({
+        active: document.querySelector('.contact-mobile-tabs')?.getAttribute('data-active') || '',
+        projectSelected: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+        reviewSelected: document.querySelector('#contactTabReview')?.getAttribute('aria-selected')
+      }));
+      if (contactSwipeRight.active !== 'project' || contactSwipeRight.projectSelected !== 'true' ||
+          contactSwipeRight.reviewSelected !== 'false') {
+        throw new Error('Swiping right on mobile Contact tabs did not return to Start a Project: ' +
+          JSON.stringify(contactSwipeRight));
       }
 
       await page.locator('#contactTabProject').focus();

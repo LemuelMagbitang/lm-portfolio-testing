@@ -176,6 +176,49 @@ assert.equal(reviewPanel.getAttribute('role'), 'tabpanel');
 assert.equal(projectPanel.getAttribute('aria-labelledby'), 'contactTabProject', 'Each panel must be labelled by its controlling tab');
 assert.equal(reviewPanel.getAttribute('aria-labelledby'), 'contactTabReview');
 
+contactRail.dispatch('pointerdown', {
+  pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, clientX: 260, clientY: 12
+});
+contactRail.dispatch('pointerup', {
+  pointerId: 41, pointerType: 'touch', clientX: 204, clientY: 14
+});
+assert.equal(reviewTab.getAttribute('aria-selected'), 'true', 'Left swipe must activate Leave a Review');
+assert.equal(contactRail.getAttribute('data-active'), 'review', 'Left swipe must move the active pill indicator');
+
+let swipeClickPrevented = false;
+let swipeClickStopped = false;
+contactRail.dispatch('click', {
+  preventDefault() { swipeClickPrevented = true; },
+  stopImmediatePropagation() { swipeClickStopped = true; }
+});
+assert.equal(swipeClickPrevented, true, 'A swipe-generated click must not undo the selected tab');
+assert.equal(swipeClickStopped, true, 'A swipe-generated click must not reach the tab click handler');
+
+contactRail.dispatch('pointerdown', {
+  pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, clientX: 204, clientY: 12
+});
+contactRail.dispatch('pointerup', {
+  pointerId: 42, pointerType: 'touch', clientX: 260, clientY: 14
+});
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Right swipe must return to Start a Project');
+
+contactRail.dispatch('pointerdown', {
+  pointerId: 43, pointerType: 'touch', isPrimary: true, button: 0, clientX: 250, clientY: 10
+});
+contactRail.dispatch('pointerup', {
+  pointerId: 43, pointerType: 'touch', clientX: 190, clientY: 80
+});
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Vertical-dominant movement must not change contact tabs');
+
+contactRail.dispatch('pointerdown', {
+  pointerId: 44, pointerType: 'touch', isPrimary: true, button: 0, clientX: 260, clientY: 12
+});
+contactRail.dispatch('pointercancel', { pointerId: 44, pointerType: 'touch' });
+contactRail.dispatch('pointerup', {
+  pointerId: 44, pointerType: 'touch', clientX: 200, clientY: 13
+});
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Cancelled touch gestures must not change contact tabs');
+
 mobileQuery.matches = false;
 resizeHandlers.forEach(handler => handler());
 assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Resizing back to desktop must expose both panels');
@@ -187,4 +230,13 @@ assert.equal(reviewPanel.getAttribute('aria-labelledby'), null);
 responsiveForms.cleanup();
 assert.equal(resizeHandlers.size, 0, 'Contact accessibility resize listener must be cleaned up');
 
-console.log('Contact form fallback and responsive accessibility behavior validated.');
+mobileQuery.matches = true;
+contactRail.dispatch('pointerdown', {
+  pointerId: 45, pointerType: 'touch', isPrimary: true, button: 0, clientX: 260, clientY: 12
+});
+contactRail.dispatch('pointerup', {
+  pointerId: 45, pointerType: 'touch', clientX: 200, clientY: 12
+});
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Cleanup must remove the contact swipe listeners');
+
+console.log('Contact form fallback, responsive accessibility, and swipe behavior validated.');

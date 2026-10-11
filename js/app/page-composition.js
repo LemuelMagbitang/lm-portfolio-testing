@@ -16,7 +16,7 @@ import {
 import { initNavigation } from '../features/navigation/index.js?v=20261011-02';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261008-02';
-import { initForms } from '../features/forms/index.js?v=20261011-04';
+import { initForms } from '../features/forms/index.js?v=20261012-01';
 import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';

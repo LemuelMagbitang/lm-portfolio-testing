@@ -4177,6 +4177,8 @@ footer > .footer-content p{
     background:#0b0b0b;
     overflow:hidden;
     scrollbar-width:none;
+    /* Keep vertical page scrolling native while horizontal swipes switch tabs. */
+    touch-action:pan-y;
   }
   .contact-mobile-tabs::before{
     content:"";

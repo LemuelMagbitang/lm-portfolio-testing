@@ -143,7 +143,77 @@ export function initForms({
     tab.addEventListener('keydown', keyHandler);
   });
 
+  const contactTabRail = contactTabs[0]?.parentElement || null;
+  let activeContactSwipe = null;
+  let suppressSwipeClick = false;
+  let swipeClickResetTimer = null;
+
+  function clearSwipeClickReset() {
+    if (swipeClickResetTimer === null) return;
+    const clearTimer = windowRef?.clearTimeout?.bind(windowRef) || globalThis.clearTimeout;
+    clearTimer(swipeClickResetTimer);
+    swipeClickResetTimer = null;
+  }
+
+  const contactSwipeStartHandler = event => {
+    if (!contactTabRail ||
+        !windowRef?.matchMedia?.('(max-width: 767px)')?.matches ||
+        event?.pointerType !== 'touch' ||
+        event?.isPrimary === false ||
+        (event?.button !== undefined && event.button !== 0)) {
+      activeContactSwipe = null;
+      return;
+    }
+    activeContactSwipe = {
+      pointerId: event.pointerId,
+      startX: Number.isFinite(Number(event.clientX)) ? Number(event.clientX) : 0,
+      startY: Number.isFinite(Number(event.clientY)) ? Number(event.clientY) : 0
+    };
+  };
+
+  const contactSwipeEndHandler = event => {
+    const swipe = activeContactSwipe;
+    activeContactSwipe = null;
+    if (!swipe || event?.pointerId !== swipe.pointerId ||
+        !windowRef?.matchMedia?.('(max-width: 767px)')?.matches) return;
+
+    const deltaX = (Number(event.clientX) || 0) - swipe.startX;
+    const deltaY = (Number(event.clientY) || 0) - swipe.startY;
+    const horizontalDistance = Math.abs(deltaX);
+    if (horizontalDistance < 36 || horizontalDistance <= Math.abs(deltaY) * 1.2) return;
+
+    // A completed swipe changes the active tab in the swipe direction.
+    // Consume the synthetic click that browsers may generate at pointerup,
+    // so it cannot immediately undo the gesture by activating the start tab.
+    suppressSwipeClick = true;
+    setActiveContactTab(deltaX < 0 ? 'review' : 'project');
+    clearSwipeClickReset();
+    const scheduleReset = windowRef?.setTimeout?.bind(windowRef) || globalThis.setTimeout;
+    swipeClickResetTimer = scheduleReset(() => {
+      suppressSwipeClick = false;
+      swipeClickResetTimer = null;
+    }, 0);
+  };
+
+  const contactSwipeCancelHandler = () => {
+    activeContactSwipe = null;
+  };
+
+  const contactSwipeClickHandler = event => {
+    if (!suppressSwipeClick) return;
+    suppressSwipeClick = false;
+    clearSwipeClickReset();
+    event?.preventDefault?.();
+    event?.stopImmediatePropagation?.();
+  };
+
   if (contactTabs.length && contactPanels.length) {
+    if (contactTabRail) {
+      contactTabRail.addEventListener('pointerdown', contactSwipeStartHandler, { passive: true });
+      contactTabRail.addEventListener('pointerup', contactSwipeEndHandler, { passive: true });
+      contactTabRail.addEventListener('pointercancel', contactSwipeCancelHandler, { passive: true });
+      contactTabRail.addEventListener('click', contactSwipeClickHandler, true);
+    }
     windowRef?.addEventListener?.('resize', contactResizeHandler);
     setActiveContactTab('project');
   }
@@ -173,6 +243,13 @@ export function initForms({
     },
     cleanup() {
       windowRef?.removeEventListener?.('resize', contactResizeHandler);
+      activeContactSwipe = null;
+      suppressSwipeClick = false;
+      clearSwipeClickReset();
+      contactTabRail?.removeEventListener('pointerdown', contactSwipeStartHandler);
+      contactTabRail?.removeEventListener('pointerup', contactSwipeEndHandler);
+      contactTabRail?.removeEventListener('pointercancel', contactSwipeCancelHandler);
+      contactTabRail?.removeEventListener('click', contactSwipeClickHandler, true);
       projectEmailBtn?.removeEventListener('click', projectEmailHandler);
       reviewEmailBtn?.removeEventListener('click', reviewEmailHandler);
       contactTabHandlers.forEach((handler, tab) => tab.removeEventListener('click', handler));
