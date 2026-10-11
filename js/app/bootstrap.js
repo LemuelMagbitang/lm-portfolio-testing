@@ -101,85 +101,61 @@ export async function bootstrapPortfolioApp({
     }
     if (!target) return;
 
+    // Let the composed content settle before calculating the final anchor.
+    // Only issue one scroll command: re-applying scrollTop every frame would
+    // cancel smooth scrolling and make automatic navigation appear to snap.
     const applyTarget = () => {
       if (!target.isConnected) return false;
 
       const rect = target.getBoundingClientRect();
       const currentY = Number(windowRef.scrollY) || 0;
-      const visualViewport = windowRef.visualViewport;
-      const viewportHeight = Number(visualViewport?.height) || Number(windowRef.innerHeight) || 0;
-      const viewportTop = Number(visualViewport?.offsetTop) || 0;
+      const viewportHeight = Number(windowRef.visualViewport?.height) || Number(windowRef.innerHeight) || 0;
       const documentHeight = Math.max(
         root.documentElement?.scrollHeight || 0,
         root.body?.scrollHeight || 0
       );
       const maxScrollY = Math.max(0, documentHeight - viewportHeight);
       const documentTargetY = currentY + rect.top;
-      const navbarHeight = Number(
-        root.querySelector('.navbar')?.getBoundingClientRect?.().height
-      ) || 0;
+      const navbarHeight = Number(root.querySelector('.navbar')?.getBoundingClientRect?.().height) || 0;
       const safeTop = Math.max(navbarHeight + 24, 24);
 
       let desiredTargetY;
       if (isContactTarget) {
-        // Contact now uses a single active mobile panel, so its total height
-        // depends on the selected tab and is no longer equivalent to simply
-        // positioning the heading. Center the actual Contact group in the
-        // usable viewport, then clamp so the heading remains clear of the
-        // fixed navbar.
         const contactGroup = root.querySelector('#contact-section .contact-grid');
         const groupRect = contactGroup?.getBoundingClientRect?.();
         if (groupRect?.height > 0) {
-          const usableTop = safeTop;
-          const usableHeight = Math.max(1, viewportHeight - usableTop);
+          const usableHeight = Math.max(1, viewportHeight - safeTop);
           const groupCenterDocumentY = currentY + groupRect.top + groupRect.height / 2;
-          desiredTargetY = groupCenterDocumentY - (usableTop + usableHeight / 2);
-
-          const headingDocumentY = documentTargetY;
-          const minHeadingTopScrollY = headingDocumentY - safeTop;
-          desiredTargetY = Math.min(desiredTargetY, minHeadingTopScrollY);
+          desiredTargetY = groupCenterDocumentY - (safeTop + usableHeight / 2);
+          desiredTargetY = Math.min(desiredTargetY, documentTargetY - safeTop);
         } else {
           desiredTargetY = documentTargetY - safeTop;
         }
       } else {
-        const offset = Math.max(navbarHeight + 12, 24);
-        desiredTargetY = documentTargetY - offset;
+        desiredTargetY = documentTargetY - Math.max(navbarHeight + 12, 24);
       }
 
-      const targetY = Math.max(
-        0,
-        Math.min(maxScrollY, desiredTargetY)
-      );
-
-      // Assigning scrollTop directly bypasses the document's global smooth-
-      // scroll setting and makes initial hash settlement deterministic.
-      const scrollingElement = root.scrollingElement || root.documentElement;
-      if (scrollingElement) scrollingElement.scrollTop = targetY;
-      else windowRef.scrollTo(0, targetY);
-      return true;
+      return Math.max(0, Math.min(maxScrollY, desiredTargetY));
     };
 
-    // Apply after the composed DOM is ready, then re-apply across two more
-    // frames. This absorbs final font/layout commits without relying on the
-    // browser's early fragment position.
+    const finishNavigation = () => {
+      const targetY = applyTarget();
+      if (targetY !== false) {
+        const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        windowRef.scrollTo({ left: 0, top: targetY, behavior: reducedMotion ? 'auto' : 'smooth' });
+      }
+      if (hasInitialHash && windowRef?.history) {
+        try { windowRef.history.scrollRestoration = 'auto'; } catch (_) {}
+      }
+    };
+
     windowRef.requestAnimationFrame(() => {
-      if (!applyTarget()) return;
-      windowRef.requestAnimationFrame(() => {
-        applyTarget();
-        windowRef.requestAnimationFrame(() => {
-          applyTarget();
-          if (hasInitialHash && windowRef?.history) {
-            try { windowRef.history.scrollRestoration = 'auto'; } catch (_) {}
-          }
-        });
-      });
+      windowRef.requestAnimationFrame(finishNavigation);
     });
   }
 
   showInitialPageTransition();
-  // Settle an initial Contact hash before asynchronous composition work. A
-  // later pass after composition corrects any layout shifts from hydration.
-  settleInitialHashTarget();
+  // Initial hash navigation is settled once the composed page has its final layout.
 
   try {
     const { createPortfolioApp } = await import(`./page-composition.js?v=${cacheVersion}`);
