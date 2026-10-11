@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 11, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted visual bug/glitch fixes, structural decoupling, CMS/Lighbox polish, optimization, and cross-device verification.
+As of October 12, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted visual bug/glitch fixes, structural decoupling, CMS/Lighbox polish, optimization, and cross-device verification.
 
 - `js/script.js` is a 19-line browser entrypoint; startup and page wiring live in `js/app/bootstrap.js` and `js/app/page-composition.js`.
 - Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings have explicit feature entry points.
@@ -400,3 +400,11 @@ This migration must not:
 - Shared stylesheet version `20261012-01` is aligned across Works, About, 404 and Success pages. The public entry/bootstrap/page-composition identity is aligned at `20261012-01`; no production repository was changed.
 - Static presentation guards and a 390×844 browser regression cover the new contract. This checkpoint adds a second 320×568 smoke case to catch narrow-screen wrapping/overlap in the heading and exit link, including a forced-visible pager fixture. Confirm the latest CI result before accepting the 320px behavior.
 - Once the full browser smoke gate is green, resume CSS ownership extraction only after the real-device Lightbox/foil QA gate described above; do not use this targeted UI pass as evidence that unrelated Lightbox visuals have been physically device-tested.
+
+
+### October 12, 2026 — Curated View CI closure and audit update
+
+- **Verified branch checkpoint:** `96d7c1d10e4590c9df1d3cc57eb85ea5e55fa518` passed [site validation and browser smoke run #38157420466](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38157420466) and [Pages build/deployment #38157420479](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38157420479). The browser smoke suite completed all 36 scenarios; Curated View scenarios #22 (1280×900), #23 (390×844), and #24 (320×568) passed, as did the Admin smoke case #36.
+- **User-side review:** the user confirmed the current Curated View presentation looks acceptable. No route rewrite or redesign is warranted based on the current evidence.
+- **Non-blocking tooling warning:** Node `DEP0040` appears immediately after the GitHub Actions `setup-node` step initializes Node 24 and again during job cleanup. The validation and browser smoke steps still pass. The exact dependency source has not been isolated, so do not modify portfolio runtime code merely to suppress this warning.
+- **Next gate:** complete the physical-device check for grouped Lightbox layouts, foil tilt/flip and Inspect/Back behavior, focused 3D viewing, and mobile YouTube first-tap behavior against the existing recording. Keep Lightbox/foil CSS ownership extraction paused until this visual/device pass; continue with targeted, evidence-backed hardening rather than a broad redesign. The legacy deployed repository remains out of scope.
