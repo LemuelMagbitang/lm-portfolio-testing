@@ -532,16 +532,43 @@ function validateUtilityPageIndexing() {
 }
 
 function scanSourceForBadPatterns() {
-  const candidates = ['index.html', 'about/index.html', 'js/script.js', 'js/model-viewer.js', 'js/media-background.js', 'css/style.css', 'admin/index.html', 'admin/admin.js', '.github/workflows/site-validation.yml'];
+  // Keep explicit HTML/admin/workflow entrypoints, then include every runtime
+  // module and feature stylesheet. The architecture has moved away from the
+  // retired root controllers, so a fixed list of old JS filenames would leave
+  // newly extracted modules outside the path-regression audit.
+  const candidates = new Set([
+    'index.html',
+    'about/index.html',
+    '404.html',
+    'success/index.html',
+    'admin/index.html',
+    'admin/admin.js',
+    '.github/workflows/site-validation.yml'
+  ]);
 
-  candidates.filter(exists).forEach(file => {
-    const text = readText(file);
-    if (/\/data\/data\//i.test(text)) err(`${file}: contains /data/data/ path.`);
-    if (/\/about\/data\//i.test(text)) err(`${file}: contains /about/data/ path.`);
-    if (/\/about\/js\//i.test(text)) err(`${file}: contains /about/js/ path.`);
-  });
+  function collectSourceFiles(dir, matches) {
+    if (!exists(dir)) return;
+    for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const file = path.posix.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        collectSourceFiles(file, matches);
+      } else if (matches.test(entry.name)) {
+        candidates.add(file);
+      }
+    }
+  }
+
+  collectSourceFiles('js', /\.(?:js|mjs)$/i);
+  collectSourceFiles('css', /\.css$/i);
+
+  for (const file of candidates) {
+    if (!exists(file)) continue;
+    const source = readText(file);
+    if (/\/data\/data\//i.test(source)) err(file + ': contains /data/data/ path.');
+    if (/\/about\/data\//i.test(source)) err(file + ': contains /about/data/ path.');
+    if (/\/about\/js\//i.test(source)) err(file + ': contains /about/js/ path.');
+  }
 }
-
 function validateCssDeclarations() {
   const css = exists('css/style.css') ? readText('css/style.css') : '';
   const invalidFlex = [...css.matchAll(/flex-direction\s*:\s*([^;]+);/g)]
