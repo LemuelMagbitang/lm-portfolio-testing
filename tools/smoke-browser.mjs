@@ -1730,6 +1730,7 @@ try {
         throw new Error('3D artwork caption is hidden before entering focused 3D inspection.');
       }
 
+      const lightboxScrollBefore3DInspect = await page.locator('#lightbox').evaluate(el => el.scrollTop);
       await modelShell.click();
       await page.locator('#lightbox .lightbox-model-viewer.is-interactive').waitFor({ state: 'visible', timeout: 3000 });
 
@@ -1783,8 +1784,9 @@ try {
       }
 
       const focused3DEntryOrigin = await page.locator('#lightbox.is-3d-focused').evaluate(el => el.scrollTop);
-      if (focused3DEntryOrigin !== 0) {
-        throw new Error('Focused 3D environment did not reset its internal Lightbox scroll position to zero: ' + focused3DEntryOrigin);
+      if (Math.abs(focused3DEntryOrigin - lightboxScrollBefore3DInspect) > 1) {
+        throw new Error('Entering focused 3D changed the Lightbox scroll position: ' +
+          JSON.stringify({ before: lightboxScrollBefore3DInspect, after: focused3DEntryOrigin }));
       }
 
       const focused3DTouchContract = await page.evaluate(() => {
@@ -1816,7 +1818,7 @@ try {
         const style = getComputedStyle(modal);
         const scrollHeightBeforeWheel = modal.scrollHeight;
         const clientHeightBeforeWheel = modal.clientHeight;
-        modal.scrollTop = 96;
+        const scrollTopAtFocus = modal.scrollTop;
         const scrollTopBeforeWheel = modal.scrollTop;
         const event = new WheelEvent('wheel', {
           bubbles: true,
@@ -1827,6 +1829,7 @@ try {
         const scrollTopAfterWheel = modal.scrollTop;
         return {
           position: style.position,
+          scrollTopAtFocus,
           overflowY: style.overflowY,
           overflowX: style.overflowX,
           touchAction: style.touchAction,
@@ -1844,8 +1847,9 @@ try {
           focused3DScrollContract.overflowX !== 'hidden' ||
           focused3DScrollContract.touchAction !== 'none' ||
           focused3DScrollContract.overscrollBehavior !== 'none' ||
-          focused3DScrollContract.scrollTopBeforeWheel !== 0 ||
-          focused3DScrollContract.scrollTopAfterWheel !== 0 ||
+          Math.abs(focused3DScrollContract.scrollTopAtFocus - lightboxScrollBefore3DInspect) > 1 ||
+          Math.abs(focused3DScrollContract.scrollTopBeforeWheel - focused3DScrollContract.scrollTopAtFocus) > 1 ||
+          Math.abs(focused3DScrollContract.scrollTopAfterWheel - focused3DScrollContract.scrollTopAtFocus) > 1 ||
           !focused3DScrollContract.wheelDefaultPrevented) {
         throw new Error('Focused 3D environment is not scroll-locked: ' + JSON.stringify(focused3DScrollContract));
       }
@@ -1992,6 +1996,11 @@ try {
       await page.waitForTimeout(100);
       const interactiveAfterEscape = await modelShell.evaluate(el => el.classList.contains('is-interactive'));
       if (interactiveAfterEscape) throw new Error('Escape did not exit interactive 3D mode.');
+      const lightboxScrollAfter3DExit = await page.locator('#lightbox').evaluate(el => el.scrollTop);
+      if (Math.abs(lightboxScrollAfter3DExit - lightboxScrollBefore3DInspect) > 1) {
+        throw new Error('Exiting focused 3D changed the Lightbox scroll position: ' +
+          JSON.stringify({ before: lightboxScrollBefore3DInspect, after: lightboxScrollAfter3DExit }));
+      }
 
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
