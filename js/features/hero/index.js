@@ -269,9 +269,33 @@ import { createLifecycle } from '../../core/lifecycle.js';
     lifecycle.add(() => windowRef.clearTimeout(messageFadeTimer));
 
 
-    const heroMessageRoot = documentRef.getElementById('heroQuote') || documentRef.querySelector('.hero-quote');
-    if (heroMessageRoot) {
-      const messageView = buildHeroMessageView(documentRef, heroMessageRoot);
+    const showHeroMessage = options.showHeroMessage !== false;
+    const showFooterMessage = options.showFooterMessage === true;
+    const heroMessageCandidate = documentRef.getElementById('heroQuote') || documentRef.querySelector('.hero-quote');
+    if (heroMessageCandidate) heroMessageCandidate.hidden = !showHeroMessage;
+    const heroMessageRoot = showHeroMessage ? heroMessageCandidate : null;
+
+    const footerContent = documentRef.querySelector('.footer-content');
+    let footerMessageRoot = footerContent?.querySelector('.footer-hero-message') || null;
+    if (showFooterMessage && footerContent) {
+      if (!footerMessageRoot) {
+        footerMessageRoot = documentRef.createElement('div');
+        footerMessageRoot.className = 'footer-hero-message';
+        const socials = footerContent.querySelector('.social-icons');
+        footerContent.insertBefore(footerMessageRoot, socials || footerContent.firstChild);
+      }
+      footerMessageRoot.hidden = false;
+    } else if (footerMessageRoot) {
+      footerMessageRoot.remove();
+      footerMessageRoot = null;
+    }
+
+    const messageViews = [
+      heroMessageRoot ? buildHeroMessageView(documentRef, heroMessageRoot) : null,
+      footerMessageRoot ? buildHeroMessageView(documentRef, footerMessageRoot) : null
+    ].filter(Boolean);
+
+    if (messageViews.length) {
       let messages = [{ label: 'LM.', text: 'Open for freelance work.', author: '', source: '', weight: 1 }];
       let currentMessage = -1;
 
@@ -280,22 +304,20 @@ import { createLifecycle } from '../../core/lifecycle.js';
         if (!item) return;
         currentMessage = index;
         if (!animate) {
-          renderHeroMessage(messageView, item);
+          messageViews.forEach(view => renderHeroMessage(view, item));
           return;
         }
 
         windowRef.clearTimeout(messageFadeTimer);
-        messageView.root.style.opacity = '0';
+        messageViews.forEach(view => { view.root.style.opacity = '0'; });
         messageFadeTimer = windowRef.setTimeout(() => {
-          renderHeroMessage(messageView, item);
-          windowRef.requestAnimationFrame(() => { messageView.root.style.opacity = '1'; });
+          messageViews.forEach(view => renderHeroMessage(view, item));
+          windowRef.requestAnimationFrame(() => messageViews.forEach(view => { view.root.style.opacity = '1'; }));
         }, config.messageFadeMs);
       };
 
       fadeToMessage(pickHeroMessage(messages), false);
-      windowRef.requestAnimationFrame(() => {
-        messageView.root.style.opacity = '1';
-      });
+      windowRef.requestAnimationFrame(() => messageViews.forEach(view => { view.root.style.opacity = '1'; }));
 
       try {
         const rawMessages = await loadJson(heroMessagesUrl, null, { resolveUrl: resolveAssetUrl });
