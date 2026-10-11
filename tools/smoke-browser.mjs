@@ -100,27 +100,57 @@ async function configureLogoRoutes(page) {
 }
 
 async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
-  await page.waitForFunction(() => {
-    const heading = document.querySelector('#contact-start');
-    const group = document.querySelector('#contact-section .contact-grid');
-    const nav = document.querySelector('.navbar');
-    const scrolling = document.scrollingElement || document.documentElement;
-    if (!heading || !group || !nav || !scrolling) return false;
+  try {
+    await page.waitForFunction(() => {
+      const heading = document.querySelector('#contact-start');
+      const group = document.querySelector('#contact-section .contact-grid');
+      const nav = document.querySelector('.navbar');
+      if (!heading || !group || !nav) return false;
 
-    const headingRect = heading.getBoundingClientRect();
-    const groupRect = group.getBoundingClientRect();
-    const navbarHeight = nav.getBoundingClientRect().height || 0;
-    const viewportHeight = Number(window.visualViewport?.height) || Number(window.innerHeight) || 0;
-    const usableTop = Math.max(navbarHeight + 24, 24);
-    const usableCenter = usableTop + Math.max(1, viewportHeight - usableTop) / 2;
-    const groupCenter = groupRect.top + groupRect.height / 2;
-    const maxScrollY = Math.max(0, Number(scrolling.scrollHeight) - viewportHeight);
-    const scrollY = Number(window.scrollY) || Number(scrolling.scrollTop) || 0;
-    const clampedAtDocumentBottom = Math.abs(scrollY - maxScrollY) <= 2;
+      const headingRect = heading.getBoundingClientRect();
+      const groupRect = group.getBoundingClientRect();
+      const navbarHeight = nav.getBoundingClientRect().height || 0;
+      // Match the final assertion below so the wait cannot demand tighter
+      // centering than the responsive layout is subsequently allowed.
+      const viewportHeight = Number(window.innerHeight) || Number(window.visualViewport?.height) || 0;
+      const usableTop = Math.max(navbarHeight + 24, 24);
+      const usableCenter = usableTop + Math.max(1, viewportHeight - usableTop) / 2;
+      const groupCenter = groupRect.top + groupRect.height / 2;
+      const headingClear = headingRect.top >= usableTop - 2;
+      const centerDelta = Math.abs(groupCenter - usableCenter);
 
-    return (clampedAtDocumentBottom || Math.abs(groupCenter - usableCenter) <= 20) &&
-      headingRect.top >= usableTop - 2;
-  }, null, { timeout: timeoutMs });
+      return headingClear && centerDelta <= 130;
+    }, null, { timeout: timeoutMs });
+  } catch (error) {
+    const snapshot = await page.evaluate(() => {
+      const heading = document.querySelector('#contact-start');
+      const group = document.querySelector('#contact-section .contact-grid');
+      const nav = document.querySelector('.navbar');
+      const scrolling = document.scrollingElement || document.documentElement;
+      const headingRect = heading?.getBoundingClientRect();
+      const groupRect = group?.getBoundingClientRect();
+      const navbarHeight = nav?.getBoundingClientRect().height || 0;
+      const viewportHeight = Number(window.innerHeight) || Number(window.visualViewport?.height) || 0;
+      const usableTop = Math.max(navbarHeight + 24, 24);
+      const usableCenter = usableTop + Math.max(1, viewportHeight - usableTop) / 2;
+      const groupCenter = groupRect ? groupRect.top + groupRect.height / 2 : null;
+      const maxScrollY = Math.max(0, Number(scrolling?.scrollHeight) - viewportHeight);
+      return {
+        hash: window.location.hash,
+        viewportHeight,
+        scrollY: Number(window.scrollY) || Number(scrolling?.scrollTop) || 0,
+        maxScrollY,
+        headingTop: headingRect?.top ?? null,
+        headingClear: headingRect ? headingRect.top >= usableTop - 2 : false,
+        groupTop: groupRect?.top ?? null,
+        groupHeight: groupRect?.height ?? null,
+        centerDelta: groupCenter === null ? null : Math.abs(groupCenter - usableCenter),
+        navbarHeight
+      };
+    });
+    throw new Error('Contact viewport did not settle within the accepted responsive bounds: ' +
+      JSON.stringify(snapshot) + '; ' + error.message);
+  }
 }
 
 async function assertPublicFilterNavigation(page, { href, expectedHash, label }) {
