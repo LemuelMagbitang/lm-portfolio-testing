@@ -735,10 +735,14 @@ function validateAdminConnectionSecurity() {
     ['safe repository-name validation', /function isSafeRepoName\(/],
     ['safe branch-name validation', /function isSafeBranchName\(/],
     ['validated stored connections', /return isValidConnection\(parsed\) \? parsed : null;/],
-    ['API path segment encoding', /function apiPath\(path\)/],
+    ['API path segment encoding uses normalized paths', /function apiPath\(filePath\)[\s\S]*?normalizeCmsPath\(filePath\)/],
     ['GitHub API referrer suppression', /referrerPolicy:\s*init\.referrerPolicy \|\| 'no-referrer'/],
     ['CMS writable-path allowlist', /const CMS_WRITABLE_PATHS = new Set\(/],
     ['CMS write-path enforcement', /assertCmsWritablePath\(file\?\.path\)/],
+    ['CMS path traversal defense', /function hasUnsafeCmsPathSegments\(filePath\)/],
+    ['CMS path normalization before API encoding', /function apiPath\(filePath\)[\s\S]*?normalizeCmsPath\(filePath\)/],
+    ['CMS normalized asset deletion guard', /const safePath = normalizeCmsPath\(path\);[\s\S]*?safePath\.startsWith\('assets\/'\)/],
+    ['CMS regular-file-only tree writes', /file\?\.mode !== undefined && file\.mode !== '100644'/],
     ['Media delete restriction', /CMS delete blocked: only media assets can be deleted/],
   ];
 

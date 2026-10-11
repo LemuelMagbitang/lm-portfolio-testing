@@ -243,17 +243,40 @@ function authHeaders(){
     'X-GitHub-Api-Version': '2022-11-28'
   };
 }
-function apiPath(path){
-  return String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+function hasUnsafeCmsPathSegments(filePath) {
+  const raw = String(filePath || '').trim().replace(/\\/g, '/');
+  if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return true;
+
+  // Check literal paths and up to three rounds of URL decoding. This rejects
+  // dot-segment traversal whether it appears directly, via encoded slashes,
+  // or behind nested percent-encoding before a request reaches the GitHub API.
+  const candidates = [raw];
+  let candidate = raw;
+  for (let decodeStep = 0; decodeStep < 3; decodeStep += 1) {
+    let decoded;
+    try {
+      decoded = decodeURIComponent(candidate).replace(/\\/g, '/');
+    } catch (_) {
+      break;
+    }
+    if (decoded === candidate) break;
+    candidates.push(decoded);
+    candidate = decoded;
+  }
+
+  return candidates.some(value =>
+    /[\u0000-\u001f\u007f]/.test(value) ||
+    value.split('/').some(segment => segment === '.' || segment === '..')
+  );
 }
-function githubFetch(url, init = {}){
-  return fetch(url, {
-    ...init,
-    credentials: 'omit',
-    cache: init.cache || 'no-store',
-    referrerPolicy: init.referrerPolicy || 'no-referrer'
-  });
+
+function normalizeCmsPath(filePath) {
+  const raw = String(filePath || '').trim().replace(/\\/g, '/');
+  if (!raw || hasUnsafeCmsPathSegments(raw)) return null;
+  const value = raw.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
+  return value || null;
 }
+
 const CMS_WRITABLE_PATHS = new Set([
   'data/about.json',
   'data/filters.json',
@@ -271,14 +294,33 @@ const CMS_WRITABLE_PATHS = new Set([
   'js/script.js',
   'js/infrastructure/media-background/engine.js'
 ]);
-function isCmsWritablePath(filePath){
-  const value = String(filePath || '').replace(/^\/+|\/+$/g, '');
-  return CMS_WRITABLE_PATHS.has(value) || value.startsWith('assets/');
+
+function isCmsWritablePath(filePath) {
+  const value = normalizeCmsPath(filePath);
+  return Boolean(value && (CMS_WRITABLE_PATHS.has(value) || value.startsWith('assets/')));
 }
-function assertCmsWritablePath(filePath){
-  if (!isCmsWritablePath(filePath)) {
+
+function assertCmsWritablePath(filePath) {
+  const value = normalizeCmsPath(filePath);
+  if (!value || !(CMS_WRITABLE_PATHS.has(value) || value.startsWith('assets/'))) {
     throw new Error('CMS write blocked: this editor can only modify site content, media, and its known reference files.');
   }
+  return value;
+}
+
+function apiPath(filePath) {
+  const value = normalizeCmsPath(filePath);
+  if (!value) throw new Error('Invalid GitHub repository path.');
+  return value.split('/').map(encodeURIComponent).join('/');
+}
+
+function githubFetch(url, init = {}) {
+  return fetch(url, {
+    ...init,
+    credentials: 'omit',
+    cache: init.cache || 'no-store',
+    referrerPolicy: init.referrerPolicy || 'no-referrer'
+  });
 }
 
 const GH = {
@@ -297,7 +339,7 @@ const GH = {
     return { json, sha: data.sha, missing:false };
   },
   async putFile(path, obj, sha, message){
-    assertCmsWritablePath(path);
+    path = assertCmsWritablePath(path);
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = {
       message,
@@ -414,7 +456,13 @@ const GH = {
   // than rewriting unrelated history.
   async commitFiles(files, message){
     if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
-    files.forEach(file => assertCmsWritablePath(file?.path));
+    const safeFiles = files.map(file => {
+      const safePath = assertCmsWritablePath(file?.path);
+      if (file?.mode !== undefined && file.mode !== '100644') {
+        throw new Error('CMS write blocked: only regular repository files can be saved.');
+      }
+      return { ...file, path: safePath, mode: '100644' };
+    });
     const parentSha = await GH.getBranchHead();
     if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
     const commitUrl = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/git/commits/${encodeURIComponent(parentSha)}`;
@@ -429,10 +477,10 @@ const GH = {
       throw new Error('The repository changed while saving. Reload the CMS and review the current content before saving again.');
     }
     const entries=[];
-    for(const file of files){
+    for (const file of safeFiles) {
       if(!file?.path) continue;
       const sha = await GH.createBlob(file.content ?? '', file.encoding || 'utf-8');
-      entries.push({path:file.path,mode:file.mode || '100644',type:'blob',sha});
+      entries.push({path:file.path,mode:'100644',type:'blob',sha});
     }
     if(!entries.length) throw new Error('Nothing to commit.');
     const newTreeSha = await GH.createTree(commitData.tree.sha, entries);
@@ -441,7 +489,7 @@ const GH = {
     return newCommit;
   },
   async uploadBinary(path, dataUrl, message, existingSha){
-    assertCmsWritablePath(path);
+    path = assertCmsWritablePath(path);
     const base64 = dataUrl.split(',')[1]; // strip the "data:*/*;base64," prefix
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const body = { message, content: base64, branch: conn.branch };
@@ -458,9 +506,11 @@ const GH = {
     return res.json();
   },
   async deleteFile(path, sha, message){
-    if (!String(path || '').replace(/^\/+|\/+$/g, '').startsWith('assets/')) {
+    const safePath = normalizeCmsPath(path);
+    if (!safePath || !safePath.startsWith('assets/')) {
       throw new Error('CMS delete blocked: only media assets can be deleted from the Media Library.');
     }
+    path = safePath;
     const url = `https://api.github.com/repos/${encodeURIComponent(conn.owner)}/${encodeURIComponent(conn.repo)}/contents/${apiPath(path)}`;
     const res = await githubFetch(url, {
       method: 'DELETE',

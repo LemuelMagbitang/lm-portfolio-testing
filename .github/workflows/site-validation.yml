@@ -59,6 +59,9 @@ jobs:
       - name: Validate CMS Projects presentation
         run: node tools/validate-cms-project-presentation.mjs
 
+      - name: Test CMS path and write safety
+        run: node tools/test-cms-path-safety.mjs
+
       - name: Validate Projects runtime composition
         run: node tools/validate-project-runtime.mjs
 
