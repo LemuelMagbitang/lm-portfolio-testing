@@ -3377,6 +3377,40 @@ footer{
 .lightbox-modal.is-3d-focused .modal-interior::before{z-index:10;}
 .lightbox-modal.is-3d-focused .is-3d-focus-target{z-index:20;}
 .lightbox-modal.is-3d-focused .is-3d-focus-target .lightbox-model-viewer{z-index:20;}
+/* The active 3D artwork is portaled out of the scrollable Lightbox so its
+   fixed geometry is relative to the viewport, not a scrolled/will-change ancestor. */
+.lightbox-3d-focus-overlay{
+  position:fixed;inset:0;z-index:10003;display:block;isolation:isolate;
+  pointer-events:auto;background:transparent;
+}
+.lightbox-3d-focus-overlay::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:rgba(5,5,5,.92);
+  backdrop-filter:blur(18px) saturate(.72);
+  -webkit-backdrop-filter:blur(18px) saturate(.72);
+}
+.lightbox-3d-focus-overlay .is-3d-focus-target{
+  position:fixed;inset:0;z-index:1;display:block;place-items:center;
+  width:100dvw;height:100dvh;min-width:0;max-width:none;
+  margin:0;padding:0;transform:none;filter:none;opacity:1;background:transparent;
+}
+.lightbox-3d-focus-overlay .lightbox-model-viewer.is-interactive,
+.lightbox-3d-focus-overlay .is-3d-focus-target .lightbox-model-viewer{
+  position:fixed!important;inset:0;z-index:20;display:grid;place-items:center;
+  width:auto;height:auto;min-width:0;min-height:0;max-width:none;max-height:none;
+  aspect-ratio:auto;border:0;border-radius:0;box-shadow:none;
+}
+.lightbox-3d-focus-overlay .is-3d-focus-target .media-caption{
+  position:fixed;left:50%;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + clamp(88px, 12vh, 116px));
+  z-index:30;width:min(calc(100% - 40px),760px);max-width:760px;
+  margin:0;padding:0;color:rgba(255,255,255,.78);
+  font-size:clamp(.78rem,1.7vw,.92rem);line-height:1.5;text-align:center;
+  text-wrap:pretty;text-shadow:0 2px 14px rgba(0,0,0,.7);
+  transform:translateX(-50%);pointer-events:none;
+}
+.lightbox-3d-focus-overlay .is-3d-focus-target .model-viewer-ui{z-index:40;}
+
 /* The project-level chevrons/X are a sibling of the Lightbox modal. In 3D
    focus they must sit underneath the modal layer, not above the interactive
    environment. They remain in the DOM for lifecycle/focus bookkeeping but
