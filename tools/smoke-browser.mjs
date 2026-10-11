@@ -4599,12 +4599,23 @@ try {
         }
       });
 
-      const footerAnimation = await page.evaluate(() => ({
-        exists: !!document.querySelector('#footerAnimation'),
-        slides: document.querySelectorAll('#footerAnimation .footer-animation-slide').length,
-        hidden: !!document.querySelector('#footerAnimation')?.hidden,
-        radius: document.querySelector('#footerAnimation') ? getComputedStyle(document.querySelector('#footerAnimation')).borderRadius : ''
-      }));
+      const footerAnimation = await page.evaluate(async () => {
+        let showFooterMessage = false;
+        try {
+          const response = await fetch('/data/settings.json');
+          const settings = response.ok ? await response.json() : {};
+          showFooterMessage = settings.showFooterMessage === true;
+        } catch (_) {}
+        const media = document.querySelector('#footerAnimation');
+        return {
+          showFooterMessage,
+          exists: !!media,
+          slides: document.querySelectorAll('#footerAnimation .footer-animation-slide').length,
+          hidden: !!media?.hidden,
+          display: media ? getComputedStyle(media).display : 'none',
+          radius: media ? getComputedStyle(media).borderRadius : ''
+        };
+      });
       const footerLayout = await page.evaluate(() => {
         const footer = document.querySelector('footer');
         const media = document.querySelector('#footerAnimation');
@@ -4620,12 +4631,14 @@ try {
           mediaHeight: media.getBoundingClientRect().height,
           mediaRadius: mediaStyle.borderRadius,
           mediaPosition: mediaStyle.position,
+          mediaDisplay: mediaStyle.display,
           contentPosition: contentStyle.position,
           contentZ: contentStyle.zIndex,
           foreground: footerStyle.getPropertyValue('--footer-foreground').trim(),
           fadeExists: !!fade,
           fadePosition: fadeStyle?.position || '',
           fadeZ: fadeStyle?.zIndex || '',
+          fadeDisplay: fadeStyle?.display || 'none',
           footerColor: footerStyle.color,
           socialColors: Array.from(document.querySelectorAll('footer .social-icons a')).map(a => getComputedStyle(a).color)
         };
@@ -4640,8 +4653,18 @@ try {
       if (footerLayout.contentPosition!=='relative' || footerLayout.contentZ!=='6') {
         throw new Error('Footer content is not layered above the artwork/fade: '+JSON.stringify(footerLayout));
       }
-      if (footerLayout.mediaHeight < footerLayout.footerHeight - 1 || footerLayout.footerHeight < 420) {
-        throw new Error('Footer stage is not large enough or artwork does not fill it: '+JSON.stringify(footerLayout));
+      if (footerAnimation.showFooterMessage) {
+        if (footerAnimation.slides < 1 || footerLayout.mediaDisplay === 'none' ||
+            footerLayout.mediaHeight < footerLayout.footerHeight - 1 || footerLayout.footerHeight < 420 ||
+            footerLayout.fadeDisplay === 'none') {
+          throw new Error('Enabled footer message must reveal a full-stage animated artwork backdrop: ' +
+            JSON.stringify({ ...footerAnimation, ...footerLayout }));
+        }
+      } else if (footerAnimation.slides !== 0 ||
+          footerLayout.mediaDisplay !== 'none' || footerLayout.fadeDisplay !== 'none' ||
+          footerLayout.mediaHeight > 1) {
+        throw new Error('Disabled footer message must remove the artwork/fade layers without collapsing the footer: ' +
+          JSON.stringify({ ...footerAnimation, ...footerLayout }));
       }
       if (footerLayout.footerColor !== 'rgb(255, 255, 255)') {
         throw new Error('Footer content foreground is not locked to white: '+JSON.stringify(footerLayout));
@@ -4699,8 +4722,10 @@ try {
       ) {
         throw new Error('Collapsed Show More control did not retain the requested glass material: ' + JSON.stringify(showMoreGeometry));
       }
-      if (!['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
-        throw new Error('Footer foreground contrast token is not resolved: '+JSON.stringify(footerLayout));
+      if (footerAnimation.showFooterMessage &&
+          !['#fff','#000','rgb(255, 255, 255)','rgb(0, 0, 0)'].includes(footerLayout.foreground)) {
+        throw new Error('Footer foreground contrast token is not resolved while its artwork backdrop is enabled: '+
+          JSON.stringify(footerLayout));
       }
 
       const backToTop = await page.locator('footer a[href="#"]').count();
@@ -4710,6 +4735,76 @@ try {
       }
 
     }, { width: 1280, height: 900 });
+
+    // Exercise the enabled footer-message mode independently of the site's CMS toggle.
+    // The real content file remains unchanged; this test response exists only in this page context.
+    await smokePage(browser, '/', async page => {
+      await page.waitForFunction(() => {
+        const footer = document.querySelector('footer');
+        const panel = footer?.querySelector('.footer-hero-message');
+        const media = document.querySelector('#footerAnimation');
+        const text = panel?.querySelector('.hero-quote-text')?.textContent?.trim();
+        const slides = media?.querySelectorAll('.footer-animation-slide').length || 0;
+        return footer?.classList.contains('footer--message-enabled') &&
+          panel?.classList.contains('hero-quote') && !!text && slides > 0 &&
+          getComputedStyle(media).display !== 'none';
+      }, null, { timeout: 15000 });
+
+      const composition = await page.evaluate(() => {
+        const heroQuote = document.querySelector('#heroQuote');
+        const heroBanner = document.querySelector('#heroBanner');
+        const heroSlide = heroBanner?.querySelector('.slide.active');
+        const footer = document.querySelector('footer');
+        const panel = footer?.querySelector('.footer-hero-message');
+        const social = footer?.querySelector('.social-icons');
+        const rect = panel?.getBoundingClientRect();
+        const socialRect = social?.getBoundingClientRect();
+        const panelStyle = panel ? getComputedStyle(panel) : null;
+        const panelAlpha = panelStyle?.backgroundColor.match(/rgba?\\([^)]*,\\s*([\\d.]+)\\s*\\)$/);
+        return {
+          heroMessageHidden: heroQuote?.hidden === true,
+          heroOverlay: heroBanner ? getComputedStyle(heroBanner, '::after').backgroundImage : '',
+          heroArtworkOpacity: heroSlide ? Number.parseFloat(getComputedStyle(heroSlide).opacity) : 0,
+          footerBackdropClass: footer?.classList.contains('footer--message-enabled') === true,
+          footerPanelUsesHeroStyle: panel?.classList.contains('hero-quote') === true,
+          footerPanelBlur: panelStyle?.backdropFilter || 'none',
+          footerPanelBackgroundAlpha: panelAlpha ? Number(panelAlpha[1]) : 0,
+          footerPanelTextAlign: panelStyle?.textAlign || '',
+          messageToSocialGap: rect && socialRect ? socialRect.top - rect.bottom : 0,
+          footerHeight: footer?.getBoundingClientRect().height || 0,
+          mediaHeight: document.querySelector('#footerAnimation')?.getBoundingClientRect().height || 0
+        };
+      });
+      if (!composition.heroMessageHidden ||
+          composition.heroOverlay !== 'none' ||
+          composition.heroArtworkOpacity < 0.99) {
+        throw new Error('Footer-on fixture should retain a fully clear Works hero with its quote toggled off: '+
+          JSON.stringify(composition));
+      }
+      if (!composition.footerBackdropClass || !composition.footerPanelUsesHeroStyle ||
+          composition.footerPanelBlur !== 'none' || composition.footerPanelBackgroundAlpha < 0.1 ||
+          composition.footerPanelTextAlign !== 'left') {
+        throw new Error('Footer message must be the same sharp transparent-black hero panel over the artwork: '+
+          JSON.stringify(composition));
+      }
+      if (composition.messageToSocialGap < 32) {
+        throw new Error('Footer quote needs a clear gap before the separate social/copyright group: '+
+          JSON.stringify(composition));
+      }
+      if (composition.footerHeight < 420 || composition.mediaHeight < composition.footerHeight - 1) {
+        throw new Error('Footer artwork must fully cover the footer stage: '+JSON.stringify(composition));
+      }
+    }, { width: 1280, height: 900 }, async page => {
+      await page.route('**/data/settings.json', async route => {
+        const response = await route.fetch();
+        const settings = await response.json();
+        await route.fulfill({
+          status: response.status(),
+          contentType: 'application/json',
+          body: JSON.stringify({ ...settings, showHeroMessage: false, showFooterMessage: true })
+        });
+      });
+    });
 
     await smokePage(browser, '/about/', async page => {
       await assertMobileNavigation(page, 'About page');
