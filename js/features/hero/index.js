@@ -275,7 +275,11 @@ import { createLifecycle } from '../../core/lifecycle.js';
     const showHeroMessage = options.showHeroMessage !== false;
     const showFooterMessage = options.showFooterMessage === true;
     const heroMessageCandidate = documentRef.getElementById('heroQuote') || documentRef.querySelector('.hero-quote');
-    if (heroMessageCandidate) heroMessageCandidate.hidden = !showHeroMessage;
+    if (heroMessageCandidate) {
+      heroMessageCandidate.hidden = !showHeroMessage;
+      const heroSection = heroMessageCandidate.closest('.hero-section');
+      if (heroSection) heroSection.classList.toggle('hero-section--message', showHeroMessage);
+    }
     const heroMessageRoot = showHeroMessage ? heroMessageCandidate : null;
 
     const footerContent = documentRef.querySelector('.footer-content');

@@ -361,7 +361,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 @media (max-width: 767px) {
-  .hero-quote { padding: 0 24px; }
+  .hero-quote { padding: clamp(22px, 5.4vw, 30px) 24px; }
   .hero-quote-label {
     font-size: 0.6rem;
     letter-spacing: 0.22em;
@@ -2861,7 +2861,7 @@ body.center-page {
    which caps the text at the length that fills roughly the old fixed
    height. Limiting the words rather than clipping the box means text
    can never be cut off — it just can't get long enough to overflow. */
-.hero-section:has(.hero-quote),
+.hero-section:has(.hero-quote:not([hidden])),
 .hero-section.hero-section--message {
   height: auto;
   min-height: 38vh;
@@ -2869,7 +2869,7 @@ body.center-page {
   align-items: center;
 }
 
-.hero-overlay:has(.hero-quote),
+.hero-overlay:has(.hero-quote:not([hidden])),
 .hero-overlay.quote-overlay {
   width: 100%;
   padding: 0;
@@ -2877,12 +2877,12 @@ body.center-page {
 }
 
 @media (max-width: 767px) {
-  .hero-section:has(.hero-quote),
+  .hero-section:has(.hero-quote:not([hidden])),
   .hero-section.hero-section--message {
     min-height: 44vh;
     padding: 44px 0;
   }
-  .hero-overlay:has(.hero-quote),
+  .hero-overlay:has(.hero-quote:not([hidden])),
   .hero-overlay.quote-overlay {
     padding: 0;
   }

@@ -1234,12 +1234,22 @@ try {
       if (messageSettings.showHeroMessage === false && !heroMessageHidden) {
         throw new Error('Works Hero message should be hidden while showHeroMessage is disabled.');
       }
-      if (messageSettings.showHeroMessage !== false) {
-        const heroPanelAlpha = await page.locator('#heroQuote').evaluate(el => {
-          const match = getComputedStyle(el).backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
-          return match ? Number(match[1]) : 0;
-        }).catch(() => 0);
-        if (heroPanelAlpha < 0.1) throw new Error('Works Hero message group is missing its translucent background.');
+      const heroMessageLayout = await page.locator('#heroQuote').evaluate(el => {
+        const style = getComputedStyle(el);
+        const match = style.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
+        return {
+          backgroundAlpha: match ? Number(match[1]) : 0,
+          paddingTop: parseFloat(style.paddingTop) || 0,
+          dynamicSizing: Boolean(el.closest('.hero-section')?.classList.contains('hero-section--message'))
+        };
+      }).catch(() => ({ backgroundAlpha: 0, paddingTop: 0, dynamicSizing: false }));
+      if (heroMessageLayout.backgroundAlpha < 0.1) throw new Error('Works Hero message group is missing its translucent background.');
+      if (heroMessageLayout.paddingTop < 18) throw new Error('Works Hero message group has insufficient vertical padding.');
+      if (messageSettings.showHeroMessage === false && heroMessageLayout.dynamicSizing) {
+        throw new Error('Works Hero should not retain message-driven sizing while its message is disabled.');
+      }
+      if (messageSettings.showHeroMessage !== false && !heroMessageLayout.dynamicSizing) {
+        throw new Error('Works Hero did not enable message-driven sizing with its message.');
       }
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
@@ -2771,12 +2781,22 @@ try {
       if (messageSettings.showHeroMessage === false && !heroMessageHidden) {
         throw new Error('Mobile/tablet Works Hero message should be hidden while showHeroMessage is disabled.');
       }
-      if (messageSettings.showHeroMessage !== false) {
-        const heroPanelAlpha = await page.locator('#heroQuote').evaluate(el => {
-          const match = getComputedStyle(el).backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
-          return match ? Number(match[1]) : 0;
-        }).catch(() => 0);
-        if (heroPanelAlpha < 0.1) throw new Error('Mobile/tablet Hero message group is missing its translucent background.');
+      const heroMessageLayout = await page.locator('#heroQuote').evaluate(el => {
+        const style = getComputedStyle(el);
+        const match = style.backgroundColor.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)$/);
+        return {
+          backgroundAlpha: match ? Number(match[1]) : 0,
+          paddingTop: parseFloat(style.paddingTop) || 0,
+          dynamicSizing: Boolean(el.closest('.hero-section')?.classList.contains('hero-section--message'))
+        };
+      }).catch(() => ({ backgroundAlpha: 0, paddingTop: 0, dynamicSizing: false }));
+      if (heroMessageLayout.backgroundAlpha < 0.1) throw new Error('Mobile/tablet Hero message group is missing its translucent background.');
+      if (heroMessageLayout.paddingTop < 18) throw new Error('Mobile/tablet Hero message group has insufficient vertical padding.');
+      if (messageSettings.showHeroMessage === false && heroMessageLayout.dynamicSizing) {
+        throw new Error('Mobile/tablet Hero should not retain message-driven sizing while its message is disabled.');
+      }
+      if (messageSettings.showHeroMessage !== false && !heroMessageLayout.dynamicSizing) {
+        throw new Error('Mobile/tablet Hero did not enable message-driven sizing with its message.');
       }
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
