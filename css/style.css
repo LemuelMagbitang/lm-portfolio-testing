@@ -2977,7 +2977,7 @@ footer{
   pointer-events:auto;
 }
 .footer-content .social-icons a{color:inherit;}
-.footer-content p{color:inherit;margin:0;}
+.footer-content > p{color:inherit;margin:0;}
 /* Optional quote from the same CMS source as the hero. This block has no fixed
    height: long text naturally expands the footer and the background follows. */
 .footer-content .footer-hero-message{
@@ -3007,9 +3007,9 @@ footer{
    its center. text-align: center fixes that at any width, and the
    smaller mobile size makes wrapping to two lines less likely in the
    first place. */
-.footer-content p { text-align: center; }
+.footer-content > p { text-align: center; }
 @media (max-width: 767px) {
-  .footer-content p { font-size: 0.85rem; padding: 0 10px; }
+  .footer-content > p { font-size: 0.85rem; padding: 0 10px; }
 }
 
 

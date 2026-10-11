@@ -1082,6 +1082,8 @@ function validateBootstrapHardening() {
       !/\.footer-content \.footer-hero-message\s*\{[^}]*margin:\s*0 auto clamp\(36px,5vw,64px\)/.test(heroCss) ||
       /\.hero-quote\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
       /\.footer-content \.footer-hero-message\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
+      !/\.footer-content > p\s*\{\s*color:inherit;margin:0;\s*\}/.test(heroCss) ||
+      !/\.footer-content > p \{ text-align: center; \}/.test(heroCss) ||
       !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner::after\s*\{\s*background:\s*transparent;\s*\}/.test(heroCss) ||
       !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner \.slide\.active\s*\{\s*opacity:\s*1;\s*\}/.test(heroCss) ||
       !/footer:not\(\.footer--message-enabled\) > \.footer-animation,[\s\S]*?display:none !important/.test(heroCss)) {

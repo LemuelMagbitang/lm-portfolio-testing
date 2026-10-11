@@ -1292,8 +1292,12 @@ try {
           const style = getComputedStyle(el);
           const social = el.closest('footer')?.querySelector('.social-icons')?.getBoundingClientRect();
           const footer = el.closest('footer');
+          const quoteText = el.querySelector('.hero-quote-text');
+          const quoteTextStyle = quoteText ? getComputedStyle(quoteText) : null;
           return {
             textAlign: style.textAlign,
+            quoteTextAlign: quoteTextStyle?.textAlign || '',
+            quoteTextMarginBottom: parseFloat(quoteTextStyle?.marginBottom || '0') || 0,
             backdropFilter: style.backdropFilter || 'none',
             messageClass: el.classList.contains('hero-quote'),
             marginBottom: parseFloat(style.marginBottom) || 0,
@@ -1303,7 +1307,9 @@ try {
             fadeDisplay: footer ? getComputedStyle(footer.querySelector('.footer-fade')).display : 'none'
           };
         });
-        if (footerMessageLayout.textAlign !== 'left') throw new Error('Footer quote should follow the left-aligned hero message layout.');
+        if (footerMessageLayout.textAlign !== 'left' || footerMessageLayout.quoteTextAlign !== 'left' || footerMessageLayout.quoteTextMarginBottom < 18) {
+          throw new Error('Footer quote and its inner text must preserve the hero panel alignment and typography spacing: ' + JSON.stringify(footerMessageLayout));
+        }
         if (footerMessageLayout.backdropFilter !== 'none' || !footerMessageLayout.messageClass) throw new Error('Footer quote must reuse the sharp, unblurred hero message panel styling.');
         if (footerMessageLayout.marginBottom < 32 || footerMessageLayout.socialGap < 32) throw new Error('Footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
         if (!footerMessageLayout.backdropClass || footerMessageLayout.animationDisplay === 'none' || footerMessageLayout.fadeDisplay === 'none') throw new Error('Footer message should enable its full-bleed looping artwork backdrop.');
@@ -2884,8 +2890,12 @@ try {
           const style = getComputedStyle(el);
           const social = el.closest('footer')?.querySelector('.social-icons')?.getBoundingClientRect();
           const footer = el.closest('footer');
+          const quoteText = el.querySelector('.hero-quote-text');
+          const quoteTextStyle = quoteText ? getComputedStyle(quoteText) : null;
           return {
             textAlign: style.textAlign,
+            quoteTextAlign: quoteTextStyle?.textAlign || '',
+            quoteTextMarginBottom: parseFloat(quoteTextStyle?.marginBottom || '0') || 0,
             backdropFilter: style.backdropFilter || 'none',
             messageClass: el.classList.contains('hero-quote'),
             marginBottom: parseFloat(style.marginBottom) || 0,
@@ -2895,7 +2905,9 @@ try {
             fadeDisplay: footer ? getComputedStyle(footer.querySelector('.footer-fade')).display : 'none'
           };
         });
-        if (footerMessageLayout.textAlign !== 'left') throw new Error('Mobile/tablet footer quote should follow the left-aligned hero message layout.');
+        if (footerMessageLayout.textAlign !== 'left' || footerMessageLayout.quoteTextAlign !== 'left' || footerMessageLayout.quoteTextMarginBottom < 18) {
+          throw new Error('Mobile/tablet footer quote and inner text must preserve hero panel alignment and spacing: ' + JSON.stringify(footerMessageLayout));
+        }
         if (footerMessageLayout.backdropFilter !== 'none' || !footerMessageLayout.messageClass) throw new Error('Mobile/tablet footer quote must reuse the sharp, unblurred hero message panel styling.');
         if (footerMessageLayout.marginBottom < 32 || footerMessageLayout.socialGap < 32) throw new Error('Mobile/tablet footer quote needs clear space before the social icon row: ' + JSON.stringify(footerMessageLayout));
         if (!footerMessageLayout.backdropClass || footerMessageLayout.animationDisplay === 'none' || footerMessageLayout.fadeDisplay === 'none') throw new Error('Mobile/tablet footer message should enable its full-bleed looping artwork backdrop.');
@@ -4770,6 +4782,12 @@ try {
           footerPanelBlur: panelStyle?.backdropFilter || 'none',
           footerPanelBackgroundAlpha: panelAlpha ? Number(panelAlpha[1]) : 0,
           footerPanelTextAlign: panelStyle?.textAlign || '',
+          footerQuoteTextAlign: panel?.querySelector('.hero-quote-text')
+            ? getComputedStyle(panel.querySelector('.hero-quote-text')).textAlign
+            : '',
+          footerQuoteTextMarginBottom: panel?.querySelector('.hero-quote-text')
+            ? parseFloat(getComputedStyle(panel.querySelector('.hero-quote-text')).marginBottom) || 0
+            : 0,
           messageToSocialGap: rect && socialRect ? socialRect.top - rect.bottom : 0,
           footerHeight: footer?.getBoundingClientRect().height || 0,
           mediaHeight: document.querySelector('#footerAnimation')?.getBoundingClientRect().height || 0
@@ -4783,7 +4801,8 @@ try {
       }
       if (!composition.footerBackdropClass || !composition.footerPanelUsesHeroStyle ||
           composition.footerPanelBlur !== 'none' || composition.footerPanelBackgroundAlpha < 0.1 ||
-          composition.footerPanelTextAlign !== 'left') {
+          composition.footerPanelTextAlign !== 'left' || composition.footerQuoteTextAlign !== 'left' ||
+          composition.footerQuoteTextMarginBottom < 18) {
         throw new Error('Footer message must be the same sharp transparent-black hero panel over the artwork: '+
           JSON.stringify(composition));
       }
