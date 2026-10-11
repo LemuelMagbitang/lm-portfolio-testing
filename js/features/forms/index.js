@@ -28,6 +28,22 @@ export function initForms({
     contactPanels.forEach(panel => {
       const hidden = isMobile && !panel.classList?.contains?.('is-contact-active');
       panel.setAttribute('aria-hidden', String(Boolean(hidden)));
+
+      // The tab controls are only presented on mobile. Expose complete tab-panel
+      // semantics there, while keeping the two desktop contact sections standalone.
+      if (!isMobile) {
+        panel.removeAttribute('role');
+        panel.removeAttribute('aria-labelledby');
+        return;
+      }
+
+      panel.setAttribute('role', 'tabpanel');
+      const panelKind = panel.getAttribute('data-contact-panel') || '';
+      const tab = contactTabs.find(candidate =>
+        candidate.getAttribute('data-contact-tab') === panelKind
+      );
+      if (tab?.id) panel.setAttribute('aria-labelledby', tab.id);
+      else panel.removeAttribute('aria-labelledby');
     });
   }
 

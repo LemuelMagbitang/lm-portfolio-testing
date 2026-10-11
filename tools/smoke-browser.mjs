@@ -4569,13 +4569,23 @@ try {
           active: tabRow?.getAttribute('data-active') || '',
           indicatorBackground: tabRow ? getComputedStyle(tabRow, '::before').backgroundColor : '',
           indicatorTransition: tabRow ? getComputedStyle(tabRow, '::before').transitionProperty : '',
-          panelIds: panels.map(panel => ({ id: panel.id, display: getComputedStyle(panel).display, ariaHidden: panel.getAttribute('aria-hidden') }))
+          panelIds: panels.map(panel => ({
+            id: panel.id,
+            display: getComputedStyle(panel).display,
+            ariaHidden: panel.getAttribute('aria-hidden'),
+            role: panel.getAttribute('role'),
+            labelledBy: panel.getAttribute('aria-labelledby')
+          }))
         };
       });
       if (mobileContactTabs.tabCount !== 2 || mobileContactTabs.activeTabs !== 1 ||
           mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'grid' ||
           mobileContactTabs.panelIds.find(panel => panel.id === 'contactProjectPanel')?.ariaHidden !== 'false' ||
-          mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.ariaHidden !== 'true') {
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.ariaHidden !== 'true' ||
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactProjectPanel')?.role !== 'tabpanel' ||
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactProjectPanel')?.labelledBy !== 'contactTabProject' ||
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.role !== 'tabpanel' ||
+          mobileContactTabs.panelIds.find(panel => panel.id === 'contactReviewPanel')?.labelledBy !== 'contactTabReview') {
         throw new Error('Mobile Contact did not collapse into a single active tab panel: '+JSON.stringify(mobileContactTabs));
       }
 
@@ -4587,11 +4597,18 @@ try {
         reviewTab: document.querySelector('#contactTabReview')?.getAttribute('aria-selected'),
         focusedTab: document.activeElement?.id || '',
         projectAriaHidden: document.querySelector('#contactProjectPanel')?.getAttribute('aria-hidden'),
-        reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden')
+        reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden'),
+        projectRole: document.querySelector('#contactProjectPanel')?.getAttribute('role'),
+        reviewRole: document.querySelector('#contactReviewPanel')?.getAttribute('role'),
+        projectLabelledBy: document.querySelector('#contactProjectPanel')?.getAttribute('aria-labelledby'),
+        reviewLabelledBy: document.querySelector('#contactReviewPanel')?.getAttribute('aria-labelledby')
       }));
       if (arrowContactState.projectTab !== 'false' || arrowContactState.reviewTab !== 'true' ||
           arrowContactState.focusedTab !== 'contactTabReview' ||
-          arrowContactState.projectAriaHidden !== 'true' || arrowContactState.reviewAriaHidden !== 'false') {
+          arrowContactState.projectAriaHidden !== 'true' || arrowContactState.reviewAriaHidden !== 'false' ||
+          arrowContactState.projectRole !== 'tabpanel' || arrowContactState.reviewRole !== 'tabpanel' ||
+          arrowContactState.projectLabelledBy !== 'contactTabProject' ||
+          arrowContactState.reviewLabelledBy !== 'contactTabReview') {
         throw new Error('Mobile Contact arrow-key navigation did not activate and focus the review tab: '+JSON.stringify(arrowContactState));
       }
       await page.keyboard.press('Home');
@@ -4639,10 +4656,16 @@ try {
         projectDisplay: getComputedStyle(document.querySelector('#contactProjectPanel')).display,
         reviewDisplay: getComputedStyle(document.querySelector('#contactReviewPanel')).display,
         projectAriaHidden: document.querySelector('#contactProjectPanel')?.getAttribute('aria-hidden'),
-        reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden')
+        reviewAriaHidden: document.querySelector('#contactReviewPanel')?.getAttribute('aria-hidden'),
+        projectRole: document.querySelector('#contactProjectPanel')?.getAttribute('role'),
+        reviewRole: document.querySelector('#contactReviewPanel')?.getAttribute('role'),
+        projectLabelledBy: document.querySelector('#contactProjectPanel')?.getAttribute('aria-labelledby'),
+        reviewLabelledBy: document.querySelector('#contactReviewPanel')?.getAttribute('aria-labelledby')
       }));
       if (desktopContactA11y.projectDisplay === 'none' || desktopContactA11y.reviewDisplay === 'none' ||
-          desktopContactA11y.projectAriaHidden !== 'false' || desktopContactA11y.reviewAriaHidden !== 'false') {
+          desktopContactA11y.projectAriaHidden !== 'false' || desktopContactA11y.reviewAriaHidden !== 'false' ||
+          desktopContactA11y.projectRole !== null || desktopContactA11y.reviewRole !== null ||
+          desktopContactA11y.projectLabelledBy !== null || desktopContactA11y.reviewLabelledBy !== null) {
         throw new Error('Desktop Contact rendered both panels but hid one from assistive technology: '+JSON.stringify(desktopContactA11y));
       }
       await page.setViewportSize(contactViewportBeforeDesktopCheck);

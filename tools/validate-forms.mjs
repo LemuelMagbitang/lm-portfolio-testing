@@ -73,6 +73,7 @@ function makeContactElement(attributes = {}, active = false) {
   const listeners = new Map();
   return {
     parentElement: null,
+    get id() { return values.get('id') || ''; },
     tabIndex: 0,
     focused: false,
     focus() { this.focused = true; },
@@ -97,13 +98,14 @@ function makeContactElement(attributes = {}, active = false) {
       for (const handler of listeners.get(type) || []) handler(event);
     },
     getAttribute(name) { return values.has(name) ? values.get(name) : null; },
-    setAttribute(name, value) { values.set(name, String(value)); }
+    setAttribute(name, value) { values.set(name, String(value)); },
+    removeAttribute(name) { values.delete(name); }
   };
 }
 
 const contactRail = makeContactElement();
-const projectTab = makeContactElement({ 'data-contact-tab': 'project', 'aria-selected': 'true' });
-const reviewTab = makeContactElement({ 'data-contact-tab': 'review', 'aria-selected': 'false' });
+const projectTab = makeContactElement({ id: 'contactTabProject', 'data-contact-tab': 'project', 'aria-selected': 'true' });
+const reviewTab = makeContactElement({ id: 'contactTabReview', 'data-contact-tab': 'review', 'aria-selected': 'false' });
 projectTab.parentElement = contactRail;
 reviewTab.parentElement = contactRail;
 const projectPanel = makeContactElement({ 'data-contact-panel': 'project' }, true);
@@ -139,7 +141,11 @@ const contactRoot = {
 
 const responsiveForms = initForms({ root: contactRoot });
 assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Desktop must expose the project panel to assistive technology');
-assert.equal(reviewPanel.getAttribute('aria-hidden'), 'false', 'Desktop must expose the visible review panel to assistive technology');
+assert.equal(reviewPanel.getAttribute('aria-hidden'), 'false', 'Desktop must expose the review panel to assistive technology');
+assert.equal(projectPanel.getAttribute('role'), null, 'Desktop contact sections must not act as tabpanels when the tablist is hidden');
+assert.equal(reviewPanel.getAttribute('role'), null, 'Desktop contact sections must remain standalone sections');
+assert.equal(projectPanel.getAttribute('aria-labelledby'), null);
+assert.equal(reviewPanel.getAttribute('aria-labelledby'), null);
 
 reviewTab.click();
 assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Both desktop panels must remain accessible after tab state changes');
@@ -165,11 +171,19 @@ mobileQuery.matches = true;
 resizeHandlers.forEach(handler => handler());
 assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Active mobile panel must remain accessible after returning Home');
 assert.equal(reviewPanel.getAttribute('aria-hidden'), 'true', 'Inactive mobile panel must be hidden from the accessibility tree');
+assert.equal(projectPanel.getAttribute('role'), 'tabpanel', 'Mobile contact panels must expose tabpanel semantics');
+assert.equal(reviewPanel.getAttribute('role'), 'tabpanel');
+assert.equal(projectPanel.getAttribute('aria-labelledby'), 'contactTabProject', 'Each panel must be labelled by its controlling tab');
+assert.equal(reviewPanel.getAttribute('aria-labelledby'), 'contactTabReview');
 
 mobileQuery.matches = false;
 resizeHandlers.forEach(handler => handler());
 assert.equal(projectPanel.getAttribute('aria-hidden'), 'false', 'Resizing back to desktop must expose both panels');
 assert.equal(reviewPanel.getAttribute('aria-hidden'), 'false', 'Resizing back to desktop must expose both panels');
+assert.equal(projectPanel.getAttribute('role'), null, 'Desktop panels must return to standalone section semantics');
+assert.equal(reviewPanel.getAttribute('role'), null);
+assert.equal(projectPanel.getAttribute('aria-labelledby'), null);
+assert.equal(reviewPanel.getAttribute('aria-labelledby'), null);
 responsiveForms.cleanup();
 assert.equal(resizeHandlers.size, 0, 'Contact accessibility resize listener must be cleaned up');
 
