@@ -451,3 +451,11 @@ This migration must not:
 - **Cache alignment:** the Forms module, bootstrap/composition chain, and public Works/About entrypoints have updated cache identities so browsers can fetch the new interaction code.
 - **CI audit finding:** Pages build/deployment succeeded for commit `2b026f36f9edaee0bbdc5ed91f457aa9b28ea8af`, but the overall validation workflow failed in the unrelated mobile Show More browser scenario at `tools/smoke-browser.mjs` around line 3378. The failure was the expanded gallery appearing collapsed after a viewport resize. All preceding validation steps, including the Contact form contract, passed. This is not evidence that the Contact drag change failed, but it does leave the full validation gate red and the Show More behavior must be isolated before this checkpoint is called green.
 - **Next:** reproduce the Show More resize failure and determine whether it is a runtime race or a timing-sensitive smoke assertion; do not weaken the assertion without evidence. After that, complete physical-phone checks for Contact drag feel and the existing Lightbox/foil/3D/YouTube checklist. The legacy deployed repository remains out of scope; do not promote production.
+
+
+### October 12, 2026 — Startup loading gate hardening and asset-readiness audit
+
+- The branded startup overlay now locks document scrolling, touch/wheel gestures, scroll keys, and background interaction until the handoff; a browser smoke scenario checks both the locked and restored states.
+- The Lightbox media warm-up now waits for all scheduled local project media, thumbnails, project backgrounds, model binaries, Lottie data, and holographic layers. Third-party YouTube player boot remains deliberately non-blocking because it is external and expensive to initialize.
+- The About page now awaits its visible hero/footer animation features, profile/software content, gallery composition, and local About asset warm-up before removing the loading gate. Font readiness is also awaited on both page types.
+- Validation and Pages deployment passed on the prior loading-gate commit. The additional About startup readiness change is being validated now; this is not a claim of physical-device verification. Loading the complete local media set may extend startup on slow networks, and individual media preload timeouts remain the fallback for unavailable assets.

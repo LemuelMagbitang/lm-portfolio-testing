@@ -53,6 +53,8 @@ assert.match(pageCompositionSource, /destroyProjects\(\);/);
 assert.match(pageCompositionSource, /activationInput/);
 assert.match(pageCompositionSource, /details\.event\?\.type === 'keydown'/);
 assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
+assert.match(pageCompositionSource, /\[heroFeature, footerFeature, galleryFeature, aboutFeature, reviewsFeature\] = await Promise\.all\(/);
+assert.match(pageCompositionSource, /visibleReviewsPromise/);
 
 const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
 assert.match(lightboxSource, /\.lightbox-holographic/);

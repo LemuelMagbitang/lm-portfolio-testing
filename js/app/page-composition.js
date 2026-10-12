@@ -342,44 +342,27 @@ export async function createPortfolioApp({
   let deferredMediaDestroyed = false;
 
   if (root.body?.classList.contains('about-page')) {
-    void heroPromise.then(feature => {
-      if (deferredMediaDestroyed) feature?.destroy?.();
-      else heroFeature = feature;
-    });
-    void footerPromise.then(feature => {
-      if (deferredMediaDestroyed) feature?.destroy?.();
-      else footerFeature = feature;
-    });
+    // About's hero/footer animations and profile/software content are visible
+    // above or within the first page view. Resolve them under the branded gate
+    // so their player scripts and local data are not first requested after it
+    // disappears. Reviews remain optional because they are hidden on this page.
+    const visibleReviewsPromise = settings.showReviews
+      ? reviewsPromise.then(feature => {
+          feature.setVisible(true);
+          return feature;
+        })
+      : Promise.resolve(null);
 
-    // About has no visible Reviews section in the current configuration,
-    // so do not block first paint on a network request for hidden content.
-    if (settings.showReviews) {
-      void reviewsPromise.then(feature => {
-        if (deferredMediaDestroyed) {
-          feature?.cleanup?.();
-          return;
-        }
-        feature?.setVisible?.(true);
-        reviewsFeature = feature;
-      });
-    } else {
-      reviewsFeature = null;
-    }
-
-    galleryFeature = await galleryPromise;
-
-    // The About HTML contains useful static fallback content, so the About CMS
-    // fetch must not hold the loading gate hostage. Hydrate it after the first
-    // composed page paint; cleanup still runs safely if navigation tears down
-    // the app before the request resolves.
-    void aboutPromise.then(feature => {
-      if (deferredMediaDestroyed) {
-        feature?.cleanup?.();
-        return;
-      }
-      feature?.setSoftwareLogosVisible?.(settings.showSoftwareLogos);
-      aboutFeature = feature;
-    });
+    [heroFeature, footerFeature, galleryFeature, aboutFeature, reviewsFeature] = await Promise.all([
+      heroPromise,
+      footerPromise,
+      galleryPromise,
+      aboutPromise.then(feature => {
+        feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
+        return feature;
+      }),
+      visibleReviewsPromise
+    ]);
   } else {
     [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
       heroPromise,
