@@ -260,5 +260,5 @@ contactRail.dispatch('pointerdown', {
 contactRail.dispatch('pointermove', {
   pointerId: 45, pointerType: 'touch', clientX: 200, clientY: 12
 });
-assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Cleanup must remove the Contact drag listeners');
+assert.equal(reviewTab.getAttribute('aria-selected'), 'true', 'Cleanup must remove the Contact drag listeners without changing the selected tab');
 console.log('Contact form fallback, responsive accessibility, and touch-drag behavior validated.');
