@@ -4850,24 +4850,35 @@ try {
           JSON.stringify({ touchAction: mobileContactTabs.touchAction }));
       }
 
-      // Dispatch touch-pointer input against the real tab rail to verify that
-      // swipe events are bound and update both tab state and panel semantics.
+      // Dispatch a press-and-drag sequence: pointerdown must originate on a
+      // tab, then pointermove crosses the rail while that pointer stays down.
       const contactTabRail = page.locator('.contact-mobile-tabs');
+      const projectTab = page.locator('#contactTabProject');
+      const reviewTab = page.locator('#contactTabReview');
       const contactRailBox = await contactTabRail.boundingBox();
-      if (!contactRailBox) throw new Error('Mobile Contact tab rail has no measurable hit area.');
+      const projectTabBox = await projectTab.boundingBox();
+      const reviewTabBox = await reviewTab.boundingBox();
+      if (!contactRailBox || !projectTabBox || !reviewTabBox) {
+        throw new Error('Mobile Contact tab rail or tab hit areas are not measurable.');
+      }
       const contactRailY = contactRailBox.y + contactRailBox.height / 2;
-      const swipeContactRail = async (pointerId, startX, endX) => {
-        await contactTabRail.dispatchEvent('pointerdown', {
+      const projectTabX = projectTabBox.x + projectTabBox.width / 2;
+      const reviewTabX = reviewTabBox.x + reviewTabBox.width / 2;
+      const dragContactRail = async (pointerId, startSelector, startX, endX) => {
+        await page.locator(startSelector).dispatchEvent('pointerdown', {
           pointerType: 'touch', isPrimary: true, pointerId, button: 0, buttons: 1,
           clientX: startX, clientY: contactRailY
         });
+        await contactTabRail.dispatchEvent('pointermove', {
+          pointerType: 'touch', isPrimary: true, pointerId, button: 0, buttons: 1,
+          clientX: endX, clientY: contactRailY
+        });
         await contactTabRail.dispatchEvent('pointerup', {
           pointerType: 'touch', isPrimary: true, pointerId, button: 0, buttons: 0,
-          clientX: endX, clientY: contactRailY + 2
+          clientX: endX, clientY: contactRailY
         });
       };
-      const railStartX = contactRailBox.x + contactRailBox.width * 0.74;
-      await swipeContactRail(731, railStartX, railStartX - 54);
+      await dragContactRail(731, '#contactTabProject', projectTabX, reviewTabX);
       await page.waitForTimeout(20);
       const contactSwipeLeft = await page.evaluate(() => ({
         active: document.querySelector('.contact-mobile-tabs')?.getAttribute('data-active') || '',
@@ -4879,11 +4890,11 @@ try {
       if (contactSwipeLeft.active !== 'review' || contactSwipeLeft.projectSelected !== 'false' ||
           contactSwipeLeft.reviewSelected !== 'true' || contactSwipeLeft.projectHidden !== 'true' ||
           contactSwipeLeft.reviewHidden !== 'false') {
-        throw new Error('Swiping left on mobile Contact tabs did not activate Leave a Review: ' +
+        throw new Error('Dragging from Start a Project to Leave a Review did not activate the review tab: ' +
           JSON.stringify(contactSwipeLeft));
       }
 
-      await swipeContactRail(732, railStartX - 54, railStartX);
+      await dragContactRail(732, '#contactTabReview', reviewTabX, projectTabX);
       await page.waitForTimeout(20);
       const contactSwipeRight = await page.evaluate(() => ({
         active: document.querySelector('.contact-mobile-tabs')?.getAttribute('data-active') || '',
@@ -4892,7 +4903,7 @@ try {
       }));
       if (contactSwipeRight.active !== 'project' || contactSwipeRight.projectSelected !== 'true' ||
           contactSwipeRight.reviewSelected !== 'false') {
-        throw new Error('Swiping right on mobile Contact tabs did not return to Start a Project: ' +
+        throw new Error('Dragging from Leave a Review to Start a Project did not activate the project tab: ' +
           JSON.stringify(contactSwipeRight));
       }
 
