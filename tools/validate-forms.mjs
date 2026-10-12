@@ -73,6 +73,8 @@ function makeContactElement(attributes = {}, active = false) {
   const listeners = new Map();
   return {
     parentElement: null,
+    bounds: null,
+    getBoundingClientRect() { return this.bounds || { left: 0, right: 0 }; },
     get id() { return values.get('id') || ''; },
     tabIndex: 0,
     focused: false,
@@ -108,6 +110,8 @@ const projectTab = makeContactElement({ id: 'contactTabProject', 'data-contact-t
 const reviewTab = makeContactElement({ id: 'contactTabReview', 'data-contact-tab': 'review', 'aria-selected': 'false' });
 projectTab.parentElement = contactRail;
 reviewTab.parentElement = contactRail;
+projectTab.bounds = { left: 0, right: 150 };
+reviewTab.bounds = { left: 150, right: 300 };
 const projectPanel = makeContactElement({ 'data-contact-panel': 'project' }, true);
 const reviewPanel = makeContactElement({ 'data-contact-panel': 'review' });
 const contactTabs = [projectTab, reviewTab];
@@ -176,48 +180,66 @@ assert.equal(reviewPanel.getAttribute('role'), 'tabpanel');
 assert.equal(projectPanel.getAttribute('aria-labelledby'), 'contactTabProject', 'Each panel must be labelled by its controlling tab');
 assert.equal(reviewPanel.getAttribute('aria-labelledby'), 'contactTabReview');
 
+// Press on one tab, then drag across the rail: the tab under the finger wins.
 contactRail.dispatch('pointerdown', {
-  pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, clientX: 260, clientY: 12
+  target: projectTab, pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, clientX: 70, clientY: 12
 });
+contactRail.dispatch('pointermove', {
+  pointerId: 41, pointerType: 'touch', clientX: 190, clientY: 14
+});
+assert.equal(reviewTab.getAttribute('aria-selected'), 'true', 'Dragging onto the review tab must activate it before release');
+assert.equal(contactRail.getAttribute('data-active'), 'review', 'The active pill indicator must follow the dragged tab');
 contactRail.dispatch('pointerup', {
-  pointerId: 41, pointerType: 'touch', clientX: 204, clientY: 14
+  pointerId: 41, pointerType: 'touch', clientX: 190, clientY: 14
 });
-assert.equal(reviewTab.getAttribute('aria-selected'), 'true', 'Left swipe must activate Leave a Review');
-assert.equal(contactRail.getAttribute('data-active'), 'review', 'Left swipe must move the active pill indicator');
 
-let swipeClickPrevented = false;
-let swipeClickStopped = false;
+let dragClickPrevented = false;
+let dragClickStopped = false;
 contactRail.dispatch('click', {
-  preventDefault() { swipeClickPrevented = true; },
-  stopImmediatePropagation() { swipeClickStopped = true; }
+  preventDefault() { dragClickPrevented = true; },
+  stopImmediatePropagation() { dragClickStopped = true; }
 });
-assert.equal(swipeClickPrevented, true, 'A swipe-generated click must not undo the selected tab');
-assert.equal(swipeClickStopped, true, 'A swipe-generated click must not reach the tab click handler');
+assert.equal(dragClickPrevented, true, 'A drag-generated click must not undo the selected tab');
+assert.equal(dragClickStopped, true, 'A drag-generated click must not reach the tab click handler');
 
+// Reverse drag returns to the first tab by position, not by gesture direction alone.
 contactRail.dispatch('pointerdown', {
-  pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, clientX: 204, clientY: 12
+  target: reviewTab, pointerId: 42, pointerType: 'touch', isPrimary: true, button: 0, clientX: 220, clientY: 12
+});
+contactRail.dispatch('pointermove', {
+  pointerId: 42, pointerType: 'touch', clientX: 90, clientY: 14
+});
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Dragging back over the project tab must select it');
+contactRail.dispatch('pointerup', {
+  pointerId: 42, pointerType: 'touch', clientX: 90, clientY: 14
+});
+contactRail.dispatch('click', { preventDefault() {}, stopImmediatePropagation() {} });
+
+// Vertical-dominant movement is left to native scrolling and does not change tabs.
+contactRail.dispatch('pointerdown', {
+  target: projectTab, pointerId: 43, pointerType: 'touch', isPrimary: true, button: 0, clientX: 70, clientY: 10
+});
+contactRail.dispatch('pointermove', {
+  pointerId: 43, pointerType: 'touch', clientX: 75, clientY: 65
 });
 contactRail.dispatch('pointerup', {
-  pointerId: 42, pointerType: 'touch', clientX: 260, clientY: 14
+  pointerId: 43, pointerType: 'touch', clientX: 75, clientY: 65
 });
-assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Right swipe must return to Start a Project');
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Vertical movement must not change contact tabs');
 
+// Cancelled gestures must not select another tab.
 contactRail.dispatch('pointerdown', {
-  pointerId: 43, pointerType: 'touch', isPrimary: true, button: 0, clientX: 250, clientY: 10
-});
-contactRail.dispatch('pointerup', {
-  pointerId: 43, pointerType: 'touch', clientX: 190, clientY: 80
-});
-assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Vertical-dominant movement must not change contact tabs');
-
-contactRail.dispatch('pointerdown', {
-  pointerId: 44, pointerType: 'touch', isPrimary: true, button: 0, clientX: 260, clientY: 12
+  target: projectTab, pointerId: 44, pointerType: 'touch', isPrimary: true, button: 0, clientX: 70, clientY: 12
 });
 contactRail.dispatch('pointercancel', { pointerId: 44, pointerType: 'touch' });
-contactRail.dispatch('pointerup', {
-  pointerId: 44, pointerType: 'touch', clientX: 200, clientY: 13
+contactRail.dispatch('pointermove', {
+  pointerId: 44, pointerType: 'touch', clientX: 200, clientY: 12
 });
 assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Cancelled touch gestures must not change contact tabs');
+
+// A stationary press is still a tap and does not get swallowed as a drag.
+reviewTab.click();
+assert.equal(reviewTab.getAttribute('aria-selected'), 'true', 'Normal tab taps must remain functional');
 
 mobileQuery.matches = false;
 resizeHandlers.forEach(handler => handler());
@@ -230,13 +252,13 @@ assert.equal(reviewPanel.getAttribute('aria-labelledby'), null);
 responsiveForms.cleanup();
 assert.equal(resizeHandlers.size, 0, 'Contact accessibility resize listener must be cleaned up');
 
+// Cleanup must remove all drag listeners too.
 mobileQuery.matches = true;
 contactRail.dispatch('pointerdown', {
-  pointerId: 45, pointerType: 'touch', isPrimary: true, button: 0, clientX: 260, clientY: 12
+  target: projectTab, pointerId: 45, pointerType: 'touch', isPrimary: true, button: 0, clientX: 70, clientY: 12
 });
-contactRail.dispatch('pointerup', {
+contactRail.dispatch('pointermove', {
   pointerId: 45, pointerType: 'touch', clientX: 200, clientY: 12
 });
-assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Cleanup must remove the contact swipe listeners');
-
-console.log('Contact form fallback, responsive accessibility, and swipe behavior validated.');
+assert.equal(projectTab.getAttribute('aria-selected'), 'true', 'Cleanup must remove the Contact drag listeners');
+console.log('Contact form fallback, responsive accessibility, and touch-drag behavior validated.');
