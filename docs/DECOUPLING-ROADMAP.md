@@ -428,3 +428,11 @@ This migration must not:
 - **Audit finding fixed in this document:** older roadmap text incorrectly said public Curated View routing was disabled and repeated the earlier foil/CSS-extraction step as the immediate next stage. The current roadmap now reflects the implemented resolver and the actual outstanding device/browser verification gate.
 - **Still unverified:** physical-device Contact swipe feel, fresh user-side Curated View reload, and real-device grouped Lightbox/foil/3D/mobile YouTube behavior. Green CI confirms the automated suite and Pages deployment, not those physical-device checks.
 - **Scope guard:** no public runtime code was changed in this audit; production `LemuelMagbitang/lemuelmagbitang.github.io` remains out of scope. CSS extraction stays paused until the stated QA gate is cleared.
+
+
+### October 12, 2026 — Post-commit CI confirmation
+
+- **Roadmap commit validation:** [Validate portfolio run #2706](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38200028816) completed successfully for the documentation reconciliation commit. The job completed all architecture/data/path checks, Curated View resolver and CMS lifecycle contracts, contact fallback checks, runtime composition checks, JavaScript syntax checks, and the Chromium browser smoke test.
+- **Pages pipeline:** [Pages build/deployment #2829](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38200028572) completed successfully; build, status report, and deploy jobs are green.
+- **New review note:** the Contact tab's height/opacity animations can overlap if a user switches tabs repeatedly before the prior animation finishes. This is a candidate for a targeted regression test, not yet a confirmed user-visible defect; do not change the interaction until the race is reproduced or a test demonstrates incorrect cleanup/state.
+- **Next:** run the fresh browser and physical-device QA checklist. If a rapid-switch animation race is reproduced, add a focused test and cancel/settle superseded animations within the Forms feature lifecycle. Keep CSS extraction and production promotion paused.
