@@ -3119,6 +3119,21 @@ try {
       }
       const bodyBusy = await page.locator('body').getAttribute('aria-busy');
       if (bodyBusy !== 'false') throw new Error('Portfolio body did not clear aria-busy after startup readiness.');
+      const unlocked = await page.evaluate(() => {
+        const overlay = document.querySelector('#pageTransition');
+        const background = Array.from(document.body.children).find(el => el !== overlay);
+        return {
+          inert: background?.inert === true,
+          rootOverflow: document.documentElement.style.overflow,
+          bodyOverflow: document.body.style.overflow,
+          bodyOverscroll: document.body.style.overscrollBehavior,
+          bodyTouchAction: document.body.style.touchAction
+        };
+      });
+      if (unlocked.inert || unlocked.rootOverflow || unlocked.bodyOverflow ||
+          unlocked.bodyOverscroll || unlocked.bodyTouchAction) {
+        throw new Error('Loading gate did not restore page interaction state after handoff: ' + JSON.stringify(unlocked));
+      }
     }, { width: 1280, height: 900 }, null, async page => {
       // Check the active loading gate before the normal smoke-page settle.
       const locked = await page.evaluate(() => {
