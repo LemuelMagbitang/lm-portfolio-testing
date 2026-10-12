@@ -381,6 +381,30 @@ export function createLightboxMediaRenderer({
     );
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
+      const thumbnail = project?.thumbnail;
+      if (thumbnail?.src) {
+        const cleanSrc = String(thumbnail.src).split('?')[0].split('#')[0].toLowerCase();
+        const type = String(thumbnail.type || (
+          /\.(mp4|webm|mov|m4v)$/.test(cleanSrc) ? 'video' :
+          /\.json$/.test(cleanSrc) ? 'lottie' :
+          /\.(glb|gltf|obj|fbx|usdz)$/.test(cleanSrc) ? 'model' : 'image'
+        )).toLowerCase();
+        const url = resolveAssetUrl(thumbnail.src);
+        const key = type + ':' + url;
+        if (type === 'model') {
+          hasModel = true;
+          scheduleJob(key, () => preloadFetch(url, { fetchPriority: 'low' }), false);
+        } else if (type === 'video') {
+          scheduleJob(key, () => preloadVideo(url, { fetchPriority: 'low' }), false);
+        } else if (type === 'lottie') {
+          scheduleJob(key, () => preloadLottie(url, { fetchPriority: 'low' }), false);
+        } else if (type === 'youtube') {
+          if (!constrainedNetwork) scheduleJob(key, () => preloadYouTube(url), false, true);
+        } else {
+          scheduleJob(key, () => preloadImage(url, { fetchPriority: 'low' }), false);
+        }
+      }
+
       const media = Array.isArray(project?.media) ? project.media : [];
       const criticalIndex = media.findIndex(item => {
         const type = String(item?.type || '').toLowerCase();
