@@ -44,6 +44,12 @@ The current implementation is no longer in structural migration. Keep the existi
 
 The earlier foil/material comparison plan remains a historical checkpoint; it is not permission to proceed directly to CSS extraction. The current gate is **physical-device and fresh-browser verification**: (1) reload `https://lemuelmagbitang.github.io/lm-portfolio-testing/#test-portfolio` in a fresh browser session, (2) check the new mobile Contact tab swipe on a real phone, and (3) verify grouped Lightbox layouts, foil tilt/flip and Inspect/Back, focused 3D viewing, and mobile YouTube first-tap behavior against the committed recording. Keep Lightbox/foil CSS ownership extraction paused until these checks are complete. Continue targeted, evidence-backed hardening; do not initiate a broad portfolio redesign.
 
+### October 12, 2026 — loading gate and media warm-up
+
+- The existing branded loading screen now disables background interaction, locks touch/wheel/keyboard scrolling, and restores the previous inline scroll styles and inert states at readiness handoff.
+- The startup gate now waits for the full local project-media preload pool: project images, local videos, Lottie data, 3D model binaries/module graph, foil artwork layers, and project backgrounds. About-page photo/software-logo candidates are awaited on About itself. Individual media jobs keep their own timeouts; YouTube iframe/player boot remains non-blocking and is skipped on constrained connections.
+- Added a browser smoke assertion for the active loading lock. Validation initially found the shared CSS cache key was not aligned in `404.html` and `success/index.html`; both entrypoints are now aligned to the same stylesheet version as Works/About.
+
 ### October 5 runtime follow-up (historical checkpoint)
 
 The latest hardening pass keeps Show Less snapping deterministic with a cancellable 1500ms document-scroll animation, waits for the initial Projects thumbnail tier before startup handoff, warms first-media YouTube projects for faster Lightbox entry, scales desktop YouTube artwork from the available viewport, tightens desktop local-video height, and uses image hit-testing suppression plus native-drag prevention for mobile artwork save protection.
