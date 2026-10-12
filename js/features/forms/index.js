@@ -206,7 +206,7 @@ export function initForms({
 
     drag.lastX = x;
     const hoveredTab = tabAtClientX(x);
-    if (hoveredTab) {
+    if (hoveredTab && hoveredTab.getAttribute('aria-selected') !== 'true') {
       setActiveContactTab(hoveredTab.getAttribute('data-contact-tab') || 'project');
     }
   };
