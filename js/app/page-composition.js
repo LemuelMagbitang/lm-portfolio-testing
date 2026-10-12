@@ -22,7 +22,7 @@ import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 import { initGallery } from '../features/gallery/index.js?v=20261009-06';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-06';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
-import { initLightbox } from '../features/lightbox/index.js?v=20261011-10';
+import { initLightbox } from '../features/lightbox/index.js?v=20261012-01';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 import { normalizeProjects } from '../data/project-normalizer.js?v=20261010-04';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
@@ -430,34 +430,15 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(true);
 
-  // Project-media warm-up started as soon as its minimum dependencies were
-  // available. The branded loading gate below only waits on its critical tier,
-  // while the remaining secondary media continues in the background.
-  const PROJECT_MEDIA_STARTUP_GATE_MS = 6000;
-  let projectMediaGateTimer = null;
-  const projectMediaGateTimeout = new Promise(resolve => {
-    if (typeof root.defaultView?.setTimeout !== 'function') {
-      resolve({ timeout: true });
-      return;
-    }
-    projectMediaGateTimer = root.defaultView.setTimeout(
-      () => resolve({ timeout: true }),
-      PROJECT_MEDIA_STARTUP_GATE_MS
-    );
-  });
-
-  // Hold the branded loading gate for the critical local-media tier, but never
-  // indefinitely. The renderer continues its remaining background warm-up after
-  // this ceiling, so a stalled asset cannot block the visitor from the page.
-  if (!initialContactNavigation) {
-    await Promise.race([
-      projectMediaPreloadPromise,
-      projectMediaGateTimeout
-    ]);
-  }
-  if (projectMediaGateTimer !== null) {
-    root.defaultView?.clearTimeout?.(projectMediaGateTimer);
-  }
+  // Wait for all local project media before removing the branded loading
+  // screen. A Contact hash changes the final scroll target, not which assets
+  // are warmed. Each individual preload has its own timeout/error handling.
+  await Promise.all([
+    projectMediaPreloadPromise,
+    root.body?.classList.contains('about-page')
+      ? aboutAssetPreloadPromise
+      : Promise.resolve()
+  ]);
 
   // About-page prefetching and image/logo warm-up are non-critical navigation
   // optimizations. Run them in the background so they cannot delay the initial

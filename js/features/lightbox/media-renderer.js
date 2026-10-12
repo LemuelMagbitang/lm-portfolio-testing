@@ -363,11 +363,11 @@ export function createLightboxMediaRenderer({
     // A shared asset may be secondary in one project but critical in another;
     // the critical use must promote the shared job rather than being discarded.
     const scheduledJobs = new Map();
-    const scheduleJob = (key, job, critical = false) => {
+    const scheduleJob = (key, job, critical = false, nonBlocking = false) => {
       if (!key || typeof job !== 'function') return;
       const existing = scheduledJobs.get(key);
-      if (!existing || (critical && !existing.critical)) {
-        scheduledJobs.set(key, { job, critical });
+      if (!existing || (critical && !existing.critical) || (!nonBlocking && existing.nonBlocking)) {
+        scheduledJobs.set(key, { job, critical, nonBlocking });
       }
     };
     let hasModel = false;
@@ -457,7 +457,7 @@ export function createLightboxMediaRenderer({
           // embed does not guarantee that the actual video bytes are ready.
           // Queue it as low-priority warm-up alongside the critical tier.
           if (!constrainedNetwork) {
-            scheduleJob(key, () => preloadYouTube(url), false);
+            scheduleJob(key, () => preloadYouTube(url), false, true);
           }
         } else {
           // Future media types still get a cache warm-up when they expose a
@@ -492,35 +492,30 @@ export function createLightboxMediaRenderer({
 
     const criticalJobs = [];
     const secondaryJobs = [];
-    for (const { job, critical } of scheduledJobs.values()) {
-      (critical ? criticalJobs : secondaryJobs).push(job);
+    const nonBlockingJobs = [];
+    for (const { job, critical, nonBlocking } of scheduledJobs.values()) {
+      if (critical) criticalJobs.push(job);
+      else if (nonBlocking) nonBlockingJobs.push(job);
+      else secondaryJobs.push(job);
     }
 
-    // The critical tier is what the branded LM loading gate waits for:
-    // one primary media item per project plus project-level backgrounds and,
-    // when present, the 3D viewer module graph.
-    // Launch secondary warm-up immediately at lower concurrency. Browser fetch
-    // priorities keep critical work favored while the visitor is still on the
-    // branded loading screen, so more of the gallery can be ready by first use.
-    const secondaryPromise = runPreloadPool(
-      secondaryJobs,
-      constrainedNetwork ? 1 : 2
-    );
+    // Wait for all local project media during the branded loading gate:
+    // images, videos, Lottie JSON, 3D model binaries, foil layers, and project
+    // backgrounds. Third-party YouTube player boot stays non-blocking.
+    void runPreloadPool(nonBlockingJobs, constrainedNetwork ? 1 : 2).catch(() => {});
 
-    const criticalResults = await runPreloadPool(
-      criticalJobs,
-      constrainedNetwork ? 3 : 6
-    );
-
-    // Secondary media is intentionally fire-and-forget after the critical gate;
-    // its completion must never hold the first paint hostage.
-    void secondaryPromise.catch(() => {});
+    const [criticalResults, secondaryResults] = await Promise.all([
+      runPreloadPool(criticalJobs, constrainedNetwork ? 3 : 6),
+      runPreloadPool(secondaryJobs, constrainedNetwork ? 1 : 6)
+    ]);
 
     return {
-      total: criticalJobs.length + secondaryJobs.length,
-      ready: criticalResults.filter(Boolean).length,
+      total: criticalJobs.length + secondaryJobs.length + nonBlockingJobs.length,
+      ready: [...criticalResults, ...secondaryResults].filter(Boolean).length,
       criticalTotal: criticalJobs.length,
-      criticalReady: criticalResults.filter(Boolean).length
+      criticalReady: criticalResults.filter(Boolean).length,
+      secondaryTotal: secondaryJobs.length + nonBlockingJobs.length,
+      secondaryReady: secondaryResults.filter(Boolean).length
     };
   }
 

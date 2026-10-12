@@ -2792,9 +2792,20 @@ body.center-page {
   justify-content: center;
   opacity: 1;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   transition: opacity .35s ease, visibility .35s ease;
+}
+
+/* Keep the document stationary as well as covering it. This also prevents
+   mobile rubber-band scrolling through the branded startup overlay. */
+html:has(body[aria-busy="true"]),
+body[aria-busy="true"] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none;
 }
 
 .page-transition-inner {

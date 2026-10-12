@@ -3119,7 +3119,34 @@ try {
       }
       const bodyBusy = await page.locator('body').getAttribute('aria-busy');
       if (bodyBusy !== 'false') throw new Error('Portfolio body did not clear aria-busy after startup readiness.');
-    }, { width: 1280, height: 900 });
+    }, { width: 1280, height: 900 }, null, async page => {
+      // Check the active loading gate before the normal smoke-page settle.
+      const locked = await page.evaluate(() => {
+        const overlay = document.querySelector('#pageTransition');
+        const background = Array.from(document.body.children).find(el => el !== overlay);
+        const touch = new Event('touchmove', { bubbles: true, cancelable: true });
+        const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 });
+        const key = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'PageDown' });
+        document.dispatchEvent(touch);
+        document.dispatchEvent(wheel);
+        document.dispatchEvent(key);
+        return {
+          loading: overlay?.dataset.loading,
+          busy: document.body.getAttribute('aria-busy'),
+          inert: background?.inert === true,
+          touchBlocked: touch.defaultPrevented,
+          wheelBlocked: wheel.defaultPrevented,
+          keyBlocked: key.defaultPrevented,
+          rootOverflow: getComputedStyle(document.documentElement).overflow,
+          bodyOverflow: getComputedStyle(document.body).overflow
+        };
+      });
+      if (locked.loading !== 'active' || locked.busy !== 'true' || !locked.inert ||
+          !locked.touchBlocked || !locked.wheelBlocked || !locked.keyBlocked ||
+          locked.rootOverflow !== 'hidden' || locked.bodyOverflow !== 'hidden') {
+        throw new Error('Loading screen did not lock page interactions and scrolling: ' + JSON.stringify(locked));
+      }
+    });
 
     await smokePage(browser, '/', async page => {
       await assertMobileNavigation(page, 'Works page');

@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261012-03'
+  cacheVersion = '20261012-04'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -29,6 +29,7 @@ export async function bootstrapPortfolioApp({
   const MIN_LOADING_SCREEN_MS = root.body?.classList.contains('about-page') ? 120 : 450;
   let initialTransitionFrame = null;
   let initialTransitionTimer = null;
+  let loadingLock = null;
   const hasInitialHash = Boolean(String(windowRef?.location?.hash || ''));
 
   // Prevent the browser's pre-hydration fragment restoration from jumping to
@@ -42,8 +43,52 @@ export async function bootstrapPortfolioApp({
   }
 
 
+  function lockPageWhileLoading() {
+    if (loadingLock || !pageTransition || !root.body) return;
+    const body = root.body;
+    const html = root.documentElement;
+    const scrollKeys = new Set([' ', 'Spacebar', 'PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown']);
+    const previousStyles = {
+      htmlOverflow: html?.style.overflow || '',
+      bodyOverflow: body.style.overflow || '',
+      bodyOverscroll: body.style.overscrollBehavior || '',
+      bodyTouchAction: body.style.touchAction || ''
+    };
+    const inertChildren = Array.from(body.children)
+      .filter(element => element !== pageTransition)
+      .map(element => ({ element, inert: Boolean(element.inert) }));
+    inertChildren.forEach(({ element }) => { element.inert = true; });
+    if (html) html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    body.style.overscrollBehavior = 'none';
+    body.style.touchAction = 'none';
+    const blockGesture = event => {
+      if (pageTransition.dataset.loading !== 'ready' && event.cancelable) event.preventDefault();
+    };
+    const blockScrollKeys = event => {
+      if (pageTransition.dataset.loading !== 'ready' && scrollKeys.has(event.key) && event.cancelable) event.preventDefault();
+    };
+    root.addEventListener?.('touchmove', blockGesture, { capture: true, passive: false });
+    root.addEventListener?.('wheel', blockGesture, { capture: true, passive: false });
+    root.addEventListener?.('keydown', blockScrollKeys, true);
+    loadingLock = () => {
+      root.removeEventListener?.('touchmove', blockGesture, true);
+      root.removeEventListener?.('wheel', blockGesture, true);
+      root.removeEventListener?.('keydown', blockScrollKeys, true);
+      inertChildren.forEach(({ element, inert }) => { element.inert = inert; });
+      if (html) html.style.overflow = previousStyles.htmlOverflow;
+      body.style.overflow = previousStyles.bodyOverflow;
+      body.style.overscrollBehavior = previousStyles.bodyOverscroll;
+      body.style.touchAction = previousStyles.bodyTouchAction;
+      loadingLock = null;
+    };
+  }
+
+  function unlockPageAfterLoading() { loadingLock?.(); }
+
   function showInitialPageTransition() {
     if (!pageTransition) return;
+    lockPageWhileLoading();
     pageTransition.classList.remove('is-hidden', 'is-entering', 'is-error');
     pageTransition.setAttribute('aria-hidden', 'false');
     pageTransition.dataset.loading = 'active';
@@ -69,6 +114,7 @@ export async function bootstrapPortfolioApp({
     pageTransition.setAttribute('aria-hidden', 'true');
     pageTransition.dataset.loading = 'ready';
     root.body?.setAttribute('aria-busy', 'false');
+    unlockPageAfterLoading();
   }
 
   async function waitForReadyPaint() {
