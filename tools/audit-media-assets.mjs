@@ -34,7 +34,7 @@ const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/product-packaging/shampoo00.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/product-packaging/aureus00.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/aol/continuity.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/tender-reverence.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.',
+  ['assets/projects/ephiphany-3d-illustration/tender-reverence.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/product-packaging/wine-box.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/graphic-design/wine-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/ephiphany-3d-illustration/melodies-of-innerself.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
