@@ -5728,6 +5728,8 @@ try {
 
     let cmsSmokeMediaSha = 'smoke-webp';
     let cmsSmokeUploadPayload = null;
+    let cmsSmokeJpegMediaSha = 'smoke-jpeg-webp';
+    let cmsSmokeJpegUploadPayload = null;
     await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
       // GitHub before the application shell is exposed. The shell becomes
@@ -5913,6 +5915,61 @@ try {
         throw new Error(
           'CMS WebP conversion changed the uploaded image dimensions: ' +
           JSON.stringify({ expected: expectedImageDimensions, actual: uploadedImageDimensions })
+        );
+      }
+
+      // Exercise JPEG input too: decode the original with the browser to account
+      // for its natural orientation, then ensure the WebP derivative keeps that
+      // same pixel width and height instead of silently resizing the artwork.
+      const smokeJpegBytes = readFileSync(new URL('../assets/projects/site/og-image.jpg', import.meta.url));
+      const smokeJpegBase64 = smokeJpegBytes.toString('base64');
+      const expectedJpegDimensions = await page.evaluate(async base64 => {
+        const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+        const objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+        try {
+          const image = new Image();
+          image.src = objectUrl;
+          await image.decode();
+          return { width: image.naturalWidth, height: image.naturalHeight };
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      }, smokeJpegBase64);
+      await page.locator('#content #fileInput').setInputFiles({
+        name: 'smoke-jpeg.jpg',
+        mimeType: 'image/jpeg',
+        buffer: smokeJpegBytes
+      });
+      await page.waitForFunction(() => {
+        const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
+          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke-jpeg.webp'));
+        return image && new URL(image.src).searchParams.get('v') === 'smoke-jpeg-replaced';
+      }, null, { timeout: 8000 });
+      if (!cmsSmokeJpegUploadPayload || cmsSmokeJpegUploadPayload.sha !== 'smoke-jpeg-webp') {
+        throw new Error('CMS JPEG upload did not send the current existing-WebP SHA.');
+      }
+      const uploadedJpegBytes = Buffer.from(cmsSmokeJpegUploadPayload.content || '', 'base64');
+      if (uploadedJpegBytes.toString('ascii', 0, 4) !== 'RIFF' ||
+          uploadedJpegBytes.toString('ascii', 8, 12) !== 'WEBP') {
+        throw new Error('CMS JPEG upload was not encoded as a valid WebP payload.');
+      }
+      const uploadedJpegDimensions = await page.evaluate(async base64 => {
+        const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+        const objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/webp' }));
+        try {
+          const image = new Image();
+          image.src = objectUrl;
+          await image.decode();
+          return { width: image.naturalWidth, height: image.naturalHeight };
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      }, cmsSmokeJpegUploadPayload.content);
+      if (uploadedJpegDimensions.width !== expectedJpegDimensions.width ||
+          uploadedJpegDimensions.height !== expectedJpegDimensions.height) {
+        throw new Error(
+          'CMS JPEG-to-WebP conversion changed pixel dimensions: ' +
+          JSON.stringify({ expected: expectedJpegDimensions, actual: uploadedJpegDimensions })
         );
       }
 
@@ -6347,6 +6404,20 @@ try {
           });
           return;
         }
+        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke-jpeg.webp' &&
+            route.request().method() === 'PUT') {
+          cmsSmokeJpegUploadPayload = route.request().postDataJSON();
+          cmsSmokeJpegMediaSha = 'smoke-jpeg-replaced';
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              content: { sha: cmsSmokeJpegMediaSha },
+              commit: { sha: 'smoke-jpeg-upload-commit' }
+            })
+          });
+          return;
+        }
         if (url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method() === 'PUT') {
           // Delay a normal content save so the browser smoke test can
           // navigate away before its completion callback runs.
@@ -6384,7 +6455,8 @@ try {
               tree: [
                 { type: 'tree', path: 'assets', sha: 'smoke-assets' },
                 { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
-                { type: 'blob', path: 'assets/projects/smoke.webp', sha: cmsSmokeMediaSha, size: 12 }
+                { type: 'blob', path: 'assets/projects/smoke.webp', sha: cmsSmokeMediaSha, size: 12 },
+                { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: cmsSmokeJpegMediaSha, size: 12 }
               ]
             })
           });
