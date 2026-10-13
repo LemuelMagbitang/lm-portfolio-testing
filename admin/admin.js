@@ -178,11 +178,11 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
   // allowing the later upload to replace the earlier one.
   const reservedNames=new Set();
   const jobs = files.map(file => {
-    const desiredName=cmsWebPTargetName(file.name);
+    const desiredName=cmsUploadNeedsWebP(file) ? cmsWebPTargetName(file.name) : file.name;
     const targetName=uniqueCmsUploadName(desiredName,reservedNames);
     reservedNames.add(targetName);
     const path = folder + '/' + targetName;
-    const isPreviewable = /^image\/|^video\//.test(file.type);
+    const isPreviewable = /^image\/|^video\//.test(file.type) || cmsUploadNeedsWebP(file);
     const localUrl = isPreviewable ? URL.createObjectURL(file) : null;
     const tile = document.createElement('div');
     tile.className = 'media-tile is-uploading';
