@@ -37,6 +37,75 @@ function bytesLabel(bytes) {
   return (bytes / MIB).toFixed(2) + ' MiB';
 }
 
+const JPEG_START_OF_FRAME_MARKERS = new Set([
+  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7,
+  0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf
+]);
+
+// Read only a bounded header to help distinguish images that need resizing
+// from files that mainly need a more efficient delivery format. This is an
+// audit-only hint: source images are never rewritten or removed here.
+function readRasterDimensions(file, ext) {
+  if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg') return null;
+
+  let descriptor = null;
+  try {
+    descriptor = fs.openSync(file, 'r');
+    const header = Buffer.alloc(256 * 1024);
+    const bytesRead = fs.readSync(descriptor, header, 0, header.length, 0);
+    const bytes = header.subarray(0, bytesRead);
+
+    if (ext === '.png' && bytes.length >= 24 &&
+        bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e &&
+        bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a &&
+        bytes[6] === 0x1a && bytes[7] === 0x0a) {
+      const width = bytes.readUInt32BE(16);
+      const height = bytes.readUInt32BE(20);
+      return width > 0 && height > 0 ? { width, height } : null;
+    }
+
+    if ((ext === '.jpg' || ext === '.jpeg') &&
+        bytes.length >= 4 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+      let offset = 2;
+      while (offset + 3 < bytes.length) {
+        if (bytes[offset] !== 0xff) {
+          offset += 1;
+          continue;
+        }
+
+        while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
+        if (offset >= bytes.length) break;
+        const marker = bytes[offset++];
+
+        // Standalone markers have no length field.
+        if (marker === 0x00 || marker === 0x01 || marker === 0xd8 ||
+            marker === 0xd9 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+        if (offset + 2 > bytes.length) break;
+
+        const segmentLength = bytes.readUInt16BE(offset);
+        if (segmentLength < 2 || offset + segmentLength > bytes.length) break;
+
+        if (JPEG_START_OF_FRAME_MARKERS.has(marker) && segmentLength >= 7) {
+          const height = bytes.readUInt16BE(offset + 3);
+          const width = bytes.readUInt16BE(offset + 5);
+          return width > 0 && height > 0 ? { width, height } : null;
+        }
+
+        offset += segmentLength;
+      }
+    }
+  } catch (_) {
+    // A failed metadata read should not turn a non-blocking asset audit into
+    // a site validation failure. File readability is handled elsewhere.
+  } finally {
+    if (descriptor !== null) {
+      try { fs.closeSync(descriptor); } catch (_) {}
+    }
+  }
+
+  return null;
+}
+
 function collectFiles(dir) {
   const files = [];
   if (!fs.existsSync(dir)) return files;
@@ -82,7 +151,7 @@ function auditAssets() {
 
     if (RASTER_EXTENSIONS.has(ext)) {
       findings.legacyRaster.push({ path: relative, size, ext });
-      if (size >= 1 * MIB) findings.largeImages.push({ path: relative, size, ext });
+      if (size >= 1 * MIB) findings.largeImages.push({ path: relative, size, ext, dimensions: readRasterDimensions(file, ext) });
     }
 
     if (VIDEO_EXTENSIONS.has(ext) && !PREFERRED_VIDEO_EXTENSIONS.has(ext)) {
@@ -168,7 +237,9 @@ reportItems(
 reportItems(
   'Raster images at or above 1 MiB',
   findings.largeImages,
-  item => item.path + ' — ' + bytesLabel(item.size)
+  item => item.path + ' — ' + bytesLabel(item.size) + (item.dimensions
+    ? ' — ' + item.dimensions.width + '×' + item.dimensions.height + ' px (' + ((item.dimensions.width * item.dimensions.height) / 1_000_000).toFixed(1) + ' MP)'
+    : ' — dimensions unavailable for this format/header')
 );
 reportItems(
   'Assets at or above 5 MiB',
