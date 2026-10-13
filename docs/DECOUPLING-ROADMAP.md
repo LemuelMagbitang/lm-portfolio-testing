@@ -638,3 +638,9 @@ This migration must not:
 - Restored the exact original JPEG (56,418 bytes vs. 65,398-byte WebP), saving **8,980 bytes** without re-encoding. Across twenty-seven reviewed originals, targeted rollbacks now save **1,118,831 bytes (1,092.6 KiB)**. The current migrated asset payload is **22,933,941 bytes (21.871 MiB)**, down **13,611,895 bytes (12.982 MiB / 37.25%)** from the original 36,545,836 bytes.
 - Three initial source-larger WebP rows remain in the historical conversion table. The only remaining project-referenced one is just 28 bytes larger than its original; leave it unchanged rather than churn references for negligible savings. Unreferenced asset candidates remain untouched pending a deliberate use-case review.
 - **Next:** validate About-page source/preload and the full browser smoke plus Pages deploy on this commit. If green, shift from material image savings to the open CMS round-trip and real-device QA rather than re-encoding borderline assets.
+
+### October 14, 2026 — Show Less smoke-test timing corrected
+
+- Validation on `a7d83e32efa86c63e4014e76b0624f30ef3a9e09` passed the static checks and site-data audit, and Pages deployment passed; browser smoke caught the mobile Show Less style assertion sampling mid-transition. At failure, the button was `expanded: true`, while background/color/backdrop-filter still carried interpolated CSS transition values. The same run confirmed the new About `profile.jpg` request returned HTTP 200.
+- The app's intentional 280 ms material transition remains unchanged. The smoke test now waits (up to 2 seconds) for the actual expanded contract—solid white background, black text, and no backdrop blur—before asserting it. This removes dependence on an arbitrary fixed wait while still failing if the final style is wrong.
+- Re-run full validation/browser smoke and Pages deployment before continuing asset or performance edits.

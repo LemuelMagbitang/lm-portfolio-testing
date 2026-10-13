@@ -2922,7 +2922,16 @@ try {
       }
 
       await showMoreAfterResize.click();
-      await page.waitForTimeout(300);
+      await page.waitForFunction(() => {
+        const el = document.querySelector('#showMoreBtn');
+        if (!el || !el.classList.contains('expanded')) return false;
+        const style = getComputedStyle(el);
+        return (
+          style.backgroundColor === 'rgb(255, 255, 255)' &&
+          style.color === 'rgb(0, 0, 0)' &&
+          style.backdropFilter === 'none'
+        );
+      }, null, { timeout: 2000 });
       const expandedShowLessMaterial = await showMoreAfterResize.evaluate(el => {
         const style = getComputedStyle(el);
         return {
