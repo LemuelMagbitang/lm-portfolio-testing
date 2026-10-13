@@ -532,7 +532,8 @@ This migration must not:
 
 ## October 13, 2026 — WebP asset migration completed
 
-- Converted 88 existing static PNG/JPEG assets to WebP and rewrote 16 runtime/test source files.
-- Payload changed from 34.93 MiB to 22.99 MiB (34.2% net reduction).
+- Converted 86 existing static PNG/JPEG assets to WebP and rewrote runtime/test source paths.
+- Kept the site favicon in PNG and the primary Open Graph social-sharing image in JPEG for compatibility.
+- Eligible raster payload changed from 34.85 MiB to 22.94 MiB (11.92 MiB / 34.2% reduction).
 - The migration report lists dimensions and per-file sizes at docs/WEBP-ASSET-MIGRATION-REPORT.md.
-- CMS PNG/JPEG uploads now convert to WebP before GitHub upload; SVG/vector, animated GIF, existing WebP, video and 3D sources remain unchanged.
+- CMS PNG/JPEG uploads convert to WebP before GitHub upload. SVG/vector, animated GIF, existing WebP, videos, 3D sources, favicon and primary/versioned Open Graph images remain in their original formats.

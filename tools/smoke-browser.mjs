@@ -3105,14 +3105,14 @@ try {
         description: '',
         thumbnail: {
           type: 'image',
-          src: 'assets/projects/site/favicon.webp',
+          src: 'assets/projects/site/favicon.png',
           focus: '50% 50%',
           zoom: 1
         },
         media: [
           { type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefghijk', caption: 'Short fixture', orientation: '' },
           { type: 'youtube', src: 'https://www.youtube.com/watch?v=lmnopqrstuv', caption: 'Landscape fixture', orientation: 'landscape' },
-          { type: 'image', src: 'assets/projects/site/favicon.webp', caption: 'Image fixture', orientation: 'square' }
+          { type: 'image', src: 'assets/projects/site/favicon.png', caption: 'Image fixture', orientation: 'square' }
         ]
       }];
       await page.route(`${BASE_URL}/data/projects.json**`, async route => {

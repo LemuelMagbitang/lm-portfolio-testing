@@ -29,6 +29,19 @@ function extension(file) {
   return path.extname(file).toLowerCase();
 }
 
+function isCompatibilityRaster(file) {
+  const rel = path.relative(ROOT, file).split(path.sep).join('/').toLowerCase();
+  const prefix = 'assets/projects/site/';
+  if (rel === prefix + 'favicon.png') return true;
+  if (!rel.startsWith(prefix)) return false;
+  const name = rel.slice(prefix.length);
+  if (['og-image.jpg', 'og-image.jpeg', 'og-image.png'].includes(name)) return true;
+  const ext = path.extname(name);
+  if (!['.jpg', '.jpeg', '.png'].includes(ext)) return false;
+  const stem = name.slice(0, -ext.length);
+  return stem === 'og-preview' || /^og-preview-v[0-9]+$/.test(stem);
+}
+
 function collectFiles(directory) {
   const files = [];
   if (!fs.existsSync(directory)) return files;
@@ -80,9 +93,11 @@ function prettyBytes(bytes) {
 
 async function main() {
   if (!fs.existsSync(ASSET_ROOT)) throw new Error('assets/ directory is missing.');
-  const candidates = collectFiles(ASSET_ROOT)
+  const allRasterCandidates = collectFiles(ASSET_ROOT)
     .filter(file => CONVERTIBLE.has(extension(file)))
     .sort((a, b) => a.localeCompare(b));
+  const preservedCompatibilityAssets = allRasterCandidates.filter(isCompatibilityRaster);
+  const candidates = allRasterCandidates.filter(file => !isCompatibilityRaster(file));
 
   if (!candidates.length) {
     console.log('[webp-migration] No PNG/JPEG assets remain; nothing to convert.');
@@ -205,8 +220,9 @@ async function main() {
     '- WebP payload: ' + prettyBytes(afterBytes),
     '- Net reduction: ' + prettyBytes(savings) + ' (' + percent.toFixed(1) + '%)',
     '- Animated/multi-page files skipped: ' + skipped.length,
+    '- Compatibility-sensitive PNG/JPEG files preserved: ' + preservedCompatibilityAssets.length,
     '',
-    'PNG files were encoded losslessly to protect transparent art and foil/mask layers. JPEG files were encoded as WebP at quality 92. SVG, GIF, existing WebP, videos, and 3D files were not converted.',
+    'PNG files were encoded losslessly to protect transparent art and foil/mask layers. JPEG files were encoded as WebP at quality 92. The site favicon and primary/versioned Open Graph social preview images stay PNG/JPEG for compatibility. SVG, GIF, existing WebP, videos, and 3D files were not converted.',
     '',
     '## Converted assets',
     '',

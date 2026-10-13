@@ -1811,7 +1811,7 @@ RENDERERS.settings = function(data){
   s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
   s.showHeroMessage = s.showHeroMessage !== false;
   s.showFooterMessage = s.showFooterMessage === true;
-  s.ogImage = s.ogImage || 'assets/projects/site/og-image.webp';
+  s.ogImage = s.ogImage || 'assets/projects/site/og-image.jpg';
   s.ogImageVersion = Math.max(1, Number(s.ogImageVersion) || 2);
   s.ogImageAlt = s.ogImageAlt || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio';
 
