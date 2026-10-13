@@ -33,7 +33,11 @@ const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
   'assets/projects/product-packaging/shampoo00.jpg',
   'assets/projects/product-packaging/aureus00.jpg',
   'assets/projects/aol/continuity.jpg',
-  'assets/projects/ephiphany-3d-illustration/tender-reverence.jpg'
+  'assets/projects/ephiphany-3d-illustration/tender-reverence.jpg',
+  'assets/projects/product-packaging/wine-box.jpg',
+  'assets/projects/graphic-design/wine-poster.jpg',
+  'assets/projects/ephiphany-3d-illustration/melodies-of-innerself.jpg',
+  'assets/projects/graphic-design/commercial-renders.jpg'
 ]);
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.htm', '.js', '.mjs', '.cjs', '.json', '.md', '.txt',
