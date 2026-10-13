@@ -41,7 +41,8 @@ const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/graphic-design/commercial-renders.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/ephiphany-3d-illustration/aqua-vitae.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/retail-spatial-layouts/lss03.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/haeru/haeru-logo-construct.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
+  ['assets/projects/haeru/haeru-logo-construct.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/site/profile.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);
