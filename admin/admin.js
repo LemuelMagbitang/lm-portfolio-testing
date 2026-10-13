@@ -4131,6 +4131,17 @@ function closeMediaFullPreview(){
   if(state.trigger?.isConnected){try{state.trigger.focus({preventScroll:true});}catch(_){state.trigger.focus();}}
 }
 
+function formatMediaFileSize(value){
+  if(value===null||value===undefined||value===''||!Number.isFinite(Number(value))||Number(value)<0) return 'Size unavailable';
+  const bytes=Math.round(Number(value));
+  if(bytes<1024) return bytes.toLocaleString('en-US')+' '+(bytes===1?'byte':'bytes');
+  const units=['KiB','MiB','GiB','TiB'];
+  let size=bytes,unitIndex=-1;
+  do{size/=1024;unitIndex+=1;}while(size>=1024&&unitIndex<units.length-1);
+  const readable=size.toLocaleString('en-US',{maximumFractionDigits:2,minimumFractionDigits:size<10?2:1});
+  return readable+' '+units[unitIndex]+' ('+bytes.toLocaleString('en-US')+' bytes)';
+}
+
 function openMediaFullPreview(item,trigger){
   closeMediaFullPreview();
   const kind=fileKind(item.path);
@@ -4156,10 +4167,15 @@ function openMediaFullPreview(item,trigger){
   const pathLabel=document.createElement('span');
   pathLabel.className='media-full-preview-path';
   pathLabel.textContent=item.path;
+  const sizeLabel=document.createElement('span');
+  sizeLabel.className='media-full-preview-size';
+  sizeLabel.textContent='File size · '+formatMediaFileSize(item.size);
+  const hasExactSize=item.size!==null&&item.size!==undefined&&item.size!==''&&Number.isFinite(Number(item.size))&&Number(item.size)>=0;
+  sizeLabel.title=hasExactSize?'Exact repository blob size: '+Number(item.size).toLocaleString('en-US')+' bytes':'Repository blob size unavailable';
   const kindLabel=document.createElement('span');
   kindLabel.className='media-full-preview-kind';
   kindLabel.textContent=kind==='model'?'3D MODEL':kind.toUpperCase();
-  heading.append(title,pathLabel);
+  heading.append(title,pathLabel,sizeLabel);
   const closeButton=document.createElement('button');
   closeButton.type='button';
   closeButton.className='icon-btn media-full-preview-close';

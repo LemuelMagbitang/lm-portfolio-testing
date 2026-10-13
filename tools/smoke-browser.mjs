@@ -5987,6 +5987,8 @@ try {
       await page.locator('#content .media-tile').filter({ hasText: 'smoke-jpeg.webp' }).locator('.thumb').click();
       await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
       await fullPreview.locator('.media-full-preview-stage > img').waitFor({ state: 'visible', timeout: 5000 });
+      const fullFileSize = (await fullPreview.locator('.media-full-preview-size').textContent()).trim();
+      if (!fullFileSize.includes('12 bytes')) throw new Error('CMS full asset preview must display the exact GitHub repository file size.');
       const fullImageFit = await fullPreview.locator('.media-full-preview-stage > img').evaluate(el => getComputedStyle(el).objectFit);
       if (fullImageFit !== 'contain') throw new Error('CMS full image preview does not preserve the whole artwork in view.');
       await page.keyboard.press('Escape');

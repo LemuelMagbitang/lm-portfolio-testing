@@ -918,6 +918,7 @@ button.icon-btn,
 .media-full-preview-heading{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
 .media-full-preview-title{color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .media-full-preview-path{color:var(--text-dim);font-size:11px;line-height:1.4;overflow-wrap:anywhere;}
+.media-full-preview-size{color:#bcbcbc;font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
 .media-full-preview-kind{flex:0 0 auto;padding:5px 8px;border:1px solid var(--line-soft);border-radius:6px;color:#aaa;font-size:9px;font-weight:800;letter-spacing:.09em;}
 .media-full-preview-close{width:38px;height:38px;flex:0 0 38px;font-size:15px;color:#eee;}
 .media-full-preview-stage{

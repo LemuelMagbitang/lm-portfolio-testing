@@ -371,10 +371,16 @@ assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 assert.ok(/project-preview-runtime\.js\?v=20261010-05/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
-assert.ok(/admin\.js\?v=20261013-01/.test(adminHtml),
+assert.ok(/admin\.js\?v=20261013-02/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
-assert.ok(/admin\.css\?v=20261013-01/.test(adminHtml),
+assert.ok(/admin\.css\?v=20261013-02/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
+assert.ok(/function formatMediaFileSize\\(value\\)/.test(admin),
+  'CMS full Media Library previews must format sizes from the GitHub tree metadata.');
+assert.ok(admin.includes("sizeLabel.textContent='File size · '+formatMediaFileSize(item.size)"),
+  'CMS full Media Library previews must show the file size in the preview header.');
+assert.ok(css.includes('.media-full-preview-size{'),
+  'CMS full Media Library preview file-size metadata must have a dedicated readable style.');
 assert.ok(css.includes('.project-list-item.is-open .project-collapsed-preview{display:flex;flex:0 0 140px;width:140px;height:76px;margin-left:auto;}') &&
   /@media\(max-width:520px\)\{[\s\S]*?\.project-list-item\.is-open \.project-collapsed-preview\{flex-basis:72px;width:72px;height:56px;\}/.test(css),
   'Expanded CMS project cards must retain their own thumbnail with a compact mobile layout.');
