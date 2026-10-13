@@ -1,4 +1,4 @@
-name: One-time WebP asset migration (path-safe rewrite)
+name: One-time WebP asset migration (boundary-aware references)
 
 on:
   push:

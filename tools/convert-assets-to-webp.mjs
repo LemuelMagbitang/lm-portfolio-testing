@@ -60,6 +60,17 @@ function imageAliases(sourcePath) {
   return [...aliases].sort((a, b) => b.length - a.length);
 }
 
+function createUniqueBasenamePattern(basename) {
+  const escaped = basename.replace(/[.*+?^${}()|[\]\\]/g, '\\function replaceEvery(value, search, replacement) {
+  return value.split(search).join(replacement);
+}');
+  return new RegExp('(?<![A-Za-z0-9_-])' + escaped + '(?![A-Za-z0-9_-])', 'g');
+}
+
+function replaceUniqueBasename(value, basename, targetBasename) {
+  return value.replace(createUniqueBasenamePattern(basename), targetBasename);
+}
+
 function replaceEvery(value, search, replacement) {
   return value.split(search).join(replacement);
 }
@@ -124,6 +135,12 @@ async function main() {
     return;
   }
 
+  const basenameCounts = new Map();
+  for (const item of mappings) {
+    const basename = path.posix.basename(item.sourcePath);
+    basenameCounts.set(basename, (basenameCounts.get(basename) || 0) + 1);
+  }
+
   const textFiles = collectFiles(ROOT).filter(shouldRewrite).sort((a, b) => a.localeCompare(b));
   let rewrittenFiles = 0;
   for (const file of textFiles) {
@@ -136,6 +153,9 @@ async function main() {
       const basename = path.posix.basename(item.sourcePath);
       const aliases = imageAliases(item.sourcePath);
       for (const alias of aliases) content = replaceEvery(content, alias, item.targetPath);
+      if (basenameCounts.get(basename) === 1) {
+        content = replaceUniqueBasename(content, basename, path.posix.basename(item.targetPath));
+      }
     }
     if (content !== original) {
       fs.writeFileSync(file, content, 'utf8');
@@ -153,7 +173,8 @@ async function main() {
     for (const item of mappings) {
       const basename = path.posix.basename(item.sourcePath);
       const aliases = imageAliases(item.sourcePath);
-      const unresolvedAlias = aliases.find(alias => content.includes(alias));
+      const unresolvedAlias = aliases.find(alias => content.includes(alias)) ||
+        (basenameCounts.get(basename) === 1 && createUniqueBasenamePattern(basename).test(content) ? basename : null);
       if (unresolvedAlias) {
         unresolved.push(relative(file) + ' still refers to ' + unresolvedAlias);
         if (unresolved.length >= 20) break;
