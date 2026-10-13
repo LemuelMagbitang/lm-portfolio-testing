@@ -29,7 +29,12 @@ export async function preloadAboutAssets({
           finish(false);
         }, ABOUT_IMAGE_PRELOAD_TIMEOUT_MS)
       : null;
-    image.onload = () => finish(true);
+    image.onload = async () => {
+      // Image load confirms the resource arrived; decode it before handoff when
+      // the browser supports decode(), matching the Lightbox preload contract.
+      try { await image.decode?.(); } catch (_) {}
+      finish(true);
+    };
     image.onerror = () => finish(false);
     image.src = value;
   });

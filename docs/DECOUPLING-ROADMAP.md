@@ -459,3 +459,12 @@ This migration must not:
 - The Lightbox media warm-up now waits for all scheduled local project media, thumbnails, project backgrounds, model binaries, Lottie data, and holographic layers. Third-party YouTube player boot remains deliberately non-blocking because it is external and expensive to initialize.
 - The About page now awaits its visible hero/footer animation features, profile/software content, gallery composition, and local About asset warm-up before removing the loading gate. Font readiness is also awaited on both page types.
 - Validation and Pages deployment passed on the prior loading-gate commit. The additional About startup readiness change is being validated now; this is not a claim of physical-device verification. Loading the complete local media set may extend startup on slow networks, and individual media preload timeouts remain the fallback for unavailable assets.
+
+
+
+### October 13, 2026 — About image decode readiness
+
+- The prior loading-gate commit's browser smoke validation and Pages deployment both passed.
+- Tightened About asset warm-up so successfully loaded images also request decode completion before the preload promise resolves, aligning the About-image preloader with the Lightbox image path. Decode failures still fall back to the successful load event, and the existing 4.5-second per-image timeout remains the escape hatch.
+- Added lifecycle/source-contract assertions for the decode wait and advanced the startup module cache version to `20261013-02` across Works/About entrypoints, bootstrap, and the About feature import.
+- This does not claim video bytes are fully downloaded, Lottie animations are pre-rendered, or 3D models are already GPU-ready. Physical-device checks remain open.

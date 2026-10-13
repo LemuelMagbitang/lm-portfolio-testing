@@ -160,6 +160,8 @@ const aboutSource = await readFile(new URL('../js/features/about/index.js', impo
 assert.match(aboutSource, /image\.src = ''/);
 assert.match(aboutSource, /image\.onload = null/);
 assert.match(aboutSource, /image\.onerror = null/);
+assert.match(aboutSource, /image\.onload = async \(\) => \{/);
+assert.match(aboutSource, /await image\.decode\?\.\(\)/);
 
 const lottieSource = await readFile(new URL('../js/infrastructure/lottie/player.js', import.meta.url), 'utf8');
 assert.match(lottieSource, /\.finally\(\(\) => \{/);
