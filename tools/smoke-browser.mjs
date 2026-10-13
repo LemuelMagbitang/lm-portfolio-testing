@@ -5726,7 +5726,7 @@ try {
       }
     }, { width: 390, height: 844 });
 
-    let cmsSmokeMediaSha = 'smoke-jpg';
+    let cmsSmokeMediaSha = 'smoke-webp';
     let cmsSmokeUploadPayload = null;
     await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
@@ -5867,17 +5867,22 @@ try {
       // Contents SHA, then the tile should use the returned SHA as its cache key.
       await page.locator('#content #uploadPath').fill('assets/projects');
       await page.locator('#content #fileInput').setInputFiles({
-        name: 'smoke.jpg',
-        mimeType: 'image/jpeg',
-        buffer: Buffer.from('replacement image bytes')
+        name: 'smoke.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/dSAAAAAASUVORK5CYII=', 'base64')
       });
       await page.waitForFunction(() => {
         const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
-          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke.jpg'));
+          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke.webp'));
         return image && new URL(image.src).searchParams.get('v') === 'smoke-replac';
       }, null, { timeout: 8000 });
-      if (!cmsSmokeUploadPayload || cmsSmokeUploadPayload.sha !== 'smoke-jpg') {
-        throw new Error('CMS same-name media upload did not send the current existing-file SHA.');
+      if (!cmsSmokeUploadPayload || cmsSmokeUploadPayload.sha !== 'smoke-webp') {
+        throw new Error('CMS same-name WebP upload did not send the current existing-file SHA.');
+      }
+      const uploadedBytes = Buffer.from(cmsSmokeUploadPayload.content || '', 'base64');
+      if (uploadedBytes.toString('ascii', 0, 4) !== 'RIFF' ||
+          uploadedBytes.toString('ascii', 8, 12) !== 'WEBP') {
+        throw new Error('CMS PNG upload was not encoded as a valid WebP payload.');
       }
 
       // Refresh uses the same asynchronous tree request after the Media
@@ -6297,10 +6302,10 @@ try {
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
-        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke.jpg' &&
+        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke.webp' &&
             route.request().method() === 'PUT') {
           cmsSmokeUploadPayload = route.request().postDataJSON();
-          cmsSmokeMediaSha = 'smoke-replaced-jpg';
+          cmsSmokeMediaSha = 'smoke-replaced-webp';
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -6348,7 +6353,7 @@ try {
               tree: [
                 { type: 'tree', path: 'assets', sha: 'smoke-assets' },
                 { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
-                { type: 'blob', path: 'assets/projects/smoke.jpg', sha: cmsSmokeMediaSha, size: 12 }
+                { type: 'blob', path: 'assets/projects/smoke.webp', sha: cmsSmokeMediaSha, size: 12 }
               ]
             })
           });

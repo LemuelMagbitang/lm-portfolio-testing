@@ -78,6 +78,89 @@ function handleMissingFile(el, kind){
 // needs to change. What happens once every file settles — which
 // screen re-navigates to show it — stays with each caller, since
 // Media Library and the picker want different things there.
+function cmsUploadNeedsWebP(file){
+  const name=String(file?.name||'');
+  const type=String(file?.type||'').toLowerCase();
+  if(!/\.(png|jpe?g)$/i.test(name)) return false;
+  // SVG is vector artwork, GIF may be animated, and already-modern formats
+  // should not be rasterized just because the picker accepts image/*.
+  return !type || ['image/png','image/jpeg','image/jpg','application/octet-stream'].includes(type);
+}
+
+function cmsWebPTargetName(name){
+  return String(name||'').replace(/\.(?:png|jpe?g)$/i,'.webp');
+}
+
+function convertCmsUploadToWebP(file){
+  if(!cmsUploadNeedsWebP(file)) return Promise.resolve({file,converted:false});
+  if(typeof URL?.createObjectURL!=='function' || typeof File!=='function'){
+    return Promise.reject(new Error('This browser cannot prepare WebP uploads. Try a current browser.'));
+  }
+
+  return new Promise((resolve,reject)=>{
+    const objectUrl=URL.createObjectURL(file);
+    const image=new Image();
+    let canvas=null;
+    let settled=false;
+    const cleanup=()=>{
+      URL.revokeObjectURL(objectUrl);
+      image.onload=null;
+      image.onerror=null;
+      if(canvas){canvas.width=0;canvas.height=0;canvas=null;}
+    };
+    const fail=error=>{
+      if(settled)return;
+      settled=true;
+      cleanup();
+      reject(error instanceof Error?error:new Error('Could not convert this image to WebP.'));
+    };
+
+    image.onload=()=>{
+      if(settled)return;
+      try{
+        const width=Number(image.naturalWidth)||0;
+        const height=Number(image.naturalHeight)||0;
+        if(width<1||height<1) throw new Error('The selected image has invalid dimensions.');
+        canvas=document.createElement('canvas');
+        canvas.width=width;
+        canvas.height=height;
+        const context=canvas.getContext('2d',{alpha:true});
+        if(!context) throw new Error('This browser could not create an image conversion surface.');
+        context.drawImage(image,0,0,width,height);
+        canvas.toBlob(blob=>{
+          if(settled)return;
+          if(!blob){fail(new Error('The browser could not encode this image as WebP.'));return;}
+          if(blob.type!=='image/webp'){
+            fail(new Error('WebP encoding is not supported by this browser. The original was not uploaded.'));
+            return;
+          }
+          settled=true;
+          const targetName=cmsWebPTargetName(file.name);
+          const convertedFile=new File([blob],targetName,{
+            type:'image/webp',
+            lastModified:file.lastModified||Date.now()
+          });
+          cleanup();
+          resolve({file:convertedFile,converted:true});
+        },'image/webp',0.92);
+      }catch(error){fail(error);}
+    };
+    image.onerror=()=>fail(new Error('Could not read the selected image for WebP conversion.'));
+    image.src=objectUrl;
+  });
+}
+
+function uniqueCmsUploadName(name, usedNames){
+  if(!usedNames.has(name)) return name;
+  const dot=name.lastIndexOf('.');
+  const stem=dot>0?name.slice(0,dot):name;
+  const extension=dot>0?name.slice(dot):'';
+  let suffix=2;
+  let candidate=stem+'-'+suffix+extension;
+  while(usedNames.has(candidate)){suffix+=1;candidate=stem+'-'+suffix+extension;}
+  return candidate;
+}
+
 async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -86,34 +169,69 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
   // cannot make a same-name upload attempt a replacement with a stale SHA.
   let uploadTree;
   try { uploadTree = (await loadMediaTree(true) || []).slice(); }
-  catch(err){ toast(`Couldn't refresh the Media Library before upload: ${err.message}`, true); return; }
+  catch(err){ toast("Couldn't refresh the Media Library before upload: " + err.message, true); return; }
   const emptyBanner = gridEl.querySelector('.banner.muted');
   if (emptyBanner) emptyBanner.remove();
 
+  // Two source files such as poster.png and poster.jpg both normalize to
+  // poster.webp. Keep them distinct within a single batch instead of silently
+  // allowing the later upload to replace the earlier one.
+  const reservedNames=new Set();
   const jobs = files.map(file => {
-    const path = folder + '/' + file.name;
+    const desiredName=cmsWebPTargetName(file.name);
+    const targetName=uniqueCmsUploadName(desiredName,reservedNames);
+    reservedNames.add(targetName);
+    const path = folder + '/' + targetName;
     const isPreviewable = /^image\/|^video\//.test(file.type);
     const localUrl = isPreviewable ? URL.createObjectURL(file) : null;
     const tile = document.createElement('div');
     tile.className = 'media-tile is-uploading';
     const thumbInner = !localUrl ? FILE_ICON_SVG
-      : file.type.startsWith('video/') ? `<video src="${localUrl}" muted></video>`
-      : `<img src="${localUrl}">`;
-    tile.innerHTML = `
-      <div class="thumb">${thumbInner}<div class="upload-overlay"><i class="fa-solid fa-circle-notch spin"></i></div></div>
-      <div class="meta"><div class="fname">${esc(file.name)}</div></div>
-      <div class="upload-status">Uploading…</div>
-    `;
+      : file.type.startsWith('video/') ? '<video src="' + localUrl + '" muted></video>'
+      : '<img src="' + localUrl + '">';
+    tile.innerHTML =
+      '<div class="thumb">' + thumbInner + '<div class="upload-overlay"><i class="fa-solid fa-circle-notch spin"></i></div></div>' +
+      '<div class="meta"><div class="fname">' + esc(file.name) + '</div></div>' +
+      '<div class="upload-status">Uploading…</div>';
     gridEl.prepend(tile);
-    return { file, path, tile, localUrl };
+    return { file, originalName:file.name, targetName, path, tile, localUrl, converted:false };
   });
 
   for (const job of jobs) {
     try {
+      if(cmsUploadNeedsWebP(job.file)){
+        const status=job.tile.querySelector('.upload-status');
+        if(status)status.textContent='Converting to WebP…';
+      }
+      const conversion=await convertCmsUploadToWebP(job.file);
+      let uploadFile=conversion.file;
+      job.converted=conversion.converted;
+      // Apply a batch collision suffix after conversion while retaining WebP
+      // MIME and bytes. The initial Git tree still determines replacements.
+      if(uploadFile.name!==job.targetName){
+        uploadFile=new File([uploadFile],job.targetName,{
+          type:uploadFile.type||job.file.type,
+          lastModified:uploadFile.lastModified||job.file.lastModified||Date.now()
+        });
+      }
+      job.file=uploadFile;
+      job.path=folder+'/'+job.targetName;
+
+      const filename=job.tile.querySelector('.fname');
+      if(filename)filename.textContent=job.targetName;
+      if(job.converted){
+        if(job.localUrl)URL.revokeObjectURL(job.localUrl);
+        job.localUrl=URL.createObjectURL(job.file);
+        const thumbnail=job.tile.querySelector('.thumb img');
+        if(thumbnail)thumbnail.src=job.localUrl;
+      }
+      const uploadStatus=job.tile.querySelector('.upload-status');
+      if(uploadStatus)uploadStatus.textContent='Uploading…';
+
       const dataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
+        reader.onerror = () => reject(reader.error || new Error('Could not read the selected file.'));
         reader.readAsDataURL(job.file);
       });
       // The Contents API requires the current SHA when replacing a path.
@@ -121,7 +239,7 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
       // duplicate names, so later uploads use the latest replacement SHA.
       const existingIndex = uploadTree.findIndex(item => item.type === 'blob' && item.path === job.path);
       const existing = existingIndex >= 0 ? uploadTree[existingIndex] : null;
-      const result = await GH.uploadBinary(job.path, dataUrl, `CMS: upload ${job.path}`, existing?.sha || null);
+      const result = await GH.uploadBinary(job.path, dataUrl, 'CMS: upload ' + job.path, existing?.sha || null);
       const newSha = result?.content?.sha || '';
       if (existingIndex >= 0) uploadTree[existingIndex] = { ...existing, sha: newSha || existing.sha };
       else uploadTree.push({ path: job.path, type: 'blob', sha: newSha, mode: '100644' });
@@ -133,7 +251,9 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
       if (overlay) overlay.remove();
       const status = job.tile.querySelector('.upload-status');
       if (status) status.remove();
-      toast(`Uploaded ${job.file.name}.`);
+      toast(job.converted
+        ? 'Converted ' + job.originalName + ' to ' + job.file.name + ' and uploaded.'
+        : 'Uploaded ' + job.file.name + '.');
     } catch(err){
       job.tile.classList.remove('is-uploading');
       job.tile.classList.add('is-error');
@@ -141,7 +261,7 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
       if (overlay) overlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#ff8f87"></i>';
       const status = job.tile.querySelector('.upload-status');
       if (status) status.textContent = 'Failed — ' + err.message;
-      toast(`${job.file.name}: ${err.message}`, true);
+      toast(job.originalName + ': ' + err.message, true);
     } finally {
       if (job.localUrl) URL.revokeObjectURL(job.localUrl);
     }
