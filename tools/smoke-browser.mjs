@@ -5940,11 +5940,14 @@ try {
         mimeType: 'image/jpeg',
         buffer: smokeJpegBytes
       });
-      await page.waitForFunction(() => {
+      // CMS media URLs use the first 12 characters of the returned file SHA
+      // as their cache key, so compare against that displayed version.
+      const expectedJpegCacheVersion = 'smoke-jpeg-replaced'.slice(0, 12);
+      await page.waitForFunction(expectedVersion => {
         const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
           .find(node => node.closest('.media-tile')?.textContent?.includes('smoke-jpeg.webp'));
-        return image && new URL(image.src).searchParams.get('v') === 'smoke-jpeg-replaced';
-      }, null, { timeout: 8000 });
+        return image && new URL(image.src).searchParams.get('v') === expectedVersion;
+      }, expectedJpegCacheVersion, { timeout: 8000 });
       if (!cmsSmokeJpegUploadPayload || cmsSmokeJpegUploadPayload.sha !== 'smoke-jpeg-webp') {
         throw new Error('CMS JPEG upload did not send the current existing-WebP SHA.');
       }
