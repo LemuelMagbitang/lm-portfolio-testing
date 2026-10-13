@@ -61,9 +61,8 @@ function imageAliases(sourcePath) {
 }
 
 function createUniqueBasenamePattern(basename) {
-  const escaped = basename.replace(/[.*+?^${}()|[\]\\]/g, '\\function replaceEvery(value, search, replacement) {
-  return value.split(search).join(replacement);
-}');
+  const regexSpecials = new Set(['.', '*', '+', '?', '^', '$', '{', '}', '(', ')', '|', '[', ']', '\\']);
+  const escaped = basename.split('').map(char => regexSpecials.has(char) ? '\\' + char : char).join('');
   return new RegExp('(?<![A-Za-z0-9_-])' + escaped + '(?![A-Za-z0-9_-])', 'g');
 }
 

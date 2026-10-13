@@ -1,4 +1,4 @@
-name: One-time WebP asset migration (boundary-aware references)
+name: One-time WebP asset migration (escaped basename matcher)
 
 on:
   push:
