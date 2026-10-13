@@ -109,6 +109,9 @@ assert.match(mediaRendererSource, /function preloadImage\(url, \{ fetchPriority 
 assert.match(mediaRendererSource, /async function preloadLottie\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return false;/);
 assert.match(mediaRendererSource, /async function preloadVideo\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed\) return false;/);
 assert.match(mediaRendererSource, /async function preloadFetch\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return false;/);
+assert.match(mediaRendererSource, /const preload = \(async \(\) => \{[\s\S]*?await response\.arrayBuffer\(\);[\s\S]*?\}\)\(\);\s*return await withPreloadTimeout\(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup\);/);
+assert.match(mediaRendererSource, /const MODEL_MODULE_PRELOAD_TIMEOUT_MS = 3500/);
+assert.match(mediaRendererSource, /scheduleJob\(\s*'viewer-module',\s*\(\) => withPreloadTimeout\(\s*Promise\.resolve\(\)\.then\(preloadModelModule\),\s*MODEL_MODULE_PRELOAD_TIMEOUT_MS/);
 assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
 assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) imageDimensionCache\.set\(url, \{ width, height \}\)/);
 assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);

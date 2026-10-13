@@ -38,6 +38,10 @@ export function createLightboxMediaRenderer({
   const artworkGroupInteractionCleanups = new Set();
   const activePreloadCleanups = new Set();
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
+  // External model-viewer module imports can wait on the Three.js CDN. Bound
+  // how long they hold the startup gate; a pending import can still complete
+  // later and populate the browser module cache.
+  const MODEL_MODULE_PRELOAD_TIMEOUT_MS = 3500;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
     let settled = false;
     const finish = value => {
@@ -312,20 +316,21 @@ export function createLightboxMediaRenderer({
     const cleanup = () => controller?.abort();
     const unregister = registerPreloadCleanup(cleanup);
     try {
-      const response = await withPreloadTimeout(
-        globalThis.fetch(url, {
+      // Include response-body consumption in the timeout. Bounding only fetch()
+      // leaves arrayBuffer() able to stall indefinitely on an incomplete stream.
+      const preload = (async () => {
+        const response = await globalThis.fetch(url, {
           method: 'GET',
           credentials: 'omit',
           cache: 'force-cache',
           ...(fetchPriority === 'high' ? { priority: 'high' } : {}),
           signal: controller?.signal
-        }),
-        MEDIA_PRELOAD_TIMEOUT_MS,
-        cleanup
-      );
-      if (!response?.ok) return false;
-      await response.arrayBuffer();
-      return true;
+        });
+        if (!response?.ok) return false;
+        await response.arrayBuffer();
+        return true;
+      })();
+      return await withPreloadTimeout(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup);
     } catch (_) {
       return false;
     } finally {
@@ -511,7 +516,14 @@ export function createLightboxMediaRenderer({
     // document also modulepreloads it, so this closes the remaining race where
     // the first 3D open beats the module graph.
     if (hasModel && typeof preloadModelModule === 'function') {
-      scheduleJob('viewer-module', () => Promise.resolve().then(preloadModelModule), true);
+      scheduleJob(
+        'viewer-module',
+        () => withPreloadTimeout(
+          Promise.resolve().then(preloadModelModule),
+          MODEL_MODULE_PRELOAD_TIMEOUT_MS
+        ),
+        true
+      );
     }
 
     const criticalJobs = [];

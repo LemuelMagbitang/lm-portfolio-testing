@@ -478,3 +478,13 @@ This migration must not:
 - Changed the player warm-up to a 2.5-second bounded wait. The Lottie animation JSON remains in the normal local media warm-up; if the custom-element script takes longer, startup proceeds and the pending request may still define the element later.
 - Added a lifecycle/source-contract assertion for the bounded wait and advanced entrypoint/bootstrap cache identity to `20261013-03`.
 - Re-run the complete validation/browser smoke before treating this follow-up as verified. Pages deployment alone is insufficient.
+
+
+
+### October 13, 2026 — Bound 3D and streamed-response waits
+
+- The loading-gate browser smoke had timed out before handoff after the Lottie player became a hard startup dependency. Its wait is now bounded at 2.5 seconds; the pending CDN request can complete in the background.
+- The project catalog also contains an OBJ model, and its startup-critical 3D module graph imports Three.js from the CDN. That module preload previously had no timeout. It is now bounded at 3.5 seconds so a stalled third-party module graph cannot hold startup indefinitely.
+- Fixed a separate timeout gap in model/asset prefetching: the timeout previously covered `fetch()` only, not `response.arrayBuffer()`. The complete response-body read is now inside the existing nine-second timeout and abort cleanup.
+- Added lifecycle/source-contract assertions for both protections and advanced the app cache key to `20261013-04`.
+- Re-run the complete validation/browser smoke before treating the combined startup changes as green. A Pages deployment by itself is not sufficient.
