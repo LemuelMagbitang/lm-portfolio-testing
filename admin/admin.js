@@ -4199,7 +4199,7 @@ function openMediaFullPreview(item,trigger){
   state.onKeydown=event=>{
     if(event.key==='Escape'){event.preventDefault();closeMediaFullPreview();return;}
     if(event.key!=='Tab')return;
-    const focusable=Array.from(dialog.querySelectorAll('button:not(:disabled),a[href],[tabindex="0"]'))
+    const focusable=Array.from(dialog.querySelectorAll('button:not(:disabled),a[href],video[controls],[tabindex="0"]'))
       .filter(el=>!el.hidden&&el.getAttribute('aria-hidden')!=='true');
     if(!focusable.length){event.preventDefault();dialog.focus();return;}
     const first=focusable[0],last=focusable[focusable.length-1];
