@@ -29,7 +29,11 @@ const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
   'assets/projects/2024shell-nsac/sketch.jpg',
   'assets/projects/ephiphany-3d-illustration/the-dead-king-midas.jpg',
   'assets/projects/gog-render-challenge/original-character-design.jpg',
-  'assets/projects/haeru/01app-design.jpg'
+  'assets/projects/haeru/01app-design.jpg',
+  'assets/projects/product-packaging/shampoo00.jpg',
+  'assets/projects/product-packaging/aureus00.jpg',
+  'assets/projects/aol/continuity.jpg',
+  'assets/projects/ephiphany-3d-illustration/tender-reverence.jpg'
 ]);
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.htm', '.js', '.mjs', '.cjs', '.json', '.md', '.txt',

@@ -30,7 +30,11 @@ const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/2024shell-nsac/sketch.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/ephiphany-3d-illustration/the-dead-king-midas.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/gog-render-challenge/original-character-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/haeru/01app-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
+  ['assets/projects/haeru/01app-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/product-packaging/shampoo00.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/product-packaging/aureus00.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/aol/continuity.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/ephiphany-3d-illustration/tender-reverence.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);

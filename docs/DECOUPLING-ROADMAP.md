@@ -595,3 +595,15 @@ This migration must not:
 - Across all three batches, fifteen original JPEGs now replace larger WebPs, saving 868,541 bytes (848.2 KiB). The migrated asset set is 23,184,231 bytes (22.110 MiB), down 13,361,605 bytes (12.743 MiB / 36.56%) from the original 36,545,836 bytes. Fifteen of the initial thirty larger-than-source WebP cases remain.
 - The converter's preserved-original allowlist and asset auditor now preserve all fifteen reviewed originals. The per-file CSV remains an audit of first-pass conversion output sizes.
 - **Next:** validate this batch and continue with `assets/projects/product-packaging/shampoo00.jpg` (+37,547 bytes / 36.7 KiB). User-side QA gates remain CMS foil save/reload, the thumbnail outline after refresh, and mobile 3D/back/focus behavior.
+
+### October 14, 2026 — Fourth selective WebP size-regression rollback
+
+- Compared four current WebP derivatives with exact historical JPEG blobs from pre-migration commit `9db228e38fa7acd0eb18df7503ff011bbe40e5ef`. At the same displayed size, there was no meaningful visual advantage to retaining the larger WebP versions. `data/projects.json` now references the original JPEGs; the converter and media-audit allowlists preserve these files without re-encoding.
+- Restored the four original files byte-for-byte:
+  - `assets/projects/product-packaging/shampoo00.jpg`: 184,073 bytes vs. 221,620-byte WebP; saves 37,547 bytes.
+  - `assets/projects/product-packaging/aureus00.jpg`: 187,955 bytes vs. 218,874-byte WebP; saves 30,919 bytes.
+  - `assets/projects/aol/continuity.jpg`: 377,148 bytes vs. 405,408-byte WebP; saves 28,260 bytes.
+  - `assets/projects/ephiphany-3d-illustration/tender-reverence.jpg`: 81,168 bytes vs. 108,564-byte WebP; saves 27,396 bytes.
+- This batch removes 954,466 bytes of WebP and restores 830,344 bytes of original JPEG, saving 124,122 bytes (121.2 KiB) without another lossy encode. Across nineteen reviewed originals, targeted rollbacks now save 992,663 bytes (969.4 KiB). The current asset payload is 23,060,109 bytes (21.992 MiB), down 13,485,727 bytes (12.861 MiB / 36.90%) from 36,545,836 bytes before migration. Eleven of the initial thirty larger-than-source WebP cases remain.
+- `docs/WEBP-ASSET-BY-ASSET-SIZE-REPORT.csv` remains a historical record of the initial conversion; current restoration totals are maintained in the migration report.
+- **Next candidate:** `assets/projects/product-packaging/wine-box.jpg` (+24,969 bytes / 24.4 KiB). Compare it with the current derivative before making another substitution. CMS foil save/reload, the occasional thumbnail outline disappearing after refresh, and physical-device mobile 3D/back/focus behavior remain open QA gates.

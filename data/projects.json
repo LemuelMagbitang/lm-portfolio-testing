@@ -221,13 +221,13 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/product-packaging/aureus00.webp",
+        "src": "assets/projects/product-packaging/aureus00.jpg",
         "caption": "3D Product & Packaging Visualization",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/product-packaging/shampoo00.webp",
+        "src": "assets/projects/product-packaging/shampoo00.jpg",
         "caption": "",
         "orientation": ""
       },
@@ -273,7 +273,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/tender-reverence.webp",
+        "src": "assets/projects/ephiphany-3d-illustration/tender-reverence.jpg",
         "caption": "Tender Reverence",
         "orientation": ""
       },
@@ -638,7 +638,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/aol/continuity.webp",
+        "src": "assets/projects/aol/continuity.jpg",
         "caption": "",
         "orientation": ""
       },
