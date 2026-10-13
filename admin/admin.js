@@ -4118,6 +4118,196 @@ function fileTileHtml(item){
   return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div>`;
 }
 
+let activeMediaFullPreviewState = null;
+
+function closeMediaFullPreview(){
+  const state=activeMediaFullPreviewState;
+  if(!state)return;
+  activeMediaFullPreviewState=null;
+  document.removeEventListener('keydown',state.onKeydown,true);
+  state.cleanups.splice(0).reverse().forEach(cleanup=>{try{cleanup();}catch(_){}});
+  state.overlay.remove();
+  document.body.style.overflow=state.previousBodyOverflow;
+  if(state.trigger?.isConnected){try{state.trigger.focus({preventScroll:true});}catch(_){state.trigger.focus();}}
+}
+
+function openMediaFullPreview(item,trigger){
+  closeMediaFullPreview();
+  const kind=fileKind(item.path);
+  const fileName=item.path.split('/').pop()||item.path;
+  const src=ghRawUrl(item.path);
+  const overlay=document.createElement('div');
+  overlay.className='media-full-preview-overlay';
+  overlay.dataset.kind=kind;
+  const dialog=document.createElement('section');
+  dialog.className='media-full-preview-dialog';
+  dialog.setAttribute('role','dialog');
+  dialog.setAttribute('aria-modal','true');
+  dialog.setAttribute('aria-label','Preview '+fileName);
+  dialog.tabIndex=-1;
+
+  const head=document.createElement('header');
+  head.className='media-full-preview-head';
+  const heading=document.createElement('div');
+  heading.className='media-full-preview-heading';
+  const title=document.createElement('strong');
+  title.className='media-full-preview-title';
+  title.textContent=fileName;
+  const pathLabel=document.createElement('span');
+  pathLabel.className='media-full-preview-path';
+  pathLabel.textContent=item.path;
+  const kindLabel=document.createElement('span');
+  kindLabel.className='media-full-preview-kind';
+  kindLabel.textContent=kind==='model'?'3D MODEL':kind.toUpperCase();
+  heading.append(title,pathLabel);
+  const closeButton=document.createElement('button');
+  closeButton.type='button';
+  closeButton.className='icon-btn media-full-preview-close';
+  closeButton.setAttribute('aria-label','Close full preview');
+  closeButton.title='Close preview';
+  closeButton.innerHTML='<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+  head.append(heading,kindLabel,closeButton);
+
+  const stage=document.createElement('div');
+  stage.className='media-full-preview-stage';
+  stage.setAttribute('aria-busy','true');
+  stage.dataset.previewStage='';
+  const status=document.createElement('div');
+  status.className='media-full-preview-status';
+  status.setAttribute('role','status');
+  status.setAttribute('aria-live','polite');
+  status.textContent='Loading preview…';
+  stage.appendChild(status);
+  dialog.append(head,stage);
+  overlay.appendChild(dialog);
+
+  const state={overlay,dialog,stage,status,trigger,previousBodyOverflow:document.body.style.overflow,cleanups:[],onKeydown:null};
+  activeMediaFullPreviewState=state;
+  const ready=()=>{
+    if(!overlay.isConnected)return;
+    stage.setAttribute('aria-busy','false');
+    status.hidden=true;
+    status.classList.remove('is-error');
+  };
+  const showError=message=>{
+    if(!overlay.isConnected)return;
+    stage.setAttribute('aria-busy','false');
+    status.hidden=false;
+    status.classList.add('is-error');
+    status.textContent=message;
+  };
+  state.onKeydown=event=>{
+    if(event.key==='Escape'){event.preventDefault();closeMediaFullPreview();return;}
+    if(event.key!=='Tab')return;
+    const focusable=Array.from(dialog.querySelectorAll('button:not(:disabled),a[href],[tabindex="0"]'))
+      .filter(el=>!el.hidden&&el.getAttribute('aria-hidden')!=='true');
+    if(!focusable.length){event.preventDefault();dialog.focus();return;}
+    const first=focusable[0],last=focusable[focusable.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  };
+  closeButton.addEventListener('click',closeMediaFullPreview);
+  overlay.addEventListener('click',event=>{if(event.target===overlay)closeMediaFullPreview();});
+  document.body.style.overflow='hidden';
+  document.body.appendChild(overlay);
+  document.addEventListener('keydown',state.onKeydown,true);
+  closeButton.focus({preventScroll:true});
+
+  if(kind==='image'){
+    const image=document.createElement('img');
+    image.className='media-full-preview-media';
+    image.alt=fileName;
+    image.decoding='async';
+    image.loading='eager';
+    image.addEventListener('load',ready,{once:true});
+    image.addEventListener('error',()=>showError('This image could not be loaded. Check the repository path or network connection.'),{once:true});
+    state.cleanups.push(()=>{image.onload=null;image.onerror=null;});
+    image.src=src;
+    stage.insertBefore(image,status);
+    if(image.complete&&image.naturalWidth>0)ready();
+  }else if(kind==='video'){
+    const video=document.createElement('video');
+    video.className='media-full-preview-media';
+    video.controls=true;
+    video.playsInline=true;
+    video.preload='metadata';
+    video.setAttribute('aria-label',fileName);
+    video.addEventListener('loadedmetadata',ready,{once:true});
+    video.addEventListener('canplay',ready,{once:true});
+    video.addEventListener('error',()=>showError('This video could not be loaded or decoded by this browser.'),{once:true});
+    state.cleanups.push(()=>{video.pause();video.removeAttribute('src');video.load();});
+    video.src=src;
+    stage.insertBefore(video,status);
+  }else if(kind==='lottie'){
+    let failed=false;
+    const loadingTimer=setTimeout(()=>{if(!failed)showError('The animation is taking longer than expected. Check the JSON file and connection.');},15000);
+    state.cleanups.push(()=>clearTimeout(loadingTimer));
+    (async()=>{
+      try{
+        const {ensureLottiePlayer}=await import('../js/infrastructure/lottie/player.js');
+        if(!overlay.isConnected)return;
+        const playerReady=await ensureLottiePlayer();
+        if(!overlay.isConnected)return;
+        if(!playerReady)throw new Error('The Lottie player could not be loaded. Check your connection.');
+        const player=document.createElement('lottie-player');
+        player.className='media-full-preview-media media-full-preview-lottie';
+        player.setAttribute('src',src);
+        player.setAttribute('autoplay','');
+        player.setAttribute('loop','');
+        player.setAttribute('controls','');
+        player.setAttribute('background','transparent');
+        player.setAttribute('renderer','svg');
+        player.setAttribute('aria-label',fileName);
+        player.addEventListener('ready',()=>{failed=false;clearTimeout(loadingTimer);ready();},{once:true});
+        player.addEventListener('error',()=>{failed=true;clearTimeout(loadingTimer);showError('The Lottie JSON could not be rendered.');},{once:true});
+        stage.insertBefore(player,status);
+        const revealTimer=setTimeout(()=>{if(overlay.isConnected&&stage.contains(player))ready();},1200);
+        state.cleanups.push(()=>clearTimeout(revealTimer));
+      }catch(error){
+        failed=true;
+        clearTimeout(loadingTimer);
+        showError(error?.message||'The Lottie preview could not be initialized.');
+      }
+    })();
+  }else if(kind==='model'){
+    const host=document.createElement('div');
+    host.className='media-full-preview-model model-viewer-shell';
+    host.setAttribute('aria-label',fileName+' interactive 3D preview');
+    host.setAttribute('role','region');
+    stage.insertBefore(host,status);
+    let modelCleanup=null;
+    state.cleanups.push(()=>{
+      try{(modelCleanup||host.__modelViewerCleanup)?.();}catch(_){}
+      if(host.__modelViewerMountToken)delete host.__modelViewerMountToken;
+    });
+    (async()=>{
+      try{
+        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261011-18');
+        if(!overlay.isConnected)return;
+        modelCleanup=await mountModelViewer(host,src,{hint:true,resolveUrl:ghRawUrl,enablePan:true,enableZoom:true});
+        if(!overlay.isConnected){
+          try{modelCleanup?.();}catch(_){}
+          if(host.__modelViewerMountToken)delete host.__modelViewerMountToken;
+          return;
+        }
+        ready();
+      }catch(error){showError(error?.message||'The 3D model could not be previewed.');}
+    })();
+  }else{
+    const message=document.createElement('div');
+    message.className='media-full-preview-unsupported';
+    message.textContent='This file type does not have an inline preview.';
+    const link=document.createElement('a');
+    link.href=src;
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.textContent='Open original file in a new tab';
+    message.appendChild(link);
+    stage.insertBefore(message,status);
+    ready();
+  }
+}
+
 // Recursively finds the first image anywhere inside folderPath — not
 // just its immediate children, so a folder that only holds
 // sub-folders full of images (rather than images directly) still
@@ -4619,6 +4809,27 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
           <button class="danger" data-del>Delete</button>
         </div>
       `;
+      const previewThumb=tile.querySelector('.thumb');
+      if(previewThumb){
+        const previewName=item.path.split('/').pop()||item.path;
+        previewThumb.dataset.viewFull='true';
+        previewThumb.tabIndex=0;
+        previewThumb.setAttribute('role','button');
+        previewThumb.setAttribute('aria-haspopup','dialog');
+        previewThumb.setAttribute('aria-label','Open full preview of '+previewName);
+        const cue=document.createElement('span');
+        cue.className='tile-view-cue';
+        cue.setAttribute('aria-hidden','true');
+        cue.innerHTML='<i class="fa-solid fa-expand"></i><span>View</span>';
+        previewThumb.appendChild(cue);
+        previewThumb.addEventListener('click',event=>{event.stopPropagation();openMediaFullPreview(item,previewThumb);});
+        previewThumb.addEventListener('keydown',event=>{
+          if(event.target!==previewThumb||(event.key!=='Enter'&&event.key!==' '))return;
+          event.preventDefault();
+          event.stopPropagation();
+          openMediaFullPreview(item,previewThumb);
+        });
+      }
       tile.querySelector('[data-copy]').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(item.path); toast('Path copied — paste it into a Source or Photo field.'); }
         catch(e){ prompt('Copy this path:', item.path); }

@@ -5976,6 +5976,42 @@ try {
         );
       }
 
+      // Each CMS media tile opens a full-size type-aware preview. Exercise image,
+      // Lottie, video, and 3D model previews before navigating away.
+      const fullPreview = page.locator('.media-full-preview-overlay');
+      const closeFullPreview = async () => {
+        await fullPreview.locator('[aria-label="Close full preview"]').click();
+        await fullPreview.waitFor({ state: 'detached', timeout: 3000 });
+      };
+
+      await page.locator('#content .media-tile').filter({ hasText: 'smoke-jpeg.webp' }).locator('.thumb').click();
+      await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
+      await fullPreview.locator('.media-full-preview-stage > img').waitFor({ state: 'visible', timeout: 5000 });
+      const fullImageFit = await fullPreview.locator('.media-full-preview-stage > img').evaluate(el => getComputedStyle(el).objectFit);
+      if (fullImageFit !== 'contain') throw new Error('CMS full image preview does not preserve the whole artwork in view.');
+      await page.keyboard.press('Escape');
+      await fullPreview.waitFor({ state: 'detached', timeout: 3000 });
+
+      await page.locator('#content .media-tile').filter({ hasText: 'Sample.json' }).locator('.thumb').click();
+      await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
+      await fullPreview.locator('.media-full-preview-stage > lottie-player').waitFor({ state: 'attached', timeout: 10000 });
+      await closeFullPreview();
+
+      await page.locator('#content .media-tile').filter({ hasText: 'idle.mp4' }).locator('.thumb').click();
+      await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
+      const fullVideo = fullPreview.locator('.media-full-preview-stage > video');
+      await fullVideo.waitFor({ state: 'attached', timeout: 3000 });
+      if (!(await fullVideo.evaluate(el => el.controls && el.playsInline))) {
+        throw new Error('CMS full video preview is missing native controls or inline playback.');
+      }
+      await closeFullPreview();
+
+      await page.locator('#content .media-tile').filter({ hasText: 'Female base.obj' }).locator('.thumb').click();
+      await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
+      await fullPreview.locator('.media-full-preview-model canvas').waitFor({ state: 'attached', timeout: 12000 });
+      await page.waitForFunction(() => document.querySelector('.media-full-preview-model')?.dataset.ready === 'true', null, { timeout: 12000 });
+      await closeFullPreview();
+
       // Refresh uses the same asynchronous tree request after the Media
       // Library is already mounted; navigating away during it must not repaint
       // the old Media screen.
@@ -6359,6 +6395,14 @@ try {
           });
           return;
         }
+        if (url.pathname.endsWith('.mp4')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'video/mp4',
+            body: readFileSync(new URL('../assets/projects/haeru/bts-idle-animation.mp4', import.meta.url))
+          });
+          return;
+        }
         if (url.pathname.endsWith('.obj')) {
           await route.fulfill({
             status: 200,
@@ -6459,7 +6503,10 @@ try {
                 { type: 'tree', path: 'assets', sha: 'smoke-assets' },
                 { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
                 { type: 'blob', path: 'assets/projects/smoke.webp', sha: cmsSmokeMediaSha, size: 12 },
-                { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: cmsSmokeJpegMediaSha, size: 12 }
+                { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: cmsSmokeJpegMediaSha, size: 12 },
+                { type: 'blob', path: 'assets/projects/Sample.json', sha: 'smoke-lottie', size: 12 },
+                { type: 'blob', path: 'assets/projects/Female base.obj', sha: 'smoke-model', size: 12 },
+                { type: 'blob', path: 'assets/projects/idle.mp4', sha: 'smoke-video', size: 12 }
               ]
             })
           });
