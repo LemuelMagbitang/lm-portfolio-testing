@@ -19,7 +19,12 @@ const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
   'assets/projects/funko-pop/8.jpg',
   'assets/projects/haeru/app-lowfi-sketch.jpg',
   'assets/projects/2024shell-nsac/full.jpg',
-  'assets/projects/graphic-design/bakeries-poster.jpg'
+  'assets/projects/graphic-design/bakeries-poster.jpg',
+  'assets/projects/ephiphany-3d-illustration/florilegium.jpg',
+  'assets/projects/aol/combination.jpg',
+  'assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg',
+  'assets/projects/graphic-design/watch-poster.jpg',
+  'assets/projects/haeru/00app-design.jpg'
 ]);
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.htm', '.js', '.mjs', '.cjs', '.json', '.md', '.txt',

@@ -20,7 +20,12 @@ const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/funko-pop/8.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/haeru/app-lowfi-sketch.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
   ['assets/projects/2024shell-nsac/full.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/graphic-design/bakeries-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
+  ['assets/projects/graphic-design/bakeries-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/ephiphany-3d-illustration/florilegium.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/aol/combination.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/graphic-design/watch-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/haeru/00app-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);

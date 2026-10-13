@@ -39,7 +39,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/haeru/00app-design.webp",
+        "src": "assets/projects/haeru/00app-design.jpg",
         "caption": "Screen flow and its components",
         "orientation": ""
       },
@@ -261,7 +261,7 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/florilegium.webp",
+        "src": "assets/projects/ephiphany-3d-illustration/florilegium.jpg",
         "caption": "Florilegium",
         "orientation": ""
       },
@@ -279,7 +279,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/temporal-constraints.webp",
+        "src": "assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg",
         "caption": "Temporal Constraints",
         "orientation": ""
       },
@@ -644,7 +644,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/aol/combination.webp",
+        "src": "assets/projects/aol/combination.jpg",
         "caption": "",
         "orientation": ""
       },
@@ -714,7 +714,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/graphic-design/watch-poster.webp",
+        "src": "assets/projects/graphic-design/watch-poster.jpg",
         "caption": "Casio Commercial Product Poster",
         "orientation": ""
       },

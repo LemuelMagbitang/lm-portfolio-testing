@@ -27,17 +27,22 @@ Top five JPEG derivatives by added bytes before selective restoration:
 
 ## Selective size optimization — October 13, 2026
 
-After comparing the original JPEGs from pre-migration commit `9db228e38fa7acd0eb18df7503ff011bbe40e5ef` against the first WebP derivatives, the following five assets now use their exact original JPEG bytes. The displayed comparisons showed no meaningful visual improvement from keeping the larger WebP:
+After comparing original JPEGs from pre-migration commit `9db228e38fa7acd0eb18df7503ff011bbe40e5ef` against the first WebP derivatives, these ten assets now use their exact original JPEG bytes. Visual comparisons at the displayed sizes showed no meaningful advantage to keeping the larger WebP derivatives:
 
 - `assets/projects/aol/figureground.jpg` — original 397,665 bytes; removed WebP was 499,260 bytes.
 - `assets/projects/funko-pop/8.jpg` — original 339,857 bytes; removed WebP was 425,978 bytes.
 - `assets/projects/haeru/app-lowfi-sketch.jpg` — original 522,533 bytes; removed WebP was 607,452 bytes.
 - `assets/projects/2024shell-nsac/full.jpg` — original 403,551 bytes; removed WebP was 480,882 bytes.
 - `assets/projects/graphic-design/bakeries-poster.jpg` — original 314,720 bytes; removed WebP was 389,914 bytes.
+- `assets/projects/ephiphany-3d-illustration/florilegium.jpg` — original 293,345 bytes; removed WebP was 353,892 bytes.
+- `assets/projects/aol/combination.jpg` — original 526,512 bytes; removed WebP was 582,710 bytes.
+- `assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg` — original 105,889 bytes; removed WebP was 158,866 bytes.
+- `assets/projects/graphic-design/watch-poster.jpg` — original 362,983 bytes; removed WebP was 415,442 bytes.
+- `assets/projects/haeru/00app-design.jpg` — original 514,514 bytes; removed WebP was 564,874 bytes.
 
-These are restorations of historical source files, not new lossy re-encodes. The change saves **425,160 bytes (415.2 KiB)** compared with those five WebP derivatives. The per-file CSV remains a historical record of the initial conversion measurements. **25** JPEG-derived WebP files that were larger than their source remain for selective review.
+These are restorations of historical source files, not new lossy re-encodes. The ten targeted rollbacks save **697,701 bytes (681.3 KiB)** compared with the larger WebP derivatives. The per-file CSV remains the historical record of the initial conversion measurements. **20** JPEG-derived WebP files that were larger than their source remain for selective review.
 
-The current payload for the migrated asset set is **23,627,612 bytes (22.533 MiB)** versus the original **36,545,836 bytes (34.853 MiB)** — a net reduction of **12,918,224 bytes (12.320 MiB, 35.35%)**.
+The current payload for the migrated asset set is **23,355,071 bytes (22.273 MiB)** versus the original **36,545,836 bytes (34.853 MiB)** — a net reduction of **13,190,765 bytes (12.580 MiB, 36.09%)**.
 
 ## Converted assets
 
