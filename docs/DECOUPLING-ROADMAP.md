@@ -554,7 +554,7 @@ This migration must not:
 - Validation passed on `55beac5bc309ebea71e9ffe6d4b229518de3a317` (workflow [#38415775492](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38415775492)); the Pages deployment passed ([#38415775622](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38415775622)). The CMS entrypoint cache keys and the static validator expectations were updated together.
 - **Next gate:** visually review and selectively optimize the 30 JPEG-derived WebP files whose output is larger than the source. Use historical originals and compare artwork detail/transparency/foil masks before replacing anything. The CMS foil save/reload round-trip, occasional missing thumbnail outline after refresh, and physical-device mobile 3D/Back/focus QA remain open.
 
-### October 13, 2026 — CMS Media Library file sizes verified
+### October 13, 2026 — CMS Media Library file-size display added
 
 - The full asset preview now displays a readable file size using the existing GitHub tree entry `size` value; the header includes both a scaled unit (bytes/KiB/MiB/GiB) and the exact byte count for larger files. Missing size metadata is reported as unavailable rather than showing a fabricated zero.
 - The implementation needs no additional API request and supports images, Lottie JSON, video, 3D models, and unsupported file types shown in the generic preview state. Exact byte counts are also exposed on the size line's title.

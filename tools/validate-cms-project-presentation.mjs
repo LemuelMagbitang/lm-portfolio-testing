@@ -375,7 +375,7 @@ assert.ok(/admin\.js\?v=20261013-02/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
 assert.ok(/admin\.css\?v=20261013-02/.test(adminHtml),
   'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
-assert.ok(/function formatMediaFileSize\\(value\\)/.test(admin),
+assert.ok(admin.includes('function formatMediaFileSize(value){'),
   'CMS full Media Library previews must format sizes from the GitHub tree metadata.');
 assert.ok(admin.includes("sizeLabel.textContent='File size · '+formatMediaFileSize(item.size)"),
   'CMS full Media Library previews must show the file size in the preview header.');
