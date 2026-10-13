@@ -52,9 +52,11 @@ function shouldRewrite(file) {
   return TEXT_EXTENSIONS.has(extension(file));
 }
 
-function imageAliases(sourcePath, basenameIsUnique) {
+function imageAliases(sourcePath) {
+  // Only replace a complete repository-relative path (or its URL-encoded
+  // representation). Bare basename replacement can corrupt longer sibling
+  // names such as app-lowfi-sketch.jpg when converting sketch.jpg elsewhere.
   const aliases = new Set([sourcePath, encodeURI(sourcePath)]);
-  if (basenameIsUnique) aliases.add(path.posix.basename(sourcePath));
   return [...aliases].sort((a, b) => b.length - a.length);
 }
 
@@ -122,12 +124,6 @@ async function main() {
     return;
   }
 
-  const basenameCounts = new Map();
-  for (const item of mappings) {
-    const basename = path.posix.basename(item.sourcePath);
-    basenameCounts.set(basename, (basenameCounts.get(basename) || 0) + 1);
-  }
-
   const textFiles = collectFiles(ROOT).filter(shouldRewrite).sort((a, b) => a.localeCompare(b));
   let rewrittenFiles = 0;
   for (const file of textFiles) {
@@ -138,7 +134,7 @@ async function main() {
     const original = content;
     for (const item of mappings) {
       const basename = path.posix.basename(item.sourcePath);
-      const aliases = imageAliases(item.sourcePath, basenameCounts.get(basename) === 1);
+      const aliases = imageAliases(item.sourcePath);
       for (const alias of aliases) content = replaceEvery(content, alias, item.targetPath);
     }
     if (content !== original) {
@@ -156,7 +152,7 @@ async function main() {
     if (content.includes('\u0000')) continue;
     for (const item of mappings) {
       const basename = path.posix.basename(item.sourcePath);
-      const aliases = imageAliases(item.sourcePath, basenameCounts.get(basename) === 1);
+      const aliases = imageAliases(item.sourcePath);
       const unresolvedAlias = aliases.find(alias => content.includes(alias));
       if (unresolvedAlias) {
         unresolved.push(relative(file) + ' still refers to ' + unresolvedAlias);
