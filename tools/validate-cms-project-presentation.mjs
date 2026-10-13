@@ -150,7 +150,7 @@ const supportedHolographicStyles = [
   'holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered',
   'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'
 ];
-const editorStyleContract = admin.match(/const styles = new Set\\(\\[([^\\]]+)\\]\\);/);
+const editorStyleContract = admin.match(/const styles = new Set\(\[(.*?)\]\);/);
 assert.ok(editorStyleContract, 'CMS holographic controls must declare their supported finish list.');
 const editorStyleIds = [...editorStyleContract[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
 assert.deepEqual(
