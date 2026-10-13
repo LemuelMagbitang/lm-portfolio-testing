@@ -513,3 +513,9 @@ This migration must not:
 - Secondary media and non-blocking YouTube warm-ups are now skipped on constrained connections. The already-defined critical first-media, project-background, model, and viewer-module tier remains unchanged; assets still load normally when the user opens a project. Ordinary connections retain six secondary workers and the existing four-second grace period.
 - Added a lifecycle/source-contract assertion for the skip behavior and aligned Lightbox renderer/entry keys to 20261013-04 and the Works/About bootstrap/entrypoint/composition chain to 20261013-07.
 - This only changes background network warm-up policy for Save-Data/2G; it does not alter the loading screen's visual design or its readiness/exit contract. Full browser smoke and Pages CI must pass before considering it verified.
+
+### October 13, 2026 — media asset hygiene audit
+
+- CI now inventories files under `assets/`, summarizes formats and payload sizes, and reports raster assets that have not yet been converted to WebP. Existing PNG/JPEG assets remain a non-blocking migration backlog so a future bulk conversion does not unexpectedly break the site or block all deployments.
+- New or oversized assets are surfaced by path and size; unrecognized asset extensions are flagged for review. An `.avif` file referenced as video is treated as a configuration error because AVIF is an image format rather than a standard HTML video container. For video delivery, use a compatible `.mp4` or `.webm` container; AV1 is a video codec and can be used within a supported container where the browser/device target allows it.
+- The audit is informational for legacy images and size candidates. It does not rewrite or delete media, change the loader UI, or alter artwork references.

@@ -35,6 +35,9 @@ jobs:
       - name: Validate site data, paths, and JavaScript
         run: node tools/validate-site.mjs
 
+      - name: Audit asset formats and file sizes
+        run: node tools/audit-media-assets.mjs
+
       - name: Validate architecture boundaries
         run: node tools/validate-architecture.mjs
 
