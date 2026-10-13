@@ -5866,10 +5866,21 @@ try {
       // Upload over an existing filename: the API must receive the current
       // Contents SHA, then the tile should use the returned SHA as its cache key.
       await page.locator('#content #uploadPath').fill('assets/projects');
+      // Use a real, non-1×1 PNG so the upload test can verify that
+      // browser-side WebP conversion preserves the source pixel dimensions.
+      const smokePngBytes = readFileSync(new URL('../assets/projects/site/favicon.png', import.meta.url));
+      if (smokePngBytes.length < 24 ||
+          smokePngBytes.toString('ascii', 1, 4) !== 'PNG') {
+        throw new Error('CMS WebP dimension fixture is not a readable PNG.');
+      }
+      const expectedImageDimensions = {
+        width: smokePngBytes.readUInt32BE(16),
+        height: smokePngBytes.readUInt32BE(20)
+      };
       await page.locator('#content #fileInput').setInputFiles({
         name: 'smoke.png',
         mimeType: 'image/png',
-        buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/dSAAAAAASUVORK5CYII=', 'base64')
+        buffer: smokePngBytes
       });
       await page.waitForFunction(() => {
         const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
@@ -5883,6 +5894,26 @@ try {
       if (uploadedBytes.toString('ascii', 0, 4) !== 'RIFF' ||
           uploadedBytes.toString('ascii', 8, 12) !== 'WEBP') {
         throw new Error('CMS PNG upload was not encoded as a valid WebP payload.');
+      }
+      const uploadedImageDimensions = await page.evaluate(async base64 => {
+        const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+        const blob = new Blob([bytes], { type: 'image/webp' });
+        const objectUrl = URL.createObjectURL(blob);
+        try {
+          const image = new Image();
+          image.src = objectUrl;
+          await image.decode();
+          return { width: image.naturalWidth, height: image.naturalHeight };
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      }, cmsSmokeUploadPayload.content);
+      if (uploadedImageDimensions.width !== expectedImageDimensions.width ||
+          uploadedImageDimensions.height !== expectedImageDimensions.height) {
+        throw new Error(
+          'CMS WebP conversion changed the uploaded image dimensions: ' +
+          JSON.stringify({ expected: expectedImageDimensions, actual: uploadedImageDimensions })
+        );
       }
 
       // Refresh uses the same asynchronous tree request after the Media
