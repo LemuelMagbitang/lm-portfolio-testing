@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 12, 2026, the `projects-runtime-cutover` branch has completed the composition/data-boundary cutover and core feature extraction. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted visual bug/glitch fixes, structural decoupling, CMS/Lighbox polish, optimization, and cross-device verification.
+As of October 13, 2026, the active `projects-runtime-cutover` branch is at `0a007694cd8ddc8b7c5724ee82475ddd5149c5c3` (`Audit media asset formats and payload sizes`). The latest `validate`, `build`, `deploy`, and `report-build-status` checks passed. The composition/data-boundary cutover and core feature extraction remain complete. The active work remains **Phase 3B/3C runtime hardening**, with CSS ownership and the CMS application boundary still in progress and Phase 3D awaiting full validation. Keep the current portfolio design: there is **no broader redesign in scope**. Priorities are targeted foil-preset and loading/performance verification, mobile 3D and thumbnail regressions, media optimization, and cross-device QA.
 
 - `js/script.js` is a 19-line browser entrypoint; startup and page wiring live in `js/app/bootstrap.js` and `js/app/page-composition.js`.
 - Projects, Gallery, Hero, Lightbox, Navigation, Reviews, About, Forms, and Settings have explicit feature entry points.

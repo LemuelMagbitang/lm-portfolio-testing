@@ -1033,7 +1033,7 @@ try {
       const distinctFoilProfiles = new Set(foilFinishContract.map(record => record.spectrum));
       if (foilFinishContract.length !== expectedFoilFinishes.length ||
           missingFoilFinishes.length > 0 ||
-          distinctFoilProfiles.size < 9) {
+          distinctFoilProfiles.size < expectedFoilFinishes.length) {
         throw new Error('Each saved holographic finish must keep its own per-artwork style and CSS profile: ' +
           JSON.stringify({ records: foilFinishContract, missing: missingFoilFinishes, distinctProfiles: distinctFoilProfiles.size }));
       }
