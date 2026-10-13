@@ -1,4 +1,4 @@
-name: Restore favicon and social preview compatibility
+name: Restore favicon and social preview compatibility (safe matcher)
 
 on:
   push:

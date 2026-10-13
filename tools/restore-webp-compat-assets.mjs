@@ -69,8 +69,15 @@ function updateMigrationUtility(file) {
     if (extStart < 0 || insertAt < 0) throw new Error('Could not locate extension helper in WebP migration utility.');
     const helper = "\nfunction isCompatibilityRaster(file) {\n" +
       "  const rel = path.relative(ROOT, file).split(path.sep).join('/').toLowerCase();\n" +
-      "  if (rel === 'assets/projects/site/favicon.png') return true;\n" +
-      "  return /^assets\\\\/projects\\\\/site\\\\/(?:og-image|og-preview(?:-v[0-9]+)?)\\\\.(?:png|jpe?g)$/.test(rel);\n" +
+      "  const prefix = 'assets/projects/site/';\n" +
+      "  if (rel === prefix + 'favicon.png') return true;\n" +
+      "  if (!rel.startsWith(prefix)) return false;\n" +
+      "  const name = rel.slice(prefix.length);\n" +
+      "  if (['og-image.jpg', 'og-image.jpeg', 'og-image.png'].includes(name)) return true;\n" +
+      "  const ext = path.extname(name);\n" +
+      "  if (!['.jpg', '.jpeg', '.png'].includes(ext)) return false;\n" +
+      "  const stem = name.slice(0, -ext.length);\n" +
+      "  return stem === 'og-preview' || /^og-preview-v[0-9]+$/.test(stem);\n" +
       "}\n";
     source = source.slice(0, insertAt) + helper + source.slice(insertAt);
   }
