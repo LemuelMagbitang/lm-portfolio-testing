@@ -37,7 +37,10 @@ const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
   'assets/projects/product-packaging/wine-box.jpg',
   'assets/projects/graphic-design/wine-poster.jpg',
   'assets/projects/ephiphany-3d-illustration/melodies-of-innerself.jpg',
-  'assets/projects/graphic-design/commercial-renders.jpg'
+  'assets/projects/graphic-design/commercial-renders.jpg',
+  'assets/projects/ephiphany-3d-illustration/aqua-vitae.jpg',
+  'assets/projects/retail-spatial-layouts/lss03.jpg',
+  'assets/projects/haeru/haeru-logo-construct.jpg'
 ]);
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.htm', '.js', '.mjs', '.cjs', '.json', '.md', '.txt',
