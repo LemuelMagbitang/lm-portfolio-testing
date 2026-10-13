@@ -11,6 +11,12 @@ const MIB = 1024 * 1024;
 const RASTER_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tif', '.tiff', '.avif'
 ]);
+// These deliberate compatibility exceptions are documented separately rather
+// than being reported as pending WebP conversions on every CI run.
+const PRESERVED_RASTER_ASSETS = new Map([
+  ['assets/projects/site/favicon.png', 'Kept as PNG for favicon compatibility.'],
+  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.']
+]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);
 const PREFERRED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm']);
@@ -22,6 +28,7 @@ const KNOWN_EXTENSIONS = new Set([
 
 const findings = {
   legacyRaster: [],
+  preservedRaster: [],
   largeImages: [],
   largeAssets: [],
   nonPreferredVideo: [],
@@ -150,7 +157,12 @@ function auditAssets() {
     extensionSummary.set(ext || '(no extension)', bucket);
 
     if (RASTER_EXTENSIONS.has(ext)) {
-      findings.legacyRaster.push({ path: relative, size, ext });
+      const preservationReason = PRESERVED_RASTER_ASSETS.get(relative);
+      if (preservationReason) {
+        findings.preservedRaster.push({ path: relative, size, ext, reason: preservationReason });
+      } else {
+        findings.legacyRaster.push({ path: relative, size, ext });
+      }
       if (size >= 1 * MIB) findings.largeImages.push({ path: relative, size, ext, dimensions: readRasterDimensions(file, ext) });
     }
 
@@ -235,6 +247,11 @@ reportItems(
   item => item.path + ' — ' + bytesLabel(item.size)
 );
 reportItems(
+  'Compatibility-preserved raster assets (excluded from WebP conversion backlog)',
+  findings.preservedRaster,
+  item => item.path + ' — ' + bytesLabel(item.size) + ' — ' + item.reason
+);
+reportItems(
   'Raster images at or above 1 MiB',
   findings.largeImages,
   item => item.path + ' — ' + bytesLabel(item.size) + (item.dimensions
@@ -258,7 +275,10 @@ reportItems(
 );
 
 if (findings.legacyRaster.length) {
-  console.log('\n[media-audit] Existing raster formats are reported only; convert safely and update references together.');
+  console.log('\n[media-audit] Remaining raster backlog is informational; convert only after verifying visual quality and updating references together.');
+}
+if (findings.preservedRaster.length) {
+  console.log('[media-audit] Compatibility-preserved raster files are intentional exceptions, not conversion backlog.');
 }
 console.log('[media-audit] Note: AVIF is an image format, not a standard video container. Use a compatible .mp4/.webm container for video; AV1 is a video codec.');
 

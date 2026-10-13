@@ -537,3 +537,12 @@ This migration must not:
 - Eligible raster payload changed from 34.85 MiB to 22.94 MiB (11.92 MiB / 34.2% reduction).
 - The migration report lists dimensions and per-file sizes at docs/WEBP-ASSET-MIGRATION-REPORT.md.
 - CMS PNG/JPEG uploads convert to WebP before GitHub upload. SVG/vector, animated GIF, existing WebP, videos, 3D sources, favicon and primary/versioned Open Graph images remain in their original formats.
+
+### October 13, 2026 — CMS JPEG smoke and asset-audit follow-up
+
+- The browser smoke test for CMS JPEG-to-WebP upload initially failed on the refreshed preview's cache-key assertion, not on encoding or dimensions: the CMS intentionally truncates Git blob SHAs to 12 characters in asset URLs. The test now checks the same 12-character contract.
+- Full validation passed on `0d9f823595143714b7eec663d4986db15cde0358` (workflow run [#38411482014](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38411482014)); the Pages deployment also passed ([#38411481931](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/38411481931)).
+- The asset auditor now separates the favicon PNG and Open Graph JPEG, which are deliberately preserved for compatibility, from any remaining raster-conversion backlog.
+- **Quality caveat:** CMS PNG/JPEG uploads are converted through the browser Canvas WebP encoder. PNG uses quality `1.0`, but Canvas does not expose an explicit lossless-WebP mode. The smoke test verifies WebP signature and pixel dimensions; it does not prove pixel-identical/lossless output. Do not describe the CMS PNG path as lossless or auto-recompress artwork without visual review.
+- **Next gate:** selectively review the 30 JPEG-derived WebPs that became larger than their originals, using historical source files and visual comparisons before replacing any output. Preserve artwork detail, transparent edges, and holographic masks. The CMS foil save/reload round-trip, the thumbnail-outline-after-refresh issue, and physical-device mobile 3D/back-control QA remain open.
+
