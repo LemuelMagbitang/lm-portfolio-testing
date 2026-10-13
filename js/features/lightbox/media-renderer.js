@@ -545,11 +545,14 @@ export function createLightboxMediaRenderer({
     // project backgrounds, models, and the viewer module remain startup-blocking.
     // The secondary queue keeps warming in the background if its short grace
     // period expires, avoiding a multi-minute gate on slow/save-data networks.
-    void runPreloadPool(nonBlockingJobs, constrainedNetwork ? 1 : 2).catch(() => {});
-    const secondaryPreloadPromise = runPreloadPool(
-      secondaryJobs,
-      constrainedNetwork ? 1 : 6
-    ).catch(() => []);
+    // Respect Data Saver/2G by skipping off-screen secondary media warm-ups.
+    // The viewer will still load an asset normally when the visitor opens it.
+    if (!constrainedNetwork) {
+      void runPreloadPool(nonBlockingJobs, 2).catch(() => {});
+    }
+    const secondaryPreloadPromise = constrainedNetwork
+      ? Promise.resolve([])
+      : runPreloadPool(secondaryJobs, 6).catch(() => []);
     const secondaryWaitPromise = constrainedNetwork
       ? Promise.resolve(null)
       : withPreloadTimeout(

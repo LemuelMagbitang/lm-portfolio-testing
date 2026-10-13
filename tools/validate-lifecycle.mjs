@@ -113,7 +113,7 @@ assert.match(mediaRendererSource, /async function preloadFetch\(url, \{ fetchPri
 assert.match(mediaRendererSource, /const preload = \(async \(\) => \{[\s\S]*?await response\.arrayBuffer\(\);[\s\S]*?\}\)\(\);\s*return await withPreloadTimeout\(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup\);/);
 assert.match(mediaRendererSource, /const MODEL_MODULE_PRELOAD_TIMEOUT_MS = 3500/);
 assert.match(mediaRendererSource, /const SECONDARY_MEDIA_STARTUP_WAIT_MS = 4000/);
-assert.match(mediaRendererSource, /const secondaryPreloadPromise = runPreloadPool\(\s*secondaryJobs,\s*constrainedNetwork \? 1 : 6\s*\)\.catch\(\(\) => \[\]\);/);
+assert.match(mediaRendererSource, /const secondaryPreloadPromise = constrainedNetwork\s*\?\s*Promise\.resolve\(\[\]\)\s*:\s*runPreloadPool\(secondaryJobs, 6\)\.catch\(\(\) => \[\]\);/);
 assert.match(mediaRendererSource, /const secondaryWaitPromise = constrainedNetwork\s*\? Promise\.resolve\(null\)\s*:\s*withPreloadTimeout\(\s*secondaryPreloadPromise,\s*SECONDARY_MEDIA_STARTUP_WAIT_MS/);
 assert.match(mediaRendererSource, /scheduleJob\(\s*'viewer-module',\s*\(\) => withPreloadTimeout\(\s*Promise\.resolve\(\)\.then\(preloadModelModule\),\s*MODEL_MODULE_PRELOAD_TIMEOUT_MS/);
 assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
@@ -145,7 +145,7 @@ assert.match(mediaRendererSource, /function runPreloadPool\(jobs, concurrency = 
 assert.match(mediaRendererSource, /const scheduledJobs = new Map\(\)/);
 assert.match(mediaRendererSource, /critical && !existing\.critical/);
 assert.match(mediaRendererSource, /const \[criticalResults, secondaryOutcome\] = await Promise\.all\(/);
-assert.match(mediaRendererSource, /constrainedNetwork \? 1 : 2/);
+assert.match(mediaRendererSource, /if \(!constrainedNetwork\) \{\s*void runPreloadPool\(nonBlockingJobs, 2\)/);
 assert.match(mediaRendererSource, /globalThis\.navigator\?\.connection/);
 assert.match(mediaRendererSource, /mediaPreloadRoot\?\.isConnected/);
 assert.match(mediaRendererSource, /videoDimensionCache\.set\(cacheKey, \{ width, height \}\)/);

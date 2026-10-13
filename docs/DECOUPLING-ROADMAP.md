@@ -505,3 +505,11 @@ This migration must not:
 - The timeout now aborts the URL's active AbortController. The fetch's existing finally path then clears its pending-request and controller map entries, allowing a later attempt to start cleanly.
 - Added a lifecycle/source-contract assertion for timeout cancellation. Updated the Lightbox renderer/entry canonical keys to 20261013-03 and aligned bootstrap, entrypoint, and Works/About composition cache identities to 20261013-06.
 - Validate the complete browser suite and Pages pipeline before treating the change as verified. This is preloader request cleanup only; it does not change the visual loading screen or its exit behavior.
+
+
+### October 13, 2026 — Respect Save-Data for secondary media warm-up
+
+- The prior policy detected Save-Data and 2G connections only to avoid waiting for secondary media before startup handoff; it still launched the full secondary-media queue at concurrency one in the background. This could download project artwork and foil textures that the visitor had not opened, despite an explicit data-saving preference.
+- Secondary media and non-blocking YouTube warm-ups are now skipped on constrained connections. The already-defined critical first-media, project-background, model, and viewer-module tier remains unchanged; assets still load normally when the user opens a project. Ordinary connections retain six secondary workers and the existing four-second grace period.
+- Added a lifecycle/source-contract assertion for the skip behavior and aligned Lightbox renderer/entry keys to 20261013-04 and the Works/About bootstrap/entrypoint/composition chain to 20261013-07.
+- This only changes background network warm-up policy for Save-Data/2G; it does not alter the loading screen's visual design or its readiness/exit contract. Full browser smoke and Pages CI must pass before considering it verified.
