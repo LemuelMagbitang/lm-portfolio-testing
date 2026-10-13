@@ -1008,6 +1008,36 @@ try {
         const image = document.querySelector('#lightboxMediaContainer .lightbox-holographic-front img');
         return image?.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
       }, null, { timeout: 4000 });
+      const foilFinishContract = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('#lightboxMediaContainer .lightbox-holographic')).map(surface => ({
+          caption: surface.closest('.lightbox-media-item')?.querySelector('.media-caption')?.textContent?.trim() || '',
+          style: surface.dataset.holoStyle || '',
+          spectrum: getComputedStyle(surface.querySelector('.lightbox-holographic-front .lightbox-holographic-spectrum')).backgroundImage
+        }))
+      );
+      const expectedFoilFinishes = [
+        ['Smooth Prism Foil', 'holographic'],
+        ['Fine Brush Foil', 'brushed'],
+        ['Vertical Light Beams', 'beams'],
+        ['Crosshatch Foil', 'crosshatch'],
+        ['Shattered Ice', 'shattered'],
+        ['Cosmos Galaxy Foil', 'cosmos'],
+        ['Water Waves', 'waves'],
+        ['Cat-Eye Lens', 'cat-eye'],
+        ['Pearlescent Foil', 'iridescent'],
+        ['Aurora Gradient', 'aurora']
+      ];
+      const missingFoilFinishes = expectedFoilFinishes.filter(([caption, style]) =>
+        !foilFinishContract.some(record => record.caption === caption && record.style === style)
+      );
+      const distinctFoilProfiles = new Set(foilFinishContract.map(record => record.spectrum));
+      if (foilFinishContract.length !== expectedFoilFinishes.length ||
+          missingFoilFinishes.length > 0 ||
+          distinctFoilProfiles.size < 9) {
+        throw new Error('Each saved holographic finish must keep its own per-artwork style and CSS profile: ' +
+          JSON.stringify({ records: foilFinishContract, missing: missingFoilFinishes, distinctProfiles: distinctFoilProfiles.size }));
+      }
+
       const uploadedArtContract = await funkoHolo.evaluate(el => {
         const image = el.querySelector('.lightbox-holographic-front img');
         const backImage = el.querySelector('.lightbox-holographic-back img');
