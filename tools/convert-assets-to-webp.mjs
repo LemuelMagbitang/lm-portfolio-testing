@@ -24,7 +24,12 @@ const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
   'assets/projects/aol/combination.jpg',
   'assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg',
   'assets/projects/graphic-design/watch-poster.jpg',
-  'assets/projects/haeru/00app-design.jpg'
+  'assets/projects/haeru/00app-design.jpg',
+  'assets/projects/ephiphany-3d-illustration/the-half-of-us.jpg',
+  'assets/projects/2024shell-nsac/sketch.jpg',
+  'assets/projects/ephiphany-3d-illustration/the-dead-king-midas.jpg',
+  'assets/projects/gog-render-challenge/original-character-design.jpg',
+  'assets/projects/haeru/01app-design.jpg'
 ]);
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.htm', '.js', '.mjs', '.cjs', '.json', '.md', '.txt',
