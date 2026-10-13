@@ -468,3 +468,13 @@ This migration must not:
 - Tightened About asset warm-up so successfully loaded images also request decode completion before the preload promise resolves, aligning the About-image preloader with the Lightbox image path. Decode failures still fall back to the successful load event, and the existing 4.5-second per-image timeout remains the escape hatch.
 - Added lifecycle/source-contract assertions for the decode wait and advanced the startup module cache version to `20261013-02` across Works/About entrypoints, bootstrap, and the About feature import.
 - This does not claim video bytes are fully downloaded, Lottie animations are pre-rendered, or 3D models are already GPU-ready. Physical-device checks remain open.
+
+
+
+### October 13, 2026 — Bound external Lottie startup wait
+
+- The About image-decode commit deployed successfully, but its full validation run failed on the browser smoke test's six-second startup readiness deadline. The failing smoke was `/?holographic-smoke=1`; source/lifecycle/syntax checks passed.
+- Root cause identified: the external Lottie player is loaded from two CDNs with an 8-second per-source script timeout. The portfolio catalog has Lottie media, so making that external player a hard startup dependency could hold the branded gate longer than the browser startup contract.
+- Changed the player warm-up to a 2.5-second bounded wait. The Lottie animation JSON remains in the normal local media warm-up; if the custom-element script takes longer, startup proceeds and the pending request may still define the element later.
+- Added a lifecycle/source-contract assertion for the bounded wait and advanced entrypoint/bootstrap cache identity to `20261013-03`.
+- Re-run the complete validation/browser smoke before treating this follow-up as verified. Pages deployment alone is insufficient.

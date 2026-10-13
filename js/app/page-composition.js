@@ -266,23 +266,40 @@ export async function createPortfolioApp({
     : Promise.resolve({ total: 0, ready: 0 });
 
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
-  // When projects contain Lottie artwork, wait for the player custom element
-  // as well as the animation JSON warm-up before the startup gate hands off.
-  // ensureLottiePlayer is shared with the visible feature initializers, so this
-  // reuses the in-flight request rather than downloading the player twice.
+  // Warm the Lottie player before handoff when possible, but do not let an
+  // external CDN stall the whole site. Project Lottie JSON has its own local
+  // media warm-up; the custom element can upgrade later if this bounded attempt
+  // is still in flight when the loading gate opens.
+  const LOTTIE_PLAYER_STARTUP_WAIT_MS = 2500;
   const projectLottiePlayerPreloadPromise = projectModels.some(
     project => project?.capabilities?.hasLottie
   )
-    ? Promise.resolve()
-        .then(() => ensureLottiePlayer())
-        .then(ready => {
-          if (!ready) console.warn('Lottie player could not be loaded during startup.');
-          return Boolean(ready);
-        })
-        .catch(error => {
-          console.warn('Lottie player warm-up failed:', error);
-          return false;
-        })
+    ? new Promise(resolve => {
+        const timerOwner = root.defaultView || globalThis;
+        let settled = false;
+        let timer = null;
+        const finish = ready => {
+          if (settled) return;
+          settled = true;
+          if (timer !== null) timerOwner.clearTimeout?.(timer);
+          resolve(Boolean(ready));
+        };
+        timer = timerOwner.setTimeout?.(() => {
+          console.warn('Lottie player startup warm-up timed out; continuing startup.');
+          finish(false);
+        }, LOTTIE_PLAYER_STARTUP_WAIT_MS) ?? null;
+
+        Promise.resolve()
+          .then(() => ensureLottiePlayer())
+          .then(ready => {
+            if (!ready) console.warn('Lottie player could not be loaded during startup.');
+            finish(ready);
+          })
+          .catch(error => {
+            console.warn('Lottie player warm-up failed:', error);
+            finish(false);
+          });
+      })
     : Promise.resolve(true);
 
   const heroPromise = hero
