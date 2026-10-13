@@ -266,11 +266,24 @@ export async function createPortfolioApp({
     : Promise.resolve({ total: 0, ready: 0 });
 
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
-  if (projectModels.some(project => project?.capabilities?.hasLottie)) {
-    void Promise.resolve().then(() => ensureLottiePlayer()).catch(error => {
-      console.warn('Lottie player warm-up failed:', error);
-    });
-  }
+  // When projects contain Lottie artwork, wait for the player custom element
+  // as well as the animation JSON warm-up before the startup gate hands off.
+  // ensureLottiePlayer is shared with the visible feature initializers, so this
+  // reuses the in-flight request rather than downloading the player twice.
+  const projectLottiePlayerPreloadPromise = projectModels.some(
+    project => project?.capabilities?.hasLottie
+  )
+    ? Promise.resolve()
+        .then(() => ensureLottiePlayer())
+        .then(ready => {
+          if (!ready) console.warn('Lottie player could not be loaded during startup.');
+          return Boolean(ready);
+        })
+        .catch(error => {
+          console.warn('Lottie player warm-up failed:', error);
+          return false;
+        })
+    : Promise.resolve(true);
 
   const heroPromise = hero
     ? initHeroBannerV2({
@@ -418,6 +431,7 @@ export async function createPortfolioApp({
   // are warmed. Each individual preload has its own timeout/error handling.
   await Promise.all([
     projectMediaPreloadPromise,
+    projectLottiePlayerPreloadPromise,
     root.body?.classList.contains('about-page')
       ? aboutAssetPreloadPromise
       : Promise.resolve()
