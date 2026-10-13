@@ -904,13 +904,13 @@ try {
         });
         if (cosmosMaterial.style !== 'cosmos' ||
             !cosmosMaterial.bottom.background.includes('conic-gradient') ||
-            !cosmosMaterial.bottom.mask.includes('cosmos-bottom.png') ||
+            !cosmosMaterial.bottom.mask.includes('cosmos-bottom.webp') ||
             !cosmosMaterial.bottom.maskMode.includes('luminance') ||
             !cosmosMaterial.middle.background.includes('conic-gradient') ||
-            !cosmosMaterial.middle.mask.includes('cosmos-middle-trans.png') ||
+            !cosmosMaterial.middle.mask.includes('cosmos-middle-trans.webp') ||
             !cosmosMaterial.middle.maskMode.includes('luminance') ||
             !cosmosMaterial.top.background.includes('conic-gradient') ||
-            !cosmosMaterial.top.mask.includes('cosmos-top-trans.png') ||
+            !cosmosMaterial.top.mask.includes('cosmos-top-trans.webp') ||
             !cosmosMaterial.top.maskMode.includes('luminance') ||
             !cosmosMaterial.grain.includes('grain.webp') ||
             cosmosMaterial.layerNames.indexOf('cosmos-bottom') < 0 ||
@@ -918,7 +918,7 @@ try {
             cosmosMaterial.layerNames.indexOf('cosmos-top') <= cosmosMaterial.layerNames.indexOf('cosmos-middle')) {
           throw new Error('Cosmos renderer profile must apply each grayscale texture as its own luminance mask over an ordered spectral layer: ' + JSON.stringify(cosmosMaterial));
         }
-        for (const asset of ['cosmos-bottom.png', 'cosmos-middle-trans.png', 'cosmos-top-trans.png']) {
+        for (const asset of ['cosmos-bottom.webp', 'cosmos-middle-trans.webp', 'cosmos-top-trans.webp']) {
           const response = await page.request.get(`${BASE_URL}/assets/holographic/${asset}`);
           if (!response.ok()) throw new Error('Cosmos texture asset is not reachable: ' + asset + ' (' + response.status() + ')');
         }
@@ -3105,14 +3105,14 @@ try {
         description: '',
         thumbnail: {
           type: 'image',
-          src: 'assets/projects/site/favicon.png',
+          src: 'assets/projects/site/favicon.webp',
           focus: '50% 50%',
           zoom: 1
         },
         media: [
           { type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefghijk', caption: 'Short fixture', orientation: '' },
           { type: 'youtube', src: 'https://www.youtube.com/watch?v=lmnopqrstuv', caption: 'Landscape fixture', orientation: 'landscape' },
-          { type: 'image', src: 'assets/projects/site/favicon.png', caption: 'Image fixture', orientation: 'square' }
+          { type: 'image', src: 'assets/projects/site/favicon.webp', caption: 'Image fixture', orientation: 'square' }
         ]
       }];
       await page.route(`${BASE_URL}/data/projects.json**`, async route => {
@@ -5544,7 +5544,7 @@ try {
 
       if (await afterEffectsImage.count()) {
         const src = await afterEffectsImage.getAttribute('src');
-        if (!src?.includes('/assets/projects/site/logos/adobe-after-effects-cc.png')) {
+        if (!src?.includes('/assets/projects/site/logos/adobe-after-effects-cc.webp')) {
           throw new Error('About page After Effects logo left its bundled Adobe asset path.');
         }
       }

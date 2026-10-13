@@ -528,3 +528,11 @@ This migration must not:
 - The asset audit inventoried 96 files totaling 39.38 MiB. It reported 88 existing raster files for a non-blocking WebP review backlog and three raster images at or above 1 MiB: `assets/projects/gog-render-challenge/card-layout.png` (3.92 MiB), `assets/projects/retail-spatial-layouts/repeluxe00.png` (3.17 MiB), and `assets/projects/graphic-design/concept-magazine.jpg` (1.23 MiB). All three are referenced by the current CMS project manifest.
 - Do not bulk-convert or remove the source files. Begin selective optimization with dimension/alpha inspection and a visual comparison, especially for the GOG card artwork because it has holographic texture and mask settings. Preserve transparency, orientation, captions, foil effects, and source compatibility; change the JSON reference only after the derivative is verified.
 - **Next gate:** run a real CMS style change → save → reload check, then verify live rendering. Separately reproduce the post-refresh thumbnail-outline issue and test mobile 3D focus/Back behavior on a physical device. Keep broad CSS ownership extraction paused until those targeted visual gates are complete.
+
+
+## October 13, 2026 — WebP asset migration completed
+
+- Converted 88 existing static PNG/JPEG assets to WebP and rewrote 16 runtime/test source files.
+- Payload changed from 34.93 MiB to 22.99 MiB (34.2% net reduction).
+- The migration report lists dimensions and per-file sizes at docs/WEBP-ASSET-MIGRATION-REPORT.md.
+- CMS PNG/JPEG uploads now convert to WebP before GitHub upload; SVG/vector, animated GIF, existing WebP, video and 3D sources remain unchanged.

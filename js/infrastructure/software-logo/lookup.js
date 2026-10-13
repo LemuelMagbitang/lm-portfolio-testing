@@ -48,13 +48,13 @@ const SOFTWARE_ALIASES = {
 // programs, so the CMS stays automatic without making the live site depend
 // on a third-party logo CDN for known entries.
 const BUNDLED_SOFTWARE_LOGOS = {
-  blender: 'assets/projects/site/logos/blender_icon_512x512.png',
-  figma: 'assets/projects/site/logos/figma.png',
-  krita: 'assets/projects/site/logos/krita.png',
-  adobepremierepro: 'assets/projects/site/logos/adobe-premiew-pro-cc.png',
-  adobeaftereffects: 'assets/projects/site/logos/adobe-after-effects-cc.png',
-  adobephotoshop: 'assets/projects/site/logos/adobe-photoshop-cc.png',
-  adobeillustrator: 'assets/projects/site/logos/adobe-illustrator-cc.png'
+  blender: 'assets/projects/site/logos/blender_icon_512x512.webp',
+  figma: 'assets/projects/site/logos/figma.webp',
+  krita: 'assets/projects/site/logos/krita.webp',
+  adobepremierepro: 'assets/projects/site/logos/adobe-premiew-pro-cc.webp',
+  adobeaftereffects: 'assets/projects/site/logos/adobe-after-effects-cc.webp',
+  adobephotoshop: 'assets/projects/site/logos/adobe-photoshop-cc.webp',
+  adobeillustrator: 'assets/projects/site/logos/adobe-illustrator-cc.webp'
 };
 
 const cache = new Map();

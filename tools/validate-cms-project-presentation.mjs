@@ -430,9 +430,9 @@ assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(a
   'CMS foil strength should have fine-grained control.');
 
 assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
-  renderer.includes("'cosmos-bottom': 'assets/holographic/cosmos-bottom.png'") &&
-  renderer.includes("'cosmos-middle': 'assets/holographic/cosmos-middle-trans.png'") &&
-  renderer.includes("'cosmos-top': 'assets/holographic/cosmos-top-trans.png'"),
+  renderer.includes("'cosmos-bottom': 'assets/holographic/cosmos-bottom.webp'") &&
+  renderer.includes("'cosmos-middle': 'assets/holographic/cosmos-middle-trans.webp'") &&
+  renderer.includes("'cosmos-top': 'assets/holographic/cosmos-top-trans.webp'"),
   'Each Cosmos layer must have its own source luminance map.');
 assert.ok(renderer.includes("modes.push('luminance')") &&
   renderer.includes("applyFaceHolographicMask(layer, mapUrl, { size: '50% 50%', repeat: 'repeat', position: '0 0' })"),
@@ -442,7 +442,7 @@ assert.ok(renderer.includes("['cosmos-bottom', 'lightbox-holographic-cosmos-laye
   renderer.includes("['cosmos-top', 'lightbox-holographic-cosmos-layer lightbox-holographic-cosmos-top']"),
   'Cosmos maps must be separate DOM layers in bottom/middle/top order.');
 assert.ok(siteCss.includes('.lightbox-holographic-grain-layer') && siteCss.includes('url("../assets/holographic/grain.webp")') &&
-  siteCss.includes('.lightbox-holographic-glitter-layer') && siteCss.includes('url("../assets/holographic/glitter.png")'),
+  siteCss.includes('.lightbox-holographic-glitter-layer') && siteCss.includes('url("../assets/holographic/glitter.webp")'),
   'Grain and glitter must be independently composited layers.');
 for (const [layerName, depth] of [['cosmos-bottom','1px'],['cosmos-middle','2px'],['cosmos-top','3.5px'],['grain-layer','4px'],['glitter-layer','5px']]) {
   const selector = ':is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-' + layerName + '{';

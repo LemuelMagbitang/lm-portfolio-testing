@@ -28,7 +28,7 @@ function toMs(value, unit){
    URL" — every preview image in this tool (project thumbnails, media
    items, the profile photo, skill logos, folder previews) is built
    from a path stored in data/*.json, like
-   "assets/projects/haeru/web-og-image.jpg". Those paths are written
+   "assets/projects/haeru/web-og-image.webp". Those paths are written
    to be resolved from the SITE ROOT — same rule the public site
    itself follows everywhere.
 
@@ -1811,7 +1811,7 @@ RENDERERS.settings = function(data){
   s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
   s.showHeroMessage = s.showHeroMessage !== false;
   s.showFooterMessage = s.showFooterMessage === true;
-  s.ogImage = s.ogImage || 'assets/projects/site/og-image.jpg';
+  s.ogImage = s.ogImage || 'assets/projects/site/og-image.webp';
   s.ogImageVersion = Math.max(1, Number(s.ogImageVersion) || 2);
   s.ogImageAlt = s.ogImageAlt || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio';
 
@@ -3487,7 +3487,7 @@ RENDERERS.about = function(data){
   // don't have a brand mark to show), so it stays plain strings.
   a.softwareSkills = (a.softwareSkills || []).map(s => typeof s === 'string' ? { name: s, icon: '' } : s);
   a.multimediaSkills = a.multimediaSkills || [];
-  // Normalizes the old plain-string photo ("assets/.../profile.jpg")
+  // Normalizes the old plain-string photo ("assets/.../profile.webp")
   // into the same {src, zoom, focus, rotate} shape a project's
   // thumbnail already uses, so data saved before this editor existed
   // still loads without an error — it just opens with zoom/rotate at
@@ -3518,7 +3518,7 @@ RENDERERS.about = function(data){
         <p class="panel-sub">Shown as a circle on the About page — the preview matches that shape, and the same zoom/focus/rotate a project thumbnail supports work here too.</p>
         <div class="two-col">
           <div>
-            <div class="field"><label class="field-label">Path or URL</label><input id="a_photo" value="${attr(a.photo.src)}" placeholder="assets/projects/site/profile.jpg"></div>
+            <div class="field"><label class="field-label">Path or URL</label><input id="a_photo" value="${attr(a.photo.src)}" placeholder="assets/projects/site/profile.webp"></div>
             <p class="hint">Pick from Media Library, paste a repo path, or a full image URL.</p>
             <div class="row">
               <div class="field"><label class="field-label">Zoom</label><input id="a_photo_zoom" type="number" step="0.05" value="${a.photo.zoom}"></div>

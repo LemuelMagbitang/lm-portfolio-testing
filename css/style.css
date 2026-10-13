@@ -5194,7 +5194,7 @@ footer > .footer-content p{
  opacity:calc(.018 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .12));
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer{
- z-index:18;transform:translateZ(5px);background-image:url("../assets/holographic/glitter.png"),radial-gradient(ellipse 32% 27% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.48),transparent 76%),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 30%,rgba(255,255,255,.24) 47%,rgba(193,233,255,.11) 51%,transparent 68%);
+ z-index:18;transform:translateZ(5px);background-image:url("../assets/holographic/glitter.webp"),radial-gradient(ellipse 32% 27% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.48),transparent 76%),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 30%,rgba(255,255,255,.24) 47%,rgba(193,233,255,.11) 51%,transparent 68%);
  background-size:120% 120%,170% 170%,300% 240%;background-position:var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);background-blend-mode:screen,screen,color-dodge;mix-blend-mode:screen;
  opacity:calc(.025 + (var(--holo-visual-intensity,var(--holo-intensity,.7)) * .38) + (var(--holo-tilt-strength,0) * .08));filter:brightness(1.02) contrast(1.13) saturate(1.16);animation:holo-glitter-twinkle 3.2s ease-in-out infinite alternate;
 }
@@ -5215,21 +5215,21 @@ footer > .footer-content p{
   transition:filter 150ms ease-out,opacity 150ms ease-out;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom {
-  background-image:url("../assets/holographic/cosmos-bottom.png"),conic-gradient(from calc(138deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#ffe875 0deg,#b8ff5c 42deg,#42f2c7 86deg,#48d7ff 130deg,#7583ff 175deg,#db65ff 220deg,#ff5da8 265deg,#ff9a69 315deg,#ffe875 360deg),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.34) 29%,rgba(255,255,255,.05) 38%,rgba(255,255,255,.42) 47%,rgba(131,238,255,.20) 52%,rgba(0,5,24,.12) 61%,transparent 72%),radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.62),rgba(174,230,255,.18) 34%,transparent 72%);
+  background-image:url("../assets/holographic/cosmos-bottom.webp"),conic-gradient(from calc(138deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#ffe875 0deg,#b8ff5c 42deg,#42f2c7 86deg,#48d7ff 130deg,#7583ff 175deg,#db65ff 220deg,#ff5da8 265deg,#ff9a69 315deg,#ffe875 360deg),linear-gradient(calc(118deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.34) 29%,rgba(255,255,255,.05) 38%,rgba(255,255,255,.42) 47%,rgba(131,238,255,.20) 52%,rgba(0,5,24,.12) 61%,transparent 72%),radial-gradient(ellipse 42% 38% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(255,255,255,.62),rgba(174,230,255,.18) 34%,transparent 72%);
   background-size:100% 100%,210% 190%,340% 280%,160% 160%;
   background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
   background-blend-mode:soft-light,screen,screen,screen;
   filter:brightness(1.02) contrast(1.48) saturate(1.62);
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle {
-  background-image:url("../assets/holographic/cosmos-middle-trans.png"),conic-gradient(from calc(218deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#45fff2 0deg,#45c6ff 45deg,#777cff 90deg,#cf69ff 135deg,#ff73d8 180deg,#fff6b7 220deg,#5dffd0 265deg,#439fff 315deg,#45fff2 360deg),linear-gradient(calc(126deg + var(--holo-angle,0deg)),transparent 16%,rgba(2,8,28,.30) 28%,rgba(255,255,255,.05) 35%,rgba(207,249,255,.46) 46%,rgba(247,195,255,.25) 52%,rgba(2,8,28,.12) 63%,transparent 76%),radial-gradient(ellipse 34% 30% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(238,255,255,.72),rgba(195,219,255,.20) 35%,transparent 72%);
+  background-image:url("../assets/holographic/cosmos-middle-trans.webp"),conic-gradient(from calc(218deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#45fff2 0deg,#45c6ff 45deg,#777cff 90deg,#cf69ff 135deg,#ff73d8 180deg,#fff6b7 220deg,#5dffd0 265deg,#439fff 315deg,#45fff2 360deg),linear-gradient(calc(126deg + var(--holo-angle,0deg)),transparent 16%,rgba(2,8,28,.30) 28%,rgba(255,255,255,.05) 35%,rgba(207,249,255,.46) 46%,rgba(247,195,255,.25) 52%,rgba(2,8,28,.12) 63%,transparent 76%),radial-gradient(ellipse 34% 30% at var(--holo-light-x,34%) var(--holo-light-y,26%),rgba(238,255,255,.72),rgba(195,219,255,.20) 35%,transparent 72%);
   background-size:100% 100%,230% 220%,300% 240%,170% 170%;
   background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-light-x,34%) var(--holo-light-y,26%);
   background-blend-mode:soft-light,screen,screen,screen;
   filter:brightness(1.02) contrast(1.52) saturate(1.68);
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top {
-  background-image:url("../assets/holographic/cosmos-top-trans.png"),conic-gradient(from calc(318deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#fff5ff 0deg,#63f6ff 38deg,#567eff 84deg,#ef5dff 128deg,#ff8bc8 174deg,#ffffff 222deg,#ffe47a 276deg,#58fff1 326deg,#fff5ff 360deg),linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.26) 30%,rgba(255,255,255,.08) 39%,rgba(255,255,255,.58) 47%,rgba(178,239,255,.28) 51%,rgba(247,218,255,.11) 56%,rgba(0,5,24,.10) 64%,transparent 74%);
+  background-image:url("../assets/holographic/cosmos-top-trans.webp"),conic-gradient(from calc(318deg + var(--holo-angle,0deg)) at var(--holo-light-x,34%) var(--holo-light-y,26%),#fff5ff 0deg,#63f6ff 38deg,#567eff 84deg,#ef5dff 128deg,#ff8bc8 174deg,#ffffff 222deg,#ffe47a 276deg,#58fff1 326deg,#fff5ff 360deg),linear-gradient(calc(112deg + var(--holo-angle,0deg)),transparent 18%,rgba(0,5,24,.26) 30%,rgba(255,255,255,.08) 39%,rgba(255,255,255,.58) 47%,rgba(178,239,255,.28) 51%,rgba(247,218,255,.11) 56%,rgba(0,5,24,.10) 64%,transparent 74%);
   background-size:100% 100%,250% 230%,280% 230%;
   background-position:center,var(--holo-foil-x,50%) var(--holo-foil-y,50%),var(--holo-foil-x,50%) var(--holo-foil-y,50%);
   background-blend-mode:soft-light,screen,screen;

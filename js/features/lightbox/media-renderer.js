@@ -467,9 +467,9 @@ export function createLightboxMediaRenderer({
             scheduleJob('holographic-back-mask:' + backMaskUrl, () => preloadImage(backMaskUrl, { fetchPriority: 'low' }), false);
           }
           const sharedFoilAssets = [
-            ...(holo?.style === 'cosmos' ? ['assets/holographic/cosmos-bottom.png','assets/holographic/cosmos-middle-trans.png','assets/holographic/cosmos-top-trans.png'] : []),
+            ...(holo?.style === 'cosmos' ? ['assets/holographic/cosmos-bottom.webp','assets/holographic/cosmos-middle-trans.webp','assets/holographic/cosmos-top-trans.webp'] : []),
             ...(holo?.grainLayer !== false ? ['assets/holographic/grain.webp'] : []),
-            ...(holo?.glitterLayer === true ? ['assets/holographic/glitter.png'] : [])
+            ...(holo?.glitterLayer === true ? ['assets/holographic/glitter.webp'] : [])
           ];
           sharedFoilAssets.forEach(path => {
             const layerUrl = resolveAssetUrl(path);
@@ -641,9 +641,9 @@ export function createLightboxMediaRenderer({
   }
 
   const HOLOGRAPHIC_COSMOS_MAPS = {
-    'cosmos-bottom': 'assets/holographic/cosmos-bottom.png',
-    'cosmos-middle': 'assets/holographic/cosmos-middle-trans.png',
-    'cosmos-top': 'assets/holographic/cosmos-top-trans.png'
+    'cosmos-bottom': 'assets/holographic/cosmos-bottom.webp',
+    'cosmos-middle': 'assets/holographic/cosmos-middle-trans.webp',
+    'cosmos-top': 'assets/holographic/cosmos-top-trans.webp'
   };
   const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;
   const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;

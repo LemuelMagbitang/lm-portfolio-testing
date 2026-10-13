@@ -55,7 +55,7 @@ function shouldRewrite(file) {
 function imageAliases(sourcePath) {
   // Only replace a complete repository-relative path (or its URL-encoded
   // representation). Bare basename replacement can corrupt longer sibling
-  // names such as app-lowfi-sketch.jpg when converting sketch.jpg elsewhere.
+  // names such as app-lowfi-sketch.webp when converting sketch.webp elsewhere.
   const aliases = new Set([sourcePath, encodeURI(sourcePath)]);
   return [...aliases].sort((a, b) => b.length - a.length);
 }

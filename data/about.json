@@ -3,7 +3,7 @@
   "subhead": "Visual Designer & Motion Specialist",
   "bio": "I'm Lemuel Magbitang, a multidisciplinary designer specializing in 2D/3D illustration, motion graphics, brand design, and UI/UX. My approach is to create engaging, high-quality visual experiences by combining technical precision with a clean, polished aesthetic.",
   "photo": {
-    "src": "assets/projects/site/profile.jpg",
+    "src": "assets/projects/site/profile.webp",
     "zoom": 1.35,
     "focus": "98% 2%",
     "rotate": 0
@@ -11,31 +11,31 @@
   "softwareSkills": [
     {
       "name": "Blender",
-      "icon": "assets/projects/site/logos/blender_icon_512x512.png"
+      "icon": "assets/projects/site/logos/blender_icon_512x512.webp"
     },
     {
       "name": "Krita",
-      "icon": "assets/projects/site/logos/krita.png"
+      "icon": "assets/projects/site/logos/krita.webp"
     },
     {
       "name": "After Effects",
-      "icon": "assets/projects/site/logos/adobe-after-effects-cc.png"
+      "icon": "assets/projects/site/logos/adobe-after-effects-cc.webp"
     },
     {
       "name": "Illustrator",
-      "icon": "assets/projects/site/logos/adobe-illustrator-cc.png"
+      "icon": "assets/projects/site/logos/adobe-illustrator-cc.webp"
     },
     {
       "name": "Premier Pro",
-      "icon": "assets/projects/site/logos/adobe-premiew-pro-cc.png"
+      "icon": "assets/projects/site/logos/adobe-premiew-pro-cc.webp"
     },
     {
       "name": "Photoshop",
-      "icon": "assets/projects/site/logos/adobe-photoshop-cc.png"
+      "icon": "assets/projects/site/logos/adobe-photoshop-cc.webp"
     },
     {
       "name": "Figma",
-      "icon": "assets/projects/site/logos/figma.png"
+      "icon": "assets/projects/site/logos/figma.webp"
     },
     {
       "name": "Youtube",
