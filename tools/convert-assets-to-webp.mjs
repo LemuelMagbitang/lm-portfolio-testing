@@ -14,6 +14,13 @@ const ASSET_ROOT = path.join(ROOT, 'assets');
 const REPORT_PATH = path.join(ROOT, 'docs', 'WEBP-ASSET-MIGRATION-REPORT.md');
 const ROADMAP_PATH = path.join(ROOT, 'docs', 'DECOUPLING-ROADMAP.md');
 const CONVERTIBLE = new Set(['.png', '.jpg', '.jpeg']);
+const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
+  'assets/projects/aol/figureground.jpg',
+  'assets/projects/funko-pop/8.jpg',
+  'assets/projects/haeru/app-lowfi-sketch.jpg',
+  'assets/projects/2024shell-nsac/full.jpg',
+  'assets/projects/graphic-design/bakeries-poster.jpg'
+]);
 const TEXT_EXTENSIONS = new Set([
   '.css', '.html', '.htm', '.js', '.mjs', '.cjs', '.json', '.md', '.txt',
   '.xml', '.yml', '.yaml', '.webmanifest', '.svg', '.obj', '.mtl', '.gltf',
@@ -97,7 +104,10 @@ async function main() {
     .filter(file => CONVERTIBLE.has(extension(file)))
     .sort((a, b) => a.localeCompare(b));
   const preservedCompatibilityAssets = allRasterCandidates.filter(isCompatibilityRaster);
-  const candidates = allRasterCandidates.filter(file => !isCompatibilityRaster(file));
+  const preservedOriginalJpegs = allRasterCandidates.filter(file => PRESERVED_SOURCE_JPEG_ASSETS.has(relative(file)));
+  const candidates = allRasterCandidates.filter(file =>
+    !isCompatibilityRaster(file) && !PRESERVED_SOURCE_JPEG_ASSETS.has(relative(file))
+  );
 
   if (!candidates.length) {
     console.log('[webp-migration] No PNG/JPEG assets remain; nothing to convert.');
@@ -221,12 +231,14 @@ async function main() {
     '- Net reduction: ' + prettyBytes(savings) + ' (' + percent.toFixed(1) + '%)',
     '- Animated/multi-page files skipped: ' + skipped.length,
     '- Compatibility-sensitive PNG/JPEG files preserved: ' + preservedCompatibilityAssets.length,
+    '- Original JPEGs retained where smaller than WebP: ' + preservedOriginalJpegs.length,
     '',
     'PNG files were encoded losslessly to protect transparent art and foil/mask layers. JPEG files were encoded as WebP at quality 92. The site favicon and primary/versioned Open Graph social preview images stay PNG/JPEG for compatibility. SVG, GIF, existing WebP, videos, and 3D files were not converted.',
     '',
     '## Converted assets',
     '',
     ...mappingRows,
+    ...(preservedOriginalJpegs.length ? ['', '## Original JPEGs retained where smaller than WebP', '', ...preservedOriginalJpegs.map(file => '- ' + relative(file) + ' — original JPEG retained because the reviewed WebP was larger without a meaningful visual benefit.')] : []),
     ...(skipped.length ? ['', '## Skipped assets', '', ...skipped.map(item => '- ' + item.path + ' — ' + item.reason)] : [])
   ].join('\n') + '\n';
   fs.writeFileSync(REPORT_PATH, report, 'utf8');

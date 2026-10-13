@@ -51,7 +51,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/haeru/app-lowfi-sketch.webp",
+        "src": "assets/projects/haeru/app-lowfi-sketch.jpg",
         "caption": "Low-fidelity screen sketch",
         "orientation": ""
       },
@@ -325,7 +325,7 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/2024shell-nsac/full.webp",
+        "src": "assets/projects/2024shell-nsac/full.jpg",
         "caption": "Walang Hanggang Dambana ng Sining (Eternal Shrine of Art)",
         "orientation": ""
       },
@@ -461,7 +461,7 @@
     "description": "this is a funko pop in 2d",
     "thumbnail": {
       "type": "image",
-      "src": "assets/projects/funko-pop/8.webp",
+      "src": "assets/projects/funko-pop/8.jpg",
       "focus": "49% 45%",
       "zoom": 1
     },
@@ -632,7 +632,7 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/aol/figureground.webp",
+        "src": "assets/projects/aol/figureground.jpg",
         "caption": "",
         "orientation": ""
       },
@@ -684,7 +684,7 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/graphic-design/bakeries-poster.webp",
+        "src": "assets/projects/graphic-design/bakeries-poster.jpg",
         "caption": "Local Bakery Commercial Poster",
         "orientation": ""
       },

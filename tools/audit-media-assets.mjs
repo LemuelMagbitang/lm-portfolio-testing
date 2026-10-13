@@ -15,7 +15,12 @@ const RASTER_EXTENSIONS = new Set([
 // than being reported as pending WebP conversions on every CI run.
 const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/site/favicon.png', 'Kept as PNG for favicon compatibility.'],
-  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.']
+  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.'],
+  ['assets/projects/aol/figureground.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/funko-pop/8.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/haeru/app-lowfi-sketch.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/2024shell-nsac/full.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
+  ['assets/projects/graphic-design/bakeries-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);
