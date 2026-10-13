@@ -42,6 +42,10 @@ export function createLightboxMediaRenderer({
   // how long they hold the startup gate; a pending import can still complete
   // later and populate the browser module cache.
   const MODEL_MODULE_PRELOAD_TIMEOUT_MS = 3500;
+  // Full-size secondary artwork can exceed 30 MiB. Give it a short startup
+  // grace period on ordinary links, but never make a constrained connection
+  // wait for the entire secondary queue before the page becomes interactive.
+  const SECONDARY_MEDIA_STARTUP_WAIT_MS = 4000;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
     let settled = false;
     const finish = value => {
@@ -535,15 +539,28 @@ export function createLightboxMediaRenderer({
       else secondaryJobs.push(job);
     }
 
-    // Wait for all local project media during the branded loading gate:
-    // images, videos, Lottie JSON, 3D model binaries, foil layers, and project
-    // backgrounds. Third-party YouTube player boot stays non-blocking.
+    // Start every scheduled warm-up before handoff. Critical first media,
+    // project backgrounds, models, and the viewer module remain startup-blocking.
+    // The secondary queue keeps warming in the background if its short grace
+    // period expires, avoiding a multi-minute gate on slow/save-data networks.
     void runPreloadPool(nonBlockingJobs, constrainedNetwork ? 1 : 2).catch(() => {});
+    const secondaryPreloadPromise = runPreloadPool(
+      secondaryJobs,
+      constrainedNetwork ? 1 : 6
+    ).catch(() => []);
+    const secondaryWaitPromise = constrainedNetwork
+      ? Promise.resolve(null)
+      : withPreloadTimeout(
+          secondaryPreloadPromise,
+          SECONDARY_MEDIA_STARTUP_WAIT_MS
+        );
 
-    const [criticalResults, secondaryResults] = await Promise.all([
+    const [criticalResults, secondaryOutcome] = await Promise.all([
       runPreloadPool(criticalJobs, constrainedNetwork ? 3 : 6),
-      runPreloadPool(secondaryJobs, constrainedNetwork ? 1 : 6)
+      secondaryWaitPromise
     ]);
+    // null or false means this tier is still running in the background.
+    const secondaryResults = Array.isArray(secondaryOutcome) ? secondaryOutcome : [];
 
     return {
       total: criticalJobs.length + secondaryJobs.length + nonBlockingJobs.length,

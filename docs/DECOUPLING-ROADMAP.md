@@ -488,3 +488,12 @@ This migration must not:
 - Fixed a separate timeout gap in model/asset prefetching: the timeout previously covered `fetch()` only, not `response.arrayBuffer()`. The complete response-body read is now inside the existing nine-second timeout and abort cleanup.
 - Added lifecycle/source-contract assertions for both protections and advanced the app cache key to `20261013-04`.
 - Re-run the complete validation/browser smoke before treating the combined startup changes as green. A Pages deployment by itself is not sufficient.
+
+
+
+### October 13, 2026 — Bound the secondary media wait
+
+- The current content manifest contains 68 local project-media entries totaling about 34.5 MiB: 64 images (~30.3 MiB), two videos (~2.0 MiB), one Lottie JSON (~0.28 MiB), and one OBJ model (~1.86 MiB), before foil layers and project backgrounds.
+- Waiting for every secondary asset is not a sustainable startup contract on save-data/2G connections. The preloader now starts the full secondary queue immediately, waits up to four seconds for it on ordinary networks, and does not wait for the secondary tier on constrained networks. The remaining jobs continue in the background; critical project media, backgrounds, and model warm-up stay in the gate.
+- Added lifecycle/source-contract coverage for the bounded wait and aligned the Lightbox runtime/test cache keys to `20261013-02`; advanced bootstrap, entrypoints, and composition cache identity to `20261013-05`.
+- This is a deliberate startup/responsiveness trade-off: assets that finish within the grace period are ready at handoff; slower secondary assets may finish afterward. Re-run browser smoke and deployment checks for this change.
