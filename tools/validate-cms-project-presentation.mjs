@@ -146,6 +146,28 @@ const legacyFoil = normalizeProjectMedia({type:'image',src:'assets/projects/test
 assert.equal(legacyFoil.grainLayer, true, 'Old foil data keeps the legacy grain default.');
 assert.equal(legacyFoil.glitterLayer, false, 'Glitter remains opt-in for existing artwork.');
 
+const supportedHolographicStyles = [
+  'holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered',
+  'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'
+];
+const editorStyleContract = admin.match(/const styles = new Set\\(\\[([^\\]]+)\\]\\);/);
+assert.ok(editorStyleContract, 'CMS holographic controls must declare their supported finish list.');
+const editorStyleIds = [...editorStyleContract[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+assert.deepEqual(
+  [...editorStyleIds].sort(),
+  [...supportedHolographicStyles].sort(),
+  'CMS and public project normalization must support the same holographic style IDs.'
+);
+for (const style of supportedHolographicStyles) {
+  const normalizedStyle = normalizeProjectMedia({
+    type: 'image',
+    src: 'assets/projects/test/front.png',
+    holographic: { style, intensity: 0.65 }
+  })?.holographic?.style;
+  assert.equal(normalizedStyle, style, `Public normalization must preserve the ${style} foil finish.`);
+  assert.ok(siteCss.includes(`data-holo-style="${style}"`), `The public stylesheet must define a ${style} finish profile.`);
+}
+
 assert.ok(
   foilNormalRendererSource.includes('float broadSpecular=') &&
   foilNormalRendererSource.includes('float fresnel=') &&
