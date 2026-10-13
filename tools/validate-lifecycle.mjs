@@ -98,6 +98,7 @@ assert.match(mediaRendererSource, /function preloadVideo\(url(?:,|\))/);
 assert.match(mediaRendererSource, /image\.fetchPriority = fetchPriority === 'high' \? 'high' : 'low'/);
 assert.match(mediaRendererSource, /video\.fetchPriority = fetchPriority === 'high' \? 'high' : 'low'/);
 assert.match(mediaRendererSource, /function preloadLottie\(url, \{ fetchPriority = 'low' \}/);
+assert.match(mediaRendererSource, /MEDIA_PRELOAD_TIMEOUT_MS,\s*\/\/ Abort a stalled dimensions fetch[\s\S]*?\(\) => lottieDimensionAbortControllers\.get\(url\)\?\.abort\(\)/);
 assert.match(mediaRendererSource, /const lottieDimensionAbortControllers = new Map\(\)/);
 assert.match(mediaRendererSource, /if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return Promise\.resolve\(null\)/);
 assert.match(mediaRendererSource, /signal: controller\?\.signal/);

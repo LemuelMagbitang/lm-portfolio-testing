@@ -497,3 +497,11 @@ This migration must not:
 - Waiting for every secondary asset is not a sustainable startup contract on save-data/2G connections. The preloader now starts the full secondary queue immediately, waits up to four seconds for it on ordinary networks, and does not wait for the secondary tier on constrained networks. The remaining jobs continue in the background; critical project media, backgrounds, and model warm-up stay in the gate.
 - Added lifecycle/source-contract coverage for the bounded wait and aligned the Lightbox runtime/test cache keys to `20261013-02`; advanced bootstrap, entrypoints, and composition cache identity to `20261013-05`.
 - This is a deliberate startup/responsiveness trade-off: assets that finish within the grace period are ready at handoff; slower secondary assets may finish afterward. Re-run browser smoke and deployment checks for this change.
+
+
+### October 13, 2026 — Abort stalled Lottie dimension preloads
+
+- The Lottie JSON dimension helper already used a timeout at the preload boundary and retained per-URL request deduplication, but its timeout callback was a no-op. If the network request or response parsing stalled, the caller could time out while the underlying fetch remained active and the pending request stayed reusable until it settled.
+- The timeout now aborts the URL's active AbortController. The fetch's existing finally path then clears its pending-request and controller map entries, allowing a later attempt to start cleanly.
+- Added a lifecycle/source-contract assertion for timeout cancellation. Updated the Lightbox renderer/entry canonical keys to 20261013-03 and aligned bootstrap, entrypoint, and Works/About composition cache identities to 20261013-06.
+- Validate the complete browser suite and Pages pipeline before treating the change as verified. This is preloader request cleanup only; it does not change the visual loading screen or its exit behavior.

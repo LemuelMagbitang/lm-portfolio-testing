@@ -212,7 +212,9 @@ export function createLightboxMediaRenderer({
       const dimensions = await withPreloadTimeout(
         resolveLottieDimensions(url, { fetchPriority }),
         MEDIA_PRELOAD_TIMEOUT_MS,
-        () => {}
+        // Abort a stalled dimensions fetch so its pending request can settle and
+        // later preloads do not inherit a request that never finishes.
+        () => lottieDimensionAbortControllers.get(url)?.abort()
       );
       return !!dimensions;
     } catch (_) {
