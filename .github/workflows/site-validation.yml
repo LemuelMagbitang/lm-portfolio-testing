@@ -73,6 +73,8 @@ jobs:
 
       - name: Test CMS Media Library folder rename
         run: node tools/test-cms-media-rename.mjs
+      - name: Test CMS image upload conversion policy
+        run: node tools/test-cms-upload-policy.mjs
 
       - name: Validate Projects runtime composition
         run: node tools/validate-project-runtime.mjs
