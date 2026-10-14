@@ -90,7 +90,7 @@ function cmsUploadNeedsWebP(file){
 }
 
 function cmsWebPTargetName(name){
-  return String(name||'').replace(/\.(?:png|jpe?g)$/i,'.webp');
+  return String(name||'').replace(/\.(?:jpe?g)$/i,'.webp');
 }
 
 function convertCmsUploadToWebP(file){
@@ -129,12 +129,9 @@ function convertCmsUploadToWebP(file){
         const context=canvas.getContext('2d',{alpha:true});
         if(!context) throw new Error('This browser could not create an image conversion surface.');
         context.drawImage(image,0,0,width,height);
-        // The Canvas API doesn't expose lossless WebP mode. Use its maximum
-        // quality for PNG input (especially transparent artwork and masks),
-        // while keeping a smaller high-quality setting for JPEG uploads.
-        const isPngInput=/\.png$/i.test(String(file?.name||'')) ||
-          String(file?.type||'').toLowerCase()==='image/png';
-        const encoderQuality=isPngInput?1:0.92;
+        // Generate a high-quality JPEG-derived WebP candidate. The caller
+        // keeps this conversion only when encoding succeeds and reduces bytes.
+        const encoderQuality=0.92;
         canvas.toBlob(blob=>{
           if(settled)return;
           if(!blob){fail(new Error('The browser could not encode this image as WebP.'));return;}
