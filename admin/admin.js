@@ -81,10 +81,12 @@ function handleMissingFile(el, kind){
 function cmsUploadNeedsWebP(file){
   const name=String(file?.name||'');
   const type=String(file?.type||'').toLowerCase();
-  if(!/\.(png|jpe?g)$/i.test(name)) return false;
-  // SVG is vector artwork, GIF may be animated, and already-modern formats
-  // should not be rasterized just because the picker accepts image/*.
-  return !type || ['image/png','image/jpeg','image/jpg','application/octet-stream'].includes(type);
+  // Preserve PNGs byte-for-byte. They may contain transparency, grayscale
+  // foil masks, or texture maps, and Canvas WebP encoding is not guaranteed
+  // to be lossless. JPEGs are only candidates; conversion is kept only when
+  // the encoded WebP is smaller than the original.
+  if(!/\.(jpe?g)$/i.test(name)) return false;
+  return !type || ['image/jpeg','image/jpg','application/octet-stream'].includes(type);
 }
 
 function cmsWebPTargetName(name){
@@ -136,8 +138,12 @@ function convertCmsUploadToWebP(file){
         canvas.toBlob(blob=>{
           if(settled)return;
           if(!blob){fail(new Error('The browser could not encode this image as WebP.'));return;}
-          if(blob.type!=='image/webp'){
-            fail(new Error('WebP encoding is not supported by this browser. The original was not uploaded.'));
+          if(blob.type!=='image/webp' || blob.size>=file.size){
+            // A conversion must not make the upload larger or block the
+            // original when this browser cannot produce WebP.
+            settled=true;
+            cleanup();
+            resolve({file,converted:false});
             return;
           }
           settled=true;
