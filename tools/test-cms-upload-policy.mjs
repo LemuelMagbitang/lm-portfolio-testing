@@ -7,7 +7,7 @@ const policyMatch = source.match(/function cmsUploadNeedsWebP\(file\)\s*\{([\s\S
 assert.ok(policyMatch, 'CMS upload WebP policy must remain explicit.');
 const policy = policyMatch[1];
 assert.ok(
-  policy.includes(String.raw`if(!/\.(jpe?g)$/i.test(name)) return false;`),
+  policy.includes('if(!/\\.(jpe?g)$/i.test(name)) return false;'),
   'Only JPEG uploads should be considered for automatic WebP conversion.'
 );
 assert.doesNotMatch(
