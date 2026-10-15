@@ -95,26 +95,31 @@ function cmsWebPTargetName(name){
 
 function convertCmsUploadToWebP(file){
   if(!cmsUploadNeedsWebP(file)) return Promise.resolve({file,converted:false});
+  // Encoding is an optional optimization, never a prerequisite for uploading
+  // the original. Any unavailable browser API or conversion failure falls back
+  // to the untouched file rather than blocking Media Library uploads.
   if(typeof URL?.createObjectURL!=='function' || typeof File!=='function'){
-    return Promise.reject(new Error('This browser cannot prepare WebP uploads. Try a current browser.'));
+    return Promise.resolve({file,converted:false});
   }
 
-  return new Promise((resolve,reject)=>{
-    const objectUrl=URL.createObjectURL(file);
-    const image=new Image();
+  return new Promise(resolve=>{
+    let objectUrl='';
+    try{objectUrl=URL.createObjectURL(file);}catch(_){resolve({file,converted:false});return;}
+    let image;
+    try{image=new Image();}catch(_){try{URL.revokeObjectURL(objectUrl);}catch(__){}resolve({file,converted:false});return;}
     let canvas=null;
     let settled=false;
     const cleanup=()=>{
-      URL.revokeObjectURL(objectUrl);
+      try{URL.revokeObjectURL(objectUrl);}catch(_){}
       image.onload=null;
       image.onerror=null;
       if(canvas){canvas.width=0;canvas.height=0;canvas=null;}
     };
-    const fail=error=>{
+    const retainOriginal=()=>{
       if(settled)return;
       settled=true;
       cleanup();
-      reject(error instanceof Error?error:new Error('Could not convert this image to WebP.'));
+      resolve({file,converted:false});
     };
 
     image.onload=()=>{
@@ -122,43 +127,38 @@ function convertCmsUploadToWebP(file){
       try{
         const width=Number(image.naturalWidth)||0;
         const height=Number(image.naturalHeight)||0;
-        if(width<1||height<1) throw new Error('The selected image has invalid dimensions.');
+        if(width<1||height<1){retainOriginal();return;}
         canvas=document.createElement('canvas');
         canvas.width=width;
         canvas.height=height;
         const context=canvas.getContext('2d',{alpha:true});
-        if(!context) throw new Error('This browser could not create an image conversion surface.');
+        if(!context){retainOriginal();return;}
         context.drawImage(image,0,0,width,height);
-        // Generate a high-quality JPEG-derived WebP candidate. The caller
-        // keeps this conversion only when encoding succeeds and reduces bytes.
-        const encoderQuality=0.92;
+        // Generate a high-quality JPEG-derived WebP candidate. Keep it only
+        // when the browser returns a valid, strictly smaller WebP payload.
         canvas.toBlob(blob=>{
           if(settled)return;
-          if(!blob){fail(new Error('The browser could not encode this image as WebP.'));return;}
-          if(blob.type!=='image/webp' || blob.size>=file.size){
-            // A conversion must not make the upload larger or block the
-            // original when this browser cannot produce WebP.
+          try{
+            if(!blob || blob.type!=='image/webp' || blob.size>=file.size){
+              retainOriginal();
+              return;
+            }
+            const targetName=cmsWebPTargetName(file.name);
+            const convertedFile=new File([blob],targetName,{
+              type:'image/webp',
+              lastModified:file.lastModified||Date.now()
+            });
             settled=true;
             cleanup();
-            resolve({file,converted:false});
-            return;
-          }
-          settled=true;
-          const targetName=cmsWebPTargetName(file.name);
-          const convertedFile=new File([blob],targetName,{
-            type:'image/webp',
-            lastModified:file.lastModified||Date.now()
-          });
-          cleanup();
-          resolve({file:convertedFile,converted:true});
-        },'image/webp',encoderQuality);
-      }catch(error){fail(error);}
+            resolve({file:convertedFile,converted:true});
+          }catch(_){retainOriginal();}
+        },'image/webp',0.92);
+      }catch(_){retainOriginal();}
     };
-    image.onerror=()=>fail(new Error('Could not read the selected image for WebP conversion.'));
-    image.src=objectUrl;
+    image.onerror=retainOriginal;
+    try{image.src=objectUrl;}catch(_){retainOriginal();}
   });
 }
-
 function uniqueCmsUploadName(name, usedNames){
   if(!usedNames.has(name)) return name;
   const dot=name.lastIndexOf('.');
