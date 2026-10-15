@@ -1676,7 +1676,10 @@ function validatePageAwareFeatureLoading() {
       !/const mainProjectsPayloadPromise = shouldLoadProjectModels/.test(composition) ||
       !/const projectModelsPromise = shouldLoadProjectModels/.test(composition) ||
       !/Promise\.all\(\[\s*mainProjectsPayloadPromise,\s*curatedViewsPromise,\s*projectsModulePromise,\s*projectModelsPromise\s*\]\)/.test(composition) ||
-      !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition)) {
+      !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition) ||
+      !/const aboutDataPromise = isAboutPage && config\.urls\.about/.test(composition) ||
+      !/const aboutPromise = isAboutPage\s*\?\s*aboutDataPromise\.then\(data => initAbout/.test(composition) ||
+      !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*aboutDataPromise\.then\(data => preloadAboutAssets/.test(composition)) {
     err('Route-aware loading: Projects, Gallery, and Lightbox graphs must load only when the project grid exists.');
   }
 }

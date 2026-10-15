@@ -5506,6 +5506,11 @@ try {
         throw new Error('About Hero/Footer should share one projects.json request; observed ' +
           projectDataRequestCount + ' requests.');
       }
+      const aboutDataRequestCount = loadedPaths.filter(path => path === '/data/about.json').length;
+      if (aboutDataRequestCount > 1) {
+        throw new Error('About rendering and asset preloading should share one about.json request; observed ' +
+          aboutDataRequestCount + ' requests.');
+      }
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('About page is missing its module bootstrap script.');

@@ -231,23 +231,50 @@ export async function createPortfolioApp({
     resolveAssetUrl: siteAssetUrl
   });
 
-  const aboutPromise = initAbout({
-    url: config.urls.about,
-    root,
-    loadJson: loadCmsJson,
-    resolveAssetUrl: siteAssetUrl
-  });
+  const isAboutPage = Boolean(root.body?.classList.contains('about-page'));
+  const aboutDataPromise = isAboutPage && config.urls.about
+    ? loadCmsJson(config.urls.about, null, { resolveUrl: siteAssetUrl })
+        .catch(error => {
+          console.warn('About data load failed:', error);
+          return null;
+        })
+    : Promise.resolve(undefined);
+
+  const aboutPromise = isAboutPage
+    ? aboutDataPromise.then(data => initAbout({
+        url: config.urls.about,
+        root,
+        data,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl
+      }))
+    : initAbout({
+        url: config.urls.about,
+        root,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl
+      });
 
   // Start About asset warm-up as soon as the data endpoint is known. The
   // browser can populate its HTTP/image cache while the branded loading gate
   // and the rest of the composed features initialize.
-  const aboutAssetPreloadPromise = preloadAboutAssets({
-    url: config.urls.about,
-    root,
-    documentRef: root,
-    loadJson: loadCmsJson,
-    resolveAssetUrl: siteAssetUrl
-  }).catch(error => {
+  const aboutAssetPreloadPromise = (isAboutPage
+    ? aboutDataPromise.then(data => preloadAboutAssets({
+        url: config.urls.about,
+        data,
+        root,
+        documentRef: root,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl
+      }))
+    : preloadAboutAssets({
+        url: config.urls.about,
+        root,
+        documentRef: root,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl
+      })
+  ).catch(error => {
     console.warn('About asset preload failed:', error);
     return { total: 0, ready: 0 };
   });
@@ -474,7 +501,7 @@ export async function createPortfolioApp({
   galleryFeatureRef = galleryFeature;
 
   const ABOUT_PAGE_PREFETCH_TIMEOUT_MS = 5000;
-  const aboutPagePrefetchPromise = !root.body?.classList.contains('about-page')
+  const aboutPagePrefetchPromise = !isAboutPage
     ? Promise.resolve().then(() => {
         const aboutPageUrl = siteAssetUrl('about/');
         if (!aboutPageUrl || typeof globalThis.fetch !== 'function') return false;
@@ -508,7 +535,7 @@ export async function createPortfolioApp({
   await Promise.all([
     projectMediaPreloadPromise,
     projectLottiePlayerPreloadPromise,
-    root.body?.classList.contains('about-page')
+    isAboutPage
       ? aboutAssetPreloadPromise
       : Promise.resolve()
   ]);

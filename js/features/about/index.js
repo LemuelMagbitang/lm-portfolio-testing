@@ -2,11 +2,14 @@ import { findSoftwareLogoCandidates, findSoftwareLogoDiscoveryCandidates } from 
 
 export async function preloadAboutAssets({
   url,
+  data = undefined,
   loadJson,
   resolveAssetUrl,
   documentRef = globalThis.document
 } = {}) {
-  if (!url || typeof loadJson !== 'function' || !documentRef) return { total: 0, ready: 0 };
+  if (!documentRef || (data === undefined && (!url || typeof loadJson !== 'function'))) {
+    return { total: 0, ready: 0 };
+  }
 
   const ABOUT_IMAGE_PRELOAD_TIMEOUT_MS = 4500;
   const preloadImage = value => new Promise(resolve => {
@@ -40,7 +43,9 @@ export async function preloadAboutAssets({
   });
 
   try {
-    const about = await loadJson(url, null, { resolveUrl: resolveAssetUrl });
+    const about = data !== undefined
+      ? data
+      : await loadJson(url, null, { resolveUrl: resolveAssetUrl });
     if (!about || typeof about !== 'object') return { total: 1, ready: 0 };
 
     const jobs = [];
@@ -100,6 +105,7 @@ export async function initAbout({
   url,
   root = globalThis.document,
   loadJson,
+  data = undefined,
   resolveAssetUrl,
   getSiteRootUrl,
   showSoftwareLogos = false
@@ -343,9 +349,11 @@ export async function initAbout({
 
   let aboutLoaded = false;
 
-  if (url && typeof loadJson === 'function') {
+  if (data !== undefined || (url && typeof loadJson === 'function')) {
     try {
-      const about = await loadJson(url, null, { resolveUrl: resolveAssetUrl });
+      const about = data !== undefined
+        ? data
+        : await loadJson(url, null, { resolveUrl: resolveAssetUrl });
       if (about && typeof about === 'object') {
         aboutLoaded = true;
         if (about.headline) headline.textContent = about.headline;
