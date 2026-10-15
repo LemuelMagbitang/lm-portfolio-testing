@@ -29,5 +29,14 @@ assert.ok(
   source.includes('image.onerror=retainOriginal;'),
   'Image decode failure during optional conversion must not block the original upload.'
 );
+const targetSelection = source.indexOf('const desiredName=conversion.converted');
+assert.notEqual(targetSelection, -1, 'Upload filename selection must follow the actual conversion outcome.');
+const targetSelectionBlock = source.slice(targetSelection, targetSelection + 260);
+assert.ok(
+  targetSelectionBlock.includes('? cmsWebPTargetName(job.originalName)') &&
+    targetSelectionBlock.includes(': job.originalName;') &&
+    targetSelectionBlock.includes('job.targetName=uniqueCmsUploadName(desiredName,reservedNames);'),
+  'JPEG fallback must retain its original extension instead of relabeling JPEG bytes as WebP.'
+);
 
 console.log('CMS upload conversion policy passed.');
