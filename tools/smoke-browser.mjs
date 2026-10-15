@@ -5793,6 +5793,7 @@ try {
     let cmsSmokeJpegOriginalMediaSha = 'smoke-jpeg-original';
     let cmsSmokeJpegUploadPayload = null;
     let cmsSmokeJpegUploadPath = '';
+    let cmsSmokeProjectsUploadPayload = null;
     await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
       // GitHub before the application shell is exposed. The shell becomes
@@ -6356,6 +6357,73 @@ try {
         throw new Error(`CMS Lottie preview did not adopt intrinsic JSON geometry: ${JSON.stringify(cmsLottieRatio)}`);
       }
 
+      // The selected foil preset must survive repeated changes, the actual CMS
+      // save payload, and a fresh editor reload—not only remain selected in DOM.
+      const holographicMedia = testProject.locator('[data-medialist] .card-item')
+        .filter({ hasText: 'Holographic image fixture' }).first();
+      if (await holographicMedia.count() !== 1) {
+        throw new Error('CMS foil style persistence fixture is missing its image media row.');
+      }
+      const holographicBody = holographicMedia.locator('[data-mbody]').first();
+      const holographicBodyStyle = await holographicBody.getAttribute('style');
+      if (!holographicBodyStyle?.includes('display:block')) {
+        await holographicMedia.locator('[data-mact="toggle"]').click();
+      }
+      const holoStyleSelect = holographicMedia.locator('[data-holo-style]').first();
+      if (await holoStyleSelect.count() !== 1 || !(await holoStyleSelect.isVisible())) {
+        throw new Error('CMS foil style selector is not visible in the image editor.');
+      }
+      if (await holoStyleSelect.inputValue() !== 'iridescent') {
+        throw new Error('CMS foil fixture did not start with its saved iridescent style.');
+      }
+      await holoStyleSelect.selectOption('cosmos');
+      await holoStyleSelect.selectOption('aurora');
+      if (await holoStyleSelect.inputValue() !== 'aurora') {
+        throw new Error('CMS foil selector did not retain the latest style selection before saving.');
+      }
+      await page.locator('#btnSaveTop').click();
+      await page.waitForFunction(() => {
+        const button = document.getElementById('btnSaveTop');
+        return !!button && !button.disabled && !/Saving/.test(button.textContent || '');
+      }, null, { timeout: 12000 });
+      if (!cmsSmokeProjectsUploadPayload?.content) {
+        throw new Error('CMS foil style test did not issue a projects.json save request.');
+      }
+      const savedProjectRows = JSON.parse(Buffer.from(
+        String(cmsSmokeProjectsUploadPayload.content).replace(/\\s/g, ''), 'base64'
+      ).toString('utf8'));
+      const savedTestProject = savedProjectRows.find(project => project.id === 'test-project');
+      const savedFoilStyle = savedTestProject?.media?.find(media =>
+        media.caption === 'Holographic image fixture'
+      )?.holographic?.style;
+      if (savedFoilStyle !== 'aurora') {
+        throw new Error('CMS save payload did not preserve the final foil style selection: ' +
+          JSON.stringify({ savedFoilStyle }));
+      }
+
+      await page.reload();
+      await page.locator('#app.active').waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator('#topbar.active').waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator('.nav-item[data-section="hero"].active').waitFor({ state: 'visible', timeout: 10000 });
+      await page.locator('#content #heroList, #content #addHero').first().waitFor({ state: 'visible', timeout: 10000 });
+      await projectsNav.click();
+      await page.locator('#content #projList .card-item').first().waitFor({ state: 'visible', timeout: 10000 });
+      const reloadedProject = page.locator('#content #projList .card-item')
+        .filter({ hasText: 'Test Project' }).first();
+      await reloadedProject.locator('[data-toggle-open]').click();
+      const reloadedHolographicMedia = reloadedProject.locator('[data-medialist] .card-item')
+        .filter({ hasText: 'Holographic image fixture' }).first();
+      const reloadedHolographicBody = reloadedHolographicMedia.locator('[data-mbody]').first();
+      const reloadedBodyStyle = await reloadedHolographicBody.getAttribute('style');
+      if (!reloadedBodyStyle?.includes('display:block')) {
+        await reloadedHolographicMedia.locator('[data-mact="toggle"]').click();
+      }
+      const reloadedHoloStyle = reloadedHolographicMedia.locator('[data-holo-style]').first();
+      await reloadedHoloStyle.waitFor({ state: 'visible', timeout: 5000 });
+      if (await reloadedHoloStyle.inputValue() !== 'aurora') {
+        throw new Error('CMS foil style did not survive a fresh reload: ' +
+          JSON.stringify({ saved: savedFoilStyle, reloaded: await reloadedHoloStyle.inputValue() }));
+      }
 
       page.once('dialog', dialog => dialog.accept());
       await nav.click();
@@ -6442,7 +6510,7 @@ try {
         media: []
       }];
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(about))));
-      const encodedProjects = btoa(unescape(encodeURIComponent(JSON.stringify(projectsFixture))));
+      let encodedProjects = btoa(unescape(encodeURIComponent(JSON.stringify(projectsFixture))));
       await page.addInitScript(({ encodedAbout }) => {
         sessionStorage.setItem('lm_cms_session_v1', JSON.stringify({
           owner: 'Smoke',
@@ -6540,6 +6608,14 @@ try {
           return;
         }
         if (url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method() === 'PUT') {
+          if (url.pathname === '/repos/Smoke/TestRepo/contents/data/projects.json') {
+            cmsSmokeProjectsUploadPayload = route.request().postDataJSON();
+            if (typeof cmsSmokeProjectsUploadPayload?.content === 'string') {
+              // Keep the save as the fixture source of truth so a real page
+              // reload exercises the exact persisted JSON bytes.
+              encodedProjects = cmsSmokeProjectsUploadPayload.content.replace(/\\s/g, '');
+            }
+          }
           // Delay a normal content save so the browser smoke test can
           // navigate away before its completion callback runs.
           await new Promise(resolve => setTimeout(resolve, 250));
