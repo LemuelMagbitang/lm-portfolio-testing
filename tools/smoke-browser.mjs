@@ -5501,6 +5501,11 @@ try {
         throw new Error('About page should not request Gallery/Lightbox module graphs: ' +
           JSON.stringify(unexpectedFeatureModules));
       }
+      const projectDataRequestCount = loadedPaths.filter(path => path === '/data/projects.json').length;
+      if (projectDataRequestCount > 1) {
+        throw new Error('About Hero/Footer should share one projects.json request; observed ' +
+          projectDataRequestCount + ' requests.');
+      }
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('About page is missing its module bootstrap script.');

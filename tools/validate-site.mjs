@@ -1672,11 +1672,11 @@ function validatePageAwareFeatureLoading() {
     err('Route-aware loading: Projects, Gallery, Lightbox, and project normalization must not be static page-composition imports.');
   }
   if (!/const projectsModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/projects\/index\.js\?v=/.test(composition) ||
-      !/const projectNormalizerModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/data\/project-normalizer\.js\?v=/.test(composition) ||
-      !/Promise\.all\(\[\s*mainProjectsPayloadPromise,\s*curatedViewsPromise,\s*projectsModulePromise,\s*projectNormalizerModulePromise\s*\]\)/.test(composition) ||
-      !/const galleryModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/gallery\/index\.js\?v=/.test(composition) ||
-      !/const lightboxModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/lightbox\/index\.js\?v=/.test(composition) ||
-      !/const galleryPromise = hasProjectGallery/.test(composition) ||
+  if (!/const projectsModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/projects\/index\.js\?v=/.test(composition) ||
+      !/const projectNormalizerModulePromise = shouldLoadProjectModels\s*\?\s*import\(['"]\.\.\/data\/project-normalizer\.js\?v=/.test(composition) ||
+      !/const mainProjectsPayloadPromise = shouldLoadProjectModels/.test(composition) ||
+      !/const projectModelsPromise = shouldLoadProjectModels/.test(composition) ||
+      !/Promise\.all\(\[\s*mainProjectsPayloadPromise,\s*curatedViewsPromise,\s*projectsModulePromise,\s*projectModelsPromise\s*\]\)/.test(composition) ||
       !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition)) {
     err('Route-aware loading: Projects, Gallery, and Lightbox graphs must load only when the project grid exists.');
   }

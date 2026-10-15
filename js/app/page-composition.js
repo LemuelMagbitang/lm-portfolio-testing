@@ -105,6 +105,11 @@ export async function createPortfolioApp({
   const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
   const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
   const hasProjectGallery = !!root.getElementById('portfolioGrid');
+  const hasProjectArtworkFeature = Boolean(
+    root.querySelector('.hero-section, #heroBanner, #heroBannerAbout') ||
+    root.getElementById('footerAnimation')
+  );
+  const shouldLoadProjectModels = hasProjectGallery || hasProjectArtworkFeature;
 
   // The Projects, Gallery, and Lightbox graphs exist only for the Work grid.
   // Load their public APIs in parallel on Works; About keeps the shared app
@@ -112,7 +117,7 @@ export async function createPortfolioApp({
   const projectsModulePromise = hasProjectGallery
     ? import('../features/projects/index.js?v=20261011-05')
     : Promise.resolve(null);
-  const projectNormalizerModulePromise = hasProjectGallery
+  const projectNormalizerModulePromise = shouldLoadProjectModels
     ? import('../data/project-normalizer.js?v=20261010-04')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
@@ -155,21 +160,36 @@ export async function createPortfolioApp({
     getSiteRootUrl
   });
 
-  const mainProjectsPayloadPromise = hasProjectGallery && config.urls.projects
+  const mainProjectsPayloadPromise = shouldLoadProjectModels && config.urls.projects
     ? loadCmsJson(config.urls.projects, null, { resolveUrl: siteAssetUrl })
     : Promise.resolve(null);
+  const projectModelsPromise = shouldLoadProjectModels && config.urls.projects
+    ? Promise.all([mainProjectsPayloadPromise, projectNormalizerModulePromise])
+        .then(([payload, projectNormalizer]) => {
+          if (!projectNormalizer?.normalizeProjects) {
+            throw new Error('Project normalizer did not expose normalizeProjects().');
+          }
+          mainProjectModels = projectNormalizer.normalizeProjects(payload);
+          return mainProjectModels;
+        })
+        .catch(error => {
+          console.warn('Project model warm-up failed:', error);
+          mainProjectModels = [];
+          return mainProjectModels;
+        })
+    : Promise.resolve([]);
   const projectsPromise = hasProjectGallery && config.urls.projects
     ? Promise.all([
         mainProjectsPayloadPromise,
         curatedViewsPromise,
         projectsModulePromise,
-        projectNormalizerModulePromise
-      ]).then(([mainPayload, views, projectsModule, projectNormalizer]) => {
-        if (!projectsModule?.mountProjects || !projectNormalizer?.normalizeProjects) {
-          throw new Error('Projects feature modules did not expose their required public API.');
+        projectModelsPromise
+      ]).then(([mainPayload, views, projectsModule, normalizedMainProjects]) => {
+        if (!projectsModule?.mountProjects) {
+          throw new Error('Projects feature module did not expose its required public API.');
         }
         projectsFeatureModule = projectsModule;
-        mainProjectModels = projectNormalizer.normalizeProjects(mainPayload);
+        mainProjectModels = normalizedMainProjects;
         const curatedResolution = resolveCuratedView({ hash: currentHash, views, mainProjects: mainPayload });
         const projectPayload = curatedResolution ? curatedResolution.projects : mainPayload;
         activeCuratedViewSlug = curatedResolution?.view?.slug || '';
@@ -240,7 +260,8 @@ export async function createPortfolioApp({
   // behind the entire feature-initialization queue.
   const [settingsFeature] = await Promise.all([
     settingsPromise,
-    projectsPromise
+    projectsPromise,
+    projectModelsPromise
   ]);
 
   const settings = settingsFeature.getState();
