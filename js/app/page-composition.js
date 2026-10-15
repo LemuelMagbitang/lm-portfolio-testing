@@ -19,10 +19,8 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 
-import { initGallery } from '../features/gallery/index.js?v=20261009-06';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-06';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
-import { initLightbox } from '../features/lightbox/index.js?v=20261015-03';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 import { normalizeProjects } from '../data/project-normalizer.js?v=20261010-04';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
@@ -115,6 +113,22 @@ export async function createPortfolioApp({
   const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
   const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
   const hasProjectGallery = !!root.getElementById('portfolioGrid');
+
+  // Start these only on pages that own the Work grid. For Works they load in
+  // parallel with settings/content, preserving startup overlap; About never
+  // parses the Gallery or Lightbox media-renderer dependency graph.
+  const galleryModulePromise = hasProjectGallery
+    ? import('../features/gallery/index.js?v=20261009-06').catch(error => {
+        console.warn('Gallery module failed to load:', error);
+        return null;
+      })
+    : Promise.resolve(null);
+  const lightboxModulePromise = hasProjectGallery
+    ? import('../features/lightbox/index.js?v=20261015-03').catch(error => {
+        console.warn('Lightbox module failed to load:', error);
+        return null;
+      })
+    : Promise.resolve(null);
   const curatedViewsPromise = loadCmsJson('data/curated-views.json', [], { resolveUrl: siteAssetUrl })
     .then(raw => {
       const views = Array.isArray(raw) ? raw : [];
@@ -236,22 +250,27 @@ export async function createPortfolioApp({
   // Initialize the Lightbox before the remaining page features finish. It can
   // safely wait for the Gallery's active-card API at interaction time while
   // exposing its media renderer immediately for startup warm-up.
-  try {
-    lightboxFeature = await initLightbox({
-      root,
-      protectionEnabled: () => settings.protectionEnabled,
-      ensureMediaBackgroundHelper,
-      applyMediaBackground,
-      parseYouTubeUrl,
-      resolveAssetUrl: siteAssetUrl,
-      mountModelViewer,
-      getActiveCards: () =>
-        galleryFeatureRef?.getActiveCards?.() ||
-        Array.from(root.querySelectorAll('.project-card')),
-      getProjectForCard
-    });
-  } catch (error) {
-    console.warn('Lightbox: initialization failed', error);
+  if (hasProjectGallery) {
+    try {
+      const lightboxModule = await lightboxModulePromise;
+      if (typeof lightboxModule?.initLightbox === 'function') {
+        lightboxFeature = await lightboxModule.initLightbox({
+          root,
+          protectionEnabled: () => settings.protectionEnabled,
+          ensureMediaBackgroundHelper,
+          applyMediaBackground,
+          parseYouTubeUrl,
+          resolveAssetUrl: siteAssetUrl,
+          mountModelViewer,
+          getActiveCards: () =>
+            galleryFeatureRef?.getActiveCards?.() ||
+            Array.from(root.querySelectorAll('.project-card')),
+          getProjectForCard
+        });
+      }
+    } catch (error) {
+      console.warn('Lightbox: initialization failed', error);
+    }
   }
 
   // Start project-media warm-up as soon as project data and the Lightbox
@@ -349,20 +368,25 @@ export async function createPortfolioApp({
   forms.setProjectEnabled(settings.formsEnabled.project);
   forms.setReviewEnabled(settings.formsEnabled.review);
 
-  const galleryPromise = initGallery({
-    root,
-    projectGrid: root.getElementById('portfolioGrid'),
-    filterUrl: config.urls.filters,
-    loadJson: loadCmsJson,
-    resolveAssetUrl: siteAssetUrl,
-    ensureLottiePlayer,
-    ensureMediaBackgroundHelper,
-    getProjects,
-    getCardForProject
-  }).catch(error => {
-    console.warn('Gallery: initialization failed', error);
-    return null;
-  });
+  const galleryPromise = hasProjectGallery
+    ? galleryModulePromise.then(module => {
+        if (typeof module?.initGallery !== 'function') return null;
+        return module.initGallery({
+          root,
+          projectGrid: root.getElementById('portfolioGrid'),
+          filterUrl: config.urls.filters,
+          loadJson: loadCmsJson,
+          resolveAssetUrl: siteAssetUrl,
+          ensureLottiePlayer,
+          ensureMediaBackgroundHelper,
+          getProjects,
+          getCardForProject
+        });
+      }).catch(error => {
+        console.warn('Gallery: initialization failed', error);
+        return null;
+      })
+    : Promise.resolve(null);
 
   let heroFeature = null;
   let footerFeature = null;

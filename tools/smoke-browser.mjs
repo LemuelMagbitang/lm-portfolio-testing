@@ -271,6 +271,8 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     hasTouch: isMobileSmoke
   });
   const page = await context.newPage();
+  const requestedUrls = [];
+  page.on('request', request => requestedUrls.push(request.url()));
   const smokeId = ++smokePageSequence;
   const caller = (new Error().stack || '').split('\n')[2]?.trim() || 'unknown-callsite';
   const smokeLabel = `#${smokeId} ${path} ${viewport.width}x${viewport.height}`;
@@ -308,7 +310,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
       if (typeof beforeReady === 'function') await beforeReady(page);
       await page.waitForTimeout(SMOKE_BOOT_SETTLE_MS);
       try {
-        await assertions(page);
+        await assertions(page, { requestedUrls });
       } catch (error) {
         if (errors.length) {
           const browserErrors = errors.join('\\n- ');
@@ -5475,7 +5477,21 @@ try {
       });
     });
 
-    await smokePage(browser, '/about/', async page => {
+    await smokePage(browser, '/about/', async (page, { requestedUrls }) => {
+      const loadedPaths = requestedUrls.map(value => {
+        try { return new URL(value).pathname; } catch (_) { return ''; }
+      });
+      const unexpectedFeatureModules = loadedPaths.filter(path =>
+        path === '/js/features/gallery/index.js' ||
+        path === '/js/features/gallery/presentation.js' ||
+        path === '/js/features/lightbox/index.js' ||
+        path === '/js/features/lightbox/media-renderer.js' ||
+        path === '/js/features/lightbox/foil-normal-renderer.js'
+      );
+      if (unexpectedFeatureModules.length) {
+        throw new Error('About page should not request Gallery/Lightbox module graphs: ' +
+          JSON.stringify(unexpectedFeatureModules));
+      }
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('About page is missing its module bootstrap script.');

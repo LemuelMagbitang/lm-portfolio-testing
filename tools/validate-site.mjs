@@ -1087,13 +1087,13 @@ function validateFeatureModuleCacheGraph() {
   const checks = [
     {
       name: 'Gallery',
-      importPattern: /from ['"]\.\.\/features\/gallery\/index\.js\?v=([^'"]+)/,
+      importPattern: /(?:from\s+|import\(\s*)['"]\.\.\/features\/gallery\/index\.js\?v=([^'"]+)['"]/,
       file: 'js/features/gallery/index.js',
       nestedPattern: /from ['"]\.\/presentation\.js\?v=([^'"]+)/g
     },
     {
       name: 'Lightbox',
-      importPattern: /from ['"]\.\.\/features\/lightbox\/index\.js\?v=([^'"]+)/,
+      importPattern: /(?:from\s+|import\(\s*)['"]\.\.\/features\/lightbox\/index\.js\?v=([^'"]+)['"]/,
       file: 'js/features/lightbox/index.js',
       nestedPattern: /from ['"]\.\/media-renderer\.js\?v=([^'"]+)/g
     }
@@ -1661,7 +1661,25 @@ validateCuratedViewRuntimeContract();
 validateCuratedViewPresentationContract();
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
+
+function validatePageAwareFeatureLoading() {
+  const composition = exists('js/app/page-composition.js')
+    ? readText('js/app/page-composition.js')
+    : '';
+  const staticFeatureImport = /(?:^|\n)\s*import\s+[^;]*?\bfrom\s*['"]\.\.\/features\/(?:gallery|lightbox)\/index\.js/m;
+  if (staticFeatureImport.test(composition)) {
+    err('Route-aware loading: Gallery and Lightbox must not be static page-composition imports.');
+  }
+  if (!/const galleryModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/gallery\/index\.js\?v=/.test(composition) ||
+      !/const lightboxModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/lightbox\/index\.js\?v=/.test(composition) ||
+      !/const galleryPromise = hasProjectGallery/.test(composition) ||
+      !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition)) {
+    err('Route-aware loading: Gallery and Lightbox module graphs must load only when the project grid exists.');
+  }
+}
+
 validateModelViewerModulePreloadCacheKey();
+validatePageAwareFeatureLoading();
 validateFeatureModuleCacheGraph();
 validateLightboxLifecycle();
 validateGalleryContract();
