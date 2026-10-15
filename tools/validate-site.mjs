@@ -1672,7 +1672,6 @@ function validatePageAwareFeatureLoading() {
     err('Route-aware loading: Projects, Gallery, Lightbox, and project normalization must not be static page-composition imports.');
   }
   if (!/const projectsModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/projects\/index\.js\?v=/.test(composition) ||
-  if (!/const projectsModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/projects\/index\.js\?v=/.test(composition) ||
       !/const projectNormalizerModulePromise = shouldLoadProjectModels\s*\?\s*import\(['"]\.\.\/data\/project-normalizer\.js\?v=/.test(composition) ||
       !/const mainProjectsPayloadPromise = shouldLoadProjectModels/.test(composition) ||
       !/const projectModelsPromise = shouldLoadProjectModels/.test(composition) ||
