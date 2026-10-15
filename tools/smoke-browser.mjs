@@ -5735,10 +5735,12 @@ try {
       }
     }, { width: 390, height: 844 });
 
-    let cmsSmokeMediaSha = 'smoke-webp';
-    let cmsSmokeUploadPayload = null;
-    let cmsSmokeJpegMediaSha = 'smoke-jpeg-webp';
+    let cmsSmokePngMediaSha = 'smoke-png-existing';
+    let cmsSmokePngUploadPayload = null;
+    let cmsSmokeJpegWebPMediaSha = 'smoke-jpeg-webp';
+    let cmsSmokeJpegOriginalMediaSha = 'smoke-jpeg-original';
     let cmsSmokeJpegUploadPayload = null;
+    let cmsSmokeJpegUploadPath = '';
     await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
       // GitHub before the application shell is exposed. The shell becomes
@@ -5874,15 +5876,14 @@ try {
       await mediaNav.click();
       await page.locator('#content #mediaGrid').waitFor({ state: 'visible', timeout: 5000 });
 
-      // Upload over an existing filename: the API must receive the current
-      // Contents SHA, then the tile should use the returned SHA as its cache key.
+      // PNG artwork and masks must survive CMS upload byte-for-byte.
+      // This protects transparency and grayscale foil maps from lossy canvas
+      // conversion while preserving the existing-file SHA/cache-key contract.
       await page.locator('#content #uploadPath').fill('assets/projects');
-      // Use a real, non-1×1 PNG so the upload test can verify that
-      // browser-side WebP conversion preserves the source pixel dimensions.
       const smokePngBytes = readFileSync(new URL('../assets/projects/site/favicon.png', import.meta.url));
       if (smokePngBytes.length < 24 ||
           smokePngBytes.toString('ascii', 1, 4) !== 'PNG') {
-        throw new Error('CMS WebP dimension fixture is not a readable PNG.');
+        throw new Error('CMS PNG preservation fixture is not a readable PNG.');
       }
       const expectedImageDimensions = {
         width: smokePngBytes.readUInt32BE(16),
@@ -5895,41 +5896,29 @@ try {
       });
       await page.waitForFunction(() => {
         const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
-          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke.webp'));
-        return image && new URL(image.src).searchParams.get('v') === 'smoke-replac';
+          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke.png'));
+        return image && new URL(image.src).searchParams.get('v') === 'smoke-png-re';
       }, null, { timeout: 8000 });
-      if (!cmsSmokeUploadPayload || cmsSmokeUploadPayload.sha !== 'smoke-webp') {
-        throw new Error('CMS same-name WebP upload did not send the current existing-file SHA.');
+      if (!cmsSmokePngUploadPayload || cmsSmokePngUploadPayload.sha !== 'smoke-png-existing') {
+        throw new Error('CMS PNG overwrite did not send the current existing-file SHA.');
       }
-      const uploadedBytes = Buffer.from(cmsSmokeUploadPayload.content || '', 'base64');
-      if (uploadedBytes.toString('ascii', 0, 4) !== 'RIFF' ||
-          uploadedBytes.toString('ascii', 8, 12) !== 'WEBP') {
-        throw new Error('CMS PNG upload was not encoded as a valid WebP payload.');
+      const uploadedPngBytes = Buffer.from(cmsSmokePngUploadPayload.content || '', 'base64');
+      if (!uploadedPngBytes.equals(smokePngBytes)) {
+        throw new Error('CMS altered PNG bytes; source artwork and foil masks must remain unchanged.');
       }
-      const uploadedImageDimensions = await page.evaluate(async base64 => {
-        const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
-        const blob = new Blob([bytes], { type: 'image/webp' });
-        const objectUrl = URL.createObjectURL(blob);
-        try {
-          const image = new Image();
-          image.src = objectUrl;
-          await image.decode();
-          return { width: image.naturalWidth, height: image.naturalHeight };
-        } finally {
-          URL.revokeObjectURL(objectUrl);
-        }
-      }, cmsSmokeUploadPayload.content);
-      if (uploadedImageDimensions.width !== expectedImageDimensions.width ||
-          uploadedImageDimensions.height !== expectedImageDimensions.height) {
-        throw new Error(
-          'CMS WebP conversion changed the uploaded image dimensions: ' +
-          JSON.stringify({ expected: expectedImageDimensions, actual: uploadedImageDimensions })
-        );
+      const uploadedPngDimensions = {
+        width: uploadedPngBytes.readUInt32BE(16),
+        height: uploadedPngBytes.readUInt32BE(20)
+      };
+      if (uploadedPngDimensions.width !== expectedImageDimensions.width ||
+          uploadedPngDimensions.height !== expectedImageDimensions.height) {
+        throw new Error('CMS PNG preservation changed source dimensions: ' +
+          JSON.stringify({ expected: expectedImageDimensions, actual: uploadedPngDimensions }));
       }
 
-      // Exercise JPEG input too: decode the original with the browser to account
-      // for its natural orientation, then ensure the WebP derivative keeps that
-      // same pixel width and height instead of silently resizing the artwork.
+      // JPEGs may convert to WebP only when the encoded result is smaller.
+      // The smoke test accepts either the optimized WebP path or the exact
+      // original JPEG fallback and verifies both payload and existing SHA.
       const smokeJpegBytes = readFileSync(new URL('../assets/projects/site/og-image.jpg', import.meta.url));
       const smokeJpegBase64 = smokeJpegBytes.toString('base64');
       const expectedJpegDimensions = await page.evaluate(async base64 => {
@@ -5949,25 +5938,44 @@ try {
         mimeType: 'image/jpeg',
         buffer: smokeJpegBytes
       });
-      // CMS media URLs use the first 12 characters of the returned file SHA
-      // as their cache key, so compare against that displayed version.
-      const expectedJpegCacheVersion = 'smoke-jpeg-replaced'.slice(0, 12);
-      await page.waitForFunction(expectedVersion => {
-        const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
-          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke-jpeg.webp'));
-        return image && new URL(image.src).searchParams.get('v') === expectedVersion;
-      }, expectedJpegCacheVersion, { timeout: 8000 });
-      if (!cmsSmokeJpegUploadPayload || cmsSmokeJpegUploadPayload.sha !== 'smoke-jpeg-webp') {
-        throw new Error('CMS JPEG upload did not send the current existing-WebP SHA.');
+      await page.waitForFunction(() => {
+        const tiles = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'));
+        return tiles.some(image => {
+          const name = image.closest('.media-tile')?.textContent || '';
+          const version = new URL(image.src).searchParams.get('v');
+          return (name.includes('smoke-jpeg.webp') && version === 'smoke-jpeg-r') ||
+            (name.includes('smoke-jpeg.jpg') && version === 'smoke-jpg-re');
+        });
+      }, null, { timeout: 8000 });
+      if (!cmsSmokeJpegUploadPayload || !cmsSmokeJpegUploadPath) {
+        throw new Error('CMS JPEG upload did not reach the mocked existing-file endpoint.');
+      }
+      const jpegConvertedToWebP = cmsSmokeJpegUploadPath.endsWith('.webp');
+      const expectedJpegSha = jpegConvertedToWebP ? 'smoke-jpeg-webp' : 'smoke-jpeg-original';
+      const expectedJpegName = jpegConvertedToWebP ? 'smoke-jpeg.webp' : 'smoke-jpeg.jpg';
+      if (cmsSmokeJpegUploadPayload.sha !== expectedJpegSha) {
+        throw new Error('CMS JPEG upload did not send the current existing-file SHA for ' + expectedJpegName + '.');
       }
       const uploadedJpegBytes = Buffer.from(cmsSmokeJpegUploadPayload.content || '', 'base64');
-      if (uploadedJpegBytes.toString('ascii', 0, 4) !== 'RIFF' ||
-          uploadedJpegBytes.toString('ascii', 8, 12) !== 'WEBP') {
-        throw new Error('CMS JPEG upload was not encoded as a valid WebP payload.');
+      let uploadedJpegMime;
+      if (jpegConvertedToWebP) {
+        if (uploadedJpegBytes.toString('ascii', 0, 4) !== 'RIFF' ||
+            uploadedJpegBytes.toString('ascii', 8, 12) !== 'WEBP') {
+          throw new Error('CMS JPEG conversion did not produce a valid WebP payload.');
+        }
+        if (uploadedJpegBytes.length >= smokeJpegBytes.length) {
+          throw new Error('CMS kept a WebP conversion that was not smaller than the original JPEG.');
+        }
+        uploadedJpegMime = 'image/webp';
+      } else {
+        if (!cmsSmokeJpegUploadPath.endsWith('.jpg') || !uploadedJpegBytes.equals(smokeJpegBytes)) {
+          throw new Error('CMS JPEG fallback did not preserve the original filename and bytes.');
+        }
+        uploadedJpegMime = 'image/jpeg';
       }
-      const uploadedJpegDimensions = await page.evaluate(async base64 => {
+      const uploadedJpegDimensions = await page.evaluate(async ({ base64, mime }) => {
         const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
-        const objectUrl = URL.createObjectURL(new Blob([bytes], { type: 'image/webp' }));
+        const objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
         try {
           const image = new Image();
           image.src = objectUrl;
@@ -5976,13 +5984,11 @@ try {
         } finally {
           URL.revokeObjectURL(objectUrl);
         }
-      }, cmsSmokeJpegUploadPayload.content);
+      }, { base64: cmsSmokeJpegUploadPayload.content, mime: uploadedJpegMime });
       if (uploadedJpegDimensions.width !== expectedJpegDimensions.width ||
           uploadedJpegDimensions.height !== expectedJpegDimensions.height) {
-        throw new Error(
-          'CMS JPEG-to-WebP conversion changed pixel dimensions: ' +
-          JSON.stringify({ expected: expectedJpegDimensions, actual: uploadedJpegDimensions })
-        );
+        throw new Error('CMS JPEG upload changed pixel dimensions: ' +
+          JSON.stringify({ expected: expectedJpegDimensions, actual: uploadedJpegDimensions }));
       }
 
       // Each CMS media tile opens a full-size type-aware preview. Exercise image,
@@ -5993,7 +5999,7 @@ try {
         await fullPreview.waitFor({ state: 'detached', timeout: 3000 });
       };
 
-      await page.locator('#content .media-tile').filter({ hasText: 'smoke-jpeg.webp' }).locator('.thumb').click();
+      await page.locator('#content .media-tile').filter({ hasText: expectedJpegName }).locator('.thumb').click();
       await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
       await fullPreview.locator('.media-full-preview-stage > img').waitFor({ state: 'visible', timeout: 5000 });
       const fullFileSize = (await fullPreview.locator('.media-full-preview-size').textContent()).trim();
@@ -6448,29 +6454,34 @@ try {
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
-        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke.webp' &&
+        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke.png' &&
             route.request().method() === 'PUT') {
-          cmsSmokeUploadPayload = route.request().postDataJSON();
-          cmsSmokeMediaSha = 'smoke-replaced-webp';
+          cmsSmokePngUploadPayload = route.request().postDataJSON();
+          cmsSmokePngMediaSha = 'smoke-png-replaced';
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({
-              content: { sha: cmsSmokeMediaSha },
-              commit: { sha: 'smoke-media-upload-commit' }
+              content: { sha: cmsSmokePngMediaSha },
+              commit: { sha: 'smoke-png-upload-commit' }
             })
           });
           return;
         }
-        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke-jpeg.webp' &&
+        if (/^\/repos\/Smoke\/TestRepo\/contents\/assets\/projects\/smoke-jpeg\.(?:webp|jpg)$/.test(url.pathname) &&
             route.request().method() === 'PUT') {
           cmsSmokeJpegUploadPayload = route.request().postDataJSON();
-          cmsSmokeJpegMediaSha = 'smoke-jpeg-replaced';
+          cmsSmokeJpegUploadPath = url.pathname.endsWith('.webp')
+            ? 'assets/projects/smoke-jpeg.webp'
+            : 'assets/projects/smoke-jpeg.jpg';
+          const resultSha = url.pathname.endsWith('.webp')
+            ? (cmsSmokeJpegWebPMediaSha = 'smoke-jpeg-replaced')
+            : (cmsSmokeJpegOriginalMediaSha = 'smoke-jpg-replaced');
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({
-              content: { sha: cmsSmokeJpegMediaSha },
+              content: { sha: resultSha },
               commit: { sha: 'smoke-jpeg-upload-commit' }
             })
           });
@@ -6513,8 +6524,9 @@ try {
               tree: [
                 { type: 'tree', path: 'assets', sha: 'smoke-assets' },
                 { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
-                { type: 'blob', path: 'assets/projects/smoke.webp', sha: cmsSmokeMediaSha, size: 12 },
-                { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: cmsSmokeJpegMediaSha, size: 12 },
+                { type: 'blob', path: 'assets/projects/smoke.png', sha: cmsSmokePngMediaSha, size: 12 },
+                { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: cmsSmokeJpegWebPMediaSha, size: 12 },
+                { type: 'blob', path: 'assets/projects/smoke-jpeg.jpg', sha: cmsSmokeJpegOriginalMediaSha, size: 12 },
                 { type: 'blob', path: 'assets/projects/Sample.json', sha: 'smoke-lottie', size: 12 },
                 { type: 'blob', path: 'assets/projects/Female base.obj', sha: 'smoke-model', size: 12 },
                 { type: 'blob', path: 'assets/projects/idle.mp4', sha: 'smoke-video', size: 12 }
