@@ -232,13 +232,15 @@ export async function mountModelViewer(container, src, options = {}) {
       const mobileProfile = isMobileRenderProfile();
       const maxPixelRatio = (mobileProfile || thumbnailMode) ? 1 : 1.5;
       const pixelRatio = Math.min(Number(view?.devicePixelRatio) || 1, maxPixelRatio);
-      if (Math.abs(pixelRatio - appliedPixelRatio) > 0.01) {
+      const pixelRatioChanged = Math.abs(pixelRatio - appliedPixelRatio) > 0.01;
+      if (pixelRatioChanged) {
         renderer.setPixelRatio(pixelRatio);
         appliedPixelRatio = pixelRatio;
       }
       container.dataset.renderProfile = mobileProfile ? 'mobile-balanced' : 'desktop-quality';
       container.dataset.renderPixelRatio = pixelRatio.toFixed(2);
       container.dataset.renderFrameCap = mobileProfile ? '30' : '60';
+      return pixelRatioChanged;
     };
     updateRenderProfile();
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -556,12 +558,19 @@ export async function mountModelViewer(container, src, options = {}) {
 
   const resizeViewer = () => {
     if (disposed) return;
-    updateRenderProfile();
+    const profileChanged = updateRenderProfile();
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
+    const dimensionsChanged = width !== lastSize.width || height !== lastSize.height;
+    // ResizeObserver and window.resize can report the same layout change.
+    // Skip duplicate WebGL buffer resizes and static-scene renders unless a
+    // profile/pixel-ratio update or an explicit camera refit also needs work.
+    if (!dimensionsChanged && !fitRequested && !profileChanged) return;
+    if (dimensionsChanged) {
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
     if (fitToViewport && (fitRequested || lastSize.width === 0)) {
       fitToViewport();
       fitRequested = false;

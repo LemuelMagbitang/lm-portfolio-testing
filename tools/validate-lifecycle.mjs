@@ -157,6 +157,11 @@ assert.match(modelViewerSource, /const reducedQualityProfile = initialMobileProf
 assert.match(modelViewerSource, /antialias: !reducedQualityProfile/);
 assert.match(modelViewerSource, /powerPreference: reducedQualityProfile \? 'low-power' : 'high-performance'/);
 assert.match(modelViewerSource, /const maxPixelRatio = \(mobileProfile \|\| thumbnailMode\) \? 1 : 1\.5/);
+assert.match(modelViewerSource, /const pixelRatioChanged = Math\.abs\(pixelRatio - appliedPixelRatio\) > 0\.01;/);
+assert.match(modelViewerSource, /const profileChanged = updateRenderProfile\(\);/);
+assert.match(modelViewerSource, /const dimensionsChanged = width !== lastSize\.width \|\| height !== lastSize\.height;/);
+assert.match(modelViewerSource, /if \(!dimensionsChanged && !fitRequested && !profileChanged\) return;/);
+assert.match(modelViewerSource, /if \(dimensionsChanged\) \{\s*renderer\.setSize\(width, height, false\);[\s\S]*?camera\.updateProjectionMatrix\(\);\s*\}/);
 assert.match(modelViewerSource, /container\.dataset\.renderFrameCap = mobileProfile \? '30' : '60'/);
 assert.match(modelViewerSource, /const frameInterval = isMobileRenderProfile\(\) \? \(1000 \/ 30\) : \(1000 \/ 60\)/);
 assert.match(modelViewerSource, /bindContainer\(ownerDocument, 'visibilitychange'/);
