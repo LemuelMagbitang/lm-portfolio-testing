@@ -269,8 +269,8 @@ async function logRuntimeProfile(page, label, requestedUrls = []) {
       try { return new URL(entry.name, location.href).pathname.toLowerCase(); }
       catch (_) { return ''; }
     };
-    const scripts = sameOrigin.filter(entry => /\\.m?js$/.test(pathnameOf(entry)));
-    const stylesheets = sameOrigin.filter(entry => /\\.css$/.test(pathnameOf(entry)));
+    const scripts = sameOrigin.filter(entry => /\.m?js$/.test(pathnameOf(entry)));
+    const stylesheets = sameOrigin.filter(entry => /\.css$/.test(pathnameOf(entry)));
     const sum = (items, field) => items.reduce((total, item) => total + (Number(item[field]) || 0), 0);
     const navigation = performance.getEntriesByType('navigation')[0] || null;
     const markTime = name => {
@@ -316,8 +316,8 @@ async function logRuntimeProfile(page, label, requestedUrls = []) {
       const url = new URL(value);
       if (url.origin !== new URL(BASE_URL).origin) continue;
       sameOrigin.add(url.pathname);
-      if (/\\.m?js$/i.test(url.pathname)) requestedScripts.add(url.pathname);
-      if (/\\.css$/i.test(url.pathname)) requestedStylesheets.add(url.pathname);
+      if (/\.m?js$/i.test(url.pathname)) requestedScripts.add(url.pathname);
+      if (/\.css$/i.test(url.pathname)) requestedStylesheets.add(url.pathname);
     } catch (_) {}
   }
 
