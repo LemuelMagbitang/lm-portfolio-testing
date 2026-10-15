@@ -16,9 +16,18 @@ assert.doesNotMatch(
   'PNG artwork, transparent assets, and foil masks must be uploaded unchanged.'
 );
 
-const conversionGuard = source.indexOf("if(blob.type!=='image/webp' || blob.size>=file.size){");
+const conversionGuard = source.indexOf("if(!blob || blob.type!=='image/webp' || blob.size>=file.size){");
 assert.notEqual(conversionGuard, -1, 'CMS must preserve the original when WebP is unsupported or larger.');
-const fallback = source.slice(conversionGuard, conversionGuard + 420);
-assert.match(fallback, /cleanup\(\);[\s\S]*?resolve\(\{file,converted:false\}\)/);
+const fallback = source.slice(conversionGuard, conversionGuard + 220);
+assert.ok(fallback.includes('retainOriginal();'), 'Unsupported or larger conversion results must use the original file.');
+assert.ok(
+  source.includes("if(typeof URL?.createObjectURL!=='function' || typeof File!=='function'){") &&
+    source.includes("return Promise.resolve({file,converted:false});"),
+  'Unavailable WebP browser APIs must fall back to the original upload.'
+);
+assert.ok(
+  source.includes('image.onerror=retainOriginal;'),
+  'Image decode failure during optional conversion must not block the original upload.'
+);
 
 console.log('CMS upload conversion policy passed.');
