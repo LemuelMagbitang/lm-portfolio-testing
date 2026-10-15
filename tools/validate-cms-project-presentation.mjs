@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-04';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
-import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261010-06';
+import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261015-01';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
@@ -178,6 +178,14 @@ assert.ok(
   foilNormalRendererSource.includes('view?.requestAnimationFrame') &&
   foilNormalRendererSource.includes('cancelAnimationFrame'),
   'Foil redraws should be frame-coalesced and pending animation frames cancelled on teardown.'
+);
+assert.ok(
+  foilNormalRendererSource.includes("const compactTarget = Boolean(view?.matchMedia?.('(pointer: coarse)')?.matches)") &&
+  foilNormalRendererSource.includes('compactTarget?0.58:0.85') &&
+  foilNormalRendererSource.includes('const maxSide=compactTarget?640:1024') &&
+  foilNormalRendererSource.includes('MOBILE_DRAW_INTERVAL_MS = 32') &&
+  foilNormalRendererSource.includes('now-lastDrawTime<MOBILE_DRAW_INTERVAL_MS'),
+  'Touch-first foil relief must use a reduced backing resolution, a bounded canvas, and roughly 30 FPS GPU redraws.'
 );
 assert.ok(
   foilNormalRendererSource.includes('pendingImageCancels=new Set()') &&

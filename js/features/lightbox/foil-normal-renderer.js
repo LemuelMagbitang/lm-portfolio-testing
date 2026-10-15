@@ -80,13 +80,15 @@ void main(){
 }
 `;
 const NOOP=Object.freeze({setLight(){},destroy(){}});
+const MOBILE_DRAW_INTERVAL_MS = 32;
 export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase=0.18,uvScale=1}={}){
   if(!canvas?.getContext)return NOOP;
   const documentRef=canvas.ownerDocument||globalThis.document,view=documentRef?.defaultView||globalThis.window;
+  const compactTarget = Boolean(view?.matchMedia?.('(pointer: coarse)')?.matches) || (Number(view?.innerWidth) > 0 && Number(view.innerWidth) <= 700);
   let gl=null;
   try{gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'})||canvas.getContext('experimental-webgl');}catch(_){}
   if(!gl){canvas.dataset.normalMapStatus='unsupported';return NOOP;}
-  let disposed=false,ready=false,textures=[],loadedImages=[],pendingImageCancels=new Set(),resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74;
+  let disposed=false,ready=false,textures=[],loadedImages=[],pendingImageCancels=new Set(),resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74,lastDrawTime=null;
   const level=Math.max(0,Math.min(1,Number(intensity)||0));
   const mapUrls=Array.from(new Set((patternUrls||[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,4);
   canvas.dataset.normalMapPatternCount=String(mapUrls.length);
@@ -129,8 +131,12 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
   function drawNow(){
     if(disposed||!ready||!uniform)return;
     const rect=canvas.getBoundingClientRect();if(!(rect.width>0&&rect.height>0))return;
-    const dpr=Math.min(Math.max(Number(view?.devicePixelRatio)||1,0.65),0.85);
-    const w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
+    // Touch-first layouts use a smaller backing buffer; CSS foil layers retain their full visual detail.
+    const dpr=Math.min(Math.max(Number(view?.devicePixelRatio)||1,compactTarget?0.5:0.65),compactTarget?0.58:0.85);
+    let w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
+    const maxSide=compactTarget?640:1024;
+    const largestSide=Math.max(w,h);
+    if(largestSide>maxSide){const scale=maxSide/largestSide;w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));}
     if(w!==width||h!==height){width=w;height=h;canvas.width=w;canvas.height=h;}
     gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.enableVertexAttribArray(uniform.position);gl.vertexAttribPointer(uniform.position,2,gl.FLOAT,false,16,0);
@@ -145,10 +151,21 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     if(disposed||!ready||!uniform||drawFrame!==null)return;
     const requestFrame=view?.requestAnimationFrame;
     if(typeof requestFrame!=='function'){drawNow();return;}
-    drawFrame=requestFrame.call(view,()=>{
+    const renderFrame=timestamp=>{
+      if(disposed){drawFrame=null;return;}
+      const now=Number.isFinite(timestamp)?timestamp:(view?.performance?.now?.()??Date.now());
+      // Keep shader redraws near 30 FPS on touch-first devices. CSS reflection and
+      // card tilt still ease at display refresh rate, while the expensive relief
+      // pass reuses the latest light position instead of shading every frame.
+      if(compactTarget&&lastDrawTime!==null&&now-lastDrawTime<MOBILE_DRAW_INTERVAL_MS){
+        drawFrame=requestFrame.call(view,renderFrame);
+        return;
+      }
       drawFrame=null;
+      lastDrawTime=now;
       drawNow();
-    });
+    };
+    drawFrame=requestFrame.call(view,renderFrame);
   }
   const handleResize=()=>draw(),RO=view?.ResizeObserver;
   if(typeof RO==='function'){resizeObserver=new RO(handleResize);resizeObserver.observe(canvas);}else view?.addEventListener?.('resize',handleResize,{passive:true});
