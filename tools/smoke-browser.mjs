@@ -258,6 +258,79 @@ async function assertPublicFilterNavigation(page, { href, expectedHash, label })
   }
 }
  
+async function logRuntimeProfile(page, label, requestedUrls = []) {
+  const profile = await page.evaluate(() => {
+    const entries = performance.getEntriesByType('resource');
+    const sameOrigin = entries.filter(entry => {
+      try { return new URL(entry.name, location.href).origin === location.origin; }
+      catch (_) { return false; }
+    });
+    const pathnameOf = entry => {
+      try { return new URL(entry.name, location.href).pathname.toLowerCase(); }
+      catch (_) { return ''; }
+    };
+    const scripts = sameOrigin.filter(entry => /\\.m?js$/.test(pathnameOf(entry)));
+    const stylesheets = sameOrigin.filter(entry => /\\.css$/.test(pathnameOf(entry)));
+    const sum = (items, field) => items.reduce((total, item) => total + (Number(item[field]) || 0), 0);
+    const navigation = performance.getEntriesByType('navigation')[0] || null;
+    const markTime = name => {
+      const mark = performance.getEntriesByName(name, 'mark')[0];
+      return mark && Number.isFinite(mark.startTime) ? mark.startTime : null;
+    };
+    const domContentLoadedMs = navigation && navigation.domContentLoadedEventEnd > 0
+      ? Math.round(navigation.domContentLoadedEventEnd)
+      : null;
+    const loadingActiveMs = markTime('lm-page-loading-active');
+    const pageReadyMs = markTime('lm-page-ready');
+    return {
+      route: location.pathname + location.search + location.hash,
+      domContentLoadedMs,
+      loadingActiveMs: loadingActiveMs == null ? null : Math.round(loadingActiveMs),
+      pageReadyMs: pageReadyMs == null ? null : Math.round(pageReadyMs),
+      startupAfterDclMs: pageReadyMs != null && domContentLoadedMs != null
+        ? Math.round(pageReadyMs - domContentLoadedMs)
+        : null,
+      loadingGateMs: pageReadyMs != null && loadingActiveMs != null
+        ? Math.round(pageReadyMs - loadingActiveMs)
+        : null,
+      sameOriginResourceRequests: sameOrigin.length,
+      sameOriginTransferBytes: sum(sameOrigin, 'transferSize'),
+      sameOriginEncodedBodyBytes: sum(sameOrigin, 'encodedBodySize'),
+      sameOriginDecodedBodyBytes: sum(sameOrigin, 'decodedBodySize'),
+      javascriptRequests: scripts.length,
+      javascriptTransferBytes: sum(scripts, 'transferSize'),
+      javascriptEncodedBodyBytes: sum(scripts, 'encodedBodySize'),
+      javascriptDecodedBodyBytes: sum(scripts, 'decodedBodySize'),
+      javascriptPaths: [...new Set(scripts.map(pathnameOf))].sort(),
+      stylesheetRequests: stylesheets.length,
+      stylesheetTransferBytes: sum(stylesheets, 'transferSize'),
+      documentTransferBytes: navigation ? Number(navigation.transferSize) || 0 : 0
+    };
+  });
+
+  const sameOrigin = new Set();
+  const requestedScripts = new Set();
+  const requestedStylesheets = new Set();
+  for (const value of requestedUrls) {
+    try {
+      const url = new URL(value);
+      if (url.origin !== new URL(BASE_URL).origin) continue;
+      sameOrigin.add(url.pathname);
+      if (/\\.m?js$/i.test(url.pathname)) requestedScripts.add(url.pathname);
+      if (/\\.css$/i.test(url.pathname)) requestedStylesheets.add(url.pathname);
+    } catch (_) {}
+  }
+
+  console.log('[profile] ' + label + ' — local Chromium smoke metrics (not a production/CDN benchmark): ' +
+    JSON.stringify({
+      ...profile,
+      requestedSameOriginPaths: sameOrigin.size,
+      requestedJavascriptPaths: requestedScripts.size,
+      requestedJavascriptFiles: [...requestedScripts].sort(),
+      requestedStylesheetPaths: requestedStylesheets.size
+    }));
+}
+
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   // A narrow viewport alone does not emulate a phone. In Chromium the CSS
   // pointer media feature remains `pointer:fine`, which means touch-specific
@@ -271,6 +344,33 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     hasTouch: isMobileSmoke
   });
   const page = await context.newPage();
+  // Instrument readiness without affecting application behavior. This profile
+  // runs only in the isolated Chromium smoke harness and is informational.
+  await page.addInitScript(() => {
+    try { performance.setResourceTimingBufferSize(2000); } catch (_) {}
+    let activeMarked = false;
+    let readyMarked = false;
+    const inspectReadiness = () => {
+      const state = document.getElementById('pageTransition')?.dataset?.loading;
+      if (state === 'active' && !activeMarked) {
+        activeMarked = true;
+        try { performance.mark('lm-page-loading-active'); } catch (_) {}
+      }
+      if (state === 'ready' && !readyMarked) {
+        readyMarked = true;
+        try { performance.mark('lm-page-ready'); } catch (_) {}
+        observer.disconnect();
+      }
+    };
+    const observer = new MutationObserver(inspectReadiness);
+    observer.observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-loading']
+    });
+    inspectReadiness();
+  });
   const requestedUrls = [];
   page.on('request', request => requestedUrls.push(request.url()));
   const smokeId = ++smokePageSequence;
@@ -5680,6 +5780,8 @@ try {
         throw new Error('About footer social icon row is not centered: ' + JSON.stringify(aboutFooterSocialCenter));
       }
 
+      await logRuntimeProfile(page, 'About 390x844', requestedUrls);
+
       const expectedBundledAdobe = [
         'After Effects',
         'Illustrator',
@@ -5755,7 +5857,7 @@ try {
       }
     });
 
-    await smokePage(browser, '/', async page => {
+    await smokePage(browser, '/', async (page, { requestedUrls }) => {
       await page.locator('.hamburger').first().click();
       const contact = page.locator('.nav-links a[href="#contact-start"]').first();
       if (await contact.count() !== 1) throw new Error('Mobile Works Contact navigation link is missing.');
@@ -5785,6 +5887,7 @@ try {
       if (!(await page.evaluate(() => window.location.hash === '#contact-start'))) {
         throw new Error('Mobile same-page Contact navigation did not preserve the exact contact-start hash.');
       }
+      await logRuntimeProfile(page, 'Works 390x844', requestedUrls);
     }, { width: 390, height: 844 });
 
     let cmsSmokePngMediaSha = 'smoke-png-existing';
