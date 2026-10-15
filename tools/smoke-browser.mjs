@@ -6507,7 +6507,7 @@ try {
         title: 'Test Project',
         subtitle: 'CMS fixture',
         badge: '',
-        filters: [],
+        filters: ['3d-motion'],
         description: '',
         thumbnail: { type: 'image', src: 'assets/projects/test/thumb.svg', focus: '50% 50%', zoom: 1 },
         media: [
@@ -6531,7 +6531,7 @@ try {
         title: 'Lottie Thumbnail Fixture',
         subtitle: 'Deferred CMS preview fixture',
         badge: '',
-        filters: [],
+        filters: ['3d-motion'],
         description: '',
         thumbnail: { type: 'lottie', src: 'assets/projects/test/Sample.json', focus: '50% 50%', zoom: 1 },
         media: []
