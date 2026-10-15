@@ -182,14 +182,12 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
   const emptyBanner = gridEl.querySelector('.banner.muted');
   if (emptyBanner) emptyBanner.remove();
 
-  // Two source files such as poster.png and poster.jpg both normalize to
-  // poster.webp. Keep them distinct within a single batch instead of silently
-  // allowing the later upload to replace the earlier one.
+  // Resolve collision-safe names after the optional conversion decision.
+  // Multiple JPEGs can normalize to the same WebP name; failed conversions
+  // retain their original extensions and must not be relabeled as WebP.
   const reservedNames=new Set();
   const jobs = files.map(file => {
-    const desiredName=cmsUploadNeedsWebP(file) ? cmsWebPTargetName(file.name) : file.name;
-    const targetName=uniqueCmsUploadName(desiredName,reservedNames);
-    reservedNames.add(targetName);
+    const targetName=file.name;
     const path = folder + '/' + targetName;
     const isPreviewable = /^image\/|^video\//.test(file.type) || cmsUploadNeedsWebP(file);
     const localUrl = isPreviewable ? URL.createObjectURL(file) : null;
@@ -215,8 +213,14 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
       const conversion=await convertCmsUploadToWebP(job.file);
       let uploadFile=conversion.file;
       job.converted=conversion.converted;
-      // Apply a batch collision suffix after conversion while retaining WebP
-      // MIME and bytes. The initial Git tree still determines replacements.
+      // Select the destination from the actual conversion result. A failed or
+      // unprofitable conversion must keep the original JPEG name as well as bytes.
+      const desiredName=conversion.converted
+        ? cmsWebPTargetName(job.originalName)
+        : job.originalName;
+      job.targetName=uniqueCmsUploadName(desiredName,reservedNames);
+      reservedNames.add(job.targetName);
+      // Apply any batch collision suffix without changing the resulting MIME.
       if(uploadFile.name!==job.targetName){
         uploadFile=new File([uploadFile],job.targetName,{
           type:uploadFile.type||job.file.type,
