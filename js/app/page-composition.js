@@ -6,13 +6,6 @@
  * explicit dependencies between them.
  */
 
-import {
-  mountProjects,
-  getProjectForCard,
-  getProjects,
-  getCardForProject,
-  destroyProjects
-} from '../features/projects/index.js?v=20261011-05';
 import { initNavigation } from '../features/navigation/index.js?v=20261011-02';
 import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261013-02';
@@ -22,7 +15,6 @@ import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261011-06';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
-import { normalizeProjects } from '../data/project-normalizer.js?v=20261010-04';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 
 function applyCuratedViewPresentation(root, resolution) {
@@ -114,6 +106,34 @@ export async function createPortfolioApp({
   const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
   const hasProjectGallery = !!root.getElementById('portfolioGrid');
 
+  // The Projects, Gallery, and Lightbox graphs exist only for the Work grid.
+  // Load their public APIs in parallel on Works; About keeps the shared app
+  // shell but skips the project card/media implementation entirely.
+  const projectsModulePromise = hasProjectGallery
+    ? import('../features/projects/index.js?v=20261011-05')
+    : Promise.resolve(null);
+  const projectNormalizerModulePromise = hasProjectGallery
+    ? import('../data/project-normalizer.js?v=20261010-04')
+    : Promise.resolve(null);
+  const galleryModulePromise = hasProjectGallery
+    ? import('../features/gallery/index.js?v=20261009-06').catch(error => {
+        console.warn('Gallery module failed to load:', error);
+        return null;
+      })
+    : Promise.resolve(null);
+  const lightboxModulePromise = hasProjectGallery
+    ? import('../features/lightbox/index.js?v=20261015-03').catch(error => {
+        console.warn('Lightbox module failed to load:', error);
+        return null;
+      })
+    : Promise.resolve(null);
+
+  let projectsFeatureModule = null;
+  const getProjectForCard = card => projectsFeatureModule?.getProjectForCard?.(card) || null;
+  const getProjects = () => projectsFeatureModule?.getProjects?.() || [];
+  const getCardForProject = projectId => projectsFeatureModule?.getCardForProject?.(projectId) || null;
+  const destroyProjects = () => projectsFeatureModule?.destroyProjects?.();
+
   // Start these only on pages that own the Work grid. For Works they load in
   // parallel with settings/content, preserving startup overlap; About never
   // parses the Gallery or Lightbox media-renderer dependency graph.
@@ -154,13 +174,22 @@ export async function createPortfolioApp({
     ? loadCmsJson(config.urls.projects, null, { resolveUrl: siteAssetUrl })
     : Promise.resolve(null);
   const projectsPromise = hasProjectGallery && config.urls.projects
-    ? Promise.all([mainProjectsPayloadPromise, curatedViewsPromise]).then(([mainPayload, views]) => {
-        mainProjectModels = normalizeProjects(mainPayload);
+    ? Promise.all([
+        mainProjectsPayloadPromise,
+        curatedViewsPromise,
+        projectsModulePromise,
+        projectNormalizerModulePromise
+      ]).then(([mainPayload, views, projectsModule, projectNormalizer]) => {
+        if (!projectsModule?.mountProjects || !projectNormalizer?.normalizeProjects) {
+          throw new Error('Projects feature modules did not expose their required public API.');
+        }
+        projectsFeatureModule = projectsModule;
+        mainProjectModels = projectNormalizer.normalizeProjects(mainPayload);
         const curatedResolution = resolveCuratedView({ hash: currentHash, views, mainProjects: mainPayload });
         const projectPayload = curatedResolution ? curatedResolution.projects : mainPayload;
         activeCuratedViewSlug = curatedResolution?.view?.slug || '';
         applyCuratedViewPresentation(root, curatedResolution);
-        return mountProjects({
+        return projectsModule.mountProjects({
           url: config.urls.projects,
           projectData: projectPayload,
           loadJson: loadCmsJson,
