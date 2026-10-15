@@ -5511,6 +5511,23 @@ try {
         throw new Error('About rendering and asset preloading should share one about.json request; observed ' +
           aboutDataRequestCount + ' requests.');
       }
+      const showReviews = await page.evaluate(async () => {
+        try {
+          const response = await fetch('/data/settings.json');
+          const settings = response.ok ? await response.json() : {};
+          return settings.showReviews === true;
+        } catch (_) {
+          return false;
+        }
+      });
+      const reviewsModuleLoaded = loadedPaths.includes('/js/features/reviews/index.js');
+      const reviewsDataLoaded = loadedPaths.includes('/data/reviews.json');
+      if (!showReviews && (reviewsModuleLoaded || reviewsDataLoaded)) {
+        throw new Error('Reviews is disabled in settings but its module/data was requested on About.');
+      }
+      if (showReviews && !reviewsModuleLoaded) {
+        throw new Error('Reviews is enabled in settings but the feature module was not requested on About.');
+      }
       await assertMobileNavigation(page, 'About page');
       const moduleScript = await page.locator('script[type="module"][src*="script.js"]').count();
       if (moduleScript !== 1) throw new Error('About page is missing its module bootstrap script.');

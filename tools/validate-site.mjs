@@ -1666,7 +1666,7 @@ function validatePageAwareFeatureLoading() {
   const composition = exists('js/app/page-composition.js')
     ? readText('js/app/page-composition.js')
     : '';
-  const staticFeatureImport = /(?:^|\n)\s*import\s+[^;]*?\bfrom\s*['"]\.\.\/features\/(?:projects|gallery|lightbox)\/index\.js/m;
+  const staticFeatureImport = /(?:^|\n)\s*import\s+[^;]*?\bfrom\s*['"]\.\.\/features\/(?:projects|gallery|lightbox|reviews)\/index\.js/m;
   const staticNormalizerImport = /(?:^|\n)\s*import\s+[^;]*?\bfrom\s*['"]\.\.\/data\/project-normalizer\.js/m;
   if (staticFeatureImport.test(composition) || staticNormalizerImport.test(composition)) {
     err('Route-aware loading: Projects, Gallery, Lightbox, and project normalization must not be static page-composition imports.');
@@ -1679,7 +1679,9 @@ function validatePageAwareFeatureLoading() {
       !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition) ||
       !/const aboutDataPromise = isAboutPage && config\.urls\.about/.test(composition) ||
       !/const aboutPromise = isAboutPage\s*\?\s*aboutDataPromise\.then\(data => initAbout/.test(composition) ||
-      !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*aboutDataPromise\.then\(data => preloadAboutAssets/.test(composition)) {
+      !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*aboutDataPromise\.then\(data => preloadAboutAssets/.test(composition) ||
+      !/const reviewsPromise = settingsPromise\.then\(async settingsFeature/.test(composition) ||
+      !/if \(!currentSettings\.showReviews\) \{[\s\S]*?return null;[\s\S]*?import\(['"]\.\.\/features\/reviews\/index\.js['"]\)/.test(composition)) {
     err('Route-aware loading: Projects, Gallery, and Lightbox graphs must load only when the project grid exists.');
   }
 }

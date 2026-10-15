@@ -7,7 +7,6 @@
  */
 
 import { initNavigation } from '../features/navigation/index.js?v=20261011-02';
-import { initReviews } from '../features/reviews/index.js';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261013-02';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
@@ -224,11 +223,31 @@ export async function createPortfolioApp({
         return false;
       });
 
-  const reviewsPromise = initReviews({
-    url: config.urls.reviews,
-    root,
-    loadJson: loadCmsJson,
-    resolveAssetUrl: siteAssetUrl
+  const reviewsPromise = settingsPromise.then(async settingsFeature => {
+    const currentSettings = settingsFeature.getState();
+    const section = root.querySelector('.reviews-section');
+    if (!currentSettings.showReviews) {
+      if (section) section.style.display = 'none';
+      return null;
+    }
+
+    try {
+      const module = await import('../features/reviews/index.js');
+      if (typeof module?.initReviews !== 'function') {
+        throw new Error('Reviews module did not expose initReviews().');
+      }
+      return await module.initReviews({
+        url: config.urls.reviews,
+        root,
+        loadJson: loadCmsJson,
+        resolveAssetUrl: siteAssetUrl,
+        visible: true
+      });
+    } catch (error) {
+      console.warn('Reviews: initialization failed', error);
+      if (section) section.style.display = 'none';
+      return null;
+    }
   });
 
   const isAboutPage = Boolean(root.body?.classList.contains('about-page'));
@@ -464,7 +483,7 @@ export async function createPortfolioApp({
     // disappears. Reviews remain optional because they are hidden on this page.
     const visibleReviewsPromise = settings.showReviews
       ? reviewsPromise.then(feature => {
-          feature.setVisible(true);
+          feature?.setVisible?.(true);
           return feature;
         })
       : Promise.resolve(null);
@@ -484,7 +503,7 @@ export async function createPortfolioApp({
       heroPromise,
       footerPromise,
       reviewsPromise.then(feature => {
-        feature.setVisible(settings.showReviews);
+        feature?.setVisible?.(settings.showReviews);
         return feature;
       }),
       aboutPromise.then(feature => {
