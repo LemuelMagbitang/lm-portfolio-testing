@@ -6373,6 +6373,10 @@ try {
       if (await holoStyleSelect.count() !== 1 || !(await holoStyleSelect.isVisible())) {
         throw new Error('CMS foil style selector is not visible in the image editor.');
       }
+      const holoEnabledInput = holographicMedia.locator('[data-holo-enabled]').first();
+      if (!(await holoEnabledInput.isChecked())) {
+        throw new Error('CMS foil fixture loaded with its holographic effect disabled.');
+      }
       if (await holoStyleSelect.inputValue() !== 'iridescent') {
         throw new Error('CMS foil fixture did not start with its saved iridescent style.');
       }
@@ -6381,13 +6385,36 @@ try {
       if (await holoStyleSelect.inputValue() !== 'aurora') {
         throw new Error('CMS foil selector did not retain the latest style selection before saving.');
       }
+      const dirtyDisplayAfterStyleChange = await page.locator('#dirty-projects').evaluate(el => getComputedStyle(el).display);
+      if (dirtyDisplayAfterStyleChange === 'none') {
+        throw new Error('Changing the foil preset did not mark the Projects section dirty.');
+      }
+      const projectsWritePromise = page.waitForRequest(request =>
+        request.method() === 'PUT' &&
+        new URL(request.url()).pathname === '/repos/Smoke/TestRepo/contents/data/projects.json',
+        { timeout: 8000 }
+      );
       await page.locator('#btnSaveTop').click();
+      try {
+        await projectsWritePromise;
+      } catch (error) {
+        const saveDiagnostics = await page.evaluate(() => ({
+          status: document.querySelector('#saveStatusText')?.textContent?.trim() || '',
+          dirtyDisplay: getComputedStyle(document.querySelector('#dirty-projects')).display,
+          buttonText: document.querySelector('#btnSaveTop')?.textContent?.trim() || '',
+          buttonDisabled: !!document.querySelector('#btnSaveTop')?.disabled,
+          toast: Array.from(document.querySelectorAll('.toast,.toast-message,[role="alert"]'))
+            .map(node => node.textContent?.trim() || '').filter(Boolean).slice(-3)
+        }));
+        throw new Error('Foil style change failed to write data/projects.json: ' +
+          JSON.stringify(saveDiagnostics) + '; ' + error.message);
+      }
       await page.waitForFunction(() => {
         const button = document.getElementById('btnSaveTop');
         return !!button && !button.disabled && !/Saving/.test(button.textContent || '');
       }, null, { timeout: 12000 });
       if (!cmsSmokeProjectsUploadPayload?.content) {
-        throw new Error('CMS foil style test did not issue a projects.json save request.');
+        throw new Error('The Projects save request was observed but its payload was not captured by the mock API.');
       }
       const savedProjectRows = JSON.parse(Buffer.from(
         String(cmsSmokeProjectsUploadPayload.content).replace(/\\s/g, ''), 'base64'
