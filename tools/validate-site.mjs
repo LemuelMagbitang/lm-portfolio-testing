@@ -1039,6 +1039,31 @@ function validateRuntimeCacheGraph() {
   }
 }
 
+function validateModelViewerModulePreloadCacheKey() {
+  const html = exists('index.html') ? readText('index.html') : '';
+  const composition = exists('js/app/page-composition.js')
+    ? readText('js/app/page-composition.js')
+    : '';
+  const preloadTag = [...html.matchAll(/<link\\b[^>]*>/gi)]
+    .map(match => match[0])
+    .find(tag =>
+      /\\brel\\s*=\\s*["'][^"']*\\bmodulepreload\\b[^"']*["']/i.test(tag) &&
+      /\\bhref\\s*=\\s*["']js\\/infrastructure\\/three\\/model-viewer\\.js\\?v=/i.test(tag)
+    ) || '';
+  if (!preloadTag) return;
+
+  const preloadVersion = preloadTag.match(
+    /\\bhref\\s*=\\s*["']js\\/infrastructure\\/three\\/model-viewer\\.js\\?v=([^"']+)["']/i
+  )?.[1] || '';
+  const importVersion = composition.match(
+    /import\\(\\s*["']\\.\\.\\/infrastructure\\/three\\/model-viewer\\.js\\?v=([^"']+)["']\\s*\\)/
+  )?.[1] || '';
+
+  if (!preloadVersion || !importVersion || preloadVersion !== importVersion) {
+    err('3D viewer preload: index.html modulepreload cache key must match page-composition.js dynamic import to avoid duplicate module fetches.');
+  }
+}
+
 function parseCacheVersion(version) {
   const parts = String(version || '').split('-');
   if (parts.length !== 2) return null;
@@ -1636,6 +1661,7 @@ validateCuratedViewRuntimeContract();
 validateCuratedViewPresentationContract();
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
+validateModelViewerModulePreloadCacheKey();
 validateFeatureModuleCacheGraph();
 validateLightboxLifecycle();
 validateGalleryContract();
