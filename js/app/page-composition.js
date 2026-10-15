@@ -134,21 +134,6 @@ export async function createPortfolioApp({
   const getCardForProject = projectId => projectsFeatureModule?.getCardForProject?.(projectId) || null;
   const destroyProjects = () => projectsFeatureModule?.destroyProjects?.();
 
-  // Start these only on pages that own the Work grid. For Works they load in
-  // parallel with settings/content, preserving startup overlap; About never
-  // parses the Gallery or Lightbox media-renderer dependency graph.
-  const galleryModulePromise = hasProjectGallery
-    ? import('../features/gallery/index.js?v=20261009-06').catch(error => {
-        console.warn('Gallery module failed to load:', error);
-        return null;
-      })
-    : Promise.resolve(null);
-  const lightboxModulePromise = hasProjectGallery
-    ? import('../features/lightbox/index.js?v=20261015-03').catch(error => {
-        console.warn('Lightbox module failed to load:', error);
-        return null;
-      })
-    : Promise.resolve(null);
   const curatedViewsPromise = loadCmsJson('data/curated-views.json', [], { resolveUrl: siteAssetUrl })
     .then(raw => {
       const views = Array.isArray(raw) ? raw : [];
