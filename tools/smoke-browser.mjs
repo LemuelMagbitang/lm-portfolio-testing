@@ -5481,6 +5481,8 @@ try {
       const loadedPaths = requestedUrls.map(value => {
         try { return new URL(value).pathname; } catch (_) { return ''; }
       });
+      // The shared normalizer remains legitimately used by the About Hero/Footer.
+      // This assertion targets page-specific project card/Gallery/Lightbox code.
       const unexpectedFeatureModules = loadedPaths.filter(path =>
         path === '/js/features/projects/index.js' ||
         path === '/js/features/projects/browser-runtime.js' ||
@@ -5489,7 +5491,6 @@ try {
         path === '/js/features/projects/card-presentation.js' ||
         path === '/js/features/projects/project-media.js' ||
         path === '/js/features/projects/project-thumbnail.js' ||
-        path === '/js/data/project-normalizer.js' ||
         path === '/js/features/gallery/index.js' ||
         path === '/js/features/gallery/presentation.js' ||
         path === '/js/features/lightbox/index.js' ||
