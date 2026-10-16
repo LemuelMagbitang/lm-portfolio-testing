@@ -328,23 +328,45 @@ export function createLightboxMediaRenderer({
     iframe.allowFullscreen = true;
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
 
-    const ready = new Promise(resolve => {
-      iframe.addEventListener('load', () => {
-        primeYouTubeFrame(iframe);
-        cacheYouTubeFrame(embedSrc, iframe);
-        resolve(true);
-      }, { once: true });
-      iframe.addEventListener('error', () => resolve(false), { once: true });
-    });
+    let settled = false;
+    let resolveReady = () => {};
+    const ready = new Promise(resolve => { resolveReady = resolve; });
+    const finish = value => {
+      if (settled) return false;
+      settled = true;
+      iframe.removeEventListener('load', onLoad);
+      iframe.removeEventListener('error', onError);
+      resolveReady(value);
+      return true;
+    };
     const cleanup = () => {
       if (youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
-      if (iframe.parentNode) iframe.remove();
+      iframe.removeEventListener('load', onLoad);
+      iframe.removeEventListener('error', onError);
+      // Explicitly cancel a pending navigation before removing the iframe.
+      // Removing only the DOM node can leave its document/resource work alive
+      // until the browser completes the abandoned navigation.
+      try { iframe.removeAttribute('src'); } catch (_) {}
+      try { iframe.remove(); } catch (_) {}
+      finish(false);
     };
+    const onLoad = () => {
+      if (destroyed) {
+        cleanup();
+        return;
+      }
+      primeYouTubeFrame(iframe);
+      cacheYouTubeFrame(embedSrc, iframe);
+      finish(true);
+    };
+    const onError = () => cleanup();
+    iframe.addEventListener('load', onLoad, { once: true });
+    iframe.addEventListener('error', onError, { once: true });
     const unregister = registerPreloadCleanup(cleanup);
     root.appendChild(iframe);
     iframe.src = embedSrc;
     const result = await withPreloadTimeout(ready, MEDIA_PRELOAD_TIMEOUT_MS, cleanup).finally(unregister);
-    if (!result && youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
+    if (!result) cleanup();
     return result;
   }
 
