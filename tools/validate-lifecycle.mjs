@@ -208,6 +208,20 @@ assert.match(modelViewerSource, /containerCleanup\.splice\(0\)\.reverse\(\)/);
 assert.doesNotMatch(modelViewerSource, /container\.addEventListener\('(?:pointerdown|pointermove|pointercancel|click|keydown|wheel)'/);
 assert.match(modelViewerSource, /if \(!isCurrentMount\(\)\) \{[\s\S]*disposeObject\(loaded\.root\)[\s\S]*return null;/);
 
+
+const successfulModelCleanupStart = modelViewerSource.indexOf('const cleanup = () => {');
+const successfulModelCleanupEnd = modelViewerSource.indexOf('container.__modelViewerCleanup = cleanup;', successfulModelCleanupStart);
+assert.ok(
+  successfulModelCleanupStart >= 0 && successfulModelCleanupEnd > successfulModelCleanupStart,
+  '3D viewer must expose its successful mount cleanup path.'
+);
+const successfulModelCleanup = modelViewerSource.slice(successfulModelCleanupStart, successfulModelCleanupEnd);
+assert.match(successfulModelCleanup, /mixers\.forEach\(mixer => \{[\s\S]*?mixer\.stopAllAction\?\.\(\);[\s\S]*?mixer\.uncacheRoot\?\.\(root\)/);
+assert.ok(
+  successfulModelCleanup.indexOf('mixers.forEach') < successfulModelCleanup.indexOf('disposeObject(root)'),
+  'Animation mixers must be stopped and uncached before their model root is disposed.'
+);
+
 const foilNormalRendererSource = await readFile(new URL('../js/features/lightbox/foil-normal-renderer.js', import.meta.url), 'utf8');
 assert.match(foilNormalRendererSource, /gl\.getExtension\('WEBGL_lose_context'\)\?\.loseContext\(\)/);
 assert.match(foilNormalRendererSource, /canvas\.width=0;canvas\.height=0;\s*return NOOP;/);

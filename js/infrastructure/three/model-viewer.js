@@ -652,6 +652,13 @@ export async function mountModelViewer(container, src, options = {}) {
     containerCleanup.splice(0).reverse().forEach(remove => {
       try { remove(); } catch (_) {}
     });
+    mixers.forEach(mixer => {
+      try {
+        mixer.stopAllAction?.();
+        if (root) mixer.uncacheRoot?.(root);
+      } catch (_) {}
+    });
+    mixers = [];
     disposeObject(root);
     scene.clear();
     renderer.dispose();
