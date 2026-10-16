@@ -1526,7 +1526,7 @@ function validateCmsRegressionContracts() {
   }
 
   const foilNormalRenderer = exists('js/features/lightbox/foil-normal-renderer.js') ? readText('js/features/lightbox/foil-normal-renderer.js') : '';
-  if (!renderer.includes("import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261015-01';") ||
+  if (!renderer.includes("import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';") ||
       !renderer.includes('createFoilNormalRenderer(normalCanvas, normalPatternUrls') ||
       !renderer.includes('holographicNormalControllers.get(surface)?.forEach(controller => controller.setLight') ||
       !foilNormalRenderer.includes('vec3 blendFoilNormals') || !foilNormalRenderer.includes('heightAt3(tileUV') || !foilNormalRenderer.includes('destroy()')) {
