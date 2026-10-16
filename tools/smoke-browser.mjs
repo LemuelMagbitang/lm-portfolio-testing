@@ -205,6 +205,7 @@ async function assertPublicNavigation(page, { href, label }) {
     const anchors = Array.from(menu?.querySelectorAll(':scope > li > a') || []);
     const navStyle = navbar ? getComputedStyle(navbar) : null;
     const logoStyle = logo ? getComputedStyle(logo) : null;
+    const navbarBackdropStyle = navbar ? getComputedStyle(navbar, '::before') : null;
     const hamburger = document.querySelector('.hamburger');
     const hamburgerStyle = hamburger ? getComputedStyle(hamburger) : null;
     const links = anchors.map(anchor => {
@@ -226,6 +227,12 @@ async function assertPublicNavigation(page, { href, label }) {
         backgroundImage: navStyle?.backgroundImage || '',
         backdropFilter: navStyle?.backdropFilter || '',
         borderBottomWidth: navStyle?.borderBottomWidth || ''
+      },
+      navbarGlass: {
+        background: navbarBackdropStyle?.backgroundColor || '',
+        backdropFilter: navbarBackdropStyle?.backdropFilter || '',
+        opacity: navbarBackdropStyle?.opacity || '',
+        pointerEvents: navbarBackdropStyle?.pointerEvents || ''
       },
       logoBlendMode: logoStyle?.mixBlendMode || '',
       hamburgerBlendMode: hamburgerStyle?.mixBlendMode || '',
@@ -268,6 +275,10 @@ async function assertPublicNavigation(page, { href, label }) {
     navContract.navbar.background !== 'rgba(0, 0, 0, 0)' ||
     navContract.navbar.backgroundImage !== 'none' ||
     navContract.navbar.backdropFilter !== 'none' ||
+    navContract.navbarGlass.background !== 'rgba(255, 255, 255, 0.1)' ||
+    !navContract.navbarGlass.backdropFilter.includes('blur(8px)') ||
+    navContract.navbarGlass.opacity !== '1' ||
+    navContract.navbarGlass.pointerEvents !== 'none' ||
     parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
     navContract.logoBlendMode !== 'difference' ||
     navContract.hamburgerBlendMode !== 'difference' ||
@@ -358,6 +369,7 @@ async function assertPublicNavigation(page, { href, label }) {
       const hamburgerIconBars = hamburger?.querySelectorAll('.hamburger-icon span').length || 0;
       const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const backdropStyle = getComputedStyle(document.querySelector('.nav-menu-backdrop'));
+      const navbarGlassStyle = getComputedStyle(document.querySelector('.navbar'), '::before');
       const bodyStyle = getComputedStyle(document.body);
       return {
         position: style?.position || '',
@@ -373,6 +385,7 @@ async function assertPublicNavigation(page, { href, label }) {
         menuAnimationName: style?.animationName || '',
         reducedMotion,
         backdropBackground: backdropStyle.backgroundColor,
+        navbarGlassOpacity: navbarGlassStyle.opacity,
         bodyBackground: bodyStyle.backgroundColor,
         bodyOverflow: bodyStyle.overflow
       };
@@ -399,6 +412,7 @@ async function assertPublicNavigation(page, { href, label }) {
       openMenuContract.hamburgerIconBars !== 3 ||
       (!openMenuContract.reducedMotion && !openMenuContract.menuAnimationName.includes('nav-menu-enter')) ||
       openMenuContract.backdropBackground !== 'rgb(0, 0, 0)' ||
+      openMenuContract.navbarGlassOpacity !== '0' ||
       openMenuContract.bodyBackground !== 'rgb(0, 0, 0)' ||
       openMenuContract.bodyOverflow !== 'hidden'
     ) {

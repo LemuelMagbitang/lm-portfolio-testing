@@ -1303,6 +1303,8 @@ function validateBootstrapHardening() {
 
   const navigationCss = exists('css/style.css') ? readText('css/style.css') : '';
   const navbarRule = (navigationCss.match(/\.navbar\s*\{[^}]*\}/) || [])[0] || '';
+  const navbarGlassRule = (navigationCss.match(/\.navbar::before\s*\{[^}]*\}/) || [])[0] || '';
+  const navbarGlassMobileRule = (navigationCss.match(/body\.menu-open \.navbar::before\s*\{[^}]*\}/) || [])[0] || '';
   const logoRule = (navigationCss.match(/\.site-logo\s*\{[^}]*\}/) || [])[0] || '';
   const hamburgerRule = (navigationCss.match(/\.hamburger\s*\{[^}]*\}/) || [])[0] || '';
   const pillRule = (navigationCss.match(/\.nav-links a\s*\{[^}]*\}/) || [])[0] || '';
@@ -1328,6 +1330,11 @@ function validateBootstrapHardening() {
       !/border-radius\s*:\s*999px/.test(pillRule) ||
       !/border:\s*0/.test(pillRule) ||
       /border-color\s*:/.test(pillRule + activePillRule + hoverPillRule) ||
+      !/background:\s*rgba\(255, 255, 255, 0\.1\)/.test(navbarGlassRule) ||
+      !/backdrop-filter:\s*blur\(8px\) brightness\(95%\)/.test(navbarGlassRule) ||
+      !/pointer-events:\s*none/.test(navbarGlassRule) ||
+      !/opacity:\s*0/.test(navbarGlassMobileRule) ||
+      !/backdrop-filter:\s*none/.test(navbarGlassMobileRule) ||
       !/background\s*:\s*#000/.test(pillRule) ||
       !/color\s*:\s*#fff/.test(pillRule) ||
       !/background\s*:\s*#fff/.test(activePillRule) ||

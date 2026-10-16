@@ -5808,3 +5808,32 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
     transition: none !important;
   }
 }
+
+/* ============================================================
+   NAVIGATION GLASS SCRIM — softens busy artwork behind the controls
+   ============================================================ */
+.navbar {
+  isolation: isolate;
+}
+
+.navbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(8px) brightness(95%);
+  backdrop-filter: blur(8px) brightness(95%);
+  opacity: 1;
+  transition: opacity .2s ease;
+}
+
+@media (max-width: 767px) {
+  /* The fullscreen menu supplies its own solid-black surface. */
+  body.menu-open .navbar::before {
+    opacity: 0;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
