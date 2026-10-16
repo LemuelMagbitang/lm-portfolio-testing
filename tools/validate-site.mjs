@@ -1052,6 +1052,16 @@ function validateModelViewerModulePreloadCacheKey() {
     ) || '';
   if (!preloadTag) return;
 
+  // Import maps must be registered before modulepreload starts resolving the
+  // dependency graph. The Three.js viewer imports the bare "three" and
+  // "three/addons/" specifiers from this map, so order is part of the runtime
+  // contract, not just markup style.
+  const importMapIndex = html.indexOf('<script type="importmap"');
+  const viewerPreloadIndex = html.indexOf(preloadTag);
+  if (importMapIndex < 0 || viewerPreloadIndex < 0 || importMapIndex > viewerPreloadIndex) {
+    err('3D viewer preload: the import map must appear before the model-viewer modulepreload so bare Three.js imports resolve on first load.');
+  }
+
   const preloadVersion = preloadTag.match(
     /\bhref\s*=\s*["']js\/infrastructure\/three\/model-viewer\.js\?v=([^"']+)["']/i
   )?.[1] || '';
