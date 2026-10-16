@@ -35,6 +35,30 @@ const afterDispose = lifecycle.listen(target, 'change', () => {});
 assert.equal(target.handlers.size, 0);
 afterDispose();
 
+
+// One observation cleanup must not disconnect other targets on the same
+// observer; the lifecycle releases each observation independently.
+const observerLifecycle = createLifecycle();
+const observedTargets = new Set();
+const observer = {
+  observe(target) { observedTargets.add(target); },
+  unobserve(target) { observedTargets.delete(target); },
+  disconnect() { observedTargets.clear(); }
+};
+const targetA = { id: 'a' };
+const targetB = { id: 'b' };
+const removeObservationA = observerLifecycle.observe(observer, targetA);
+observerLifecycle.observe(observer, targetB);
+assert.deepEqual([...observedTargets], [targetA, targetB]);
+removeObservationA();
+assert.deepEqual(
+  [...observedTargets],
+  [targetB],
+  'removing one observation must not disconnect unrelated targets'
+);
+observerLifecycle.cleanup();
+assert.deepEqual([...observedTargets], [], 'lifecycle cleanup releases remaining observations');
+
 console.log('Feature lifecycle boundary validated.');
 
 

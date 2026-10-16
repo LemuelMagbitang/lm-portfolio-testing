@@ -60,7 +60,12 @@ export function createLifecycle() {
   function observe(observer, target, options) {
     if (!observer || typeof observer.observe !== 'function' || !target) return () => {};
     observer.observe(target, options);
-    return add(() => observer.disconnect?.());
+    // Observers can watch several targets. Releasing one registration must not
+    // disconnect every other target managed by the same observer instance.
+    return add(() => {
+      if (typeof observer.unobserve === 'function') observer.unobserve(target);
+      else observer.disconnect?.();
+    });
   }
 
   function cleanup() {
