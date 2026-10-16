@@ -1297,7 +1297,7 @@ function validateBootstrapHardening() {
   }
   if (!/querySelector\('\.hamburger, \.menu-button'\)/.test(navigation) ||
       !/querySelector\('\.nav-links, \.mobile-menu'\)/.test(navigation) ||
-      !/mobileMenu\.classList\.add\('active'\)/.test(navigation)) {
+      !/mobileMenu\.classList\.add\('active'(?:, 'is-open')?\)/.test(navigation)) {
     err('Navigation: runtime must bind the public hamburger to the public nav-links menu and toggle its active state.');
   }
 

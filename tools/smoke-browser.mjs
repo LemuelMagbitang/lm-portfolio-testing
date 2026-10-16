@@ -238,7 +238,7 @@ async function assertPublicNavigation(page, { href, label }) {
   });
   const contrastRatio = (foreground, background) => {
     const luminance = color => {
-      const channels = color.match(/[\\d.]+/g).slice(0, 3).map(Number).map(channel => {
+      const channels = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(channel => {
         const value = channel / 255;
         return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
       });
