@@ -153,7 +153,7 @@ assert.match(mediaRendererSource, /if \(!constrainedNetwork\) \{\s*void runPrelo
 assert.match(mediaRendererSource, /globalThis\.navigator\?\.connection/);
 assert.match(mediaRendererSource, /mediaPreloadRoot\?\.isConnected/);
 assert.match(mediaRendererSource, /videoDimensionCache\.set\(cacheKey, \{ width, height \}\)/);
-assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*mediaPreloadRoot\?\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
+assert.match(mediaRendererSource, /function destroy\(\) \{[\s\S]*youtubePreloadRoot\?\.isConnected[\s\S]*if \(mediaPreloadRoot\) \{[\s\S]*mediaPreloadRoot\.querySelectorAll\('video'\)\.forEach\(releasePreloadedVideo\)[\s\S]*mediaPreloadRoot\.isConnected[\s\S]*youtubeFrameCache\.clear\(\)/);
 
 const modelViewerSource = await readFile(new URL('../js/infrastructure/three/model-viewer.js', import.meta.url), 'utf8');
 assert.match(modelViewerSource, /__modelViewerMountToken/);
