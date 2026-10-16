@@ -67,8 +67,8 @@
     }
   }
   </script>
-  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261016-08">
-  <link rel="modulepreload" href="js/app/page-composition.js?v=20261016-08">
+  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261016-09">
+  <link rel="modulepreload" href="js/app/page-composition.js?v=20261016-09">
   <link rel="modulepreload" href="js/infrastructure/three/model-viewer.js?v=20261016-01">
   <link rel="prefetch" href="about/" as="document">
 
@@ -198,8 +198,8 @@
             <input type="hidden" name="access_key" value="15822b98-f9a5-42fe-86f0-149ed102f521">
             <input type="hidden" name="subject" value="New Project Inquiry">
             <input type="hidden" name="redirect" value="https://lemuelmagbitang.github.io/success/">
-            <input type="text" name="name" placeholder="Name" required>
-            <input type="email" name="email" placeholder="Email" required>
+            <input type="text" name="name" autocomplete="name" placeholder="Name" required>
+            <input type="email" name="email" autocomplete="email" placeholder="Email" required>
             <textarea name="message" rows="4" placeholder="Tell me about your project..." required></textarea>
             <button type="submit" class="submit-btn">SEND MESSAGE</button>
           </form>
@@ -219,7 +219,7 @@
             <input type="hidden" name="access_key" value="b0a32379-4abd-4770-a9eb-c9f39b45e7d3">
             <input type="hidden" name="subject" value="New Portfolio Review Received!">
             <input type="hidden" name="redirect" value="https://lemuelmagbitang.github.io/success/">
-            <input type="text" name="name" placeholder="Your Name / Handle" required>
+            <input type="text" name="name" autocomplete="nickname" placeholder="Your Name / Handle" required>
             
             <div class="star-rating" style="display: flex; flex-direction: row-reverse; justify-content: center; gap: 10px; margin: 10px 0;">
               <input type="radio" id="star5" name="rating" value="5" required/><label for="star5" title="5 stars">★</label>
@@ -309,6 +309,6 @@
     window.HERO_LOOP_URL = 'data/hero-loop.json';
     window.FOOTER_LOOP_URL = 'data/footer-loop.json';
   </script>
-  <script type="module" src="js/script.js?v=20261016-08"></script>
+  <script type="module" src="js/script.js?v=20261016-09"></script>
 </body>
 </html>
