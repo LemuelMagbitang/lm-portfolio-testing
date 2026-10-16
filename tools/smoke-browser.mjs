@@ -217,6 +217,8 @@ async function assertPublicNavigation(page, { href, label }) {
     const navbarBackdropStyle = navbar ? getComputedStyle(navbar, '::before') : null;
     const hamburger = document.querySelector('.hamburger');
     const hamburgerStyle = hamburger ? getComputedStyle(hamburger) : null;
+    const hamburgerIconBlendModes = Array.from(hamburger?.querySelectorAll('.hamburger-icon span') || [])
+      .map(span => getComputedStyle(span).mixBlendMode);
     const links = anchors.map(anchor => {
       const style = getComputedStyle(anchor);
       return {
@@ -246,6 +248,8 @@ async function assertPublicNavigation(page, { href, label }) {
       bodyMenuOpen: document.body.classList.contains('menu-open'),
       logoBlendMode: logoStyle?.mixBlendMode || '',
       hamburgerBlendMode: hamburgerStyle?.mixBlendMode || '',
+      hamburgerBackground: hamburgerStyle?.backgroundColor || '',
+      hamburgerIconBlendModes,
       labels: links.map(link => link.label),
       links,
       dropdownCount: menu?.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length || 0,
@@ -296,7 +300,9 @@ async function assertPublicNavigation(page, { href, label }) {
     !glassStateCorrect ||
     parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
     navContract.logoBlendMode !== 'difference' ||
-    navContract.hamburgerBlendMode !== 'difference' ||
+    navContract.hamburgerBlendMode !== 'normal' ||
+    navContract.hamburgerBackground !== 'rgba(255, 255, 255, 0.94)' ||
+    JSON.stringify(navContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
     navContract.dropdownCount !== 0 ||
@@ -353,6 +359,21 @@ async function assertPublicNavigation(page, { href, label }) {
   if ((viewport?.width || 0) < 768) {
     const hamburger = page.locator('.hamburger').first();
     const mobileMenu = page.locator('.nav-links').first();
+    if (supportsHover) {
+      await hamburger.hover();
+      await page.waitForFunction(() => {
+        const button = document.querySelector('.hamburger');
+        const style = button ? getComputedStyle(button) : null;
+        const strokes = Array.from(button?.querySelectorAll('.hamburger-icon span') || []);
+        return style?.backgroundColor === 'rgb(0, 0, 0)' &&
+          strokes.length === 3 &&
+          strokes.every(stroke => getComputedStyle(stroke).mixBlendMode === 'difference');
+      }, null, { timeout: 1500 });
+      await page.mouse.move(0, 0);
+      await page.waitForFunction(() =>
+        getComputedStyle(document.querySelector('.hamburger')).backgroundColor === 'rgba(255, 255, 255, 0.94)',
+        null, { timeout: 1500 });
+    }
     if (await hamburger.count() !== 1 || await mobileMenu.count() !== 1) {
       throw new Error(label + ' mobile navigation controls are missing.');
     }
@@ -364,6 +385,7 @@ async function assertPublicNavigation(page, { href, label }) {
       return menu?.classList.contains('active') && menu.classList.contains('is-open') &&
         document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
+    if (supportsHover) await page.mouse.move(0, 0);
     const reducedMotionPreference = await page.evaluate(() =>
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
@@ -381,7 +403,9 @@ async function assertPublicNavigation(page, { href, label }) {
       const inactiveStyle = inactive ? getComputedStyle(inactive) : null;
       const hamburger = document.querySelector('.hamburger');
       const hamburgerStyle = getComputedStyle(hamburger);
-      const hamburgerIconBars = hamburger?.querySelectorAll('.hamburger-icon span').length || 0;
+      const hamburgerIconElements = Array.from(hamburger?.querySelectorAll('.hamburger-icon span') || []);
+      const hamburgerIconBlendModes = hamburgerIconElements.map(span => getComputedStyle(span).mixBlendMode);
+      const hamburgerIconBars = hamburgerIconElements.length;
       const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const backdropStyle = getComputedStyle(document.querySelector('.nav-menu-backdrop'));
       const navbarGlassStyle = getComputedStyle(document.querySelector('.navbar'), '::before');
@@ -395,6 +419,8 @@ async function assertPublicNavigation(page, { href, label }) {
         active: activeStyle ? { background: activeStyle.backgroundColor, color: activeStyle.color, borderWidth: activeStyle.borderWidth, pointerEvents: activeStyle.pointerEvents } : null,
         inactive: inactiveStyle ? { background: inactiveStyle.backgroundColor, color: inactiveStyle.color, borderWidth: inactiveStyle.borderWidth, pointerEvents: inactiveStyle.pointerEvents } : null,
         hamburgerBlendMode: hamburgerStyle.mixBlendMode,
+        hamburgerBackground: hamburgerStyle.backgroundColor,
+        hamburgerIconBlendModes,
         hamburgerIsOpen: hamburger?.classList.contains('is-open') || false,
         hamburgerIconBars,
         menuAnimationName: style?.animationName || '',
@@ -422,7 +448,10 @@ async function assertPublicNavigation(page, { href, label }) {
       openMenuContract.inactive?.color !== 'rgb(255, 255, 255)' ||
       openMenuContract.inactive?.borderWidth !== '0px' ||
       openMenuContract.inactive?.pointerEvents !== 'auto' ||
-      openMenuContract.hamburgerBlendMode !== 'difference' ||
+      openMenuContract.hamburgerBlendMode !== 'normal' ||
+      openMenuContract.hamburgerBackground !== 'rgba(255, 255, 255, 0.94)' ||
+      JSON.stringify(openMenuContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
+      contrastRatio('rgb(15, 15, 15)', 'rgb(240, 240, 240)') < 3 ||
       !openMenuContract.hamburgerIsOpen ||
       openMenuContract.hamburgerIconBars !== 3 ||
       (!openMenuContract.reducedMotion && !openMenuContract.menuAnimationName.includes('nav-menu-enter')) ||
