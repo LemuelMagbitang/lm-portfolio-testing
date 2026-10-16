@@ -304,6 +304,24 @@ async function assertPublicNavigation(page, { href, label }) {
       return style.backgroundColor === 'rgb(0, 0, 0)' &&
         style.color === 'rgb(255, 255, 255)';
     }, null, { timeout: 1500 });
+
+    const activeHoverTarget = page.locator('.nav-links a.active-link').first();
+    await activeHoverTarget.hover();
+    await page.waitForFunction(() => {
+      const hovered = document.querySelector('.nav-links a.active-link:hover');
+      if (!hovered) return false;
+      const style = getComputedStyle(hovered);
+      return style.backgroundColor === 'rgb(0, 0, 0)' &&
+        style.color === 'rgb(255, 255, 255)' && style.borderWidth === '0px';
+    }, null, { timeout: 1500 });
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() => {
+      const active = document.querySelector('.nav-links a.active-link');
+      if (!active) return false;
+      const style = getComputedStyle(active);
+      return style.backgroundColor === 'rgb(255, 255, 255)' &&
+        style.color === 'rgb(0, 0, 0)';
+    }, null, { timeout: 1500 });
   }
 
   if ((viewport?.width || 0) < 768) {
@@ -320,6 +338,12 @@ async function assertPublicNavigation(page, { href, label }) {
       return menu?.classList.contains('active') && menu.classList.contains('is-open') &&
         document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
+    const reducedMotionPreference = await page.evaluate(() =>
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
+    if (!reducedMotionPreference) {
+      await page.waitForTimeout(280);
+    }
 
     const openMenuContract = await page.evaluate(() => {
       const menu = document.querySelector('.nav-links');
@@ -396,8 +420,11 @@ async function assertPublicNavigation(page, { href, label }) {
     await link.waitFor({ state: 'visible', timeout: 2000 });
   }
 
+  const reducedMotionBeforeSelection = await page.evaluate(() =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
   await link.click();
-  if ((viewport?.width || 0) < 768) {
+  if ((viewport?.width || 0) < 768 && !reducedMotionBeforeSelection) {
     await page.waitForFunction(() => {
       const menu = document.querySelector('.nav-links');
       const selected = menu?.querySelector('a.is-selected');
@@ -683,7 +710,11 @@ async function assertMobileNavigation(page, label) {
   await page.locator('body').click({ position: { x: 5, y: 300 } });
   const closing = await menu.evaluate(el => el.classList.contains('is-closing'));
   const collapsed = await button.getAttribute('aria-expanded');
-  if (!closing || collapsed !== 'false' || await button.evaluate(el => el.classList.contains('is-open'))) {
+  const reducedMotion = await page.evaluate(() =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+  if ((!reducedMotion && !closing) || collapsed !== 'false' ||
+      await button.evaluate(el => el.classList.contains('is-open'))) {
     throw new Error(label + ' mobile navigation did not begin closing from an outside tap.');
   }
   await page.waitForFunction(() => {
