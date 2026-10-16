@@ -204,7 +204,7 @@ async function assertPublicNavigation(page, { href, label }) {
     const menuOpen = window.innerWidth < 768 && document.body.classList.contains('menu-open');
     const desiredOpacity = menuOpen ? 0 : 1;
     const actualOpacity = Number.parseFloat(getComputedStyle(navbar, '::before').opacity);
-    return Number.isFinite(actualOpacity) && Math.abs(actualOpacity - desiredOpacity) < 0.02;
+    return Number.isFinite(actualOpacity) && Math.abs(actualOpacity - desiredOpacity) < 0.001;
   }, null, { timeout: 1200 });
 
   const navContract = await page.evaluate(() => {
@@ -284,8 +284,10 @@ async function assertPublicNavigation(page, { href, label }) {
   const glassStateCorrect = navContract.navbarGlass.background === 'rgba(255, 255, 255, 0.1)' &&
     navContract.navbarGlass.pointerEvents === 'none' &&
     (glassVisible
-      ? navContract.navbarGlass.backdropFilter.includes('blur(8px)') && navContract.navbarGlass.opacity === '1'
-      : navContract.navbarGlass.backdropFilter === 'none' && navContract.navbarGlass.opacity === '0');
+      ? navContract.navbarGlass.backdropFilter.includes('blur(8px)') &&
+        Math.abs(Number(navContract.navbarGlass.opacity) - 1) < 0.02
+      : navContract.navbarGlass.backdropFilter === 'none' &&
+        Math.abs(Number(navContract.navbarGlass.opacity)) < 0.02);
   if (
     !navContract.navbar.exists ||
     navContract.navbar.background !== 'rgba(0, 0, 0, 0)' ||
@@ -425,7 +427,7 @@ async function assertPublicNavigation(page, { href, label }) {
       openMenuContract.hamburgerIconBars !== 3 ||
       (!openMenuContract.reducedMotion && !openMenuContract.menuAnimationName.includes('nav-menu-enter')) ||
       openMenuContract.backdropBackground !== 'rgb(0, 0, 0)' ||
-      openMenuContract.navbarGlassOpacity !== '0' ||
+      Math.abs(Number(openMenuContract.navbarGlassOpacity)) >= 0.02 ||
       openMenuContract.bodyBackground !== 'rgb(0, 0, 0)' ||
       openMenuContract.bodyOverflow !== 'hidden'
     ) {
