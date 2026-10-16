@@ -5042,9 +5042,14 @@ try {
       }
 
       await page.mouse.click(8, 760);
-      await page.waitForTimeout(50);
+      await page.waitForFunction(() => {
+        const menu = document.querySelector('.nav-links');
+        return menu?.classList.contains('is-closing') &&
+          !document.querySelector('.hamburger')?.classList.contains('is-open');
+      }, null, { timeout: 1000 });
+      await page.waitForFunction(() => !document.body.classList.contains('menu-open'), null, { timeout: 1500 });
       if (await page.evaluate(() => document.body.classList.contains('menu-open'))) {
-        throw new Error('Outside tap no longer closes the mobile hamburger menu.');
+        throw new Error('Outside tap did not finish closing the animated mobile hamburger menu.');
       }
     }, { width: 390, height: 844 });
 
