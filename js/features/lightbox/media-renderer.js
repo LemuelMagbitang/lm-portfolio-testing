@@ -355,6 +355,7 @@ export function createLightboxMediaRenderer({
         cleanup();
         return;
       }
+      iframe.dataset.lmYoutubeLoaded = 'true';
       primeYouTubeFrame(iframe);
       cacheYouTubeFrame(embedSrc, iframe);
       finish(true);
@@ -1280,7 +1281,7 @@ export function createLightboxMediaRenderer({
   }
 
   function pauseYouTubeFrame(iframe) {
-    if (!iframe?.contentWindow) return;
+    if (!iframe?.contentWindow || iframe.dataset.lmYoutubeLoaded !== 'true') return;
     iframe.dataset.lmYoutubePauseRequested = String(Date.now());
     try {
       iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), YOUTUBE_PLAYER_ORIGIN);
@@ -1335,7 +1336,7 @@ export function createLightboxMediaRenderer({
   }
 
   function primeYouTubeFrame(iframe) {
-    if (!iframe?.contentWindow) return;
+    if (!iframe?.contentWindow || iframe.dataset.lmYoutubeLoaded !== 'true') return;
     try {
       iframe.contentWindow.postMessage(JSON.stringify({
         event: 'command',
@@ -1548,6 +1549,7 @@ export function createLightboxMediaRenderer({
       iframe.allowFullscreen = true;
       iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       iframe.addEventListener('load', () => {
+        iframe.dataset.lmYoutubeLoaded = 'true';
         primeYouTubeFrame(iframe);
         // A newly created frame is cached only after a successful load. This
         // prevents a failed player from becoming a poisoned cache entry.
