@@ -5797,3 +5797,14 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
     transform: none !important;
   }
 }
+
+/* Once the full-screen menu is closed, do not keep animating its old
+   max-height/viewport box. Opening and closing motion is handled by the
+   explicit keyframes above, so this removes the stale post-close hit surface. */
+@media (max-width: 767px) {
+  .nav-links:not(.active) {
+    height: 0 !important;
+    max-height: 0 !important;
+    transition: none !important;
+  }
+}
