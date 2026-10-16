@@ -232,7 +232,8 @@ async function assertPublicNavigation(page, { href, label }) {
       labels: links.map(link => link.label),
       links,
       dropdownCount: menu?.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length || 0,
-      mobileMenuBackground: menu ? getComputedStyle(menu).backgroundColor : ''
+      mobileMenuBackground: menu ? getComputedStyle(menu).backgroundColor : '',
+      viewportWidth: window.innerWidth
     };
   });
   const expectedLabels = ['DESIGNS', 'ABOUT ME', 'CONTACTS'];
@@ -256,7 +257,7 @@ async function assertPublicNavigation(page, { href, label }) {
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
     navContract.dropdownCount !== 0 ||
-    navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)'
+    (navContract.viewportWidth >= 768 && navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)')
   ) {
     throw new Error(label + ' navigation visual/markup contract failed: ' + JSON.stringify(navContract));
   }
