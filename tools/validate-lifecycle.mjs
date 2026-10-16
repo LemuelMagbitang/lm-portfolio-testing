@@ -141,7 +141,7 @@ assert.match(mediaRendererSource, /function preloadYouTube\(url\)/);
 assert.match(mediaRendererSource, /iframe\.removeEventListener\('load', onLoad\)/);
 assert.match(mediaRendererSource, /iframe\.removeEventListener\('error', onError\)/);
 assert.match(mediaRendererSource, /try \{ iframe\.removeAttribute\('src'\); \} catch \(_) \{\}/);
-assert.match(mediaRendererSource, /const cleanup = \(\) => \{[\s\S]*?youtubeFrameCache\.delete\(embedSrc\)[\s\S]*?finish\(false\)/);assert.match(mediaRendererSource, /type === 'image'/);
+assert.match(mediaRendererSource, /const cleanup = \(\) => \{[\s\S]*?youtubeFrameCache\.delete\(embedSrc\)[\s\S]*?finish\(false\)/);\nassert.match(mediaRendererSource, /type === 'image'/);
 assert.match(mediaRendererSource, /type === 'video'/);
 assert.match(mediaRendererSource, /type === 'youtube'/);
 assert.match(mediaRendererSource, /const criticalIndex = media\.findIndex\(item => \{/);
