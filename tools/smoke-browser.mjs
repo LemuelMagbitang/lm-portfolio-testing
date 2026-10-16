@@ -198,15 +198,6 @@ async function assertPublicNavigation(page, { href, label }) {
     }, null, { timeout: 6000 });
   }
 
-  await page.waitForFunction(() => {
-    const navbar = document.querySelector('.navbar');
-    if (!navbar) return false;
-    const menuOpen = window.innerWidth < 768 && document.body.classList.contains('menu-open');
-    const desiredOpacity = menuOpen ? 0 : 1;
-    const actualOpacity = Number.parseFloat(getComputedStyle(navbar, '::before').opacity);
-    return Number.isFinite(actualOpacity) && Math.abs(actualOpacity - desiredOpacity) < 0.001;
-  }, null, { timeout: 1200 });
-
   const navContract = await page.evaluate(() => {
     const navbar = document.querySelector('.navbar');
     const logo = document.querySelector('.site-logo');
@@ -214,7 +205,6 @@ async function assertPublicNavigation(page, { href, label }) {
     const anchors = Array.from(menu?.querySelectorAll(':scope > li > a') || []);
     const navStyle = navbar ? getComputedStyle(navbar) : null;
     const logoStyle = logo ? getComputedStyle(logo) : null;
-    const navbarBackdropStyle = navbar ? getComputedStyle(navbar, '::before') : null;
     const hamburger = document.querySelector('.hamburger');
     const hamburgerStyle = hamburger ? getComputedStyle(hamburger) : null;
     const hamburgerIconBlendModes = Array.from(hamburger?.querySelectorAll('.hamburger-icon span') || [])
@@ -239,16 +229,12 @@ async function assertPublicNavigation(page, { href, label }) {
         backdropFilter: navStyle?.backdropFilter || '',
         borderBottomWidth: navStyle?.borderBottomWidth || ''
       },
-      navbarGlass: {
-        background: navbarBackdropStyle?.backgroundColor || '',
-        backdropFilter: navbarBackdropStyle?.backdropFilter || '',
-        opacity: navbarBackdropStyle?.opacity || '',
-        pointerEvents: navbarBackdropStyle?.pointerEvents || ''
-      },
-      bodyMenuOpen: document.body.classList.contains('menu-open'),
       logoBlendMode: logoStyle?.mixBlendMode || '',
       hamburgerBlendMode: hamburgerStyle?.mixBlendMode || '',
       hamburgerBackground: hamburgerStyle?.backgroundColor || '',
+      hamburgerBackdropFilter: hamburgerStyle?.backdropFilter || '',
+      hamburgerWidth: hamburgerStyle?.width || '',
+      hamburgerHeight: hamburgerStyle?.height || '',
       hamburgerIconBlendModes,
       labels: links.map(link => link.label),
       links,
@@ -284,24 +270,18 @@ async function assertPublicNavigation(page, { href, label }) {
         ? link.background === 'rgb(255, 255, 255)' && link.color === 'rgb(0, 0, 0)'
         : link.background === 'rgb(0, 0, 0)' && link.color === 'rgb(255, 255, 255)')
     );
-  const glassVisible = !(navContract.viewportWidth < 768 && navContract.bodyMenuOpen);
-  const glassStateCorrect = navContract.navbarGlass.background === 'rgba(255, 255, 255, 0.1)' &&
-    navContract.navbarGlass.pointerEvents === 'none' &&
-    (glassVisible
-      ? navContract.navbarGlass.backdropFilter.includes('blur(8px)') &&
-        Math.abs(Number(navContract.navbarGlass.opacity) - 1) < 0.02
-      : navContract.navbarGlass.backdropFilter === 'none' &&
-        Math.abs(Number(navContract.navbarGlass.opacity)) < 0.02);
   if (
     !navContract.navbar.exists ||
     navContract.navbar.background !== 'rgba(0, 0, 0, 0)' ||
     navContract.navbar.backgroundImage !== 'none' ||
     navContract.navbar.backdropFilter !== 'none' ||
-    !glassStateCorrect ||
     parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
     navContract.logoBlendMode !== 'difference' ||
     navContract.hamburgerBlendMode !== 'normal' ||
-    navContract.hamburgerBackground !== 'rgba(255, 255, 255, 0.94)' ||
+    navContract.hamburgerBackground !== 'rgb(255, 255, 255)' ||
+    navContract.hamburgerBackdropFilter !== 'none' ||
+    navContract.hamburgerWidth !== '38px' ||
+    navContract.hamburgerHeight !== '38px' ||
     JSON.stringify(navContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
@@ -371,7 +351,7 @@ async function assertPublicNavigation(page, { href, label }) {
       }, null, { timeout: 1500 });
       await page.mouse.move(0, 0);
       await page.waitForFunction(() =>
-        getComputedStyle(document.querySelector('.hamburger')).backgroundColor === 'rgba(255, 255, 255, 0.94)',
+        getComputedStyle(document.querySelector('.hamburger')).backgroundColor === 'rgb(255, 255, 255)',
         null, { timeout: 1500 });
     }
     if (await hamburger.count() !== 1 || await mobileMenu.count() !== 1) {
@@ -408,7 +388,6 @@ async function assertPublicNavigation(page, { href, label }) {
       const hamburgerIconBars = hamburgerIconElements.length;
       const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const backdropStyle = getComputedStyle(document.querySelector('.nav-menu-backdrop'));
-      const navbarGlassStyle = getComputedStyle(document.querySelector('.navbar'), '::before');
       const bodyStyle = getComputedStyle(document.body);
       return {
         position: style?.position || '',
@@ -420,13 +399,15 @@ async function assertPublicNavigation(page, { href, label }) {
         inactive: inactiveStyle ? { background: inactiveStyle.backgroundColor, color: inactiveStyle.color, borderWidth: inactiveStyle.borderWidth, pointerEvents: inactiveStyle.pointerEvents } : null,
         hamburgerBlendMode: hamburgerStyle.mixBlendMode,
         hamburgerBackground: hamburgerStyle.backgroundColor,
+        hamburgerBackdropFilter: hamburgerStyle.backdropFilter,
+        hamburgerWidth: hamburgerStyle.width,
+        hamburgerHeight: hamburgerStyle.height,
         hamburgerIconBlendModes,
         hamburgerIsOpen: hamburger?.classList.contains('is-open') || false,
         hamburgerIconBars,
         menuAnimationName: style?.animationName || '',
         reducedMotion,
         backdropBackground: backdropStyle.backgroundColor,
-        navbarGlassOpacity: navbarGlassStyle.opacity,
         bodyBackground: bodyStyle.backgroundColor,
         bodyOverflow: bodyStyle.overflow
       };
@@ -449,14 +430,16 @@ async function assertPublicNavigation(page, { href, label }) {
       openMenuContract.inactive?.borderWidth !== '0px' ||
       openMenuContract.inactive?.pointerEvents !== 'auto' ||
       openMenuContract.hamburgerBlendMode !== 'normal' ||
-      openMenuContract.hamburgerBackground !== 'rgba(255, 255, 255, 0.94)' ||
+      openMenuContract.hamburgerBackground !== 'rgb(255, 255, 255)' ||
+      openMenuContract.hamburgerBackdropFilter !== 'none' ||
+      openMenuContract.hamburgerWidth !== '38px' ||
+      openMenuContract.hamburgerHeight !== '38px' ||
       JSON.stringify(openMenuContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
-      contrastRatio('rgb(15, 15, 15)', 'rgb(240, 240, 240)') < 3 ||
+      contrastRatio('rgb(0, 0, 0)', 'rgb(255, 255, 255)') < 3 ||
       !openMenuContract.hamburgerIsOpen ||
       openMenuContract.hamburgerIconBars !== 3 ||
       (!openMenuContract.reducedMotion && !openMenuContract.menuAnimationName.includes('nav-menu-enter')) ||
       openMenuContract.backdropBackground !== 'rgb(0, 0, 0)' ||
-      Math.abs(Number(openMenuContract.navbarGlassOpacity)) >= 0.02 ||
       openMenuContract.bodyBackground !== 'rgb(0, 0, 0)' ||
       openMenuContract.bodyOverflow !== 'hidden'
     ) {

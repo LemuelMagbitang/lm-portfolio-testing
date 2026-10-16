@@ -1303,8 +1303,6 @@ function validateBootstrapHardening() {
 
   const navigationCss = exists('css/style.css') ? readText('css/style.css') : '';
   const navbarRule = (navigationCss.match(/\.navbar\s*\{[^}]*\}/) || [])[0] || '';
-  const navbarGlassRule = (navigationCss.match(/\.navbar::before\s*\{[^}]*\}/) || [])[0] || '';
-  const navbarGlassMobileRule = (navigationCss.match(/body\.menu-open \.navbar::before\s*\{[^}]*\}/) || [])[0] || '';
   const logoRule = (navigationCss.match(/\.site-logo\s*\{[^}]*\}/) || [])[0] || '';
   const hamburgerRule = (navigationCss.match(/(?:^|\n)\.hamburger\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
   const hamburgerButtonRule = (navigationCss.match(/(?:^|\n)button\.hamburger\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
@@ -1330,9 +1328,13 @@ function validateBootstrapHardening() {
   if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
       !/filter:\s*brightness\(0\) invert\(1\)/.test(logoRule) ||
       !/mix-blend-mode\s*:\s*difference/.test(logoRule) ||
-      !/background:\s*rgba\(255, 255, 255, 0\.94\)/.test(hamburgerButtonRule) ||
+      !/background:\s*#fff/.test(hamburgerButtonRule) ||
       !/mix-blend-mode\s*:\s*normal/.test(hamburgerRule) ||
-      !/backdrop-filter:\s*blur\(8px\) brightness\(105%\)/.test(hamburgerButtonRule) ||
+      !/backdrop-filter:\s*none/.test(hamburgerButtonRule) ||
+      !/width:\s*38px/.test(hamburgerButtonRule) ||
+      !/min-width:\s*38px/.test(hamburgerButtonRule) ||
+      !/height:\s*38px/.test(hamburgerButtonRule) ||
+      navigationCss.includes('.navbar::before') ||
       !/mix-blend-mode\s*:\s*difference/.test(hamburgerIconRule) ||
       !/height:\s*2\.5px/.test(hamburgerIconRule) ||
       !/background:\s*#000/.test(hamburgerHoverRule) ||
@@ -1340,11 +1342,6 @@ function validateBootstrapHardening() {
       !/border-radius\s*:\s*999px/.test(pillRule) ||
       !/border:\s*0/.test(pillRule) ||
       /border-color\s*:/.test(pillRule + activePillRule + hoverPillRule) ||
-      !/background:\s*rgba\(255, 255, 255, 0\.1\)/.test(navbarGlassRule) ||
-      !/backdrop-filter:\s*blur\(8px\) brightness\(95%\)/.test(navbarGlassRule) ||
-      !/pointer-events:\s*none/.test(navbarGlassRule) ||
-      !/opacity:\s*0/.test(navbarGlassMobileRule) ||
-      !/backdrop-filter:\s*none/.test(navbarGlassMobileRule) ||
       !/background\s*:\s*#000/.test(pillRule) ||
       !/color\s*:\s*#fff/.test(pillRule) ||
       !/background\s*:\s*#fff/.test(activePillRule) ||

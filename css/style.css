@@ -144,9 +144,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   z-index: 1003;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -159,8 +159,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .hamburger-icon {
   position: relative;
   display: block;
-  width: 24px;
-  height: 20px;
+  width: 20px;
+  height: 18px;
   pointer-events: none;
 }
 
@@ -168,8 +168,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   position: absolute;
   left: 0;
   display: block;
-  width: 24px;
-  height: 2px;
+  width: 20px;
+  height: 2.5px;
   border-radius: 999px;
   background: #fff;
   transform-origin: center;
@@ -177,11 +177,11 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .hamburger-icon span:nth-child(1) { top: 3px; }
-.hamburger-icon span:nth-child(2) { top: 9px; }
-.hamburger-icon span:nth-child(3) { top: 15px; }
+.hamburger-icon span:nth-child(2) { top: 8px; }
+.hamburger-icon span:nth-child(3) { top: 13px; }
 
 .hamburger.is-open .hamburger-icon span:nth-child(1) {
-  top: 9px;
+  top: 8px;
   transform: rotate(45deg);
 }
 
@@ -191,7 +191,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .hamburger.is-open .hamburger-icon span:nth-child(3) {
-  top: 9px;
+  top: 8px;
   transform: rotate(-45deg);
 }
 
@@ -5810,51 +5810,22 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
 }
 
 /* ============================================================
-   NAVIGATION GLASS SCRIM — softens busy artwork behind the controls
-   ============================================================ */
-.navbar {
-  isolation: isolate;
-}
-
-.navbar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: rgba(255, 255, 255, 0.1);
-  -webkit-backdrop-filter: blur(8px) brightness(95%);
-  backdrop-filter: blur(8px) brightness(95%);
-  opacity: 1;
-  transition: opacity .2s ease;
-}
-
-@media (max-width: 767px) {
-  /* The fullscreen menu supplies its own solid-black surface. */
-  body.menu-open .navbar::before {
-    opacity: 0;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
-/* ============================================================
-   WCAG-ALIGNED HAMBURGER CONTRAST SURFACE + HOVER DELTA
+   HAMBURGER CONTRAST SURFACE + HOVER DELTA
    ============================================================
-   The icon still uses difference compositing, but only its three strokes
-   blend. A near-white frosted hit target makes the local backdrop predictable
-   enough to retain strong contrast over both dark and bright artwork. On
-   hover/press, the surface switches to black and the strokes invert to white.
+   Keep the control minimal and glass-free to match the transparent,
+   artwork-led header. A solid white hit surface gives the difference-blended
+   strokes a predictable high-contrast backdrop; hover/press invert it to black.
 */
 .hamburger {
-  background: rgba(255, 255, 255, 0.94);
-  -webkit-backdrop-filter: blur(8px) brightness(105%);
-  backdrop-filter: blur(8px) brightness(105%);
+  background: #fff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   mix-blend-mode: normal;
   transition: background-color .22s ease, transform .22s cubic-bezier(.22, 1, .36, 1);
 }
 
 .hamburger-icon span {
+  width: 20px;
   height: 2.5px;
   mix-blend-mode: difference;
 }
@@ -5876,11 +5847,12 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
   }
 }
 
-/* The native button selector has higher specificity than .hamburger.
-   Repeat the contrast surface at that specificity so it survives the reset
-   button rules earlier in the stylesheet. */
+/* Match the native-button reset specificity so the solid surface wins. */
 button.hamburger {
-  background: rgba(255, 255, 255, 0.94);
-  -webkit-backdrop-filter: blur(8px) brightness(105%);
-  backdrop-filter: blur(8px) brightness(105%);
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  background: #fff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
