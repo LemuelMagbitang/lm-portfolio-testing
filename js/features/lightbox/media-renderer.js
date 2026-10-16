@@ -25,6 +25,7 @@ export function createLightboxMediaRenderer({
   const holographicNormalControllers = new WeakMap();
   const holographicMotionStates = new WeakMap();
   const youtubeFrameCache = new Map();
+  const MAX_CACHED_YOUTUBE_FRAMES = 2;
   const imageDimensionCache = new Map();
   const videoDimensionCache = new Map();
   const lottieDimensionCache = new Map();
@@ -106,6 +107,23 @@ export function createLightboxMediaRenderer({
     params.set('playsinline', '1');
     if (windowRef?.location?.origin) params.set('origin', windowRef.location.origin);
     return 'https://www.youtube.com/embed/' + parsed.id + '?' + params.toString();
+  }
+
+  function cacheYouTubeFrame(embedSrc, iframe) {
+    if (!embedSrc || !iframe || destroyed) return;
+    youtubeFrameCache.delete(embedSrc);
+    youtubeFrameCache.set(embedSrc, iframe);
+    // Retained iframe documents can hold substantial memory even off-screen.
+    // Evict only hidden cached frames; never interrupt a visible Lightbox player.
+    while (youtubeFrameCache.size > MAX_CACHED_YOUTUBE_FRAMES) {
+      const oldest = youtubeFrameCache.entries().next().value;
+      if (!oldest) break;
+      const [oldKey, oldFrame] = oldest;
+      youtubeFrameCache.delete(oldKey);
+      if (youtubePreloadRoot && oldFrame?.parentNode === youtubePreloadRoot) {
+        try { oldFrame.remove(); } catch (_) {}
+      }
+    }
   }
 
   function ensureMediaPreloadRoot() {
@@ -313,7 +331,7 @@ export function createLightboxMediaRenderer({
     const ready = new Promise(resolve => {
       iframe.addEventListener('load', () => {
         primeYouTubeFrame(iframe);
-        youtubeFrameCache.set(embedSrc, iframe);
+        cacheYouTubeFrame(embedSrc, iframe);
         resolve(true);
       }, { once: true });
       iframe.addEventListener('error', () => resolve(false), { once: true });
@@ -398,6 +416,7 @@ export function createLightboxMediaRenderer({
       }
     };
     let hasModel = false;
+    const youtubeWarmupKeys = new Set();
 
     const connection = globalThis.navigator?.connection ||
       globalThis.navigator?.mozConnection ||
@@ -406,6 +425,12 @@ export function createLightboxMediaRenderer({
       connection?.saveData ||
       /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
     );
+    const scheduleYouTubeWarmup = (key, url) => {
+      if (constrainedNetwork || !key || !url || youtubeWarmupKeys.has(key)) return;
+      if (youtubeWarmupKeys.size >= MAX_CACHED_YOUTUBE_FRAMES) return;
+      youtubeWarmupKeys.add(key);
+      scheduleJob(key, () => preloadYouTube(url), false, true);
+    };
 
     (Array.isArray(projects) ? projects : []).forEach(project => {
       const thumbnail = project?.thumbnail;
@@ -426,7 +451,7 @@ export function createLightboxMediaRenderer({
         } else if (type === 'lottie') {
           scheduleJob(key, () => preloadLottie(url, { fetchPriority: 'low' }), false);
         } else if (type === 'youtube') {
-          if (!constrainedNetwork) scheduleJob(key, () => preloadYouTube(url), false, true);
+          scheduleYouTubeWarmup(key, url);
         } else {
           scheduleJob(key, () => preloadImage(url, { fetchPriority: 'low' }), false);
         }
@@ -503,13 +528,9 @@ export function createLightboxMediaRenderer({
         } else if (type === 'video') {
           scheduleJob(key, () => preloadVideo(url, { fetchPriority }), critical);
         } else if (type === 'youtube') {
-          // A YouTube iframe is never startup-critical. Its iframe/player boot
-          // is much more expensive than the local first-view assets, and the
-          // embed does not guarantee that the actual video bytes are ready.
-          // Queue it as low-priority warm-up alongside the critical tier.
-          if (!constrainedNetwork) {
-            scheduleJob(key, () => preloadYouTube(url), false, true);
-          }
+          // Warm only a small number of players; other embeds load on demand.
+          // We do not intercept the user's native player interaction.
+          scheduleYouTubeWarmup(key, url);
         } else {
           // Future media types still get a cache warm-up when they expose a
           // repository/network source. Unsupported renderers can therefore
@@ -600,6 +621,8 @@ export function createLightboxMediaRenderer({
       youtubeFrameCache.delete(embedSrc);
       return null;
     }
+    youtubeFrameCache.delete(embedSrc);
+    youtubeFrameCache.set(embedSrc, frame);
     return frame;
   }
 
@@ -1506,7 +1529,7 @@ export function createLightboxMediaRenderer({
         primeYouTubeFrame(iframe);
         // A newly created frame is cached only after a successful load. This
         // prevents a failed player from becoming a poisoned cache entry.
-        youtubeFrameCache.set(embedSrc, iframe);
+        cacheYouTubeFrame(embedSrc, iframe);
       }, { once: true });
       iframe.addEventListener('error', () => {
         if (youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
