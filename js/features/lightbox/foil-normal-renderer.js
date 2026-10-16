@@ -125,7 +125,10 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     try{if(vertexShader)gl.deleteShader(vertexShader);}catch(_){}
     try{if(fragmentShader)gl.deleteShader(fragmentShader);}catch(_){}
     try{if(vertexBuffer)gl.deleteBuffer(vertexBuffer);}catch(_){}
-    textures.forEach(t=>{try{gl.deleteTexture(t);}catch(_){}});return NOOP;
+    textures.forEach(t=>{try{gl.deleteTexture(t);}catch(_){}});
+    try{gl.getExtension('WEBGL_lose_context')?.loseContext();}catch(_){}
+    canvas.width=0;canvas.height=0;
+    return NOOP;
   }
   let drawFrame = null;
   function drawNow(){

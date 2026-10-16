@@ -5,7 +5,7 @@
  * and project selection remain in the Lightbox controller.
  */
 
-import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261015-01';
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 
@@ -128,6 +128,20 @@ export function createLightboxMediaRenderer({
     return mediaPreloadRoot;
   }
 
+  // Removing a video node alone does not reliably stop its resource selection
+  // or release buffered media. Releasing the source and calling load() aborts
+  // pending work; the helper is safe to call from timeout, destroy, or dispose.
+  function releasePreloadedVideo(video) {
+    if (!video) return;
+    try { video.pause(); } catch (_) {}
+    try { video.removeAttribute('src'); } catch (_) {}
+    try {
+      video.querySelectorAll?.('source').forEach(source => source.removeAttribute('src'));
+    } catch (_) {}
+    try { video.load(); } catch (_) {}
+    try { video.remove(); } catch (_) {}
+  }
+
   function setAspectRatio(surface, width, height) {
     const w = Number(width);
     const h = Number(height);
@@ -240,18 +254,18 @@ export function createLightboxMediaRenderer({
     video.style.pointerEvents = 'none';
 
     let settled = false;
-    let resolveResult = null;
+    let finishPreload = () => {};
     const preload = new Promise(resolve => {
-      resolveResult = resolve;
       const finish = ready => {
         if (settled) return;
         settled = true;
         video.removeEventListener('loadeddata', onReady);
         video.removeEventListener('canplay', onReady);
         video.removeEventListener('error', onError);
-        if (!ready && video.parentNode) video.remove();
+        if (!ready) releasePreloadedVideo(video);
         resolve(ready);
       };
+      finishPreload = finish;
       const onReady = () => finish(true);
       const onError = () => finish(false);
       video.addEventListener('loadeddata', onReady, { once: true });
@@ -259,7 +273,9 @@ export function createLightboxMediaRenderer({
       video.addEventListener('error', onError, { once: true });
     });
 
-    const cleanup = () => resolveResult?.(false);
+    // On renderer destruction or timeout, remove listeners, stop playback,
+    // clear the source, and resolve the pending preload exactly once.
+    const cleanup = () => finishPreload(false);
     const unregister = registerPreloadCleanup(cleanup);
     root.appendChild(video);
     video.src = url;
@@ -271,7 +287,7 @@ export function createLightboxMediaRenderer({
       cleanup
     ).finally(unregister);
 
-    if (!result && video.parentNode) video.remove();
+    if (!result) releasePreloadedVideo(video);
     return result;
   }
 
@@ -2136,8 +2152,9 @@ export function createLightboxMediaRenderer({
       youtubePreloadRoot.remove();
     }
     youtubePreloadRoot = null;
-    if (mediaPreloadRoot?.isConnected) {
-      mediaPreloadRoot.remove();
+    if (mediaPreloadRoot) {
+      mediaPreloadRoot.querySelectorAll('video').forEach(releasePreloadedVideo);
+      if (mediaPreloadRoot.isConnected) mediaPreloadRoot.remove();
     }
     mediaPreloadRoot = null;
 
@@ -2165,6 +2182,7 @@ export function createLightboxMediaRenderer({
     youtubeMessageCleanup?.();
     youtubeMessageCleanup = null;
     pauseOtherPlayback(container);
+    container.querySelectorAll('video').forEach(releasePreloadedVideo);
 
     const youtubeFrames = Array.from(container.querySelectorAll('iframe[data-lm-youtube]'));
     if (youtubeFrames.length) {

@@ -109,6 +109,10 @@ assert.match(mediaRendererSource, /function preloadFetch\(url, \{ fetchPriority 
 assert.match(mediaRendererSource, /function preloadImage\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed\) return Promise\.resolve\(false\);/);
 assert.match(mediaRendererSource, /async function preloadLottie\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return false;/);
 assert.match(mediaRendererSource, /async function preloadVideo\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed\) return false;/);
+assert.match(mediaRendererSource, /function releasePreloadedVideo\(video\) \{[\s\S]*?video\.pause\(\)[\s\S]*?video\.removeAttribute\('src'\)[\s\S]*?video\.load\(\)[\s\S]*?video\.remove\(\)/);
+assert.match(mediaRendererSource, /const cleanup = \(\) => finishPreload\(false\);/);
+assert.match(mediaRendererSource, /mediaPreloadRoot\.querySelectorAll\('video'\)\.forEach\(releasePreloadedVideo\)/);
+assert.match(mediaRendererSource, /container\.querySelectorAll\('video'\)\.forEach\(releasePreloadedVideo\)/);
 assert.match(mediaRendererSource, /async function preloadFetch\(url, \{ fetchPriority = 'low' \} = \{\}\) \{\s*if \(!url \|\| destroyed \|\| typeof globalThis\.fetch !== 'function'\) return false;/);
 assert.match(mediaRendererSource, /const preload = \(async \(\) => \{[\s\S]*?await response\.arrayBuffer\(\);[\s\S]*?\}\)\(\);\s*return await withPreloadTimeout\(preload, MEDIA_PRELOAD_TIMEOUT_MS, cleanup\);/);
 assert.match(mediaRendererSource, /const MODEL_MODULE_PRELOAD_TIMEOUT_MS = 3500/);
@@ -170,6 +174,10 @@ assert.match(modelViewerSource, /const containerCleanup = \[\]/);
 assert.match(modelViewerSource, /containerCleanup\.splice\(0\)\.reverse\(\)/);
 assert.doesNotMatch(modelViewerSource, /container\.addEventListener\('(?:pointerdown|pointermove|pointercancel|click|keydown|wheel)'/);
 assert.match(modelViewerSource, /if \(!isCurrentMount\(\)\) \{[\s\S]*disposeObject\(loaded\.root\)[\s\S]*return null;/);
+
+const foilNormalRendererSource = await readFile(new URL('../js/features/lightbox/foil-normal-renderer.js', import.meta.url), 'utf8');
+assert.match(foilNormalRendererSource, /gl\.getExtension\('WEBGL_lose_context'\)\?\.loseContext\(\)/);
+assert.match(foilNormalRendererSource, /canvas\.width=0;canvas\.height=0;\s*return NOOP;/);
 
 const aboutSource = await readFile(new URL('../js/features/about/index.js', import.meta.url), 'utf8');
 assert.match(aboutSource, /image\.src = ''/);
