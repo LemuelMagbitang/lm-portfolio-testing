@@ -198,6 +198,15 @@ async function assertPublicNavigation(page, { href, label }) {
     }, null, { timeout: 6000 });
   }
 
+  await page.waitForFunction(() => {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return false;
+    const menuOpen = window.innerWidth < 768 && document.body.classList.contains('menu-open');
+    const desiredOpacity = menuOpen ? 0 : 1;
+    const actualOpacity = Number.parseFloat(getComputedStyle(navbar, '::before').opacity);
+    return Number.isFinite(actualOpacity) && Math.abs(actualOpacity - desiredOpacity) < 0.02;
+  }, null, { timeout: 1200 });
+
   const navContract = await page.evaluate(() => {
     const navbar = document.querySelector('.navbar');
     const logo = document.querySelector('.site-logo');
@@ -234,6 +243,7 @@ async function assertPublicNavigation(page, { href, label }) {
         opacity: navbarBackdropStyle?.opacity || '',
         pointerEvents: navbarBackdropStyle?.pointerEvents || ''
       },
+      bodyMenuOpen: document.body.classList.contains('menu-open'),
       logoBlendMode: logoStyle?.mixBlendMode || '',
       hamburgerBlendMode: hamburgerStyle?.mixBlendMode || '',
       labels: links.map(link => link.label),
@@ -270,15 +280,18 @@ async function assertPublicNavigation(page, { href, label }) {
         ? link.background === 'rgb(255, 255, 255)' && link.color === 'rgb(0, 0, 0)'
         : link.background === 'rgb(0, 0, 0)' && link.color === 'rgb(255, 255, 255)')
     );
+  const glassVisible = !(navContract.viewportWidth < 768 && navContract.bodyMenuOpen);
+  const glassStateCorrect = navContract.navbarGlass.background === 'rgba(255, 255, 255, 0.1)' &&
+    navContract.navbarGlass.pointerEvents === 'none' &&
+    (glassVisible
+      ? navContract.navbarGlass.backdropFilter.includes('blur(8px)') && navContract.navbarGlass.opacity === '1'
+      : navContract.navbarGlass.backdropFilter === 'none' && navContract.navbarGlass.opacity === '0');
   if (
     !navContract.navbar.exists ||
     navContract.navbar.background !== 'rgba(0, 0, 0, 0)' ||
     navContract.navbar.backgroundImage !== 'none' ||
     navContract.navbar.backdropFilter !== 'none' ||
-    navContract.navbarGlass.background !== 'rgba(255, 255, 255, 0.1)' ||
-    !navContract.navbarGlass.backdropFilter.includes('blur(8px)') ||
-    navContract.navbarGlass.opacity !== '1' ||
-    navContract.navbarGlass.pointerEvents !== 'none' ||
+    !glassStateCorrect ||
     parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
     navContract.logoBlendMode !== 'difference' ||
     navContract.hamburgerBlendMode !== 'difference' ||
