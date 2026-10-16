@@ -181,83 +181,120 @@ async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
   }
 }
 
-async function assertPublicFilterNavigation(page, { href, expectedHash, label }) {
-  const link = page.locator(`.nav-links a[href="${href}"]`).first();
+async function assertPublicNavigation(page, { href, label }) {
+  const link = page.locator('.nav-links a[href="' + href + '"]').first();
   if (await link.count() !== 1) {
-    throw new Error(`${label} filter navigation link is missing: ${href}`);
+    throw new Error(label + ' direct navigation link is missing: ' + href);
   }
 
-  // Cross-page smoke cases can deliberately reload a public page immediately
-  // before exercising its navigation. The branded loading gate intentionally
-  // intercepts pointer events until bootstrap has composed and painted the
-  // page, so synchronize against that explicit readiness contract instead of
-  // racing the transition overlay.
+  // Wait for the branded loading gate before inspecting styles or activating
+  // the navigation. This avoids racing the transition overlay after reloads.
   const pageTransition = page.locator('#pageTransition').first();
   if (await pageTransition.count() === 1) {
     await page.waitForFunction(() => {
       const transition = document.querySelector('#pageTransition');
-      return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
+      return transition?.dataset.loading === 'ready' &&
+        transition.getAttribute('aria-hidden') === 'true';
     }, null, { timeout: 6000 });
   }
 
-  // Desktop exposes these links through a CSS-only hover dropdown. Test the
-  // anchor's actual activation semantics there without depending on a headless
-  // pseudo-hover state. Mobile uses the real visible hamburger menu and a real
-  // Playwright click, which separately exercises the touch/navigation lifecycle.
+  const navContract = await page.evaluate(() => {
+    const navbar = document.querySelector('.navbar');
+    const logo = document.querySelector('.site-logo');
+    const menu = document.querySelector('.nav-links');
+    const anchors = Array.from(menu?.querySelectorAll(':scope > li > a') || []);
+    const navStyle = navbar ? getComputedStyle(navbar) : null;
+    const logoStyle = logo ? getComputedStyle(logo) : null;
+    const links = anchors.map(anchor => {
+      const style = getComputedStyle(anchor);
+      return {
+        label: (anchor.textContent || '').trim().replace(/\s+/g, ' ').toUpperCase(),
+        background: style.backgroundColor,
+        color: style.color,
+        radius: style.borderRadius,
+        href: anchor.getAttribute('href') || ''
+      };
+    });
+    return {
+      navbar: {
+        exists: !!navbar,
+        background: navStyle?.backgroundColor || '',
+        backgroundImage: navStyle?.backgroundImage || '',
+        backdropFilter: navStyle?.backdropFilter || '',
+        borderBottomWidth: navStyle?.borderBottomWidth || ''
+      },
+      logoBlendMode: logoStyle?.mixBlendMode || '',
+      labels: links.map(link => link.label),
+      links,
+      dropdownCount: menu?.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length || 0,
+      mobileMenuBackground: menu ? getComputedStyle(menu).backgroundColor : ''
+    };
+  });
+  const expectedLabels = ['DESIGNS', 'ABOUT ME', 'CONTACTS'];
+  const solidBlackPills = navContract.links.length === 3 &&
+    navContract.links.every(link =>
+      link.background === 'rgb(0, 0, 0)' &&
+      link.color === 'rgb(255, 255, 255)' &&
+      link.radius === '999px'
+    );
+  if (
+    !navContract.navbar.exists ||
+    navContract.navbar.background !== 'rgba(0, 0, 0, 0)' ||
+    navContract.navbar.backgroundImage !== 'none' ||
+    navContract.navbar.backdropFilter !== 'none' ||
+    parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
+    navContract.logoBlendMode !== 'difference' ||
+    JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
+    !solidBlackPills ||
+    navContract.dropdownCount !== 0 ||
+    navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)'
+  ) {
+    throw new Error(label + ' navigation visual/markup contract failed: ' + JSON.stringify(navContract));
+  }
+
+  const expectedDestination = await link.evaluate(element => {
+    const url = new URL(element.getAttribute('href') || '', window.location.href);
+    return { pathname: url.pathname, search: url.search };
+  });
+
   const viewport = page.viewportSize();
-  if ((viewport?.width || 0) >= 768) {
-    const dropdown = page.locator('.nav-item-dropdown').first();
-    if (await dropdown.count() !== 1) {
-      throw new Error(`${label} Works dropdown is missing.`);
-    }
-    await link.evaluate(element => element.click());
-  } else {
-    // Mobile public filter links live inside the collapsed hamburger menu.
-    // Open it here when the caller has just reloaded a page, while preserving
-    // already-open callers such as the dedicated mobile navigation smoke.
+  if ((viewport?.width || 0) < 768) {
     const hamburger = page.locator('.hamburger').first();
     const mobileMenu = page.locator('.nav-links').first();
-    if (await hamburger.count() === 1 && await mobileMenu.count() === 1) {
-      const menuOpen = await mobileMenu.evaluate(el => el.classList.contains('active'));
-      if (!menuOpen) await hamburger.click();
+    if (await hamburger.count() !== 1 || await mobileMenu.count() !== 1) {
+      throw new Error(label + ' mobile navigation controls are missing.');
     }
-    // The mobile menu opens with a short opacity/max-height transition.
-    // Wait for the actual filter anchor to become visible before exercising
-    // its navigation semantics instead of racing the presentation animation.
-    await link.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
-    if (!(await link.isVisible())) {
-      throw new Error(`${label} filter navigation link is not visible in the mobile menu.`);
+    if (!(await mobileMenu.evaluate(el => el.classList.contains('active')))) {
+      await hamburger.click();
     }
-    await link.click();
+    await link.waitFor({ state: 'visible', timeout: 2000 });
   }
-  await page.waitForFunction(hash => window.location.hash === hash, expectedHash, { timeout: 3000 });
+
+  await link.click();
+  await page.waitForFunction(destination => {
+    return window.location.pathname === destination.pathname &&
+      window.location.search === destination.search &&
+      window.location.hash === '';
+  }, expectedDestination, { timeout: 6000 });
+
+  // A direct Designs link returns to the Works root, rather than choosing a
+  // gallery filter. The destination should therefore clear the prior hash and
+  // restore the gallery's ALL state, with the mobile menu fully dismissed.
   await page.waitForFunction(() => {
-    const target = document.querySelector('.portfolio-wrapper');
-    const nav = document.querySelector('.navbar');
-    if (!target || !nav) return false;
-    const targetBox = target.getBoundingClientRect();
-    const navBox = nav.getBoundingClientRect();
-    return targetBox.y >= navBox.height - 12 && targetBox.y <= navBox.height + 90;
-  }, null, { timeout: 4000 });
-
-  // Hash settlement and Gallery activation are separate async stages. The
-  // navigation contract is not complete until the Gallery has acknowledged the
-  // same filter in its own button state, so wait for that observable state
-  // instead of sampling it immediately after the page-transition geometry check.
-  const activeFilterLocator = page.locator(`.filter-tabs [data-filter="${expectedHash.slice(1)}"].active`).first();
-  await activeFilterLocator.waitFor({ state: 'visible', timeout: 4000 }).catch(() => {});
-  const activeFilter = await page.locator(`.filter-tabs [data-filter="${expectedHash.slice(1)}"].active`).count();
-  if (activeFilter !== 1) {
-    throw new Error(`${label} filter navigation selected the hash but not the matching Gallery filter.`);
-  }
-
-  const hamburger = page.locator('.hamburger').first();
-  if (await hamburger.isVisible().catch(() => false)) {
-    const menuOpen = await page.locator('.nav-links').first().evaluate(el => el.classList.contains('active'));
-    if (menuOpen) throw new Error(`${label} filter navigation left the mobile menu open.`);
-  }
+    const transition = document.querySelector('#pageTransition');
+    return !transition ||
+      (transition.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true');
+  }, null, { timeout: 6000 });
+  await page.waitForFunction(() => {
+    const all = document.querySelector('.filter-tabs [data-filter="all"]');
+    return all?.classList.contains('active') && all.getAttribute('aria-pressed') === 'true';
+  }, null, { timeout: 5000 });
+  await page.waitForFunction(() =>
+    !document.body.classList.contains('menu-open') &&
+    !document.querySelector('.nav-links')?.classList.contains('active'), null, { timeout: 3000 });
+  await page.waitForFunction(() => Math.abs(window.scrollY) <= 8, null, { timeout: 5000 });
 }
- 
+
 async function logRuntimeProfile(page, label, requestedUrls = []) {
   const profile = await page.evaluate(() => {
     const entries = performance.getEntriesByType('resource');
@@ -516,18 +553,15 @@ async function assertMobileNavigation(page, label) {
   // Regression guard: a closed mobile Works dropdown must not retain an
   // interactive/visible hit surface over the document. Previously its nested
   // dropdown rules overrode the parent's pointer-events:none and intercepted
-  // arbitrary page taps as filter navigation.
+  // arbitrary page taps as navigation.
   const closedMenuContract = await menu.evaluate(el => {
     const style = getComputedStyle(el);
-    const dropdown = el.querySelector('.nav-dropdown-menu');
-    const dropdownStyle = dropdown ? getComputedStyle(dropdown) : null;
     return {
       maxHeight: style.maxHeight,
       opacity: style.opacity,
       visibility: style.visibility,
       pointerEvents: style.pointerEvents,
-      dropdownVisibility: dropdownStyle?.visibility || '',
-      dropdownPointerEvents: dropdownStyle?.pointerEvents || ''
+      dropdownCount: el.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length
     };
   });
   if (
@@ -535,7 +569,7 @@ async function assertMobileNavigation(page, label) {
     closedMenuContract.opacity !== '0' ||
     closedMenuContract.visibility !== 'hidden' ||
     closedMenuContract.pointerEvents !== 'none' ||
-    closedMenuContract.dropdownPointerEvents !== 'none'
+    closedMenuContract.dropdownCount !== 0
   ) {
     throw new Error(label + ' closed mobile navigation still exposes a stale interactive hit surface: ' + JSON.stringify(closedMenuContract));
   }
@@ -552,7 +586,7 @@ async function assertMobileNavigation(page, label) {
     const afterHash = await page.evaluate(() => window.location.hash);
     if (afterHash !== beforeHash) {
       throw new Error(
-        label + ' clicking ordinary hero/background content unexpectedly triggered filter navigation: ' +
+        label + ' clicking ordinary hero/background content unexpectedly triggered navigation: ' +
         beforeHash + ' -> ' + afterHash
       );
     }
@@ -596,7 +630,7 @@ async function assertMobileNavigation(page, label) {
     const afterHash = await page.evaluate(() => window.location.hash);
     if (afterHash !== beforeHash) {
       throw new Error(
-        label + ' ordinary page surface unexpectedly triggered filter navigation: ' +
+        label + ' ordinary page surface unexpectedly triggered navigation: ' +
         beforeHash + ' -> ' + afterHash
       );
     }
@@ -614,14 +648,12 @@ async function assertMobileNavigation(page, label) {
 
   const finalClosedContract = await menu.evaluate(el => {
     const style = getComputedStyle(el);
-    const dropdown = el.querySelector('.nav-dropdown-menu');
-    const dropdownStyle = dropdown ? getComputedStyle(dropdown) : null;
     return {
       maxHeight: style.maxHeight,
       opacity: style.opacity,
       visibility: style.visibility,
       pointerEvents: style.pointerEvents,
-      dropdownPointerEvents: dropdownStyle?.pointerEvents || ''
+      dropdownCount: el.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length
     };
   });
   if (
@@ -629,7 +661,7 @@ async function assertMobileNavigation(page, label) {
     finalClosedContract.opacity !== '0' ||
     finalClosedContract.visibility !== 'hidden' ||
     finalClosedContract.pointerEvents !== 'none' ||
-    finalClosedContract.dropdownPointerEvents !== 'none'
+    finalClosedContract.dropdownCount !== 0
   ) {
     throw new Error(
       label + ' repeated mobile navigation close exposed a stale interactive hit surface: ' +
@@ -1757,9 +1789,8 @@ try {
       const allFilter = page.locator('.filter-tabs .filter-btn[data-filter="all"], .filter-tabs .tab-btn[data-filter="all"]');
       if (await allFilter.count() !== 1) throw new Error('Works filter UI is missing the ALL filter.');
 
-      await assertPublicFilterNavigation(page, {
-        href: '#3d-motion',
-        expectedHash: '#3d-motion',
+      await assertPublicNavigation(page, {
+        href: './',
         label: 'Desktop Works'
       });
       await allFilter.click();
@@ -3308,9 +3339,8 @@ try {
       await assertMobileNavigation(page, 'Works page');
 
       await page.locator('.hamburger').first().click();
-      await assertPublicFilterNavigation(page, {
-        href: '#3d-motion',
-        expectedHash: '#3d-motion',
+      await assertPublicNavigation(page, {
+        href: './',
         label: 'Mobile Works'
       });
 
@@ -4484,7 +4514,7 @@ try {
       }
 
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.locator('.nav-links .nav-dropdown-toggle').first().click();
+      await page.locator('.nav-links a[href="./"]').first().click();
       await page.waitForFunction(() => Math.abs(window.scrollY) <= 8, null, { timeout: 5000 });
       const worksReset = await page.evaluate(() => ({
         scrollY: window.scrollY,
@@ -4674,7 +4704,7 @@ try {
         throw new Error('Desktop Gallery smoke could not enter a selected non-ALL filter.');
       }
 
-      await page.locator('.nav-links .nav-dropdown-toggle').first().click();
+      await page.locator('.nav-links a[href="./"]').first().click();
       await page.waitForTimeout(80);
       const reset = await page.evaluate(() => ({
         active: document.querySelector('.filter-tabs .filter-btn.active')?.getAttribute('data-filter') || '',
@@ -4698,7 +4728,7 @@ try {
 
       await page.locator('.hamburger').click();
       await page.waitForTimeout(60);
-      const worksLink = page.locator('.nav-links .nav-dropdown-toggle').first();
+      const worksLink = page.locator('.nav-links a[href="./"]').first();
       if (await worksLink.count() !== 1) throw new Error('Mobile hamburger Works navigation link is missing.');
       await worksLink.click();
       await page.waitForTimeout(120);
@@ -5842,9 +5872,8 @@ try {
       // verifies the independent cross-page About -> Works gallery target.
       await page.goto(`${BASE_URL}/about/`, { waitUntil: 'domcontentloaded', timeout: 15000 });
       await page.waitForTimeout(120);
-      await assertPublicFilterNavigation(page, {
-        href: '../#3d-motion',
-        expectedHash: '#3d-motion',
+      await assertPublicNavigation(page, {
+        href: '../',
         label: 'About-to-Works'
       });
     }, { width: 390, height: 844 }, null, async page => {

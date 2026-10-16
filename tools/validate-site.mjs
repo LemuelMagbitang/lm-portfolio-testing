@@ -1301,6 +1301,29 @@ function validateBootstrapHardening() {
     err('Navigation: runtime must bind the public hamburger to the public nav-links menu and toggle its active state.');
   }
 
+  const navigationCss = exists('css/style.css') ? readText('css/style.css') : '';
+  const navbarRule = (navigationCss.match(/\.navbar\s*\{[^}]*\}/) || [])[0] || '';
+  const logoRule = (navigationCss.match(/\.site-logo\s*\{[^}]*\}/) || [])[0] || '';
+  const pillRule = (navigationCss.match(/\.nav-links a\s*\{[^}]*\}/) || [])[0] || '';
+  const mobileMenuRule = (navigationCss.match(/@media \(max-width: 767px\) \{\s*\.hamburger \{ display: block; \}[\s\S]*?\.nav-links \{[^}]*\}/) || [])[0] || '';
+  if (!publicWorks.includes('class="active-link" aria-current="page">Designs</a>') ||
+      !publicAbout.includes('class="active-link" aria-current="page">About Me</a>') ||
+      !publicWorks.includes('<li><a href="#contact-start">Contacts</a></li>') ||
+      !publicAbout.includes('<li><a href="../#contact-start">Contacts</a></li>') ||
+      /class="nav-(?:item-dropdown|dropdown-menu|dropdown-toggle)/.test(publicWorks + publicAbout)) {
+    err('Navigation: Works/About must use direct Designs, About Me, and Contacts links without nested dropdown markup.');
+  }
+  if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
+      !/mix-blend-mode\s*:\s*difference/.test(logoRule) ||
+      !/border-radius\s*:\s*999px/.test(pillRule) ||
+      !/background\s*:\s*#000/.test(pillRule) ||
+      !/color\s*:\s*#fff/.test(pillRule) ||
+      !/background:\s*transparent/.test(mobileMenuRule) ||
+      !/border:\s*0/.test(mobileMenuRule) ||
+      !/box-shadow:\s*none/.test(mobileMenuRule)) {
+    err('Navigation: transparent chrome, difference-blended logo, black/white pill links, and transparent mobile menu must remain in the CSS contract.');
+  }
+
   const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
   if (!/about\.softwareSkills/.test(about) ||
       !/about\.experience/.test(about) ||
