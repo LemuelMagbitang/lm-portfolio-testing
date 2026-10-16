@@ -808,6 +808,29 @@ function validateWorkflowHardening() {
   if (!/cancel-in-progress:\s*true\b/.test(workflow)) err('CI reliability: outdated validation runs should be cancelled.');
 }
 
+function validateFormAutocomplete() {
+  const html = exists('index.html') ? readText('index.html') : '';
+  const getForm = id => {
+    const start = html.search(new RegExp('<form[^>]*\\bid="' + id + '"', 'i'));
+    if (start < 0) return '';
+    const end = html.indexOf('</form>', start);
+    return end < 0 ? '' : html.slice(start, end + 7);
+  };
+  const hasAutocomplete = (form, name, token) => {
+    const input = form.match(new RegExp('<input\\b(?=[^>]*\\bname="' + name + '")[^>]*>', 'i'))?.[0] || '';
+    return new RegExp('\\bautocomplete="' + token + '"', 'i').test(input);
+  };
+  const checks = [
+    ['project inquiry name', getForm('projectForm'), 'name', 'name'],
+    ['project inquiry email', getForm('projectForm'), 'email', 'email'],
+    ['review name/handle', getForm('reviewForm'), 'name', 'nickname']
+  ];
+  checks.forEach(([label, form, name, token]) => {
+    if (!form || !hasAutocomplete(form, name, token)) {
+      err('Forms: ' + label + ' input must expose autocomplete="' + token + '".');
+    }
+  });
+}
 function validateTargetBlankRel(file) {
   if (!exists(file)) return;
   const html = readText(file);
@@ -831,6 +854,18 @@ function validateLightboxLifecycle() {
     ? readText('js/infrastructure/three/model-viewer.js')
     : '';
   const legacy = exists('js/lightbox.js') ? readText('js/lightbox.js') : '';
+
+  const pauseStart = mediaRenderer.indexOf('function pauseYouTubeFrame(iframe)');
+  const pauseEnd = mediaRenderer.indexOf('\n  function pauseOtherPlayback', pauseStart);
+  const pauseBody = pauseStart >= 0 && pauseEnd > pauseStart ? mediaRenderer.slice(pauseStart, pauseEnd) : '';
+  const primeStart = mediaRenderer.indexOf('function primeYouTubeFrame(iframe)');
+  const primeEnd = mediaRenderer.indexOf('\n  function bindYouTubeStateHandoff', primeStart);
+  const primeBody = primeStart >= 0 && primeEnd > primeStart ? mediaRenderer.slice(primeStart, primeEnd) : '';
+  if (!pauseBody.includes("iframe.dataset.lmYoutubeLoaded !== 'true'") ||
+      !primeBody.includes("iframe.dataset.lmYoutubeLoaded !== 'true'") ||
+      !/iframe\\.dataset\\.lmYoutubeLoaded = 'true';\\s*primeYouTubeFrame\\(iframe\\)/.test(mediaRenderer)) {
+    err('Lightbox: YouTube postMessage calls must wait for the iframe load event to avoid targeting the portfolio origin during navigation.');
+  }
 
   if (legacy) {
     err('Lightbox: retired root module js/lightbox.js must not remain after feature cutover.');
@@ -1696,6 +1731,7 @@ function validatePageAwareFeatureLoading() {
   }
 }
 
+validateFormAutocomplete();
 validateModelViewerModulePreloadCacheKey();
 validatePageAwareFeatureLoading();
 validateFeatureModuleCacheGraph();
