@@ -708,3 +708,10 @@ This migration must not:
 - Root Works, About, bootstrap, script, and page-composition cache keys were synchronized to `20261016-09`; Lightbox's entry key is `20261016-09` and its nested media renderer key is `20261016-04`. A source-level spot-check confirmed the versions match and all three form fields expose the expected token.
 - The browser's `youtubei/v1/log_event` request failing with `ERR_BLOCKED_BY_CLIENT` is consistent with client-side request filtering and is not, by itself, evidence that video playback failed. QuillBot's `chrome-extension://invalid/` error is extension-originated rather than a first-party site asset.
 - **Validation status:** the last confirmed green validation/deployment remains the baseline noted above. The follow-up source commit and Pages deployment have not yet been confirmed green, so treat this as pending CI/Pages verification rather than a completed deployment. Production and `main` remain untouched.
+
+
+### October 16, 2026 — Synchronize test harness cache contracts
+
+- The follow-up CI failure was not a runtime or form-autocomplete failure: `validate-site.mjs` passed, and the Pages deployment check passed. Architecture validation uses explicit canonical cache keys for nested modules and separate test harnesses, which had not been advanced alongside the Lightbox source imports.
+- Updated the architecture validator's Lightbox entry/media-renderer expectations to `20261016-09`/`20261016-04`, and aligned `tools/validate-project-runtime.mjs` with the same Lightbox entry key. The next validation run is the verification gate for any further hidden stale references.
+- **Next:** wait for the current branch CI to finish and inspect the first failing step's log if the validator finds another stale fixture. Keep production and `main` untouched.
