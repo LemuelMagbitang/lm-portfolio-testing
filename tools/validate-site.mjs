@@ -1304,8 +1304,14 @@ function validateBootstrapHardening() {
   const navigationCss = exists('css/style.css') ? readText('css/style.css') : '';
   const navbarRule = (navigationCss.match(/\.navbar\s*\{[^}]*\}/) || [])[0] || '';
   const logoRule = (navigationCss.match(/\.site-logo\s*\{[^}]*\}/) || [])[0] || '';
+  const hamburgerRule = (navigationCss.match(/\.hamburger\s*\{[^}]*\}/) || [])[0] || '';
   const pillRule = (navigationCss.match(/\.nav-links a\s*\{[^}]*\}/) || [])[0] || '';
+  const activePillRule = (navigationCss.match(/\.nav-links a\.active-link\s*\{[^}]*\}/) || [])[0] || '';
+  const hoverPillRule = (navigationCss.match(/\.nav-links a:hover\s*\{[^}]*\}/) || [])[0] || '';
   const mobileMenuRule = (navigationCss.match(/@media \(max-width: 767px\) \{\s*\.hamburger \{ display: block; \}[\s\S]*?\.nav-links \{[^}]*\}/) || [])[0] || '';
+  const mobileOpenMenuRule = (navigationCss.match(/\.nav-links\.active\.is-open\s*\{[^}]*\}/) || [])[0] || '';
+  const menuBackdropRule = (navigationCss.match(/\.nav-menu-backdrop\s*\{[^}]*\}/) || [])[0] || '';
+  const bodyMenuOpenRule = (navigationCss.match(/body\.menu-open\s*\{[^}]*\}/) || [])[0] || '';
   if (!publicWorks.includes('class="active-link" aria-current="page">Designs</a>') ||
       !publicAbout.includes('class="active-link" aria-current="page">About Me</a>') ||
       !publicWorks.includes('<li><a href="#contact-start">Contacts</a></li>') ||
@@ -1315,13 +1321,25 @@ function validateBootstrapHardening() {
   }
   if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
       !/mix-blend-mode\s*:\s*difference/.test(logoRule) ||
+      !/mix-blend-mode\s*:\s*difference/.test(hamburgerRule) ||
       !/border-radius\s*:\s*999px/.test(pillRule) ||
+      !/border:\s*0/.test(pillRule) ||
+      /border-color\s*:/.test(pillRule + activePillRule + hoverPillRule) ||
       !/background\s*:\s*#000/.test(pillRule) ||
       !/color\s*:\s*#fff/.test(pillRule) ||
+      !/background\s*:\s*#fff/.test(activePillRule) ||
+      !/color\s*:\s*#000/.test(activePillRule) ||
+      !/background\s*:\s*#fff/.test(hoverPillRule) ||
+      !/color\s*:\s*#000/.test(hoverPillRule) ||
+      !/position\s*:\s*fixed/.test(mobileOpenMenuRule) ||
+      !/background\s*:\s*#000/.test(mobileOpenMenuRule) ||
+      !/background:\s*#000/.test(menuBackdropRule) ||
+      !/background-color:\s*#000/.test(bodyMenuOpenRule) ||
+      !/overflow:\s*hidden/.test(bodyMenuOpenRule) ||
       !/background:\s*transparent/.test(mobileMenuRule) ||
       !/border:\s*0/.test(mobileMenuRule) ||
       !/box-shadow:\s*none/.test(mobileMenuRule)) {
-    err('Navigation: transparent chrome, difference-blended logo, black/white pill links, and transparent mobile menu must remain in the CSS contract.');
+    err('Navigation: transparent chrome, inverted active pill, black/white hover, difference-blended logo/menu icon, and seamless full-screen mobile menu must remain in the CSS contract.');
   }
 
   const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';

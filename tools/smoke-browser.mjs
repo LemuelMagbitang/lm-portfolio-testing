@@ -205,13 +205,17 @@ async function assertPublicNavigation(page, { href, label }) {
     const anchors = Array.from(menu?.querySelectorAll(':scope > li > a') || []);
     const navStyle = navbar ? getComputedStyle(navbar) : null;
     const logoStyle = logo ? getComputedStyle(logo) : null;
+    const hamburger = document.querySelector('.hamburger');
+    const hamburgerStyle = hamburger ? getComputedStyle(hamburger) : null;
     const links = anchors.map(anchor => {
       const style = getComputedStyle(anchor);
       return {
         label: (anchor.textContent || '').trim().replace(/\s+/g, ' ').toUpperCase(),
+        active: anchor.classList.contains('active-link'),
         background: style.backgroundColor,
         color: style.color,
         radius: style.borderRadius,
+        borderWidth: style.borderWidth,
         href: anchor.getAttribute('href') || ''
       };
     });
@@ -224,6 +228,7 @@ async function assertPublicNavigation(page, { href, label }) {
         borderBottomWidth: navStyle?.borderBottomWidth || ''
       },
       logoBlendMode: logoStyle?.mixBlendMode || '',
+      hamburgerBlendMode: hamburgerStyle?.mixBlendMode || '',
       labels: links.map(link => link.label),
       links,
       dropdownCount: menu?.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length || 0,
@@ -231,11 +236,14 @@ async function assertPublicNavigation(page, { href, label }) {
     };
   });
   const expectedLabels = ['DESIGNS', 'ABOUT ME', 'CONTACTS'];
-  const solidBlackPills = navContract.links.length === 3 &&
+  const correctPillStates = navContract.links.length === 3 &&
+    navContract.links.filter(link => link.active).length === 1 &&
     navContract.links.every(link =>
-      link.background === 'rgb(0, 0, 0)' &&
-      link.color === 'rgb(255, 255, 255)' &&
-      link.radius === '999px'
+      link.radius === '999px' &&
+      link.borderWidth === '0px' &&
+      (link.active
+        ? link.background === 'rgb(255, 255, 255)' && link.color === 'rgb(0, 0, 0)'
+        : link.background === 'rgb(0, 0, 0)' && link.color === 'rgb(255, 255, 255)')
     );
   if (
     !navContract.navbar.exists ||
@@ -244,8 +252,9 @@ async function assertPublicNavigation(page, { href, label }) {
     navContract.navbar.backdropFilter !== 'none' ||
     parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
     navContract.logoBlendMode !== 'difference' ||
+    navContract.hamburgerBlendMode !== 'difference' ||
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
-    !solidBlackPills ||
+    !correctPillStates ||
     navContract.dropdownCount !== 0 ||
     navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)'
   ) {
@@ -258,15 +267,104 @@ async function assertPublicNavigation(page, { href, label }) {
   });
 
   const viewport = page.viewportSize();
+  const supportsHover = await page.evaluate(() => window.matchMedia('(hover: hover)').matches);
+  if ((viewport?.width || 0) >= 768 && supportsHover) {
+    const hoverTarget = page.locator('.nav-links a:not(.active-link)').first();
+    await hoverTarget.hover();
+    await page.waitForFunction(() => {
+      const hovered = document.querySelector('.nav-links a:not(.active-link):hover');
+      if (!hovered) return false;
+      const style = getComputedStyle(hovered);
+      return style.backgroundColor === 'rgb(255, 255, 255)' &&
+        style.color === 'rgb(0, 0, 0)' && style.borderWidth === '0px';
+    }, null, { timeout: 1500 });
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() => {
+      const link = document.querySelector('.nav-links a:not(.active-link)');
+      if (!link) return false;
+      const style = getComputedStyle(link);
+      return style.backgroundColor === 'rgb(0, 0, 0)' &&
+        style.color === 'rgb(255, 255, 255)';
+    }, null, { timeout: 1500 });
+  }
+
   if ((viewport?.width || 0) < 768) {
     const hamburger = page.locator('.hamburger').first();
     const mobileMenu = page.locator('.nav-links').first();
     if (await hamburger.count() !== 1 || await mobileMenu.count() !== 1) {
       throw new Error(label + ' mobile navigation controls are missing.');
     }
-    if (!(await mobileMenu.evaluate(el => el.classList.contains('active')))) {
+    if (!(await mobileMenu.evaluate(el => el.classList.contains('active') && el.classList.contains('is-open')))) {
       await hamburger.click();
     }
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('.nav-links');
+      return menu?.classList.contains('active') && menu.classList.contains('is-open') &&
+        document.body.classList.contains('menu-open');
+    }, null, { timeout: 2000 });
+
+    const openMenuContract = await page.evaluate(() => {
+      const menu = document.querySelector('.nav-links');
+      const style = menu ? getComputedStyle(menu) : null;
+      const rect = menu?.getBoundingClientRect();
+      const active = menu?.querySelector('a.active-link');
+      const inactive = menu?.querySelector('a:not(.active-link)');
+      const activeStyle = active ? getComputedStyle(active) : null;
+      const inactiveStyle = inactive ? getComputedStyle(inactive) : null;
+      const hamburgerStyle = getComputedStyle(document.querySelector('.hamburger'));
+      const backdropStyle = getComputedStyle(document.querySelector('.nav-menu-backdrop'));
+      const bodyStyle = getComputedStyle(document.body);
+      return {
+        position: style?.position || '',
+        background: style?.backgroundColor || '',
+        pointerEvents: style?.pointerEvents || '',
+        rect: rect ? { top: rect.top, left: rect.left, width: rect.width, height: rect.height } : null,
+        viewport: { width: innerWidth, height: innerHeight },
+        active: activeStyle ? { background: activeStyle.backgroundColor, color: activeStyle.color, borderWidth: activeStyle.borderWidth, pointerEvents: activeStyle.pointerEvents } : null,
+        inactive: inactiveStyle ? { background: inactiveStyle.backgroundColor, color: inactiveStyle.color, borderWidth: inactiveStyle.borderWidth, pointerEvents: inactiveStyle.pointerEvents } : null,
+        hamburgerBlendMode: hamburgerStyle.mixBlendMode,
+        backdropBackground: backdropStyle.backgroundColor,
+        bodyBackground: bodyStyle.backgroundColor,
+        bodyOverflow: bodyStyle.overflow
+      };
+    });
+    if (
+      openMenuContract.position !== 'fixed' ||
+      openMenuContract.background !== 'rgb(0, 0, 0)' ||
+      openMenuContract.pointerEvents !== 'none' ||
+      !openMenuContract.rect ||
+      Math.abs(openMenuContract.rect.top) > 1 ||
+      Math.abs(openMenuContract.rect.left) > 1 ||
+      Math.abs(openMenuContract.rect.width - openMenuContract.viewport.width) > 1 ||
+      Math.abs(openMenuContract.rect.height - openMenuContract.viewport.height) > 1 ||
+      openMenuContract.active?.background !== 'rgb(255, 255, 255)' ||
+      openMenuContract.active?.color !== 'rgb(0, 0, 0)' ||
+      openMenuContract.active?.borderWidth !== '0px' ||
+      openMenuContract.active?.pointerEvents !== 'auto' ||
+      openMenuContract.inactive?.background !== 'rgb(0, 0, 0)' ||
+      openMenuContract.inactive?.color !== 'rgb(255, 255, 255)' ||
+      openMenuContract.inactive?.borderWidth !== '0px' ||
+      openMenuContract.inactive?.pointerEvents !== 'auto' ||
+      openMenuContract.hamburgerBlendMode !== 'difference' ||
+      openMenuContract.backdropBackground !== 'rgb(0, 0, 0)' ||
+      openMenuContract.bodyBackground !== 'rgb(0, 0, 0)' ||
+      openMenuContract.bodyOverflow !== 'hidden'
+    ) {
+      throw new Error(label + ' full-screen mobile navigation visual contract failed: ' + JSON.stringify(openMenuContract));
+    }
+
+    // Blank-canvas taps pass through to the backdrop, preserving outside-tap dismissal.
+    await page.locator('.nav-menu-backdrop').click({ position: { x: 4, y: Math.max(1, (viewport?.height || 844) - 8) } });
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('.nav-links');
+      return !menu?.classList.contains('active') && !menu?.classList.contains('is-open') &&
+        !document.body.classList.contains('menu-open');
+    }, null, { timeout: 2000 });
+    await hamburger.click();
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('.nav-links');
+      return menu?.classList.contains('active') && menu.classList.contains('is-open');
+    }, null, { timeout: 2000 });
     await link.waitFor({ state: 'visible', timeout: 2000 });
   }
 

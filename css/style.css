@@ -52,6 +52,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .nav-logo {
+  position: relative;
+  z-index: 1002;
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--lm-color-text-primary);
@@ -63,6 +65,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   width: 45px;
   height: auto;
   vertical-align: middle;
+  /* Difference compositing negates pixels beneath the mark so it stays
+     light over dark artwork and dark over bright artwork without a plate. */
   mix-blend-mode: difference;
   transition: transform 0.3s ease;
 }
@@ -89,7 +93,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   justify-content: center;
   min-height: 42px;
   padding: 10px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 0;
   border-radius: 999px;
   background: #000;
   color: #fff;
@@ -100,20 +104,21 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: color 0.22s ease, background-color 0.22s ease,
-    border-color 0.22s ease, box-shadow 0.26s ease,
-    transform 0.26s cubic-bezier(.22, 1, .36, 1);
+  transition: color 0.22s ease, background-color 0.22s ease;
 }
 
-.nav-links a:hover {
-  background: #191919;
-  border-color: rgba(255, 255, 255, 0.32);
+/* Only hover-capable input devices receive the black/white inversion. */
+@media (hover: hover) {
+  .nav-links a:hover {
+    background: #fff;
+    color: #000;
+  }
 }
 
 .nav-links a.active-link {
-  background: #000;
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #fff;
+  color: #000;
+  border: 0;
 }
 
 .nav-links a:focus-visible {
@@ -123,9 +128,12 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .hamburger {
   display: none;
+  position: relative;
+  z-index: 1003;
   font-size: 1.5rem;
   color: #fff;
   cursor: pointer;
+  mix-blend-mode: difference;
 }
 
 /* Navigation links use direct destinations; the former Works dropdown is retired. */
@@ -1233,7 +1241,7 @@ body.center-page {
     inset: 0;
     width: 100vw;
     height: 100dvh;
-    background: rgba(0, 0, 0, 0.45);
+    background: #000;
     z-index: 999;
     pointer-events: auto;
   }
@@ -4158,12 +4166,15 @@ footer > .footer-content p{
 
 /* Fluid micro-interactions. Keep properties explicit so media viewers and
    Lightbox geometry do not inherit broad transition:all rules. */
-.nav-links a,.filter-tabs .tab-btn,.btn-show-more,.submit-btn,.email-me-btn,
+.nav-links a {
+  transition: color .22s ease, background-color .22s ease;
+}
+.filter-tabs .tab-btn,.btn-show-more,.submit-btn,.email-me-btn,
 .social-icons a,.contact-mobile-tab,.hamburger{
   transition:color .22s ease,background-color .22s ease,border-color .22s ease,
     box-shadow .26s ease,transform .26s cubic-bezier(.22,1,.36,1),opacity .22s ease;
 }
-.nav-links a:active,.filter-tabs .tab-btn:active,.btn-show-more:active,
+.filter-tabs .tab-btn:active,.btn-show-more:active,
 .submit-btn:active,.email-me-btn:active,.social-icons a:active,
 .contact-mobile-tab:active,.hamburger:active{transform:scale(.975);}
 @media(hover:hover) and (pointer:fine){
@@ -5605,4 +5616,73 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
   .curated-view-heading-copy { flex: 1 1 auto; min-width: 0; }
   .curated-view-heading h1 { font-size: clamp(1.2rem, 5vw, 1.65rem); overflow-wrap: anywhere; }
   .curated-view-exit { gap: 6px; min-height: 36px; padding: 8px 0; font-size: .72rem; white-space: nowrap; }
+}
+
+/* ============================================================
+   FINAL NAVIGATION CONTRAST + FULL-SCREEN MOBILE MENU
+   ============================================================ */
+.site-logo,
+.hamburger {
+  mix-blend-mode: difference;
+}
+
+@media (max-width: 767px) {
+  body.menu-open {
+    background-color: #000;
+    overflow: hidden;
+  }
+
+  /* Backdrop and full-screen menu use the same black to eliminate seams. */
+  .nav-menu-backdrop {
+    background: #000;
+  }
+
+  .nav-links.active.is-open {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: calc(84px + env(safe-area-inset-top, 0px)) 24px calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+    background: #000 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    /* Let blank-canvas taps pass through to the black backdrop; links remain
+       individually interactive and the existing outside-tap close handler works. */
+    pointer-events: none !important;
+    z-index: 1001 !important;
+    transition: opacity .22s ease;
+  }
+
+  .nav-links.active.is-open > li {
+    width: min(100%, 320px);
+  }
+
+  .nav-links.active.is-open a {
+    border: 0;
+    pointer-events: auto !important;
+    transition: color .22s ease, background-color .22s ease;
+  }
+
+  .nav-links.active.is-open a.active-link {
+    background: #fff;
+    color: #000;
+  }
+
+  .hamburger {
+    z-index: 1003;
+  }
 }
