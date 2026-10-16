@@ -863,7 +863,7 @@ function validateLightboxLifecycle() {
   const primeBody = primeStart >= 0 && primeEnd > primeStart ? mediaRenderer.slice(primeStart, primeEnd) : '';
   if (!pauseBody.includes("iframe.dataset.lmYoutubeLoaded !== 'true'") ||
       !primeBody.includes("iframe.dataset.lmYoutubeLoaded !== 'true'") ||
-      !/iframe\\.dataset\\.lmYoutubeLoaded = 'true';\\s*primeYouTubeFrame\\(iframe\\)/.test(mediaRenderer)) {
+      !/iframe\.dataset\.lmYoutubeLoaded = 'true';\s*primeYouTubeFrame\(iframe\)/.test(mediaRenderer)) {
     err('Lightbox: YouTube postMessage calls must wait for the iframe load event to avoid targeting the portfolio origin during navigation.');
   }
 
