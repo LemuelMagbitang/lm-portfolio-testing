@@ -3968,6 +3968,10 @@ try {
           throw new Error('Desktop YouTube Lightbox iframe is not pointer-interactive.');
         }
 
+        const youtubeFrameLoaded = await youtubeFrames.first().getAttribute('data-lm-youtube-loaded');
+        if (youtubeFrameLoaded !== 'true') {
+          throw new Error('YouTube Lightbox marked its player ready before the iframe load completed.');
+        }
         const youtubeApiReady = await youtubeFrames.first().getAttribute('data-lm-youtube-api');
         if (youtubeApiReady !== 'ready') {
           throw new Error('YouTube Lightbox did not initialize its playback-state handoff listener.');
