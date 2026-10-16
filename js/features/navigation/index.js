@@ -25,6 +25,9 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   }
 
   let isOpen = false;
+  let closeTimer = null;
+  let replayingMenuLink = false;
+  const windowRef = root?.defaultView || globalThis.window;
 
   // A real DOM backdrop is more reliable than body::after: it remains fixed to
   // the viewport even while the document underneath is being scrolled.
@@ -42,22 +45,78 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
   }
 
+  function finishClose(afterClose) {
+    closeTimer = null;
+    mobileMenu.classList.remove('active', 'is-open', 'is-closing');
+    mobileMenuLinks.forEach(link => link.classList.remove('is-selected'));
+    root.body?.classList.remove('menu-open');
+    if (menuBackdrop) menuBackdrop.hidden = true;
+    syncAria();
+    if (typeof afterClose === 'function') afterClose();
+  }
+
   function open() {
+    if (closeTimer !== null) {
+      windowRef?.clearTimeout?.(closeTimer);
+      closeTimer = null;
+    }
     isOpen = true;
-    mobileMenu.classList.add('active');
-    mobileMenu.classList.add('is-open');
+    mobileMenu.classList.add('active', 'is-open');
+    mobileMenu.classList.remove('is-closing');
+    menuButton.classList.add('is-open');
     root.body?.classList.add('menu-open');
     if (menuBackdrop) menuBackdrop.hidden = false;
     syncAria();
   }
 
-  function close() {
+  function close(afterClose, immediate = false) {
+    if (!isOpen) {
+      if (immediate) {
+        if (closeTimer !== null) windowRef?.clearTimeout?.(closeTimer);
+        finishClose(afterClose);
+      }
+      return;
+    }
+
     isOpen = false;
-    mobileMenu.classList.remove('active');
-    mobileMenu.classList.remove('is-open');
-    root.body?.classList.remove('menu-open');
-    if (menuBackdrop) menuBackdrop.hidden = true;
+    menuButton.classList.remove('is-open');
+    mobileMenu.classList.add('is-closing');
     syncAria();
+
+    const reducedMotion = Boolean(
+      windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    );
+    const duration = (immediate || reducedMotion) ? 0 : 260;
+    if (closeTimer !== null) windowRef?.clearTimeout?.(closeTimer);
+
+    if (duration === 0 || typeof windowRef?.setTimeout !== 'function') {
+      finishClose(afterClose);
+      return;
+    }
+    closeTimer = windowRef.setTimeout(() => finishClose(afterClose), duration);
+  }
+
+  function handleMobileMenuLinkSelection(event) {
+    if (replayingMenuLink) {
+      replayingMenuLink = false;
+      return;
+    }
+
+    if (!isOpen || Number(windowRef?.innerWidth || 0) >= 768) return;
+    const link = event.currentTarget;
+    if (!link) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation?.();
+    mobileMenuLinks.forEach(item => item.classList.toggle('is-selected', item === link));
+
+    // Let the upward exit and selected-button motion finish before replaying
+    // the click. This preserves the existing same-page Designs/Contacts logic.
+    close(() => {
+      if (!root?.contains?.(link)) return;
+      replayingMenuLink = true;
+      link.click();
+    });
   }
 
   function toggle(event) {
@@ -74,7 +133,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   };
 
   bind(menuButton, 'click', toggle);
-  mobileMenuLinks.forEach(link => bind(link, 'click', close));
+  mobileMenuLinks.forEach(link => {
+    bind(link, 'click', handleMobileMenuLinkSelection, true);
+    bind(link, 'click', close);
+  });
 
   function scrollSamePageContact() {
     const target = root.getElementById('contact-grid-anchor')
@@ -267,7 +329,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       cleanup.splice(0).forEach(remove => {
         try { remove(); } catch (_) {}
       });
-      close();
+      close(undefined, true);
       menuBackdrop?.remove?.();
     }
   };

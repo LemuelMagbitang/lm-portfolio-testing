@@ -1314,12 +1314,15 @@ function validateBootstrapHardening() {
   const bodyMenuOpenRule = (navigationCss.match(/body\.menu-open\s*\{[^}]*\}/) || [])[0] || '';
   if (!publicWorks.includes('class="active-link" aria-current="page">Designs</a>') ||
       !publicAbout.includes('class="active-link" aria-current="page">About Me</a>') ||
+      !publicWorks.includes('<span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>') ||
+      !publicAbout.includes('<span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>') ||
       !publicWorks.includes('<li><a href="#contact-start">Contacts</a></li>') ||
       !publicAbout.includes('<li><a href="../#contact-start">Contacts</a></li>') ||
       /class="nav-(?:item-dropdown|dropdown-menu|dropdown-toggle)/.test(publicWorks + publicAbout)) {
     err('Navigation: Works/About must use direct Designs, About Me, and Contacts links without nested dropdown markup.');
   }
   if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
+      !/filter:\s*brightness\(0\) invert\(1\)/.test(logoRule) ||
       !/mix-blend-mode\s*:\s*difference/.test(logoRule) ||
       !/mix-blend-mode\s*:\s*difference/.test(hamburgerRule) ||
       !/border-radius\s*:\s*999px/.test(pillRule) ||
@@ -1338,7 +1341,15 @@ function validateBootstrapHardening() {
       !/overflow:\s*hidden/.test(bodyMenuOpenRule) ||
       !/background:\s*transparent/.test(mobileMenuRule) ||
       !/border:\s*0/.test(mobileMenuRule) ||
-      !/box-shadow:\s*none/.test(mobileMenuRule)) {
+      !/box-shadow:\s*none/.test(mobileMenuRule) ||
+      !/nav-menu-enter/.test(navigationCss) ||
+      !/nav-menu-exit/.test(navigationCss) ||
+      !/nav-link-select/.test(navigationCss) ||
+      !/prefers-reduced-motion:\s*reduce/.test(navigationCss) ||
+      !/0 0 0 2px #000, 0 0 0 4px #fff/.test(navigationCss) ||
+      !/classList\.add\('is-open'\)/.test(navigation) ||
+      !/classList\.add\('is-closing'\)/.test(navigation) ||
+      !/replayingMenuLink/.test(navigation)) {
     err('Navigation: transparent chrome, inverted active pill, black/white hover, difference-blended logo/menu icon, and seamless full-screen mobile menu must remain in the CSS contract.');
   }
 

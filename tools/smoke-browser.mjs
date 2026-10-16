@@ -236,9 +236,26 @@ async function assertPublicNavigation(page, { href, label }) {
       viewportWidth: window.innerWidth
     };
   });
+  const contrastRatio = (foreground, background) => {
+    const luminance = color => {
+      const channels = color.match(/[\\d.]+/g).slice(0, 3).map(Number).map(channel => {
+        const value = channel / 255;
+        return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    const a = luminance(foreground);
+    const b = luminance(background);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  };
   const expectedLabels = ['DESIGNS', 'ABOUT ME', 'CONTACTS'];
   const correctPillStates = navContract.links.length === 3 &&
     navContract.links.filter(link => link.active).length === 1 &&
+    navContract.links.every(link => {
+      const foreground = link.active ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
+      const background = link.active ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)';
+      return contrastRatio(foreground, background) >= 3;
+    }) &&
     navContract.links.every(link =>
       link.radius === '999px' &&
       link.borderWidth === '0px' &&
@@ -312,7 +329,10 @@ async function assertPublicNavigation(page, { href, label }) {
       const inactive = menu?.querySelector('a:not(.active-link)');
       const activeStyle = active ? getComputedStyle(active) : null;
       const inactiveStyle = inactive ? getComputedStyle(inactive) : null;
-      const hamburgerStyle = getComputedStyle(document.querySelector('.hamburger'));
+      const hamburger = document.querySelector('.hamburger');
+      const hamburgerStyle = getComputedStyle(hamburger);
+      const hamburgerIconBars = hamburger?.querySelectorAll('.hamburger-icon span').length || 0;
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const backdropStyle = getComputedStyle(document.querySelector('.nav-menu-backdrop'));
       const bodyStyle = getComputedStyle(document.body);
       return {
@@ -324,6 +344,10 @@ async function assertPublicNavigation(page, { href, label }) {
         active: activeStyle ? { background: activeStyle.backgroundColor, color: activeStyle.color, borderWidth: activeStyle.borderWidth, pointerEvents: activeStyle.pointerEvents } : null,
         inactive: inactiveStyle ? { background: inactiveStyle.backgroundColor, color: inactiveStyle.color, borderWidth: inactiveStyle.borderWidth, pointerEvents: inactiveStyle.pointerEvents } : null,
         hamburgerBlendMode: hamburgerStyle.mixBlendMode,
+        hamburgerIsOpen: hamburger?.classList.contains('is-open') || false,
+        hamburgerIconBars,
+        menuAnimationName: style?.animationName || '',
+        reducedMotion,
         backdropBackground: backdropStyle.backgroundColor,
         bodyBackground: bodyStyle.backgroundColor,
         bodyOverflow: bodyStyle.overflow
@@ -347,6 +371,9 @@ async function assertPublicNavigation(page, { href, label }) {
       openMenuContract.inactive?.borderWidth !== '0px' ||
       openMenuContract.inactive?.pointerEvents !== 'auto' ||
       openMenuContract.hamburgerBlendMode !== 'difference' ||
+      !openMenuContract.hamburgerIsOpen ||
+      openMenuContract.hamburgerIconBars !== 3 ||
+      (!openMenuContract.reducedMotion && !openMenuContract.menuAnimationName.includes('nav-menu-enter')) ||
       openMenuContract.backdropBackground !== 'rgb(0, 0, 0)' ||
       openMenuContract.bodyBackground !== 'rgb(0, 0, 0)' ||
       openMenuContract.bodyOverflow !== 'hidden'
@@ -370,6 +397,15 @@ async function assertPublicNavigation(page, { href, label }) {
   }
 
   await link.click();
+  if ((viewport?.width || 0) < 768) {
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('.nav-links');
+      const selected = menu?.querySelector('a.is-selected');
+      return menu?.classList.contains('is-closing') && selected &&
+        getComputedStyle(menu).animationName.includes('nav-menu-exit') &&
+        getComputedStyle(selected).animationName.includes('nav-link-select');
+    }, null, { timeout: 180 });
+  }
   await page.waitForFunction(destination => {
     return window.location.pathname === destination.pathname &&
       window.location.search === destination.search &&
@@ -625,6 +661,13 @@ async function assertMobileNavigation(page, label) {
   if (await menu.count() !== 1) throw new Error(label + ' is missing the public mobile navigation.');
 
   await button.click();
+  await page.waitForFunction(() => {
+    const button = document.querySelector('.hamburger');
+    const menu = document.querySelector('.nav-links');
+    return button?.classList.contains('is-open') &&
+      button.querySelectorAll('.hamburger-icon span').length === 3 &&
+      menu?.classList.contains('active') && menu.classList.contains('is-open');
+  }, null, { timeout: 1500 });
   const expanded = await button.getAttribute('aria-expanded');
   const active = await menu.evaluate(el => el.classList.contains('active'));
   if (expanded !== 'true' || !active) {
@@ -638,16 +681,16 @@ async function assertMobileNavigation(page, label) {
   }
 
   await page.locator('body').click({ position: { x: 5, y: 300 } });
-  const closed = await menu.evaluate(el => !el.classList.contains('active'));
+  const closing = await menu.evaluate(el => el.classList.contains('is-closing'));
   const collapsed = await button.getAttribute('aria-expanded');
-  if (!closed || collapsed !== 'false') {
-    throw new Error(label + ' mobile navigation did not close from an outside tap.');
+  if (!closing || collapsed !== 'false' || await button.evaluate(el => el.classList.contains('is-open'))) {
+    throw new Error(label + ' mobile navigation did not begin closing from an outside tap.');
   }
-
-  // The menu close interaction is intentionally animated. Pointer events are
-  // disabled immediately by the CSS contract, while opacity/max-height settle
-  // over a few hundred milliseconds. Wait before inspecting final presentation.
-  await page.waitForTimeout(360);
+  await page.waitForFunction(() => {
+    const menu = document.querySelector('.nav-links');
+    return !menu?.classList.contains('active') && !menu?.classList.contains('is-open') &&
+      !document.body.classList.contains('menu-open');
+  }, null, { timeout: 1500 });
 
   // Regression guard: a closed mobile Works dropdown must not retain an
   // interactive/visible hit surface over the document. Previously its nested
@@ -4830,7 +4873,7 @@ try {
       const worksLink = page.locator('.nav-links a[href="./"]').first();
       if (await worksLink.count() !== 1) throw new Error('Mobile hamburger Works navigation link is missing.');
       await worksLink.click();
-      await page.waitForTimeout(120);
+      await page.waitForTimeout(340);
       const reset = await page.evaluate(() => ({
         active: document.querySelector('.filter-tabs .filter-btn.active')?.getAttribute('data-filter') || '',
         hash: window.location.hash,
