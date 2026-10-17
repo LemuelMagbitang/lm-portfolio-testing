@@ -4618,6 +4618,7 @@ async function renameMediaFile(oldPath,onDone){
   if(name.includes('/') || name.includes(String.fromCharCode(92)) || Array.from(name).some(ch=>ch.charCodeAt(0)<32) || name==='.' || name==='..' || name.length>180){
     toast('Enter a valid file name without folder separators.',true);return;
   }
+  setMediaOperationStatus('Checking the current branch and destination…');
   const parent=oldPath.slice(0,oldPath.lastIndexOf('/'));
   const newPath=joinRepoPath(parent,name);
   const parentSha=await GH.getBranchHead();
@@ -4625,7 +4626,8 @@ async function renameMediaFile(oldPath,onDone){
   const tree=await GH.getTree(parentSha);
   const source=tree.find(item=>item.type==='blob'&&item.path===oldPath);
   if(!source){toast('This file no longer exists in the current branch. Refresh and try again.',true);return;}
-  if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){toast('A file or folder with that name already exists here.',true);return;}
+  if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){setMediaOperationStatus('Rename blocked: a file or folder with that name already exists here.',true);toast('A file or folder with that name already exists here.',true);return;}
+  setMediaOperationStatus('Scanning tracked website and CMS files for references…');
   toast('Checking where this file is used…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,false);
   const entries=[
@@ -4633,7 +4635,8 @@ async function renameMediaFile(oldPath,onDone){
     {path:oldPath,mode:'100644',type:'blob',sha:null},
     ...impact.entries
   ];
-  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact)))return;
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
+  setMediaOperationStatus('Committing rename and reference updates…');
   await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
   Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
   recordMediaImpact(impact,oldPath,newPath);
@@ -4651,16 +4654,18 @@ async function renameMediaFolder(oldPath,onDone){
   const name=safeFolderName(rawName);
   if(!name){toast('Enter a valid folder name without folder separators.',true);return;}
   if(name===oldName)return;
+  setMediaOperationStatus('Checking the current branch and destination…');
   const parent=oldPath.includes('/')?oldPath.slice(0,oldPath.lastIndexOf('/')):'';
   const newPath=joinRepoPath(parent,name);
   if(newPath===oldPath)return;
   const parentSha=await GH.getBranchHead();
   if(!parentSha)throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
   const tree=await GH.getTree(parentSha);
-  if(tree.some(item=>item.path===newPath||item.path.startsWith(newPath+'/'))){toast('That destination already exists.',true);return;}
+  if(tree.some(item=>item.path===newPath||item.path.startsWith(newPath+'/'))){setMediaOperationStatus('Rename blocked: that destination already exists.',true);toast('That destination already exists.',true);return;}
   const prefix=oldPath+'/';
   const moving=tree.filter(item=>item.type==='blob'&&item.path.startsWith(prefix));
-  if(!moving.length){toast('That folder has no tracked files to move.',true);return;}
+  if(!moving.length){setMediaOperationStatus('Rename blocked: that folder has no tracked files to move.',true);toast('That folder has no tracked files to move.',true);return;}
+  setMediaOperationStatus('Scanning tracked website and CMS files for references…');
   toast('Checking which projects and sections use this folder…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,true);
   const entries=[];
@@ -4670,7 +4675,8 @@ async function renameMediaFolder(oldPath,onDone){
     entries.push({path:item.path,mode:'100644',type:'blob',sha:null});
   });
   entries.push(...impact.entries);
-  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact)))return;
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
+  setMediaOperationStatus('Committing rename and reference updates…');
   await ghCommitTreeEntries(entries,'CMS: rename folder '+oldPath+' → '+newPath+' and update references',parentSha);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
