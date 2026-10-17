@@ -4435,7 +4435,7 @@ let lastMediaImpact = { sections:[], projectIds:[], projectTitles:[], changedFil
 function mediaPathBoundary(source,index,path,isFolder){
   const before=index>0?source[index-1]:'';
   const after=source[index+path.length]||'';
-  const beforeOK=!before || ['/','"',"'","`",':','=','(','[',',','{'].includes(before) || /\s/.test(before);
+  const beforeOK=!before || ['/','.', '"',"'","`",':','=','(','[',',','{'].includes(before) || /\s/.test(before);
   const afterDelimiters=isFolder?['/','?','#','"',"'","`",',',')','}',']']:['?','#','"',"'","`",',',')','}',']'];
   const afterOK=!after || afterDelimiters.includes(after) || /\s/.test(after);
   return beforeOK&&afterOK;
@@ -4490,7 +4490,7 @@ function mediaImpactSummary(impact){
 
 async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
   const candidates=new Set(MEDIA_REFERENCE_FILES);
-  const referenceExtensions=/\\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest)$/i;
+  const referenceExtensions=/\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest)$/i;
   (tree||[]).forEach(item=>{
     const filePath=String(item?.path||'');
     if(item?.type!=='blob'||!referenceExtensions.test(filePath))return;
