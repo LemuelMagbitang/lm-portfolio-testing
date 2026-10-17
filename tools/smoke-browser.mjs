@@ -6256,7 +6256,7 @@ try {
       });
 
       const aboutNavigation = page.waitForURL(
-        url => url.pathname.replace(/\\/+$/, '') === '/about',
+        url => url.pathname === '/about' || url.pathname === '/about/',
         { timeout: 8000, waitUntil: 'domcontentloaded' }
       );
       await aboutLink.click();
