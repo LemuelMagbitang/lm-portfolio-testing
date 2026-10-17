@@ -261,43 +261,43 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/florilegium.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/florilegium.webp",
         "caption": "Florilegium",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/the-half-of-us.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/the-half-of-us.webp",
         "caption": "The Half of Us",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/tender-reverence.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/tender-reverence.webp",
         "caption": "Tender Reverence",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/temporal-constraints.webp",
         "caption": "Temporal Constraints",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/melodies-of-innerself.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/melodies-of-innerself.webp",
         "caption": "Melodies of the Inner Self",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/aqua-vitae.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/aqua-vitae.webp",
         "caption": "Aqua Vitae",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/ephiphany-3d-illustration/the-dead-king-midas.jpg",
+        "src": "assets/projects/ephiphany-3d-illustration/the-dead-king-midas.webp",
         "caption": "The Dead King Midas",
         "orientation": ""
       }
