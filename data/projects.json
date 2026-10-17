@@ -325,13 +325,13 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/2024shell-nsac/full.jpg",
+        "src": "assets/projects/2024shell-nsac/shell-nsac-full-artwork.webp",
         "caption": "Walang Hanggang Dambana ng Sining (Eternal Shrine of Art)",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/2024shell-nsac/sketch.jpg",
+        "src": "assets/projects/2024shell-nsac/shell-nsac-sketch-artwork.webp",
         "caption": "Sketch and Process Images",
         "orientation": ""
       }
