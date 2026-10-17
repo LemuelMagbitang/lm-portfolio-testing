@@ -461,7 +461,7 @@
     "description": "this is a funko pop in 2d",
     "thumbnail": {
       "type": "image",
-      "src": "assets/projects/funko-pop/8.jpg",
+      "src": "assets/projects/funko-pop-sticker/8.jpg",
       "focus": "49% 45%",
       "zoom": 1
     },
@@ -475,7 +475,7 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/Asset 4@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/Asset 4@4x.webp",
         "caption": "Smooth Prism Foil",
         "groupId": "test-1",
         "orientation": "square",
@@ -489,7 +489,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/miles morales@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/miles morales@4x.webp",
         "caption": "Fine Brush Foil",
         "groupId": "test-1",
         "orientation": "",
@@ -503,7 +503,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/mittens@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/mittens@4x.webp",
         "caption": "Vertical Light Beams",
         "groupId": "test-1",
         "orientation": "",
@@ -517,7 +517,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/peter b@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/peter b@4x.webp",
         "caption": "Crosshatch Foil",
         "groupId": "test-1",
         "orientation": "",
@@ -531,7 +531,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/miguel o_hara@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/miguel o_hara@4x.webp",
         "caption": "Shattered Ice",
         "groupId": "test-1",
         "orientation": "",
@@ -545,7 +545,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/Asset 8@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/Asset 8@4x.webp",
         "caption": "Cosmos Galaxy Foil",
         "orientation": "",
         "holographic": {
@@ -558,7 +558,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/ben@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/ben@4x.webp",
         "caption": "Water Waves",
         "orientation": "",
         "holographic": {
@@ -571,7 +571,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/spidergwen@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/spidergwen@4x.webp",
         "caption": "Cat-Eye Lens",
         "orientation": "",
         "holographic": {
@@ -584,7 +584,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/Asset 5@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/Asset 5@4x.webp",
         "caption": "Pearlescent Foil",
         "orientation": "",
         "holographic": {
@@ -597,7 +597,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop/pavitr@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/pavitr@4x.webp",
         "caption": "Aurora Gradient",
         "orientation": "",
         "holographic": {

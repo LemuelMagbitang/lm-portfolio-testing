@@ -16,7 +16,7 @@ const ROADMAP_PATH = path.join(ROOT, 'docs', 'DECOUPLING-ROADMAP.md');
 const CONVERTIBLE = new Set(['.png', '.jpg', '.jpeg']);
 const PRESERVED_SOURCE_JPEG_ASSETS = new Set([
   'assets/projects/aol/figureground.jpg',
-  'assets/projects/funko-pop/8.jpg',
+  'assets/projects/funko-pop-sticker/8.jpg',
   'assets/projects/haeru/app-lowfi-sketch.jpg',
   'assets/projects/2024shell-nsac/full.jpg',
   'assets/projects/graphic-design/bakeries-poster.jpg',
