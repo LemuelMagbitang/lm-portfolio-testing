@@ -884,7 +884,13 @@ function updateDirtyDots(){
   });
 }
 
-function markDirty(){ dirty[currentSection] = true; updateDirtyDots(); }
+const editRevision = Object.create(null);
+function getEditRevision(name){ return Number(editRevision[name]||0); }
+function markDirty(){
+  dirty[currentSection]=true;
+  editRevision[currentSection]=getEditRevision(currentSection)+1;
+  updateDirtyDots();
+}
 
 window.addEventListener('beforeunload', (e) => {
   if(Object.values(dirty).some(Boolean)){ e.preventDefault(); e.returnValue = ''; }
@@ -901,21 +907,24 @@ async function loadSection(name){
   return result;
 }
 
-async function saveSection(name, obj, commitMessage){
-  const { file } = SECTIONS[name];
-  const existing = cache[name] || {};
-  const result = await GH.putFile(file, obj, existing.sha, commitMessage);
-  cache[name] = { json: obj, sha: result.content.sha, missing:false };
-  dirty[name] = false;
+async function saveSection(name,obj,commitMessage,revisionSnapshot={}){
+  const {file}=SECTIONS[name];
+  const existing=cache[name]||{};
+  const savedRevision=revisionSnapshot[name]??getEditRevision(name);
+  const result=await GH.putFile(file,obj,existing.sha,commitMessage);
+  cache[name]={json:obj,sha:result.content.sha,missing:false};
+  // The user may keep editing while GitHub is committing the snapshot. Preserve
+  // the unsaved dot when the in-editor model has changed since this Save began.
+  dirty[name]=getEditRevision(name)!==savedRevision;
   updateDirtyDots();
-  return result.commit && result.commit.sha; // the commit itself, for deploy-status tracking
+  return result.commit&&result.commit.sha;
 }
 
 // Saves several CMS JSON files in one Git commit. This is important for
 // settings that logically belong together (such as Hero Loop entries and
 // heroTiming) so one click produces one repository revision and one Pages
 // deployment instead of a chain of superseding deployments.
-async function saveSectionsAtomic(files, message){
+async function saveSectionsAtomic(files,message,revisionSnapshot={}){
   if(!Array.isArray(files) || !files.length) throw new Error('Nothing to commit.');
   const versionedFiles = files.map(file => {
     const previous = cache[file.name];
@@ -943,9 +952,10 @@ async function saveSectionsAtomic(files, message){
     updateDirtyDots();
     throw error;
   }
-  for (const snapshot of snapshots) {
-    cache[snapshot.name] = { json: snapshot.json, sha: snapshot.sha, missing:false };
-    dirty[snapshot.name] = false;
+  for(const snapshot of snapshots){
+    cache[snapshot.name]={json:snapshot.json,sha:snapshot.sha,missing:false};
+    const savedRevision=revisionSnapshot[snapshot.name]??getEditRevision(snapshot.name);
+    dirty[snapshot.name]=getEditRevision(snapshot.name)!==savedRevision;
   }
   updateDirtyDots();
   return commit.sha;
@@ -1079,6 +1089,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   const saveContext = currentSave;
   const saveStartedVersion = renderVersion;
   const { onCollect, name, filePath } = saveContext;
+  const editRevisionAtStart={...editRevision};
   const btn = document.getElementById('btnSaveTop');
   const orig = btn.innerHTML;
   btn.disabled = true;
@@ -1099,7 +1110,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
       commitSha=await saveSectionsAtomic([
         {name:'filters',path:SECTIONS.filters.file,content:JSON.stringify(obj,null,2)+'\n',encoding:'utf-8'},
         {name:'projects',path:SECTIONS.projects.file,content:JSON.stringify(saveContext.extraData(),null,2)+'\n',encoding:'utf-8'}
-      ],'CMS: delete filter and clear project tags');
+      ],'CMS: delete filter and clear project tags',editRevisionAtStart);
       toast(`Saved — filter/attribute changes and project cleanup committed to ${conn.branch}.`);
     }else if(saveContext.combined && name==='heroLoop'){
       const sr=await loadSection('settings');
@@ -1107,19 +1118,27 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
       commitSha=await saveSectionsAtomic([
         {name:'heroLoop',path:SECTIONS.heroLoop.file,content:JSON.stringify(obj.items||[],null,2)+'\n',encoding:'utf-8'},
         {name:'settings',path:SECTIONS.settings.file,content:JSON.stringify(next,null,2)+'\n',encoding:'utf-8'}
-      ],'CMS: update hero loop and transition settings');
+      ],'CMS: update hero loop and transition settings',editRevisionAtStart);
       toast(`Saved — hero loop and transition settings committed to ${conn.branch}.`);
     }else{
-      commitSha=await saveSection(name,obj,`CMS: update ${filePath}`);
+      commitSha=await saveSection(name,obj,`CMS: update ${filePath}`,editRevisionAtStart);
       toast(`Saved — ${filePath} committed to ${conn.branch}.`);
     }
     // The commit belongs to the section that initiated this save. Do not
     // update the status bar or begin deployment polling on a different
     // section the user navigated to while the GitHub request was in flight.
-    if(renderVersion === saveStartedVersion && currentSave === saveContext){
-      btn.disabled = false;
-      btn.innerHTML = orig;
-      trackDeployStatus(commitSha, () => renderVersion === saveStartedVersion && currentSave === saveContext);
+    if(renderVersion===saveStartedVersion&&currentSave===saveContext){
+      btn.disabled=false;
+      btn.innerHTML=orig;
+      const newerEditsRemain=Object.keys(editRevisionAtStart).some(key=>getEditRevision(key)!==(editRevisionAtStart[key]||0));
+      if(newerEditsRemain){
+        const status=document.getElementById('saveStatus');
+        const statusText=document.getElementById('saveStatusText');
+        status?.classList.remove('saved','deploying','deploy-failed');
+        if(statusText)statusText.textContent='Saved snapshot; newer edits remain unsaved';
+      }else{
+        trackDeployStatus(commitSha,()=>renderVersion===saveStartedVersion&&currentSave===saveContext);
+      }
     }
   }catch(err){
     toast(err.message, true);
