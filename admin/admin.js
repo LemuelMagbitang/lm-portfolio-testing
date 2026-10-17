@@ -4490,16 +4490,30 @@ function mediaImpactSummary(impact){
 
 async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
   const candidates=new Set(MEDIA_REFERENCE_FILES);
+  const referenceExtensions=/\\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest)$/i;
   (tree||[]).forEach(item=>{
-    if(item?.type==='blob' && String(item.path||'').startsWith('data/') && String(item.path||'').toLowerCase().endsWith('.json'))candidates.add(item.path);
+    const filePath=String(item?.path||'');
+    if(item?.type!=='blob'||!referenceExtensions.test(filePath))return;
+    // Never rewrite the tool's own implementation while renaming user data.
+    if(filePath==='admin/admin.js'||filePath.endsWith('.map'))return;
+    if(filePath.startsWith('node_modules/')||filePath.startsWith('vendor/'))return;
+    candidates.add(filePath);
   });
-  // Read the candidates from one immutable commit in parallel. The old loop
-  // awaited every GitHub Contents request sequentially, making Rename look
-  // inert for several seconds before its confirmation dialog appeared.
-  const files=await Promise.all([...candidates].map(async filePath=>{
-    try{return {filePath,current:await GH.getTextFile(filePath,parentSha)};}
-    catch(err){if(/was not found in the repository/i.test(err.message||''))return null;throw err;}
-  }));
+  // Read tracked website/CMS text assets in a small worker pool from one
+  // immutable commit. This covers modules/components and future data files
+  // without firing hundreds of simultaneous requests or serially blocking UI.
+  const paths=[...candidates],files=new Array(paths.length);
+  let nextIndex=0;
+  const worker=async()=>{
+    while(true){
+      const index=nextIndex++;
+      if(index>=paths.length)return;
+      const filePath=paths[index];
+      try{files[index]={filePath,current:await GH.getTextFile(filePath,parentSha)};}
+      catch(err){if(/was not found in the repository/i.test(err.message||'')){files[index]=null;continue;}throw err;}
+    }
+  };
+  await Promise.all(Array.from({length:Math.min(8,paths.length)},()=>worker()));
   const matched=[];
   for(const record of files.filter(Boolean)){
     const next=replaceMediaPathReferences(record.current.text,oldPath,newPath,isFolder);
