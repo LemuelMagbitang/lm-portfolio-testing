@@ -4535,7 +4535,23 @@ function mediaImpactSummary(impact){
   return impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s')+' will be updated.'+(parts.length?'\n'+parts.join('\n'):'');
 }
 
-async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
+
+function mediaDeletionReferenceMessage(filePath, impact){
+  const labels=[...new Set((impact.sections||[]).map(key=>SECTIONS[key]?.label||key))];
+  const lines=[];
+  lines.push('Deletion blocked: '+filePath+' is referenced by '+impact.changedFiles.length+' tracked website/CMS file'+(impact.changedFiles.length===1?'':'s')+'.');
+  if(labels.length)lines.push('Affected CMS sections: '+labels.join(', ')+'.');
+  if(impact.projectTitles?.length){
+    const titles=impact.projectTitles.slice(0,8);
+    lines.push('Affected projects/views: '+titles.join(', ')+(impact.projectTitles.length>titles.length?' and '+(impact.projectTitles.length-titles.length)+' more':'')+'.');
+  }
+  const files=(impact.changedFiles||[]).slice(0,8);
+  if(files.length)lines.push('Reference locations: '+files.join(', ')+(impact.changedFiles.length>files.length?' and '+(impact.changedFiles.length-files.length)+' more':'')+'.');
+  lines.push('No deletion was made. Remove or replace these references first, save the changes, refresh the Media Library, and retry. Use Rename instead when moving an asset.');
+  return lines.join(' ');
+}
+
+async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder,scanOnly=false){
   const candidates=new Set(MEDIA_REFERENCE_FILES);
   const referenceExtensions=/\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest)$/i;
   (tree||[]).forEach(item=>{
@@ -4566,7 +4582,7 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
     const next=replaceMediaPathReferences(record.current.text,oldPath,newPath,isFolder);
     if(next!==record.current.text)matched.push({...record,next});
   }
-  const blobShas=await Promise.all(matched.map(record=>GH.createBlob(record.next,'utf-8')));
+  const blobShas=scanOnly?[]:await Promise.all(matched.map(record=>GH.createBlob(record.next,'utf-8')));
   const sections=new Set(),projectIds=new Set(),projectTitles=new Set(),projectTitlesById=new Map();
   const sourceModes=new Map((tree||[]).filter(item=>item?.path).map(item=>[item.path,item.mode||'100644']));
   const entries=matched.map((record,index)=>{
@@ -4627,7 +4643,7 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
       }catch(_){}
     }
   }
-  return {entries,changedFiles:matched.map(record=>record.filePath),sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
+  return {entries:scanOnly?[]:entries,changedFiles:matched.map(record=>record.filePath),sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
 }
 
 function recordMediaImpact(impact,oldPath,newPath){
@@ -5251,29 +5267,56 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       tile.querySelector('[data-del]').addEventListener('click', async event => {
         const button=event.currentTarget;
         const deletedName=item.path.split('/').pop() || item.path;
-        if (!confirm(`Delete "${item.path}"? This removes the file from the current branch but does not update project or CMS references. If it's still in use, media may break. Renaming is the reference-aware operation. The deleted file remains in Git history.\n\nContinue?`)) return;
+        if(button.disabled)return;
         button.disabled=true;
+        let deleted=false;
         try {
-          await GH.deleteFile(item.path, item.sha, `CMS: delete ${item.path}`);
+          setMediaOperationStatus('Checking tracked website and CMS references before deletion…');
+          const parentSha=await GH.getBranchHead();
+          if(!parentSha)throw new Error('Could not resolve the current branch head. Refresh the Media Library and retry.');
+          const snapshot=await GH.getTree(parentSha);
+          const source=snapshot.find(entry=>entry?.type==='blob'&&entry.path===item.path);
+          if(!source)throw new Error('This file no longer exists on the current branch. Refresh the Media Library and retry.');
+          if(source.sha!==item.sha)throw new Error('This file changed after the Media Library was loaded. Refresh the Media Library and review the current file before retrying.');
+          const impact=await prepareMediaReferenceUpdates(item.path,'__MEDIA_PATH_AUDIT__',parentSha,snapshot,false,true);
+          if(!isCurrent())return;
+          if(impact.changedFiles.length){
+            const message=mediaDeletionReferenceMessage(item.path,impact);
+            setMediaOperationStatus(message,true);
+            toast('Deletion blocked because the file is still referenced. See the Media Library status.',true);
+            return;
+          }
+          const latestHead=await GH.getBranchHead();
+          if(latestHead!==parentSha)throw new Error('The repository changed during the reference scan. No deletion was made; refresh the Media Library and retry.');
+          if(!confirm('No references were found in the tracked website/CMS text files scanned. Delete "'+item.path+'" from the current branch? The file will remain in Git history.')){
+            setMediaOperationStatus('Deletion cancelled. No repository changes were made.');
+            return;
+          }
+          setMediaOperationStatus('Deleting unreferenced media file…');
+          await ghCommitTreeEntries([{path:item.path,mode:source.mode||'100644',type:'blob',sha:null}],'CMS: delete unreferenced media file '+item.path,parentSha);
+          deleted=true;
+          toast('Deleted '+deletedName+'.');
+          try {
+            tree=await loadMediaTree(true);
+            if(!isCurrent())return;
+            paint();
+          } catch(refreshError) {
+            if(!isCurrent())return;
+            const message='Deleted '+deletedName+', but the Media Library could not refresh. Use Refresh to reconcile with GitHub. '+(refreshError?.message||'');
+            setMediaOperationStatus(message,true);
+            toast('File deleted, but refresh failed. Use Refresh.',true);
+          }
         } catch(err) {
-          toast(err.message, true);
-          if(button.isConnected)button.disabled=false;
-          return;
-        }
-        toast(`Deleted ${deletedName}.`);
-        try {
-          tree = await loadMediaTree(true);
-          if(!isCurrent()) return;
-          paint();
-        } catch(refreshError) {
-          if(!isCurrent()) return;
-          const message=`Deleted ${deletedName}, but the Media Library could not refresh. Use Refresh to reconcile with GitHub. ${refreshError?.message || ''}`;
-          setMediaOperationStatus(message,true);
-          toast('File deleted, but refresh failed. Use Refresh.',true);
+          if(isCurrent()){
+            const message=(err?.message||'Could not safely delete this media file.')+(deleted?' The deletion commit succeeded; refresh the Media Library before continuing.':'');
+            setMediaOperationStatus(message,true);
+            toast(message,true);
+          }
         } finally {
           if(button.isConnected)button.disabled=false;
         }
       });
+
       grid.appendChild(tile);
     });
 
