@@ -228,19 +228,19 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/product-packaging/aureus00.jpg",
+        "src": "assets/projects/product-packaging/aureus00.webp",
         "caption": "3D Product & Packaging Visualization",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/product-packaging/shampoo00.jpg",
+        "src": "assets/projects/product-packaging/shampoo00.webp",
         "caption": "",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/product-packaging/wine-box.jpg",
+        "src": "assets/projects/product-packaging/wine-box.webp",
         "caption": "3D Structural Packaging Concept",
         "orientation": ""
       }
