@@ -1514,16 +1514,16 @@ try {
           hintBeforeCaption: !caption || !!(hint && (hint.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING))
         };
       });
-      if (!uploadedArtContract.src.includes('funko-pop/Asset') ||
+      if (!uploadedArtContract.src.includes('funko-pop-sticker/Asset') ||
           uploadedArtContract.naturalWidth < 100 ||
           uploadedArtContract.naturalHeight < 100 ||
           Math.abs(uploadedArtContract.naturalRatio - uploadedArtContract.slotRatio) > .015 ||
           uploadedArtContract.alphaMode !== 'alpha' ||
-          !uploadedArtContract.alphaMask.includes('funko-pop/Asset') ||
+          !uploadedArtContract.alphaMask.includes('funko-pop-sticker/Asset') ||
           uploadedArtContract.alphaMask.includes('%2520') ||
           !uploadedArtContract.hasDiffraction || !uploadedArtContract.hasSparkles ||
           !uploadedArtContract.defaultBackMirrored ||
-          !uploadedArtContract.backSrc.includes('funko-pop/Asset') ||
+          !uploadedArtContract.backSrc.includes('funko-pop-sticker/Asset') ||
           !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption ||
           !uploadedArtContract.desktopActionText.includes('CLICK / MOVE') ||
           uploadedArtContract.desktopActionDisplay === 'none' ||
