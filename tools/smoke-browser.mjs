@@ -5038,7 +5038,15 @@ try {
       const worksLink = page.locator('.nav-links a[href="./"]').first();
       if (await worksLink.count() !== 1) throw new Error('Mobile hamburger Works navigation link is missing.');
       await worksLink.click();
-      await page.waitForTimeout(340);
+      // The interaction now deliberately stages selected feedback before the
+      // 260ms menu exit. Wait on the resulting navigation contract rather than
+      // sampling at a fixed 340ms while the exit may still be running.
+      await page.waitForFunction(() => {
+        const active = document.querySelector('.filter-tabs .filter-btn.active')?.getAttribute('data-filter') || '';
+        return active === 'all' &&
+          window.location.hash === '' &&
+          !document.body.classList.contains('menu-open');
+      }, null, { timeout: 2500 });
       const reset = await page.evaluate(() => ({
         active: document.querySelector('.filter-tabs .filter-btn.active')?.getAttribute('data-filter') || '',
         hash: window.location.hash,
