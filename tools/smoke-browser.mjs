@@ -6245,6 +6245,20 @@ try {
       browser,
       '/',
       async page => {
+        // Exercise the capped-container branch of --lm-lightbox-control-edge,
+        // which is not reached at 1280px (where the edge equals the page gutter).
+        await page.locator('#lightboxClose').waitFor({ state: 'attached', timeout: 5000 });
+        await page.locator('.lightbox-prev').first().waitFor({ state: 'attached', timeout: 5000 });
+        await page.locator('.lightbox-next').first().waitFor({ state: 'attached', timeout: 5000 });
+        await assertLightboxChromeAlignment(page, 'Wide Desktop Works', 'desktop');
+      },
+      { width: 1600, height: 900 }
+    );
+
+    await smokePage(
+      browser,
+      '/',
+      async page => {
         // The hidden controls still have their fixed-position geometry;
         // keeping the Lightbox closed isolates alignment from media loading.
         await page.locator('#lightboxClose').waitFor({ state: 'attached', timeout: 5000 });
