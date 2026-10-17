@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
-const saveStart = admin.indexOf('async function saveSectionsAtomic(files, message){');
+const saveStart = admin.indexOf('async function saveSectionsAtomic(');
 const saveEnd = admin.indexOf('\n\n/* =====================================================================\n   6. RENDER ROUTER', saveStart);
 assert.ok(saveStart >= 0 && saveEnd > saveStart, 'Atomic save helper must remain a self-contained unit.');
 const saveSource = admin.slice(saveStart, saveEnd);
@@ -39,14 +39,17 @@ for (const expression of [
     'Atomic JSON content must use the actual newline escape used by other CMS saves.');
 }
 
-function makeHarness({freshFile, refreshError = null}) {
+function makeHarness({freshFile,refreshError=null,editDuringCommit=false}) {
   const cache = { hero: { json: { title: 'before' }, sha: 'base-sha', missing: false } };
   const dirty = { hero: true };
+  const editRevision = { hero: 0 };
+  const getEditRevision = name => Number(editRevision[name] || 0);
   const calls = { files: null, dotUpdates: 0 };
   const GH = {
     async commitFiles(files, message) {
       calls.files = files;
       calls.message = message;
+      if(editDuringCommit)editRevision.hero += 1;
       return { sha: 'saved-commit-sha' };
     },
     async getFile(filePath) {
@@ -57,9 +60,9 @@ function makeHarness({freshFile, refreshError = null}) {
   };
   const updateDirtyDots = () => { calls.dotUpdates += 1; };
   const fn = vm.runInNewContext(saveSource + '\nsaveSectionsAtomic', {
-    GH, cache, dirty, updateDirtyDots
+    GH, cache, dirty, editRevision, getEditRevision, updateDirtyDots
   }, { filename: 'cms-atomic-save.js' });
-  return { fn, cache, dirty, calls };
+  return { fn, cache, dirty, editRevision, calls };
 }
 
 const intended = { title: 'after' };
@@ -75,6 +78,18 @@ assert.equal(JSON.stringify(success.cache.hero.json), JSON.stringify(intended));
 assert.equal(success.cache.hero.sha, 'saved-file-sha');
 assert.equal(success.dirty.hero, false);
 assert.equal(success.calls.dotUpdates, 1);
+
+const editedDuringSave = makeHarness({
+  freshFile: { json: intended, sha: 'saved-file-sha', missing: false },
+  editDuringCommit: true
+});
+assert.equal(await editedDuringSave.fn([
+  { name: 'hero', path: 'data/hero.json', content: serialized, encoding: 'utf-8' }
+], 'CMS: test save with a concurrent edit', { hero: 0 }), 'saved-commit-sha');
+assert.equal(editedDuringSave.cache.hero.sha, 'saved-file-sha');
+assert.equal(editedDuringSave.dirty.hero, true,
+  'Edits made while the commit is in flight must remain marked unsaved.');
+assert.equal(editedDuringSave.editRevision.hero, 1);
 
 const raced = makeHarness({
   freshFile: { json: { title: 'changed in another tab' }, sha: 'newer-file-sha', missing: false }
