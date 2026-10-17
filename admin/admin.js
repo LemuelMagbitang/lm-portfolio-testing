@@ -268,8 +268,6 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
       const status=job.tile.querySelector('.upload-status');
       if(status)status.textContent='Failed — '+(err?.message||'Could not stage this file.');
       toast(job.originalName+': '+(err?.message||'Could not stage this file.'),true);
-    }finally{
-      if(job.localUrl){URL.revokeObjectURL(job.localUrl);job.localUrl=null;}
     }
   }
 
@@ -294,6 +292,14 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
     });
     setMediaTreeCache(uploadTree);
     stagedJobs.forEach(job=>{
+      // Switch to the committed, SHA-keyed remote URL before releasing the
+      // temporary local preview, so the tile never points at a revoked blob.
+      const preview=job.tile.querySelector('.thumb img, .thumb video');
+      if(preview){
+        preview.src=ghRawUrl(job.path,job.blobSha);
+        if(preview.tagName==='VIDEO')preview.load();
+      }
+      if(job.localUrl){URL.revokeObjectURL(job.localUrl);job.localUrl=null;}
       job.tile.classList.remove('is-uploading');
       job.tile.classList.add('is-done');
       job.tile.querySelector('.upload-overlay')?.remove();

@@ -6319,6 +6319,27 @@ try {
     let cmsSmokeJpegUploadPayload = null;
     let cmsSmokeJpegUploadPath = '';
     let cmsSmokeProjectsUploadPayload = null;
+    // Model the Git Data API used by batch uploads with one immutable parent
+    // tree, blob storage, and a guarded branch-ref update.
+    let cmsSmokeBranchHead = 'smoke-main-head';
+    let cmsSmokeCurrentTreeSha = 'smoke-main-tree';
+    let cmsSmokeTreeSequence = 0;
+    let cmsSmokeCommitSequence = 0;
+    let cmsSmokeBlobSequence = 0;
+    const cmsSmokeGitBlobs = new Map();
+    const cmsSmokePendingTrees = new Map();
+    const cmsSmokeCommitParents = new Map([['smoke-main-head', null]]);
+    const cmsSmokeCommitTreeBySha = new Map([['smoke-main-head', 'smoke-main-tree']]);
+    let cmsSmokeGitTree = [
+      { type: 'tree', path: 'assets', sha: 'smoke-assets' },
+      { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
+      { type: 'blob', path: 'assets/projects/smoke.png', sha: 'smoke-png-existing', size: 12, mode: '100644' },
+      { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: 'smoke-jpeg-webp', size: 12, mode: '100644' },
+      { type: 'blob', path: 'assets/projects/smoke-jpeg.jpg', sha: 'smoke-jpeg-original', size: 12, mode: '100644' },
+      { type: 'blob', path: 'assets/projects/Sample.json', sha: 'smoke-lottie', size: 12, mode: '100644' },
+      { type: 'blob', path: 'assets/projects/Female base.obj', sha: 'smoke-model', size: 12, mode: '100644' },
+      { type: 'blob', path: 'assets/projects/idle.mp4', sha: 'smoke-video', size: 12, mode: '100644' }
+    ];
     await smokePage(
       browser,
       '/',
@@ -6520,7 +6541,7 @@ try {
         return image && new URL(image.src).searchParams.get('v') === 'smoke-png-re';
       }, null, { timeout: 8000 });
       if (!cmsSmokePngUploadPayload || cmsSmokePngUploadPayload.sha !== 'smoke-png-existing') {
-        throw new Error('CMS PNG overwrite did not send the current existing-file SHA.');
+        throw new Error('CMS PNG replacement did not overwrite the file present in the captured parent tree.');
       }
       const uploadedPngBytes = Buffer.from(cmsSmokePngUploadPayload.content || '', 'base64');
       if (!uploadedPngBytes.equals(smokePngBytes)) {
@@ -6574,7 +6595,7 @@ try {
       const expectedJpegSha = jpegConvertedToWebP ? 'smoke-jpeg-webp' : 'smoke-jpeg-original';
       const expectedJpegName = jpegConvertedToWebP ? 'smoke-jpeg.webp' : 'smoke-jpeg.jpg';
       if (cmsSmokeJpegUploadPayload.sha !== expectedJpegSha) {
-        throw new Error('CMS JPEG upload did not send the current existing-file SHA for ' + expectedJpegName + '.');
+        throw new Error('CMS JPEG replacement did not overwrite the captured existing blob for ' + expectedJpegName + '.');
       }
       const uploadedJpegBytes = Buffer.from(cmsSmokeJpegUploadPayload.content || '', 'base64');
       let uploadedJpegMime;
@@ -7168,37 +7189,98 @@ try {
           return;
         }
         const aboutPath = '/repos/Smoke/TestRepo/contents/data/about.json';
-        if (url.pathname === '/repos/Smoke/TestRepo/contents/assets/projects/smoke.png' &&
-            route.request().method() === 'PUT') {
-          cmsSmokePngUploadPayload = route.request().postDataJSON();
-          cmsSmokePngMediaSha = 'smoke-png-replaced';
+        if (url.pathname === '/repos/Smoke/TestRepo/git/ref/heads/main' &&
+            route.request().method() === 'GET') {
           await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ ref: 'refs/heads/main', object: { sha: cmsSmokeBranchHead } })
+          });
+          return;
+        }
+        if (url.pathname.startsWith('/repos/Smoke/TestRepo/git/commits/') &&
+            route.request().method() === 'GET') {
+          const commitSha = url.pathname.split('/').pop();
+          await route.fulfill({
+            status: 200, contentType: 'application/json',
             body: JSON.stringify({
-              content: { sha: cmsSmokePngMediaSha },
-              commit: { sha: 'smoke-png-upload-commit' }
+              sha: commitSha,
+              tree: { sha: cmsSmokeCommitTreeBySha.get(commitSha) || cmsSmokeCurrentTreeSha }
             })
           });
           return;
         }
-        if (/^\/repos\/Smoke\/TestRepo\/contents\/assets\/projects\/smoke-jpeg\.(?:webp|jpg)$/.test(url.pathname) &&
-            route.request().method() === 'PUT') {
-          cmsSmokeJpegUploadPayload = route.request().postDataJSON();
-          cmsSmokeJpegUploadPath = url.pathname.endsWith('.webp')
-            ? 'assets/projects/smoke-jpeg.webp'
-            : 'assets/projects/smoke-jpeg.jpg';
-          const resultSha = url.pathname.endsWith('.webp')
-            ? (cmsSmokeJpegWebPMediaSha = 'smoke-jpeg-replaced')
-            : (cmsSmokeJpegOriginalMediaSha = 'smoke-jpg-replaced');
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              content: { sha: resultSha },
-              commit: { sha: 'smoke-jpeg-upload-commit' }
-            })
-          });
+        if (url.pathname === '/repos/Smoke/TestRepo/git/blobs' &&
+            route.request().method() === 'POST') {
+          const payload = route.request().postDataJSON();
+          const bytes = Buffer.from(payload.content || '', payload.encoding === 'base64' ? 'base64' : 'utf8');
+          let blobSha;
+          if (bytes.length > 4 && bytes.toString('ascii', 1, 4) === 'PNG') blobSha = 'smoke-png-re';
+          else if (bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP') blobSha = 'smoke-jpeg-r';
+          else if (bytes[0] === 0xff && bytes[1] === 0xd8) blobSha = 'smoke-jpg-re';
+          else blobSha = 'smoke-upload-blob-' + (++cmsSmokeBlobSequence);
+          cmsSmokeGitBlobs.set(blobSha, { content: payload.content || '', encoding: payload.encoding || 'utf-8', size: bytes.length, bytes });
+          await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ sha: blobSha, size: bytes.length }) });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/git/trees' &&
+            route.request().method() === 'POST') {
+          const payload = route.request().postDataJSON();
+          const treeSha = 'smoke-tree-' + (++cmsSmokeTreeSequence);
+          cmsSmokePendingTrees.set(treeSha, { baseTree: payload.base_tree, entries: payload.tree || [] });
+          await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ sha: treeSha, tree: [] }) });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/git/commits' &&
+            route.request().method() === 'POST') {
+          const payload = route.request().postDataJSON();
+          const commitSha = 'smoke-commit-' + (++cmsSmokeCommitSequence);
+          cmsSmokeCommitParents.set(commitSha, (payload.parents || [])[0] || null);
+          cmsSmokeCommitTreeBySha.set(commitSha, payload.tree);
+          await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ sha: commitSha, tree: { sha: payload.tree }, parents: payload.parents || [] }) });
+          return;
+        }
+        if (url.pathname === '/repos/Smoke/TestRepo/git/refs/heads/main' &&
+            route.request().method() === 'PATCH') {
+          const payload = route.request().postDataJSON();
+          const commitSha = payload.sha;
+          const parent = cmsSmokeCommitParents.get(commitSha);
+          const nextTreeSha = cmsSmokeCommitTreeBySha.get(commitSha);
+          const pending = cmsSmokePendingTrees.get(nextTreeSha);
+          if (parent !== cmsSmokeBranchHead || !pending || pending.baseTree !== cmsSmokeCommitTreeBySha.get(parent)) {
+            await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ message: 'Reference update conflict in smoke fixture.' }) });
+            return;
+          }
+          const byPath = new Map(cmsSmokeGitTree.map(item => [item.path, { ...item }]));
+          for (const entry of pending.entries) {
+            if (entry.sha === null) {
+              byPath.delete(entry.path);
+              continue;
+            }
+            const previous = byPath.get(entry.path);
+            const blob = cmsSmokeGitBlobs.get(entry.sha);
+            if (entry.path === 'assets/projects/smoke.png' && blob) {
+              cmsSmokePngUploadPayload = { sha: previous?.sha || '', content: blob.content };
+              cmsSmokePngMediaSha = entry.sha;
+            }
+            if (entry.path.startsWith('assets/projects/smoke-jpeg.') &&
+                (entry.path.endsWith('.webp') || entry.path.endsWith('.jpg')) && blob) {
+              cmsSmokeJpegUploadPayload = { sha: previous?.sha || '', content: blob.content };
+              cmsSmokeJpegUploadPath = entry.path;
+              if (entry.path.endsWith('.webp')) cmsSmokeJpegWebPMediaSha = entry.sha;
+              else cmsSmokeJpegOriginalMediaSha = entry.sha;
+            }
+            byPath.set(entry.path, {
+              type: entry.type || 'blob',
+              path: entry.path,
+              sha: entry.sha,
+              mode: entry.mode || previous?.mode || '100644',
+              size: blob?.size ?? previous?.size ?? 12
+            });
+          }
+          cmsSmokeGitTree = [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
+          cmsSmokeBranchHead = commitSha;
+          cmsSmokeCurrentTreeSha = nextTreeSha;
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ref: 'refs/heads/main', object: { sha: commitSha } }) });
           return;
         }
         if (url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method() === 'PUT') {
@@ -7235,25 +7317,16 @@ try {
           });
           return;
         }
-        if (url.pathname === '/repos/Smoke/TestRepo/git/trees/main') {
-          // Make Media Library tree hydration cross a deliberate section
-          // navigation boundary in the smoke test.
-          await new Promise(resolve => setTimeout(resolve, 250));
+        if (url.pathname.startsWith('/repos/Smoke/TestRepo/git/trees/') &&
+            route.request().method() === 'GET') {
+          // Preserve the deliberate navigation race for the initial branch
+          // tree load; commit-pinned reads return the same tree snapshot.
+          if (url.pathname.endsWith('/git/trees/main')) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
           await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              tree: [
-                { type: 'tree', path: 'assets', sha: 'smoke-assets' },
-                { type: 'tree', path: 'assets/projects', sha: 'smoke-projects' },
-                { type: 'blob', path: 'assets/projects/smoke.png', sha: cmsSmokePngMediaSha, size: 12 },
-                { type: 'blob', path: 'assets/projects/smoke-jpeg.webp', sha: cmsSmokeJpegWebPMediaSha, size: 12 },
-                { type: 'blob', path: 'assets/projects/smoke-jpeg.jpg', sha: cmsSmokeJpegOriginalMediaSha, size: 12 },
-                { type: 'blob', path: 'assets/projects/Sample.json', sha: 'smoke-lottie', size: 12 },
-                { type: 'blob', path: 'assets/projects/Female base.obj', sha: 'smoke-model', size: 12 },
-                { type: 'blob', path: 'assets/projects/idle.mp4', sha: 'smoke-video', size: 12 }
-              ]
-            })
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ sha: cmsSmokeCurrentTreeSha, tree: cmsSmokeGitTree })
           });
           return;
         }
