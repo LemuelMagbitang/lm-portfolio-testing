@@ -4583,7 +4583,9 @@ function setMediaOperationStatus(message,isError=false){
 }
 
 function applyMediaTreeEntries(baseTree,entries){
-  const byPath=new Map((baseTree||[]).filter(item=>item?.path).map(item=>[item.path,{...item}]));
+  // Media Library builds folders from file paths; keep the fallback cache to blobs
+  // only so deleted implicit Git tree nodes cannot resurrect the old folder name.
+  const byPath=new Map((baseTree||[]).filter(item=>item?.type==='blob'&&item.path).map(item=>[item.path,{...item}]));
   (entries||[]).forEach(entry=>{
     if(!entry?.path)return;
     if(entry.sha===null){byPath.delete(entry.path);return;}
