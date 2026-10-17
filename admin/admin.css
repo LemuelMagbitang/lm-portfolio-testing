@@ -985,3 +985,7 @@ button.icon-btn,
 .media-impact-dot{display:inline-block;width:7px;height:7px;flex:0 0 7px;border-radius:50%;margin-left:8px;vertical-align:middle;background:#e3b65b;box-shadow:0 0 0 2px rgba(227,182,91,.12);}
 .nav-item .media-impact-dot{margin-left:5px;margin-right:4px;align-self:center;}
 .project-list-item .item-title .media-impact-dot{margin-left:8px;}
+
+/* Persistent progress/error state for operations that touch many media references. */
+.media-operation-error{background:rgba(224,88,79,.08)!important;border-color:rgba(224,88,79,.5)!important;color:#ffd0cc!important;white-space:pre-line;}
+#mediaOperationStatus{white-space:pre-line;line-height:1.5;}
