@@ -4388,11 +4388,62 @@ const MEDIA_REFERENCE_FILES = [
   'data/settings.json'
 ];
 
+async function renameMediaFile(oldPath,onDone){
+  if(!oldPath || !oldPath.startsWith('assets/')){ toast('Only files inside the Media Library can be renamed.',true); return; }
+  const oldName=oldPath.split('/').pop();
+  const rawName=prompt('Rename file:',oldName);
+  if(rawName===null)return;
+  const name=String(rawName).trim();
+  if(!name || name===oldName)return;
+  if(/[\\/\\u0000-\\u001f]/.test(name) || name==='.' || name==='..' || name.length>180){
+    toast('Enter a valid file name without folder separators.',true);return;
+  }
+  const parent=oldPath.slice(0,oldPath.lastIndexOf('/'));
+  const newPath=joinRepoPath(parent,name);
+  const parentSha=await GH.getBranchHead();
+  if(!parentSha)throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
+  const tree=await GH.getTree(parentSha);
+  const source=tree.find(item=>item.type==='blob'&&item.path===oldPath);
+  if(!source){toast('This file no longer exists in the current branch. Refresh and try again.',true);return;}
+  if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){toast('A file or folder with that name already exists here.',true);return;}
+  const entries=[
+    {path:newPath,mode:source.mode==='100755'?'100755':'100644',type:'blob',sha:source.sha},
+    {path:oldPath,mode:'100644',type:'blob',sha:null}
+  ];
+  const changedReferenceFiles=[];
+  for(const filePath of MEDIA_REFERENCE_FILES){
+    try{
+      const current=await GH.getTextFile(filePath,parentSha);
+      if(!current.text.includes(oldPath))continue;
+      const next=current.text.split(oldPath).join(newPath);
+      if(next===current.text)continue;
+      const blob=await GH.createBlob(next,'utf-8');
+      entries.push({path:filePath,mode:'100644',type:'blob',sha:blob});
+      changedReferenceFiles.push(filePath);
+    }catch(err){
+      if(/was not found in the repository/i.test(err.message||''))continue;
+      throw err;
+    }
+  }
+  const note=changedReferenceFiles.length
+    ? 'References in '+changedReferenceFiles.length+' site/data file'+(changedReferenceFiles.length===1?'':'s')+' will also be updated.'
+    : 'No matching references were found in the configured site/data files.';
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”? '+note))return;
+  await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
+  setMediaTreeCache(null);
+  ['about','heroLoop','footerLoop','hero','projects','reviews','settings','filters','curatedViews'].forEach(key=>{delete cache[key];});
+  toast('Renamed '+oldName+' to '+name+(changedReferenceFiles.length?' and updated '+changedReferenceFiles.length+' reference file'+(changedReferenceFiles.length===1?'s':''):'')+'.');
+  if(onDone)onDone(newPath);
+}
+
 async function renameMediaFolder(oldPath,onDone){
   if(!oldPath || oldPath==='assets'){ toast('The Media Library root cannot be renamed.',true); return; }
   const oldName=oldPath.split('/').pop();
-  const name=safeFolderName(prompt('Rename folder:',oldName));
-  if(!name || name===oldName) return;
+  const rawName=prompt('Rename folder:',oldName);
+  if(rawName===null)return;
+  const name=safeFolderName(rawName);
+  if(!name){toast('Enter a valid folder name without folder separators.',true);return;}
+  if(name===oldName)return;
   const parent=oldPath.includes('/') ? oldPath.slice(0,oldPath.lastIndexOf('/')) : '';
   const newPath=joinRepoPath(parent,name);
   if(newPath===oldPath) return;
@@ -4828,8 +4879,9 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       tile.className = 'media-tile';
       tile.innerHTML = fileTileHtml(item) + `
         <div class="tile-actions">
-          <button class="ghost" data-copy>Copy path</button>
-          <button class="danger" data-del>Delete</button>
+          <button class="ghost" data-rename type="button">Rename</button>
+          <button class="ghost" data-copy type="button">Copy path</button>
+          <button class="danger" data-del type="button">Delete</button>
         </div>
       `;
       const previewThumb=tile.querySelector('.thumb');
@@ -4853,6 +4905,17 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
           openMediaFullPreview(item,previewThumb);
         });
       }
+      tile.querySelector('[data-rename]').addEventListener('click', async event => {
+        event.stopPropagation();
+        try {
+          await renameMediaFile(item.path, async () => {
+            if(!isCurrent())return;
+            tree=await loadMediaTree(true);
+            if(!isCurrent())return;
+            paint();
+          });
+        } catch(err) { toast(err?.message||'Could not rename this file.',true); }
+      });
       tile.querySelector('[data-copy]').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(item.path); toast('Path copied — paste it into a Source or Photo field.'); }
         catch(e){ prompt('Copy this path:', item.path); }
