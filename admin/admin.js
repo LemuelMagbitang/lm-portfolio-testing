@@ -5248,8 +5248,10 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
         try { await navigator.clipboard.writeText(item.path); toast('Path copied — paste it into a Source or Photo field.'); }
         catch(e){ prompt('Copy this path:', item.path); }
       });
-      tile.querySelector('[data-del]').addEventListener('click', async () => {
-        if (!confirm(`Delete "${item.path}"? This can't be undone from here (though it stays in git history).`)) return;
+      tile.querySelector('[data-del]').addEventListener('click', async event => {
+        const button=event.currentTarget;
+        if (!confirm(`Delete "${item.path}"? This removes the file from the current branch but does not update project or CMS references. If it's still in use, media may break. Renaming is the reference-aware operation. The deleted file remains in Git history.\n\nContinue?`)) return;
+        button.disabled=true;
         try {
           await GH.deleteFile(item.path, item.sha, `CMS: delete ${item.path}`);
           toast(`Deleted ${item.path.split('/').pop() || item.path}.`);
@@ -5257,6 +5259,7 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
           if(!isCurrent()) return;
           paint();
         } catch(err){ toast(err.message, true); }
+        finally { if(button.isConnected)button.disabled=false; }
       });
       grid.appendChild(tile);
     });
