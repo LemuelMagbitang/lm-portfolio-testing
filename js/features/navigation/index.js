@@ -27,6 +27,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   let isOpen = false;
   let closeTimer = null;
   let replayingMenuLink = false;
+  let selectingMenuLink = false;
   const windowRef = root?.defaultView || globalThis.window;
 
   // A real DOM backdrop is more reliable than body::after: it remains fixed to
@@ -45,8 +46,47 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
   }
 
+  function waitForMenuLinkSelection(link) {
+    const reducedMotion = Boolean(
+      windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    );
+    if (reducedMotion) return Promise.resolve();
+
+    // Wait for both the selected-pill transform and its foreground/background
+    // transitions. The menu must remain open until this selected state lands.
+    if (typeof link?.getAnimations === 'function') {
+      const activeAnimations = link.getAnimations()
+        .filter(animation => animation.playState !== 'finished');
+      if (activeAnimations.length) {
+        return Promise.all(activeAnimations.map(animation =>
+          Promise.resolve(animation.finished).catch(() => {})
+        )).then(() => undefined);
+      }
+    }
+
+    // Fallback for browsers without the Web Animations API. Keep this bounded
+    // to the selected-state keyframe duration; reduced motion already exits above.
+    const style = windowRef?.getComputedStyle?.(link);
+    const names = String(style?.animationName || '')
+      .split(',').map(name => name.trim());
+    if (!names.includes('nav-link-select')) return Promise.resolve();
+
+    const toMilliseconds = value => {
+      const normalized = String(value || '0s').trim();
+      const amount = Number.parseFloat(normalized);
+      if (!Number.isFinite(amount)) return 0;
+      return normalized.endsWith('ms') ? amount : amount * 1000;
+    };
+    const duration = String(style?.animationDuration || '0s').split(',')[0];
+    const delay = String(style?.animationDelay || '0s').split(',')[0];
+    const waitMs = Math.max(0, toMilliseconds(duration) + toMilliseconds(delay)) + 32;
+    if (waitMs <= 32 || typeof windowRef?.setTimeout !== 'function') return Promise.resolve();
+    return new Promise(resolve => windowRef.setTimeout(resolve, waitMs));
+  }
+
   function finishClose(afterClose) {
     closeTimer = null;
+    selectingMenuLink = false;
     mobileMenu.classList.remove('active', 'is-open', 'is-closing');
     mobileMenuLinks.forEach(link => link.classList.remove('is-selected'));
     root.body?.classList.remove('menu-open');
@@ -108,19 +148,34 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
 
     event.preventDefault();
     event.stopImmediatePropagation?.();
+    if (selectingMenuLink) return;
+
+    selectingMenuLink = true;
     mobileMenuLinks.forEach(item => item.classList.toggle('is-selected', item === link));
 
-    // Let the upward exit and selected-button motion finish before replaying
-    // the click. This preserves the existing same-page Designs/Contacts logic.
-    close(() => {
-      if (!root?.contains?.(link)) return;
-      replayingMenuLink = true;
-      link.click();
+    // Stage 1: make the chosen destination visibly selected while the menu
+    // remains open. Stage 2: close the menu; stage 3: replay the native click
+    // only after the exit finishes, preserving existing same-page routing.
+    waitForMenuLinkSelection(link).then(() => {
+      if (!isOpen || !root?.contains?.(link)) {
+        selectingMenuLink = false;
+        return;
+      }
+
+      close(() => {
+        if (!root?.contains?.(link)) {
+          selectingMenuLink = false;
+          return;
+        }
+        replayingMenuLink = true;
+        link.click();
+      });
     });
   }
 
   function toggle(event) {
     event?.preventDefault?.();
+    if (selectingMenuLink) return;
     if (isOpen) close();
     else open();
   }

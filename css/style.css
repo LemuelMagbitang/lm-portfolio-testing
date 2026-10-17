@@ -5747,6 +5747,8 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
   }
 
   .nav-links.active.is-open a.is-selected {
+    background: #fff;
+    color: #000;
     animation: nav-link-select 220ms cubic-bezier(.2,.8,.2,1) both;
   }
 

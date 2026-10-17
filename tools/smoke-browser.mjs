@@ -6220,6 +6220,65 @@ try {
       await logRuntimeProfile(page, 'Works 390x844', requestedUrls);
     }, { width: 390, height: 844 });
 
+    await smokePage(browser, '/', async page => {
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' &&
+          transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 6000 });
+
+      let selectionSnapshot = null;
+      await page.exposeFunction('__lmCaptureNavSelectionState', snapshot => {
+        selectionSnapshot = snapshot;
+      });
+
+      await page.locator('.hamburger').first().click();
+      const menu = page.locator('.nav-links.active.is-open');
+      await menu.waitFor({ state: 'visible', timeout: 2000 });
+      const aboutLink = page.locator('.nav-links a[href="about/"]').first();
+      if (await aboutLink.count() !== 1) {
+        throw new Error('Mobile selection animation test cannot find the About Me link.');
+      }
+
+      await aboutLink.evaluate(link => {
+        link.addEventListener('animationend', event => {
+          if (event.animationName !== 'nav-link-select') return;
+          const menu = document.querySelector('.nav-links');
+          void window.__lmCaptureNavSelectionState({
+            pathname: window.location.pathname,
+            bodyMenuOpen: document.body.classList.contains('menu-open'),
+            menuOpen: Boolean(menu?.classList.contains('active') && menu?.classList.contains('is-open')),
+            selected: link.classList.contains('is-selected'),
+            background: getComputedStyle(link).backgroundColor,
+            color: getComputedStyle(link).color
+          });
+        });
+      });
+
+      const aboutNavigation = page.waitForURL(
+        url => url.pathname.replace(/\\/+$/, '') === '/about',
+        { timeout: 8000, waitUntil: 'domcontentloaded' }
+      );
+      await aboutLink.click();
+      await aboutNavigation;
+
+      if (!selectionSnapshot) {
+        throw new Error('Mobile navigation changed pages without completing the selected-link animation.');
+      }
+      if (
+        selectionSnapshot.pathname !== '/' ||
+        !selectionSnapshot.bodyMenuOpen ||
+        !selectionSnapshot.menuOpen ||
+        !selectionSnapshot.selected ||
+        selectionSnapshot.background !== 'rgb(255, 255, 255)' ||
+        selectionSnapshot.color !== 'rgb(0, 0, 0)'
+      ) {
+        throw new Error('Mobile navigation did not show the selected pill before closing/navigating: ' +
+          JSON.stringify(selectionSnapshot));
+      }
+      await page.locator('#aboutHeadline').waitFor({ state: 'visible', timeout: 5000 });
+    }, { width: 390, height: 844 });
+
     let cmsSmokePngMediaSha = 'smoke-png-existing';
     let cmsSmokePngUploadPayload = null;
     let cmsSmokeJpegWebPMediaSha = 'smoke-jpeg-webp';

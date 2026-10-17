@@ -724,3 +724,11 @@ This migration must not:
 - On mobile, the 52px close target is centered in both axes over the 38px hamburger; previous/next controls now use the same horizontal page-edge anchors and 52px square hit targets.
 - Added browser-smoke assertions at 1280×900, 1600×900, and 390×844 to protect the control geometry. The 1600px case exercises the capped-container branch of the shared edge token; the 1280px case covers the regular page-gutter branch. The Lightbox feature stylesheet cache identity is `20261017-02`. The first geometry run exposed the base stylesheet's more-specific desktop arrow offsets and the logo-driven vertical center; feature selectors now match the original arrow specificity, and the close targets use the measured 45px nav-row geometry.
 - **Verification gate:** run the full validation/browser-smoke workflow and Pages build/deployment on this commit. Then visually confirm at desktop, narrow tablet, and a physical phone, including safe-area behavior and arrow reachability. Do not promote to `main` or the deployed production repository.
+
+
+### October 17, 2026 — Phase 3D mobile navigation selection feedback
+
+- Mobile nav-link activation now runs as a deliberate three-stage interaction: the tapped pill transitions to white/black selected styling and completes its lift/settle animation; the full-screen menu then exits; only after the exit does the existing link click replay so native page navigation and the same-page Designs/Contacts contracts remain intact.
+- The selected-state wait observes Web Animations API animations and transitions where available, has a bounded CSS-timing fallback, and skips the wait under `prefers-reduced-motion: reduce`. A selection-in-progress guard prevents double-taps or the hamburger from interrupting the handoff. The mobile menu's close timer and existing Escape/outside-tap flows remain the same.
+- Added a browser regression that records the About Me pill's selected styling while the menu is still open, then verifies navigation to About follows. Bumped the shared stylesheet cache identity to `20261017-09` on Works and About.
+- **Verification gate:** validate selection-first sequencing, same-page Contacts scrolling, active Designs behavior, reduced-motion navigation, and the full Chromium smoke/Pages workflows. Do not promote to `main` or the deployed production repository.
