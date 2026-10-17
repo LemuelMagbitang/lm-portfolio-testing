@@ -4388,8 +4388,107 @@ const MEDIA_REFERENCE_FILES = [
   'data/settings.json'
 ];
 
+let lastMediaImpact = { sections:[], projectIds:[], projectTitles:[], changedFiles:[], oldPath:'', newPath:'' };
+
+function mediaPathBoundary(source,index,path,isFolder){
+  const before=index>0?source[index-1]:'';
+  const after=source[index+path.length]||'';
+  const beforeOK=!before || '/"\'\`:=([,{\\s'.includes(before);
+  const afterOK=!after || (isFolder ? '/?#"\'\`,)}]\\s'.includes(after) : '?#"\'\`,)}]\\s'.includes(after));
+  return beforeOK&&afterOK;
+}
+
+function replaceMediaPathReferences(source,oldPath,newPath,isFolder){
+  let cursor=0,searchAt=0,out='',changed=false;
+  while(searchAt<source.length){
+    const index=source.indexOf(oldPath,searchAt);
+    if(index<0)break;
+    searchAt=index+oldPath.length;
+    if(!mediaPathBoundary(source,index,oldPath,isFolder))continue;
+    out+=source.slice(cursor,index)+newPath;
+    cursor=index+oldPath.length;
+    changed=true;
+  }
+  return changed?out+source.slice(cursor):source;
+}
+
+function valueReferencesMediaPath(value,oldPath,isFolder){
+  if(typeof value==='string')return replaceMediaPathReferences(value,oldPath,'__MEDIA_PATH_MATCH__',isFolder)!==value;
+  if(Array.isArray(value))return value.some(item=>valueReferencesMediaPath(item,oldPath,isFolder));
+  if(value&&typeof value==='object')return Object.values(value).some(item=>valueReferencesMediaPath(item,oldPath,isFolder));
+  return false;
+}
+
+function updateMediaImpactIndicators(){
+  const sectionSet=new Set(lastMediaImpact.sections||[]);
+  document.querySelectorAll('.nav-item[data-section]').forEach(nav=>{
+    let dot=nav.querySelector('.media-impact-dot');
+    const isAffected=sectionSet.has(nav.dataset.section);
+    if(isAffected&&!dot){
+      dot=document.createElement('span');
+      dot.className='media-impact-dot';
+      dot.setAttribute('aria-label','Asset reference updated — review this section');
+      dot.title='A media path was updated here. Review this section.';
+      nav.appendChild(dot);
+    }else if(!isAffected&&dot)dot.remove();
+  });
+}
+
+function mediaImpactSummary(impact){
+  const labels=[...new Set((impact.sections||[]).map(key=>SECTIONS[key]?.label||key))];
+  const parts=[];
+  if(labels.length)parts.push('Affected sections: '+labels.join(', '));
+  if(impact.projectTitles?.length)parts.push('Affected projects: '+impact.projectTitles.join(', '));
+  const other=(impact.changedFiles||[]).filter(file=>!Object.values(SECTIONS).some(section=>section.file===file));
+  if(other.length)parts.push('Other site files: '+other.length);
+  return (impact.changedFiles?.length||0)+' reference file'+((impact.changedFiles?.length||0)===1?'':'s')+' will be updated.'+(parts.length?'\\n'+parts.join('\\n'):'');
+}
+
+async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
+  const candidates=new Set(MEDIA_REFERENCE_FILES);
+  (tree||[]).forEach(item=>{
+    if(item?.type==='blob' && /^data\\/.*\\.json$/i.test(item.path||''))candidates.add(item.path);
+  });
+  const entries=[],changedFiles=[],sections=new Set(),projectIds=new Set(),projectTitles=new Set();
+  for(const filePath of candidates){
+    let current;
+    try{current=await GH.getTextFile(filePath,parentSha);}
+    catch(err){if(/was not found in the repository/i.test(err.message||''))continue;throw err;}
+    const next=replaceMediaPathReferences(current.text,oldPath,newPath,isFolder);
+    if(next===current.text)continue;
+    entries.push({path:filePath,mode:'100644',type:'blob',sha:await GH.createBlob(next,'utf-8')});
+    changedFiles.push(filePath);
+    const section=Object.entries(SECTIONS).find(([,config])=>config.file===filePath);
+    if(section)sections.add(section[0]);
+    if(filePath==='data/projects.json'){
+      try{
+        const projects=JSON.parse(current.text);
+        if(Array.isArray(projects))projects.forEach(project=>{
+          if(!project||typeof project!=='object'||!valueReferencesMediaPath(project,oldPath,isFolder))return;
+          const id=String(project.id||slugify(project.title||''));
+          const title=String(project.title||id||'Untitled project');
+          if(id)projectIds.add(id);
+          if(title)projectTitles.add(title);
+        });
+      }catch(_){}
+    }
+  }
+  return {entries,changedFiles,sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
+}
+
+function recordMediaImpact(impact,oldPath,newPath){
+  lastMediaImpact={
+    sections:[...(impact.sections||[])],
+    projectIds:[...(impact.projectIds||[])],
+    projectTitles:[...(impact.projectTitles||[])],
+    changedFiles:[...(impact.changedFiles||[])],
+    oldPath,newPath
+  };
+  updateMediaImpactIndicators();
+}
+
 async function renameMediaFile(oldPath,onDone){
-  if(!oldPath || !oldPath.startsWith('assets/')){ toast('Only files inside the Media Library can be renamed.',true); return; }
+  if(!oldPath || !oldPath.startsWith('assets/')){toast('Only files inside the Media Library can be renamed.',true);return;}
   const oldName=oldPath.split('/').pop();
   const rawName=prompt('Rename file:',oldName);
   if(rawName===null)return;
@@ -4406,93 +4505,58 @@ async function renameMediaFile(oldPath,onDone){
   const source=tree.find(item=>item.type==='blob'&&item.path===oldPath);
   if(!source){toast('This file no longer exists in the current branch. Refresh and try again.',true);return;}
   if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){toast('A file or folder with that name already exists here.',true);return;}
+  const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,false);
   const entries=[
     {path:newPath,mode:source.mode==='100755'?'100755':'100644',type:'blob',sha:source.sha},
-    {path:oldPath,mode:'100644',type:'blob',sha:null}
+    {path:oldPath,mode:'100644',type:'blob',sha:null},
+    ...impact.entries
   ];
-  const changedReferenceFiles=[];
-  for(const filePath of MEDIA_REFERENCE_FILES){
-    try{
-      const current=await GH.getTextFile(filePath,parentSha);
-      if(!current.text.includes(oldPath))continue;
-      const next=current.text.split(oldPath).join(newPath);
-      if(next===current.text)continue;
-      const blob=await GH.createBlob(next,'utf-8');
-      entries.push({path:filePath,mode:'100644',type:'blob',sha:blob});
-      changedReferenceFiles.push(filePath);
-    }catch(err){
-      if(/was not found in the repository/i.test(err.message||''))continue;
-      throw err;
-    }
-  }
-  const note=changedReferenceFiles.length
-    ? 'References in '+changedReferenceFiles.length+' site/data file'+(changedReferenceFiles.length===1?'':'s')+' will also be updated.'
-    : 'No matching references were found in the configured site/data files.';
-  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”? '+note))return;
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact)))return;
   await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
   setMediaTreeCache(null);
-  ['about','heroLoop','footerLoop','hero','projects','reviews','settings','filters','curatedViews'].forEach(key=>{delete cache[key];});
-  toast('Renamed '+oldName+' to '+name+(changedReferenceFiles.length?' and updated '+changedReferenceFiles.length+' reference file'+(changedReferenceFiles.length===1?'s':''):'')+'.');
-  if(onDone)onDone(newPath);
+  Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
+  recordMediaImpact(impact,oldPath,newPath);
+  const refreshedTree=await loadMediaTree(true);
+  toast('Renamed '+oldName+' to '+name+(impact.changedFiles.length?' and updated '+impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s'):'')+'.');
+  if(onDone)await onDone(newPath,refreshedTree,impact);
 }
 
 async function renameMediaFolder(oldPath,onDone){
-  if(!oldPath || oldPath==='assets'){ toast('The Media Library root cannot be renamed.',true); return; }
+  if(!oldPath || oldPath==='assets'){toast('The Media Library root cannot be renamed.',true);return;}
   const oldName=oldPath.split('/').pop();
   const rawName=prompt('Rename folder:',oldName);
   if(rawName===null)return;
   const name=safeFolderName(rawName);
   if(!name){toast('Enter a valid folder name without folder separators.',true);return;}
   if(name===oldName)return;
-  const parent=oldPath.includes('/') ? oldPath.slice(0,oldPath.lastIndexOf('/')) : '';
+  const parent=oldPath.includes('/')?oldPath.slice(0,oldPath.lastIndexOf('/')):'';
   const newPath=joinRepoPath(parent,name);
-  if(newPath===oldPath) return;
-  // Use one immutable snapshot for the media tree and all reference files.
-  // If the branch advances while confirmation is open, the final non-forced
-  // ref update rejects the stale snapshot instead of overwriting newer data.
+  if(newPath===oldPath)return;
   const parentSha=await GH.getBranchHead();
-  if(!parentSha) throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
+  if(!parentSha)throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
   const tree=await GH.getTree(parentSha);
-  if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){ toast('That destination already exists.',true); return; }
+  if(tree.some(item=>item.path===newPath||item.path.startsWith(newPath+'/'))){toast('That destination already exists.',true);return;}
   const prefix=oldPath+'/';
-  const moving=tree.filter(item=>item.type==='blob' && item.path.startsWith(prefix));
-  if(!moving.length){ toast('That folder has no tracked files to move.',true); return; }
-
+  const moving=tree.filter(item=>item.type==='blob'&&item.path.startsWith(prefix));
+  if(!moving.length){toast('That folder has no tracked files to move.',true);return;}
+  const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,true);
   const entries=[];
   moving.forEach(item=>{
     const suffix=item.path.slice(prefix.length);
     entries.push({path:newPath+'/'+suffix,mode:item.mode==='100755'?'100755':'100644',type:'blob',sha:item.sha});
     entries.push({path:item.path,mode:'100644',type:'blob',sha:null});
   });
-
-  const changedReferenceFiles=[];
-  for(const filePath of MEDIA_REFERENCE_FILES){
-    try{
-      const current=await GH.getTextFile(filePath,parentSha);
-      if(!current.text.includes(oldPath)) continue;
-      const next=current.text.split(oldPath).join(newPath);
-      if(next===current.text) continue;
-      const blob=await GH.createBlob(next,'utf-8');
-      entries.push({path:filePath,mode:'100644',type:'blob',sha:blob});
-      changedReferenceFiles.push(filePath);
-    }catch(err){
-      if(/was not found in the repository/i.test(err.message||'')) continue;
-      throw err;
-    }
-  }
-
-  const referenceNote=changedReferenceFiles.length
-    ? 'References in '+changedReferenceFiles.length+' site/data file'+(changedReferenceFiles.length===1?'':'s')+' will be updated automatically in the same commit.'
-    : 'No existing site/data references to this folder were found.';
-  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”? '+referenceNote)) return;
-
-  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath} and update references`,parentSha);
+  entries.push(...impact.entries);
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact)))return;
+  await ghCommitTreeEntries(entries,'CMS: rename folder '+oldPath+' → '+newPath+' and update references',parentSha);
   setMediaTreeCache(null);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
-  ['about','heroLoop','footerLoop','hero','projects','reviews','settings','filters'].forEach(name=>{ delete cache[name]; });
-  toast('Renamed '+oldName+' to '+name+(changedReferenceFiles.length ? ' and updated '+changedReferenceFiles.length+' reference file'+(changedReferenceFiles.length===1?'':'s') : '')+'.');
-  if(onDone) onDone(newPath);
+  Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
+  recordMediaImpact(impact,oldPath,newPath);
+  const refreshedTree=await loadMediaTree(true);
+  toast('Renamed '+oldName+' to '+name+(impact.changedFiles.length?' and updated '+impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s'):'')+'.');
+  if(onDone)await onDone(newPath,refreshedTree,impact);
 }
 
 async function ghCommitTreeEntries(entries,message,parentSha){
@@ -4505,6 +4569,8 @@ async function ghCommitTreeEntries(entries,message,parentSha){
   const base=(await res.json()).tree.sha;
   const treeSha=await GH.createTree(base,entries);
   const commit=await GH.createCommit(message,treeSha,parentSha);
+  const currentHead=await GH.getBranchHead();
+  if(currentHead!==parentSha)throw new Error('The repository changed while preparing this media operation. Nothing was applied; refresh the Media Library and retry.');
   await GH.updateBranch(commit.sha);
   return commit;
 }
