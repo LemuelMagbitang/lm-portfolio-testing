@@ -4523,6 +4523,7 @@ async function renameMediaFile(oldPath,onDone){
   const source=tree.find(item=>item.type==='blob'&&item.path===oldPath);
   if(!source){toast('This file no longer exists in the current branch. Refresh and try again.',true);return;}
   if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){toast('A file or folder with that name already exists here.',true);return;}
+  toast('Checking where this file is used…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,false);
   const entries=[
     {path:newPath,mode:source.mode==='100755'?'100755':'100644',type:'blob',sha:source.sha},
@@ -4557,6 +4558,7 @@ async function renameMediaFolder(oldPath,onDone){
   const prefix=oldPath+'/';
   const moving=tree.filter(item=>item.type==='blob'&&item.path.startsWith(prefix));
   if(!moving.length){toast('That folder has no tracked files to move.',true);return;}
+  toast('Checking which projects and sections use this folder…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,true);
   const entries=[];
   moving.forEach(item=>{
@@ -5029,11 +5031,16 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
     });
     document.getElementById('btnRenameFolder').disabled = mediaCurrentPath==='assets';
     document.getElementById('btnRenameFolder').addEventListener('click', async () => {
-      try { await renameMediaFolder(mediaCurrentPath, async p => {
+      const button=document.getElementById('btnRenameFolder');
+      button.disabled=true;
+      try { await renameMediaFolder(mediaCurrentPath, async (p,nextTree) => {
           if(!isCurrent()) return;
+          tree=Array.isArray(nextTree)?nextTree:await loadMediaTree(true);
+          if(!isCurrent())return;
           mediaCurrentPath=p;
           paint();
         }); } catch(err){ toast(err.message,true); }
+      finally { if(button.isConnected)button.disabled=mediaCurrentPath==='assets'; }
     });
 
     document.getElementById('btnRefresh').addEventListener('click', async event => {
