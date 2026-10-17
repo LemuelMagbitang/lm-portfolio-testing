@@ -1089,7 +1089,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
   const saveContext = currentSave;
   const saveStartedVersion = renderVersion;
   const { onCollect, name, filePath } = saveContext;
-  const editRevisionAtStart={...editRevision};
+  const editRevisionAtStart=Object.fromEntries(Object.keys(SECTIONS).map(key=>[key,getEditRevision(key)]));
   const btn = document.getElementById('btnSaveTop');
   const orig = btn.innerHTML;
   btn.disabled = true;
