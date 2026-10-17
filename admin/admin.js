@@ -4509,6 +4509,28 @@ function valueReferencesMediaPath(value,oldPath,isFolder){
   return false;
 }
 
+// The destructive-delete audit is deliberately more conservative than Rename:
+// decode percent-encoded URL path bytes before checking, but never rewrite the
+// decoded text. This catches spaces, encoded separators, and mixed-case escapes.
+function decodeMediaPathEscapes(source){
+  return String(source||'').replace(/(?:%[0-9a-f]{2})+/gi,encoded=>{
+    try{return decodeURIComponent(encoded);}
+    catch(_){return encoded;}
+  });
+}
+function mediaSourceReferencesPath(source,oldPath,isFolder){
+  const value=String(source||'');
+  if(replaceMediaPathReferences(value,oldPath,'__MEDIA_PATH_MATCH__',isFolder)!==value)return true;
+  const decoded=decodeMediaPathEscapes(value);
+  return decoded!==value&&replaceMediaPathReferences(decoded,oldPath,'__MEDIA_PATH_MATCH__',isFolder)!==decoded;
+}
+function valueReferencesMediaPathForDeletion(value,oldPath,isFolder){
+  if(typeof value==='string')return mediaSourceReferencesPath(value,oldPath,isFolder);
+  if(Array.isArray(value))return value.some(item=>valueReferencesMediaPathForDeletion(item,oldPath,isFolder));
+  if(value&&typeof value==='object')return Object.values(value).some(item=>valueReferencesMediaPathForDeletion(item,oldPath,isFolder));
+  return false;
+}
+
 function updateMediaImpactIndicators(){
   const sectionSet=new Set(lastMediaImpact.sections||[]);
   document.querySelectorAll('.nav-item[data-section]').forEach(nav=>{
@@ -4553,7 +4575,9 @@ function mediaDeletionReferenceMessage(filePath, impact){
 
 async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder,scanOnly=false){
   const candidates=new Set(MEDIA_REFERENCE_FILES);
-  const referenceExtensions=/\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest)$/i;
+  const referenceExtensions=scanOnly
+    ? /\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest|md|mdx|txt|ya?ml|toml|ts|tsx|jsx|vue|svelte|astro|scss|sass|less|php|py|sh|ini|conf|csv)$/i
+    : /\.(?:html?|css|m?js|cjs|json|svg|xml|webmanifest)$/i;
   (tree||[]).forEach(item=>{
     const filePath=String(item?.path||'');
     if(item?.type!=='blob'||!referenceExtensions.test(filePath))return;
@@ -4579,6 +4603,10 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
   await Promise.all(Array.from({length:Math.min(8,paths.length)},()=>worker()));
   const matched=[];
   for(const record of files.filter(Boolean)){
+    if(scanOnly){
+      if(mediaSourceReferencesPath(record.current.text,oldPath,isFolder))matched.push({...record,next:record.current.text});
+      continue;
+    }
     const next=replaceMediaPathReferences(record.current.text,oldPath,newPath,isFolder);
     if(next!==record.current.text)matched.push({...record,next});
   }
@@ -4593,7 +4621,10 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
       try{
         const projects=JSON.parse(record.current.text);
         if(Array.isArray(projects))projects.forEach(project=>{
-          if(!project||typeof project!=='object'||!valueReferencesMediaPath(project,oldPath,isFolder))return;
+          const referencesMedia=scanOnly
+            ? valueReferencesMediaPathForDeletion(project,oldPath,isFolder)
+            : valueReferencesMediaPath(project,oldPath,isFolder);
+          if(!project||typeof project!=='object'||!referencesMedia)return;
           const id=String(project.id||slugify(project.title||''));
           const title=String(project.title||id||'Untitled project');
           if(id)projectIds.add(id);
@@ -4606,7 +4637,10 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
         const views=JSON.parse(record.current.text);
         if(Array.isArray(views))views.forEach(view=>{
           (Array.isArray(view?.projects)?view.projects:[]).forEach(entry=>{
-            if(entry?.source!=='curated'||!valueReferencesMediaPath(entry.project,oldPath,isFolder))return;
+            const referencesMedia=scanOnly
+              ? valueReferencesMediaPathForDeletion(entry.project,oldPath,isFolder)
+              : valueReferencesMediaPath(entry.project,oldPath,isFolder);
+            if(entry?.source!=='curated'||!referencesMedia)return;
             const title=String(entry.project?.title||entry.project?.id||'Untitled curated project');
             projectTitles.add(String(view?.name||view?.slug||'Curated View')+' / '+title);
           });
