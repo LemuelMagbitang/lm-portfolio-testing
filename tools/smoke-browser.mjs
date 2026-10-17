@@ -6703,7 +6703,17 @@ try {
           .locator('[data-folder-rename]');
         await folderRenameButton.waitFor({state:'visible',timeout:5000});
         await folderRenameButton.click();
-        await page.locator('#crumbs button').last().waitFor({state:'visible',timeout:8000});
+        try{
+          await page.waitForFunction(
+            () => document.querySelector('#crumbs button:last-child')?.textContent?.trim()==='renamed-folder',
+            null,
+            {timeout:10000}
+          );
+        }catch(error){
+          const currentCrumb=(await page.locator('#crumbs button').last().textContent().catch(()=>'' )).trim();
+          const operationStatus=(await page.locator('#mediaOperationStatus').textContent().catch(()=>'' )).trim();
+          throw new Error('CMS folder Rename did not navigate into the renamed folder. Current crumb: '+currentCrumb+'. Operation status: '+(operationStatus||'(no status message)')+'. '+error.message);
+        }
         const renamedFolderCrumb=(await page.locator('#crumbs button').last().textContent()).trim();
         if(renamedFolderCrumb!=='renamed-folder'){
           throw new Error('CMS folder Rename did not navigate into the renamed folder: '+renamedFolderCrumb);
