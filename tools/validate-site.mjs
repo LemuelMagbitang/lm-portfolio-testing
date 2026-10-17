@@ -744,6 +744,10 @@ function validateAdminConnectionSecurity() {
     ['CMS normalized asset deletion guard', /const safePath = normalizeCmsPath\(path\);[\s\S]*?safePath\.startsWith\('assets\/'\)/],
     ['CMS regular-file-only tree writes', /file\?\.mode !== undefined && file\.mode !== '100644'/],
     ['Media delete restriction', /CMS delete blocked: only media assets can be deleted/],
+    ['Media deletion scans references at the captured branch head', /prepareMediaReferenceUpdates\(item\.path,\s*'__MEDIA_PATH_AUDIT__',\s*parentSha,\s*snapshot,\s*false,\s*true\)/],
+    ['Referenced media deletion is blocked before commit', /if\s*\(impact\.changedFiles\.length\)\s*\{[\s\S]*?mediaDeletionReferenceMessage\(item\.path,impact\)[\s\S]*?return;/],
+    ['Media deletion scan-only mode avoids creating blobs', /const blobShas=scanOnly\?\[\]:await Promise\.all\(matched\.map\(record=>GH\.createBlob/],
+    ['Media deletion uses a guarded tree commit', /await ghCommitTreeEntries\(\[\{path:item\.path,mode:source\.mode\|\|'100644',type:'blob',sha:null\}\],[\s\S]*?parentSha\)/],
   ];
 
   required.forEach(([label, pattern]) => {
