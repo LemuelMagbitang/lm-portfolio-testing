@@ -5,7 +5,8 @@
     "subtitle": "Co-Founder & Chief Creative Officer",
     "badge": "UI/UX Design",
     "badges": [
-      "UI/UX Design"
+      "UI/UX Design",
+      "Brand Design"
     ],
     "filters": [
       "archive"
@@ -27,7 +28,7 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/haeru/haeru-logo-construct.jpg",
+        "src": "assets/projects/haeru/haeru-logo-construct.webp",
         "caption": "App Icon Vector Grid Architecture",
         "orientation": ""
       },
@@ -39,19 +40,19 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/haeru/00app-design.jpg",
+        "src": "assets/projects/haeru/00app-design.webp",
         "caption": "Screen flow and its components",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/haeru/01app-design.jpg",
+        "src": "assets/projects/haeru/01app-design.webp",
         "caption": "High-fidelity screen gallery mockup",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/haeru/app-lowfi-sketch.jpg",
+        "src": "assets/projects/haeru/app-lowfi-sketch.webp",
         "caption": "Low-fidelity screen sketch",
         "orientation": ""
       },
@@ -77,6 +78,12 @@
         "type": "image",
         "src": "assets/projects/haeru/web-design.webp",
         "caption": "Marketing Landing Page Design",
+        "orientation": ""
+      },
+      {
+        "type": "video",
+        "src": "assets/projects/haeru/haeru-web.mp4",
+        "caption": "",
         "orientation": ""
       },
       {
