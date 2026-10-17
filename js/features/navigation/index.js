@@ -50,7 +50,20 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     const reducedMotion = Boolean(
       windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
     );
-    if (reducedMotion) return Promise.resolve();
+    if (reducedMotion) {
+      // The selected colors should still reach one painted frame, even when
+      // motion is reduced. Two RAFs let the instantaneous selected state be
+      // painted before the menu closes without an animation delay.
+      return new Promise(resolve => {
+        if (typeof windowRef?.requestAnimationFrame === 'function') {
+          windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(resolve));
+        } else if (typeof windowRef?.setTimeout === 'function') {
+          windowRef.setTimeout(resolve, 0);
+        } else {
+          resolve();
+        }
+      });
+    }
 
     // Wait for both the selected-pill transform and its foreground/background
     // transitions. The menu must remain open until this selected state lands.

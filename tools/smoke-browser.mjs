@@ -544,13 +544,28 @@ async function assertPublicNavigation(page, { href, label }) {
   );
   await link.click();
   if ((viewport?.width || 0) < 768 && !reducedMotionBeforeSelection) {
+    // The selected-pill phase must finish while the menu is still open. Only
+    // after it settles should the parent menu begin its upward exit.
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('.nav-links');
+      const selected = menu?.querySelector('a.is-selected');
+      if (!menu?.classList.contains('active') ||
+          !menu.classList.contains('is-open') ||
+          menu.classList.contains('is-closing') ||
+          !selected ||
+          !getComputedStyle(selected).animationName.includes('nav-link-select')) return false;
+      const style = getComputedStyle(selected);
+      return style.backgroundColor === 'rgb(255, 255, 255)' &&
+        style.color === 'rgb(0, 0, 0)';
+    }, null, { timeout: 1500 });
+
     await page.waitForFunction(() => {
       const menu = document.querySelector('.nav-links');
       const selected = menu?.querySelector('a.is-selected');
       return menu?.classList.contains('is-closing') && selected &&
         getComputedStyle(menu).animationName.includes('nav-menu-exit') &&
         getComputedStyle(selected).animationName.includes('nav-link-select');
-    }, null, { timeout: 180 });
+    }, null, { timeout: 1500 });
   }
   await page.waitForFunction(destination => {
     return window.location.pathname === destination.pathname &&
