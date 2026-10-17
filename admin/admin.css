@@ -979,3 +979,9 @@ button.icon-btn,
   .media-full-preview-close{width:36px;height:36px;flex-basis:36px;}
   .media-full-preview-stage>img{padding:8px;}
 }
+
+
+/* Media-reference impact markers — separate from unsaved-change dots. */
+.media-impact-dot{display:inline-block;width:7px;height:7px;flex:0 0 7px;border-radius:50%;margin-left:8px;vertical-align:middle;background:#e3b65b;box-shadow:0 0 0 2px rgba(227,182,91,.12);}
+.nav-item .media-impact-dot{margin-left:auto;margin-right:4px;align-self:center;}
+.project-list-item .item-title .media-impact-dot{margin-left:8px;}
