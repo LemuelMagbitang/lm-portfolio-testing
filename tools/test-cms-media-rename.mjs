@@ -92,7 +92,17 @@ const context = {
   remapNestedPath: (value, from, to) => value === from || value.startsWith(from + '/')
     ? to + value.slice(from.length)
     : value,
-  toast: message => calls.toast.push(message)
+  toast: message => calls.toast.push(message),
+  document: {
+    getElementById: () => null,
+    querySelectorAll: () => []
+  },
+  SECTIONS: {
+    projects: { file: 'data/projects.json', label: 'Projects' },
+    curatedViews: { file: 'data/curated-views.json', label: 'Curated Views' },
+    footerLoop: { file: 'data/footer-loop.json', label: 'Footer Animation' }
+  },
+  slugify: value => String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 };
 const harness = vm.runInNewContext(source, context, { filename: 'cms-media-rename.js' });
 assert.ok(harness.MEDIA_REFERENCE_FILES.includes('data/curated-views.json'),

@@ -220,7 +220,7 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
       const conversion=await convertCmsUploadToWebP(job.file);
       let uploadFile=conversion.file;
       job.converted=conversion.converted;
-      const desiredName=conversion.converted?cmsWebPTargetName(job.originalName):job.originalName;
+      const desiredName=conversion.converted ? cmsWebPTargetName(job.originalName) : job.originalName;
       job.targetName=uniqueCmsUploadName(desiredName,reservedNames);
       reservedNames.add(job.targetName);
       if(uploadFile.name!==job.targetName){
@@ -286,7 +286,7 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
     // immediately so previews resolve to the new blob SHAs without a second
     // blocking tree request or a stale pre-upload view.
     stagedJobs.forEach(job=>{
-      const existingIndex=uploadTree.findIndex(item=>item.type==='blob'&&item.path===job.path);
+      const existingIndex = uploadTree.findIndex(item => item.type === 'blob' && item.path === job.path);
       const existing=existingIndex>=0?uploadTree[existingIndex]:null;
       const entry={path:job.path,type:'blob',sha:job.blobSha,mode:existing?.mode==='100755'?'100755':'100644'};
       if(existingIndex>=0)uploadTree[existingIndex]=entry;
@@ -4691,7 +4691,7 @@ async function renameMediaFile(oldPath,onDone){
   const entries=[...entryByPath.values()];
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
   setMediaOperationStatus('Committing rename and reference updates…');
-  await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
+  await ghCommitTreeEntries(entries,`CMS: rename file ${oldPath} → ${newPath} and update references`,parentSha);
   Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
   recordMediaImpact(impact,oldPath,newPath);
   const refreshedTree=await refreshMediaTreeAfterCommit(tree,entries);
@@ -4733,7 +4733,7 @@ async function renameMediaFolder(oldPath,onDone){
   const entries=[...entryByPath.values()];
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
   setMediaOperationStatus('Committing rename and reference updates…');
-  await ghCommitTreeEntries(entries,'CMS: rename folder '+oldPath+' → '+newPath+' and update references',parentSha);
+  await ghCommitTreeEntries(entries,`CMS: rename folder ${oldPath} → ${newPath} and update references`,parentSha);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
   Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
