@@ -4539,7 +4539,7 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
     if(next!==record.current.text)matched.push({...record,next});
   }
   const blobShas=await Promise.all(matched.map(record=>GH.createBlob(record.next,'utf-8')));
-  const sections=new Set(),projectIds=new Set(),projectTitles=new Set();
+  const sections=new Set(),projectIds=new Set(),projectTitles=new Set(),projectTitlesById=new Map();
   const sourceModes=new Map((tree||[]).filter(item=>item?.path).map(item=>[item.path,item.mode||'100644']));
   const entries=matched.map((record,index)=>{
     const filePath=record.filePath;
@@ -4554,6 +4554,7 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
           const title=String(project.title||id||'Untitled project');
           if(id)projectIds.add(id);
           if(title)projectTitles.add(title);
+          if(id&&title)projectTitlesById.set(id,title);
         });
       }catch(_){}
     }else if(filePath==='data/curated-views.json'){
@@ -4578,6 +4579,26 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
         : filePath;
     return {path:outputPath,mode:sourceModes.get(filePath)||'100644',type:'blob',sha:blobShas[index]};
   });
+  // Main Portfolio assets are also visible through any Curated View that
+  // references those project IDs. Mark those tabs even when their own JSON
+  // does not need a textual path replacement.
+  if(projectIds.size){
+    const curatedRecord=files.find(record=>record?.filePath==='data/curated-views.json');
+    if(curatedRecord){
+      try{
+        const views=JSON.parse(curatedRecord.current.text);
+        if(Array.isArray(views))views.forEach(view=>{
+          (Array.isArray(view?.projects)?view.projects:[]).forEach(entry=>{
+            if(entry?.source!=='main')return;
+            const id=String(entry.projectId||'');
+            if(!projectIds.has(id))return;
+            sections.add('curatedViews');
+            projectTitles.add(String(view?.name||view?.slug||'Curated View')+' → '+(projectTitlesById.get(id)||id));
+          });
+        });
+      }catch(_){}
+    }
+  }
   return {entries,changedFiles:matched.map(record=>record.filePath),sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
 }
 
