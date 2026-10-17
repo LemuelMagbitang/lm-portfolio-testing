@@ -4395,7 +4395,7 @@ async function renameMediaFile(oldPath,onDone){
   if(rawName===null)return;
   const name=String(rawName).trim();
   if(!name || name===oldName)return;
-  if(name.includes('/') || name.includes('\\\\') || /[\\u0000-\\u001f]/.test(name) || name==='.' || name==='..' || name.length>180){
+  if(name.includes('/') || name.includes(String.fromCharCode(92)) || Array.from(name).some(ch=>ch.charCodeAt(0)<32) || name==='.' || name==='..' || name.length>180){
     toast('Enter a valid file name without folder separators.',true);return;
   }
   const parent=oldPath.slice(0,oldPath.lastIndexOf('/'));
