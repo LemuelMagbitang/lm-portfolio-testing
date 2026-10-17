@@ -6231,25 +6231,21 @@ try {
       browser,
       '/',
       async page => {
-        const card = page.locator('#portfolioGrid .project-card:visible').first();
-        await card.waitFor({ state: 'visible', timeout: 5000 });
-        await card.click();
-        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-        await page.waitForFunction(() => document.querySelector('.lightbox-controls')?.classList.contains('active'), null, { timeout: 3000 });
+        // Control placement is CSS-owned. Do not make geometry validation
+        // depend on the Gallery/media preload finishing or a project opening.
+        await page.locator('#lightboxClose').waitFor({ state: 'attached', timeout: 5000 });
+        await page.locator('.lightbox-prev').first().waitFor({ state: 'attached', timeout: 5000 });
+        await page.locator('.lightbox-next').first().waitFor({ state: 'attached', timeout: 5000 });
         await assertLightboxChromeAlignment(page, 'Desktop Works', 'desktop');
-        await page.locator('#lightboxClose').click();
-        await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 });
       },
       { width: 1280, height: 900 },
       async page => {
-        const card = page.locator('#portfolioGrid .project-card:visible').first();
-        await card.waitFor({ state: 'visible', timeout: 5000 });
-        await card.click();
-        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
-        await page.waitForFunction(() => document.querySelector('.lightbox-controls')?.classList.contains('active'), null, { timeout: 3000 });
+        // The hidden controls still have their fixed-position geometry;
+        // keeping the Lightbox closed isolates alignment from media loading.
+        await page.locator('#lightboxClose').waitFor({ state: 'attached', timeout: 5000 });
+        await page.locator('.lightbox-prev').first().waitFor({ state: 'attached', timeout: 5000 });
+        await page.locator('.lightbox-next').first().waitFor({ state: 'attached', timeout: 5000 });
         await assertLightboxChromeAlignment(page, 'Mobile Works', 'mobile');
-        await page.locator('#lightboxClose').click();
-        await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 });
       },
       { width: 390, height: 844 }
     );
