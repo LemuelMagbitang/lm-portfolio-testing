@@ -632,19 +632,19 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/aol/figureground.jpg",
+        "src": "assets/projects/aol/figureground.webp",
         "caption": "",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/aol/continuity.jpg",
+        "src": "assets/projects/aol/continuity.webp",
         "caption": "",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/aol/combination.jpg",
+        "src": "assets/projects/aol/combination.webp",
         "caption": "",
         "orientation": ""
       },
