@@ -5250,16 +5250,29 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       });
       tile.querySelector('[data-del]').addEventListener('click', async event => {
         const button=event.currentTarget;
+        const deletedName=item.path.split('/').pop() || item.path;
         if (!confirm(`Delete "${item.path}"? This removes the file from the current branch but does not update project or CMS references. If it's still in use, media may break. Renaming is the reference-aware operation. The deleted file remains in Git history.\n\nContinue?`)) return;
         button.disabled=true;
         try {
           await GH.deleteFile(item.path, item.sha, `CMS: delete ${item.path}`);
-          toast(`Deleted ${item.path.split('/').pop() || item.path}.`);
+        } catch(err) {
+          toast(err.message, true);
+          if(button.isConnected)button.disabled=false;
+          return;
+        }
+        toast(`Deleted ${deletedName}.`);
+        try {
           tree = await loadMediaTree(true);
           if(!isCurrent()) return;
           paint();
-        } catch(err){ toast(err.message, true); }
-        finally { if(button.isConnected)button.disabled=false; }
+        } catch(refreshError) {
+          if(!isCurrent()) return;
+          const message=`Deleted ${deletedName}, but the Media Library could not refresh. Use Refresh to reconcile with GitHub. ${refreshError?.message || ''}`;
+          setMediaOperationStatus(message,true);
+          toast('File deleted, but refresh failed. Use Refresh.',true);
+        } finally {
+          if(button.isConnected)button.disabled=false;
+        }
       });
       grid.appendChild(tile);
     });
