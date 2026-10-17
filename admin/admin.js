@@ -4631,11 +4631,11 @@ async function renameMediaFile(oldPath,onDone){
   toast('Checking where this file is used…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,false);
   const entries=[
-    {path:newPath,mode:source.mode==='100755'?'100755':'100644',type:'blob',sha:source.sha},
+    {path:newPath,mode:source.mode||'100644',type:'blob',sha:source.sha},
     {path:oldPath,mode:'100644',type:'blob',sha:null},
     ...impact.entries
   ];
-  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
   setMediaOperationStatus('Committing rename and reference updates…');
   await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
   Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
@@ -4671,11 +4671,11 @@ async function renameMediaFolder(oldPath,onDone){
   const entries=[];
   moving.forEach(item=>{
     const suffix=item.path.slice(prefix.length);
-    entries.push({path:newPath+'/'+suffix,mode:item.mode==='100755'?'100755':'100644',type:'blob',sha:item.sha});
+    entries.push({path:newPath+'/'+suffix,mode:item.mode||'100644',type:'blob',sha:item.sha});
     entries.push({path:item.path,mode:'100644',type:'blob',sha:null});
   });
   entries.push(...impact.entries);
-  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
+  if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
   setMediaOperationStatus('Committing rename and reference updates…');
   await ghCommitTreeEntries(entries,'CMS: rename folder '+oldPath+' → '+newPath+' and update references',parentSha);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
