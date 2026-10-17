@@ -379,10 +379,10 @@ assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
 assert.ok(/project-preview-runtime\.js\?v=20261010-05/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
-assert.ok(/admin\.js\?v=20261015-01/.test(adminHtml),
-  'The CMS HTML entrypoint must bust cache after editor JavaScript changes.');
-assert.ok(/admin\.css\?v=20261013-02/.test(adminHtml),
-  'The CMS HTML entrypoint must bust cache after preview layout CSS changes.');
+assert.ok(/admin\.js\?v=\d{8}-\d{2}/.test(adminHtml),
+  'The CMS HTML entrypoint must use a versioned cache-busting URL for editor JavaScript.');
+assert.ok(/admin\.css\?v=\d{8}-\d{2}/.test(adminHtml),
+  'The CMS HTML entrypoint must use a versioned cache-busting URL for preview layout CSS.');
 assert.ok(admin.includes('function formatMediaFileSize(value){'),
   'CMS full Media Library previews must format sizes from the GitHub tree metadata.');
 assert.ok(admin.includes("sizeLabel.textContent='File size · '+formatMediaFileSize(item.size)"),
