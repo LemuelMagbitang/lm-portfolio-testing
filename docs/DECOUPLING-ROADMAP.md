@@ -715,3 +715,12 @@ This migration must not:
 - The follow-up CI failure was not a runtime or form-autocomplete failure: `validate-site.mjs` passed, and the Pages deployment check passed. Architecture validation uses explicit canonical cache keys for nested modules and separate test harnesses, which had not been advanced alongside the Lightbox source imports.
 - Updated the architecture validator's Lightbox entry/media-renderer expectations to `20261016-09`/`20261016-04`, and aligned `tools/validate-project-runtime.mjs` with the same Lightbox entry key. Both the architecture validator and all remaining contract/syntax checks passed on the next completed run.
 - **Next:** continue with fresh-session testing of the published testing site, especially desktop first-load 3D and the YouTube iframe warning. Keep production and `main` untouched.
+
+
+### October 17, 2026 — Phase 3D navbar-anchored Lightbox controls
+
+- The public navbar remains transparent with direct Designs, About Me, and Contacts pills; this iteration leaves its accepted styling and menu behavior unchanged.
+- Added a shared Lightbox edge token based on the page gutter and the current 1400px container. On desktop, the close circle matches the 42px navbar-pill height and aligns with the right edge of the last link; previous/next mirror the navbar's left/right page edges. This follows the rightmost link, not a hard-coded count of three links.
+- On mobile, the 52px close target is centered in both axes over the 38px hamburger; previous/next controls now use the same horizontal page-edge anchors and 52px square hit targets.
+- Added browser-smoke assertions at 1280×900 and 390×844 to protect the control geometry. The Lightbox feature stylesheet cache identity is bumped to `20261017-01`.
+- **Verification gate:** run the full validation/browser-smoke workflow and Pages build/deployment on this commit. Then visually confirm at desktop, narrow tablet, and a physical phone, including safe-area behavior and arrow reachability. Do not promote to `main` or the deployed production repository.

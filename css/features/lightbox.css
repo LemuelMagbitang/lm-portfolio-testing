@@ -72,3 +72,53 @@
   .lightbox-inspect-footer .lightbox-holographic-hint{margin-bottom:5px;font-size:8px;}
   .lightbox-inspect-footer .lightbox-inspect-description{font-size:12px;}
 }
+
+
+/* Phase 3D — align Lightbox chrome to the public navbar's page grid.
+   --lm-container-max is currently 1400px, so 700px is its half-width.
+   Keeping the edge rule here avoids tying alignment to a fixed link count:
+   the right anchor always follows the last navbar pill's outer edge. */
+:root{
+  --lm-lightbox-control-edge: max(
+    var(--lm-page-gutter, 24px),
+    calc(50vw - 700px + var(--lm-page-gutter, 24px))
+  );
+}
+
+/* Desktop: the close control matches the navbar pill's 42px height.
+   Both arrows mirror the same left/right page edges. */
+@media (min-width:768px){
+  .lightbox-close{
+    top:15px;
+    right:var(--lm-lightbox-control-edge);
+    width:42px;
+    height:42px;
+    font-size:1.7rem;
+  }
+  .lightbox-close::before{inset:0;}
+  .lightbox-nav{
+    width:42px;
+    height:42px;
+  }
+  .lightbox-prev{left:var(--lm-lightbox-control-edge);right:auto;}
+  .lightbox-next{right:var(--lm-lightbox-control-edge);left:auto;}
+}
+
+/* Mobile: preserve a 52px close hit target and center it on the 38px
+   hamburger in both axes. The arrows use the same page-edge margins. */
+@media (max-width:767px){
+  .lightbox-close{
+    top:8px;
+    right:calc(var(--lm-lightbox-control-edge) - 7px);
+    width:52px;
+    height:52px;
+    font-size:2.35rem;
+  }
+  .lightbox-close::before{inset:3px;}
+  .lightbox-nav{
+    width:52px;
+    height:52px;
+  }
+  .lightbox-prev{left:var(--lm-lightbox-control-edge);right:auto;}
+  .lightbox-next{right:var(--lm-lightbox-control-edge);left:auto;}
+}

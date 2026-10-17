@@ -181,6 +181,84 @@ async function waitForContactViewportAlignment(page, timeoutMs = 5000) {
   }
 }
 
+async function assertLightboxChromeAlignment(page, label, mode) {
+  const geometry = await page.evaluate(() => {
+    const read = selector => {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2
+      };
+    };
+    return {
+      viewportWidth: window.innerWidth,
+      logo: read('.nav-logo'),
+      lastPill: read('.nav-links > li:last-child > a'),
+      hamburger: read('.hamburger'),
+      close: read('#lightboxClose'),
+      previous: read('.lightbox-prev'),
+      next: read('.lightbox-next')
+    };
+  });
+  const near = (a, b, tolerance = 1.5) =>
+    Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tolerance;
+
+  if (!geometry.close || !geometry.previous || !geometry.next || !geometry.logo) {
+    throw new Error(label + ' Lightbox/navbar geometry fixture is incomplete: ' + JSON.stringify(geometry));
+  }
+
+  if (mode === 'desktop') {
+    if (geometry.viewportWidth < 768 || !geometry.lastPill) {
+      throw new Error(label + ' desktop alignment ran outside the desktop navigation layout: ' + JSON.stringify(geometry));
+    }
+    if (
+      !near(geometry.close.right, geometry.lastPill.right) ||
+      !near(geometry.close.top, geometry.lastPill.top) ||
+      !near(geometry.close.height, geometry.lastPill.height) ||
+      !near(geometry.close.width, 42) ||
+      !near(geometry.close.height, 42) ||
+      !near(geometry.next.right, geometry.lastPill.right) ||
+      !near(geometry.previous.left, geometry.logo.left) ||
+      !near(geometry.previous.width, 42) ||
+      !near(geometry.next.width, 42)
+    ) {
+      throw new Error(label + ' desktop Lightbox controls are not aligned to navbar pill/page edges: ' + JSON.stringify(geometry));
+    }
+    return;
+  }
+
+  if (mode === 'mobile') {
+    if (geometry.viewportWidth >= 768 || !geometry.hamburger) {
+      throw new Error(label + ' mobile alignment ran outside the hamburger navigation layout: ' + JSON.stringify(geometry));
+    }
+    if (
+      !near(geometry.close.centerX, geometry.hamburger.centerX) ||
+      !near(geometry.close.centerY, geometry.hamburger.centerY) ||
+      !near(geometry.previous.left, geometry.logo.left) ||
+      !near(geometry.next.right, geometry.hamburger.right) ||
+      !near(geometry.close.width, 52) ||
+      !near(geometry.close.height, 52) ||
+      !near(geometry.previous.width, 52) ||
+      !near(geometry.next.width, 52) ||
+      !near(geometry.previous.height, 52) ||
+      !near(geometry.next.height, 52)
+    ) {
+      throw new Error(label + ' mobile Lightbox controls are not aligned to the hamburger/page edges: ' + JSON.stringify(geometry));
+    }
+    return;
+  }
+
+  throw new Error('Unknown Lightbox alignment mode: ' + mode);
+}
+
 async function assertPublicNavigation(page, { href, label }) {
   const link = page.locator('.nav-links a[href="' + href + '"]').first();
   if (await link.count() !== 1) {
@@ -6149,6 +6227,33 @@ try {
     let cmsSmokeJpegUploadPayload = null;
     let cmsSmokeJpegUploadPath = '';
     let cmsSmokeProjectsUploadPayload = null;
+    await smokePage(
+      browser,
+      '/',
+      async page => {
+        const card = page.locator('#portfolioGrid .project-card:visible').first();
+        await card.waitFor({ state: 'visible', timeout: 5000 });
+        await card.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+        await page.waitForFunction(() => document.querySelector('.lightbox-controls')?.classList.contains('active'), null, { timeout: 3000 });
+        await assertLightboxChromeAlignment(page, 'Desktop Works', 'desktop');
+        await page.locator('#lightboxClose').click();
+        await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 });
+      },
+      { width: 1280, height: 900 },
+      async page => {
+        const card = page.locator('#portfolioGrid .project-card:visible').first();
+        await card.waitFor({ state: 'visible', timeout: 5000 });
+        await card.click();
+        await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+        await page.waitForFunction(() => document.querySelector('.lightbox-controls')?.classList.contains('active'), null, { timeout: 3000 });
+        await assertLightboxChromeAlignment(page, 'Mobile Works', 'mobile');
+        await page.locator('#lightboxClose').click();
+        await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 3000 });
+      },
+      { width: 390, height: 844 }
+    );
+
     await smokePage(browser, '/admin/', async page => {
       // CMS boot is asynchronous because the connection is validated against
       // GitHub before the application shell is exposed. The shell becomes
