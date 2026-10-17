@@ -193,7 +193,7 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
 
   const reservedNames=new Set();
   const jobs=files.map(file=>{
-    const isPreviewable=/^image\\/|^video\\//.test(file.type)||cmsUploadNeedsWebP(file);
+    const isPreviewable=/^image\/|^video\//.test(file.type)||cmsUploadNeedsWebP(file);
     const localUrl=isPreviewable?URL.createObjectURL(file):null;
     const tile=document.createElement('div');
     tile.className='media-tile is-uploading';
@@ -4489,7 +4489,7 @@ function mediaImpactSummary(impact){
 async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
   const candidates=new Set(MEDIA_REFERENCE_FILES);
   (tree||[]).forEach(item=>{
-    if(item?.type==='blob' && /^data\\/.*\\.json$/i.test(item.path||''))candidates.add(item.path);
+    if(item?.type==='blob' && String(item.path||'').startsWith('data/') && String(item.path||'').toLowerCase().endsWith('.json'))candidates.add(item.path);
   });
   // Read the candidates from one immutable commit in parallel. The old loop
   // awaited every GitHub Contents request sequentially, making Rename look
