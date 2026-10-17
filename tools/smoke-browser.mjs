@@ -7426,6 +7426,27 @@ try {
           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content, sha: `smoke-${filename}-sha` }) });
           return;
         }
+        // The Media Library reference scanner reads tracked text candidates
+        // beyond the explicit fixtures above. Return empty tracked text files
+        // for unmodeled Contents GETs so expected scan coverage does not flood
+        // the browser console with fixture-only 404 responses. Public-site
+        // local assets and all explicit CMS data fixtures remain separately checked.
+        if(url.pathname.startsWith('/repos/Smoke/TestRepo/contents/') && route.request().method()==='GET'){
+          const relativePath=decodeURIComponent(url.pathname.split('/contents/')[1]||'');
+          await route.fulfill({
+            status:200,
+            contentType:'application/json',
+            body:JSON.stringify({
+              type:'file',
+              name:relativePath.split('/').pop()||'fixture.txt',
+              path:relativePath,
+              sha:'smoke-empty-reference-'+relativePath.replace(/[^A-Za-z0-9]+/g,'-'),
+              encoding:'base64',
+              content:''
+            })
+          });
+          return;
+        }
         await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Not found' }) });
       });
     });
