@@ -170,57 +170,59 @@ function uniqueCmsUploadName(name, usedNames){
   return candidate;
 }
 
-async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
-  const files = Array.from(fileList || []);
-  if (!files.length) return;
-  if (!gridEl) throw new Error('Media Library upload target is no longer available.');
-  // Always use a fresh branch tree so an old selection or another CMS tab
-  // cannot make a same-name upload attempt a replacement with a stale SHA.
-  let uploadTree;
-  try { uploadTree = (await loadMediaTree(true) || []).slice(); }
-  catch(err){ toast("Couldn't refresh the Media Library before upload: " + err.message, true); return; }
-  const emptyBanner = gridEl.querySelector('.banner.muted');
-  if (emptyBanner) emptyBanner.remove();
+async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
+  const files=Array.from(fileList||[]);
+  if(!files.length)return;
+  if(!gridEl)throw new Error('Media Library upload target is no longer available.');
 
-  // Resolve collision-safe names after the optional conversion decision.
-  // Multiple JPEGs can normalize to the same WebP name; failed conversions
-  // retain their original extensions and must not be relabeled as WebP.
+  // Stage all selected files against one exact branch snapshot. Nothing is
+  // committed until every readable file has been converted (if beneficial)
+  // and uploaded as a Git blob, so one multi-file batch produces one commit.
+  let uploadParentSha,uploadTree;
+  try{
+    uploadParentSha=await GH.getBranchHead();
+    if(!uploadParentSha)throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
+    uploadTree=(await GH.getTree(uploadParentSha)||[]).slice();
+    setMediaTreeCache(uploadTree);
+  }catch(err){
+    toast("Couldn't refresh the Media Library before upload: "+err.message,true);
+    return;
+  }
+  const emptyBanner=gridEl.querySelector('.banner.muted');
+  if(emptyBanner)emptyBanner.remove();
+
   const reservedNames=new Set();
-  const jobs = files.map(file => {
-    const targetName=file.name;
-    const path = folder + '/' + targetName;
-    const isPreviewable = /^image\/|^video\//.test(file.type) || cmsUploadNeedsWebP(file);
-    const localUrl = isPreviewable ? URL.createObjectURL(file) : null;
-    const tile = document.createElement('div');
-    tile.className = 'media-tile is-uploading';
-    const thumbInner = !localUrl ? FILE_ICON_SVG
-      : file.type.startsWith('video/') ? '<video src="' + localUrl + '" muted></video>'
-      : '<img src="' + localUrl + '">';
-    tile.innerHTML =
-      '<div class="thumb">' + thumbInner + '<div class="upload-overlay"><i class="fa-solid fa-circle-notch spin"></i></div></div>' +
-      '<div class="meta"><div class="fname">' + esc(file.name) + '</div></div>' +
-      '<div class="upload-status">Uploading…</div>';
+  const jobs=files.map(file=>{
+    const isPreviewable=/^image\\/|^video\\//.test(file.type)||cmsUploadNeedsWebP(file);
+    const localUrl=isPreviewable?URL.createObjectURL(file):null;
+    const tile=document.createElement('div');
+    tile.className='media-tile is-uploading';
+    const thumbInner=!localUrl?FILE_ICON_SVG
+      :file.type.startsWith('video/')?'<video src="'+localUrl+'" muted></video>'
+      :'<img src="'+localUrl+'">';
+    tile.innerHTML=
+      '<div class="thumb">'+thumbInner+'<div class="upload-overlay"><i class="fa-solid fa-circle-notch spin"></i></div></div>'+
+      '<div class="meta"><div class="fname">'+esc(file.name)+'</div></div>'+
+      '<div class="upload-status">Preparing…</div>';
     gridEl.prepend(tile);
-    return { file, originalName:file.name, targetName, path, tile, localUrl, converted:false };
+    return {file,originalName:file.name,targetName:file.name,path:folder+'/'+file.name,tile,localUrl,converted:false,blobSha:null,staged:false};
   });
+  const stagedJobs=[];
+  const entries=[];
+  toast('Preparing '+jobs.length+' file'+(jobs.length===1?'':'s')+' for one commit…');
 
-  for (const job of jobs) {
-    try {
+  for(const job of jobs){
+    try{
       if(cmsUploadNeedsWebP(job.file)){
         const status=job.tile.querySelector('.upload-status');
-        if(status)status.textContent='Converting to WebP…';
+        if(status)status.textContent='Optimizing image…';
       }
       const conversion=await convertCmsUploadToWebP(job.file);
       let uploadFile=conversion.file;
       job.converted=conversion.converted;
-      // Select the destination from the actual conversion result. A failed or
-      // unprofitable conversion must keep the original JPEG name as well as bytes.
-      const desiredName=conversion.converted
-        ? cmsWebPTargetName(job.originalName)
-        : job.originalName;
+      const desiredName=conversion.converted?cmsWebPTargetName(job.originalName):job.originalName;
       job.targetName=uniqueCmsUploadName(desiredName,reservedNames);
       reservedNames.add(job.targetName);
-      // Apply any batch collision suffix without changing the resulting MIME.
       if(uploadFile.name!==job.targetName){
         uploadFile=new File([uploadFile],job.targetName,{
           type:uploadFile.type||job.file.type,
@@ -229,7 +231,6 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
       }
       job.file=uploadFile;
       job.path=folder+'/'+job.targetName;
-
       const filename=job.tile.querySelector('.fname');
       if(filename)filename.textContent=job.targetName;
       if(job.converted){
@@ -238,46 +239,77 @@ async function uploadFilesToFolder(fileList, folder, gridEl, currentTree){
         const thumbnail=job.tile.querySelector('.thumb img');
         if(thumbnail)thumbnail.src=job.localUrl;
       }
-      const uploadStatus=job.tile.querySelector('.upload-status');
-      if(uploadStatus)uploadStatus.textContent='Uploading…';
-
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(reader.error || new Error('Could not read the selected file.'));
+      const status=job.tile.querySelector('.upload-status');
+      if(status)status.textContent='Staging for commit…';
+      const dataUrl=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(reader.result);
+        reader.onerror=()=>reject(reader.error||new Error('Could not read the selected file.'));
         reader.readAsDataURL(job.file);
       });
-      // The Contents API requires the current SHA when replacing a path.
-      // Update our fresh tree after each upload, including batches containing
-      // duplicate names, so later uploads use the latest replacement SHA.
-      const existingIndex = uploadTree.findIndex(item => item.type === 'blob' && item.path === job.path);
-      const existing = existingIndex >= 0 ? uploadTree[existingIndex] : null;
-      const result = await GH.uploadBinary(job.path, dataUrl, 'CMS: upload ' + job.path, existing?.sha || null);
-      const newSha = result?.content?.sha || '';
-      if (existingIndex >= 0) uploadTree[existingIndex] = { ...existing, sha: newSha || existing.sha };
-      else uploadTree.push({ path: job.path, type: 'blob', sha: newSha, mode: '100644' });
-      setMediaTreeCache(uploadTree);
-
-      job.tile.classList.remove('is-uploading');
-      job.tile.classList.add('is-done');
-      const overlay = job.tile.querySelector('.upload-overlay');
-      if (overlay) overlay.remove();
-      const status = job.tile.querySelector('.upload-status');
-      if (status) status.remove();
-      toast(job.converted
-        ? 'Converted ' + job.originalName + ' to ' + job.file.name + ' and uploaded.'
-        : 'Uploaded ' + job.file.name + '.');
-    } catch(err){
+      if(typeof dataUrl!=='string'||!dataUrl.includes(','))throw new Error('Could not encode this file for upload.');
+      const base64=dataUrl.slice(dataUrl.indexOf(',')+1);
+      if(!base64)throw new Error('This file produced an empty upload payload.');
+      job.blobSha=await GH.createBlob(base64,'base64');
+      job.staged=true;
+      entries.push({
+        path:job.path,
+        mode:'100644',
+        type:'blob',
+        sha:job.blobSha
+      });
+      stagedJobs.push(job);
+      if(status)status.textContent='Ready to save…';
+    }catch(err){
       job.tile.classList.remove('is-uploading');
       job.tile.classList.add('is-error');
-      const overlay = job.tile.querySelector('.upload-overlay');
-      if (overlay) overlay.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#ff8f87"></i>';
-      const status = job.tile.querySelector('.upload-status');
-      if (status) status.textContent = 'Failed — ' + err.message;
-      toast(job.originalName + ': ' + err.message, true);
-    } finally {
-      if (job.localUrl) URL.revokeObjectURL(job.localUrl);
+      const overlay=job.tile.querySelector('.upload-overlay');
+      if(overlay)overlay.innerHTML='<i class="fa-solid fa-triangle-exclamation" style="color:#ff8f87"></i>';
+      const status=job.tile.querySelector('.upload-status');
+      if(status)status.textContent='Failed — '+(err?.message||'Could not stage this file.');
+      toast(job.originalName+': '+(err?.message||'Could not stage this file.'),true);
+    }finally{
+      if(job.localUrl){URL.revokeObjectURL(job.localUrl);job.localUrl=null;}
     }
+  }
+
+  if(!entries.length)return;
+  try{
+    const latestHead=await GH.getBranchHead();
+    if(latestHead!==uploadParentSha)throw new Error('The repository changed while files were being prepared. No upload was committed; refresh the Media Library and retry.');
+    await ghCommitTreeEntries(
+      entries,
+      'CMS: upload '+stagedJobs.length+' media file'+(stagedJobs.length===1?'':'s')+' to '+folder,
+      uploadParentSha
+    );
+    // The new tree differs only at these uploaded paths. Update the local tree
+    // immediately so previews resolve to the new blob SHAs without a second
+    // blocking tree request or a stale pre-upload view.
+    stagedJobs.forEach(job=>{
+      const existingIndex=uploadTree.findIndex(item=>item.type==='blob'&&item.path===job.path);
+      const existing=existingIndex>=0?uploadTree[existingIndex]:null;
+      const entry={path:job.path,type:'blob',sha:job.blobSha,mode:existing?.mode==='100755'?'100755':'100644'};
+      if(existingIndex>=0)uploadTree[existingIndex]=entry;
+      else uploadTree.push(entry);
+    });
+    setMediaTreeCache(uploadTree);
+    stagedJobs.forEach(job=>{
+      job.tile.classList.remove('is-uploading');
+      job.tile.classList.add('is-done');
+      job.tile.querySelector('.upload-overlay')?.remove();
+      job.tile.querySelector('.upload-status')?.remove();
+    });
+    toast('Uploaded '+stagedJobs.length+' file'+(stagedJobs.length===1?'':'s')+' in one GitHub commit.');
+  }catch(err){
+    stagedJobs.forEach(job=>{
+      job.tile.classList.remove('is-uploading');
+      job.tile.classList.add('is-error');
+      const overlay=job.tile.querySelector('.upload-overlay');
+      if(overlay)overlay.innerHTML='<i class="fa-solid fa-triangle-exclamation" style="color:#ff8f87"></i>';
+      const status=job.tile.querySelector('.upload-status');
+      if(status)status.textContent='Commit failed — '+(err?.message||'Could not publish this batch.');
+    });
+    toast('Upload batch was not committed: '+(err?.message||'Unknown GitHub error.'),true);
   }
 }
 
