@@ -778,13 +778,13 @@
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/graphic-design/bakeries-poster.jpg",
+        "src": "assets/projects/graphic-design/bakeries-poster.webp",
         "caption": "Local Bakery Commercial Poster",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/graphic-design/commercial-renders.jpg",
+        "src": "assets/projects/graphic-design/commercial-renders.webp",
         "caption": "Social Media Promotional Assets",
         "orientation": ""
       },
@@ -808,14 +808,20 @@
       },
       {
         "type": "image",
-        "src": "assets/projects/graphic-design/watch-poster.jpg",
+        "src": "assets/projects/graphic-design/watch-poster.webp",
         "caption": "Casio Commercial Product Poster",
         "orientation": ""
       },
       {
         "type": "image",
-        "src": "assets/projects/graphic-design/wine-poster.jpg",
+        "src": "assets/projects/graphic-design/wine-poster.webp",
         "caption": "Premium Wine Brand Advertisement",
+        "orientation": ""
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/graphic-design/concept-cover.webp",
+        "caption": "Star Wars Commercial Toy Key Visual",
         "orientation": ""
       }
     ]
