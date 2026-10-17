@@ -300,6 +300,10 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
         if(preview.tagName==='VIDEO')preview.load();
       }
       if(job.localUrl){URL.revokeObjectURL(job.localUrl);job.localUrl=null;}
+      // The temporary upload tile has no full-preview/action bindings. Keep it
+      // non-interactive until the owning renderer replaces it with a real tile.
+      job.tile.style.pointerEvents='none';
+      job.tile.setAttribute('aria-disabled','true');
       job.tile.classList.remove('is-uploading');
       job.tile.classList.add('is-done');
       job.tile.querySelector('.upload-overlay')?.remove();

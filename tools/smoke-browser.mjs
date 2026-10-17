@@ -6537,7 +6537,10 @@ try {
       });
       await page.waitForFunction(() => {
         const image = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'))
-          .find(node => node.closest('.media-tile')?.textContent?.includes('smoke.png'));
+          .find(node => {
+            const tile=node.closest('.media-tile');
+            return tile?.textContent?.includes('smoke.png') && tile.querySelector('[data-copy]') && tile.querySelector('[data-del]');
+          });
         return image && new URL(image.src).searchParams.get('v') === 'smoke-png-re';
       }, null, { timeout: 8000 });
       if (!cmsSmokePngUploadPayload || cmsSmokePngUploadPayload.sha !== 'smoke-png-existing') {
@@ -6582,10 +6585,12 @@ try {
       await page.waitForFunction(() => {
         const tiles = Array.from(document.querySelectorAll('#content #mediaGrid .media-tile img'));
         return tiles.some(image => {
-          const name = image.closest('.media-tile')?.textContent || '';
-          const version = new URL(image.src).searchParams.get('v');
-          return (name.includes('smoke-jpeg.webp') && version === 'smoke-jpeg-r') ||
-            (name.includes('smoke-jpeg.jpg') && version === 'smoke-jpg-re');
+          const tile=image.closest('.media-tile');
+          const name=tile?.textContent||'';
+          const version=new URL(image.src).searchParams.get('v');
+          if(!tile?.querySelector('[data-copy]')||!tile.querySelector('[data-del]'))return false;
+          return (name.includes('smoke-jpeg.webp')&&version==='smoke-jpeg-r') ||
+            (name.includes('smoke-jpeg.jpg')&&version==='smoke-jpg-re');
         });
       }, null, { timeout: 8000 });
       if (!cmsSmokeJpegUploadPayload || !cmsSmokeJpegUploadPath) {
@@ -6640,11 +6645,16 @@ try {
         await fullPreview.waitFor({ state: 'detached', timeout: 3000 });
       };
 
-      await page.locator('#content .media-tile').filter({ hasText: expectedJpegName }).locator('.thumb').click();
+      const expectedJpegPreviewVersion=jpegConvertedToWebP?'smoke-jpeg-r':'smoke-jpg-re';
+      const uploadedJpegTile=page.locator('#content .media-tile:has([data-copy]):has(img[src*="v='+expectedJpegPreviewVersion+'"])').filter({hasText:expectedJpegName});
+      await uploadedJpegTile.locator('.thumb').click();
       await fullPreview.waitFor({ state: 'visible', timeout: 3000 });
       await fullPreview.locator('.media-full-preview-stage > img').waitFor({ state: 'visible', timeout: 5000 });
       const fullFileSize = (await fullPreview.locator('.media-full-preview-size').textContent()).trim();
-      if (!fullFileSize.includes('12 bytes')) throw new Error('CMS full asset preview must display the exact GitHub repository file size.');
+      const expectedFullFileSizeBytes=Buffer.from(cmsSmokeJpegUploadPayload.content||'','base64').length;
+      if (!fullFileSize.includes(expectedFullFileSizeBytes.toLocaleString('en-US')+' bytes')) {
+        throw new Error('CMS full asset preview must display the exact GitHub repository file size. Expected '+expectedFullFileSizeBytes+' bytes, received '+fullFileSize+'.');
+      }
       const fullImageFit = await fullPreview.locator('.media-full-preview-stage > img').evaluate(el => getComputedStyle(el).objectFit);
       if (fullImageFit !== 'contain') throw new Error('CMS full image preview does not preserve the whole artwork in view.');
       await page.keyboard.press('Escape');
