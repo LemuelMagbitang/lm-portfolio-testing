@@ -4521,6 +4521,7 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
   }
   const blobShas=await Promise.all(matched.map(record=>GH.createBlob(record.next,'utf-8')));
   const sections=new Set(),projectIds=new Set(),projectTitles=new Set();
+  const sourceModes=new Map((tree||[]).filter(item=>item?.path).map(item=>[item.path,item.mode||'100644']));
   const entries=matched.map((record,index)=>{
     const filePath=record.filePath;
     const section=Object.entries(SECTIONS).find(([,config])=>config.file===filePath);
@@ -4556,7 +4557,7 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
       : isFolder&&filePath.startsWith(oldPath+'/')
         ? newPath+filePath.slice(oldPath.length)
         : filePath;
-    return {path:outputPath,mode:record.current?.mode||'100644',type:'blob',sha:blobShas[index]};
+    return {path:outputPath,mode:sourceModes.get(filePath)||'100644',type:'blob',sha:blobShas[index]};
   });
   return {entries,changedFiles:matched.map(record=>record.filePath),sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
 }
