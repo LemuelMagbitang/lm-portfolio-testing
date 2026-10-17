@@ -747,6 +747,9 @@ function validateAdminConnectionSecurity() {
     ['Media deletion scans references at the captured branch head', /prepareMediaReferenceUpdates\(item\.path,\s*'__MEDIA_PATH_AUDIT__',\s*parentSha,\s*snapshot,\s*false,\s*true\)/],
     ['Referenced media deletion is blocked before commit', /if\s*\(impact\.changedFiles\.length\)\s*\{[\s\S]*?mediaDeletionReferenceMessage\(item\.path,impact\)[\s\S]*?return;/],
     ['Media deletion scan-only mode avoids creating blobs', /const blobShas=scanOnly\?\[\]:await Promise\.all\(matched\.map\(record=>GH\.createBlob/],
+    ['Media deletion checks percent-encoded URL paths', /function decodeMediaPathEscapes\(source\)/],
+    ['Media deletion scans docs and common source/config files', /md\|mdx\|txt\|ya\?ml\|toml\|ts\|tsx\|jsx\|vue\|svelte/],
+    ['Encoded-path checking remains isolated from rename writes', /if\(scanOnly\)\{\s*if\(mediaSourceReferencesPath\(record\.current\.text,oldPath,isFolder\)\)matched\.push\(\{\.\.\.record,next:record\.current\.text\}\);\s*continue;\s*\}\s*const next=replaceMediaPathReferences\(record\.current\.text,oldPath,newPath,isFolder\)/],
     ['Media deletion uses a guarded tree commit', /await ghCommitTreeEntries\(\[\{path:item\.path,mode:source\.mode\|\|'100644',type:'blob',sha:null\}\],[\s\S]*?parentSha\)/],
   ];
 
