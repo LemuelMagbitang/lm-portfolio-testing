@@ -6702,6 +6702,10 @@ try {
           .filter({hasText:'rename-folder'})
           .locator('[data-folder-rename]');
         await folderRenameButton.waitFor({state:'visible',timeout:5000});
+        if ((await folderRenameButton.getAttribute('aria-label')) !== 'Rename folder' ||
+            (await folderRenameButton.textContent()).trim() !== '') {
+          throw new Error('Media Library folder action must be icon-only with an accessible Rename folder name.');
+        }
         await folderRenameButton.click();
         try{
           await page.waitForFunction(
@@ -6726,6 +6730,19 @@ try {
           .filter({hasText:'smoke.png'})
           .locator('[data-rename]');
         await fileRenameButton.waitFor({state:'visible',timeout:8000});
+        const renameAccessibleName=await fileRenameButton.getAttribute('aria-label');
+        const renameVisibleLabel=(await fileRenameButton.textContent()).trim();
+        const copyPathButton=page.locator('#content .media-tile:has([data-rename])')
+          .filter({hasText:'smoke.png'}).locator('[data-copy]');
+        const deleteButton=page.locator('#content .media-tile:has([data-rename])')
+          .filter({hasText:'smoke.png'}).locator('[data-del]');
+        if(renameAccessibleName!=='Rename file'||renameVisibleLabel!==''||
+           await copyPathButton.getAttribute('aria-label')!=='Copy file path'||
+           (await copyPathButton.textContent()).trim()!==''||
+           await deleteButton.getAttribute('aria-label')!=='Delete file'||
+           (await deleteButton.textContent()).trim()!==''){
+          throw new Error('Media Library file actions must be icon-only and retain accessible names for Rename, Copy path, and Delete.');
+        }
         await fileRenameButton.click();
         await page.locator('#content .media-tile:has([data-rename])')
           .filter({hasText:'smoke-renamed.png'})

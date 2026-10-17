@@ -2663,8 +2663,8 @@ function buildProjectBody(el, p, options = {}){
       <textarea data-f="description" rows="4">${esc(p.description)}</textarea>
     </div>
 
-    <div class="panel" style="background:#141414;">
-      <h3 style="font-size:.85rem">Thumbnail</h3>
+    <div class="panel project-editor-panel project-thumbnail-panel">
+      <h3>Thumbnail</h3>
       <p class="panel-sub">Leave the image blank and the site uses the first media item instead.</p>
       <div class="two-col">
         <div>
@@ -2689,8 +2689,8 @@ function buildProjectBody(el, p, options = {}){
       </div>
     </div>
 
-    <div class="panel" style="background:#141414;">
-      <h3 style="font-size:.85rem">Media (lightbox gallery)</h3>
+    <div class="panel project-editor-panel project-media-panel">
+      <h3>Media (lightbox gallery)</h3>
       <p class="panel-sub">Order here is the order in the lightbox. Drag the handle to reorder. Ungrouped artwork keeps the original vertical list.</p>
       <section class="artwork-group-manager" data-artwork-groups aria-label="Artwork grouping controls">
         <div class="artwork-group-manager-copy">
@@ -2707,8 +2707,11 @@ function buildProjectBody(el, p, options = {}){
           <button type="button" data-group-ungroup-selected disabled>Ungroup selected</button>
         </div>
         <p class="artwork-group-selection-status" data-group-selection-status aria-live="polite">Select at least one artwork below to create a group.</p>
-        <div class="artwork-group-list" data-artwork-group-list></div>
       </section>
+      <details class="artwork-group-existing" data-artwork-group-disclosure ${p.mediaGroups.length ? 'open' : 'hidden'}>
+        <summary><span>Manage existing groups</span><span data-group-count>${p.mediaGroups.length} group${p.mediaGroups.length===1?'':'s'}</span></summary>
+        <div class="artwork-group-list" data-artwork-group-list></div>
+      </details>
       <div data-medialist></div>
       <button class="add-btn" data-addmedia type="button"><i class="fa-solid fa-plus"></i> Add media item</button>
     </div>
@@ -2889,10 +2892,18 @@ function buildProjectBody(el, p, options = {}){
   const applyGroupButton = el.querySelector('[data-group-apply]');
   const ungroupSelectedButton = el.querySelector('[data-group-ungroup-selected]');
   const groupList = el.querySelector('[data-artwork-group-list]');
+  const groupDisclosure = el.querySelector('[data-artwork-group-disclosure]');
+  const groupCountLabel = el.querySelector('[data-group-count]');
   const groupStatus = el.querySelector('[data-group-selection-status]');
   const selectedMedia = () => p.media.filter(media => selectedMediaUids.has(media._uid));
   function paintGroups(){
     if (!groupTarget || !groupList) return;
+    const groupCount = p.mediaGroups.length;
+    if (groupDisclosure) {
+      groupDisclosure.hidden = groupCount === 0;
+      if (groupCount === 0) groupDisclosure.open = false;
+    }
+    if (groupCountLabel) groupCountLabel.textContent = groupCount + ' existing group' + (groupCount === 1 ? '' : 's');
     const previousTarget = groupTarget.value;
     groupTarget.innerHTML = '<option value="">Create a new group…</option>' + p.mediaGroups.map(group =>
       `<option value="${attr(group.id)}">${esc(group.name)}</option>`
@@ -2962,6 +2973,7 @@ function buildProjectBody(el, p, options = {}){
       while (p.mediaGroups.some(group => group.id === id)) id = `${baseId}-${suffix++}`;
       target = {id, name, layout:['grid','stack','cards'].includes(groupLayoutInput?.value) ? groupLayoutInput.value : 'grid'};
       p.mediaGroups.push(target);
+      if (groupDisclosure) { groupDisclosure.hidden = false; groupDisclosure.open = true; }
       if (groupNameInput) groupNameInput.value = '';
       if (groupTarget) groupTarget.value = target.id;
     }
@@ -3003,7 +3015,7 @@ function buildProjectBody(el, p, options = {}){
             <button class="icon-btn" data-mact="toggle"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
           </div>
         </div>
-        <div class="collapsible-body" style="display:${isOpen?'block':'none'};margin-top:16px;" data-mbody>
+        <div class="collapsible-body media-editor-body" style="display:${isOpen?'block':'none'};" data-mbody>
           <div class="row media-editor-row">
             <div class="field" style="max-width:140px"><label class="field-label">Type</label>
               <select data-mf="type">
@@ -3490,6 +3502,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
 
     items.forEach((p)=>{
       const isOpen = p._uid === openUid;
+      const projectIndex = items.indexOf(p);
       const wrap = document.createElement('div');
       wrap.className = 'card-item project-list-item' + (isOpen ? ' is-open' : ' is-collapsed');
       wrap.dataset.uid = p._uid;
@@ -3503,10 +3516,10 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
           </span>
           <span class="project-collapsed-preview" aria-hidden="true">${projectPreview}</span>
           <div class="card-item-actions project-card-actions">
-            <button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
-            <button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
-            <button class="icon-btn project-delete-action" data-act="del" title="Delete" aria-label="Delete project"><i class="fa-solid fa-trash"></i></button>
-            <button class="icon-btn" data-act="toggle" title="${isOpen ? 'Collapse project' : 'Expand project'}" aria-expanded="${isOpen ? 'true' : 'false'}"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
+            <button class="icon-btn" data-act="up" type="button" title="Move project up" aria-label="Move project up" ${projectIndex===0?'disabled':''}><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+            <button class="icon-btn" data-act="down" type="button" title="Move project down" aria-label="Move project down" ${projectIndex===items.length-1?'disabled':''}><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+            <button class="icon-btn project-delete-action" data-act="del" type="button" title="Delete project" aria-label="Delete project"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            <button class="icon-btn project-toggle-action" data-act="toggle" type="button" title="${isOpen ? 'Collapse project' : 'Expand project'}" aria-label="${isOpen ? 'Collapse project' : 'Expand project'}" aria-expanded="${isOpen ? 'true' : 'false'}"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}" aria-hidden="true"></i></button>
           </div>
         </div>
         <div data-body class="project-editor-body" style="display:${isOpen?'block':'none'};margin-top:16px;"></div>
@@ -4168,12 +4181,17 @@ const MODEL_ICON_SVG = '<svg viewBox="0 0 24 24" width="30" height="30" fill="no
 // near-identical copy of this markup, which is exactly how a fix to
 // one and not the other went unnoticed for a couple of rounds. Now
 // there's exactly one place that decides what a tile looks like.
+function mediaActionButtonHtml(action,label,icon,tone=''){
+  const toneClass=tone?' '+tone:'';
+  return `<button class="icon-btn media-action-btn${toneClass}" data-${action} type="button" title="${attr(label)}" aria-label="${attr(label)}"><i class="fa-solid ${icon}" aria-hidden="true"></i></button>`;
+}
+
 function folderTileHtml(name, previewPath){
   const thumbHtml = previewPath
     ? `<img src="${attr(ghRawUrl(previewPath))}" loading="lazy" onerror="this.parentElement.innerHTML='${FOLDER_ICON_SVG.replace(/"/g, '&quot;')}'">`
     : FOLDER_ICON_SVG;
   const badge = `<span class="tile-badge" title="Folder"><i class="fa-solid fa-folder"></i></span>`;
-  return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div><div class="tile-actions folder-actions"><button class="ghost" data-folder-rename type="button" title="Rename folder"><i class="fa-solid fa-pen"></i><span>Rename</span></button></div>`;
+  return `<div class="thumb">${thumbHtml}${badge}</div><div class="meta"><div class="fname">${esc(name)}</div></div><div class="tile-actions folder-actions">${mediaActionButtonHtml('folder-rename','Rename folder','fa-pen')}</div>`;
 }
 
 function fileTileHtml(item){
@@ -5117,7 +5135,7 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
           <label class="field-label">Upload to folder</label>
           <input id="uploadPath" value="${attr(mediaCurrentPath)}">
         </div>
-        <div class="media-toolbar-actions"><button class="ghost" id="btnNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="ghost" id="btnRenameFolder" type="button"><i class="fa-solid fa-pen"></i> Rename folder</button><button class="ghost" id="btnRefresh" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
+        <div class="media-toolbar-actions"><button class="ghost" id="btnNewFolder" type="button"><i class="fa-solid fa-folder-plus"></i> New folder</button><button class="icon-btn media-toolbar-icon" id="btnRenameFolder" type="button" title="Rename current folder" aria-label="Rename current folder"><i class="fa-solid fa-pen" aria-hidden="true"></i></button><button class="ghost" id="btnRefresh" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
       </div>
 
       <div class="dropzone" id="dropzone">
@@ -5181,10 +5199,10 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       const tile = document.createElement('div');
       tile.className = 'media-tile';
       tile.innerHTML = fileTileHtml(item) + `
-        <div class="tile-actions">
-          <button class="ghost" data-rename type="button">Rename</button>
-          <button class="ghost" data-copy type="button">Copy path</button>
-          <button class="danger" data-del type="button">Delete</button>
+        <div class="tile-actions" aria-label="File actions">
+          ${mediaActionButtonHtml('rename','Rename file','fa-pen')}
+          ${mediaActionButtonHtml('copy','Copy file path','fa-copy')}
+          ${mediaActionButtonHtml('del','Delete file','fa-trash','media-delete-action')}
         </div>
       `;
       const previewThumb=tile.querySelector('.thumb');

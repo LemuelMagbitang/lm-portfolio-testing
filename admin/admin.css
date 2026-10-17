@@ -123,11 +123,81 @@
     margin-bottom:12px;
   }
 
+/* Project editor: one clear outer surface, with quiet internal sections rather
+   than bordered cards stacked inside the expanded Project card. */
+.project-editor-body > .project-editor-panel{
+  margin:0;padding:14px 0 18px;background:transparent!important;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;
+}
+.project-editor-body > .project-editor-panel:last-of-type{border-bottom:0;padding-bottom:10px;}
+.project-editor-panel>h3{font-size:.93rem!important;margin:0 0 4px;color:#f4f4f4;}
+.project-editor-panel>.panel-sub{margin:0 0 12px;max-width:72ch;}
+.project-editor-body>.row{gap:10px;}
+.project-editor-body>.field{margin-bottom:12px;}
+.project-editor-panel .field{min-width:0;}
+.project-media-panel .add-btn{margin-top:9px;}
+.project-media-panel [data-medialist]>.card-item{
+  margin:0;padding:10px 0;background:transparent!important;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;
+}
+.project-media-panel [data-medialist]>.card-item:last-child{border-bottom:0;}
+.project-media-panel [data-medialist]>.card-item>.card-item-head{margin:0;min-height:38px;}
+.project-media-panel .media-editor-body{padding:12px 0 2px;}
+.project-media-panel .media-editor-row{gap:10px;}
+.project-media-panel .media-editor-row>.field{margin-bottom:10px;}
+.project-media-panel .media-preview{margin:4px 0 12px;}
+.project-card-actions .icon-btn{
+  width:30px;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;color:#aaa;
+}
+.project-card-actions .icon-btn:hover{color:#fff;border-color:var(--line-soft);background:rgba(255,255,255,.065);}
+.project-card-actions .icon-btn:disabled{opacity:.24;cursor:not-allowed;background:transparent;border-color:transparent;}
+.project-card-actions .project-delete-action{color:#858585;}
+.project-card-actions .project-toggle-action{margin-left:2px;border-left-color:var(--line-soft);}
+.project-card-actions .project-delete-action:hover{color:#ffaaa2;border-color:rgba(224,88,79,.24);background:rgba(224,88,79,.1);}
+.project-list-item.is-open{overflow:visible;}
+
+/* Artwork grouping stays reachable during long gallery edits on desktop.
+   Existing group definitions live outside this sticky control surface. */
+.artwork-group-manager{
+  position:sticky;top:70px;z-index:25;align-self:start;
+  display:grid;grid-template-columns:minmax(145px,.72fr) minmax(0,2fr);
+  gap:8px 14px;margin:10px 0 8px;padding:10px 12px;
+  border:1px solid rgba(255,255,255,.1);border-radius:10px;
+  background:rgba(29,29,29,.97);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  box-shadow:0 8px 22px rgba(0,0,0,.2);
+}
+.artwork-group-manager-copy{gap:3px;align-self:center;}
+.artwork-group-manager-copy strong{font-size:12px;}
+.artwork-group-manager-copy span{font-size:10px;line-height:1.4;max-width:31ch;}
+.artwork-group-create-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,.8fr) minmax(145px,.9fr);gap:8px;align-items:end;}
+.artwork-group-create-row .field{min-width:0;flex:initial;margin:0;}
+.artwork-group-create-row .field-label{font-size:9px;letter-spacing:.04em;margin-bottom:4px;}
+.artwork-group-create-row input,.artwork-group-create-row select{min-width:0;padding:8px 9px;font-size:12px;border-radius:7px;}
+.artwork-group-actions{grid-column:2;gap:6px;align-items:center;justify-content:flex-end;}
+.artwork-group-actions button{padding:7px 10px;font-size:11px;}
+.artwork-group-selection-status{grid-column:1/-1;padding-top:6px;border-top:1px solid var(--line-soft);font-size:10.5px;line-height:1.4;}
+.artwork-group-existing{margin:4px 0 10px;border-bottom:1px solid var(--line-soft);}
+.artwork-group-existing[hidden]{display:none!important;}
+.artwork-group-existing>summary{display:flex;align-items:center;gap:10px;padding:9px 2px;color:#aaa;font-size:11px;font-weight:650;cursor:pointer;list-style:none;}
+.artwork-group-existing>summary::-webkit-details-marker{display:none;}
+.artwork-group-existing>summary::after{content:'+';margin-left:auto;color:#777;font-size:15px;font-weight:400;}
+.artwork-group-existing[open]>summary::after{content:'−';}
+.artwork-group-existing>summary [data-group-count]{color:#777;font-weight:500;}
+.artwork-group-card{padding:10px 0;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;background:transparent;}
+.artwork-group-card:last-child{border-bottom:0;}
+@media(max-width:720px){
+  .artwork-group-manager{position:static;grid-template-columns:minmax(0,1fr);gap:8px;margin:8px 0 10px;padding:10px 0;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
+  .artwork-group-manager-copy span{max-width:none;}
+  .artwork-group-create-row{display:flex;gap:8px;}
+  .artwork-group-create-row .field{width:100%;min-width:0;margin:0;}
+  .artwork-group-actions{grid-column:auto;justify-content:flex-start;}
+  .artwork-group-selection-status{grid-column:auto;}
+  .project-editor-body > .project-editor-panel{padding:12px 0 15px;}
+  .project-media-panel [data-medialist]>.card-item{padding:9px 0;}
+}
 /* ---------- Project list presentation ----------
    Collapsed rows show a lightweight artwork preview on the right while
    the open editor removes that decorative treatment. Image previews reuse
    the same fallback contract as the project's editor thumbnail. */
-.project-list-item{position:relative;overflow:hidden;}
+.project-list-item{position:relative;overflow:visible;}
 .project-card-head{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) minmax(120px,170px) auto;align-items:center;gap:12px;min-height:78px;margin:0;}
 .project-list-item:not(.is-open) .project-card-head{padding:2px 0;}
 
@@ -435,8 +505,14 @@
   .media-tile .meta{padding:9px 10px;min-height:1px;background:rgba(255,255,255,.02);}
   .media-tile .fname{font-size:12.5px;font-weight:600;color:#fff!important;word-break:break-all;line-height:1.4;max-height:2.8em;overflow:hidden;display:block;}
   .media-tile .thumb svg{color:#7a7a7a;}
-  .media-tile .tile-actions{display:flex;gap:6px;padding:0 10px 10px;}
-  .media-tile .tile-actions button{flex:1;padding:6px 4px;font-size:11px;}
+  .media-tile .tile-actions{display:flex;justify-content:flex-end;gap:4px;padding:0 8px 8px;}
+  .media-tile .media-action-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;width:34px;min-width:34px;height:34px;padding:0;border:1px solid transparent;border-radius:8px;background:transparent;color:#858585;font-size:12px;transition:background .14s,color .14s,border-color .14s;}
+  .media-tile .media-action-btn:hover{color:#fff;background:rgba(255,255,255,.075);border-color:var(--line-soft);}
+  .media-tile .media-action-btn:focus-visible,.media-toolbar-icon:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .media-tile .media-action-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .media-tile .media-delete-action{color:#a87570;}
+  .media-tile .media-delete-action:hover{color:#ffaaa2;background:rgba(224,88,79,.12);border-color:rgba(224,88,79,.25);}
+  .media-toolbar-icon{width:38px;height:38px;flex:0 0 38px;display:inline-flex;align-items:center;justify-content:center;padding:0;font-size:13px;}
   /* A file appears in the grid the instant it's dropped/chosen — using a
      local blob preview of the file itself, before any network call —
      with this overlay marking it as still in flight, instead of the
@@ -545,8 +621,8 @@
 
 /* Folder management */
 .media-toolbar-actions{display:flex;gap:8px;align-items:flex-end;}
-.folder-actions{padding:0 10px 10px;display:flex;}
-.folder-actions button{width:100%;}
+.folder-actions{padding:0 8px 8px;display:flex;justify-content:flex-end;}
+.folder-actions button{width:34px;height:34px;flex:0 0 34px;}
 .media-tile{transition:border-color .15s,transform .15s;}
 .media-tile.folder-tile:hover{border-color:#555;transform:translateY(-1px);}
 .media-picker-dialog .media-tile.folder-tile:hover{cursor:pointer;}

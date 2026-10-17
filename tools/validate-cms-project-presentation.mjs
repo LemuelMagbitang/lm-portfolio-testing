@@ -389,6 +389,34 @@ assert.ok(admin.includes("sizeLabel.textContent='File size · '+formatMediaFileS
   'CMS full Media Library previews must show the file size in the preview header.');
 assert.ok(css.includes('.media-full-preview-size{'),
   'CMS full Media Library preview file-size metadata must have a dedicated readable style.');
+assert.ok(/function mediaActionButtonHtml\(action,label,icon,tone=''/s.test(admin),
+  'Media Library actions must share one accessible icon-button builder.');
+for (const marker of [
+  "mediaActionButtonHtml('folder-rename','Rename folder','fa-pen')",
+  "mediaActionButtonHtml('rename','Rename file','fa-pen')",
+  "mediaActionButtonHtml('copy','Copy file path','fa-copy')",
+  "mediaActionButtonHtml('del','Delete file','fa-trash','media-delete-action')",
+  'aria-label="${attr(label)}"'
+]) {
+  assert.ok(admin.includes(marker), `CMS Media Library action is missing an accessible icon label: ${marker}`);
+}
+for (const marker of ['.media-action-btn:hover','.media-delete-action:hover','.media-toolbar-icon:focus-visible']) {
+  assert.ok(css.includes(marker), `CMS Media Library icon-action style is missing: ${marker}`);
+}
+assert.ok(admin.includes('class="panel project-editor-panel project-thumbnail-panel"') &&
+  admin.includes('class="panel project-editor-panel project-media-panel"'),
+  'Project editor sections must use the flatter editor-panel surface rather than another nested card.');
+assert.ok(admin.includes('data-artwork-group-disclosure') &&
+  admin.includes('data-group-count') &&
+  admin.includes('data-artwork-group-list'),
+  'Existing artwork-group management must be separate from sticky selection controls.');
+assert.ok(css.includes('position:sticky;top:70px') &&
+  css.includes('.artwork-group-manager{') &&
+  css.includes('.artwork-group-manager{position:static;grid-template-columns:minmax(0,1fr)'),
+  'Artwork grouping controls must stay reachable while scrolling on desktop and return to normal flow on mobile.');
+assert.ok(css.includes('.project-media-panel [data-medialist]>.card-item{') &&
+  css.includes('background:transparent!important;border:0;border-bottom:1px solid var(--line-soft)'),
+  'Individual artworks must use compact divider rows rather than stacked nested cards.');
 assert.ok(css.includes('.project-list-item.is-open .project-collapsed-preview{display:flex;flex:0 0 140px;width:140px;height:76px;margin-left:auto;}') &&
   /@media\(max-width:520px\)\{[\s\S]*?\.project-list-item\.is-open \.project-collapsed-preview\{flex-basis:72px;width:72px;height:56px;\}/.test(css),
   'Expanded CMS project cards must retain their own thumbnail with a compact mobile layout.');
