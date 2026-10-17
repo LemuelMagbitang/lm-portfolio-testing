@@ -89,7 +89,7 @@
    Both arrows mirror the same left/right page edges. */
 @media (min-width:768px){
   .lightbox-close{
-    top:15px;
+    top:16.5px;
     right:var(--lm-lightbox-control-edge);
     width:42px;
     height:42px;
@@ -100,15 +100,15 @@
     width:42px;
     height:42px;
   }
-  .lightbox-prev{left:var(--lm-lightbox-control-edge);right:auto;}
-  .lightbox-next{right:var(--lm-lightbox-control-edge);left:auto;}
+  .lightbox-nav.lightbox-prev{left:var(--lm-lightbox-control-edge);right:auto;}
+  .lightbox-nav.lightbox-next{right:var(--lm-lightbox-control-edge);left:auto;}
 }
 
 /* Mobile: preserve a 52px close hit target and center it on the 38px
    hamburger in both axes. The arrows use the same page-edge margins. */
 @media (max-width:767px){
   .lightbox-close{
-    top:8px;
+    top:11.5px;
     right:calc(var(--lm-lightbox-control-edge) - 7px);
     width:52px;
     height:52px;
@@ -119,6 +119,6 @@
     width:52px;
     height:52px;
   }
-  .lightbox-prev{left:var(--lm-lightbox-control-edge);right:auto;}
-  .lightbox-next{right:var(--lm-lightbox-control-edge);left:auto;}
+  .lightbox-nav.lightbox-prev{left:var(--lm-lightbox-control-edge);right:auto;}
+  .lightbox-nav.lightbox-next{right:var(--lm-lightbox-control-edge);left:auto;}
 }
