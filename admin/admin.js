@@ -820,6 +820,10 @@ function goToSection(name){
   if (deployStatusText) deployStatusText.textContent = '';
   setDrawerOpen(false); // picking a section is done with the drawer, same as tapping outside it
   currentSection = name;
+  // Section-level impact dots clear when the editor visits that section.
+  // Project-level dots remain until the affected project itself is opened.
+  lastMediaImpact.sections = (lastMediaImpact.sections||[]).filter(key=>key!==name);
+  updateMediaImpactIndicators();
   document.querySelectorAll('.nav-item[data-section]').forEach(el=>{
     el.classList.toggle('active', el.dataset.section === name);
   });
@@ -3431,7 +3435,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
         <div class="card-item-head project-card-head" data-toggle-open>
           <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
           <span class="project-item-label">
-            <span class="item-title">${esc(p.title)||'(untitled project)'} ${p.badges?.length?`<span class="project-attribute-summary"> — ${esc(p.badges.join(' · '))}</span>`:''}</span>
+            <span class="item-title">${esc(p.title)||'(untitled project)'} ${lastMediaImpact.projectIds.includes(String(p.id||slugify(p.title||'')))?'<span class="media-impact-dot" title="A media path was updated in this project" aria-label="Media path updated"></span>':''} ${p.badges?.length?`<span class="project-attribute-summary"> — ${esc(p.badges.join(' · '))}</span>`:''}</span>
             <span class="project-preview-text">${esc(p.subtitle||'')}</span>
           </span>
           <span class="project-collapsed-preview" aria-hidden="true">${projectPreview}</span>
@@ -3446,6 +3450,10 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
       `;
       wrap.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if(e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
+        const impactId=String(p.id||slugify(p.title||''));
+        if(!isOpen && lastMediaImpact.projectIds.includes(impactId)){
+          lastMediaImpact.projectIds=lastMediaImpact.projectIds.filter(id=>id!==impactId);
+        }
         openUid = isOpen ? null : p._uid; paint();
       });
       wrap.querySelector('[data-act="del"]').addEventListener('click',(e)=>{
@@ -4393,9 +4401,9 @@ let lastMediaImpact = { sections:[], projectIds:[], projectTitles:[], changedFil
 function mediaPathBoundary(source,index,path,isFolder){
   const before=index>0?source[index-1]:'';
   const after=source[index+path.length]||'';
-  const beforeOK=!before || ['/','"',"'","`",':','=','(','[',',','{'].includes(before) || /\\s/.test(before);
+  const beforeOK=!before || ['/','"',"'","`",':','=','(','[',',','{'].includes(before) || /\s/.test(before);
   const afterDelimiters=isFolder?['/','?','#','"',"'","`",',',')','}',']']:['?','#','"',"'","`",',',')','}',']'];
-  const afterOK=!after || afterDelimiters.includes(after) || /\\s/.test(after);
+  const afterOK=!after || afterDelimiters.includes(after) || /\s/.test(after);
   return beforeOK&&afterOK;
 }
 
@@ -4443,7 +4451,7 @@ function mediaImpactSummary(impact){
   const other=(impact.changedFiles||[]).filter(file=>!Object.values(SECTIONS).some(section=>section.file===file));
   if(other.length)parts.push('Other site files: '+other.length);
   if(!(impact.changedFiles||[]).length)return 'No references were found in the scanned website and data files.';
-  return impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s')+' will be updated.'+(parts.length?'\\n'+parts.join('\\n'):'');
+  return impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s')+' will be updated.'+(parts.length?'\n'+parts.join('\n'):'');
 }
 
 async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
@@ -4943,8 +4951,10 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       const folderPath = mediaCurrentPath + '/' + f;
       tile.innerHTML = folderTileHtml(f, findFolderPreviewImage(tree, folderPath));
       tile.addEventListener('click', () => { mediaCurrentPath = folderPath; paint(); });
-      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => { e.stopPropagation(); try { await renameMediaFolder(folderPath, async p => {
+      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => { e.stopPropagation(); try { await renameMediaFolder(folderPath, async (p,nextTree) => {
             if(!isCurrent()) return;
+            tree=Array.isArray(nextTree)?nextTree:await loadMediaTree(true);
+            if(!isCurrent())return;
             mediaCurrentPath=p;
             paint();
           }); } catch(err){ toast(err.message,true); } });
@@ -4984,10 +4994,11 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       tile.querySelector('[data-rename]').addEventListener('click', async event => {
         event.stopPropagation();
         try {
-          await renameMediaFile(item.path, async () => {
+          await renameMediaFile(item.path, async (newPath,nextTree) => {
             if(!isCurrent())return;
-            tree=await loadMediaTree(true);
+            tree=Array.isArray(nextTree)?nextTree:await loadMediaTree(true);
             if(!isCurrent())return;
+            mediaCurrentPath=newPath.slice(0,newPath.lastIndexOf('/'))||'assets';
             paint();
           });
         } catch(err) { toast(err?.message||'Could not rename this file.',true); }
