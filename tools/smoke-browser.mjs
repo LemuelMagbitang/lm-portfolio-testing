@@ -6238,7 +6238,12 @@ try {
         await page.locator('.lightbox-next').first().waitFor({ state: 'attached', timeout: 5000 });
         await assertLightboxChromeAlignment(page, 'Desktop Works', 'desktop');
       },
-      { width: 1280, height: 900 },
+      { width: 1280, height: 900 }
+    );
+
+    await smokePage(
+      browser,
+      '/',
       async page => {
         // The hidden controls still have their fixed-position geometry;
         // keeping the Lightbox closed isolates alignment from media loading.
