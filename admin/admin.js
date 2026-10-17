@@ -4655,7 +4655,7 @@ async function renameMediaFile(oldPath,onDone){
   if(!parentSha)throw new Error(`Couldn't resolve the current ${conn.branch} branch head.`);
   const tree=await GH.getTree(parentSha);
   const source=tree.find(item=>item.type==='blob'&&item.path===oldPath);
-  if(!source){toast('This file no longer exists in the current branch. Refresh and try again.',true);return;}
+  if(!source){setMediaOperationStatus('Rename blocked: this file no longer exists in the current branch. Refresh and try again.',true);toast('This file no longer exists in the current branch. Refresh and try again.',true);return;}
   if(tree.some(item=>item.path===newPath || item.path.startsWith(newPath+'/'))){setMediaOperationStatus('Rename blocked: a file or folder with that name already exists here.',true);toast('A file or folder with that name already exists here.',true);return;}
   setMediaOperationStatus('Scanning tracked website and CMS files for references…');
   toast('Checking where this file is used…');
@@ -4685,7 +4685,7 @@ async function renameMediaFolder(oldPath,onDone){
   const rawName=prompt('Rename folder:',oldName);
   if(rawName===null)return;
   const name=safeFolderName(rawName);
-  if(!name){toast('Enter a valid folder name without folder separators.',true);return;}
+  if(!name){setMediaOperationStatus('Rename blocked: enter a valid folder name without folder separators.',true);toast('Enter a valid folder name without folder separators.',true);return;}
   if(name===oldName)return;
   setMediaOperationStatus('Checking the current branch and destination…');
   const parent=oldPath.includes('/')?oldPath.slice(0,oldPath.lastIndexOf('/')):'';
