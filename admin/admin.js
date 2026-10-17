@@ -4564,6 +4564,50 @@ function recordMediaImpact(impact,oldPath,newPath){
   updateMediaImpactIndicators();
 }
 
+function setMediaOperationStatus(message,isError=false){
+  const grid=document.getElementById('mediaGrid')||document.getElementById('pickerGrid');
+  if(!grid?.parentNode)return;
+  let status=document.getElementById('mediaOperationStatus');
+  if(!status||!status.isConnected){
+    status=document.createElement('div');
+    status.id='mediaOperationStatus';
+    status.className='banner info';
+    status.style.marginBottom='12px';
+    status.style.gridColumn='1/-1';
+    status.setAttribute('role','status');
+    grid.parentNode.insertBefore(status,grid);
+  }
+  status.classList.toggle('media-operation-error',!!isError);
+  status.setAttribute('role',isError?'alert':'status');
+  status.textContent=String(message||'');
+}
+
+function applyMediaTreeEntries(baseTree,entries){
+  const byPath=new Map((baseTree||[]).filter(item=>item?.path).map(item=>[item.path,{...item}]));
+  (entries||[]).forEach(entry=>{
+    if(!entry?.path)return;
+    if(entry.sha===null){byPath.delete(entry.path);return;}
+    const previous=byPath.get(entry.path)||{};
+    byPath.set(entry.path,{...previous,...entry,type:entry.type||'blob',mode:entry.mode||previous.mode||'100644'});
+  });
+  return [...byPath.values()].sort((a,b)=>String(a.path).localeCompare(String(b.path)));
+}
+
+async function refreshMediaTreeAfterCommit(baseTree,entries){
+  const localTree=applyMediaTreeEntries(baseTree,entries);
+  setMediaTreeCache(localTree);
+  try{
+    const remoteTree=await loadMediaTree(true);
+    return Array.isArray(remoteTree)?remoteTree:localTree;
+  }catch(error){
+    // The Git commit has already succeeded. Keep the deterministic tree built
+    // from that commit's exact changes and let the user continue working.
+    setMediaTreeCache(localTree);
+    setMediaOperationStatus('Rename committed, but the live Media Library refresh failed. The renamed paths are applied locally; use Refresh to reconcile with GitHub. '+(error?.message||''),true);
+    return localTree;
+  }
+}
+
 async function renameMediaFile(oldPath,onDone){
   if(!oldPath || !oldPath.startsWith('assets/')){toast('Only files inside the Media Library can be renamed.',true);return;}
   const oldName=oldPath.split('/').pop();
@@ -4591,10 +4635,10 @@ async function renameMediaFile(oldPath,onDone){
   ];
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact)))return;
   await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
-  setMediaTreeCache(null);
   Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
   recordMediaImpact(impact,oldPath,newPath);
-  const refreshedTree=await loadMediaTree(true);
+  const refreshedTree=await refreshMediaTreeAfterCommit(tree,entries);
+  setMediaOperationStatus('Renamed file: '+oldPath+' → '+newPath);
   toast('Renamed '+oldName+' to '+name+(impact.changedFiles.length?' and updated '+impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s'):'')+'.');
   if(onDone)await onDone(newPath,refreshedTree,impact);
 }
@@ -4628,12 +4672,12 @@ async function renameMediaFolder(oldPath,onDone){
   entries.push(...impact.entries);
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\\n'+mediaImpactSummary(impact)))return;
   await ghCommitTreeEntries(entries,'CMS: rename folder '+oldPath+' → '+newPath+' and update references',parentSha);
-  setMediaTreeCache(null);
   mediaCurrentPath=remapNestedPath(mediaCurrentPath,oldPath,newPath);
   mediaPickerPath=remapNestedPath(mediaPickerPath,oldPath,newPath);
   Object.entries(SECTIONS).forEach(([key,section])=>{if(impact.changedFiles.includes(section.file))delete cache[key];});
   recordMediaImpact(impact,oldPath,newPath);
-  const refreshedTree=await loadMediaTree(true);
+  const refreshedTree=await refreshMediaTreeAfterCommit(tree,entries);
+  setMediaOperationStatus('Renamed folder: '+oldPath+' → '+newPath);
   toast('Renamed '+oldName+' to '+name+(impact.changedFiles.length?' and updated '+impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s'):'')+'.');
   if(onDone)await onDone(newPath,refreshedTree,impact);
 }
