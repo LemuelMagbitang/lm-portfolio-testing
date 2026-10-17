@@ -6267,13 +6267,19 @@ try {
         link.addEventListener('animationend', event => {
           if (event.animationName !== 'nav-link-select') return;
           const menu = document.querySelector('.nav-links');
+          const oldActive = menu?.querySelector('a.active-link:not(.is-selected)');
+          const oldActiveStyle = oldActive ? getComputedStyle(oldActive) : null;
           void window.__lmCaptureNavSelectionState({
             pathname: window.location.pathname,
             bodyMenuOpen: document.body.classList.contains('menu-open'),
             menuOpen: Boolean(menu?.classList.contains('active') && menu?.classList.contains('is-open')),
+            selectionMode: Boolean(menu?.classList.contains('has-selection')),
+            selectedCount: menu?.querySelectorAll('a.is-selected').length || 0,
             selected: link.classList.contains('is-selected'),
             background: getComputedStyle(link).backgroundColor,
-            color: getComputedStyle(link).color
+            color: getComputedStyle(link).color,
+            oldActiveBackground: oldActiveStyle?.backgroundColor || '',
+            oldActiveColor: oldActiveStyle?.color || ''
           });
         });
       });
@@ -6292,9 +6298,13 @@ try {
         selectionSnapshot.pathname !== '/' ||
         !selectionSnapshot.bodyMenuOpen ||
         !selectionSnapshot.menuOpen ||
+        !selectionSnapshot.selectionMode ||
+        selectionSnapshot.selectedCount !== 1 ||
         !selectionSnapshot.selected ||
         selectionSnapshot.background !== 'rgb(255, 255, 255)' ||
-        selectionSnapshot.color !== 'rgb(0, 0, 0)'
+        selectionSnapshot.color !== 'rgb(0, 0, 0)' ||
+        selectionSnapshot.oldActiveBackground !== 'rgb(0, 0, 0)' ||
+        selectionSnapshot.oldActiveColor !== 'rgb(255, 255, 255)'
       ) {
         throw new Error('Mobile navigation did not show the selected pill before closing/navigating: ' +
           JSON.stringify(selectionSnapshot));

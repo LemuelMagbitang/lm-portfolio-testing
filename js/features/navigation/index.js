@@ -100,7 +100,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   function finishClose(afterClose) {
     closeTimer = null;
     selectingMenuLink = false;
-    mobileMenu.classList.remove('active', 'is-open', 'is-closing');
+    mobileMenu.classList.remove('active', 'is-open', 'is-closing', 'has-selection');
     mobileMenuLinks.forEach(link => link.classList.remove('is-selected'));
     root.body?.classList.remove('menu-open');
     if (menuBackdrop) menuBackdrop.hidden = true;
@@ -115,7 +115,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
     isOpen = true;
     mobileMenu.classList.add('active', 'is-open');
-    mobileMenu.classList.remove('is-closing');
+    mobileMenu.classList.remove('is-closing', 'has-selection');
+    mobileMenuLinks.forEach(link => link.classList.remove('is-selected'));
     menuButton.classList.add('is-open');
     root.body?.classList.add('menu-open');
     if (menuBackdrop) menuBackdrop.hidden = false;
@@ -164,6 +165,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (selectingMenuLink) return;
 
     selectingMenuLink = true;
+    mobileMenu.classList.add('has-selection');
     mobileMenuLinks.forEach(item => item.classList.toggle('is-selected', item === link));
 
     // Stage 1: make the chosen destination visibly selected while the menu

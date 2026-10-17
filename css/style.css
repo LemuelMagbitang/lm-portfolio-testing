@@ -5761,6 +5761,13 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
     color: #000;
   }
 
+  /* During route selection, show one selected destination at a time.
+     The previous page's active pill temporarily returns to the neutral state. */
+  .nav-links.active.is-open.has-selection a.active-link:not(.is-selected) {
+    background: #000;
+    color: #fff;
+  }
+
   .hamburger {
     z-index: 1003;
   }
