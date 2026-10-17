@@ -5252,7 +5252,7 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
         if (!confirm(`Delete "${item.path}"? This can't be undone from here (though it stays in git history).`)) return;
         try {
           await GH.deleteFile(item.path, item.sha, `CMS: delete ${item.path}`);
-          toast(`Deleted ${name}.`);
+          toast(`Deleted ${item.path.split('/').pop() || item.path}.`);
           tree = await loadMediaTree(true);
           if(!isCurrent()) return;
           paint();
