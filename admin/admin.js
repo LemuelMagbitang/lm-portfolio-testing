@@ -455,6 +455,8 @@ const CMS_WRITABLE_PATHS = new Set([
   'about/index.html',
   '404.html',
   'success/index.html',
+  'admin/index.html',
+  'admin/admin.css',
   'css/style.css',
   'js/script.js',
   'js/infrastructure/media-background/engine.js'
@@ -4518,6 +4520,17 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
           const title=String(project.title||id||'Untitled project');
           if(id)projectIds.add(id);
           if(title)projectTitles.add(title);
+        });
+      }catch(_){}
+    }else if(filePath==='data/curated-views.json'){
+      try{
+        const views=JSON.parse(record.current.text);
+        if(Array.isArray(views))views.forEach(view=>{
+          (Array.isArray(view?.projects)?view.projects:[]).forEach(entry=>{
+            if(entry?.source!=='curated'||!valueReferencesMediaPath(entry.project,oldPath,isFolder))return;
+            const title=String(entry.project?.title||entry.project?.id||'Untitled curated project');
+            projectTitles.add(String(view?.name||view?.slug||'Curated View')+' / '+title);
+          });
         });
       }catch(_){}
     }
