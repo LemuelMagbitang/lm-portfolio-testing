@@ -4548,7 +4548,15 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
         });
       }catch(_){}
     }
-    return {path:filePath,mode:'100644',type:'blob',sha:blobShas[index]};
+    // If a text asset being moved contains a self-reference, write its
+    // updated contents at the destination path instead of recreating the old
+    // path after the delete entry.
+    const outputPath=!isFolder&&filePath===oldPath
+      ? newPath
+      : isFolder&&filePath.startsWith(oldPath+'/')
+        ? newPath+filePath.slice(oldPath.length)
+        : filePath;
+    return {path:outputPath,mode:record.current?.mode||'100644',type:'blob',sha:blobShas[index]};
   });
   return {entries,changedFiles:matched.map(record=>record.filePath),sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
 }
@@ -4632,11 +4640,14 @@ async function renameMediaFile(oldPath,onDone){
   setMediaOperationStatus('Scanning tracked website and CMS files for references…');
   toast('Checking where this file is used…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,false);
-  const entries=[
-    {path:newPath,mode:source.mode||'100644',type:'blob',sha:source.sha},
-    {path:oldPath,mode:'100644',type:'blob',sha:null},
-    ...impact.entries
-  ];
+  const entryByPath=new Map([
+    [newPath,{path:newPath,mode:source.mode||'100644',type:'blob',sha:source.sha}],
+    [oldPath,{path:oldPath,mode:'100644',type:'blob',sha:null}]
+  ]);
+  // Reference-file writes have final say when a renamed text file references
+  // itself: its destination should contain rewritten data, not the old blob.
+  impact.entries.forEach(entry=>entryByPath.set(entry.path,entry));
+  const entries=[...entryByPath.values()];
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
   setMediaOperationStatus('Committing rename and reference updates…');
   await ghCommitTreeEntries(entries,'CMS: rename file '+oldPath+' → '+newPath+' and update references',parentSha);
@@ -4670,13 +4681,15 @@ async function renameMediaFolder(oldPath,onDone){
   setMediaOperationStatus('Scanning tracked website and CMS files for references…');
   toast('Checking which projects and sections use this folder…');
   const impact=await prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,true);
-  const entries=[];
+  const entryByPath=new Map();
   moving.forEach(item=>{
     const suffix=item.path.slice(prefix.length);
-    entries.push({path:newPath+'/'+suffix,mode:item.mode||'100644',type:'blob',sha:item.sha});
-    entries.push({path:item.path,mode:'100644',type:'blob',sha:null});
+    entryByPath.set(newPath+'/'+suffix,{path:newPath+'/'+suffix,mode:item.mode||'100644',type:'blob',sha:item.sha});
+    entryByPath.set(item.path,{path:item.path,mode:'100644',type:'blob',sha:null});
   });
-  entries.push(...impact.entries);
+  // Apply rewritten self-referencing files at their destination paths.
+  impact.entries.forEach(entry=>entryByPath.set(entry.path,entry));
+  const entries=[...entryByPath.values()];
   if(!confirm('Rename “'+oldPath+'” to “'+newPath+'”?\n'+mediaImpactSummary(impact))){setMediaOperationStatus('Rename cancelled. No repository changes were made.');return;}
   setMediaOperationStatus('Committing rename and reference updates…');
   await ghCommitTreeEntries(entries,'CMS: rename folder '+oldPath+' → '+newPath+' and update references',parentSha);
