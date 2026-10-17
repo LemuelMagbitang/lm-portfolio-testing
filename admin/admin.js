@@ -4787,7 +4787,21 @@ function openMediaPicker(onPick, options={}){
   ['dragleave','drop'].forEach(evt=>overlay.querySelector('#pickerDropzone').addEventListener(evt,e=>{e.preventDefault();e.currentTarget.classList.remove('hover');}));
   overlay.querySelector('#pickerDropzone').addEventListener('drop',e=>{if(e.dataTransfer.files.length)handlePickerUpload(e.dataTransfer.files);});
   overlay.querySelector('#pickerNewFolder').addEventListener('click',async()=>{ try{await createMediaFolder(mediaPickerPath||'assets',async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);} });
-  overlay.querySelector('#pickerRenameFolder').addEventListener('click',async()=>{ try{await renameMediaFolder(mediaPickerPath,async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);} });
+  overlay.querySelector('#pickerRenameFolder').addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    button.disabled=true;
+    try{
+      await renameMediaFolder(mediaPickerPath,async(p,nextTree)=>{
+        if(Array.isArray(nextTree))setMediaTreeCache(nextTree);
+        mediaPickerPath=p;
+        await paintPicker();
+      });
+    }catch(err){
+      const message=err?.message||'Could not rename this folder.';
+      setMediaOperationStatus('Folder rename failed: '+message,true);
+      toast(message,true);
+    }finally{if(button.isConnected)button.disabled=false;}
+  });
   overlay.querySelector('#pickerRefresh').addEventListener('click',async()=>{try{await loadMediaTree(true);await paintPicker();toast('Refreshed.');}catch(err){toast(err.message,true);}});
   kindSelect?.addEventListener('change',()=>{pickerKind=kindSelect.value;paintPicker();});
   searchInput?.addEventListener('input',()=>{pickerSearch=searchInput.value.trim().toLowerCase();paintPicker();});
@@ -4827,7 +4841,22 @@ function openMediaPicker(onPick, options={}){
     folders.forEach(f=>{
       const path=mediaPickerPath+'/'+f; const tile=document.createElement('div'); tile.className='media-tile folder-tile'; tile.innerHTML=folderTileHtml(f,findFolderPreviewImage(tree,path));
       tile.addEventListener('click',()=>{mediaPickerPath=path;paintPicker();});
-      tile.querySelector('[data-folder-rename]')?.addEventListener('click',async e=>{e.stopPropagation();try{await renameMediaFolder(path,async p=>{mediaPickerPath=p;await paintPicker();});}catch(err){toast(err.message,true);}});
+      tile.querySelector('[data-folder-rename]')?.addEventListener('click',async e=>{
+        e.stopPropagation();
+        const button=e.currentTarget;
+        button.disabled=true;
+        try{
+          await renameMediaFolder(path,async(p,nextTree)=>{
+            if(Array.isArray(nextTree))setMediaTreeCache(nextTree);
+            mediaPickerPath=p;
+            await paintPicker();
+          });
+        }catch(err){
+          const message=err?.message||'Could not rename this folder.';
+          setMediaOperationStatus('Folder rename failed: '+message,true);
+          toast(message,true);
+        }finally{if(button.isConnected)button.disabled=false;}
+      });
       grid.appendChild(tile);
     });
     visibleFiles.forEach(item=>{
@@ -5062,13 +5091,24 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       const folderPath = mediaCurrentPath + '/' + f;
       tile.innerHTML = folderTileHtml(f, findFolderPreviewImage(tree, folderPath));
       tile.addEventListener('click', () => { mediaCurrentPath = folderPath; paint(); });
-      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => { e.stopPropagation(); try { await renameMediaFolder(folderPath, async (p,nextTree) => {
-            if(!isCurrent()) return;
+      tile.querySelector('[data-folder-rename]')?.addEventListener('click', async e => {
+        e.stopPropagation();
+        const button=e.currentTarget;
+        button.disabled=true;
+        try{
+          await renameMediaFolder(folderPath,async(p,nextTree)=>{
+            if(!isCurrent())return;
             tree=Array.isArray(nextTree)?nextTree:await loadMediaTree(true);
             if(!isCurrent())return;
             mediaCurrentPath=p;
             paint();
-          }); } catch(err){ toast(err.message,true); } });
+          });
+        }catch(err){
+          const message=err?.message||'Could not rename this folder.';
+          setMediaOperationStatus('Folder rename failed: '+message,true);
+          toast(message,true);
+        }finally{if(button.isConnected)button.disabled=false;}
+      });
       grid.appendChild(tile);
     });
     files.forEach(item => {
@@ -5104,15 +5144,21 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
       }
       tile.querySelector('[data-rename]').addEventListener('click', async event => {
         event.stopPropagation();
-        try {
-          await renameMediaFile(item.path, async (newPath,nextTree) => {
+        const button=event.currentTarget;
+        button.disabled=true;
+        try{
+          await renameMediaFile(item.path,async(newPath,nextTree)=>{
             if(!isCurrent())return;
             tree=Array.isArray(nextTree)?nextTree:await loadMediaTree(true);
             if(!isCurrent())return;
             mediaCurrentPath=newPath.slice(0,newPath.lastIndexOf('/'))||'assets';
             paint();
           });
-        } catch(err) { toast(err?.message||'Could not rename this file.',true); }
+        }catch(err){
+          const message=err?.message||'Could not rename this file.';
+          setMediaOperationStatus('File rename failed: '+message,true);
+          toast(message,true);
+        }finally{if(button.isConnected)button.disabled=false;}
       });
       tile.querySelector('[data-copy]').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(item.path); toast('Path copied — paste it into a Source or Photo field.'); }
@@ -5148,7 +5194,11 @@ RENDERERS.media = async function(data, isCurrent=()=>true){
           if(!isCurrent())return;
           mediaCurrentPath=p;
           paint();
-        }); } catch(err){ toast(err.message,true); }
+        }); } catch(err){
+          const message=err?.message||'Could not rename this folder.';
+          setMediaOperationStatus('Folder rename failed: '+message,true);
+          toast(message,true);
+        }
       finally { if(button.isConnected)button.disabled=mediaCurrentPath==='assets'; }
     });
 
