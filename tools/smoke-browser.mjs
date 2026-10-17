@@ -6338,7 +6338,8 @@ try {
       { type: 'blob', path: 'assets/projects/smoke-jpeg.jpg', sha: 'smoke-jpeg-original', size: 12, mode: '100644' },
       { type: 'blob', path: 'assets/projects/Sample.json', sha: 'smoke-lottie', size: 12, mode: '100644' },
       { type: 'blob', path: 'assets/projects/Female base.obj', sha: 'smoke-model', size: 12, mode: '100644' },
-      { type: 'blob', path: 'assets/projects/idle.mp4', sha: 'smoke-video', size: 12, mode: '100644' }
+      { type: 'blob', path: 'assets/projects/idle.mp4', sha: 'smoke-video', size: 12, mode: '100644' },
+      { type: 'blob', path: 'assets/projects/rename-folder/rename-target.obj', sha: 'smoke-rename-folder', size: 12, mode: '100644' }
     ];
     await smokePage(
       browser,
@@ -6679,6 +6680,54 @@ try {
       await fullPreview.locator('.media-full-preview-model canvas').waitFor({ state: 'attached', timeout: 12000 });
       await page.waitForFunction(() => document.querySelector('.media-full-preview-model')?.dataset.ready === 'true', null, { timeout: 12000 });
       await closeFullPreview();
+
+      // Exercise the actual Media Library Rename controls, not only the
+      // extracted function contract. Folder rename must retain its contents,
+      // and file rename must remove the old path and expose the new one.
+      const renamePromptAnswers=['renamed-folder','smoke-renamed.png'];
+      const renameDialogHandler=async dialog=>{
+        if(dialog.type()==='prompt'){
+          const answer=renamePromptAnswers.shift();
+          if(answer===undefined){await dialog.dismiss();return;}
+          await dialog.accept(answer);
+        }else if(dialog.type()==='confirm'){
+          await dialog.accept();
+        }else{
+          await dialog.dismiss();
+        }
+      };
+      page.on('dialog',renameDialogHandler);
+      try{
+        const folderRenameButton=page.locator('#content .folder-tile')
+          .filter({hasText:'rename-folder'})
+          .locator('[data-folder-rename]');
+        await folderRenameButton.waitFor({state:'visible',timeout:5000});
+        await folderRenameButton.click();
+        await page.locator('#crumbs button').last().waitFor({state:'visible',timeout:8000});
+        const renamedFolderCrumb=(await page.locator('#crumbs button').last().textContent()).trim();
+        if(renamedFolderCrumb!=='renamed-folder'){
+          throw new Error('CMS folder Rename did not navigate into the renamed folder: '+renamedFolderCrumb);
+        }
+        await page.locator('#content .media-tile:has([data-rename])')
+          .filter({hasText:'rename-target.obj'})
+          .waitFor({state:'visible',timeout:8000});
+        await page.locator('#crumbs button').nth(1).click();
+        const fileRenameButton=page.locator('#content .media-tile:has([data-rename])')
+          .filter({hasText:'smoke.png'})
+          .locator('[data-rename]');
+        await fileRenameButton.waitFor({state:'visible',timeout:8000});
+        await fileRenameButton.click();
+        await page.locator('#content .media-tile:has([data-rename])')
+          .filter({hasText:'smoke-renamed.png'})
+          .waitFor({state:'visible',timeout:8000});
+        const oldPathTileCount=await page.locator('#content .media-tile:has([data-rename])')
+          .filter({hasText:'smoke.png'}).count();
+        if(oldPathTileCount!==0){
+          throw new Error('CMS file Rename left the previous smoke.png tile visible after commit.');
+        }
+      }finally{
+        page.off('dialog',renameDialogHandler);
+      }
 
       // Refresh uses the same asynchronous tree request after the Media
       // Library is already mounted; navigating away during it must not repaint
