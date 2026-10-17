@@ -449,8 +449,8 @@
   },
   {
     "id": "funko-pop-test",
-    "title": "Funko Pop Test",
-    "subtitle": "Funko poppppp",
+    "title": "Into the Spider-Verse: Funko Pop Vinyl Sticker Series",
+    "subtitle": "Vector Illustration & Specialty Foil Print Production",
     "badge": "2D Illustration",
     "badges": [
       "2D Illustration"
@@ -458,154 +458,245 @@
     "filters": [
       "illustration"
     ],
-    "description": "this is a funko pop in 2d",
+    "description": "A custom fan art sticker series inspired by the iconic aesthetic of Spider-Man: Across the Spider-Verse reimagined in the distinct Funko Pop vinyl figure style.\n\nCreated in Adobe Illustrator, each character design carefully translates animated cinematic details from suit patterns to unique dynamic silhouettes nto clean vector artwork. The final physical pieces were produced using specialty foil printing techniques to recreate a striking metallic rim light effect and high contrast sheen across characters like Miles Morales, Spider-Gwen, Miguel O'Hara, and The Spot.",
     "thumbnail": {
       "type": "image",
-      "src": "assets/projects/funko-pop-sticker/8.jpg",
-      "focus": "49% 45%",
+      "src": "assets/projects/funko-pop-sticker/thumbnail.webp",
+      "focus": "50% 50%",
       "zoom": 1
     },
     "mediaGroups": [
       {
-        "id": "test-1",
-        "name": "test 1",
+        "id": "group1",
+        "name": "group1",
+        "layout": "cards"
+      },
+      {
+        "id": "group2",
+        "name": "group2",
         "layout": "cards"
       }
     ],
     "media": [
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/Asset 4@4x.webp",
-        "caption": "Smooth Prism Foil",
-        "groupId": "test-1",
+        "src": "assets/projects/funko-pop-sticker/miles-morales-front-1.webp",
+        "caption": "",
+        "groupId": "group1",
         "orientation": "square",
         "holographic": {
           "style": "holographic",
           "intensity": 0.15,
           "textureMode": "fill",
           "glitterLayer": true,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/miles-morales-back-1.webp",
+          "backFoilEnabled": true
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/miles morales@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/miles-morales-front.webp",
         "caption": "Fine Brush Foil",
-        "groupId": "test-1",
+        "groupId": "group1",
         "orientation": "",
         "holographic": {
           "style": "brushed",
           "intensity": 0.6,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/miles-morales-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/mittens@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/gwen-stacy-front.webp",
         "caption": "Vertical Light Beams",
-        "groupId": "test-1",
+        "groupId": "group1",
         "orientation": "",
         "holographic": {
           "style": "beams",
           "intensity": 0.65,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/gwen-stacy-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/peter b@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/peter-b-parker-front.webp",
         "caption": "Crosshatch Foil",
-        "groupId": "test-1",
+        "groupId": "group1",
         "orientation": "",
         "holographic": {
           "style": "crosshatch",
           "intensity": 0.7,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/peter-b-parker-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/miguel o_hara@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/Miguel-ohara-front.webp",
         "caption": "Shattered Ice",
-        "groupId": "test-1",
+        "groupId": "group1",
         "orientation": "",
         "holographic": {
           "style": "shattered",
           "intensity": 0.75,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/Miguel-ohara-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/Asset 8@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/pavitr-front.webp",
         "caption": "Cosmos Galaxy Foil",
+        "groupId": "group1",
         "orientation": "",
         "holographic": {
           "style": "cosmos",
           "intensity": 0.8,
           "textureMode": "fill",
           "glitterLayer": true,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/pavitr-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/ben@4x.webp",
-        "caption": "Water Waves",
+        "src": "assets/projects/funko-pop-sticker/jessica-drew-front.webp",
+        "caption": "",
+        "groupId": "group1",
         "orientation": "",
         "holographic": {
-          "style": "waves",
-          "intensity": 0.85,
+          "style": "holographic",
+          "intensity": 0.7,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/jessica-drew-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/spidergwen@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/hobie-brown-front.webp",
         "caption": "Cat-Eye Lens",
+        "groupId": "group2",
         "orientation": "",
         "holographic": {
           "style": "cat-eye",
           "intensity": 0.9,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/hobie-brown-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/Asset 5@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/ben-railey-front.webp",
+        "caption": "Water Waves",
+        "groupId": "group2",
+        "orientation": "",
+        "holographic": {
+          "style": "waves",
+          "intensity": 0.85,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/ben-railey-back.webp",
+          "backFoilEnabled": false
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop-sticker/spider-cat-front.webp",
         "caption": "Pearlescent Foil",
+        "groupId": "group2",
         "orientation": "",
         "holographic": {
           "style": "iridescent",
           "intensity": 0.95,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/spider-cat-back.webp",
+          "backFoilEnabled": false
         }
       },
       {
         "type": "image",
-        "src": "assets/projects/funko-pop-sticker/pavitr@4x.webp",
+        "src": "assets/projects/funko-pop-sticker/spider-punk-logo-front.webp",
         "caption": "Aurora Gradient",
+        "groupId": "group2",
         "orientation": "",
         "holographic": {
           "style": "aurora",
           "intensity": 1,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/spider-punk-logo-back.webp",
+          "backFoilEnabled": false
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop-sticker/the-spot-front-1.webp",
+        "caption": "",
+        "groupId": "group2",
+        "orientation": "",
+        "holographic": {
+          "style": "holographic",
+          "intensity": 0.7,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/the-spot-back-1.webp",
+          "backFoilEnabled": false
+        }
+      },
+      {
+        "type": "image",
+        "src": "assets/projects/funko-pop-sticker/the-spot-front.webp",
+        "caption": "",
+        "groupId": "group2",
+        "orientation": "",
+        "holographic": {
+          "style": "holographic",
+          "intensity": 0.7,
+          "textureMode": "fill",
+          "glitterLayer": false,
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/the-spot-back.webp",
+          "backFoilEnabled": false
         }
       }
     ]
