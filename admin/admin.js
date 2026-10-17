@@ -4393,8 +4393,9 @@ let lastMediaImpact = { sections:[], projectIds:[], projectTitles:[], changedFil
 function mediaPathBoundary(source,index,path,isFolder){
   const before=index>0?source[index-1]:'';
   const after=source[index+path.length]||'';
-  const beforeOK=!before || '/"\'\`:=([,{\\s'.includes(before);
-  const afterOK=!after || (isFolder ? '/?#"\'\`,)}]\\s'.includes(after) : '?#"\'\`,)}]\\s'.includes(after));
+  const beforeOK=!before || ['/','"',"'","`",':','=','(','[',',','{'].includes(before) || /\\s/.test(before);
+  const afterDelimiters=isFolder?['/','?','#','"',"'","`",',',')','}',']']:['?','#','"',"'","`",',',')','}',']'];
+  const afterOK=!after || afterDelimiters.includes(after) || /\\s/.test(after);
   return beforeOK&&afterOK;
 }
 
@@ -4441,7 +4442,8 @@ function mediaImpactSummary(impact){
   if(impact.projectTitles?.length)parts.push('Affected projects: '+impact.projectTitles.join(', '));
   const other=(impact.changedFiles||[]).filter(file=>!Object.values(SECTIONS).some(section=>section.file===file));
   if(other.length)parts.push('Other site files: '+other.length);
-  return (impact.changedFiles?.length||0)+' reference file'+((impact.changedFiles?.length||0)===1?'':'s')+' will be updated.'+(parts.length?'\\n'+parts.join('\\n'):'');
+  if(!(impact.changedFiles||[]).length)return 'No references were found in the scanned website and data files.';
+  return impact.changedFiles.length+' reference file'+(impact.changedFiles.length===1?'':'s')+' will be updated.'+(parts.length?'\\n'+parts.join('\\n'):'');
 }
 
 async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFolder){
@@ -4449,20 +4451,27 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
   (tree||[]).forEach(item=>{
     if(item?.type==='blob' && /^data\\/.*\\.json$/i.test(item.path||''))candidates.add(item.path);
   });
-  const entries=[],changedFiles=[],sections=new Set(),projectIds=new Set(),projectTitles=new Set();
-  for(const filePath of candidates){
-    let current;
-    try{current=await GH.getTextFile(filePath,parentSha);}
-    catch(err){if(/was not found in the repository/i.test(err.message||''))continue;throw err;}
-    const next=replaceMediaPathReferences(current.text,oldPath,newPath,isFolder);
-    if(next===current.text)continue;
-    entries.push({path:filePath,mode:'100644',type:'blob',sha:await GH.createBlob(next,'utf-8')});
-    changedFiles.push(filePath);
+  // Read the candidates from one immutable commit in parallel. The old loop
+  // awaited every GitHub Contents request sequentially, making Rename look
+  // inert for several seconds before its confirmation dialog appeared.
+  const files=await Promise.all([...candidates].map(async filePath=>{
+    try{return {filePath,current:await GH.getTextFile(filePath,parentSha)};}
+    catch(err){if(/was not found in the repository/i.test(err.message||''))return null;throw err;}
+  }));
+  const matched=[];
+  for(const record of files.filter(Boolean)){
+    const next=replaceMediaPathReferences(record.current.text,oldPath,newPath,isFolder);
+    if(next!==record.current.text)matched.push({...record,next});
+  }
+  const blobShas=await Promise.all(matched.map(record=>GH.createBlob(record.next,'utf-8')));
+  const sections=new Set(),projectIds=new Set(),projectTitles=new Set();
+  const entries=matched.map((record,index)=>{
+    const filePath=record.filePath;
     const section=Object.entries(SECTIONS).find(([,config])=>config.file===filePath);
     if(section)sections.add(section[0]);
     if(filePath==='data/projects.json'){
       try{
-        const projects=JSON.parse(current.text);
+        const projects=JSON.parse(record.current.text);
         if(Array.isArray(projects))projects.forEach(project=>{
           if(!project||typeof project!=='object'||!valueReferencesMediaPath(project,oldPath,isFolder))return;
           const id=String(project.id||slugify(project.title||''));
@@ -4472,8 +4481,9 @@ async function prepareMediaReferenceUpdates(oldPath,newPath,parentSha,tree,isFol
         });
       }catch(_){}
     }
-  }
-  return {entries,changedFiles,sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
+    return {path:filePath,mode:'100644',type:'blob',sha:blobShas[index]};
+  });
+  return {entries,changedFiles:matched.map(record=>record.filePath),sections:[...sections],projectIds:[...projectIds],projectTitles:[...projectTitles]};
 }
 
 function recordMediaImpact(impact,oldPath,newPath){
