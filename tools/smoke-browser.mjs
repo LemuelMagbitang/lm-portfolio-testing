@@ -925,7 +925,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             throw new Error(label + ': hero video failed to decode or load (MediaError ' + playback.error + ').');
           }
           if (playback.playbackState === 'blocked' || playback.paused) {
-            await page.locator('#heroBanner').click({ position: { x: 12, y: 12 } });
+            const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';
+            await page.locator(retryTarget).click({ position: { x: 12, y: 12 } });
             await page.waitForFunction(() => {
               const video = document.querySelector('#heroBanner .slide.active video');
               return video && (video.error || (!video.paused && video.currentTime > 0.05));
@@ -941,6 +942,21 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           }
         } else if (videoContract.activeType === 'video') {
           throw new Error(label + ': video hero media was not rendered as a video element.');
+        }
+
+        // Force the fallback path once with Hero Message enabled: the real
+        // pointer gesture lands on the overlay sibling, not the banner.
+        if (videoContract.present && expectedMessage && viewport.name === 'desktop') {
+          const priorTime = await page.locator('#heroBanner .slide.active video').evaluate(video => {
+            video.pause();
+            video.dataset.playbackState = 'blocked';
+            return video.currentTime;
+          });
+          await page.locator('.hero-overlay').click({ position: { x: 12, y: 12 } });
+          await page.waitForFunction(baseline => {
+            const video = document.querySelector('#heroBanner .slide.active video');
+            return video && !video.paused && video.currentTime > baseline + 0.05;
+          }, priorTime, { timeout: 3000 });
         }
       }
       if (!expectedMessage && layout.heroHeight + 1 < layout.heroMinHeight) {
