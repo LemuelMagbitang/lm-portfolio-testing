@@ -67,7 +67,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   vertical-align: middle;
   /* Normalize the source to pure white before difference compositing. */
   filter: brightness(0) invert(1);
-  mix-blend-mode: difference;
+  mix-blend-mode: normal;
   transition: transform 0.3s ease;
 }
 
@@ -5920,16 +5920,13 @@ button.hamburger {
   }
 }
 
-/* The white-normalized source and difference compositing already adapt to the
-   real rendered pixels underneath the fixed logo. Unlike scroll-triggered
-   color sampling, this keeps working frame-by-frame for video, animation,
-   mixed artwork, cross-origin media, and scroll transitions without layout
-   reads or observers. The transitions soften normal hover/visibility changes;
-   color adaptation remains continuous with the changing backdrop. */
+/* Adaptive logo foreground is driven by the navigation feature's
+   backdrop sampler. Keep compositing normal: the navbar is a stacking context,
+   so a nested difference-blended image cannot reliably sample the page behind it. */
 .site-logo {
+  mix-blend-mode: normal;
   transition:
     transform 0.3s ease,
-    opacity var(--lm-motion-standard) ease,
     filter var(--lm-motion-standard) ease;
 }
 
