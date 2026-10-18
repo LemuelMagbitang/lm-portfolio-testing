@@ -5928,3 +5928,29 @@ button.hamburger {
     transform: none;
   }
 }
+
+
+/* Optional visitor control for CMS-enabled sound/haptic feedback. */
+footer .interaction-feedback-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin: 0 auto 12px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.76);
+  font-family: var(--lm-font-label);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: color .18s ease, background-color .18s ease;
+}
+footer .interaction-feedback-toggle:hover { background: rgba(255,255,255,.14); color: #fff; }
+footer .interaction-feedback-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  footer .interaction-feedback-toggle { transition: none; }
+}
