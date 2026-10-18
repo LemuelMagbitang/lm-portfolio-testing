@@ -939,7 +939,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#000000"/></svg>'
           );
           try { await image.decode(); } catch (_) {}
-          window.dispatchEvent(new Event('resize'));
+          // A changed hero frame must be recognized without requiring the visitor
+          // to resize or scroll the page.
         });
         await page.waitForFunction(
           () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
