@@ -214,7 +214,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   let logoMutationObservers = [];
 
   function parseColor(value) {
-    const match = String(value || '').match(/rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:\\s*[,/ ]\\s*([\\d.]+%?))?\\s*\\)/i);
+    const match = String(value || '').match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/ ]\s*([\d.]+%?))?\s*\)/i);
     if (!match) return null;
     const alphaRaw = match[4];
     const alpha = alphaRaw === undefined ? 1
