@@ -1673,7 +1673,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
       !smoke.includes('hero video did not resume after a real interaction') ||
       !smoke.includes("for (const viewport of viewports)") ||
-      smoke.includes("if (viewport.name === 'desktop') {\\n        const videoContract") ||
+      /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
       !smoke.includes("page.locator('#heroBanner').click({ position: { x: 12, y: 12 } })") ||
       !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
       !smoke.includes("document.body.classList.contains('menu-open')") ||
