@@ -552,6 +552,11 @@ export async function initGallery(options = {}) {
       event.preventDefault();
       return;
     }
+    // A programmatic centering scroll can finish after the click event. Ignore
+    // its late scroll/scrollend notifications so an explicitly selected,
+    // already-visible pill cannot be replaced by the nearest-centre category.
+    // Genuine wheel/pointer gestures clear this guard in their own handlers.
+    suppressFilterSettleUntil = Date.now() + 750;
     activateFilterButton(btn, { center: true, updateUrl: true });
   }));
 
