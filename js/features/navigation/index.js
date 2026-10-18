@@ -627,6 +627,33 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     return pathnameValue || '/';
   }
 
+  function scrollToHomePosition(windowRef, behavior) {
+    if (behavior === 'smooth') {
+      windowRef.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // behavior:auto follows the document's global scroll-behavior:smooth.
+    // Temporarily override that CSS setting for true Home/reduced-motion
+    // resets, then restore it after two paint frames to absorb layout updates
+    // without leaving the page a few pixels below the top.
+    const html = root?.documentElement;
+    const previousInlineBehavior = html?.style?.scrollBehavior ?? '';
+    if (html?.style) html.style.scrollBehavior = 'auto';
+    const scrollInstantly = () => windowRef.scrollTo({ left: 0, top: 0, behavior: 'auto' });
+    scrollInstantly();
+
+    const restoreAfterLayout = () => {
+      scrollInstantly();
+      if (html?.style) html.style.scrollBehavior = previousInlineBehavior;
+    };
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      windowRef.requestAnimationFrame(() => windowRef.requestAnimationFrame(restoreAfterLayout));
+    } else {
+      windowRef.setTimeout(restoreAfterLayout, 0);
+    }
+  }
+
   function handleSamePageHomeNavigation(event) {
     const link = event.currentTarget;
     const windowRef = root?.defaultView || globalThis.window;
@@ -649,7 +676,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
         try { windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home')); } catch (_) {}
         const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
         const instantLogoReset = Boolean(link.matches?.('.nav-logo'));
-        windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion || instantLogoReset ? 'auto' : 'smooth' });
+        scrollToHomePosition(windowRef, reducedMotion || instantLogoReset ? 'auto' : 'smooth');
         return;
       }
       link.setAttribute('href', url.pathname + url.search + '#' + encodeURIComponent(curatedSlug));
