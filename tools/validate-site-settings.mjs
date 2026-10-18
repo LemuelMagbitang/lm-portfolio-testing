@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { SOCIAL_PLATFORMS, normalizeSiteSettings } from '../js/data/site-settings.js';
 
 const keys = SOCIAL_PLATFORMS.map(platform => platform.key);
@@ -18,6 +19,34 @@ assert.equal(defaults.showHeroMessage, true, 'Hero message should remain visible
 assert.equal(defaults.showFooterMessage, false, 'Footer quote should remain opt-in by default.');
 assert.equal(defaults.heroTiming.fadeMs, 600, 'Message fade timing should have a stable default.');
 assert.equal(defaults.heroTiming.autoRotateMs, 9000, 'Message loop should rotate by default.');
+
+assert.equal(defaults.interactionFeedback.enabled, false);
+assert.equal(defaults.interactionFeedback.hapticsEnabled, false);
+assert.equal(defaults.interactionFeedback.navigationSound, 'assets/projects/site/sounds/navigation.wav');
+
+const feedback = normalizeSiteSettings({ interactionFeedback: {
+  enabled: true, soundEnabled: false, hapticsEnabled: true, volume: 0.8,
+  navigationSound: 'assets/projects/site/sounds/custom.wav',
+  selectionSound: 'javascript:alert(1)'
+} }).interactionFeedback;
+assert.equal(feedback.enabled, true);
+assert.equal(feedback.soundEnabled, false);
+assert.equal(feedback.hapticsEnabled, true);
+assert.equal(feedback.volume, 0.3);
+assert.equal(feedback.navigationSound, 'assets/projects/site/sounds/custom.wav');
+assert.equal(feedback.selectionSound, '');
+assert.equal(normalizeSiteSettings({
+  interactionFeedback: { navigationSound: 'assets/../private/secret.wav' }
+}).interactionFeedback.navigationSound, '');
+
+const feedbackSource = await readFile(new URL('../js/features/interaction-feedback/index.js', import.meta.url), 'utf8');
+assert.ok(feedbackSource.includes('!event?.isTrusted'));
+assert.ok(feedbackSource.includes("audio.preload = 'none'"));
+assert.ok(feedbackSource.includes('localStorage'));
+assert.ok(feedbackSource.includes('navigatorRef?.vibrate'));
+const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
+assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
+assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-01')"));
 
 const explicitMessageToggles = normalizeSiteSettings({ showHeroMessage: false, showFooterMessage: true });
 assert.equal(explicitMessageToggles.showHeroMessage, false, 'CMS can disable the hero message.');
