@@ -3646,6 +3646,9 @@ try {
       if (await page.locator('#pageTransitionProgress').count() !== 0) {
         throw new Error('Portfolio loading screen still exposes a progress bar.');
       }
+      // Hero media may take a moment to become decodable; the branded gate
+      // intentionally remains visible until that bounded readiness check settles.
+      await page.waitForFunction(() => document.querySelector('#pageTransition')?.dataset?.loading === 'ready', null, { timeout: 10000 });
       const loadingState = await transition.getAttribute('data-loading');
       if (loadingState !== 'ready' || await transition.isVisible().catch(() => true)) {
         throw new Error('Portfolio loading screen did not hand off cleanly after application readiness.');
