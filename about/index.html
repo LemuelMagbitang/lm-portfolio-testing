@@ -37,7 +37,7 @@
   <link rel="preload" as="image" href="../assets/projects/site/profile.jpg" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@500,700,800,900&display=swap">
-  <link rel="stylesheet" href="../css/style.css?v=20261018-10">
+  <link rel="stylesheet" href="../css/style.css?v=20261018-11">
   <link rel="modulepreload" href="../js/app/bootstrap.js?v=20261018-14">
   <link rel="modulepreload" href="../js/app/page-composition.js?v=20261018-14">
   <script type="importmap">
@@ -73,7 +73,7 @@
     </div>
   </nav>
 
-  <header class="hero-section about-hero">
+  <header class="hero-section about-hero about-hero--with-filter-rail">
     <div class="hero-banner" id="heroBannerAbout"></div>
 
     <div class="hero-overlay about-hero-overlay">
@@ -97,7 +97,14 @@
     </div>
   </header>
 
-  <main class="container page-spacing">
+  <nav class="filter-tabs about-filter-rail" aria-label="Browse designs by category">
+    <a class="tab-btn about-filter-link" href="../" data-filter-link="all">ALL</a>
+    <a class="tab-btn about-filter-link" href="../#3d-motion" data-filter-link="3d-motion">3D &amp; MOTION</a>
+    <a class="tab-btn about-filter-link" href="../#illustration" data-filter-link="illustration">ILLUSTRATION</a>
+    <a class="tab-btn about-filter-link" href="../#archive" data-filter-link="archive">UI/UX &amp; BRAND</a>
+  </nav>
+
+  <main class="container page-spacing about-main">
     <div class="resume-section">
 
       <div class="resume-skills-row">
