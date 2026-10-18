@@ -9,7 +9,7 @@
 import { initNavigation } from '../features/navigation/index.js?v=20261018-08';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261013-02';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
-import { initSiteSettings } from '../features/settings/index.js?v=20261018-08';
+import { initSiteSettings } from '../features/settings/index.js?v=20261018-09';
 
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261018-08';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261018-08';
@@ -313,6 +313,20 @@ export async function createPortfolioApp({
   const settings = settingsFeature.getState();
   settingsFeature.applyDom();
 
+  // Keep optional sounds/haptics out of the default route graph.
+  let interactionFeedback = null;
+  if (settings.interactionFeedback?.enabled === true &&
+      (settings.interactionFeedback.soundEnabled || settings.interactionFeedback.hapticsEnabled)) {
+    try {
+      const feedback = await import('../features/interaction-feedback/index.js?v=20261018-01');
+      interactionFeedback = feedback.initInteractionFeedback({
+        root, settings: settings.interactionFeedback, resolveAssetUrl: siteAssetUrl
+      });
+    } catch (error) {
+      console.warn('Interaction feedback: feature could not initialize.', error);
+    }
+  }
+
   const projectModels = getProjects();
   const hasModelMedia = projectModels.some(project => project?.capabilities?.hasModel);
   const preloadModelModule = hasModelMedia
@@ -586,6 +600,7 @@ export async function createPortfolioApp({
     reviews: reviewsFeature,
     about: aboutFeature,
     forms,
+    interactionFeedback,
     destroy() {
       deferredMediaDestroyed = true;
       lightboxFeature?.destroy?.();
@@ -595,6 +610,7 @@ export async function createPortfolioApp({
       galleryFeature?.destroy?.();
       destroyProjects();
       navigation.destroy?.();
+      interactionFeedback?.destroy?.();
       reviewsFeature?.cleanup?.();
       aboutFeature?.cleanup?.();
       forms.cleanup?.();
