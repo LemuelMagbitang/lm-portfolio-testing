@@ -1910,7 +1910,12 @@ async function assertFilterNavigationResponsive(page, label) {
     borderColor: getComputedStyle(el).borderTopColor,
     outline: getComputedStyle(el).outlineStyle,
     shadow: getComputedStyle(el).boxShadow,
-    hoverCapable: matchMedia('(hover: hover) and (pointer: fine)').matches
+    hoverCapable: matchMedia('(hover: hover) and (pointer: fine)').matches,
+    isHovered: el.matches(':hover'),
+    className: el.className,
+    pressed: el.getAttribute('aria-pressed'),
+    inlineBackground: el.style.backgroundColor,
+    hoverSelectorMatches: el.matches('.tab-btn:hover:not(.active):not([aria-pressed="true"])')
   }));
   const hoverBackgroundValid = hoverStyle.hoverCapable
     ? /^rgba\(255, 255, 255, 0\.12\)$/.test(hoverStyle.background)
