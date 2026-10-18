@@ -664,6 +664,97 @@ async function logRuntimeProfile(page, label, requestedUrls = []) {
     }));
 }
 
+async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
+  const originalViewport = page.viewportSize() || { width: 1280, height: 900 };
+  const viewports = [
+    { width: 1440, height: 900, name: 'desktop' },
+    { width: 820, height: 1024, name: 'tablet' },
+    { width: 390, height: 844, name: 'mobile' }
+  ];
+
+  try {
+    for (const viewport of viewports) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const layout = await page.evaluate(expected => {
+        const hero = document.querySelector('.hero-section:not(.about-hero)');
+        const banner = hero?.querySelector('.hero-banner');
+        const quote = hero?.querySelector('.hero-quote');
+        const main = document.querySelector('main.works-main');
+        const grid = document.querySelector('#portfolioGrid');
+        const logo = document.querySelector('.site-logo');
+        const navLogo = document.querySelector('.nav-logo');
+        const navbar = document.querySelector('.navbar');
+        const heroRect = hero?.getBoundingClientRect();
+        const bannerRect = banner?.getBoundingClientRect();
+        const mainStyle = main ? getComputedStyle(main) : null;
+        const fadeStyle = banner ? getComputedStyle(banner, '::before') : null;
+        const logoStyle = logo ? getComputedStyle(logo) : null;
+        const navLogoStyle = navLogo ? getComputedStyle(navLogo) : null;
+        const navbarStyle = navbar ? getComputedStyle(navbar) : null;
+        return {
+          hasHero: !!hero,
+          heroHeight: heroRect?.height || 0,
+          heroMinHeight: hero ? parseFloat(getComputedStyle(hero).minHeight) || 0 : 0,
+          bannerHeight: bannerRect?.height || 0,
+          hasMessage: !!quote && !quote.hidden,
+          messageSizing: !!hero?.classList.contains('hero-section--message'),
+          fadeHeight: fadeStyle ? parseFloat(fadeStyle.height) || 0 : 0,
+          fadeImage: fadeStyle?.backgroundImage || 'none',
+          fadePointerEvents: fadeStyle?.pointerEvents || '',
+          mainPaddingLeft: parseFloat(mainStyle?.paddingLeft || '0') || 0,
+          mainPaddingRight: parseFloat(mainStyle?.paddingRight || '0') || 0,
+          gridWidth: grid?.getBoundingClientRect().width || 0,
+          mainWidth: main?.getBoundingClientRect().width || 0,
+          logoBlendMode: logoStyle?.mixBlendMode || '',
+          logoFilter: logoStyle?.filter || '',
+          logoTransitionProperties: (logoStyle?.transitionProperty || '').split(',').map(x => x.trim()),
+          logoTransitionDurations: (logoStyle?.transitionDuration || '').split(',').map(x => x.trim()),
+          navLogoZ: Number.parseInt(navLogoStyle?.zIndex || '0', 10) || 0,
+          navbarZ: Number.parseInt(navbarStyle?.zIndex || '0', 10) || 0,
+          reducedMotion: expected
+        };
+      }, false);
+
+      if (!layout.hasHero || layout.heroHeight <= 0 ||
+          Math.abs(layout.heroHeight - layout.bannerHeight) > 1) {
+        throw new Error(label + ' ' + viewport.name + ': hero banner must fill the complete hero surface: ' + JSON.stringify(layout));
+      }
+      if (layout.hasMessage !== expectedMessage || layout.messageSizing !== expectedMessage) {
+        throw new Error(label + ' ' + viewport.name + ': the hero message visibility and sizing state diverged: ' + JSON.stringify(layout));
+      }
+      if (layout.fadeHeight <= 0 || layout.fadeHeight >= layout.bannerHeight ||
+          !layout.fadeImage.includes('linear-gradient') || layout.fadePointerEvents !== 'none') {
+        throw new Error(label + ' ' + viewport.name + ': bottom-edge hero fade is missing, oversized, or interactive: ' + JSON.stringify(layout));
+      }
+      if (layout.mainPaddingLeft !== 0 || layout.mainPaddingRight !== 0 ||
+          layout.gridWidth <= 0 || layout.gridWidth > layout.mainWidth + 1) {
+        throw new Error(label + ' ' + viewport.name + ': Works gallery is still inset by the generic container gutter: ' + JSON.stringify(layout));
+      }
+      if (layout.logoBlendMode !== 'difference' ||
+          !layout.logoFilter.includes('invert') ||
+          !layout.logoTransitionProperties.includes('opacity') ||
+          !layout.logoTransitionProperties.includes('filter') ||
+          layout.navLogoZ <= layout.navbarZ) {
+        throw new Error(label + ' ' + viewport.name + ': adaptive logo contrast, transitions, or stacking regressed: ' + JSON.stringify(layout));
+      }
+      if (!expectedMessage && layout.heroHeight + 1 < layout.heroMinHeight) {
+        throw new Error(label + ' ' + viewport.name + ': message-free hero does not use its responsive minimum height: ' + JSON.stringify(layout));
+      }
+    }
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const transitionDuration = await page.locator('.site-logo').first().evaluate(
+      logo => getComputedStyle(logo).transitionDuration
+    );
+    if (transitionDuration.split(',').some(value => Number.parseFloat(value) > 0)) {
+      throw new Error(label + ': adaptive logo transitions must respect prefers-reduced-motion, got ' + transitionDuration);
+    }
+  } finally {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.setViewportSize(originalViewport);
+  }
+}
+
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   // A narrow viewport alone does not emulate a phone. In Chromium the CSS
   // pointer media feature remains `pointer:fine`, which means touch-specific
