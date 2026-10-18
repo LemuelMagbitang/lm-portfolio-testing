@@ -291,6 +291,9 @@ async function assertNavigationLabelsCentered(page, label) {
 }
 
 async function assertPublicNavigation(page, { href, label }) {
+  if (await page.locator('.interaction-feedback-toggle').count() !== 0) {
+    throw new Error(label + ' default-off interaction feedback must not insert a visitor control.');
+  }
   const link = page.locator('.nav-links a[href="' + href + '"]').first();
   if (await link.count() !== 1) {
     throw new Error(label + ' direct navigation link is missing: ' + href);
