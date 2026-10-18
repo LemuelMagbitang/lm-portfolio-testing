@@ -1913,7 +1913,7 @@ async function assertFilterNavigationResponsive(page, label) {
     hoverCapable: matchMedia('(hover: hover) and (pointer: fine)').matches
   }));
   const hoverBackgroundValid = hoverStyle.hoverCapable
-    ? /^rgba\\(255, 255, 255, 0\\.12\\)$/.test(hoverStyle.background)
+    ? /^rgba\(255, 255, 255, 0\.12\)$/.test(hoverStyle.background)
     : hoverStyle.background === 'rgba(0, 0, 0, 0)' || hoverStyle.background === 'transparent';
   if (hoverStyle.outline !== 'none' || hoverStyle.shadow !== 'none' ||
       hoverStyle.borderColor !== 'rgba(0, 0, 0, 0)' || !hoverBackgroundValid) {
