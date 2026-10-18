@@ -259,6 +259,37 @@ async function assertLightboxChromeAlignment(page, label, mode) {
   throw new Error('Unknown Lightbox alignment mode: ' + mode);
 }
 
+async function assertNavigationLabelsCentered(page, label) {
+  const states = await page.locator('.nav-links a[href]').evaluateAll(anchors => anchors.map(anchor => {
+    const style = getComputedStyle(anchor);
+    const pill = anchor.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(anchor);
+    const text = range.getBoundingClientRect();
+    return {
+      label: (anchor.textContent || '').trim(),
+      display: style.display,
+      alignItems: style.alignItems,
+      justifyContent: style.justifyContent,
+      textAlign: style.textAlign,
+      boxSizing: style.boxSizing,
+      centerDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
+      centerDeltaY: Math.abs((text.top + text.height / 2) - (pill.top + pill.height / 2))
+    };
+  }));
+  if (!states.length || states.some(state =>
+    state.display !== 'inline-flex' ||
+    state.alignItems !== 'center' ||
+    state.justifyContent !== 'center' ||
+    state.textAlign !== 'center' ||
+    state.boxSizing !== 'border-box' ||
+    state.centerDeltaX > 1.5 ||
+    state.centerDeltaY > 1.5
+  )) {
+    throw new Error(label + ' navigation text is not centered within its pill: ' + JSON.stringify(states));
+  }
+}
+
 async function assertPublicNavigation(page, { href, label }) {
   const link = page.locator('.nav-links a[href="' + href + '"]').first();
   if (await link.count() !== 1) {
@@ -289,11 +320,22 @@ async function assertPublicNavigation(page, { href, label }) {
       .map(span => getComputedStyle(span).mixBlendMode);
     const links = anchors.map(anchor => {
       const style = getComputedStyle(anchor);
+      const pill = anchor.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(anchor);
+      const text = range.getBoundingClientRect();
       return {
         label: (anchor.textContent || '').trim().replace(/\s+/g, ' ').toUpperCase(),
         active: anchor.classList.contains('active-link'),
         background: style.backgroundColor,
         color: style.color,
+        display: style.display,
+        alignItems: style.alignItems,
+        justifyContent: style.justifyContent,
+        textAlign: style.textAlign,
+        boxSizing: style.boxSizing,
+        centerDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
+        centerDeltaY: Math.abs((text.top + text.height / 2) - (pill.top + pill.height / 2)),
         radius: style.borderRadius,
         borderWidth: style.borderWidth,
         href: anchor.getAttribute('href') || ''
@@ -323,6 +365,8 @@ async function assertPublicNavigation(page, { href, label }) {
       viewportWidth: window.innerWidth
     };
   });
+  await assertNavigationLabelsCentered(page, label + ' default navigation state');
+
   const contrastRatio = (foreground, background) => {
     const luminance = color => {
       const channels = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(channel => {
@@ -368,6 +412,15 @@ async function assertPublicNavigation(page, { href, label }) {
     JSON.stringify(navContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
+    navContract.links.some(link =>
+      link.display !== 'inline-flex' ||
+      link.alignItems !== 'center' ||
+      link.justifyContent !== 'center' ||
+      link.textAlign !== 'center' ||
+      link.boxSizing !== 'border-box' ||
+      link.centerDeltaX > 1.5 ||
+      link.centerDeltaY > 1.5
+    ) ||
     navContract.dropdownCount !== 0 ||
     (navContract.viewportWidth >= 768 && navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)')
   ) {
@@ -384,6 +437,7 @@ async function assertPublicNavigation(page, { href, label }) {
   if ((viewport?.width || 0) >= 768 && supportsHover) {
     const hoverTarget = page.locator('.nav-links a:not(.active-link)').first();
     await hoverTarget.hover();
+    await assertNavigationLabelsCentered(page, label + ' hover state');
     await page.waitForFunction(() => {
       const hovered = document.querySelector('.nav-links a:not(.active-link):hover');
       if (!hovered) return false;
@@ -402,6 +456,7 @@ async function assertPublicNavigation(page, { href, label }) {
 
     const activeHoverTarget = page.locator('.nav-links a.active-link').first();
     await activeHoverTarget.hover();
+    await assertNavigationLabelsCentered(page, label + ' active-hover state');
     await page.waitForFunction(() => {
       const hovered = document.querySelector('.nav-links a.active-link:hover');
       if (!hovered) return false;
@@ -417,6 +472,13 @@ async function assertPublicNavigation(page, { href, label }) {
       return style.backgroundColor === 'rgb(255, 255, 255)' &&
         style.color === 'rgb(0, 0, 0)';
     }, null, { timeout: 1500 });
+  }
+
+  if ((viewport?.width || 0) >= 768) {
+    const focusTarget = page.locator('.nav-links a[href]').nth(1);
+    await focusTarget.focus();
+    await assertNavigationLabelsCentered(page, label + ' focus state');
+    await focusTarget.evaluate(element => element.blur());
   }
 
   if ((viewport?.width || 0) < 768) {
@@ -706,6 +768,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           fadeHeight: fadeStyle ? parseFloat(fadeStyle.height) || 0 : 0,
           fadeImage: fadeStyle?.backgroundImage || 'none',
           fadePointerEvents: fadeStyle?.pointerEvents || '',
+          filterLeftInset: (() => { const r = document.querySelector('.filter-tabs')?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? r.left - m.left : -1; })(),
+          filterRightInset: (() => { const r = document.querySelector('.filter-tabs')?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? m.right - r.right : -1; })(),
+          filterCenterDelta: (() => { const r = document.querySelector('.filter-tabs')?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? Math.abs((r.left + r.width / 2) - (m.left + m.width / 2)) : 9999; })(),
           mainPaddingLeft: parseFloat(mainStyle?.paddingLeft || '0') || 0,
           mainPaddingRight: parseFloat(mainStyle?.paddingRight || '0') || 0,
           gridWidth: grid?.getBoundingClientRect().width || 0,
@@ -727,13 +792,17 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
       if (layout.hasMessage !== expectedMessage || layout.messageSizing !== expectedMessage) {
         throw new Error(label + ' ' + viewport.name + ': the hero message visibility and sizing state diverged: ' + JSON.stringify(layout));
       }
-      if (layout.fadeHeight <= 0 || layout.fadeHeight >= layout.bannerHeight ||
-          !layout.fadeImage.includes('linear-gradient') || layout.fadePointerEvents !== 'none') {
-        throw new Error(label + ' ' + viewport.name + ': bottom-edge hero fade is missing, oversized, or interactive: ' + JSON.stringify(layout));
+      if (layout.fadeImage !== 'none') {
+        throw new Error(label + ' ' + viewport.name + ': Works hero must render without a bottom-edge gradient fade: ' + JSON.stringify(layout));
       }
       if (layout.mainPaddingLeft !== 0 || layout.mainPaddingRight !== 0 ||
           layout.gridWidth <= 0 || layout.gridWidth > layout.mainWidth + 1) {
         throw new Error(label + ' ' + viewport.name + ': Works gallery is still inset by the generic container gutter: ' + JSON.stringify(layout));
+      }
+      if (layout.filterLeftInset < 20 || layout.filterRightInset < 20 ||
+          Math.abs(layout.filterLeftInset - layout.filterRightInset) > 1.5 ||
+          layout.filterCenterDelta > 1.5) {
+        throw new Error(label + ' ' + viewport.name + ': filter tabs are not centered within balanced page gutters: ' + JSON.stringify(layout));
       }
       if (layout.logoBlendMode !== 'normal' ||
           !['light', 'dark'].includes(layout.logoForeground) ||
