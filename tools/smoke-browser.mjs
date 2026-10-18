@@ -3920,10 +3920,19 @@ try {
 
         await page.setViewportSize({ width: 375, height: 844 });
         await page.waitForTimeout(250);
-        const preservedAfterResize = await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight);
+        const preservedAfterResize = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          maxHeight: getComputedStyle(el).maxHeight,
+          clientHeight: el.clientHeight,
+          scrollHeight: el.scrollHeight,
+          expanded: el.dataset.expanded || '',
+          ariaExpanded: document.querySelector('#showMoreBtn')?.getAttribute('aria-expanded') || '',
+          activeFilters: Array.from(document.querySelectorAll('.filter-tabs [aria-pressed="true"]'))
+            .map(button => button.getAttribute('data-filter') || 'all')
+        }));
         const resizeLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
-        if (preservedAfterResize !== 'none' || resizeLabel?.trim().toUpperCase() !== 'SHOW LESS') {
-          throw new Error('Mobile Show More collapsed unexpectedly while remaining in an overflowing viewport.');
+        if (preservedAfterResize.maxHeight !== 'none' || resizeLabel?.trim().toUpperCase() !== 'SHOW LESS') {
+          throw new Error('Mobile Show More collapsed unexpectedly while remaining in an overflowing viewport: ' +
+            JSON.stringify({ ...preservedAfterResize, label: resizeLabel?.trim() || '' }));
         }
 
         await page.evaluate(() => {

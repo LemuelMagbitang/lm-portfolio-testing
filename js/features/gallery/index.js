@@ -100,6 +100,10 @@ export async function initGallery(options = {}) {
   let filterPointerActive = false;
   let filterSettling = false;
   let suppressFilterClickUntil = 0;
+  // Centering the active filter after a viewport resize emits scroll events.
+  // Those programmatic scrolls must not be mistaken for a user selecting a new
+  // filter, because a filter change intentionally collapses Show More.
+  let suppressFilterSettleUntil = 0;
   // Gallery owns persistent listeners and timers through one lifecycle.
   // Short-lived pagination nodes disappear with the pager rather than
   // accumulating separate global teardown paths.
@@ -260,7 +264,8 @@ export async function initGallery(options = {}) {
   }
 
   function settleCenteredFilter({ center = true } = {}) {
-    if (!filterTabs || !isFilterCarousel() || filterSettling) return;
+    if (!filterTabs || !isFilterCarousel() || filterSettling ||
+        Date.now() < suppressFilterSettleUntil) return;
     const buttons = getFilterButtons();
     if (!buttons.length) return;
 
@@ -283,7 +288,8 @@ export async function initGallery(options = {}) {
   }
 
   function scheduleCenteredFilter() {
-    if (!filterTabs || !isFilterCarousel() || filterPointerActive || filterSettling) return;
+    if (!filterTabs || !isFilterCarousel() || filterPointerActive || filterSettling ||
+        Date.now() < suppressFilterSettleUntil) return;
     windowRef.clearTimeout(filterScrollTimer);
     filterScrollTimer = windowRef.setTimeout(() => settleCenteredFilter(), 140);
   }
@@ -552,10 +558,22 @@ export async function initGallery(options = {}) {
   let resizeTimer = null;
   lifecycle.add(() => windowRef.clearTimeout(resizeTimer));
   bind(windowRef, 'resize', () => {
+    // Cancel any scroll-settlement work that was already pending before this
+    // resize. Re-centering the active button is presentation-only and must not
+    // switch the active filter or collapse the user's expanded gallery.
+    suppressFilterSettleUntil = Date.now() + 350;
+    windowRef.clearTimeout(filterScrollTimer);
+    filterScrollTimer = null;
+    windowRef.clearTimeout(filterSettleTimer);
+    filterSettleTimer = null;
+    filterSettling = false;
     clearTimeout(resizeTimer);
     resizeTimer = windowRef.setTimeout(() => {
       ensureFilterEdges();
       const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
+      // Re-establish the guard after the debounce because this is the
+      // programmatic scroll that otherwise fires a second filter settlement.
+      suppressFilterSettleUntil = Date.now() + 350;
       if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
       updateFilterPager(filterBtns.indexOf(activeBtn));
       // Re-render at breakpoint changes because card orientation and the
@@ -592,6 +610,8 @@ export async function initGallery(options = {}) {
      in-progress swipe or drag. */
   bind(filterTabs, 'pointerdown', event => {
     if (!isFilterCarousel()) return;
+    // A real user gesture takes precedence over the post-resize suppression.
+    suppressFilterSettleUntil = 0;
     filterPointerActive = true;
 
     if (event.pointerType !== 'mouse' || event.button !== 0) return;
@@ -639,6 +659,8 @@ export async function initGallery(options = {}) {
     }
   }
 
+  bind(filterTabs, 'wheel', () => { suppressFilterSettleUntil = 0; }, { passive: true });
+  bind(filterTabs, 'touchstart', () => { suppressFilterSettleUntil = 0; }, { passive: true });
   bind(filterTabs, 'pointerup', finishFilterPointer);
   bind(filterTabs, 'pointercancel', finishFilterPointer);
 
