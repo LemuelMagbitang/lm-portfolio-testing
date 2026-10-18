@@ -100,6 +100,7 @@ export async function initGallery(options = {}) {
   let filterScrollFrame = null;
   let filterDrag = null;
   let filterPointerActive = false;
+  let filterInertiaFrame = null;
   let filterSettling = false;
   let suppressFilterClickUntil = 0;
   // Centering the active filter after a viewport resize emits scroll events.
@@ -697,13 +698,65 @@ export async function initGallery(options = {}) {
     settleCenteredFilter();
   }, { passive: true });
 
-  /* Small-screen touch, wheel/trackpad and primary-button mouse dragging
-     all share the same settling rule. The centered filter is selected only
-     after the user's movement ends, so the interface never fights an
-     in-progress swipe or drag. */
+  /* Horizontal rail gestures are axis-locked. Touch-action: pan-y lets
+     the browser own vertical scrolling; horizontal dragging only starts
+     after X movement clearly wins over Y movement. */
+  function stopFilterInertia() {
+    if (filterInertiaFrame !== null) windowRef.cancelAnimationFrame?.(filterInertiaFrame);
+    filterInertiaFrame = null;
+    filterTabs?.classList.remove('is-gesture-active', 'is-dragging');
+  }
+
+  function runFilterInertia(initialVelocity) {
+    if (!filterTabs || typeof windowRef.requestAnimationFrame !== 'function') {
+      stopFilterInertia();
+      scheduleCenteredFilter();
+      return;
+    }
+
+    let velocity = Math.max(-2.5, Math.min(2.5, initialVelocity));
+    let previousTime = null;
+    let elapsed = 0;
+    const maxScroll = Math.max(0, filterTabs.scrollWidth - filterTabs.clientWidth);
+
+    const advance = timestamp => {
+      filterInertiaFrame = null;
+      const now = Number.isFinite(timestamp) ? timestamp : Date.now();
+      const deltaTime = previousTime === null
+        ? 16
+        : Math.max(1, Math.min(32, now - previousTime));
+      previousTime = now;
+      elapsed += deltaTime;
+
+      const before = filterTabs.scrollLeft;
+      const next = Math.max(0, Math.min(maxScroll, before + velocity * deltaTime));
+      filterTabs.scrollLeft = next;
+      velocity *= Math.exp(-deltaTime / 230);
+
+      const hitEdge = (next <= 0 && velocity < 0) || (next >= maxScroll && velocity > 0);
+      if (elapsed < 640 && Math.abs(velocity) > 0.035 && !hitEdge) {
+        filterInertiaFrame = windowRef.requestAnimationFrame(advance);
+        return;
+      }
+
+      filterTabs.classList.remove('is-gesture-active', 'is-dragging');
+      scheduleCenteredFilter();
+    };
+
+    if (Math.abs(velocity) < 0.035) {
+      stopFilterInertia();
+      scheduleCenteredFilter();
+      return;
+    }
+    filterInertiaFrame = windowRef.requestAnimationFrame(advance);
+  }
+
   bind(filterTabs, 'pointerdown', event => {
-    if (!isFilterScroller()) return;
-    // A new gesture can interrupt programmatic centering.
+    if (!isFilterScroller() || event.isPrimary === false) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    // A new gesture interrupts any previous coast or programmatic centering.
+    stopFilterInertia();
     suppressFilterSettleUntil = 0;
     windowRef.clearTimeout(filterScrollTimer);
     filterScrollTimer = null;
@@ -712,63 +765,112 @@ export async function initGallery(options = {}) {
     filterSettling = false;
     filterPointerActive = true;
 
-    if (event.pointerType !== 'mouse' || event.button !== 0) return;
     filterDrag = {
       pointerId: event.pointerId,
+      pointerType: event.pointerType || 'mouse',
       startX: event.clientX,
+      startY: event.clientY,
       startScrollLeft: filterTabs.scrollLeft,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      lastTime: Number(event.timeStamp) || Date.now(),
+      velocityX: 0,
+      distanceX: 0,
+      axis: null,
       moved: false
     };
   });
 
   bind(filterTabs, 'pointermove', event => {
     if (!filterDrag || event.pointerId !== filterDrag.pointerId) return;
-    const distance = event.clientX - filterDrag.startX;
-    if (Math.abs(distance) > 4) {
-      filterDrag.moved = true;
-      filterTabs.classList.add('is-dragging');
-      filterTabs.setPointerCapture?.(event.pointerId);
-    }
-    if (!filterDrag.moved) return;
 
-    event.preventDefault();
-    filterTabs.scrollLeft = filterDrag.startScrollLeft - distance;
+    const now = Number(event.timeStamp) || Date.now();
+    const deltaTime = Math.max(1, now - filterDrag.lastTime);
+    const sampleVelocity = Math.max(
+      -2.5,
+      Math.min(2.5, (event.clientX - filterDrag.lastX) / deltaTime)
+    );
+    filterDrag.velocityX = filterDrag.velocityX * 0.35 + sampleVelocity * 0.65;
+
+    const distanceX = event.clientX - filterDrag.startX;
+    const distanceY = event.clientY - filterDrag.startY;
+    filterDrag.distanceX = distanceX;
+
+    if (!filterDrag.axis && Math.max(Math.abs(distanceX), Math.abs(distanceY)) >= 8) {
+      if (Math.abs(distanceX) > Math.abs(distanceY) * 1.15) {
+        filterDrag.axis = 'x';
+        filterDrag.moved = true;
+        filterTabs.classList.add('is-gesture-active', 'is-dragging');
+        try { filterTabs.setPointerCapture?.(event.pointerId); } catch (_) {}
+      } else if (Math.abs(distanceY) > Math.abs(distanceX) * 1.15) {
+        // The gesture belongs to the document, not the filter rail. Do not
+        // preventDefault(), capture the pointer, or schedule filter selection.
+        filterDrag.axis = 'y';
+        filterPointerActive = false;
+      }
+    }
+
+    if (filterDrag.axis === 'x') {
+      if (event.cancelable) event.preventDefault();
+      filterTabs.scrollLeft = filterDrag.startScrollLeft - distanceX;
+    }
+
+    filterDrag.lastX = event.clientX;
+    filterDrag.lastY = event.clientY;
+    filterDrag.lastTime = now;
   });
 
   function finishFilterPointer(event) {
-    if (event && filterDrag && event.pointerId !== filterDrag.pointerId) return;
+    if (!filterDrag) return;
+    if (event && event.pointerId !== filterDrag.pointerId) return;
 
-    const dragged = !!filterDrag?.moved;
-    const pointerId = filterDrag?.pointerId;
-
-    if (filterDrag) {
-      filterDrag = null;
-      filterTabs.classList.remove('is-dragging');
-      try { filterTabs.releasePointerCapture?.(pointerId); } catch (e) {}
-    }
-
+    const gesture = filterDrag;
+    const cancelled = event?.type === 'pointercancel';
+    filterDrag = null;
     filterPointerActive = false;
 
-    if (dragged) {
-      suppressFilterClickUntil = Date.now() + 250;
-      // Let touch/drag momentum finish; scroll events keep resetting this
-      // timer so the sound is only triggered by the final centered filter.
-      scheduleCenteredFilter();
-    } else {
-      // A simple click on a mobile-width mouse/touchpad also needs a settle
-      // pass; touch and keyboard inputs use this same debounced contract.
-      scheduleCenteredFilter();
+    try { filterTabs.releasePointerCapture?.(gesture.pointerId); } catch (_) {}
+    filterTabs.classList.remove('is-dragging');
+
+    // Native vertical page scrolling takes priority and must not change which
+    // filter is active just because the pointer started over the rail.
+    if (gesture.axis === 'y') {
+      filterTabs.classList.remove('is-gesture-active');
+      return;
     }
+
+    if (gesture.axis === 'x' && gesture.moved) {
+      suppressFilterClickUntil = Date.now() + 250;
+      const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const travel = Math.abs(gesture.distanceX);
+      const speed = Math.abs(gesture.velocityX);
+      const longGesture = travel >= Math.max(140, filterTabs.clientWidth * 0.42);
+      const shouldCoast = !reducedMotion && !cancelled && (
+        (travel >= 24 && speed >= 0.45) ||
+        (longGesture && speed >= 0.12)
+      );
+
+      if (shouldCoast) {
+        // Finger velocity and scroll velocity have opposite signs. The brief
+        // damped coast is reserved for genuinely fast or long horizontal drags.
+        runFilterInertia(-gesture.velocityX);
+      } else {
+        filterTabs.classList.remove('is-gesture-active');
+        scheduleCenteredFilter();
+      }
+      return;
+    }
+
+    filterTabs.classList.remove('is-gesture-active');
+    if (!cancelled) scheduleCenteredFilter();
   }
 
   bind(filterTabs, 'wheel', () => { suppressFilterSettleUntil = 0; }, { passive: true });
-  bind(filterTabs, 'touchstart', () => { suppressFilterSettleUntil = 0; }, { passive: true });
   bind(filterTabs, 'pointerup', finishFilterPointer);
   bind(filterTabs, 'pointercancel', finishFilterPointer);
 
-  // A touch can begin on the filter rail and finish outside it. Keep the
-  // cleanup listener on the window so pointer state cannot remain stuck after
-  // a swipe exits the tab strip.
+  // Gestures can end outside the strip after pointer capture or OS interruption.
+  // The no-active-gesture guard prevents the bubbling pointerup from settling twice.
   bind(windowRef, 'pointerup', finishFilterPointer);
   bind(windowRef, 'pointercancel', finishFilterPointer);
 
@@ -809,6 +911,7 @@ export async function initGallery(options = {}) {
   lifecycle.add(() => windowRef.clearTimeout(filterScrollTimer));
   lifecycle.add(() => windowRef.clearTimeout(filterSettleTimer));
   lifecycle.add(() => windowRef.cancelAnimationFrame?.(filterScrollFrame));
+  lifecycle.add(() => windowRef.cancelAnimationFrame?.(filterInertiaFrame));
 
   // Re-entry through browser back/forward can restore the page with a stale
   // collapsed gallery measurement. Rebuild the collapsed presentation from
@@ -846,6 +949,9 @@ export async function initGallery(options = {}) {
       filterDrag = null;
       filterPointerActive = false;
       filterSettling = false;
+      if (filterInertiaFrame !== null) windowRef.cancelAnimationFrame?.(filterInertiaFrame);
+      filterInertiaFrame = null;
+      filterTabs?.classList.remove('is-gesture-active', 'is-dragging');
       filterPager?.remove();
       filterPager = null;
       filterPageDots = [];
