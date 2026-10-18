@@ -85,30 +85,33 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
           sourceY = (height - sourceHeight) * verticalPosition;
         }
       } else if (objectFit === 'contain') {
-        const contentAspect = sourceAspect;
-        if (contentAspect > renderedAspect) {
-          const contentHeight = rect.width / contentAspect;
-          const offsetY = (rect.height - contentHeight) * verticalPositionFraction(style?.objectPosition);
+        const horizontalPosition = positionFraction(
+          String(style?.objectPosition || '50% 50%').split(/\\s+/)[0], 0.5
+        );
+        const verticalPosition = positionFraction(
+          String(style?.objectPosition || '50% 50%').split(/\\s+/)[1] || '50%', 0.5
+        );
+        let localX = 0;
+        let localY = 0;
+
+        if (sourceAspect > renderedAspect) {
+          const contentHeight = rect.width / sourceAspect;
+          const offsetY = (rect.height - contentHeight) * verticalPosition;
           if (viewportPoint.y < rect.top + offsetY || viewportPoint.y > rect.top + offsetY + contentHeight) return null;
-          sourceHeight = height;
-          sourceY = 0;
+          localX = clamp((viewportPoint.x - rect.left) / rect.width, 0, 1);
+          localY = clamp((viewportPoint.y - rect.top - offsetY) / contentHeight, 0, 1);
         } else {
-          const contentWidth = rect.height * contentAspect;
-          const offsetX = (rect.width - contentWidth) * horizontalPositionFraction(style?.objectPosition);
+          const contentWidth = rect.height * sourceAspect;
+          const offsetX = (rect.width - contentWidth) * horizontalPosition;
           if (viewportPoint.x < rect.left + offsetX || viewportPoint.x > rect.left + offsetX + contentWidth) return null;
-          sourceWidth = width;
-          sourceX = 0;
+          localX = clamp((viewportPoint.x - rect.left - offsetX) / contentWidth, 0, 1);
+          localY = clamp((viewportPoint.y - rect.top) / rect.height, 0, 1);
         }
-        const fittedWidth = sourceWidth;
-        const fittedHeight = sourceHeight;
-        const u = clamp((viewportPoint.x - rect.left) / rect.width, 0, 1);
-        const v = clamp((viewportPoint.y - rect.top) / rect.height, 0, 1);
-        sourceX += u * fittedWidth;
-        sourceY += v * fittedHeight;
+
         const patchWidth = Math.max(1, width * Math.min(0.035, 8 / rect.width));
         const patchHeight = Math.max(1, height * Math.min(0.035, 8 / rect.height));
-        sourceX = clamp(sourceX - patchWidth / 2, 0, width - patchWidth);
-        sourceY = clamp(sourceY - patchHeight / 2, 0, height - patchHeight);
+        sourceX = clamp(localX * width - patchWidth / 2, 0, width - patchWidth);
+        sourceY = clamp(localY * height - patchHeight / 2, 0, height - patchHeight);
         context.drawImage(media, sourceX, sourceY, patchWidth, patchHeight, 0, 0, sampleSize, sampleSize);
         return readLuminance(context, sampleSize);
       }
