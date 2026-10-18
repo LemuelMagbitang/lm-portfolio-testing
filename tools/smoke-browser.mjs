@@ -6678,10 +6678,109 @@ try {
       if (await hero.count() !== 1) throw new Error('About page hero container is missing.');
       await page.waitForFunction(() =>
         Boolean(document.querySelector('.about-hero .hero-banner')) &&
-        document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+        ['light', 'dark'].includes(document.querySelector('.site-logo')?.dataset?.logoForeground),
         null,
         { timeout: 2500 }
       );
+
+
+
+      const aboutRailState = await page.evaluate(() => {
+        const rail = document.querySelector('.about-filter-rail');
+        const links = Array.from(rail?.querySelectorAll('a.about-filter-link') || []);
+        const style = rail ? getComputedStyle(rail) : null;
+        return {
+          exists: !!rail,
+          label: rail?.getAttribute('aria-label') || '',
+          links: links.map(link => ({ href: link.getAttribute('href'), label: link.textContent.trim() })),
+          railHeight: rail?.getBoundingClientRect().height || 0,
+          buttonHeights: links.map(link => link.getBoundingClientRect().height),
+          overflowX: style?.overflowX || '',
+          touchAction: style?.touchAction || '',
+          mask: (style?.maskImage || '') + ' ' + (style?.webkitMaskImage || ''),
+          scrollable: Number(rail?.scrollWidth || 0) > Number(rail?.clientWidth || 0)
+        };
+      });
+      const expectedAboutFilterLinks = [
+        ['../', 'ALL'],
+        ['../#3d-motion', '3D & MOTION'],
+        ['../#illustration', 'ILLUSTRATION'],
+        ['../#archive', 'UI/UX & BRAND']
+      ];
+      if (!aboutRailState.exists || aboutRailState.label !== 'Browse designs by category' ||
+          JSON.stringify(aboutRailState.links.map(link => [link.href, link.label])) !== JSON.stringify(expectedAboutFilterLinks)) {
+        throw new Error('About page category rail is missing or its destinations do not match the public Works filters: ' + JSON.stringify(aboutRailState));
+      }
+      if (aboutRailState.railHeight < 44 || aboutRailState.buttonHeights.some(height => height < 44) ||
+          aboutRailState.overflowX !== 'auto' || aboutRailState.touchAction !== 'pan-x' ||
+          !/linear-gradient/i.test(aboutRailState.mask) || !aboutRailState.scrollable) {
+        throw new Error('About category rail lost its mobile touch sizing, horizontal scrolling, or edge fade: ' + JSON.stringify(aboutRailState));
+      }
+
+      // The About hero keeps a dark scrim for text readability. Ensure the logo
+      // uses composited visible luminance, not raw source pixels, so a bright
+      // still selects a dark mark and a dark still restores the white mark.
+      await page.evaluate(async () => {
+        const banner = document.querySelector('.about-hero .hero-banner');
+        const logo = document.querySelector('.site-logo');
+        if (!banner || !logo) throw new Error('About adaptive-logo fixture could not find the hero banner and site logo.');
+        const originals = Array.from(banner.querySelectorAll('.slide'));
+        window.__lmAboutLogoSlideSnapshot = originals.map(slide => ({
+          slide,
+          className: slide.className,
+          style: slide.getAttribute('style')
+        }));
+        originals.forEach(slide => slide.classList.remove('active'));
+        const slide = document.createElement('div');
+        slide.id = '__lm-about-logo-contrast-slide';
+        slide.className = 'slide active';
+        Object.assign(slide.style, { position: 'absolute', inset: '0', zIndex: '1', pointerEvents: 'none' });
+        const image = document.createElement('img');
+        image.id = '__lm-about-logo-contrast-image';
+        image.alt = '';
+        Object.assign(image.style, { display: 'block', width: '100%', height: '100%', objectFit: 'cover' });
+        image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#ffffff"/></svg>'
+        );
+        slide.appendChild(image);
+        banner.appendChild(slide);
+        await image.decode();
+        logo.dataset.logoForeground = 'light';
+        logo.style.filter = 'brightness(0) invert(1)';
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+        null,
+        { timeout: 2500 }
+      );
+      await page.evaluate(async () => {
+        const image = document.getElementById('__lm-about-logo-contrast-image');
+        const logo = document.querySelector('.site-logo');
+        if (!image || !logo) throw new Error('About adaptive-logo fixture disappeared before its dark-media check.');
+        image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#000000"/></svg>'
+        );
+        await image.decode();
+        logo.dataset.logoForeground = 'dark';
+        logo.style.filter = 'brightness(0)';
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+        null,
+        { timeout: 2500 }
+      );
+      await page.evaluate(() => {
+        document.getElementById('__lm-about-logo-contrast-slide')?.remove();
+        (window.__lmAboutLogoSlideSnapshot || []).forEach(({ slide, className, style }) => {
+          slide.className = className;
+          if (style === null) slide.removeAttribute('style');
+          else slide.setAttribute('style', style);
+        });
+        delete window.__lmAboutLogoSlideSnapshot;
+        window.dispatchEvent(new Event('scroll'));
+      });
 
       const aboutSocialGeometry = await page.evaluate(() => {
         const row = document.querySelector('.about-social-icons');

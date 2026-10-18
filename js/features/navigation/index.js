@@ -343,6 +343,37 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
   }
 
+
+  function effectiveAboutHeroLuminance(media, sampledLuminance, point) {
+    const banner = media?.closest?.('.hero-banner');
+    const aboutHero = banner?.closest?.('.about-hero');
+    if (!banner || !aboutHero || !Number.isFinite(sampledLuminance)) return sampledLuminance;
+
+    const slide = media.closest?.('.slide');
+    const bannerRect = banner.getBoundingClientRect();
+    const bannerStyle = windowRef?.getComputedStyle?.(banner);
+    const slideStyle = slide ? windowRef?.getComputedStyle?.(slide) : null;
+    const mediaStyle = windowRef?.getComputedStyle?.(media);
+    const alphaValue = (value, fallback) => {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : fallback;
+    };
+    const topScrim = alphaValue(bannerStyle?.getPropertyValue('--about-hero-scrim-top-alpha'), 0.32);
+    const bottomScrim = alphaValue(bannerStyle?.getPropertyValue('--about-hero-scrim-bottom-alpha'), 0.72);
+    const position = bannerRect.height > 0
+      ? Math.max(0, Math.min(1, (point.y - bannerRect.top) / bannerRect.height))
+      : 0;
+    const scrimAlpha = topScrim + ((bottomScrim - topScrim) * position);
+    const slideOpacity = alphaValue(slideStyle?.opacity, 1);
+    const mediaOpacity = alphaValue(mediaStyle?.opacity, 1);
+    const artworkAlpha = Math.max(0, Math.min(1, slideOpacity * mediaOpacity * (1 - scrimAlpha)));
+    const darkBase = luminanceFromColor({ r: 18, g: 18, b: 18 }) ?? 0.006;
+    // The canvas sampler returns source media luminance. Composite it against
+    // the dark base using the active slide opacity and the About hero scrim,
+    // so the logo responds to the artwork as it is actually rendered.
+    return sampledLuminance * artworkAlpha + darkBase * (1 - artworkAlpha);
+  }
+
   function updateLogoContrast() {
     if (!logo || (!root.elementsFromPoint && !root.elementFromPoint)) return;
     const rect = logo.getBoundingClientRect();
@@ -375,11 +406,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return;
     }
     const heroSection = backdrop.closest?.('.hero-section');
-    if (heroSection?.classList.contains('hero-section--message') ||
-        heroSection?.classList.contains('about-hero')) {
-      // Both layouts intentionally dim their art for overlay copy. White is
-      // the correct foreground over that rendered dark scrim; full-color Works
-      // media below is sampled directly and can switch between black and white.
+    if (heroSection?.classList.contains('hero-section--message')) {
+      // The Works message hero keeps its established dark scrim and white mark.
       setDynamicBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.02);
@@ -412,7 +440,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
     if (media) {
       setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName));
-      const luminance = sampleMediaLuminance(root, media, point);
+      const sampledLuminance = sampleMediaLuminance(root, media, point);
+      const luminance = heroSection?.classList.contains('about-hero')
+        ? effectiveAboutHeroLuminance(media, sampledLuminance, point)
+        : sampledLuminance;
       if (Number.isFinite(luminance)) {
         setLogoForeground(luminance);
         return;
