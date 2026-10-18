@@ -11,7 +11,7 @@ import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261010-04';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
-import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261018-07';
+import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261018-08';
 
 function mediaTypeFromSrc(src) {
   const clean = String(src || '').split('?')[0].split('#')[0].toLowerCase();
