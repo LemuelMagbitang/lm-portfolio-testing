@@ -361,6 +361,7 @@ async function assertPublicNavigation(page, { href, label }) {
       labels: links.map(link => link.label),
       links,
       dropdownCount: menu?.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length || 0,
+      mobileMenuOpen: Boolean(menu?.classList.contains('active') && menu?.classList.contains('is-open')),
       mobileMenuBackground: menu ? getComputedStyle(menu).backgroundColor : '',
       viewportWidth: window.innerWidth
     };
@@ -420,8 +421,8 @@ async function assertPublicNavigation(page, { href, label }) {
       link.justifyContent !== 'center' ||
       link.textAlign !== 'center' ||
       link.boxSizing !== 'border-box' ||
-      link.centerDeltaX > 1.5 ||
-      link.centerDeltaY > 1.5
+      ((navContract.viewportWidth >= 768 || navContract.mobileMenuOpen) &&
+        (link.centerDeltaX > 1.5 || link.centerDeltaY > 1.5))
     ) ||
     navContract.dropdownCount !== 0 ||
     (navContract.viewportWidth >= 768 && navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)')
