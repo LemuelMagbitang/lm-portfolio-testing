@@ -3828,14 +3828,24 @@ try {
       // still be mid-transition after filter interaction, and getBoundingClientRect()
       // includes transform/scale effects that do not change CSS grid track sizing.
       const firstRowLayout = await page.locator('#portfolioGrid').evaluate(grid => {
-        const cards = Array.from(grid.querySelectorAll('.project-card'));
+        const cards = Array.from(grid.querySelectorAll('.project-card')).filter(card => {
+          const style = getComputedStyle(card);
+          return style.display !== 'none' && style.visibility !== 'hidden' &&
+            card.offsetWidth > 0 && card.offsetHeight > 0;
+        });
         const columns = getComputedStyle(grid).gridTemplateColumns
           .trim()
           .split(/\s+/)
           .map(value => Number.parseFloat(value));
+        const firstVisibleTop = cards[0]?.offsetTop;
+        const firstRowCards = cards
+          .filter(card => Math.abs(card.offsetTop - firstVisibleTop) <= 2)
+          .sort((a, b) => a.offsetLeft - b.offsetLeft)
+          .slice(0, 2);
         return {
           columns,
-          firstRow: cards.slice(0, 2).map(card => ({
+          visibleCardCount: cards.length,
+          firstRow: firstRowCards.map(card => ({
             left: card.offsetLeft,
             top: card.offsetTop,
             width: card.offsetWidth
