@@ -1905,6 +1905,18 @@ async function assertFilterNavigationResponsive(page, label) {
   // Desktop hover stays in the existing gray palette; no hover border/ring.
   const hoverTarget = page.locator('.filter-nav-scroller [data-filter]:not(.active)').first();
   await hoverTarget.hover();
+  const hasFineHover = await hoverTarget.evaluate(
+    () => matchMedia('(hover: hover) and (pointer: fine)').matches
+  );
+  if (hasFineHover) {
+    // Wait for the intended 220ms CSS transition rather than sampling the
+    // transparent starting frame immediately after Playwright moves the mouse.
+    await page.waitForFunction(() => {
+      const target = document.querySelector('.filter-nav-scroller [data-filter]:not(.active)');
+      return !!target && target.matches('.tab-btn:hover:not(.active):not([aria-pressed="true"])') &&
+        getComputedStyle(target).backgroundColor === 'rgba(255, 255, 255, 0.12)';
+    }, null, { timeout: 700 });
+  }
   const hoverStyle = await hoverTarget.evaluate(el => ({
     background: getComputedStyle(el).backgroundColor,
     borderColor: getComputedStyle(el).borderTopColor,
