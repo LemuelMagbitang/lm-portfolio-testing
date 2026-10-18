@@ -1621,12 +1621,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !/justify-content:\s*center/.test(navigationPillRule) ||
       !/text-align:\s*center/.test(navigationPillRule) ||
       !/box-sizing:\s*border-box/.test(navigationPillRule) ||
-      !/display:\s*inline-flex/.test(navigationLabelRule) ||
-      !/align-items:\s*center/.test(navigationLabelRule) ||
-      !/justify-content:\s*center/.test(navigationLabelRule) ||
+      !/display:\s*block/.test(navigationLabelRule) ||
       !/width:\s*max-content/.test(navigationLabelRule) ||
-      !/min-height:\s*1\.2em/.test(navigationLabelRule) ||
-      !/line-height:\s*1\.2/.test(navigationLabelRule)) {
+      !/line-height:\s*1/.test(navigationLabelRule) ||
+      !/text-box-trim:\s*trim-both/.test(navigationLabelRule) ||
+      !/text-box-edge:\s*cap alphabetic/.test(navigationLabelRule)) {
     err('Navigation pills: explicit content-sized label boxes must remain mathematically centered without manual offsets.');
   }
 
@@ -1765,9 +1764,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261018-19') ||
       !works.includes('js/app/page-composition.js?v=20261018-19') ||
-      !works.includes('css/style.css?v=20261018-15') ||
+      !works.includes('css/style.css?v=20261018-16') ||
       !works.includes('js/script.js?v=20261018-19') ||
-      !about.includes('style.css?v=20261018-15') ||
+      !about.includes('style.css?v=20261018-16') ||
       !about.includes('script.js?v=20261018-19') ||
       !about.includes('page-composition.js?v=20261018-19')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

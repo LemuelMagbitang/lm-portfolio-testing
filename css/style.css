@@ -125,18 +125,20 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .nav-link-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   flex: 0 1 auto;
   width: max-content;
   max-width: 100%;
   min-width: 0;
-  min-height: 1.2em;
   margin: 0;
   padding: 0;
-  line-height: 1.2;
+  line-height: 1;
   text-align: center;
+  /* Trim font leading to the Inter cap height and alphabetic baseline.
+     Flex-centering the trimmed text box aligns the visible uppercase forms,
+     rather than centering the font's extra top/bottom line-box space. */
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
 }
 
 .nav-links a.active-link {

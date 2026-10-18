@@ -275,6 +275,9 @@ async function assertNavigationLabelsCentered(page, label) {
       justifyContent: style.justifyContent,
       textAlign: style.textAlign,
       boxSizing: style.boxSizing,
+      labelDisplay: labelElement ? getComputedStyle(labelElement).display : '',
+      labelTextBoxTrim: labelElement ? getComputedStyle(labelElement).textBoxTrim : '',
+      labelTextBoxEdge: labelElement ? getComputedStyle(labelElement).textBoxEdge : '',
       labelBoxDeltaX: labelBox ? Math.abs((labelBox.left + labelBox.width / 2) - (pill.left + pill.width / 2)) : Infinity,
       labelBoxDeltaY: labelBox ? Math.abs((labelBox.top + labelBox.height / 2) - (pill.top + pill.height / 2)) : Infinity,
       textDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
@@ -287,6 +290,10 @@ async function assertNavigationLabelsCentered(page, label) {
     state.justifyContent !== 'center' ||
     state.textAlign !== 'center' ||
     state.boxSizing !== 'border-box' ||
+    state.labelDisplay !== 'block' ||
+    state.labelTextBoxTrim !== 'trim-both' ||
+    !state.labelTextBoxEdge.includes('cap') ||
+    !state.labelTextBoxEdge.includes('alphabetic') ||
     state.labelBoxDeltaX > 1.5 ||
     state.labelBoxDeltaY > 1.5 ||
     state.textDeltaX > 1.5 ||
