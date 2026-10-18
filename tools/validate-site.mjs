@@ -1659,7 +1659,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes("heroSection?.classList.contains('about-hero')") ||
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
       !navigation.includes("setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName))") ||
-      !navigation.includes("heroSection?.classList.contains('hero-section--message') ||") ||
+      !navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
+      !navigation.includes("function effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
+      !navigation.includes("effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
+      !navigation.includes("--about-hero-scrim-top-alpha") ||
+      !navigation.includes("--about-hero-scrim-bottom-alpha") ||
       !navigation.includes('instantLogoReset') ||
       !navigation.includes('logo-contrast-fallback') ||
       !navigation.includes('MutationObserver') ||
@@ -1716,25 +1720,29 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("await page.locator('.hero-overlay').click({ position: { x: 12, y: 12 } })") ||
       !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
       !smoke.includes("document.body.classList.contains('menu-open')") ||
-      !smoke.includes("gate.dataset.loading = 'active'")) {
+      !smoke.includes("gate.dataset.loading = 'active'") ||
+      !about.includes('class="filter-tabs about-filter-rail"') ||
+      !css.includes('.about-filter-rail .about-filter-link') ||
+      !smoke.includes('About page category rail is missing') ||
+      !smoke.includes('About adaptive-logo fixture')) {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-14") ||
-      !bootstrap.includes("cacheVersion = '20261018-14'") ||
-      !composition.includes("navigation/index.js?v=20261018-14") ||
+  if (!entry.includes("bootstrap.js?v=20261018-15") ||
+      !bootstrap.includes("cacheVersion = '20261018-15'") ||
+      !composition.includes("navigation/index.js?v=20261018-15") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-01") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-14') ||
-      !works.includes('js/app/page-composition.js?v=20261018-14') ||
-      !works.includes('css/style.css?v=20261018-10') ||
-      !works.includes('js/script.js?v=20261018-14') ||
-      !about.includes('style.css?v=20261018-10') ||
-      !about.includes('script.js?v=20261018-14') ||
-      !about.includes('page-composition.js?v=20261018-14')) {
+      !works.includes('js/app/bootstrap.js?v=20261018-15') ||
+      !works.includes('js/app/page-composition.js?v=20261018-15') ||
+      !works.includes('css/style.css?v=20261018-11') ||
+      !works.includes('js/script.js?v=20261018-15') ||
+      !about.includes('style.css?v=20261018-11') ||
+      !about.includes('script.js?v=20261018-15') ||
+      !about.includes('page-composition.js?v=20261018-15')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
