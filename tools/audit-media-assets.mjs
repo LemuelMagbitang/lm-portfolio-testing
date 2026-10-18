@@ -46,9 +46,10 @@ const PRESERVED_RASTER_ASSETS = new Map([
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);
+const AUDIO_EXTENSIONS = new Set(['.wav', '.mp3', '.ogg', '.m4a', '.aac', '.flac']);
 const PREFERRED_VIDEO_EXTENSIONS = new Set(['.mp4', '.webm']);
 const KNOWN_EXTENSIONS = new Set([
-  ...RASTER_EXTENSIONS, '.webp', ...VECTOR_EXTENSIONS, ...VIDEO_EXTENSIONS,
+  ...RASTER_EXTENSIONS, '.webp', ...VECTOR_EXTENSIONS, ...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS,
   '.json', '.obj', '.mtl', '.gltf', '.glb', '.fbx', '.bin',
   '.ktx2', '.basis', '.woff', '.woff2', '.ttf', '.otf'
 ]);
