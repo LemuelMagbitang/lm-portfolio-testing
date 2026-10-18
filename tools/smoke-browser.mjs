@@ -675,7 +675,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
   try {
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      const layout = await page.evaluate(expected => {
+      const layout = await page.evaluate(() => {
         const hero = document.querySelector('.hero-section:not(.about-hero)');
         const banner = hero?.querySelector('.hero-banner');
         const quote = hero?.querySelector('.hero-quote');
@@ -711,9 +711,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           logoTransitionDurations: (logoStyle?.transitionDuration || '').split(',').map(x => x.trim()),
           navLogoZ: Number.parseInt(navLogoStyle?.zIndex || '0', 10) || 0,
           navbarZ: Number.parseInt(navbarStyle?.zIndex || '0', 10) || 0,
-          reducedMotion: expected
         };
-      }, false);
+      });
 
       if (!layout.hasHero || layout.heroHeight <= 0 ||
           Math.abs(layout.heroHeight - layout.bannerHeight) > 1) {
@@ -2013,6 +2012,7 @@ try {
       if (refreshed.heroIndex === first.heroIndex || refreshed.footerIndex === first.footerIndex) {
         throw new Error('Hero/footer messages did not choose new random entries after refresh: ' + JSON.stringify({ first, refreshed }));
       }
+      await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled');
     }, { width: 1280, height: 900 }, async page => {
       await page.route('**/data/settings.json*', async route => {
         const response = await route.fetch();
@@ -2170,6 +2170,11 @@ try {
           (!heroMessageLayout.overlayImage.includes('linear-gradient') || heroMessageLayout.activeArtworkOpacity > 0.6)) {
         throw new Error('Works Hero must keep its readability overlay when the message is enabled: ' + JSON.stringify(heroMessageLayout));
       }
+      await assertWorksHeroGalleryResponsive(
+        page,
+        messageSettings.showHeroMessage !== false,
+        'Works Hero current CMS setting'
+      );
       if (messageSettings.showFooterMessage === true) {
         const footerMessage = await page.locator('footer .footer-hero-message .hero-quote-text').textContent().catch(() => '');
         if (!footerMessage?.trim()) throw new Error('Works footer message is missing while showFooterMessage is enabled.');
