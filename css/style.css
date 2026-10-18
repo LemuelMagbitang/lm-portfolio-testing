@@ -541,11 +541,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   scroll-behavior: auto;
 }
 
-.filter-nav-content {
-  position: relative;
-  isolation: isolate;
-}
-
 .filter-active-indicator {
   position: absolute;
   inset: 0 auto auto 0;
@@ -589,6 +584,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .filter-nav-content {
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-flow: row nowrap;
   align-items: center;
