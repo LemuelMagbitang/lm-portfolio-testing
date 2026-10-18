@@ -9,9 +9,9 @@
   "showHeroMessage": false,
   "showFooterMessage": true,
   "interactionFeedback": {
-    "enabled": false,
+    "enabled": true,
     "soundEnabled": true,
-    "hapticsEnabled": false,
+    "hapticsEnabled": true,
     "volume": 0.12,
     "navigationSound": "assets/projects/site/sounds/navigation.wav",
     "selectionSound": "assets/projects/site/sounds/selection.wav"
