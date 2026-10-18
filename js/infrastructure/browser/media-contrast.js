@@ -38,8 +38,15 @@ export function foregroundForLuminance(luminance) {
 }
 
 export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
-  const width = Number(media?.naturalWidth || media?.videoWidth || 0);
-  const height = Number(media?.naturalHeight || media?.videoHeight || 0);
+  // Lottie can expose its current canvas through an open shadow root. Sampling
+  // that actual painted surface is more useful than guessing from the host's
+  // transparent background; other custom renderers safely fall back to CSS.
+  const shadowMedia = media?.localName === 'lottie-player'
+    ? media.shadowRoot?.querySelector('canvas, video, img')
+    : null;
+  const sampleTarget = shadowMedia || media;
+  const width = Number(sampleTarget?.naturalWidth || sampleTarget?.videoWidth || sampleTarget?.width || 0);
+  const height = Number(sampleTarget?.naturalHeight || sampleTarget?.videoHeight || sampleTarget?.height || 0);
   if (!width || !height) return null;
 
   try {
@@ -56,14 +63,14 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
     let sourceY = 0;
 
     if (viewportPoint) {
-      const rect = media.getBoundingClientRect?.();
+      const rect = sampleTarget.getBoundingClientRect?.();
       if (!rect || rect.width <= 0 || rect.height <= 0 ||
           viewportPoint.x < rect.left || viewportPoint.x > rect.right ||
           viewportPoint.y < rect.top || viewportPoint.y > rect.bottom) {
         return null;
       }
 
-      const style = documentRef.defaultView?.getComputedStyle?.(media);
+      const style = documentRef.defaultView?.getComputedStyle?.(sampleTarget);
       const objectFit = style?.objectFit || 'fill';
       const localX = clamp((viewportPoint.x - rect.left) / rect.width, 0, 1);
       const localY = clamp((viewportPoint.y - rect.top) / rect.height, 0, 1);
@@ -112,7 +119,7 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
         const patchHeight = Math.max(1, height * Math.min(0.035, 8 / rect.height));
         sourceX = clamp(localX * width - patchWidth / 2, 0, width - patchWidth);
         sourceY = clamp(localY * height - patchHeight / 2, 0, height - patchHeight);
-        context.drawImage(media, sourceX, sourceY, patchWidth, patchHeight, 0, 0, sampleSize, sampleSize);
+        context.drawImage(sampleTarget, sourceX, sourceY, patchWidth, patchHeight, 0, 0, sampleSize, sampleSize);
         return readLuminance(context, sampleSize);
       }
 
@@ -122,7 +129,7 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
       const patchHeight = Math.max(1, sourceHeight * Math.min(0.035, 8 / rect.height));
       sourceX = clamp(sourceX - patchWidth / 2, 0, width - patchWidth);
       sourceY = clamp(sourceY - patchHeight / 2, 0, height - patchHeight);
-      context.drawImage(media, sourceX, sourceY, patchWidth, patchHeight, 0, 0, sampleSize, sampleSize);
+      context.drawImage(sampleTarget, sourceX, sourceY, patchWidth, patchHeight, 0, 0, sampleSize, sampleSize);
       return readLuminance(context, sampleSize);
     }
 
@@ -137,7 +144,7 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
       sourceY = (height - sourceHeight) * 0.74;
       sourceY = Math.max(0, Math.min(sourceY, height - sourceHeight));
     }
-    context.drawImage(media, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+    context.drawImage(sampleTarget, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
     return readLuminance(context, sampleSize);
   } catch (_) {
     return null;
@@ -157,16 +164,6 @@ function readLuminance(context, sampleSize) {
     count += 1;
   }
   return count ? luminance / count : null;
-}
-
-function horizontalPositionFraction(value) {
-  const tokens = String(value || '50% 50%').split(/\s+/);
-  return positionFraction(tokens[0], 0.5);
-}
-
-function verticalPositionFraction(value) {
-  const tokens = String(value || '50% 50%').split(/\s+/);
-  return positionFraction(tokens[1] || tokens[0], 0.5);
 }
 
 export function chooseForeground(documentRef, source, media) {
