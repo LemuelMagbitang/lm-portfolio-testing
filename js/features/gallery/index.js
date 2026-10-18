@@ -214,7 +214,11 @@ export async function initGallery(options = {}) {
     indicator.style.width = `${buttonRect.width}px`;
     indicator.style.height = `${buttonRect.height}px`;
     indicator.style.transform = `translate3d(${buttonRect.left - contentRect.left}px, ${buttonRect.top - contentRect.top}px, 0)`;
+    // Measure first, then hand visual ownership to the indicator. The static
+    // active button remains the CSS fallback until this point, so selection
+    // never disappears while Gallery initializes.
     indicator.classList.add('is-ready');
+    filterContent.classList.add('has-active-indicator');
   }
 
   // Active labels use a heavier weight, which can otherwise alter flex widths
@@ -1025,6 +1029,7 @@ export async function initGallery(options = {}) {
       filterTabs?.classList.remove('is-gesture-active', 'is-dragging');
       filterActiveIndicator?.remove();
       filterActiveIndicator = null;
+      filterContent?.classList.remove('has-active-indicator');
       filterPager?.remove();
       filterPager = null;
       filterPageDots = [];
