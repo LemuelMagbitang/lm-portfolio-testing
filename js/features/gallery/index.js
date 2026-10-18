@@ -289,7 +289,7 @@ export async function initGallery(options = {}) {
     // Keep the selected item on the viewport's horizontal centerline. A small
     // tolerance prevents re-scrolling when it's already centered, while force
     // is reserved for precise post-swipe snap settlement.
-    const centerTolerance = Math.max(6, Math.min(12, tabsRect.width * 0.02));
+    const centerTolerance = 1.5;
     if (!force && Math.abs(delta) <= centerTolerance) return false;
     if (Math.abs(delta) < 1) return false;
 
