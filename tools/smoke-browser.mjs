@@ -1626,6 +1626,8 @@ async function assertFilterNavigationResponsive(page, label) {
       const lastRect = buttons[buttons.length - 1]?.getBoundingClientRect();
       const active = buttons.find(button => button.classList.contains('active'));
       const activeRect = active?.getBoundingClientRect();
+      const activeStyle = active ? getComputedStyle(active) : null;
+      const activeMarker = active ? getComputedStyle(active, '::before').content : '';
       const scrollerStyle = scroller ? getComputedStyle(scroller) : null;
       const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
       return {
@@ -1650,6 +1652,10 @@ async function assertFilterNavigationResponsive(page, label) {
           : Infinity,
         activeFilter: active?.getAttribute('data-filter') || '',
         activePressed: active?.getAttribute('aria-pressed') || '',
+        ariaPressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
+        activeRadius: Number.parseFloat(activeStyle?.borderTopLeftRadius || '0') || 0,
+        activeBackground: activeStyle?.backgroundColor || '',
+        activeMarker,
         documentWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth
       };
     });
@@ -1665,6 +1671,12 @@ async function assertFilterNavigationResponsive(page, label) {
         state.paddingTop < 14 || state.paddingBottom < 14) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
+    if (state.ariaPressedCount !== 1 || state.activeRadius < 20 ||
+        !state.activeMarker.includes('✓') ||
+        state.activeBackground === 'rgba(0, 0, 0, 0)' ||
+        state.activeBackground === 'transparent') {
+      throw new Error(label + ' accessible pill state or non-colour active marker failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
     if (state.documentWidth > state.viewportWidth + 1) {
       throw new Error(label + ' filter navigation introduced document-level horizontal overflow at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
@@ -1674,8 +1686,8 @@ async function assertFilterNavigationResponsive(page, label) {
     if (state.dataOverflow && !state.snapType.includes('x mandatory')) {
       throw new Error(label + ' overflowing filter navigation is missing horizontal snapping at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    if (state.touchAction === 'none' || state.touchAction === 'pan-x') {
-      throw new Error(label + ' filter strip is blocking natural vertical page gestures at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    if (state.touchAction !== 'pan-y') {
+      throw new Error(label + ' filter rail must delegate vertical gestures to the page (touch-action: pan-y) at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
 
     // Test active-pill centering once at the narrowest phone width.
@@ -1713,10 +1725,112 @@ async function assertFilterNavigationResponsive(page, label) {
           const scrollerRect = scroller?.getBoundingClientRect();
           const activeRect = active?.getBoundingClientRect();
           return !!scrollerRect && !!activeRect &&
+            !scroller?.classList.contains('is-gesture-active') &&
             Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
         }, null, { timeout: 2500 });
         testedMouseDrag = true;
       }
+
+      // A predominantly vertical touch begun over the rail must not become
+      // a horizontal drag or trigger filter settlement.
+      const verticalGesture = await rail.evaluate(async el => {
+        const rect = el.getBoundingClientRect();
+        const before = el.scrollLeft;
+        const x = rect.left + rect.width * 0.55;
+        const y = rect.top + rect.height / 2;
+        const dispatch = (type, clientX, clientY) => el.dispatchEvent(new PointerEvent(type, {
+          bubbles: true, cancelable: true, pointerId: 71, pointerType: 'touch',
+          isPrimary: true, button: 0, clientX, clientY
+        }));
+        dispatch('pointerdown', x, y);
+        dispatch('pointermove', x + 1, y + 42);
+        dispatch('pointerup', x + 1, y + 42);
+        await new Promise(resolve => setTimeout(resolve, 40));
+        return {
+          before, after: el.scrollLeft,
+          dragging: el.classList.contains('is-dragging'),
+          gestureActive: el.classList.contains('is-gesture-active')
+        };
+      });
+      if (Math.abs(verticalGesture.after - verticalGesture.before) > 1 ||
+          verticalGesture.dragging || verticalGesture.gestureActive) {
+        throw new Error(label + ' vertical touch gesture was captured by the filter rail: ' + JSON.stringify(verticalGesture));
+      }
+
+      // A short, slow horizontal gesture should settle nearby rather than
+      // coasting across multiple filters.
+      const slowGesture = await rail.evaluate(async el => {
+        const rect = el.getBoundingClientRect();
+        const before = el.scrollLeft;
+        const x = rect.left + rect.width * 0.68;
+        const y = rect.top + rect.height / 2;
+        const dispatch = (type, clientX, clientY) => el.dispatchEvent(new PointerEvent(type, {
+          bubbles: true, cancelable: true, pointerId: 72, pointerType: 'touch',
+          isPrimary: true, button: 0, clientX, clientY
+        }));
+        dispatch('pointerdown', x, y);
+        await new Promise(resolve => setTimeout(resolve, 120));
+        dispatch('pointermove', x - 14, y + 1);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        dispatch('pointerup', x - 14, y + 1);
+        return { before, requestedDistance: 14 };
+      });
+      await page.waitForFunction(() => {
+        const scroller = document.querySelector('.filter-nav-scroller');
+        const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+        const scrollerRect = scroller?.getBoundingClientRect();
+        const activeRect = active?.getBoundingClientRect();
+        return !!scrollerRect && !!activeRect &&
+          !scroller.classList.contains('is-gesture-active') &&
+          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+      }, null, { timeout: 2500 });
+      const slowAfter = await rail.evaluate(el => el.scrollLeft);
+      if (Math.abs(slowAfter - slowGesture.before) > 55) {
+        throw new Error(label + ' short slow swipe travelled too far instead of settling nearby: ' +
+          JSON.stringify({ ...slowGesture, after: slowAfter }));
+      }
+
+      // A fast swipe should travel beyond the finger-tracked distance before
+      // the nearest pill becomes the final active filter.
+      const fastGesture = await rail.evaluate(async el => {
+        const rect = el.getBoundingClientRect();
+        const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+        const before = el.scrollLeft;
+        const towardRight = maxScroll - before >= before ? 1 : -1;
+        const available = towardRight > 0 ? maxScroll - before : before;
+        const distance = Math.min(120, available * 0.75);
+        const fingerDelta = towardRight > 0 ? -distance : distance;
+        const x = rect.left + rect.width * 0.5;
+        const y = rect.top + rect.height / 2;
+        const dispatch = (type, clientX, clientY) => el.dispatchEvent(new PointerEvent(type, {
+          bubbles: true, cancelable: true, pointerId: 73, pointerType: 'touch',
+          isPrimary: true, button: 0, clientX, clientY
+        }));
+        dispatch('pointerdown', x, y);
+        await new Promise(resolve => setTimeout(resolve, 16));
+        dispatch('pointermove', x + fingerDelta * 0.52, y + 1);
+        await new Promise(resolve => setTimeout(resolve, 16));
+        dispatch('pointermove', x + fingerDelta, y + 1);
+        const direct = el.scrollLeft;
+        dispatch('pointerup', x + fingerDelta, y + 1);
+        return { before, direct, requestedDistance: distance, towardRight };
+      });
+      await page.waitForFunction(() => {
+        const scroller = document.querySelector('.filter-nav-scroller');
+        const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+        const scrollerRect = scroller?.getBoundingClientRect();
+        const activeRect = active?.getBoundingClientRect();
+        return !!scrollerRect && !!activeRect &&
+          !scroller.classList.contains('is-gesture-active') &&
+          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+      }, null, { timeout: 3000 });
+      const fastAfter = await rail.evaluate(el => el.scrollLeft);
+      const coastDistance = (fastAfter - fastGesture.direct) * fastGesture.towardRight;
+      if (fastGesture.requestedDistance >= 60 && coastDistance < 4) {
+        throw new Error(label + ' fast horizontal swipe did not coast before snapping: ' +
+          JSON.stringify({ ...fastGesture, after: fastAfter, coastDistance }));
+      }
+
       await page.locator('.filter-nav-scroller [data-filter="all"]').click();
       await page.waitForFunction(() => {
         const scroller = document.querySelector('.filter-nav-scroller');
@@ -1753,6 +1867,27 @@ async function assertFilterNavigationResponsive(page, label) {
       Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
   }, null, { timeout: 1500 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  // Arrow-key navigation must move through the button group with a visible
+  // keyboard focus ring while retaining a single aria-pressed active filter.
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForTimeout(160);
+  await page.locator('.filter-nav-scroller [data-filter]').first().focus();
+  await page.keyboard.press('ArrowRight');
+  const filterKeyboardFocus = await page.evaluate(() => {
+    const focused = document.activeElement;
+    return {
+      isFilter: !!focused?.matches?.('.filter-nav-scroller [data-filter]'),
+      focusVisible: !!focused?.matches?.(':focus-visible'),
+      outlineStyle: focused ? getComputedStyle(focused).outlineStyle : 'none',
+      pressedCount: document.querySelectorAll('.filter-nav-scroller [aria-pressed="true"]').length
+    };
+  });
+  if (!filterKeyboardFocus.isFilter || !filterKeyboardFocus.focusVisible ||
+      filterKeyboardFocus.outlineStyle === 'none' || filterKeyboardFocus.pressedCount !== 1) {
+    throw new Error(label + ' filter buttons lost keyboard focus visibility or pressed state: ' +
+      JSON.stringify(filterKeyboardFocus));
+  }
 
   // Keyboard focus must be visible; pointer activation must not leave a ghost plate.
   await page.setViewportSize({ width: 1280, height: 900 });
