@@ -982,7 +982,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         String(layout.filterWebkitMaskImage).includes('linear-gradient');
       if (viewport.name === 'mobile' &&
           ((layout.filterHasOverflow && !hasFilterEdgeFade) ||
-           layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'auto')) {
+           layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'pan-y')) {
         throw new Error(label + ' mobile: overflowing filters must preserve the edge fade, horizontal scrolling, and natural vertical gestures: ' + JSON.stringify(layout));
       }
       if (layout.logoBlendMode !== 'normal' ||
