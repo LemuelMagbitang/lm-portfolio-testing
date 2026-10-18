@@ -709,12 +709,13 @@ const GH = {
     }
     return res.json();
   },
-  async getCheckRuns(sha){
-    const url = `https://api.github.com/repos/${conn.owner}/${conn.repo}/commits/${sha}/check-runs`;
+  async getWorkflowRuns(sha){
+    const url = 'https://api.github.com/repos/' + encodeURIComponent(conn.owner) + '/' +
+      encodeURIComponent(conn.repo) + '/actions/runs?head_sha=' + encodeURIComponent(sha) + '&per_page=50';
     const res = await githubFetch(url, { headers: authHeaders() });
-    if(!res.ok) return []; // don't fail the save over a status-check read
+    if(!res.ok) return []; // Deployment status must never turn a readable commit into a failed save.
     const data = await res.json();
-    return data.check_runs || [];
+    return (data.workflow_runs || []).filter(run => run?.head_sha === sha);
   }
 };
 
@@ -1032,13 +1033,10 @@ function wireSave(onCollect, name, filePath){
   return saveContext;
 }
 
-/* Polls GitHub's own Pages-deploy check runs for a commit, so "saved"
-   can mean "the live site actually rebuilt from this", not just "the
-   commit went through". GitHub Pages builds usually take 20–60
-   seconds; this checks every 4s for up to 2 minutes. If the repo's
-   Pages setup doesn't use Actions (no check runs ever appear) this
-   quietly falls back to the plain "committed" message rather than
-   hanging in a "deploying" state forever. */
+/* Track the actual Pages workflow separately from the site's validation workflow.
+   A failed validation run does not mean the Pages deployment failed, and a newer
+   commit can supersede a pending deployment. Follow the current branch head so
+   the CMS reports the state of the content that will actually be published. */
 let deployTrackVersion = 0;
 async function trackDeployStatus(sha, isCurrent=()=>true){
   const trackVersion = ++deployTrackVersion;
@@ -1047,50 +1045,137 @@ async function trackDeployStatus(sha, isCurrent=()=>true){
   const statusText = document.getElementById('saveStatusText');
   if (!status) return;
 
-  status.classList.remove('saved', 'deploy-failed');
+  status.classList.remove('saved', 'deploy-failed', 'deploy-warning');
   status.classList.add('deploying');
-  statusText.textContent = 'Deploying…';
+  statusText.textContent = 'Checking Pages deployment…';
 
-  const deadline = Date.now() + 120000; // 2 minutes
-  let sawAnyCheck = false;
+  const deadline = Date.now() + 120000;
+  let trackedSha = sha;
+  let followedNewerCommit = false;
+  let observedPagesRun = null;
+  let observedSuccessfulPagesRun = null;
+  let observedValidationRun = null;
+  const newestFirst = (a, b) =>
+    Date.parse(b.created_at || b.run_started_at || 0) - Date.parse(a.created_at || a.run_started_at || 0);
+
+  const setValidationWarning = validationRun => {
+    status.classList.remove('saved', 'deploying', 'deploy-failed');
+    status.classList.add('deploy-warning');
+    const phrase = followedNewerCommit
+      ? 'Latest changes are live on site — validation failed — '
+      : 'Live on site — validation failed — ';
+    statusText.innerHTML = phrase + '<a href="' + attr(validationRun.html_url || '#') +
+      '" target="_blank" rel="noopener noreferrer">view validation details</a>';
+  };
+  const setDeploymentFailure = pagesRun => {
+    status.classList.remove('saved', 'deploying', 'deploy-warning');
+    status.classList.add('deploy-failed');
+    statusText.innerHTML = 'Deploy failed — <a href="' + attr(pagesRun.html_url || '#') +
+      '" target="_blank" rel="noopener noreferrer">view deployment details</a>';
+  };
 
   while (Date.now() < deadline && trackVersion === deployTrackVersion && isCurrent()) {
-    let runs;
-    try { runs = await GH.getCheckRuns(sha); }
-    catch(err){ runs = []; }
-    if(trackVersion !== deployTrackVersion || !isCurrent()) return;
+    let branchHead = null;
+    try { branchHead = await GH.getBranchHead(); } catch (_) {}
+    if (branchHead && branchHead !== trackedSha) {
+      trackedSha = branchHead;
+      if (trackedSha !== sha) followedNewerCommit = true;
+    }
 
-    const pagesRuns = runs.filter(r => /pages/i.test(r.name || ''));
-    const relevant = pagesRuns.length ? pagesRuns : runs;
+    let workflowRuns = [];
+    try { workflowRuns = await GH.getWorkflowRuns(trackedSha); } catch (_) {}
+    if (trackVersion !== deployTrackVersion || !isCurrent()) return;
 
-    if (relevant.length) {
-      sawAnyCheck = true;
-      const allDone = relevant.every(r => r.status === 'completed');
-      if (allDone) {
-        const failed = relevant.find(r => r.conclusion && r.conclusion !== 'success');
-        if (failed) {
-          status.classList.remove('deploying');
-          status.classList.add('deploy-failed');
-          statusText.innerHTML = `Deploy failed — <a href="${attr(failed.html_url||'#')}" target="_blank">view details</a>`;
-        } else {
-          status.classList.remove('deploying');
-          status.classList.add('saved');
-          statusText.textContent = 'Live on site';
-        }
+    const pagesRuns = workflowRuns
+      .filter(run => /^pages build and deployment$/i.test(run.name || ''))
+      .sort(newestFirst);
+    const validationRuns = workflowRuns
+      .filter(run => /^validate portfolio$/i.test(run.name || ''))
+      .sort(newestFirst);
+    observedPagesRun = pagesRuns[0] || null;
+    observedSuccessfulPagesRun = pagesRuns.find(run =>
+      run.status === 'completed' && run.conclusion === 'success') || null;
+    observedValidationRun = validationRuns[0] || null;
+
+    // A successful Pages run for this exact commit means the content is live,
+    // even if a redundant rerun later gets cancelled.
+    if (observedSuccessfulPagesRun) {
+      if (observedValidationRun?.status === 'completed' &&
+          observedValidationRun.conclusion &&
+          observedValidationRun.conclusion !== 'success') {
+        setValidationWarning(observedValidationRun);
         return;
       }
+      if (observedValidationRun && observedValidationRun.status !== 'completed') {
+        status.classList.remove('saved', 'deploy-failed', 'deploy-warning');
+        status.classList.add('deploying');
+        statusText.textContent = 'Site is live — checking validation…';
+        await new Promise(resolve => setTimeout(resolve, 4000));
+        continue;
+      }
+      status.classList.remove('deploying', 'deploy-failed', 'deploy-warning');
+      status.classList.add('saved');
+      statusText.textContent = followedNewerCommit ? 'Latest changes live on site' : 'Live on site';
+      return;
     }
-    await new Promise(r => setTimeout(r, 4000));
+
+    if (observedPagesRun?.status === 'completed' &&
+        observedPagesRun.conclusion &&
+        observedPagesRun.conclusion !== 'success' &&
+        observedPagesRun.conclusion !== 'cancelled') {
+      setDeploymentFailure(observedPagesRun);
+      return;
+    }
+
+    // A cancellation can mean GitHub superseded this deploy with a newer
+    // branch commit. Keep following the branch before deciding it is unresolved.
+    if (observedPagesRun?.status === 'completed' && observedPagesRun.conclusion === 'cancelled') {
+      statusText.textContent = 'Deployment superseded or cancelled — checking latest commit…';
+    }
+    await new Promise(resolve => setTimeout(resolve, 4000));
   }
 
-  // Timed out without a clear answer — don't leave a spinner running
-  // forever, and don't claim success we didn't confirm.
-  status.classList.remove('deploying');
-  if (sawAnyCheck) {
-    statusText.textContent = 'Still deploying — check GitHub';
-  } else {
+  if (trackVersion !== deployTrackVersion || !isCurrent()) return;
+
+  if (observedSuccessfulPagesRun) {
+    if (observedValidationRun?.status === 'completed' &&
+        observedValidationRun.conclusion &&
+        observedValidationRun.conclusion !== 'success') {
+      setValidationWarning(observedValidationRun);
+      return;
+    }
+    status.classList.remove('deploying', 'deploy-failed');
     status.classList.add('saved');
-    statusText.textContent = 'Committed — check GitHub for deploy status';
+    if (observedValidationRun && observedValidationRun.status !== 'completed') {
+      status.classList.add('deploy-warning');
+      statusText.innerHTML = 'Live on site — validation is still running — <a href="' +
+        attr(observedValidationRun.html_url || '#') +
+        '" target="_blank" rel="noopener noreferrer">view validation status</a>';
+    } else {
+      statusText.textContent = followedNewerCommit ? 'Latest changes live on site' : 'Live on site';
+    }
+    return;
+  }
+
+  status.classList.remove('deploying', 'saved', 'deploy-warning', 'deploy-failed');
+  if (observedPagesRun?.status === 'completed' && observedPagesRun.conclusion === 'cancelled') {
+    statusText.innerHTML = 'Deployment cancelled — <a href="' + attr(observedPagesRun.html_url || '#') +
+      '" target="_blank" rel="noopener noreferrer">view deployment details</a>';
+  } else if (observedPagesRun) {
+    statusText.innerHTML = 'Deployment still running — <a href="' + attr(observedPagesRun.html_url || '#') +
+      '" target="_blank" rel="noopener noreferrer">view deployment status</a>';
+  } else if (observedValidationRun?.status === 'completed' &&
+             observedValidationRun.conclusion &&
+             observedValidationRun.conclusion !== 'success') {
+    status.classList.add('deploy-warning');
+    statusText.innerHTML = 'Commit saved — Pages deployment not detected; validation failed — <a href="' +
+      attr(observedValidationRun.html_url || '#') +
+      '" target="_blank" rel="noopener noreferrer">view validation details</a>';
+  } else {
+    const actionsUrl = 'https://github.com/' + encodeURIComponent(conn.owner) + '/' +
+      encodeURIComponent(conn.repo) + '/actions';
+    statusText.innerHTML = 'Committed — Pages deployment not found yet — <a href="' + attr(actionsUrl) +
+      '" target="_blank" rel="noopener noreferrer">check Actions</a>';
   }
 }
 

@@ -1471,12 +1471,29 @@ try {
       const missingFoilFinishes = expectedFoilFinishes.filter(([caption, style]) =>
         !foilFinishContract.some(record => record.caption === caption && record.style === style)
       );
-      const distinctFoilProfiles = new Set(foilFinishContract.map(record => record.spectrum));
-      if (foilFinishContract.length !== expectedFoilFinishes.length ||
-          missingFoilFinishes.length > 0 ||
-          distinctFoilProfiles.size < expectedFoilFinishes.length) {
-        throw new Error('Each saved holographic finish must keep its own per-artwork style and CSS profile: ' +
-          JSON.stringify({ records: foilFinishContract, missing: missingFoilFinishes, distinctProfiles: distinctFoilProfiles.size }));
+      const profileByStyle = new Map();
+      const conflictingStyleProfiles = new Set();
+      for (const record of foilFinishContract) {
+        if (!record.style || !record.spectrum) continue;
+        if (profileByStyle.has(record.style) && profileByStyle.get(record.style) !== record.spectrum) {
+          conflictingStyleProfiles.add(record.style);
+        } else {
+          profileByStyle.set(record.style, record.spectrum);
+        }
+      }
+      const expectedFoilProfiles = new Set(expectedFoilFinishes.map(([caption, style]) =>
+        foilFinishContract.find(record => record.caption === caption && record.style === style)?.spectrum || ''
+      ).filter(Boolean));
+      if (missingFoilFinishes.length > 0 ||
+          expectedFoilProfiles.size !== expectedFoilFinishes.length ||
+          conflictingStyleProfiles.size > 0) {
+        throw new Error('Each named holographic finish must retain its expected style and distinct CSS profile: ' +
+          JSON.stringify({
+            records: foilFinishContract,
+            missing: missingFoilFinishes,
+            distinctProfiles: expectedFoilProfiles.size,
+            conflictingStyles: [...conflictingStyleProfiles]
+          }));
       }
 
       const uploadedArtContract = await funkoHolo.evaluate(el => {

@@ -751,11 +751,18 @@ function validateAdminConnectionSecurity() {
     ['Media deletion scans docs and common source/config files', /md\|mdx\|txt\|ya\?ml\|toml\|ts\|tsx\|jsx\|vue\|svelte/],
     ['Encoded-path checking remains isolated from rename writes', /if\(scanOnly\)\{\s*if\(mediaSourceReferencesPath\(record\.current\.text,oldPath,isFolder\)\)matched\.push\(\{\.\.\.record,next:record\.current\.text\}\);\s*continue;\s*\}\s*const next=replaceMediaPathReferences\(record\.current\.text,oldPath,newPath,isFolder\)/],
     ['Media deletion uses a guarded tree commit', /await ghCommitTreeEntries\(\[\{path:item\.path,mode:source\.mode\|\|'100644',type:'blob',sha:null\}\],[\s\S]*?parentSha\)/],
+    ['CMS deployment status reads actual workflow-run metadata', /async getWorkflowRuns\(sha\)/],
+    ['CMS deployment status selects the Pages workflow explicitly', /workflowRuns\s*\.filter\(run\s*=>\s*\/\^pages build and deployment\$\/i\.test\(run\.name\s*\|\|\s*''\)\)/],
+    ['CMS distinguishes a live deployment from a failed validation run', /Live on site — validation failed/],
+    ['CMS tracks the latest branch head when deployments are superseded', /branchHead\s*=\s*await GH\.getBranchHead\(\)/],
   ];
 
   required.forEach(([label, pattern]) => {
     if (!pattern.test(admin)) err('CMS security: ' + label + ' contract is missing.');
   });
+  if (admin.includes('const relevant = pagesRuns.length ? pagesRuns : runs;')) {
+    err('CMS security: deployment status must never treat unrelated validation checks as Pages deployment failures.');
+  }
 }
 
 function validateExternalDependencyPins() {

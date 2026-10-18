@@ -90,6 +90,7 @@
   .save-status.deploying{color:var(--warn);}
   .save-status.deploying .dot{animation:pulse-dot 1.1s ease-in-out infinite;}
   .save-status.deploy-failed{color:var(--danger);}
+  .save-status.deploy-warning{color:var(--warn);}
   .save-status a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
   @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.25;}}
 
