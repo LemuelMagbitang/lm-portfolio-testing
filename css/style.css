@@ -553,11 +553,15 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   opacity: 0;
   pointer-events: none;
   transform: translate3d(0, 0, 0);
+  transition: none;
+  will-change: transform, width;
+}
+
+.filter-active-indicator.is-animated {
   transition:
     transform 280ms cubic-bezier(.22, 1, .36, 1),
     width 280ms cubic-bezier(.22, 1, .36, 1),
     height 180ms ease;
-  will-change: transform, width;
 }
 
 .filter-active-indicator.is-ready {
