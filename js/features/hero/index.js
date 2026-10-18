@@ -543,9 +543,13 @@ import { createLifecycle } from '../../core/lifecycle.js';
         const playback = media.play?.();
         if (playback && typeof playback.then === 'function') {
           Promise.resolve(playback).then(() => {
-            if (!disposed) media.dataset.playbackState = 'playing';
+            if (!disposed && slides[currentIndex] === slide) {
+              media.dataset.playbackState = 'playing';
+            }
           }).catch(() => {
-            if (disposed) return;
+            // A delayed rejection from a slide that has already been replaced
+            // must not overwrite the active slide's playback status or timer.
+            if (disposed || slides[currentIndex] !== slide) return;
             media.dataset.playbackState = 'blocked';
             // Multi-slide heroes can continue if autoplay is denied. A single
             // reel stays on its poster/frame and retries only after a gesture.
@@ -635,7 +639,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       if (reducedMotion || disposed) return;
       const slide = slides[currentIndex];
       const media = slide?.firstElementChild;
-      if (slide?.dataset?.heroType === 'video' && media?.dataset?.playbackState === 'blocked') {
+      if (slide?.dataset?.heroType === 'video' && (media?.dataset?.playbackState === 'blocked' || media?.paused)) {
         activateMedia(slide);
       }
     }
