@@ -1812,6 +1812,8 @@ function validateFilterSoundAndFeedbackContract() {
       !navigation.includes('logoLink.blur()') ||
       !smoke.includes('filterGalleryGap') ||
       !smoke.includes('layout.filterHeroGap < 14 || layout.filterGalleryGap < 14') ||
+      !smoke.includes('filterHasOverflow') ||
+      !smoke.includes('layout.filterHasOverflow && !hasFilterEdgeFade') ||
       !css.includes('.nav-logo:focus:not(:focus-visible)') ||
       !css.includes('.nav-logo.is-pointer-focused:focus-visible') ||
       !navigation.includes("bind(logoLink, 'pointerdown'") ||

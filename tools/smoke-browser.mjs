@@ -933,6 +933,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           filterTabHeight: activeFilterRect?.height || 0,
           filterTabCenterDeltaX: activeFilterRect && activeFilterTextRect ? Math.abs((activeFilterRect.left + activeFilterRect.width/2)-(activeFilterTextRect.left+activeFilterTextRect.width/2)) : 9999,
           filterTabCenterDeltaY: activeFilterRect && activeFilterTextRect ? Math.abs((activeFilterRect.top + activeFilterRect.height/2)-(activeFilterTextRect.top+activeFilterTextRect.height/2)) : 9999,
+          filterHasOverflow: filterRail ? filterRail.scrollWidth > filterRail.clientWidth + 1 : false,
           filterMaskImage: filterStyle?.maskImage || 'none',
           filterWebkitMaskImage: filterStyle?.webkitMaskImage || 'none',
           filterOverflowX: filterStyle?.overflowX || '',
@@ -975,10 +976,12 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           layout.filterTabCenterDeltaX > 1.5 || layout.filterTabCenterDeltaY > 1.5) {
         throw new Error(label + ' ' + viewport.name + ': filters must preserve hero/gallery breathing room and centered 44–48px targets: ' + JSON.stringify(layout));
       }
+      const hasFilterEdgeFade = String(layout.filterMaskImage).includes('linear-gradient') ||
+        String(layout.filterWebkitMaskImage).includes('linear-gradient');
       if (viewport.name === 'mobile' &&
-          (!(String(layout.filterMaskImage).includes('linear-gradient') || String(layout.filterWebkitMaskImage).includes('linear-gradient')) ||
+          ((layout.filterHasOverflow && !hasFilterEdgeFade) ||
            layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'auto')) {
-        throw new Error(label + ' mobile: edge fade must preserve horizontal scroll and touch gestures: ' + JSON.stringify(layout));
+        throw new Error(label + ' mobile: overflowing filters must preserve the edge fade, horizontal scrolling, and natural vertical gestures: ' + JSON.stringify(layout));
       }
       if (layout.logoBlendMode !== 'normal' ||
           !['light', 'dark'].includes(layout.logoForeground) ||
