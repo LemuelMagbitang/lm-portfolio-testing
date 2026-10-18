@@ -1629,18 +1629,23 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Navigation pills: explicit content-sized label boxes must remain mathematically centered without manual offsets.');
   }
 
-  const filterTabsRule = (css.match(/\.filter-tabs\s*\{([^}]*)\}/) || [])[1] || '';
-  if (!/justify-content:\s*center/.test(filterTabsRule) ||
-      !/max-width:\s*var\(--lm-container-max\)/.test(filterTabsRule) ||
-      !/width:\s*calc\(100% - var\(--lm-page-gutter\) - var\(--lm-page-gutter\)\)/.test(filterTabsRule)) {
-    err('Filter tabs: the strip must be centered within the shared page gutters and container width.');
+  const filterWrapperRule = (css.match(/\.filter-nav-wrapper\s*\{([^}]*)\}/) || [])[1] || '';
+  const filterScrollerRule = (css.match(/\.filter-tabs\.filter-nav-scroller\s*\{([^}]*)\}/) || [])[1] || '';
+  const filterContentRule = (css.match(/\.filter-nav-content\s*\{([^}]*)\}/) || [])[1] || '';
+  if (!/max-width:\s*var\(--lm-container-max\)/.test(filterWrapperRule) ||
+      !/padding-block:\s*clamp\(18px,\s*2vw,\s*26px\)/.test(filterWrapperRule) ||
+      !/width:\s*100%/.test(filterScrollerRule) ||
+      !/overflow-x:\s*auto/.test(filterScrollerRule) ||
+      !/justify-content:\s*center/.test(filterContentRule)) {
+    err('Filter tabs: the shared wrapper must own balanced gutters while the content stays centered until scrolling is needed.');
   }
   if (!/\.tab-btn\s*\{[^}]*display:\s*inline-flex/s.test(css) ||
       !/\.tab-btn\s*\{[^}]*min-height:\s*44px/s.test(css) ||
       !css.includes('.hero-section:not(.about-hero) + main.works-main.page-spacing {\n  padding-top: 0;') ||
-      !css.includes('mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%)') ||
-      !css.includes('touch-action:pan-x;')) {
-    err('Works filters must keep compact hero-edge spacing, centered 44px targets, and the mobile edge fade.');
+      !css.includes('mask-image:linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)') ||
+      !css.includes('touch-action: auto;') ||
+      !css.includes('scroll-snap-stop: always')) {
+    err('Works filters must retain balanced hero/gallery spacing, 44px targets, overflow-edge fading, and natural vertical touch scrolling.');
   }
 
   const logoCommentStart = css.lastIndexOf('/* Adaptive logo foreground is driven');
