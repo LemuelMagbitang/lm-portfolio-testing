@@ -1666,7 +1666,10 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
-      !smoke.includes('hero video did not resume after a real interaction')) {
+      !smoke.includes('hero video did not resume after a real interaction') ||
+      !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
+      !smoke.includes("document.body.classList.contains('menu-open')") ||
+      !smoke.includes("gate.dataset.loading = 'active'")) {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
