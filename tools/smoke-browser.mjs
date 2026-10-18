@@ -770,7 +770,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
       await page.evaluate(() => {
         const backdrop = document.getElementById('__smoke-logo-backdrop');
         if (backdrop) backdrop.style.background = '#000';
-        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event('scroll'));
       });
       await page.waitForFunction(
         () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
@@ -781,6 +781,53 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         document.getElementById('__smoke-logo-backdrop')?.remove();
         window.dispatchEvent(new Event('scroll'));
       });
+
+      // Exercise the loading gate and mobile navigation as distinct logo
+      // contrast states, not only the static light/dark test fixture.
+      await page.evaluate(() => {
+        const gate = document.getElementById('pageTransition');
+        if (gate) {
+          gate.classList.remove('is-hidden');
+          gate.dataset.loading = 'active';
+          gate.setAttribute('aria-hidden', 'false');
+        }
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+        null,
+        { timeout: 2500 }
+      );
+      await page.evaluate(() => {
+        const gate = document.getElementById('pageTransition');
+        if (gate) {
+          gate.dataset.loading = 'ready';
+          gate.classList.add('is-hidden');
+          gate.setAttribute('aria-hidden', 'true');
+        }
+        window.dispatchEvent(new Event('resize'));
+      });
+
+      if (viewport.name === 'mobile') {
+        await page.locator('.hamburger').click();
+        await page.waitForFunction(
+          () => document.body.classList.contains('menu-open') &&
+            document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+          null,
+          { timeout: 2500 }
+        );
+        const menuExpanded = await page.locator('.hamburger').getAttribute('aria-expanded');
+        if (menuExpanded !== 'true') {
+          throw new Error(label + ': mobile menu did not expose its expanded state while the logo followed the menu scrim.');
+        }
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(
+          () => !document.body.classList.contains('menu-open') &&
+            document.querySelector('.hamburger')?.getAttribute('aria-expanded') === 'false',
+          null,
+          { timeout: 2500 }
+        );
+      }
 
       if (viewport.name === 'desktop') {
         const videoContract = await page.evaluate(() => {
