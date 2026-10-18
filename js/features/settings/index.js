@@ -8,7 +8,7 @@ import {
   DEFAULT_SITE_SETTINGS,
   normalizeSiteSettings,
   SOCIAL_PLATFORMS
-} from '../../data/site-settings.js?v=20261018-07';
+} from '../../data/site-settings.js?v=20261018-08';
 
 export async function initSiteSettings({
   url,
