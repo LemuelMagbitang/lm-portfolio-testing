@@ -210,8 +210,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   const logo = root.querySelector('.site-logo');
   const pageTransition = root.getElementById('pageTransition');
   let logoFrame = null;
-  let logoBackdropIsVideo = false;
-  let logoVideoTimer = null;
+  let logoBackdropIsDynamic = false;
+  let logoBackdropTimer = null;
   let logoMutationObservers = [];
 
   function parseColor(value) {
@@ -322,21 +322,24 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
 
   function setLogoContrastFallback() {
     if (!logo) return;
-    setVideoBackdropState(false);
+    setDynamicBackdropState(false);
     logo.dataset.logoForeground = 'light';
     logo.style.filter = 'brightness(0) invert(1)';
     logo.closest?.('.nav-logo')?.classList.add('logo-contrast-fallback');
   }
 
-  function setVideoBackdropState(isVideo) {
-    logoBackdropIsVideo = Boolean(isVideo);
-    if (logoBackdropIsVideo && logoVideoTimer === null && typeof windowRef?.setInterval === 'function') {
-      logoVideoTimer = windowRef.setInterval(() => {
-        if (logoBackdropIsVideo) scheduleLogoContrast();
+  function setDynamicBackdropState(isDynamic) {
+    logoBackdropIsDynamic = Boolean(isDynamic);
+    // Hero stills can move and cross-fade just like video. Poll only while
+    // animated artwork is underneath the fixed logo; ordinary page images
+    // remain event-driven so this does not become a permanent background timer.
+    if (logoBackdropIsDynamic && logoBackdropTimer === null && typeof windowRef?.setInterval === 'function') {
+      logoBackdropTimer = windowRef.setInterval(() => {
+        if (logoBackdropIsDynamic && root.visibilityState !== 'hidden') scheduleLogoContrast();
       }, 500);
-    } else if (!logoBackdropIsVideo && logoVideoTimer !== null) {
-      windowRef?.clearInterval?.(logoVideoTimer);
-      logoVideoTimer = null;
+    } else if (!logoBackdropIsDynamic && logoBackdropTimer !== null) {
+      windowRef?.clearInterval?.(logoBackdropTimer);
+      logoBackdropTimer = null;
     }
   }
 
@@ -346,7 +349,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (!rect.width || !rect.height) return;
     const point = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
     if (pageTransition && pageTransition.dataset.loading !== 'ready' && !pageTransition.classList.contains('is-hidden')) {
-      setVideoBackdropState(false);
+      setDynamicBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
       return;
@@ -361,12 +364,12 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return !element.closest?.('script, style');
     });
     if (!backdrop) {
-      setVideoBackdropState(false);
+      setDynamicBackdropState(false);
       setLogoForeground(computedBackdropLuminance(root.body));
       return;
     }
     if (backdrop.classList?.contains('nav-menu-backdrop')) {
-      setVideoBackdropState(false);
+      setDynamicBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.006);
       return;
@@ -377,7 +380,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       // Both layouts intentionally dim their art for overlay copy. White is
       // the correct foreground over that rendered dark scrim; full-color Works
       // media below is sampled directly and can switch between black and white.
-      setVideoBackdropState(false);
+      setDynamicBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.02);
       return;
@@ -398,7 +401,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
     // The opaque fill of a hero container is behind the artwork; other opaque overlays are not.
     if (!media && !isHeroMediaContainer && backdropColor && backdropColor.a >= 0.98) {
-      setVideoBackdropState(false);
+      setDynamicBackdropState(false);
       setLogoForeground(computedBackdropLuminance(backdrop));
       return;
     }
@@ -408,7 +411,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
     if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
     if (media) {
-      setVideoBackdropState(['video', 'canvas', 'lottie-player'].includes(media.localName));
+      setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName));
       const luminance = sampleMediaLuminance(root, media, point);
       if (Number.isFinite(luminance)) {
         setLogoForeground(luminance);
@@ -417,7 +420,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       setLogoContrastFallback();
       return;
     }
-    setVideoBackdropState(false);
+    setDynamicBackdropState(false);
     if (style?.backgroundImage && style.backgroundImage !== 'none') {
       setLogoContrastFallback();
       return;
@@ -477,7 +480,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     cleanup.push(() => {
       if (logoFrame !== null) windowRef?.cancelAnimationFrame?.(logoFrame);
       logoFrame = null;
-      setVideoBackdropState(false);
+      setDynamicBackdropState(false);
       logoMutationObservers.forEach(observer => observer.disconnect());
       logoMutationObservers = [];
     });
