@@ -729,6 +729,12 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
       }
 
       const errors = [];
+      const http404Resources = [];
+      page.on('response', response => {
+        if (response.status() === 404) {
+          http404Resources.push(response.url());
+        }
+      });
       page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
       page.on('console', message => {
         if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
@@ -753,7 +759,10 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
       }
 
       if (errors.length) {
-        throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}`);
+        const resourceDetails = http404Resources.length
+          ? '\\nHTTP 404 URLs:\\n- ' + [...new Set(http404Resources)].join('\\n- ')
+          : '';
+        throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}${resourceDetails}`);
       }
     }, SMOKE_PAGE_TIMEOUT_MS, `${smokeLabel} caller=${caller}`);
 
