@@ -1582,6 +1582,16 @@ function validateAboutFirstPaintContract() {
 function validateResponsiveHeroGalleryAndLogoContract() {
   const css = exists('css/style.css') ? readText('css/style.css') : '';
   const works = exists('index.html') ? readText('index.html') : '';
+  const about = exists('about/index.html') ? readText('about/index.html') : '';
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  const hero = exists('js/features/hero/index.js') ? readText('js/features/hero/index.js') : '';
+  const footer = exists('js/features/footer/index.js') ? readText('js/features/footer/index.js') : '';
+  const contrast = exists('js/infrastructure/browser/media-contrast.js')
+    ? readText('js/infrastructure/browser/media-contrast.js')
+    : '';
   const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
 
   if (!works.includes('<main class="container page-spacing works-main">') ||
@@ -1599,25 +1609,68 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Hero presentation: a non-interactive bottom fade to the site canvas must remain separate from the readability overlay.');
   }
 
-  const logoCommentStart = css.lastIndexOf('/* The white-normalized source');
+  const logoCommentStart = css.lastIndexOf('/* Adaptive logo foreground is driven');
   const logoRuleStart = logoCommentStart >= 0 ? css.indexOf('.site-logo {', logoCommentStart) : -1;
   const logoRuleEnd = logoRuleStart >= 0 ? css.indexOf('}', logoRuleStart) : -1;
   const logoRule = logoRuleStart >= 0 && logoRuleEnd > logoRuleStart
     ? css.slice(logoRuleStart, logoRuleEnd)
     : '';
-  if (!logoRule.includes('opacity var(--lm-motion-standard) ease') ||
+  if (!logoRule.includes('mix-blend-mode: normal') ||
       !logoRule.includes('filter var(--lm-motion-standard) ease') ||
       !logoRule.includes('transform 0.3s ease') ||
-      !/mix-blend-mode:\s*difference/.test(css) ||
       !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.site-logo\s*\{\s*transition:\s*none/s.test(css)) {
-    err('Adaptive logo: pixel-level contrast compositing, transition support, and reduced-motion handling must remain wired.');
+    err('Adaptive logo: the explicit foreground-state transition and reduced-motion behavior are incomplete.');
+  }
+
+  if (!contrast.includes('export function sampleMediaLuminance') ||
+      !contrast.includes('export function foregroundForLuminance') ||
+      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-05'") ||
+      !navigation.includes('logo.dataset.logoForeground = foreground') ||
+      !navigation.includes('sampleMediaLuminance(root, media, point)') ||
+      !navigation.includes('MutationObserver') ||
+      !navigation.includes("bind(windowRef, 'scroll', scheduleLogoContrast") ||
+      !navigation.includes("bind(root, 'loadeddata', scheduleLogoContrast")) {
+    err('Adaptive logo runtime: media sampling, state updates, scrolling, or DOM-state observation are not fully connected.');
+  }
+
+  if (!hero.includes('if (!slides.length) return () => {};') ||
+      hero.includes('if (slides.length <= 1 || isReducedMotionFn()) return () => {};') ||
+      !hero.includes('media.loop = slides.length === 1') ||
+      !hero.includes('activateMedia(slides[currentIndex])') ||
+      !hero.includes("media.dataset.playbackState = 'blocked'") ||
+      !hero.includes("bind(heroContainer, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes('if (reducedMotion) {')) {
+    err('Hero media runtime: a single video/Lottie must activate, loop where appropriate, handle rejected playback, and respect reduced motion.');
+  }
+
+  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-05'") ||
+      !footer.includes('chooseForeground(documentRef, source, media)') ||
+      !footer.includes('windowRef.setInterval') ||
+      !footer.includes('lifecycle.cleanup()')) {
+    err('Footer regression contract: the shared contrast helper, video refresh, and lifecycle cleanup must remain connected.');
   }
 
   if (!smoke.includes('async function assertWorksHeroGalleryResponsive') ||
       !smoke.includes("await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled')") ||
       !smoke.includes("'Works Hero current CMS setting'") ||
-      !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })")) {
-    err('Responsive browser smoke: desktop/tablet/mobile hero and gallery cases must cover both message states and reduced motion.');
+      !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
+      !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
+      !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
+      !smoke.includes('hero video did not resume after a real interaction')) {
+    err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
+  }
+
+  if (!entry.includes("bootstrap.js?v=20261018-05") ||
+      !bootstrap.includes("cacheVersion = '20261018-05'") ||
+      !composition.includes("navigation/index.js?v=20261018-05") ||
+      !composition.includes("hero/index.js?v=20261018-05") ||
+      !composition.includes("footer/index.js?v=20261018-05") ||
+      !works.includes('css/style.css?v=20261018-05') ||
+      !works.includes('js/script.js?v=20261018-05') ||
+      !about.includes('style.css?v=20261018-05') ||
+      !about.includes('script.js?v=20261018-05') ||
+      !about.includes('page-composition.js?v=20261018-05')) {
+    err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
 
