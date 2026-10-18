@@ -724,7 +724,9 @@ export async function initGallery(options = {}) {
     if (dragged) {
       suppressFilterClickUntil = Date.now() + 250;
       settleCenteredFilter();
-    } else if (event?.pointerType !== 'mouse') {
+    } else {
+      // A simple click on a mobile-width mouse/touchpad also needs a settle
+      // pass; touch and keyboard inputs use this same debounced contract.
       scheduleCenteredFilter();
     }
   }
