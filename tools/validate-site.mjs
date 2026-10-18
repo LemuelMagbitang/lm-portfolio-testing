@@ -1567,7 +1567,7 @@ function validateAboutFirstPaintContract() {
   const composition = exists('js/app/page-composition.js')
     ? readText('js/app/page-composition.js')
     : '';
-  const waitStart = composition.indexOf('await Promise.all([\\n    projectMediaPreloadPromise,');
+  const waitStart = composition.search(/await Promise\.all\(\[\s*projectMediaPreloadPromise,/);
   const waitEnd = composition.indexOf('// About-page prefetching and image/logo warm-up', waitStart);
   if (waitStart < 0 || waitEnd <= waitStart) {
     err('About first paint: startup media-warm-up boundary could not be verified.');
