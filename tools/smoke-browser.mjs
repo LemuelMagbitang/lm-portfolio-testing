@@ -1531,23 +1531,24 @@ try {
           hintBeforeCaption: !caption || !!(hint && (hint.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING))
         };
       });
-      if (!uploadedArtContract.src.includes('funko-pop-sticker/Asset') ||
+      const usesFrontAsBack = uploadedArtContract.backSrc === uploadedArtContract.src;
+      if (!uploadedArtContract.src.includes('funko-pop-sticker/') ||
           uploadedArtContract.naturalWidth < 100 ||
           uploadedArtContract.naturalHeight < 100 ||
           Math.abs(uploadedArtContract.naturalRatio - uploadedArtContract.slotRatio) > .015 ||
           uploadedArtContract.alphaMode !== 'alpha' ||
-          !uploadedArtContract.alphaMask.includes('funko-pop-sticker/Asset') ||
+          !uploadedArtContract.alphaMask.includes('funko-pop-sticker/') ||
           uploadedArtContract.alphaMask.includes('%2520') ||
           !uploadedArtContract.hasDiffraction || !uploadedArtContract.hasSparkles ||
-          !uploadedArtContract.defaultBackMirrored ||
-          !uploadedArtContract.backSrc.includes('funko-pop-sticker/Asset') ||
+          uploadedArtContract.defaultBackMirrored !== usesFrontAsBack ||
+          !uploadedArtContract.backSrc.includes('funko-pop-sticker/') ||
           !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption ||
           !uploadedArtContract.desktopActionText.includes('CLICK / MOVE') ||
           uploadedArtContract.desktopActionDisplay === 'none' ||
           uploadedArtContract.surfaceIdleAnimation !== 'holo-idle-float' ||
           uploadedArtContract.sheenDisplay === 'none' ||
           !uploadedArtContract.sheenAnimation.includes('holo-idle-sheen')) {
-        throw new Error('Uploaded transparent artwork did not receive the full holographic sizing/flip/discoverability contract: ' + JSON.stringify(uploadedArtContract));
+        throw new Error('Holographic artwork must preserve transparent sizing, use its configured back-face behavior, and retain all interaction hints: ' + JSON.stringify(uploadedArtContract));
       }
 
       // Desktop must react to real pointer movement, with the foil reflection
