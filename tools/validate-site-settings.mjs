@@ -41,12 +41,15 @@ assert.equal(normalizeSiteSettings({
 
 const feedbackSource = await readFile(new URL('../js/features/interaction-feedback/index.js', import.meta.url), 'utf8');
 assert.ok(feedbackSource.includes('!event?.isTrusted'));
-assert.ok(feedbackSource.includes("audio.preload = 'none'"));
-assert.ok(feedbackSource.includes('localStorage'));
+assert.ok(feedbackSource.includes("audio.preload = 'auto'"));
+assert.ok(!feedbackSource.includes('localStorage'), 'Visitor feedback preferences must not persist.');
+assert.ok(!feedbackSource.includes('interaction-feedback-toggle'), 'Feedback must not inject a public footer control.');
+assert.ok(feedbackSource.includes("root.addEventListener('lm:filter-centered', handleCenteredFilter)"));
 assert.ok(feedbackSource.includes('typeof nav?.vibrate === \'function\''));
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
-assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-01')"));
+assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-02')"));
+assert.ok(compositionSource.includes("import('../features/gallery/index.js?v=20261018-02')"));
 
 const explicitMessageToggles = normalizeSiteSettings({ showHeroMessage: false, showFooterMessage: true });
 assert.equal(explicitMessageToggles.showHeroMessage, false, 'CMS can disable the hero message.');

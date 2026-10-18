@@ -1733,22 +1733,50 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-16") ||
-      !bootstrap.includes("cacheVersion = '20261018-16'") ||
-      !composition.includes("navigation/index.js?v=20261018-16") ||
+  if (!entry.includes("bootstrap.js?v=20261018-17") ||
+      !bootstrap.includes("cacheVersion = '20261018-17'") ||
+      !composition.includes("navigation/index.js?v=20261018-17") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
-      !composition.includes("interaction-feedback/index.js?v=20261018-01") ||
+      !composition.includes("interaction-feedback/index.js?v=20261018-02") ||
+      !composition.includes("gallery/index.js?v=20261018-02") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-16') ||
-      !works.includes('js/app/page-composition.js?v=20261018-16') ||
-      !works.includes('css/style.css?v=20261018-12') ||
-      !works.includes('js/script.js?v=20261018-16') ||
-      !about.includes('style.css?v=20261018-12') ||
-      !about.includes('script.js?v=20261018-16') ||
-      !about.includes('page-composition.js?v=20261018-16')) {
+      !works.includes('js/app/bootstrap.js?v=20261018-17') ||
+      !works.includes('js/app/page-composition.js?v=20261018-17') ||
+      !works.includes('css/style.css?v=20261018-13') ||
+      !works.includes('js/script.js?v=20261018-17') ||
+      !about.includes('style.css?v=20261018-13') ||
+      !about.includes('script.js?v=20261018-17') ||
+      !about.includes('page-composition.js?v=20261018-17')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
+  }
+}
+
+function validateFilterSoundAndFeedbackContract() {
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const feedback = exists('js/features/interaction-feedback/index.js') ? readText('js/features/interaction-feedback/index.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+
+  if (!gallery.includes("new CustomEventConstructor('lm:filter-centered'") ||
+      !gallery.includes("setTimeout(() => settleCenteredFilter(), 220)") ||
+      !gallery.includes("'(prefers-reduced-motion: reduce)'") ||
+      !gallery.includes("event.key === 'ArrowRight'") ||
+      !gallery.includes("event.key === 'Home'")) {
+    err('Mobile filter behavior: centered changes must settle once, dispatch a cue, support keyboard navigation and respect reduced motion.');
+  }
+  if (!feedback.includes("root.addEventListener('lm:filter-centered', handleCenteredFilter)") ||
+      !feedback.includes("audio.preload = 'auto'") ||
+      !feedback.includes("audioByCue.forEach(otherAudio =>") ||
+      feedback.includes('localStorage') ||
+      feedback.includes('interaction-feedback-toggle')) {
+    err('Interaction feedback: centered cues must be gesture-aware, single-channel, CMS-controlled, and free of visitor preference state.');
+  }
+  if (css.includes('.interaction-feedback-toggle') ||
+      !smoke.includes('must never render a public interaction-feedback control') ||
+      !smoke.includes('selectionSoundCalls')) {
+    err('Public feedback control: the toggle must be absent from CSS and browser smoke must cover centered-filter sound behavior.');
   }
 }
 
@@ -1987,6 +2015,7 @@ validateCuratedViewPresentationContract();
 validateAboutFirstPaintContract();
 validateResponsiveHeroGalleryAndLogoContract();
 validateCmsRegressionContracts();
+validateFilterSoundAndFeedbackContract();
 validateRuntimeCacheGraph();
 
 function validatePageAwareFeatureLoading() {

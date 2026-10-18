@@ -291,33 +291,9 @@ async function assertNavigationLabelsCentered(page, label) {
 }
 
 async function assertPublicNavigation(page, { href, label }) {
-  // The toggle is optional CMS UI. Assert against the active site setting
-  // instead of assuming feedback is off on every testing snapshot.
-  const feedbackSetting = await page.evaluate(async () => {
-    try {
-      const response = await fetch('/data/settings.json', { cache: 'no-store' });
-      if (!response.ok) return null;
-      const settings = await response.json();
-      const feedback = settings?.interactionFeedback || {};
-      return {
-        enabled: feedback.enabled === true,
-        soundEnabled: feedback.soundEnabled !== false,
-        hapticsEnabled: feedback.hapticsEnabled === true
-      };
-    } catch (_) {
-      return null;
-    }
-  });
   const feedbackControlCount = await page.locator('.interaction-feedback-toggle').count();
-  if (feedbackSetting) {
-    const shouldShowFeedbackControl = feedbackSetting.enabled &&
-      (feedbackSetting.soundEnabled || feedbackSetting.hapticsEnabled);
-    if ((feedbackControlCount === 1) !== shouldShowFeedbackControl) {
-      throw new Error(label + ' interaction-feedback control does not match CMS settings: ' +
-        JSON.stringify({ feedbackSetting, feedbackControlCount, shouldShowFeedbackControl }));
-    }
-  } else if (feedbackControlCount !== 0) {
-    throw new Error(label + ' rendered an interaction-feedback control while site settings were unavailable.');
+  if (feedbackControlCount !== 0) {
+    throw new Error(label + ' must never render a public interaction-feedback control.');
   }
   const link = page.locator('.nav-links a[href="' + href + '"]').first();
   if (await link.count() !== 1) {
@@ -1271,6 +1247,23 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     });
     inspectReadiness();
   });
+  // Deterministic, silent audio spy: record only audible requests, not muted
+  // autoplay-unlock attempts, so the mobile interaction test never makes sound.
+  await page.addInitScript(() => {
+    const NativeAudio = window.Audio;
+    window.__lmAudioPlayLog = [];
+    window.Audio = function (...args) {
+      const audio = new NativeAudio(...args);
+      audio.play = function () {
+        if (!audio.muted) {
+          try { window.__lmAudioPlayLog.push(new URL(audio.src, location.href).pathname); } catch (_) {}
+        }
+        return Promise.resolve();
+      };
+      return audio;
+    };
+    window.Audio.prototype = NativeAudio.prototype;
+  });
   const requestedUrls = [];
   page.on('request', request => requestedUrls.push(request.url()));
   const smokeId = ++smokePageSequence;
@@ -1363,6 +1356,85 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
     await page.close().catch(() => {});
     await context.close().catch(() => {});
   }
+}
+
+async function assertMobileFilterCenteredSound(page, label) {
+  const rail = page.locator('.filter-tabs');
+  await rail.scrollIntoViewIfNeeded();
+  const geometry = await rail.evaluate(el => ({
+    scrollWidth: el.scrollWidth,
+    clientWidth: el.clientWidth
+  }));
+  if (geometry.scrollWidth <= geometry.clientWidth + 2) {
+    throw new Error(label + ' filter rail is not horizontally scrollable: ' + JSON.stringify(geometry));
+  }
+
+  const startingSoundCount = await page.evaluate(() =>
+    (window.__lmAudioPlayLog || []).filter(src => src.endsWith('/selection.wav')).length
+  );
+  const rect = await rail.boundingBox();
+  if (!rect) throw new Error(label + ' filter rail has no measurable hit area.');
+
+  const y = rect.y + rect.height / 2;
+  await page.mouse.move(rect.x + rect.width * 0.82, y);
+  await page.mouse.down();
+  await page.mouse.move(rect.x + rect.width * 0.18, y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+
+  const dragged = await page.evaluate(() => {
+    const rail = document.querySelector('.filter-tabs');
+    const buttons = Array.from(rail?.querySelectorAll('.filter-btn, .tab-btn') || []);
+    const active = buttons.find(button => button.classList.contains('active'));
+    const rect = active?.getBoundingClientRect();
+    const railRect = rail?.getBoundingClientRect();
+    return {
+      activeFilter: active?.getAttribute('data-filter') || '',
+      pressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
+      centerDelta: rect && railRect ? Math.abs((rect.left + rect.width / 2) - (railRect.left + railRect.width / 2)) : Infinity,
+      selectionSoundCalls: (window.__lmAudioPlayLog || []).filter(src => src.endsWith('/selection.wav')).length
+    };
+  });
+  if (!dragged.activeFilter || dragged.activeFilter === 'all' || dragged.pressedCount !== 1 ||
+      dragged.centerDelta > 3 || dragged.selectionSoundCalls !== startingSoundCount + 1) {
+    throw new Error(label + ' settled mobile filter must center and play one selection cue: ' +
+      JSON.stringify({ geometry, startingSoundCount, dragged }));
+  }
+
+  // Arrow keys are an equivalent input method. Check centering under reduced
+  // motion and verify exactly one additional cue after the new center settles.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const beforeKeyboard = dragged.selectionSoundCalls;
+  const keyboardStart = await rail.evaluate(el => {
+    const buttons = Array.from(el.querySelectorAll('.filter-btn, .tab-btn'));
+    const activeIndex = buttons.findIndex(button => button.classList.contains('active'));
+    return { activeIndex, count: buttons.length };
+  });
+  const key = keyboardStart.activeIndex < keyboardStart.count - 1 ? 'ArrowRight' : 'ArrowLeft';
+  await rail.locator('.active').focus();
+  await page.keyboard.press(key);
+  await page.waitForTimeout(450);
+  const keyboard = await page.evaluate(() => {
+    const rail = document.querySelector('.filter-tabs');
+    const buttons = Array.from(rail?.querySelectorAll('.filter-btn, .tab-btn') || []);
+    const active = buttons.find(button => button.classList.contains('active'));
+    const rect = active?.getBoundingClientRect();
+    const railRect = rail?.getBoundingClientRect();
+    return {
+      activeIndex: buttons.indexOf(active),
+      focusIndex: buttons.indexOf(document.activeElement),
+      pressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
+      centerDelta: rect && railRect ? Math.abs((rect.left + rect.width / 2) - (railRect.left + railRect.width / 2)) : Infinity,
+      selectionSoundCalls: (window.__lmAudioPlayLog || []).filter(src => src.endsWith('/selection.wav')).length
+    };
+  });
+  if (keyboard.activeIndex === keyboardStart.activeIndex || keyboard.focusIndex < 0 ||
+      keyboard.pressedCount !== 1 || keyboard.centerDelta > 3 ||
+      keyboard.selectionSoundCalls !== beforeKeyboard + 1) {
+    throw new Error(label + ' keyboard filter navigation must focus, center and sound once with reduced motion: ' +
+      JSON.stringify({ keyboardStart, keyboard, beforeKeyboard }));
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 }
 
 async function assertFilterButtonHitTarget(page, label, index = 1) {
@@ -4332,6 +4404,9 @@ try {
       await assertFilterButtonHitTarget(page, 'Mobile Works');
       await allFilter.click();
       await page.waitForTimeout(120);
+      await assertMobileFilterCenteredSound(page, 'Mobile Works');
+      await allFilter.click();
+      await page.waitForTimeout(450);
 
       const messageSettings = await page.evaluate(async () => {
         try {
