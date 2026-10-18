@@ -101,6 +101,7 @@ export async function initGallery(options = {}) {
   let filterDrag = null;
   let filterPointerActive = false;
   let filterInertiaFrame = null;
+  let filterActiveIndicator = null;
   let filterSettling = false;
   let suppressFilterClickUntil = 0;
   // Centering the active filter after a viewport resize emits scroll events.
@@ -192,6 +193,51 @@ export async function initGallery(options = {}) {
     return filterTabs ? Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn')) : [];
   }
 
+  function ensureFilterActiveIndicator() {
+    if (!filterContent) return null;
+    if (!filterActiveIndicator || filterActiveIndicator.parentElement !== filterContent) {
+      filterActiveIndicator = documentRef.createElement('span');
+      filterActiveIndicator.className = 'filter-active-indicator';
+      filterActiveIndicator.setAttribute('aria-hidden', 'true');
+      filterContent.appendChild(filterActiveIndicator);
+    }
+    return filterActiveIndicator;
+  }
+
+  function syncFilterActiveIndicator(button = getFilterButtons().find(item =>
+    item.classList.contains('active') || item.getAttribute('aria-pressed') === 'true'
+  )) {
+    const indicator = ensureFilterActiveIndicator();
+    if (!indicator || !button || !filterContent.contains(button)) return;
+    const contentRect = filterContent.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    indicator.style.width = `${buttonRect.width}px`;
+    indicator.style.height = `${buttonRect.height}px`;
+    indicator.style.transform = `translate3d(${buttonRect.left - contentRect.left}px, ${buttonRect.top - contentRect.top}px, 0)`;
+    indicator.classList.add('is-ready');
+  }
+
+  // Active labels use a heavier weight, which can otherwise alter flex widths
+  // on every selection and nudge neighbouring labels. Reserve each label's
+  // natural maximum active/inactive width so only the gray indicator moves.
+  function normalizeFilterButtonWidths() {
+    getFilterButtons().forEach(button => {
+      button.style.width = '';
+      const wasActive = button.classList.contains('active');
+      const previousPressed = button.getAttribute('aria-pressed');
+      button.classList.remove('active');
+      button.setAttribute('aria-pressed', 'false');
+      const inactiveWidth = button.getBoundingClientRect().width;
+      button.classList.add('active');
+      button.setAttribute('aria-pressed', 'true');
+      const activeWidth = button.getBoundingClientRect().width;
+      button.classList.toggle('active', wasActive);
+      if (previousPressed === null) button.removeAttribute('aria-pressed');
+      else button.setAttribute('aria-pressed', previousPressed);
+      button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;
+    });
+  }
+
   function getNearestCenteredFilterIndex() {
     const buttons = getFilterButtons();
     if (!buttons.length || !filterTabs) return 0;
@@ -238,16 +284,13 @@ export async function initGallery(options = {}) {
     if (!filterTabs || !button || !isFilterScroller()) return false;
     const tabsRect = filterTabs.getBoundingClientRect();
     const buttonRect = button.getBoundingClientRect();
-    const safeInset = Math.min(12, tabsRect.width * 0.04);
-    const comfortablyVisible =
-      buttonRect.left >= tabsRect.left + safeInset &&
-      buttonRect.right <= tabsRect.right - safeInset;
-    // Clicking a pill that is already comfortably visible should not cause a
-    // gratuitous rail glide. Scroll-settlement calls pass force=true because
-    // a completed swipe must land on an actual snap position.
-    if (!force && comfortablyVisible) return false;
     const delta = (buttonRect.left + buttonRect.width / 2) -
       (tabsRect.left + tabsRect.width / 2);
+    // Keep the selected item on the viewport's horizontal centerline. A small
+    // tolerance prevents re-scrolling when it's already centered, while force
+    // is reserved for precise post-swipe snap settlement.
+    const centerTolerance = Math.max(6, Math.min(12, tabsRect.width * 0.02));
+    if (!force && Math.abs(delta) <= centerTolerance) return false;
     if (Math.abs(delta) < 1) return false;
 
     const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -301,6 +344,7 @@ export async function initGallery(options = {}) {
       item.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
     currentFilter = nextFilter;
+    syncFilterActiveIndicator(button);
 
     // Only a real filter change starts a new result set. Centering the
     // currently selected button during resize/scroll settling must not reset
@@ -380,10 +424,13 @@ export async function initGallery(options = {}) {
       return dot;
     });
 
+    normalizeFilterButtonWidths();
+    ensureFilterActiveIndicator();
     ensureFilterEdges();
     const activeIndex = Math.max(0, buttons.findIndex(button => (button.getAttribute('data-filter') || 'all') === currentFilter));
     const activeButton = buttons[activeIndex];
     lastCenteredFilterId = activeButton?.getAttribute('data-filter') || currentFilter;
+    syncFilterActiveIndicator(activeButton);
     if (activeButton && isFilterScroller()) centerFilterButton(activeButton, 'auto');
     updateFilterPager(activeIndex >= 0 ? activeIndex : 0);
   }
@@ -507,6 +554,7 @@ export async function initGallery(options = {}) {
     });
     currentFilter = 'all';
     lastCenteredFilterId = 'all';
+    syncFilterActiveIndicator(allButton);
     isExpanded = false;
     render({ animateTransition: changed, transitionFromRects });
     updateFilterPager(filterBtns.indexOf(allButton));
@@ -680,6 +728,7 @@ export async function initGallery(options = {}) {
     filterSettling = false;
     clearTimeout(resizeTimer);
     resizeTimer = windowRef.setTimeout(() => {
+      normalizeFilterButtonWidths();
       ensureFilterEdges();
       const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
       // Re-establish the guard after the debounce because this is the
@@ -687,6 +736,7 @@ export async function initGallery(options = {}) {
       suppressFilterSettleUntil = Date.now() + 350;
       lastCenteredFilterId = activeBtn?.getAttribute('data-filter') || currentFilter;
       if (activeBtn && isFilterScroller()) centerFilterButton(activeBtn, 'auto');
+      syncFilterActiveIndicator(activeBtn);
       updateFilterPager(filterBtns.indexOf(activeBtn));
       // Re-render at breakpoint changes because card orientation and the
       // collapsed viewport measurement depend on the current width. The
@@ -973,6 +1023,8 @@ export async function initGallery(options = {}) {
       if (filterInertiaFrame !== null) windowRef.cancelAnimationFrame?.(filterInertiaFrame);
       filterInertiaFrame = null;
       filterTabs?.classList.remove('is-gesture-active', 'is-dragging');
+      filterActiveIndicator?.remove();
+      filterActiveIndicator = null;
       filterPager?.remove();
       filterPager = null;
       filterPageDots = [];
