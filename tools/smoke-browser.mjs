@@ -885,7 +885,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         );
       }
 
-      if (viewport.name === 'desktop') {
+      {
         const videoContract = await page.evaluate(() => {
           const active = document.querySelector('#heroBanner .slide.active');
           const video = active?.querySelector('video');
