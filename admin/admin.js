@@ -2120,6 +2120,23 @@ RENDERERS.settings = function(data){
   s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
   s.showHeroMessage = s.showHeroMessage !== false;
   s.showFooterMessage = s.showFooterMessage === true;
+  const feedbackDefaults = {
+    enabled: false, soundEnabled: true, hapticsEnabled: false, volume: 0.12,
+    navigationSound: 'assets/projects/site/sounds/navigation.wav',
+    selectionSound: 'assets/projects/site/sounds/selection.wav'
+  };
+  s.interactionFeedback = {
+    ...feedbackDefaults,
+    ...(s.interactionFeedback && typeof s.interactionFeedback === 'object' ? s.interactionFeedback : {})
+  };
+  s.interactionFeedback.enabled = s.interactionFeedback.enabled === true;
+  s.interactionFeedback.soundEnabled = s.interactionFeedback.soundEnabled !== false;
+  s.interactionFeedback.hapticsEnabled = s.interactionFeedback.hapticsEnabled === true;
+  const feedbackVolume = Number(s.interactionFeedback.volume);
+  s.interactionFeedback.volume = Number.isFinite(feedbackVolume)
+    ? Math.max(0, Math.min(0.3, feedbackVolume)) : feedbackDefaults.volume;
+  s.interactionFeedback.navigationSound = String(s.interactionFeedback.navigationSound || '');
+  s.interactionFeedback.selectionSound = String(s.interactionFeedback.selectionSound || '');
   s.ogImage = s.ogImage || 'assets/projects/site/og-image.jpg';
   s.ogImageVersion = Math.max(1, Number(s.ogImageVersion) || 2);
   s.ogImageAlt = s.ogImageAlt || 'Lemuel Magbitang — 3D & Motion Illustrator portfolio';
@@ -2136,6 +2153,31 @@ RENDERERS.settings = function(data){
       ${toggleRow('showSoftwareLogos','Software skill logos','Shows every Software Skill (About page) as its logo instead of its name. One switch for the whole list — set a specific logo per skill from the About page itself.', s.showSoftwareLogos)}
       ${toggleRow('showHeroMessage','Hero message in hero','Show or hide the rotating statement over the homepage hero artwork.', s.showHeroMessage)}
       ${toggleRow('showFooterMessage','Hero message in footer','Show the current hero statement above the footer links. The footer grows naturally with longer messages.', s.showFooterMessage)}
+    </div>
+
+    <div class="panel">
+      <h3>Interaction Feedback</h3>
+      <p class="panel-sub">Optional, subtle sounds and supported-device haptics. Off on the public site until enabled here; visitors can disable feedback locally.</p>
+      ${toggleRow('interactionFeedback.enabled','Enable interface feedback','Master switch. Disabled by default.', s.interactionFeedback.enabled)}
+      ${toggleRow('interactionFeedback.soundEnabled','Sound cues','Play brief sounds only after a real click; files are fetched on demand.', s.interactionFeedback.soundEnabled)}
+      ${toggleRow('interactionFeedback.hapticsEnabled','Supported-device haptics','Use a short vibration where the browser supports it.', s.interactionFeedback.hapticsEnabled)}
+      <div class="field">
+        <label class="field-label" for="s_feedback_volume">Sound volume (0–0.30)</label>
+        <input id="s_feedback_volume" type="number" min="0" max="0.3" step="0.01" value="${attr(s.interactionFeedback.volume)}">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label class="field-label" for="s_feedback_navigation">Navigation cue file</label>
+          <input id="s_feedback_navigation" value="${attr(s.interactionFeedback.navigationSound)}" placeholder="assets/projects/site/sounds/navigation.wav">
+          <button class="ghost" id="s_feedback_preview_navigation" type="button">Preview navigation cue</button>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s_feedback_selection">Selection cue file</label>
+          <input id="s_feedback_selection" value="${attr(s.interactionFeedback.selectionSound)}" placeholder="assets/projects/site/sounds/selection.wav">
+          <button class="ghost" id="s_feedback_preview_selection" type="button">Preview selection cue</button>
+        </div>
+      </div>
+      <div class="hint">Use Browse to select an audio file from the Media Library. Upload replacements under assets/ first, then select the saved path. Previews play only when pressed.</div>
     </div>
 
     <div class="panel">
@@ -2192,6 +2234,38 @@ RENDERERS.settings = function(data){
       flagUnsaved();
     });
   });
+  const feedbackNavigationInput = content.querySelector('#s_feedback_navigation');
+  const feedbackSelectionInput = content.querySelector('#s_feedback_selection');
+  const feedbackVolumeInput = content.querySelector('#s_feedback_volume');
+  const feedbackPreviewNavigation = content.querySelector('#s_feedback_preview_navigation');
+  const feedbackPreviewSelection = content.querySelector('#s_feedback_preview_selection');
+  [feedbackNavigationInput, feedbackSelectionInput, feedbackVolumeInput].forEach(input => input?.addEventListener('input', flagUnsaved));
+  attachMediaBrowseButton(feedbackNavigationInput, null, { kind: 'other', title: 'Choose navigation cue sound' });
+  attachMediaBrowseButton(feedbackSelectionInput, null, { kind: 'other', title: 'Choose selection cue sound' });
+
+  let feedbackPreviewAudio = null;
+  function previewFeedbackSound(input) {
+    const source = String(input?.value || '').trim();
+    if (!source) { toast('Choose a sound file before previewing.', true); return; }
+    const url = /^https:\/\//i.test(source) ? source : ghRawUrl(source);
+    try {
+      feedbackPreviewAudio?.pause();
+      const audio = new Audio(url);
+      feedbackPreviewAudio = audio;
+      audio.preload = 'none';
+      const level = Number(feedbackVolumeInput?.value);
+      audio.volume = Number.isFinite(level) ? Math.max(0, Math.min(0.3, level)) : 0.12;
+      audio.addEventListener('ended', () => {
+        if (feedbackPreviewAudio === audio) feedbackPreviewAudio = null;
+        audio.removeAttribute('src');
+      }, { once: true });
+      const playback = audio.play();
+      if (playback && typeof playback.catch === 'function') playback.catch(() => toast('Preview was blocked. Check the file format/path and try again.', true));
+    } catch (_) { toast('Could not preview this sound file. Check its path and format.', true); }
+  }
+  feedbackPreviewNavigation?.addEventListener('click', () => previewFeedbackSound(feedbackNavigationInput));
+  feedbackPreviewSelection?.addEventListener('click', () => previewFeedbackSound(feedbackSelectionInput));
+
   const socialEditor = content.querySelector('#socialEditor');
   const addSocialBtn = content.querySelector('#addSocial');
   let socialRows = Object.entries(s.socials)
@@ -2329,6 +2403,24 @@ RENDERERS.settings = function(data){
     });
   }
 
+  function validateFeedbackSoundPath(raw, label) {
+    const value = String(raw || '').trim();
+    if (!value) return '';
+    if (/^https:\/\//i.test(value)) {
+      try { const url = new URL(value); if (url.protocol === 'https:') return url.href; } catch (_) {}
+      throw new Error(label + ' must be a valid HTTPS URL.');
+    }
+    const path = value.split(/[?#]/, 1)[0];
+    const forbidden = value.includes(String.fromCharCode(92))
+      || Array.from(value).some(character => character.charCodeAt(0) < 32);
+    if (!value.startsWith('assets/') || forbidden ||
+        path.split('/').some(part => !part || part === '.' || part === '..') ||
+        !/\.(?:wav|mp3|ogg|m4a|aac|flac|webm)$/i.test(path)) {
+      throw new Error(label + ' must point to audio under assets/ or an HTTPS audio URL.');
+    }
+    return value;
+  }
+
   wireSave(()=>({
     protectionEnabled: s.protectionEnabled,
     formsEnabled: { project: s.formsEnabled.project, review: s.formsEnabled.review },
@@ -2336,6 +2428,21 @@ RENDERERS.settings = function(data){
     showSoftwareLogos: s.showSoftwareLogos,
     showHeroMessage: s.showHeroMessage,
     showFooterMessage: s.showFooterMessage,
+    interactionFeedback: (() => {
+      const rawVolume = val('s_feedback_volume').trim();
+      const volume = Number(rawVolume);
+      if (!rawVolume || !Number.isFinite(volume) || volume < 0 || volume > 0.3) {
+        throw new Error('Feedback sound volume must be a number between 0 and 0.30.');
+      }
+      return {
+        enabled: s.interactionFeedback.enabled === true,
+        soundEnabled: s.interactionFeedback.soundEnabled !== false,
+        hapticsEnabled: s.interactionFeedback.hapticsEnabled === true,
+        volume,
+        navigationSound: validateFeedbackSoundPath(val('s_feedback_navigation'), 'Navigation cue'),
+        selectionSound: validateFeedbackSoundPath(val('s_feedback_selection'), 'Selection cue')
+      };
+    })(),
     web3forms: { projectKey: val('s_pkey'), reviewKey: val('s_rkey') },
     redirectUrl: val('s_redirect'),
     contactEmail: val('s_email'),
