@@ -6479,7 +6479,7 @@ try {
       // transition into deployment tracking. This verifies the cancellation
       // did not invalidate the tracker that belongs to the approved save.
       await page.waitForFunction(
-        () => document.querySelector('#saveStatusText')?.textContent?.trim() === 'Deploying…',
+        () => ['Deploying…', 'Checking Pages deployment…'].includes(document.querySelector('#saveStatusText')?.textContent?.trim()),
         null,
         { timeout: 2000 }
       );
@@ -6821,11 +6821,11 @@ try {
       await page.locator('#btnSaveTop').click();
       await page.waitForTimeout(400);
       const savingStatus = (await page.locator('#saveStatusText').textContent()).trim();
-      if (savingStatus !== 'Deploying…') {
+      if (!['Deploying…', 'Checking Pages deployment…'].includes(savingStatus)) {
         throw new Error(`CMS save did not enter deployment tracking state (found "${savingStatus}").`);
       }
       await mediaNav.click();
-      if ((await page.locator('#saveStatusText').textContent()).trim() === 'Deploying…') {
+      if (['Deploying…', 'Checking Pages deployment…'].includes((await page.locator('#saveStatusText').textContent()).trim())) {
         throw new Error('CMS deployment polling continued to own the Save status after navigation.');
       }
 
