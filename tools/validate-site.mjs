@@ -1341,7 +1341,7 @@ function validateBootstrapHardening() {
   }
   if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
       !/filter:\s*brightness\(0\) invert\(1\)/.test(logoRule) ||
-      !/mix-blend-mode\s*:\s*difference/.test(logoRule) ||
+      !/mix-blend-mode\s*:\s*normal/.test(logoRule) ||
       !/background:\s*#fff/.test(hamburgerButtonRule) ||
       !/mix-blend-mode\s*:\s*normal/.test(hamburgerRule) ||
       !/backdrop-filter:\s*none/.test(hamburgerButtonRule) ||
@@ -1378,7 +1378,7 @@ function validateBootstrapHardening() {
       !/classList\.add\('is-open'\)/.test(navigation) ||
       !/classList\.add\('is-closing'\)/.test(navigation) ||
       !/replayingMenuLink/.test(navigation)) {
-    err('Navigation: transparent chrome, inverted active pill, black/white hover, difference-blended logo/menu icon, and seamless full-screen mobile menu must remain in the CSS contract.');
+    err('Navigation: transparent chrome, state-driven logo foreground, inverted active pill, difference-blended menu icon, and seamless full-screen mobile menu must remain in the CSS contract.');
   }
 
   const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
