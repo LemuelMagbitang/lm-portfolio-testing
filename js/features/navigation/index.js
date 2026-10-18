@@ -355,7 +355,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     const stack = typeof root.elementsFromPoint === 'function'
       ? (root.elementsFromPoint(point.x, point.y) || [])
       : [root.elementFromPoint(point.x, point.y)].filter(Boolean);
-    const backdrop = stack.find(element => {
+    let backdrop = stack.find(element => {
       if (!element || element === logo || element.closest?.('.navbar')) return false;
       if (element.classList?.contains('nav-menu-backdrop')) return true;
       return !element.closest?.('script, style');
@@ -372,15 +372,18 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return;
     }
     const heroSection = backdrop.closest?.('.hero-section');
-    if (heroSection?.classList.contains('hero-section--message') ||
-        heroSection?.classList.contains('about-hero')) {
-      // Both modes paint a deliberate dark scrim over their media. The raw
-      // image sample underneath that layer is not the color the visitor sees.
+    if (heroSection?.classList.contains('about-hero')) {
+      // About keeps its existing dark-scrim treatment; the Work hero below
+      // samples its own media so white and black can follow the moving artwork.
       setVideoBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.02);
       return;
     }
+    // A message overlay or slide wrapper can be the elementFromPoint result.
+    // Normalize it to the Hero media surface before deciding the logo color.
+    const heroBanner = heroSection?.querySelector?.('.hero-banner');
+    if (heroBanner) backdrop = heroBanner;
 
     const style = windowRef?.getComputedStyle?.(backdrop);
     const backdropColor = parseColor(style?.backgroundColor);
@@ -403,7 +406,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
     if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
     if (media) {
-      setVideoBackdropState(media.localName === 'video');
+      setVideoBackdropState(['video', 'canvas', 'lottie-player'].includes(media.localName));
       const luminance = sampleMediaLuminance(root, media, point);
       if (Number.isFinite(luminance)) {
         setLogoForeground(luminance);

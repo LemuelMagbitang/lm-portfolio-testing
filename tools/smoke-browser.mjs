@@ -889,6 +889,73 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         window.dispatchEvent(new Event('scroll'));
       });
 
+      if (expectedMessage) {
+        await page.evaluate(async () => {
+          const hero = document.querySelector('.hero-section--message');
+          const banner = hero?.querySelector('.hero-banner');
+          const logo = document.querySelector('.site-logo');
+          if (!banner || !logo) throw new Error('Hero-message contrast fixture could not locate the Works media surface.');
+          const originals = Array.from(banner.querySelectorAll('.slide'));
+          window.__lmSmokeHeroSlideSnapshot = originals.map(element => ({
+            element,
+            active: element.classList.contains('active')
+          }));
+          originals.forEach(element => element.classList.remove('active'));
+
+          const slide = document.createElement('div');
+          slide.id = '__smoke-hero-logo-contrast-slide';
+          slide.className = 'slide active';
+          Object.assign(slide.style, {
+            position: 'absolute', inset: '0', zIndex: '999',
+            opacity: '1', pointerEvents: 'none'
+          });
+          const image = document.createElement('img');
+          image.id = '__smoke-hero-logo-contrast-image';
+          image.alt = '';
+          Object.assign(image.style, {
+            display: 'block', width: '100%', height: '100%',
+            objectFit: 'cover', pointerEvents: 'none'
+          });
+          const svg = color => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="' + color + '"/></svg>'
+          );
+          image.src = svg('#ffffff');
+          slide.appendChild(image);
+          banner.appendChild(slide);
+          try { await image.decode(); } catch (_) {}
+          logo.dataset.logoForeground = 'light';
+          logo.style.filter = 'brightness(0) invert(1)';
+          window.dispatchEvent(new Event('resize'));
+        });
+        await page.waitForFunction(
+          () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+          null,
+          { timeout: 2500 }
+        );
+        await page.evaluate(async () => {
+          const image = document.getElementById('__smoke-hero-logo-contrast-image');
+          if (!image) throw new Error('Hero-message contrast fixture image disappeared before the dark-media check.');
+          image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#000000"/></svg>'
+          );
+          try { await image.decode(); } catch (_) {}
+          window.dispatchEvent(new Event('resize'));
+        });
+        await page.waitForFunction(
+          () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+          null,
+          { timeout: 2500 }
+        );
+        await page.evaluate(() => {
+          document.getElementById('__smoke-hero-logo-contrast-slide')?.remove();
+          (window.__lmSmokeHeroSlideSnapshot || []).forEach(({ element, active }) => {
+            element.classList.toggle('active', active);
+          });
+          delete window.__lmSmokeHeroSlideSnapshot;
+          window.dispatchEvent(new Event('resize'));
+        });
+      }
+
       // Inactive bright slides must not outweigh the dark media of the active slide.
       await page.evaluate(async () => {
         const logo = document.querySelector('.site-logo');
