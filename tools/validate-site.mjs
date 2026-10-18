@@ -1766,15 +1766,15 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261018-05") ||
+      !composition.includes("gallery/index.js?v=20261018-06") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261018-21') ||
-      !works.includes('js/app/page-composition.js?v=20261018-21') ||
-      !works.includes('css/style.css?v=20261018-19') ||
+      !works.includes('js/app/page-composition.js?v=20261018-22') ||
+      !works.includes('css/style.css?v=20261018-20') ||
       !works.includes('js/script.js?v=20261018-21') ||
-      !about.includes('style.css?v=20261018-19') ||
+      !about.includes('style.css?v=20261018-20') ||
       !about.includes('script.js?v=20261018-21') ||
-      !about.includes('page-composition.js?v=20261018-21')) {
+      !about.includes('page-composition.js?v=20261018-22')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -1807,7 +1807,7 @@ function validateFilterSoundAndFeedbackContract() {
       !css.includes('scroll-snap-stop: always') ||
       !css.includes('scroll-snap-type: none') ||
       !css.includes('-webkit-overflow-scrolling: auto;') ||
-      !gallery.includes("centerFilterButton(nearest, 'auto')") ||
+      !gallery.includes("centerFilterButton(nearest, 'auto', true)") ||
       !navigation.includes("bind(windowRef, 'pointerup', resetPointerFocus)") ||
       !navigation.includes('logoLink.blur()') ||
       !smoke.includes('filterGalleryGap') ||
