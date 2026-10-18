@@ -613,16 +613,21 @@ async function assertPublicNavigation(page, { href, label }) {
       await hamburger.hover();
       await page.waitForFunction(() => {
         const button = document.querySelector('.hamburger');
+        const logo = document.querySelector('.site-logo');
         const style = button ? getComputedStyle(button) : null;
+        const foreground = logo?.dataset?.logoForeground === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
         const strokes = Array.from(button?.querySelectorAll('.hamburger-icon span') || []);
-        return style?.backgroundColor === 'rgb(0, 0, 0)' &&
+        return style?.backgroundColor === 'rgba(0, 0, 0, 0)' &&
+          style?.mixBlendMode === 'normal' &&
           strokes.length === 3 &&
-          strokes.every(stroke => getComputedStyle(stroke).mixBlendMode === 'difference');
+          strokes.every(stroke => getComputedStyle(stroke).backgroundColor === foreground &&
+            getComputedStyle(stroke).mixBlendMode === 'normal');
       }, null, { timeout: 1500 });
       await page.mouse.move(0, 0);
-      await page.waitForFunction(() =>
-        getComputedStyle(document.querySelector('.hamburger')).backgroundColor === 'rgb(255, 255, 255)',
-        null, { timeout: 1500 });
+      await page.waitForFunction(() => {
+        const button = document.querySelector('.hamburger');
+        return getComputedStyle(button).backgroundColor === 'rgba(0, 0, 0, 0)';
+      }, null, { timeout: 1500 });
     }
     if (await hamburger.count() !== 1 || await mobileMenu.count() !== 1) {
       throw new Error(label + ' mobile navigation controls are missing.');
@@ -672,6 +677,8 @@ async function assertPublicNavigation(page, { href, label }) {
         inactive: inactiveStyle ? { background: inactiveStyle.backgroundColor, color: inactiveStyle.color, borderWidth: inactiveStyle.borderWidth, pointerEvents: inactiveStyle.pointerEvents } : null,
         hamburgerBlendMode: hamburgerStyle.mixBlendMode,
         hamburgerBackground: hamburgerStyle.backgroundColor,
+        hamburgerForeground: hamburger?.dataset?.foreground || '',
+        hamburgerIconColors: hamburgerIconElements.map(span => getComputedStyle(span).backgroundColor),
         hamburgerBackdropFilter: hamburgerStyle.backdropFilter,
         hamburgerWidth: hamburgerStyle.width,
         hamburgerHeight: hamburgerStyle.height,
@@ -703,11 +710,13 @@ async function assertPublicNavigation(page, { href, label }) {
       openMenuContract.inactive?.borderWidth !== '0px' ||
       openMenuContract.inactive?.pointerEvents !== 'auto' ||
       openMenuContract.hamburgerBlendMode !== 'normal' ||
-      openMenuContract.hamburgerBackground !== 'rgb(255, 255, 255)' ||
+      openMenuContract.hamburgerBackground !== 'rgba(0, 0, 0, 0)' ||
+      openMenuContract.hamburgerForeground !== 'light' ||
+      JSON.stringify(openMenuContract.hamburgerIconColors) !== JSON.stringify(['rgb(255, 255, 255)', 'rgb(255, 255, 255)', 'rgb(255, 255, 255)']) ||
       openMenuContract.hamburgerBackdropFilter !== 'none' ||
       openMenuContract.hamburgerWidth !== '38px' ||
       openMenuContract.hamburgerHeight !== '38px' ||
-      JSON.stringify(openMenuContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
+      JSON.stringify(openMenuContract.hamburgerIconBlendModes) !== JSON.stringify(['normal', 'normal', 'normal']) ||
       contrastRatio('rgb(0, 0, 0)', 'rgb(255, 255, 255)') < 3 ||
       !openMenuContract.hamburgerIsOpen ||
       openMenuContract.hamburgerIconBars !== 3 ||
