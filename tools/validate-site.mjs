@@ -1786,7 +1786,7 @@ function validateFilterSoundAndFeedbackContract() {
   const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
 
   if (!gallery.includes("new CustomEventConstructor('lm:filter-centered'") ||
-      !gallery.includes("setTimeout(() => settleCenteredFilter(), 220)") ||
+      !gallery.includes("filterActiveIndicator?.classList.remove('is-following-scroll');\n      settleCenteredFilter();") ||
       !gallery.includes("'(prefers-reduced-motion: reduce)'") ||
       !gallery.includes("event.key === 'ArrowRight'") ||
       !gallery.includes("event.key === 'Home'")) {
