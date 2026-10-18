@@ -291,8 +291,33 @@ async function assertNavigationLabelsCentered(page, label) {
 }
 
 async function assertPublicNavigation(page, { href, label }) {
-  if (await page.locator('.interaction-feedback-toggle').count() !== 0) {
-    throw new Error(label + ' default-off interaction feedback must not insert a visitor control.');
+  // The toggle is optional CMS UI. Assert against the active site setting
+  // instead of assuming feedback is off on every testing snapshot.
+  const feedbackSetting = await page.evaluate(async () => {
+    try {
+      const response = await fetch('/data/settings.json', { cache: 'no-store' });
+      if (!response.ok) return null;
+      const settings = await response.json();
+      const feedback = settings?.interactionFeedback || {};
+      return {
+        enabled: feedback.enabled === true,
+        soundEnabled: feedback.soundEnabled !== false,
+        hapticsEnabled: feedback.hapticsEnabled === true
+      };
+    } catch (_) {
+      return null;
+    }
+  });
+  const feedbackControlCount = await page.locator('.interaction-feedback-toggle').count();
+  if (feedbackSetting) {
+    const shouldShowFeedbackControl = feedbackSetting.enabled &&
+      (feedbackSetting.soundEnabled || feedbackSetting.hapticsEnabled);
+    if ((feedbackControlCount === 1) !== shouldShowFeedbackControl) {
+      throw new Error(label + ' interaction-feedback control does not match CMS settings: ' +
+        JSON.stringify({ feedbackSetting, feedbackControlCount, shouldShowFeedbackControl }));
+    }
+  } else if (feedbackControlCount !== 0) {
+    throw new Error(label + ' rendered an interaction-feedback control while site settings were unavailable.');
   }
   const link = page.locator('.nav-links a[href="' + href + '"]').first();
   if (await link.count() !== 1) {
