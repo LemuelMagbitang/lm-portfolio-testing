@@ -4067,6 +4067,16 @@ a:focus-visible{
   box-shadow:none!important;
 }
 
+/* The active-state background is more specific than the early focus rule.
+   Reassert the shape-following ring so keyboard focus remains visible even
+   when the focused button is also the selected filter. */
+.filter-nav-content.has-active-indicator .tab-btn:focus-visible,
+.filter-nav-content.has-active-indicator .tab-btn[aria-pressed="true"]:focus-visible {
+  outline: none !important;
+  outline-offset: 0;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .82) !important;
+}
+
 /* ============================================================
    PROJECT GALLERY — legacy visual contract
    Cards are deliberately flush, square, and gapless. The squircle system is
