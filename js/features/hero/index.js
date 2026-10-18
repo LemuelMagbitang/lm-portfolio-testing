@@ -123,7 +123,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       try { src = new URL(rawSrc, baseUrl).href; } catch (e) { /* keep raw */ }
     }
 
-    return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background };
+    return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background, zoomTransition: typeof thumb.zoomTransition === 'boolean' ? thumb.zoomTransition : null, fadeTransition: typeof thumb.fadeTransition === 'boolean' ? thumb.fadeTransition : null };
   }
 
   function normalizeHeroMessages(raw) {
@@ -231,7 +231,9 @@ import { createLifecycle } from '../../core/lifecycle.js';
       rotate: item.rotate || null,
       background: item.background || null,
       fadeInMs: Number.isFinite(Number(item.fadeInMs)) ? Math.max(0, Number(item.fadeInMs)) : 1500,
-      fadeOutMs: Number.isFinite(Number(item.fadeOutMs)) ? Math.max(0, Number(item.fadeOutMs)) : 1500
+      fadeOutMs: Number.isFinite(Number(item.fadeOutMs)) ? Math.max(0, Number(item.fadeOutMs)) : 1500,
+      zoomTransition: typeof item.zoomTransition === 'boolean' ? item.zoomTransition : null,
+      fadeTransition: typeof item.fadeTransition === 'boolean' ? item.fadeTransition : null
     };
   }
 
@@ -416,15 +418,14 @@ import { createLifecycle } from '../../core/lifecycle.js';
       if (source.type === 'video') {
         media = documentRef.createElement('video');
         media.src = resolveAssetUrl(source.src);
-        media.autoplay = true; media.muted = true; media.loop = true; media.playsInline = true;
+        media.muted = true; media.loop = false; media.playsInline = true; media.preload = i === 0 ? 'auto' : 'metadata'; media.autoplay = i === 0;
       } else if (source.type === 'lottie') {
         // <lottie-player> is a custom element from the lottie-player
         // library (loaded in this page's <head>) — it takes a JSON
         // animation file the same way an <img> takes a picture file.
         media = documentRef.createElement('lottie-player');
         media.setAttribute('src', resolveAssetUrl(source.src));
-        media.setAttribute('autoplay', '');
-        media.setAttribute('loop', '');
+        if (i === 0) media.setAttribute('autoplay', '');
         media.setAttribute('background', 'transparent');
         media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       } else {
@@ -434,9 +435,13 @@ import { createLifecycle } from '../../core/lifecycle.js';
       }
       const fadeInMs = Number.isFinite(Number(source.fadeInMs)) ? Math.max(0, Number(source.fadeInMs)) : 1500;
       const fadeOutMs = Number.isFinite(Number(source.fadeOutMs)) ? Math.max(0, Number(source.fadeOutMs)) : 1500;
+      const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
+      const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
+      wrap.dataset.heroType = source.type || 'image';
+      wrap.classList.toggle('slide--zoom', zoomTransition);
+      wrap.classList.toggle('slide--fade', fadeTransition);
       wrap.style.setProperty('--hero-fade-in-ms', `${fadeInMs}ms`);
       wrap.style.setProperty('--hero-fade-out-ms', `${fadeOutMs}ms`);
-
       wrap.appendChild(media);
       heroContainer.appendChild(wrap);
       if (applyMediaBackground && source.background) await applyMediaBackground(wrap, source.background, resolveAssetUrl);
@@ -455,6 +460,12 @@ import { createLifecycle } from '../../core/lifecycle.js';
       }
     }
 
+    // Hold the branded startup gate until the first hero visual is usable.
+    const firstSlide = heroContainer.querySelector('.slide');
+    if (firstSlide) {
+      try { await waitForHeroMedia(firstSlide.firstElementChild, sources[0]?.type, windowRef); }
+      catch (_) { /* An unavailable visual must never trap startup. */ }
+    }
     const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef, isReducedMotion);
     lifecycle.add(stopCrossfade);
 
@@ -470,21 +481,30 @@ import { createLifecycle } from '../../core/lifecycle.js';
     };
   }
 
-  function startHeroCrossfade(heroContainer, crossfadeMs, windowRef = globalThis.window, isReducedMotionFn = prefersReducedMotion) {
-    const slides = heroContainer.querySelectorAll('.slide');
-    if (slides.length <= 1) return () => {};
-
-    let currentSlide = 0;
-    if (isReducedMotionFn()) return () => {};
-    const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
-      ? Number(crossfadeMs)
-      : 3500;
-    const intervalId = windowRef.setInterval(() => {
-      slides[currentSlide].classList.remove('active');
-      currentSlide = (currentSlide + 1) % slides.length;
-      slides[currentSlide].classList.add('active');
-    }, intervalMs); // configured in Hero Loop Animation
-
-    return () => windowRef.clearInterval(intervalId);
+  function waitForHeroMedia(media,type,windowRef){
+    if(!media)return Promise.resolve(false);
+    return new Promise(resolve=>{
+      let settled=false;
+      const finish=value=>{if(settled)return;settled=true;windowRef.clearTimeout(timer);Object.entries(handlers).forEach(([name,fn])=>media.removeEventListener?.(name,fn));resolve(value);};
+      const handlers={load:()=>finish(true),loadeddata:()=>finish(true),canplay:()=>finish(true),ready:()=>finish(true),error:()=>finish(false)};
+      const timer=windowRef.setTimeout(()=>finish(false),3200);
+      if(type==='image'){if(media.complete&&media.naturalWidth>0){finish(true);return;}media.addEventListener('load',handlers.load,{once:true});media.addEventListener('error',handlers.error,{once:true});}
+      else if(type==='video'){if(media.readyState>=2){finish(true);return;}media.addEventListener('loadeddata',handlers.loadeddata,{once:true});media.addEventListener('canplay',handlers.canplay,{once:true});media.addEventListener('error',handlers.error,{once:true});try{media.load?.();media.play?.()?.catch?.(()=>{});}catch(_){}}
+      else{if(media.isReady||media.getLottie?.()){finish(true);return;}media.addEventListener('ready',handlers.ready,{once:true});media.addEventListener('error',handlers.error,{once:true});}
+    });
+  }
+  function startHeroCrossfade(heroContainer,crossfadeMs,windowRef=globalThis.window,isReducedMotionFn=prefersReducedMotion){
+    const slides=Array.from(heroContainer.querySelectorAll('.slide'));
+    if(slides.length<=1||isReducedMotionFn())return()=>{};
+    const intervalMs=Number.isFinite(Number(crossfadeMs))&&Number(crossfadeMs)>=500?Number(crossfadeMs):3500;
+    let currentIndex=Math.max(0,slides.findIndex(slide=>slide.classList.contains('active'))),timer=null,disposed=false;
+    const cleanups=[];
+    function clearTimer(){if(timer!==null)windowRef.clearTimeout(timer);timer=null;}
+    function scheduleAdvance(delay){clearTimer();timer=windowRef.setTimeout(advance,Math.max(0,delay));}
+    function activateMedia(slide){const media=slide?.firstElementChild;if(!media)return;if(slide.dataset.heroType==='video'){media.muted=true;media.loop=false;const p=media.play?.();if(p&&typeof p.catch==='function')p.catch(()=>scheduleAdvance(intervalMs));}else if(slide.dataset.heroType==='lottie'){media.setAttribute('autoplay','');media.removeAttribute('loop');try{media.play?.();}catch(_){}}}
+    function advance(){if(disposed)return;clearTimer();const outgoing=slides[currentIndex],oldMedia=outgoing?.firstElementChild;outgoing?.classList.remove('active');currentIndex=(currentIndex+1)%slides.length;const incoming=slides[currentIndex];incoming.classList.add('active');if(oldMedia&&outgoing.dataset.heroType==='video'){try{oldMedia.pause?.();oldMedia.currentTime=0;}catch(_){}}else if(oldMedia&&outgoing.dataset.heroType==='lottie'){try{oldMedia.pause?.();oldMedia.stop?.();}catch(_){}}scheduleAdvanceForCurrent();activateMedia(incoming);}
+    function scheduleAdvanceForCurrent(){clearTimer();const slide=slides[currentIndex],type=slide.dataset.heroType,media=slide.firstElementChild;if(type==='video'){const ended=()=>advance(),error=()=>scheduleAdvance(intervalMs);media.addEventListener('ended',ended,{once:true});media.addEventListener('error',error,{once:true});cleanups.push(()=>{media.removeEventListener('ended',ended);media.removeEventListener('error',error);});return;}if(type==='lottie'){const complete=()=>advance(),error=()=>scheduleAdvance(intervalMs);media.addEventListener('complete',complete,{once:true});media.addEventListener('error',error,{once:true});cleanups.push(()=>{media.removeEventListener('complete',complete);media.removeEventListener('error',error);});timer=windowRef.setTimeout(()=>{if(media.isConnected&&!media.getLottie?.())advance();},Math.max(intervalMs*3,15000));return;}scheduleAdvance(intervalMs);}
+    scheduleAdvanceForCurrent();activateMedia(slides[currentIndex]);
+    return()=>{disposed=true;clearTimer();cleanups.forEach(fn=>fn());slides.forEach(slide=>{const media=slide.firstElementChild;if(slide.dataset.heroType==='video'){try{media.pause?.();}catch(_){}}if(slide.dataset.heroType==='lottie'){try{media.pause?.();media.stop?.();}catch(_){}}});};
   }
 export { initHeroBanner as initHeroBannerV2 };

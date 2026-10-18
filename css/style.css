@@ -294,24 +294,14 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
      zoom/rotate/focus still fully applies, just held static.
    - none: an instant cut, no fade duration either — set by removing
      the .slide transition, below. */
-.hero-banner.transition-kenburns .slide img,
-.hero-banner.transition-kenburns .slide video,
-.hero-banner.transition-kenburns .slide lottie-player {
-  animation: hero-kenburns 14s ease-in-out infinite;
-}
-.hero-banner.transition-fade .slide img,
-.hero-banner.transition-fade .slide video,
-.hero-banner.transition-fade .slide lottie-player {
-  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
-}
-.hero-banner.transition-none .slide {
-  transition: none;
-}
-.hero-banner.transition-none .slide img,
-.hero-banner.transition-none .slide video,
-.hero-banner.transition-none .slide lottie-player {
-  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
-}
+.hero-banner .slide.slide--zoom img,
+.hero-banner .slide.slide--zoom video,
+.hero-banner .slide.slide--zoom lottie-player { animation: hero-kenburns 14s ease-in-out infinite; }
+.hero-banner .slide:not(.slide--zoom) img,
+.hero-banner .slide:not(.slide--zoom) video,
+.hero-banner .slide:not(.slide--zoom) lottie-player { transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate)); }
+.hero-banner .slide:not(.slide--fade) { transition: none; }
+.hero-banner .slide.slide--fade { transition-property: opacity; transition-timing-function: ease-in-out; }
 
 @keyframes hero-kenburns {
   0%   { transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)); }
