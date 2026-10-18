@@ -73,7 +73,7 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
       if (objectFit === 'cover') {
         let horizontalPosition = 0.5;
         let verticalPosition = 0.5;
-        const positionTokens = String(style?.objectPosition || '50% 50%').split(/\\s+/);
+        const positionTokens = String(style?.objectPosition || '50% 50%').split(/\s+/);
         horizontalPosition = positionFraction(positionTokens[0], 0.5);
         verticalPosition = positionFraction(positionTokens[1] || '50%', 0.5);
 
@@ -86,10 +86,10 @@ export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
         }
       } else if (objectFit === 'contain') {
         const horizontalPosition = positionFraction(
-          String(style?.objectPosition || '50% 50%').split(/\\s+/)[0], 0.5
+          String(style?.objectPosition || '50% 50%').split(/\s+/)[0], 0.5
         );
         const verticalPosition = positionFraction(
-          String(style?.objectPosition || '50% 50%').split(/\\s+/)[1] || '50%', 0.5
+          String(style?.objectPosition || '50% 50%').split(/\s+/)[1] || '50%', 0.5
         );
         let localX = 0;
         let localY = 0;
@@ -160,12 +160,12 @@ function readLuminance(context, sampleSize) {
 }
 
 function horizontalPositionFraction(value) {
-  const tokens = String(value || '50% 50%').split(/\\s+/);
+  const tokens = String(value || '50% 50%').split(/\s+/);
   return positionFraction(tokens[0], 0.5);
 }
 
 function verticalPositionFraction(value) {
-  const tokens = String(value || '50% 50%').split(/\\s+/);
+  const tokens = String(value || '50% 50%').split(/\s+/);
   return positionFraction(tokens[1] || tokens[0], 0.5);
 }
 
