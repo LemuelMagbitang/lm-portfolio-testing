@@ -466,8 +466,6 @@ const CMS_WRITABLE_PATHS = new Set([
   'about/index.html',
   '404.html',
   'success/index.html',
-  'admin/index.html',
-  'admin/admin.css',
   'css/style.css',
   'js/script.js',
   'js/infrastructure/media-background/engine.js'
