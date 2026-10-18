@@ -1909,12 +1909,16 @@ async function assertFilterNavigationResponsive(page, label) {
     background: getComputedStyle(el).backgroundColor,
     borderColor: getComputedStyle(el).borderTopColor,
     outline: getComputedStyle(el).outlineStyle,
-    shadow: getComputedStyle(el).boxShadow
+    shadow: getComputedStyle(el).boxShadow,
+    hoverCapable: matchMedia('(hover: hover) and (pointer: fine)').matches
   }));
+  const hoverBackgroundValid = hoverStyle.hoverCapable
+    ? /^rgba\\(255, 255, 255, 0\\.12\\)$/.test(hoverStyle.background)
+    : hoverStyle.background === 'rgba(0, 0, 0, 0)' || hoverStyle.background === 'transparent';
   if (hoverStyle.outline !== 'none' || hoverStyle.shadow !== 'none' ||
-      hoverStyle.borderColor !== 'rgba(0, 0, 0, 0)' ||
-      !/^rgba\(255, 255, 255, 0\.12\)$/.test(hoverStyle.background)) {
-    throw new Error(label + ' desktop filter hover added an outline or left the gray hover palette: ' + JSON.stringify(hoverStyle));
+      hoverStyle.borderColor !== 'rgba(0, 0, 0, 0)' || !hoverBackgroundValid) {
+    throw new Error(label + ' filter hover outline/palette contract failed for ' +
+      (hoverStyle.hoverCapable ? 'fine-pointer desktop' : 'coarse-pointer touch') + ': ' + JSON.stringify(hoverStyle));
   }
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
