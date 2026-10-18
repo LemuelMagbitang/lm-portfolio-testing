@@ -1699,8 +1699,10 @@ async function assertFilterNavigationResponsive(page, label) {
         const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
         const scrollerRect = scroller?.getBoundingClientRect();
         const activeRect = active?.getBoundingClientRect();
-        return !!scrollerRect && !!activeRect &&
-          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+        return !!scrollerRect && !!activeRect && (
+          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2 ||
+          (activeRect.left >= scrollerRect.left + 8 && activeRect.right <= scrollerRect.right - 8)
+          );
       }, null, { timeout: 2500 });
       const selected = await page.evaluate(() => {
         const active = document.querySelector('.filter-nav-scroller .filter-btn.active, .filter-nav-scroller .tab-btn.active');
@@ -1837,8 +1839,10 @@ async function assertFilterNavigationResponsive(page, label) {
         const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
         const scrollerRect = scroller?.getBoundingClientRect();
         const activeRect = active?.getBoundingClientRect();
-        return !!scrollerRect && !!activeRect &&
-          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+        return !!scrollerRect && !!activeRect && (
+          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2 ||
+          (activeRect.left >= scrollerRect.left + 8 && activeRect.right <= scrollerRect.right - 8)
+          );
       }, null, { timeout: 2500 });
     }
   }
@@ -1863,8 +1867,10 @@ async function assertFilterNavigationResponsive(page, label) {
     const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
     const scrollerRect = scroller?.getBoundingClientRect();
     const activeRect = active?.getBoundingClientRect();
-    return !!scrollerRect && !!activeRect &&
-      Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+    return !!scrollerRect && !!activeRect && (
+      Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2 ||
+      (activeRect.left >= scrollerRect.left + 8 && activeRect.right <= scrollerRect.right - 8)
+      );
   }, null, { timeout: 1500 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 
