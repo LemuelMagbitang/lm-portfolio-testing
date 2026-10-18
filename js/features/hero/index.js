@@ -492,18 +492,185 @@ import { createLifecycle } from '../../core/lifecycle.js';
       else{if(media.isReady||media.getLottie?.()){finish(true);return;}media.addEventListener('ready',handlers.ready,{once:true});media.addEventListener('error',handlers.error,{once:true});}
     });
   }
-  function startHeroCrossfade(heroContainer,crossfadeMs,windowRef=globalThis.window,isReducedMotionFn=prefersReducedMotion){
-    const slides=Array.from(heroContainer.querySelectorAll('.slide'));
-    if(slides.length<=1||isReducedMotionFn())return()=>{};
-    const intervalMs=Number.isFinite(Number(crossfadeMs))&&Number(crossfadeMs)>=500?Number(crossfadeMs):3500;
-    let currentIndex=Math.max(0,slides.findIndex(slide=>slide.classList.contains('active'))),timer=null,disposed=false;
-    const cleanups=[];
-    function clearTimer(){if(timer!==null)windowRef.clearTimeout(timer);timer=null;}
-    function scheduleAdvance(delay){clearTimer();timer=windowRef.setTimeout(advance,Math.max(0,delay));}
-    function activateMedia(slide){const media=slide?.firstElementChild;if(!media)return;if(slide.dataset.heroType==='video'){media.muted=true;media.loop=false;const p=media.play?.();if(p&&typeof p.catch==='function')p.catch(()=>scheduleAdvance(intervalMs));}else if(slide.dataset.heroType==='lottie'){media.setAttribute('autoplay','');media.removeAttribute('loop');try{media.play?.();}catch(_){}}}
-    function advance(){if(disposed)return;clearTimer();const outgoing=slides[currentIndex],oldMedia=outgoing?.firstElementChild;outgoing?.classList.remove('active');currentIndex=(currentIndex+1)%slides.length;const incoming=slides[currentIndex];incoming.classList.add('active');if(oldMedia&&outgoing.dataset.heroType==='video'){try{oldMedia.pause?.();oldMedia.currentTime=0;}catch(_){}}else if(oldMedia&&outgoing.dataset.heroType==='lottie'){try{oldMedia.pause?.();oldMedia.stop?.();}catch(_){}}scheduleAdvanceForCurrent();activateMedia(incoming);}
-    function scheduleAdvanceForCurrent(){clearTimer();const slide=slides[currentIndex],type=slide.dataset.heroType,media=slide.firstElementChild;if(type==='video'){const ended=()=>advance(),error=()=>scheduleAdvance(intervalMs);media.addEventListener('ended',ended,{once:true});media.addEventListener('error',error,{once:true});cleanups.push(()=>{media.removeEventListener('ended',ended);media.removeEventListener('error',error);});return;}if(type==='lottie'){const complete=()=>advance(),error=()=>scheduleAdvance(intervalMs);media.addEventListener('complete',complete,{once:true});media.addEventListener('error',error,{once:true});cleanups.push(()=>{media.removeEventListener('complete',complete);media.removeEventListener('error',error);});timer=windowRef.setTimeout(()=>{if(media.isConnected&&!media.getLottie?.())advance();},Math.max(intervalMs*3,15000));return;}scheduleAdvance(intervalMs);}
-    scheduleAdvanceForCurrent();activateMedia(slides[currentIndex]);
-    return()=>{disposed=true;clearTimer();cleanups.forEach(fn=>fn());slides.forEach(slide=>{const media=slide.firstElementChild;if(slide.dataset.heroType==='video'){try{media.pause?.();}catch(_){}}if(slide.dataset.heroType==='lottie'){try{media.pause?.();media.stop?.();}catch(_){}}});};
+  function startHeroCrossfade(heroContainer, crossfadeMs, windowRef = globalThis.window, isReducedMotionFn = prefersReducedMotion) {
+    const slides = Array.from(heroContainer.querySelectorAll('.slide'));
+    if (!slides.length) return () => {};
+
+    const reducedMotion = Boolean(isReducedMotionFn());
+    const intervalMs = Number.isFinite(Number(crossfadeMs)) && Number(crossfadeMs) >= 500
+      ? Number(crossfadeMs)
+      : 3500;
+    let currentIndex = Math.max(0, slides.findIndex(slide => slide.classList.contains('active')));
+    let timer = null;
+    let disposed = false;
+    const cleanups = [];
+
+    function bind(target, type, handler, options) {
+      if (!target?.addEventListener) return;
+      target.addEventListener(type, handler, options);
+      cleanups.push(() => target.removeEventListener(type, handler, options));
+    }
+
+    function clearTimer() {
+      if (timer !== null) windowRef.clearTimeout(timer);
+      timer = null;
+    }
+
+    function scheduleAdvance(delay) {
+      clearTimer();
+      if (slides.length <= 1 || reducedMotion) return;
+      timer = windowRef.setTimeout(advance, Math.max(0, delay));
+    }
+
+    function activateMedia(slide) {
+      const media = slide?.firstElementChild;
+      if (!media || reducedMotion || disposed) return;
+
+      if (slide.dataset.heroType === 'video') {
+        media.muted = true;
+        media.defaultMuted = true;
+        media.playsInline = true;
+        // A single CMS-selected video is a continuous hero reel, not a
+        // one-slide slideshow that waits for an ended event to restart.
+        media.loop = slides.length === 1;
+        const playback = media.play?.();
+        if (playback && typeof playback.then === 'function') {
+          Promise.resolve(playback).then(() => {
+            if (!disposed) media.dataset.playbackState = 'playing';
+          }).catch(() => {
+            if (disposed) return;
+            media.dataset.playbackState = 'blocked';
+            // Multi-slide heroes can continue if autoplay is denied. A single
+            // reel stays on its poster/frame and retries only after a gesture.
+            if (slides.length > 1) scheduleAdvance(intervalMs);
+          });
+        } else if (!media.paused) {
+          media.dataset.playbackState = 'playing';
+        }
+        return;
+      }
+
+      if (slide.dataset.heroType === 'lottie') {
+        media.setAttribute('autoplay', '');
+        if (slides.length === 1) media.setAttribute('loop', '');
+        else media.removeAttribute('loop');
+        try { media.play?.(); } catch (_) {}
+      }
+    }
+
+    function advance() {
+      if (disposed || reducedMotion || slides.length <= 1) return;
+      clearTimer();
+      const outgoing = slides[currentIndex];
+      const oldMedia = outgoing?.firstElementChild;
+      outgoing?.classList.remove('active');
+      currentIndex = (currentIndex + 1) % slides.length;
+      const incoming = slides[currentIndex];
+      incoming.classList.add('active');
+
+      if (oldMedia && outgoing.dataset.heroType === 'video') {
+        try {
+          oldMedia.pause?.();
+          oldMedia.currentTime = 0;
+          oldMedia.dataset.playbackState = 'paused';
+        } catch (_) {}
+      } else if (oldMedia && outgoing.dataset.heroType === 'lottie') {
+        try { oldMedia.pause?.(); oldMedia.stop?.(); } catch (_) {}
+      }
+
+      scheduleAdvanceForCurrent();
+      activateMedia(incoming);
+    }
+
+    function scheduleAdvanceForCurrent() {
+      clearTimer();
+      if (slides.length <= 1 || reducedMotion) return;
+      const slide = slides[currentIndex];
+      const type = slide?.dataset?.heroType;
+      const media = slide?.firstElementChild;
+      if (!media) {
+        scheduleAdvance(intervalMs);
+        return;
+      }
+
+      if (type === 'video') {
+        const ended = () => advance();
+        const error = () => scheduleAdvance(intervalMs);
+        media.addEventListener('ended', ended, { once: true });
+        media.addEventListener('error', error, { once: true });
+        cleanups.push(() => {
+          media.removeEventListener('ended', ended);
+          media.removeEventListener('error', error);
+        });
+        return;
+      }
+
+      if (type === 'lottie') {
+        const complete = () => advance();
+        const error = () => scheduleAdvance(intervalMs);
+        media.addEventListener('complete', complete, { once: true });
+        media.addEventListener('error', error, { once: true });
+        cleanups.push(() => {
+          media.removeEventListener('complete', complete);
+          media.removeEventListener('error', error);
+        });
+        timer = windowRef.setTimeout(() => {
+          if (media.isConnected && !media.getLottie?.()) advance();
+        }, Math.max(intervalMs * 3, 15000));
+        return;
+      }
+
+      scheduleAdvance(intervalMs);
+    }
+
+    function retryBlockedVideo() {
+      if (reducedMotion || disposed) return;
+      const slide = slides[currentIndex];
+      const media = slide?.firstElementChild;
+      if (slide?.dataset?.heroType === 'video' && media?.dataset?.playbackState === 'blocked') {
+        activateMedia(slide);
+      }
+    }
+
+    // Autoplay is normally allowed for a muted, inline background video, but
+    // browsers may still deny it (for example, data-saving or battery modes).
+    // Retry from a real gesture and when a background tab becomes visible again.
+    bind(heroContainer, 'pointerdown', retryBlockedVideo, { passive: true });
+    bind(windowRef.document, 'visibilitychange', () => {
+      if (!windowRef.document.hidden) retryBlockedVideo();
+    });
+
+    if (reducedMotion) {
+      slides.forEach(slide => {
+        const media = slide.firstElementChild;
+        if (slide.dataset.heroType === 'video') {
+          try { media.pause?.(); } catch (_) {}
+        } else if (slide.dataset.heroType === 'lottie') {
+          try { media.pause?.(); media.stop?.(); } catch (_) {}
+        }
+      });
+    } else {
+      // Always activate the current slide, even when the CMS contains only a
+      // single video or Lottie. The previous early return skipped play() for
+      // the site's current one-video manual loop.
+      scheduleAdvanceForCurrent();
+      activateMedia(slides[currentIndex]);
+    }
+
+    return () => {
+      disposed = true;
+      clearTimer();
+      cleanups.splice(0).forEach(cleanup => {
+        try { cleanup(); } catch (_) {}
+      });
+      slides.forEach(slide => {
+        const media = slide.firstElementChild;
+        if (slide.dataset.heroType === 'video') {
+          try { media.pause?.(); media.dataset.playbackState = 'paused'; } catch (_) {}
+        } else if (slide.dataset.heroType === 'lottie') {
+          try { media.pause?.(); media.stop?.(); } catch (_) {}
+        }
+      });
+    };
   }
 export { initHeroBanner as initHeroBannerV2 };
