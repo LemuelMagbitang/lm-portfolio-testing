@@ -890,6 +890,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
   try {
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      // Gallery remeasures edge cushions on its 120ms resize debounce; inspect the settled rail.
+      await page.waitForTimeout(180);
       const layout = await page.evaluate(() => {
         const hero = document.querySelector('.hero-section:not(.about-hero)');
         const banner = hero?.querySelector('.hero-banner');
