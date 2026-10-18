@@ -7452,13 +7452,22 @@ try {
           });
           return;
         }
-        if (url.pathname === '/repos/Smoke/TestRepo/commits/smoke-save-commit/check-runs') {
+        if (url.pathname.startsWith('/repos/Smoke/TestRepo/commits/') &&
+            url.pathname.endsWith('/check-runs') &&
+            route.request().method() === 'GET') {
+          // The CMS follows the current branch head while a save is in flight,
+          // so the checked SHA may change from smoke-save-commit to the modeled
+          // branch head. Serve the explicit Pages checks for every fixture SHA
+          // instead of returning a browser-visible 404 for those valid lookups.
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({
               check_runs: [
-                { name: 'pages build and deployment', status: 'in_progress', conclusion: null, html_url: 'https://github.com/Smoke/TestRepo/actions' }
+                { name: 'build', status: 'in_progress', conclusion: null, details_url: 'https://github.com/Smoke/TestRepo/actions' },
+                { name: 'deploy', status: 'in_progress', conclusion: null, details_url: 'https://github.com/Smoke/TestRepo/actions' },
+                { name: 'report-build-status', status: 'in_progress', conclusion: null, details_url: 'https://github.com/Smoke/TestRepo/actions' },
+                { name: 'validate', status: 'in_progress', conclusion: null, details_url: 'https://github.com/Smoke/TestRepo/actions' }
               ]
             })
           });
