@@ -6,13 +6,13 @@
  * explicit dependencies between them.
  */
 
-import { initNavigation } from '../features/navigation/index.js?v=20261017-03';
+import { initNavigation } from '../features/navigation/index.js?v=20261018-05';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261013-02';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261011-02';
 
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261018-03';
-import { initFooterAnimation } from '../features/footer/index.js?v=20261011-03';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261018-05';
+import { initFooterAnimation } from '../features/footer/index.js?v=20261018-05';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 
