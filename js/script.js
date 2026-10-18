@@ -3,7 +3,7 @@
  * DOMContentLoaded is the only responsibility of this file.
  */
 
-import { bootstrapPortfolioApp } from './app/bootstrap.js?v=20261018-13';
+import { bootstrapPortfolioApp } from './app/bootstrap.js?v=20261018-14';
 
 function start() {
   return bootstrapPortfolioApp().catch(error => {
