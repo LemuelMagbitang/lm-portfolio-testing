@@ -6698,24 +6698,31 @@ try {
       // survive mobile -> desktop -> mobile without leaving the rail inert,
       // pointer-disabled, or bound to the wrong layout mode.
       await page.setViewportSize({ width: 1280, height: 900 });
-      await page.waitForTimeout(120);
+      await page.waitForTimeout(180);
       const desktopFilterMode = await filterRail.evaluate(el => {
         const style = getComputedStyle(el);
         return {
           flexWrap: style.flexWrap,
           overflowX: style.overflowX,
           inert: el.inert,
-          pointerEvents: style.pointerEvents
+          pointerEvents: style.pointerEvents,
+          dataOverflow: el.dataset.overflow === 'true',
+          contentWidth: el.scrollWidth,
+          viewportWidth: el.clientWidth
         };
       });
+      // The updated design uses one shared adaptive scroller at every breakpoint.
+      // On desktop the labels stay on one row; overflow-x:auto is harmless when
+      // they fit, and is required if the category labels become wider in the future.
       if (
-        desktopFilterMode.flexWrap !== 'wrap' ||
-        desktopFilterMode.overflowX === 'auto' ||
+        desktopFilterMode.flexWrap !== 'nowrap' ||
+        desktopFilterMode.overflowX !== 'auto' ||
         desktopFilterMode.inert ||
-        desktopFilterMode.pointerEvents === 'none'
+        desktopFilterMode.pointerEvents === 'none' ||
+        (desktopFilterMode.dataOverflow && desktopFilterMode.contentWidth <= desktopFilterMode.viewportWidth + 1)
       ) {
         throw new Error(
-          'Filter rail retained stale mobile interaction/layout state after switching to desktop: ' +
+          'Desktop filter rail lost its one-row responsive scroller contract after a mobile breakpoint: ' +
           JSON.stringify(desktopFilterMode)
         );
       }
