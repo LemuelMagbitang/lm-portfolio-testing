@@ -442,8 +442,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
       if (applyMediaBackground && source.background) await applyMediaBackground(wrap, source.background, resolveAssetUrl);
 
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }
-      media.style.setProperty('--hero-zoom', source.zoom || 1);
-      media.style.setProperty('--hero-rotate', (source.rotate || 0) + 'deg');
+      media.style.setProperty('--thumb-zoom', source.zoom || 1);
+      media.style.setProperty('--thumb-rotate', (source.rotate || 0) + 'deg');
 
       // Auto face-detection fallback only ever made sense for still
       // images with no focus point already set by hand — video and

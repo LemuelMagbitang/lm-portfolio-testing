@@ -314,9 +314,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 @keyframes hero-kenburns {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0%   { transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)); }
+  50%  { transform: scale(calc(var(--thumb-zoom, 1) * 1.15)) rotate(var(--thumb-rotate, 0deg)); }
+  100% { transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)); }
 }
 
 .hero-overlay { position: relative; z-index: 3; text-align: center; padding: 0 20px; }

@@ -2004,6 +2004,33 @@ try {
       const firstActiveSlide = await page.locator('#heroBanner .slide.active').first().getAttribute('class').catch(() => '');
       if (!firstActiveSlide) throw new Error('Works Hero has no active artwork slide.');
 
+      const heroTransformContract = await page.locator('#heroBanner .slide').first().evaluate(slide => {
+        const media = slide.querySelector('img, video, lottie-player');
+        return {
+          zoom: media?.style.getPropertyValue('--thumb-zoom').trim() || '',
+          rotate: media?.style.getPropertyValue('--thumb-rotate').trim() || ''
+        };
+      });
+      if (!heroTransformContract.zoom || !heroTransformContract.rotate) {
+        throw new Error('Hero media is missing the CSS zoom/rotation variables consumed by the live hero styles.');
+      }
+
+      const heroKenBurnsContract = await page.evaluate(() => {
+        for (const sheet of Array.from(document.styleSheets)) {
+          try {
+            for (const rule of Array.from(sheet.cssRules || [])) {
+              if (rule.type !== (window.CSSRule?.KEYFRAMES_RULE ?? 7) || rule.name !== 'hero-kenburns') continue;
+              const transforms = Array.from(rule.cssRules || []).map(frame => frame.style?.getPropertyValue('transform') || '');
+              return transforms.length > 0 && transforms.every(value => value.includes('var(--thumb-zoom') && value.includes('var(--thumb-rotate'));
+            }
+          } catch (_) {}
+        }
+        return false;
+      });
+      if (!heroKenBurnsContract) {
+        throw new Error('Hero Ken Burns keyframes override the CMS-configured zoom/rotation values.');
+      }
+
       const messageSettings = await page.evaluate(async () => {
         try {
           const response = await fetch('/data/settings.json');
