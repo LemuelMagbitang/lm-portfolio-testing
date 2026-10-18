@@ -91,6 +91,12 @@ export function initInteractionFeedback({ root = globalThis.document, settings =
     const target = event?.target;
     if (target?.closest?.(NAVIGATION_TARGETS)) return 'navigation';
     if (target?.closest?.(SELECTION_TARGETS)) return 'selection';
+    // Swipes can start on the gaps/fade edges, not directly on a filter
+    // button. Prime the selection cue from any trusted gesture inside the
+    // mobile rail so autoplay policy does not make that path unreliable.
+    if ((Number(windowRef?.innerWidth) || 0) < 768 && target?.closest?.('.filter-tabs')) {
+      return 'selection';
+    }
     return '';
   }
 

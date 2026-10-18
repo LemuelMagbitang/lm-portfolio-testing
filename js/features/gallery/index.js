@@ -723,7 +723,9 @@ export async function initGallery(options = {}) {
 
     if (dragged) {
       suppressFilterClickUntil = Date.now() + 250;
-      settleCenteredFilter();
+      // Let touch/drag momentum finish; scroll events keep resetting this
+      // timer so the sound is only triggered by the final centered filter.
+      scheduleCenteredFilter();
     } else {
       // A simple click on a mobile-width mouse/touchpad also needs a settle
       // pass; touch and keyboard inputs use this same debounced contract.

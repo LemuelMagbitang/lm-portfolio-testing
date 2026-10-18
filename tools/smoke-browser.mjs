@@ -1376,9 +1376,11 @@ async function assertMobileFilterCenteredSound(page, label) {
   if (!rect) throw new Error(label + ' filter rail has no measurable hit area.');
 
   const y = rect.y + rect.height / 2;
-  await page.mouse.move(rect.x + rect.width * 0.82, y);
+  // Start in the trailing fade/edge-spacer region to prove a swipe that does
+  // not begin on a tab button still unlocks playback for the settled cue.
+  await page.mouse.move(rect.x + rect.width * 0.98, y);
   await page.mouse.down();
-  await page.mouse.move(rect.x + rect.width * 0.18, y, { steps: 8 });
+  await page.mouse.move(rect.x + rect.width * 0.40, y, { steps: 8 });
   await page.mouse.up();
   await page.waitForTimeout(700);
 
