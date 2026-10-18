@@ -418,14 +418,13 @@ import { createLifecycle } from '../../core/lifecycle.js';
       if (source.type === 'video') {
         media = documentRef.createElement('video');
         media.src = resolveAssetUrl(source.src);
-        media.muted = true; media.loop = false; media.playsInline = true; media.preload = i === 0 ? 'auto' : 'metadata'; media.autoplay = i === 0;
+        media.muted = true; media.loop = false; media.playsInline = true; media.preload = i === 0 ? 'auto' : 'metadata'; media.autoplay = false;
       } else if (source.type === 'lottie') {
         // <lottie-player> is a custom element from the lottie-player
         // library (loaded in this page's <head>) — it takes a JSON
         // animation file the same way an <img> takes a picture file.
         media = documentRef.createElement('lottie-player');
         media.setAttribute('src', resolveAssetUrl(source.src));
-        if (i === 0) media.setAttribute('autoplay', '');
         media.setAttribute('background', 'transparent');
         media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       } else {
@@ -489,7 +488,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       const handlers={load:()=>finish(true),loadeddata:()=>finish(true),canplay:()=>finish(true),ready:()=>finish(true),error:()=>finish(false)};
       const timer=windowRef.setTimeout(()=>finish(false),3200);
       if(type==='image'){if(media.complete&&media.naturalWidth>0){finish(true);return;}media.addEventListener('load',handlers.load,{once:true});media.addEventListener('error',handlers.error,{once:true});}
-      else if(type==='video'){if(media.readyState>=2){finish(true);return;}media.addEventListener('loadeddata',handlers.loadeddata,{once:true});media.addEventListener('canplay',handlers.canplay,{once:true});media.addEventListener('error',handlers.error,{once:true});try{media.load?.();media.play?.()?.catch?.(()=>{});}catch(_){}}
+      else if(type==='video'){if(media.readyState>=2){finish(true);return;}media.addEventListener('loadeddata',handlers.loadeddata,{once:true});media.addEventListener('canplay',handlers.canplay,{once:true});media.addEventListener('error',handlers.error,{once:true});try{media.load?.();}catch(_){}}
       else{if(media.isReady||media.getLottie?.()){finish(true);return;}media.addEventListener('ready',handlers.ready,{once:true});media.addEventListener('error',handlers.error,{once:true});}
     });
   }
