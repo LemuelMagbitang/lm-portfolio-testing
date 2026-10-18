@@ -1844,6 +1844,18 @@ async function assertFilterNavigationResponsive(page, label) {
           (activeRect.left >= scrollerRect.left + 8 && activeRect.right <= scrollerRect.right - 8)
           );
       }, null, { timeout: 2500 });
+
+      // A delayed scrollend from the preceding fast swipe must not override
+      // an explicit click selection once programmatic centering has settled.
+      await page.waitForTimeout(850);
+      const stableSelection = await page.locator('.filter-nav-scroller [data-filter="all"]').evaluate(button => ({
+        active: button.classList.contains('active'),
+        pressed: button.getAttribute('aria-pressed')
+      }));
+      if (!stableSelection.active || stableSelection.pressed !== 'true') {
+        throw new Error(label + ' a delayed scroll settlement overrode the explicit All filter selection: ' +
+          JSON.stringify(stableSelection));
+      }
     }
   }
 
