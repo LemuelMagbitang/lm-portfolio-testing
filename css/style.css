@@ -147,6 +147,11 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   border: 0;
 }
 
+.nav-logo:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
 .nav-links a:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px #000, 0 0 0 4px #fff;
@@ -157,6 +162,11 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   outline: none;
   border-radius: 8px;
   box-shadow: 0 0 0 2px #000, 0 0 0 4px #fff;
+}
+
+.nav-logo.is-pointer-focused:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .hamburger {
@@ -485,33 +495,84 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .page-spacing { padding-top: 80px; padding-bottom: 60px; }
 .section-title { font-size: 1.1rem; letter-spacing: 2px; color: #888; margin-bottom: 40px; text-align: center; }
 
-.filter-tabs {
+
+.filter-nav-wrapper {
+  width: 100%;
+  max-width: var(--lm-container-max);
+  margin: 0 auto;
+  padding-block: clamp(18px, 2vw, 26px);
+}
+
+.filter-nav-viewport {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.filter-tabs.filter-nav-scroller {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: auto;
+  overscroll-behavior-x: contain;
+  touch-action: auto;
+}
+
+.filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-nav-content {
   display: flex;
+  flex-flow: row nowrap;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px 18px;
-  width: calc(100% - var(--lm-page-gutter) - var(--lm-page-gutter));
-  max-width: var(--lm-container-max);
-  box-sizing: border-box;
-  margin: 28px auto 10px;
-  padding: 0;
-  overflow: visible;
+  gap: clamp(8px, 1.2vw, 14px);
+  width: max-content;
+  min-width: 100%;
 }
 
 .filter-tabs .filter-edge-spacer {
-  display: none;
+  display: block;
+  flex: 0 0 auto;
+  height: 1px;
+  pointer-events: none;
 }
 
 .filter-tabs .tab-btn {
   flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
 }
 
-/* Desktop keeps the established wrapped filter layout. The horizontal
-   carousel and centered snapping are intentionally enabled only for
-   small screens below. */
+@media (hover: hover) and (pointer: fine) {
+  .filter-tabs[data-overflow="true"] {
+    cursor: grab;
+  }
+
+  .filter-tabs.is-dragging {
+    cursor: grabbing;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+.filter-tabs[data-overflow="true"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+}
 
 /* Lead-in line used on the targeted landing pages (3d-motion.html,
    illustration.html) in place of the filter tabs — sits in the same
@@ -3489,56 +3550,38 @@ footer{
 html.lm-3d-focus-open,
 body.lm-3d-focus-open{overscroll-behavior:none;}
 
-@media (max-width:767px){
-  /* Small screens use the centered horizontal filter carousel. Touch
-     keeps native horizontal momentum; a mouse on a narrow window can
-     drag the same strip with a primary-button hold. */
-  .filter-tabs{
-    justify-content:flex-start;
-    flex-wrap:nowrap;
-    gap:8px;
-    width:calc(100% - var(--lm-page-gutter) - var(--lm-page-gutter));
-    max-width:var(--lm-container-max);
-    box-sizing:border-box;
-    margin:14px auto 10px;
-    padding:0;
-    overflow-x:auto;
-    overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    -ms-overflow-style:none;
-    scroll-snap-type:x mandatory;
-    overscroll-behavior-x:contain;
-    touch-action:pan-x;
-    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
-    mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
-    cursor:grab;
+@media (max-width: 767px) {
+  .filter-nav-wrapper {
+    padding-block: 18px 20px;
   }
-  .filter-tabs.is-dragging{
-    cursor:grabbing;
-    user-select:none;
-    -webkit-user-select:none;
+
+  .filter-nav-content {
+    gap: 8px;
   }
-  .filter-tabs::-webkit-scrollbar{display:none;}
-  .filter-tabs .filter-edge-spacer{
-    display:block;
-    flex:0 0 auto;
-    height:1px;
-    pointer-events:none;
+
+  .filter-tabs .tab-btn {
+    font-size: .8rem;
+    letter-spacing: 1.1px;
   }
-  .filter-tabs .tab-btn{
-    flex:0 0 auto;
-    font-size:.8rem;
-    letter-spacing:1.1px;
-    padding:8px 12px;
-    scroll-snap-align:center;
+
+  .filter-page-controls {
+    gap: 7px;
+    margin-bottom: 24px;
   }
-  .filter-page-controls{
-    gap:7px;
-    margin-bottom:24px;
+
+  .filter-page-controls:not([hidden]) {
+    display: none !important;
   }
-  .filter-page-controls:not([hidden]){
-    display:none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-tabs.filter-nav-scroller {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
+
+  .filter-page-dot {
+    transition: none;
   }
 }
 
@@ -5953,8 +5996,8 @@ body.menu-open .hamburger-icon span {
 }
 
 
-/* Works spacing: align the filter rail directly to the hero edge instead of stacking
-   generic page padding and the old filter top margin. About spacing remains unchanged. */
+/* Works removes the generic main top padding; the dedicated filter-nav wrapper
+   now owns the deliberate breathing room between the hero, labels, and gallery. */
 .hero-section:not(.about-hero) + main.works-main.page-spacing {
   padding-top: 0;
 }

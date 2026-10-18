@@ -16,6 +16,7 @@ export async function initGallery(options = {}) {
   if (!documentRef || !windowRef) return null;
 
   const filterTabs = documentRef.querySelector('.filter-tabs');
+  const filterContent = filterTabs?.querySelector('.filter-nav-content') || filterTabs;
   const getProjects = typeof options.getProjects === 'function' ? options.getProjects : () => [];
   const getCardForProject = typeof options.getCardForProject === 'function' ? options.getCardForProject : () => null;
   const showMoreBtn = documentRef.getElementById('showMoreBtn');
@@ -66,7 +67,7 @@ export async function initGallery(options = {}) {
         fragment.appendChild(button);
       });
 
-      filterTabs.replaceChildren(fragment);
+      filterContent.replaceChildren(fragment);
     } catch (error) {
       console.warn('Filters: could not load', options.filterUrl, error);
     }
@@ -139,17 +140,38 @@ export async function initGallery(options = {}) {
   }
 
   function ensureFilterEdges() {
-    if (!filterTabs) return;
-    const current = Array.from(filterTabs.querySelectorAll('.filter-edge-spacer'));
-    current.forEach(el => el.remove());
+    if (!filterTabs || !filterContent) return;
+
+    // Edge cushions are useful only when labels need horizontal scrolling.
+    // If the entire row fits, keep it centered without creating fake overflow.
+    filterTabs.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
 
     const buttons = Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn'));
-    if (!buttons.length) return;
+    if (!buttons.length || filterTabs.clientWidth <= 0) {
+      filterTabs.dataset.overflow = 'false';
+      return;
+    }
 
+    const contentStyle = windowRef.getComputedStyle?.(filterContent);
+    const columnGap = Number.parseFloat(contentStyle?.columnGap || contentStyle?.gap || '0') || 0;
+    const pillsWidth = buttons.reduce((total, button) => total + button.getBoundingClientRect().width, 0);
+    const naturalWidth = pillsWidth + columnGap * Math.max(0, buttons.length - 1);
+    const needsScroller = naturalWidth > filterTabs.clientWidth + 1;
+    filterTabs.dataset.overflow = needsScroller ? 'true' : 'false';
+    if (!needsScroller) return;
+
+    // The outer gap around each spacer is part of the flex gap, so subtract it
+    // from the cushion size. This aligns the visible pill center with the rail.
     const first = buttons[0];
     const last = buttons[buttons.length - 1];
-    const firstSpace = Math.max(0, (filterTabs.clientWidth - first.getBoundingClientRect().width) / 2);
-    const lastSpace = Math.max(0, (filterTabs.clientWidth - last.getBoundingClientRect().width) / 2);
+    const firstSpace = Math.max(
+      0,
+      (filterTabs.clientWidth - first.getBoundingClientRect().width) / 2 - columnGap
+    );
+    const lastSpace = Math.max(
+      0,
+      (filterTabs.clientWidth - last.getBoundingClientRect().width) / 2 - columnGap
+    );
 
     const leading = documentRef.createElement('span');
     leading.className = 'filter-edge-spacer';
@@ -161,8 +183,8 @@ export async function initGallery(options = {}) {
     trailing.setAttribute('aria-hidden', 'true');
     trailing.style.width = `${lastSpace}px`;
 
-    filterTabs.prepend(leading);
-    filterTabs.append(trailing);
+    filterContent.prepend(leading);
+    filterContent.append(trailing);
   }
 
   function getFilterButtons() {
@@ -203,12 +225,16 @@ export async function initGallery(options = {}) {
     });
   }
 
+  function isFilterScroller() {
+    return Boolean(filterTabs && filterTabs.dataset.overflow === 'true');
+  }
+
   function isFilterCarousel() {
     return windowRef.innerWidth < 768;
   }
 
   function centerFilterButton(button, behavior = 'smooth') {
-    if (!filterTabs || !button || !isFilterCarousel()) return false;
+    if (!filterTabs || !button || !isFilterScroller()) return false;
     const tabsRect = filterTabs.getBoundingClientRect();
     const buttonRect = button.getBoundingClientRect();
     const delta = (buttonRect.left + buttonRect.width / 2) -
@@ -275,7 +301,7 @@ export async function initGallery(options = {}) {
       isExpanded = false;
       render({ animateTransition: true, transitionFromRects });
     }
-    if (center && isFilterCarousel()) centerFilterButton(button);
+    if (center && isFilterScroller()) centerFilterButton(button);
     updateFilterPager(filterBtns.indexOf(button));
 
     if (updateUrl && changed) {
@@ -290,7 +316,7 @@ export async function initGallery(options = {}) {
   }
 
   function settleCenteredFilter({ center = true } = {}) {
-    if (!filterTabs || !isFilterCarousel() || filterSettling ||
+    if (!filterTabs || !isFilterScroller() || filterSettling ||
         Date.now() < suppressFilterSettleUntil) return;
     const buttons = getFilterButtons();
     if (!buttons.length) return;
@@ -319,7 +345,7 @@ export async function initGallery(options = {}) {
   }
 
   function scheduleCenteredFilter() {
-    if (!filterTabs || !isFilterCarousel() || filterPointerActive || filterSettling ||
+    if (!filterTabs || !isFilterScroller() || filterPointerActive || filterSettling ||
         Date.now() < suppressFilterSettleUntil) return;
     windowRef.clearTimeout(filterScrollTimer);
     filterScrollTimer = windowRef.setTimeout(() => settleCenteredFilter(), 220);
@@ -347,7 +373,7 @@ export async function initGallery(options = {}) {
     const activeIndex = Math.max(0, buttons.findIndex(button => (button.getAttribute('data-filter') || 'all') === currentFilter));
     const activeButton = buttons[activeIndex];
     lastCenteredFilterId = activeButton?.getAttribute('data-filter') || currentFilter;
-    if (activeButton && isFilterCarousel()) centerFilterButton(activeButton, 'auto');
+    if (activeButton && isFilterScroller()) centerFilterButton(activeButton, 'auto');
     updateFilterPager(activeIndex >= 0 ? activeIndex : 0);
   }
   function projectMatchesFilter(project, filter) {
@@ -468,7 +494,7 @@ export async function initGallery(options = {}) {
     isExpanded = false;
     render({ animateTransition: changed, transitionFromRects });
     updateFilterPager(filterBtns.indexOf(allButton));
-    if (isFilterCarousel()) centerFilterButton(allButton, 'auto');
+    if (isFilterScroller()) centerFilterButton(allButton, 'auto');
   }
 
   bind(windowRef, 'lm:navigate-home', resetToAllFilter);
@@ -521,7 +547,7 @@ export async function initGallery(options = {}) {
   // Arrow keys move focus along the mobile strip; Home/End jump to its bounds.
   // The settled center remains the owner of filter state and sound timing.
   bind(filterTabs, 'keydown', event => {
-    if (!isFilterCarousel()) return;
+    if (!isFilterScroller()) return;
     const focused = event.target?.closest?.('.filter-btn, .tab-btn');
     if (!focused) return;
     const buttons = getFilterButtons();
@@ -636,7 +662,7 @@ export async function initGallery(options = {}) {
       // programmatic scroll that otherwise fires a second filter settlement.
       suppressFilterSettleUntil = Date.now() + 350;
       lastCenteredFilterId = activeBtn?.getAttribute('data-filter') || currentFilter;
-      if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
+      if (activeBtn && isFilterScroller()) centerFilterButton(activeBtn, 'auto');
       updateFilterPager(filterBtns.indexOf(activeBtn));
       // Re-render at breakpoint changes because card orientation and the
       // collapsed viewport measurement depend on the current width. The
@@ -646,7 +672,7 @@ export async function initGallery(options = {}) {
   });
 
   bind(filterTabs, 'scroll', () => {
-    if (!isFilterCarousel()) return;
+    if (!isFilterScroller()) return;
     if (filterScrollFrame) return;
     filterScrollFrame = windowRef.requestAnimationFrame(() => {
       filterScrollFrame = null;
@@ -656,7 +682,7 @@ export async function initGallery(options = {}) {
   }, { passive: true });
 
   bind(filterTabs, 'scrollend', () => {
-    if (!isFilterCarousel()) return;
+    if (!isFilterScroller()) return;
     if (filterPointerActive) return;
     if (filterSettling) {
       filterSettling = false;
@@ -674,7 +700,7 @@ export async function initGallery(options = {}) {
      after the user's movement ends, so the interface never fights an
      in-progress swipe or drag. */
   bind(filterTabs, 'pointerdown', event => {
-    if (!isFilterCarousel()) return;
+    if (!isFilterScroller()) return;
     // A new gesture can interrupt programmatic centering.
     suppressFilterSettleUntil = 0;
     windowRef.clearTimeout(filterScrollTimer);
@@ -768,7 +794,7 @@ export async function initGallery(options = {}) {
     lastCenteredFilterId = hash;
     isExpanded = false;
     render();
-    if (isFilterCarousel()) centerFilterButton(btn, 'auto');
+    if (isFilterScroller()) centerFilterButton(btn, 'auto');
     updateFilterPager(filterBtns.indexOf(btn));
 
     // Filter links from the public navigation use the same hash contract as
@@ -802,7 +828,7 @@ export async function initGallery(options = {}) {
   ensureFilterEdges();
   lifecycle.animationFrame(() => {
     const activeBtn = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === currentFilter);
-    if (activeBtn && isFilterCarousel()) centerFilterButton(activeBtn, 'auto');
+    if (activeBtn && isFilterScroller()) centerFilterButton(activeBtn, 'auto');
     updateFilterPager(filterBtns.indexOf(activeBtn));
   }, windowRef);
   bind(windowRef, 'hashchange', applyHash);

@@ -208,6 +208,24 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   // The navbar is its own stacking context, so mix-blend-mode on the nested
   // logo image cannot reliably see artwork behind the fixed navbar. Instead,
   // sample the visible backdrop and switch a normalized black/white logo.
+  const logoLink = root.querySelector('.nav-logo');
+  if (logoLink) {
+    // Some browsers retain :focus-visible after pointer activation when the
+    // link previously had keyboard focus. Track pointer origin explicitly so
+    // the logo never keeps a ghost focus plate; keyboard input restores the
+    // normal accessible focus ring.
+    bind(logoLink, 'pointerdown', event => {
+      if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+      logoLink.classList.add('is-pointer-focused');
+    });
+    bind(logoLink, 'blur', () => logoLink.classList.remove('is-pointer-focused'));
+    bind(root, 'keydown', event => {
+      if (event.key === 'Tab' || event.key === 'Enter' || event.key === ' ') {
+        logoLink.classList.remove('is-pointer-focused');
+      }
+    }, true);
+  }
+
   const logo = root.querySelector('.site-logo');
   const pageTransition = root.getElementById('pageTransition');
   let logoFrame = null;

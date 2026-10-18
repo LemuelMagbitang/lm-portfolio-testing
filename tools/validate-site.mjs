@@ -1753,22 +1753,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-19") ||
-      !bootstrap.includes("cacheVersion = '20261018-19'") ||
-      !composition.includes("navigation/index.js?v=20261018-18") ||
+  if (!entry.includes("bootstrap.js?v=20261018-20") ||
+      !bootstrap.includes("cacheVersion = '20261018-20'") ||
+      !composition.includes("navigation/index.js?v=20261018-19") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261018-03") ||
+      !composition.includes("gallery/index.js?v=20261018-04") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-19') ||
-      !works.includes('js/app/page-composition.js?v=20261018-19') ||
-      !works.includes('css/style.css?v=20261018-16') ||
-      !works.includes('js/script.js?v=20261018-19') ||
-      !about.includes('style.css?v=20261018-16') ||
-      !about.includes('script.js?v=20261018-19') ||
-      !about.includes('page-composition.js?v=20261018-19')) {
+      !works.includes('js/app/bootstrap.js?v=20261018-20') ||
+      !works.includes('js/app/page-composition.js?v=20261018-20') ||
+      !works.includes('css/style.css?v=20261018-17') ||
+      !works.includes('js/script.js?v=20261018-20') ||
+      !about.includes('style.css?v=20261018-17') ||
+      !about.includes('script.js?v=20261018-20') ||
+      !about.includes('page-composition.js?v=20261018-20')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -1785,6 +1785,27 @@ function validateFilterSoundAndFeedbackContract() {
       !gallery.includes("event.key === 'ArrowRight'") ||
       !gallery.includes("event.key === 'Home'")) {
     err('Mobile filter behavior: centered changes must settle once, dispatch a cue, support keyboard navigation and respect reduced motion.');
+  }
+  const works = exists('index.html') ? readText('index.html') : '';
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  if (!works.includes('<div class="filter-nav-wrapper" role="group" aria-label="Project categories">') ||
+      !works.includes('class="filter-nav-viewport"') ||
+      !works.includes('class="filter-tabs filter-nav-scroller"') ||
+      !works.includes('class="filter-nav-content"') ||
+      !gallery.includes("filterTabs?.querySelector('.filter-nav-content') || filterTabs") ||
+      !gallery.includes('function isFilterScroller()') ||
+      !gallery.includes("filterContent.replaceChildren(fragment)") ||
+      !gallery.includes("filterContent.prepend(leading)") ||
+      !gallery.includes("filterContent.append(trailing)") ||
+      !css.includes('.filter-tabs[data-overflow="true"]') ||
+      !css.includes('scroll-snap-stop: always') ||
+      !css.includes('scroll-snap-type: none') ||
+      !css.includes('.nav-logo:focus:not(:focus-visible)') ||
+      !css.includes('.nav-logo.is-pointer-focused:focus-visible') ||
+      !navigation.includes("bind(logoLink, 'pointerdown'") ||
+      !navigation.includes("logoLink.classList.add('is-pointer-focused')") ||
+      !smoke.includes('assertFilterNavigationResponsive(page,')) {
+    err('Responsive filter navigation and adaptive-logo focus contract: wrapper layers, overflow-aware centering, snap/reduced-motion, and keyboard-versus-pointer focus must remain covered.');
   }
   if (!feedback.includes("root.addEventListener('lm:filter-centered', handleCenteredFilter)") ||
       !feedback.includes("audio.preload = 'auto'") ||

@@ -1587,6 +1587,199 @@ async function assertMobileFilterCenteredSound(page, label) {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 }
 
+async function assertFilterNavigationResponsive(page, label) {
+  await page.waitForFunction(() =>
+    document.querySelectorAll('.filter-nav-scroller .filter-btn, .filter-nav-scroller .tab-btn').length >= 2
+  );
+
+  const viewports = [
+    { width: 320, height: 568 }, { width: 360, height: 740 }, { width: 390, height: 844 },
+    { width: 600, height: 900 }, { width: 767, height: 900 }, { width: 768, height: 900 },
+    { width: 820, height: 900 }, { width: 1024, height: 900 }, { width: 1099, height: 900 },
+    { width: 1100, height: 900 }, { width: 1280, height: 900 }, { width: 1440, height: 900 },
+    { width: 1920, height: 1080 }
+  ];
+  let testedCenteredSelection = false;
+  let testedMouseDrag = false;
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(160);
+    const state = await page.evaluate(() => {
+      const wrapper = document.querySelector('.filter-nav-wrapper');
+      const viewport = wrapper?.querySelector('.filter-nav-viewport');
+      const scroller = wrapper?.querySelector('.filter-nav-scroller');
+      const content = scroller?.querySelector('.filter-nav-content');
+      const buttons = Array.from(content?.querySelectorAll('.filter-btn, .tab-btn') || []);
+      const gap = Number.parseFloat(content ? getComputedStyle(content).columnGap : '0') || 0;
+      const naturalWidth = buttons.reduce((total, button) => total + button.getBoundingClientRect().width, 0) +
+        gap * Math.max(0, buttons.length - 1);
+      const scrollerRect = scroller?.getBoundingClientRect();
+      const firstRect = buttons[0]?.getBoundingClientRect();
+      const lastRect = buttons[buttons.length - 1]?.getBoundingClientRect();
+      const active = buttons.find(button => button.classList.contains('active'));
+      const activeRect = active?.getBoundingClientRect();
+      const scrollerStyle = scroller ? getComputedStyle(scroller) : null;
+      const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
+      return {
+        wrapperExists: !!wrapper, role: wrapper?.getAttribute('role') || '',
+        label: wrapper?.getAttribute('aria-label') || '', viewportExists: !!viewport,
+        scrollerExists: !!scroller, contentExists: !!content, count: buttons.length,
+        clientWidth: scroller?.clientWidth || 0, scrollWidth: scroller?.scrollWidth || 0,
+        dataOverflow: scroller?.dataset.overflow === 'true',
+        actualOverflow: (scroller?.scrollWidth || 0) > (scroller?.clientWidth || 0) + 1,
+        expectedOverflow: naturalWidth > (scroller?.clientWidth || 0) + 1,
+        snapType: scrollerStyle?.scrollSnapType || '', touchAction: scrollerStyle?.touchAction || '',
+        verticalOverflow: scroller ? scroller.scrollHeight > scroller.clientHeight + 1 : true,
+        paddingTop: Number.parseFloat(wrapperStyle?.paddingTop || '0') || 0,
+        paddingBottom: Number.parseFloat(wrapperStyle?.paddingBottom || '0') || 0,
+        minButtonHeight: buttons.length ? Math.min(...buttons.map(button => button.getBoundingClientRect().height)) : 0,
+        labelsStayOneLine: buttons.every(button => getComputedStyle(button).whiteSpace === 'nowrap'),
+        groupCenterDelta: scrollerRect && firstRect && lastRect
+          ? Math.abs((firstRect.left + lastRect.right) / 2 - (scrollerRect.left + scroller.clientWidth / 2))
+          : Infinity,
+        activeCenterDelta: scrollerRect && activeRect
+          ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2))
+          : Infinity,
+        activeFilter: active?.getAttribute('data-filter') || '',
+        activePressed: active?.getAttribute('aria-pressed') || '',
+        documentWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth
+      };
+    });
+
+    if (!state.wrapperExists || state.role !== 'group' || state.label !== 'Project categories' ||
+        !state.viewportExists || !state.scrollerExists || !state.contentExists || state.count < 2) {
+      throw new Error(label + ' filter navigation structure is incomplete at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.dataOverflow !== state.expectedOverflow || state.actualOverflow !== state.expectedOverflow) {
+      throw new Error(label + ' filter overflow state is inconsistent at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.minButtonHeight < 44 || !state.labelsStayOneLine || state.verticalOverflow ||
+        state.paddingTop < 14 || state.paddingBottom < 14) {
+      throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.documentWidth > state.viewportWidth + 1) {
+      throw new Error(label + ' filter navigation introduced document-level horizontal overflow at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (!state.dataOverflow && state.groupCenterDelta > 2) {
+      throw new Error(label + ' fitting filter categories are not centered as a group at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.dataOverflow && !state.snapType.includes('x mandatory')) {
+      throw new Error(label + ' overflowing filter navigation is missing horizontal snapping at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.touchAction === 'none' || state.touchAction === 'pan-x') {
+      throw new Error(label + ' filter strip is blocking natural vertical page gestures at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+
+    // Test active-pill centering once at the narrowest phone width.
+    if (viewport.width === 320 && state.dataOverflow) {
+      const nonAll = page.locator('.filter-nav-scroller [data-filter]:not([data-filter="all"])').first();
+      await nonAll.click();
+      await page.waitForFunction(() => {
+        const scroller = document.querySelector('.filter-nav-scroller');
+        const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+        const scrollerRect = scroller?.getBoundingClientRect();
+        const activeRect = active?.getBoundingClientRect();
+        return !!scrollerRect && !!activeRect &&
+          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+      }, null, { timeout: 2500 });
+      const selected = await page.evaluate(() => {
+        const active = document.querySelector('.filter-nav-scroller .filter-btn.active, .filter-nav-scroller .tab-btn.active');
+        return { filter: active?.getAttribute('data-filter') || '', pressed: active?.getAttribute('aria-pressed') || '' };
+      });
+      if (!selected.filter || selected.pressed !== 'true') {
+        throw new Error(label + ' centered filter selection lost active/ARIA state: ' + JSON.stringify(selected));
+      }
+      testedCenteredSelection = true;
+
+      // Primary-button mouse drag uses the same settle-to-nearest contract as touch scrolling.
+      const rail = page.locator('.filter-nav-scroller');
+      const rect = await rail.boundingBox();
+      if (rect) {
+        await page.mouse.move(rect.x + rect.width * .78, rect.y + rect.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(rect.x + rect.width * .22, rect.y + rect.height / 2, { steps: 6 });
+        await page.mouse.up();
+        await page.waitForFunction(() => {
+          const scroller = document.querySelector('.filter-nav-scroller');
+          const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+          const scrollerRect = scroller?.getBoundingClientRect();
+          const activeRect = active?.getBoundingClientRect();
+          return !!scrollerRect && !!activeRect &&
+            Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+        }, null, { timeout: 2500 });
+        testedMouseDrag = true;
+      }
+      await page.locator('.filter-nav-scroller [data-filter="all"]').click();
+      await page.waitForFunction(() => {
+        const scroller = document.querySelector('.filter-nav-scroller');
+        const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+        const scrollerRect = scroller?.getBoundingClientRect();
+        const activeRect = active?.getBoundingClientRect();
+        return !!scrollerRect && !!activeRect &&
+          Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+      }, null, { timeout: 2500 });
+    }
+  }
+
+  if (!testedCenteredSelection || !testedMouseDrag) {
+    throw new Error(label + ' missed centered selection or mouse-drag interaction checks.');
+  }
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(180);
+  const reduced = await page.evaluate(() => ({
+    reduce: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    snap: getComputedStyle(document.querySelector('.filter-nav-scroller')).scrollSnapType
+  }));
+  if (!reduced.reduce || reduced.snap !== 'none') {
+    throw new Error(label + ' reduced-motion preference did not disable snap animation: ' + JSON.stringify(reduced));
+  }
+  await page.locator('.filter-nav-scroller [data-filter]:not([data-filter="all"])').first().click();
+  await page.waitForFunction(() => {
+    const scroller = document.querySelector('.filter-nav-scroller');
+    const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+    const scrollerRect = scroller?.getBoundingClientRect();
+    const activeRect = active?.getBoundingClientRect();
+    return !!scrollerRect && !!activeRect &&
+      Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
+  }, null, { timeout: 1500 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  // Keyboard focus must be visible; pointer activation must not leave a ghost plate.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForTimeout(180);
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  let logoFocusedByKeyboard = false;
+  for (let index = 0; index < 10; index += 1) {
+    await page.keyboard.press('Tab');
+    logoFocusedByKeyboard = await page.locator('.nav-logo').evaluate(el => el === document.activeElement);
+    if (logoFocusedByKeyboard) break;
+  }
+  const keyboardLogo = await page.locator('.nav-logo').evaluate(el => ({
+    focused: el === document.activeElement,
+    focusVisible: el.matches(':focus-visible'),
+    boxShadow: getComputedStyle(el).boxShadow
+  }));
+  if (!logoFocusedByKeyboard || !keyboardLogo.focusVisible || keyboardLogo.boxShadow === 'none') {
+    throw new Error(label + ' keyboard navigation lost the logo focus indicator: ' + JSON.stringify(keyboardLogo));
+  }
+  await page.locator('.nav-logo').click();
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(360);
+  const pointerLogo = await page.locator('.nav-logo').evaluate(el => ({
+    pointerFocused: el.classList.contains('is-pointer-focused'),
+    boxShadow: getComputedStyle(el).boxShadow,
+    outlineStyle: getComputedStyle(el).outlineStyle
+  }));
+  if (!pointerLogo.pointerFocused || pointerLogo.boxShadow !== 'none' || pointerLogo.outlineStyle !== 'none') {
+    throw new Error(label + ' pointer activation left the logo ghost focus plate visible: ' + JSON.stringify(pointerLogo));
+  }
+}
+
 async function assertFilterButtonHitTarget(page, label, index = 1) {
   const button = page.locator('.filter-tabs .filter-btn, .filter-tabs .tab-btn').nth(index);
   if (await button.count() !== 1) {
@@ -8536,6 +8729,10 @@ try {
         await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Not found' }) });
       });
     });
+    await smokePage(browser, '/', async page => {
+      await assertFilterNavigationResponsive(page, 'Responsive filter navigation');
+    }, { width: 1280, height: 900 });
+
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
   } finally {
     await browser.close();
