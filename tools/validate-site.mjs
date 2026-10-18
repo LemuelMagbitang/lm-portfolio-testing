@@ -1579,6 +1579,47 @@ function validateAboutFirstPaintContract() {
   }
 }
 
+function validateResponsiveHeroGalleryAndLogoContract() {
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const works = exists('index.html') ? readText('index.html') : '';
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+
+  if (!works.includes('<main class="container page-spacing works-main">') ||
+      !css.includes('.works-main {\\n  padding-inline: 0;\\n}') ||
+      !css.includes('.hero-section:not(.about-hero):not(.hero-section--message)') ||
+      !css.includes('min-height: clamp(440px, 64svh, 780px);') ||
+      !css.includes('min-height: clamp(420px, 60svh, 680px);') ||
+      !css.includes('min-height: clamp(360px, 62svh, 620px);')) {
+    err('Responsive Works presentation: the message-free hero sizing and gallery-specific gutter reset are incomplete.');
+  }
+
+  if (!css.includes('.hero-section:not(.about-hero) .hero-banner::before') ||
+      !css.includes('var(--lm-color-background) 100%') ||
+      !/\.hero-section:not\(\.about-hero\) \.hero-banner::before\s*\{[^}]*pointer-events:\s*none/s.test(css)) {
+    err('Hero presentation: a non-interactive bottom fade to the site canvas must remain separate from the readability overlay.');
+  }
+
+  const logoRuleStart = css.lastIndexOf('.site-logo {');
+  const logoRuleEnd = logoRuleStart >= 0 ? css.indexOf('}', logoRuleStart) : -1;
+  const logoRule = logoRuleStart >= 0 && logoRuleEnd > logoRuleStart
+    ? css.slice(logoRuleStart, logoRuleEnd)
+    : '';
+  if (!logoRule.includes('opacity var(--lm-motion-standard) ease') ||
+      !logoRule.includes('filter var(--lm-motion-standard) ease') ||
+      !logoRule.includes('transform 0.3s ease') ||
+      !/mix-blend-mode:\s*difference/.test(css) ||
+      !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.site-logo\s*\{\s*transition:\s*none/s.test(css)) {
+    err('Adaptive logo: pixel-level contrast compositing, transition support, and reduced-motion handling must remain wired.');
+  }
+
+  if (!smoke.includes('async function assertWorksHeroGalleryResponsive') ||
+      !smoke.includes("await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled')") ||
+      !smoke.includes("'Works Hero current CMS setting'") ||
+      !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })")) {
+    err('Responsive browser smoke: desktop/tablet/mobile hero and gallery cases must cover both message states and reduced motion.');
+  }
+}
+
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   if (!/let renderVersion = 0;/.test(admin) ||
@@ -1801,6 +1842,7 @@ function validateCmsRegressionContracts() {
 validateCuratedViewRuntimeContract();
 validateCuratedViewPresentationContract();
 validateAboutFirstPaintContract();
+validateResponsiveHeroGalleryAndLogoContract();
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
 
