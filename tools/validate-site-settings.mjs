@@ -43,7 +43,7 @@ const feedbackSource = await readFile(new URL('../js/features/interaction-feedba
 assert.ok(feedbackSource.includes('!event?.isTrusted'));
 assert.ok(feedbackSource.includes("audio.preload = 'none'"));
 assert.ok(feedbackSource.includes('localStorage'));
-assert.ok(feedbackSource.includes('navigatorRef?.vibrate'));
+assert.ok(feedbackSource.includes('typeof nav?.vibrate === \'function\''));
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
 assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-01')"));
