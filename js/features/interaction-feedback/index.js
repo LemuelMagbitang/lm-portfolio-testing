@@ -1,20 +1,15 @@
 /**
- * Optional navigation and selection feedback, dynamically loaded only when
- * enabled in CMS Settings. Sound is requested only after a trusted click.
+ * CMS-controlled navigation and selection feedback.
+ * Audio is primed only after a trusted user gesture, and rejected playback is
+ * intentionally silent so blocked autoplay never interferes with navigation.
  */
-const PREFERENCE_KEY = 'lm-interaction-feedback-muted-v1';
 const NAVIGATION_TARGETS = '.nav-logo, .nav-links a[href]';
 const SELECTION_TARGETS = '.filter-tabs .tab-btn, .filter-tabs .filter-btn, .contact-mobile-tab';
+const FILTER_SELECTION_TARGETS = '.filter-tabs .tab-btn, .filter-tabs .filter-btn';
 
 function clampVolume(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.min(0.3, number)) : 0.12;
-}
-function readMuted(windowRef) {
-  try { return windowRef?.localStorage?.getItem(PREFERENCE_KEY) === 'off'; } catch (_) { return false; }
-}
-function writeMuted(windowRef, muted) {
-  try { windowRef?.localStorage?.setItem(PREFERENCE_KEY, muted ? 'off' : 'on'); } catch (_) {}
 }
 
 export function initInteractionFeedback({ root = globalThis.document, settings = {}, resolveAssetUrl } = {}) {
@@ -29,45 +24,20 @@ export function initInteractionFeedback({ root = globalThis.document, settings =
   const windowRef = root?.defaultView || globalThis.window;
   if (!enabled || (!soundEnabled && !hapticsEnabled) || !root?.addEventListener) return { destroy() {} };
 
-  let muted = readMuted(windowRef);
   let destroyed = false;
-  let preferenceButton = null;
+  let lastCue = '';
+  let lastCueAt = 0;
+  let audioOperation = 0;
   const audioByCue = new Map();
+  const primeTokens = new WeakMap();
+  const unlockedAudio = new WeakSet();
 
-  function renderPreferenceButton() {
-    if (!preferenceButton) return;
-    preferenceButton.textContent = muted ? 'Interface feedback: Off' : 'Interface feedback: On';
-    preferenceButton.setAttribute('aria-pressed', String(!muted));
-    preferenceButton.setAttribute('aria-label', muted
-      ? 'Enable optional interface sound and haptic feedback'
-      : 'Disable optional interface sound and haptic feedback');
-  }
-  function togglePreference() {
-    muted = !muted;
-    writeMuted(windowRef, muted);
-    renderPreferenceButton();
-    if (muted) audioByCue.forEach(audio => {
-      try { audio.pause(); audio.currentTime = 0; } catch (_) {}
-    });
-  }
-  function createPreferenceButton() {
-    const footer = root.querySelector('footer .footer-content');
-    if (!footer) return;
-    const doc = root.ownerDocument || root;
-    preferenceButton = doc.createElement('button');
-    preferenceButton.type = 'button';
-    preferenceButton.className = 'interaction-feedback-toggle';
-    preferenceButton.addEventListener('click', togglePreference);
-    const socials = footer.querySelector('.social-icons');
-    if (socials) socials.insertAdjacentElement('afterend', preferenceButton);
-    else footer.appendChild(preferenceButton);
-    renderPreferenceButton();
-  }
   function getAudio(cue) {
     const path = sources[cue];
     if (!path || typeof windowRef?.Audio !== 'function') return null;
     let audio = audioByCue.get(cue);
     if (audio) return audio;
+
     let resolved = path;
     if (!/^https:\/\//i.test(path) && typeof resolveAssetUrl === 'function') {
       try { resolved = resolveAssetUrl(path); } catch (_) { return null; }
@@ -75,50 +45,146 @@ export function initInteractionFeedback({ root = globalThis.document, settings =
     if (!resolved) return null;
     try {
       audio = new windowRef.Audio();
-      audio.preload = 'none';
+      audio.preload = 'auto';
       audio.volume = volume;
       audio.src = String(resolved);
       audioByCue.set(cue, audio);
       return audio;
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
+
+  function primeAudioFromGesture(audio) {
+    if (!audio || unlockedAudio.has(audio) || !audio.paused) return;
+    const token = ++audioOperation;
+    primeTokens.set(audio, token);
+    try {
+      // The muted play attempt is made within trusted user activation. It primes
+      // restrictive browsers without adding an audible sound to the gesture.
+      audio.muted = true;
+      const playback = audio.play();
+      if (playback && typeof playback.then === 'function') {
+        playback.then(() => {
+          if (primeTokens.get(audio) !== token) return;
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+            unlockedAudio.add(audio);
+          } catch (_) {}
+        }).catch(() => {
+          if (primeTokens.get(audio) === token) audio.muted = false;
+        });
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+        unlockedAudio.add(audio);
+      }
+    } catch (_) {
+      if (primeTokens.get(audio) === token) audio.muted = false;
+    }
+  }
+
+  function getGestureCue(event) {
+    const target = event?.target;
+    if (target?.closest?.(NAVIGATION_TARGETS)) return 'navigation';
+    if (target?.closest?.(SELECTION_TARGETS)) return 'selection';
+    return '';
+  }
+
+  function unlockAudioFromGesture(event) {
+    if (destroyed || !soundEnabled || !event?.isTrusted) return;
+    const cue = getGestureCue(event);
+    if (!cue) return;
+    primeAudioFromGesture(getAudio(cue));
+  }
+
   function playCue(cue) {
-    if (muted || !soundEnabled) return;
+    if (destroyed || !soundEnabled) return;
     const audio = getAudio(cue);
     if (!audio) return;
+
+    // Drop immediate duplicate deliveries and stop any older cue before playing.
+    const now = Date.now();
+    if (lastCue === cue && now - lastCueAt < 110) return;
+    lastCue = cue;
+    lastCueAt = now;
+
+    audioByCue.forEach(otherAudio => {
+      if (otherAudio === audio) return;
+      primeTokens.set(otherAudio, ++audioOperation);
+      try {
+        otherAudio.pause();
+        otherAudio.currentTime = 0;
+        otherAudio.muted = false;
+      } catch (_) {}
+    });
+
+    primeTokens.set(audio, ++audioOperation);
     try {
+      audio.muted = false;
+      audio.pause();
       audio.currentTime = 0;
       const playback = audio.play();
       if (playback && typeof playback.catch === 'function') playback.catch(() => {});
-    } catch (_) {}
+    } catch (_) {
+      // Blocked or missing media never interferes with visual/keyboard behavior.
+    }
   }
+
   function vibrate() {
-    if (muted || !hapticsEnabled) return;
+    if (!hapticsEnabled) return;
     try {
       const nav = windowRef?.navigator;
       if (typeof nav?.vibrate === 'function') nav.vibrate(8);
     } catch (_) {}
   }
+
+  function isMobileFilterControl(target) {
+    return !!target?.closest?.(FILTER_SELECTION_TARGETS) &&
+      (Number(windowRef?.innerWidth) || 0) < 768;
+  }
+
   function handleInteraction(event) {
-    if (destroyed || muted || !event?.isTrusted) return;
-    const cue = event.target?.closest?.(NAVIGATION_TARGETS)
+    if (destroyed || !event?.isTrusted) return;
+    unlockAudioFromGesture(event);
+
+    const target = event.target;
+    const cue = target?.closest?.(NAVIGATION_TARGETS)
       ? 'navigation'
-      : event.target?.closest?.(SELECTION_TARGETS) ? 'selection' : '';
+      : target?.closest?.(SELECTION_TARGETS) ? 'selection' : '';
     if (!cue) return;
+
+    // Mobile filter sound belongs to its settled center, not its initial tap.
+    if (isMobileFilterControl(target)) {
+      vibrate();
+      return;
+    }
+
     playCue(cue);
     vibrate();
   }
 
-  createPreferenceButton();
+  function handleCenteredFilter(event) {
+    if (destroyed || !soundEnabled || !event?.detail?.filter) return;
+    playCue('selection');
+  }
+
+  root.addEventListener('pointerdown', unlockAudioFromGesture, true);
+  root.addEventListener('keydown', unlockAudioFromGesture, true);
   root.addEventListener('click', handleInteraction, true);
+  root.addEventListener('lm:filter-centered', handleCenteredFilter);
+
   return {
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      root.removeEventListener('pointerdown', unlockAudioFromGesture, true);
+      root.removeEventListener('keydown', unlockAudioFromGesture, true);
       root.removeEventListener('click', handleInteraction, true);
-      preferenceButton?.removeEventListener('click', togglePreference);
-      preferenceButton?.remove();
-      preferenceButton = null;
+      root.removeEventListener('lm:filter-centered', handleCenteredFilter);
       audioByCue.forEach(audio => {
         try { audio.pause(); audio.removeAttribute('src'); audio.load?.(); } catch (_) {}
       });
