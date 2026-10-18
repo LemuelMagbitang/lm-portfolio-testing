@@ -4486,6 +4486,21 @@ try {
       const navigationCard = page.locator('#portfolioGrid .project-card[data-project-id="haeru"]').first();
       if (await navigationCard.count() !== 1) throw new Error('Lightbox rapid-navigation fixture card is missing.');
 
+      const expectedMediaCounts = await page.evaluate(async () => {
+        const response = await fetch('/data/projects.json');
+        if (!response.ok) throw new Error('Could not read project data for the Lightbox smoke contract.');
+        const projects = await response.json();
+        const project = projects.find(item => item.id === 'haeru');
+        if (!project || !Array.isArray(project.media)) return null;
+        return {
+          media: project.media.length,
+          images: project.media.filter(item => item?.type === 'image').length
+        };
+      });
+      if (!expectedMediaCounts || expectedMediaCounts.media < 1) {
+        throw new Error('Haeru media-count smoke contract could not resolve the saved project data.');
+      }
+
       await navigationCard.click();
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       const previous = page.locator('.lightbox-prev').first();
@@ -4500,8 +4515,8 @@ try {
       }
 
       const mediaItems = await page.locator('#lightboxMediaContainer .lightbox-media-item').count();
-      if (mediaItems !== 11) {
-        throw new Error(`Rapid Lightbox navigation produced ${mediaItems} media entries instead of the 11-item Haeru project.`);
+      if (mediaItems !== expectedMediaCounts.media) {
+        throw new Error(`Rapid Lightbox navigation produced ${mediaItems} media entries; saved Haeru data contains ${expectedMediaCounts.media}.`);
       }
 
       const youtubePlayers = await page.locator('#lightboxMediaContainer iframe[data-lm-youtube]').count();
@@ -4510,8 +4525,8 @@ try {
       }
 
       const imageCount = await page.locator('#lightboxMediaContainer img').count();
-      if (imageCount !== 9) {
-        throw new Error(`Rapid navigation left an unexpected image count in Haeru (${imageCount}).`);
+      if (imageCount !== expectedMediaCounts.images) {
+        throw new Error(`Rapid navigation left ${imageCount} images in Haeru; saved project data contains ${expectedMediaCounts.images} image media entries.`);
       }
 
       await close.click();
@@ -4523,8 +4538,8 @@ try {
       await navigationCard.click();
       await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
       const reopenedItems = await page.locator('#lightboxMediaContainer .lightbox-media-item').count();
-      if (reopenedItems !== 11) {
-        throw new Error(`Lightbox reopen after rapid navigation rendered ${reopenedItems} entries instead of 11.`);
+      if (reopenedItems !== expectedMediaCounts.media) {
+        throw new Error(`Lightbox reopen after rapid navigation rendered ${reopenedItems} entries; saved Haeru data contains ${expectedMediaCounts.media}.`);
       }
 
       await close.click();
