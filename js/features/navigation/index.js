@@ -261,34 +261,72 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom);
   }
 
-  function findMediaAtPoint(target, x, y) {
+  function isVisibleMediaAtPoint(candidate, x, y) {
+    if (!candidate || candidate === logo) return false;
+    if (!candidate.matches?.('video, img, canvas, lottie-player')) return false;
+    if (candidate.closest?.('.navbar, #pageTransition, .page-transition, .nav-menu-backdrop')) return false;
+    if (!containsViewportPoint(candidate, x, y)) return false;
+    for (let current = candidate; current && current !== root.documentElement; current = current.parentElement) {
+      if (current.hidden) return false;
+      if (current.classList?.contains('slide') && !current.classList.contains('active')) return false;
+      const style = windowRef?.getComputedStyle?.(current);
+      if (style && (style.display === 'none' || style.visibility === 'hidden' || Number.parseFloat(style.opacity) <= 0.01)) return false;
+      if (current === root.body) break;
+    }
+    return true;
+  }
+
+  function findMediaAtPoint(target, x, y, stack = []) {
     const mediaSelector = 'video, img, canvas, lottie-player';
+    const candidates = new Set();
+    const add = candidate => { if (isVisibleMediaAtPoint(candidate, x, y)) candidates.add(candidate); };
+    stack.forEach(add);
     for (let current = target; current && !current.closest?.('.navbar'); current = current.parentElement) {
-      if (current.matches?.(mediaSelector) && containsViewportPoint(current, x, y)) return current;
+      if (current.matches?.(mediaSelector)) add(current);
     }
-
-    const heroBanner = target?.closest?.('.hero-banner');
+    const heroBanner = target?.matches?.('.hero-banner') ? target : target?.closest?.('.hero-banner');
     if (heroBanner) {
-      const activeMedia = heroBanner.querySelector('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player');
-      if (containsViewportPoint(activeMedia, x, y)) return activeMedia;
+      heroBanner.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player').forEach(add);
     }
-
+    // Search nearby ancestry last; this excludes the logo itself and stale slides.
     for (let current = target; current && !current.closest?.('.navbar'); current = current.parentElement) {
-      if (!current.querySelector) continue;
-      const media = Array.from(current.querySelectorAll(mediaSelector))
-        .find(candidate => containsViewportPoint(candidate, x, y));
-      if (media) return media;
+      if (!current.querySelectorAll) continue;
+      current.querySelectorAll(mediaSelector).forEach(add);
       if (current === root.body || current === root.documentElement) break;
     }
-    return null;
+    if (!candidates.size) return null;
+    const rank = candidate => {
+      const index = stack.indexOf(candidate);
+      return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+    };
+    return Array.from(candidates).sort((x,y) => {
+      const rx=rank(x), ry=rank(y);
+      if(rx!==ry) return rx-ry;
+      const ax=x.getBoundingClientRect(), ay=y.getBoundingClientRect();
+      return ax.width*ax.height-ay.width*ay.height;
+    })[0] || null;
   }
 
   function setLogoForeground(luminance) {
     if (!logo || !Number.isFinite(luminance)) return;
-    const foreground = foregroundForLuminance(luminance) === '#000' ? 'dark' : 'light';
-    if (logo.dataset.logoForeground === foreground) return;
+    logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
+    // Hysteresis near the crossover prevents flicker over moving artwork.
+    const current = logo.dataset.logoForeground;
+    let foreground;
+    if (current === 'dark' && luminance >= 0.145) foreground = 'dark';
+    else if (current === 'light' && luminance <= 0.215) foreground = 'light';
+    else foreground = foregroundForLuminance(luminance) === '#000' ? 'dark' : 'light';
+    if (current === foreground) return;
     logo.dataset.logoForeground = foreground;
     logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
+  }
+
+  function setLogoContrastFallback() {
+    if (!logo) return;
+    setVideoBackdropState(false);
+    logo.dataset.logoForeground = 'light';
+    logo.style.filter = 'brightness(0) invert(1)';
+    logo.closest?.('.nav-logo')?.classList.add('logo-contrast-fallback');
   }
 
   function setVideoBackdropState(isVideo) {
@@ -296,7 +334,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (logoBackdropIsVideo && logoVideoTimer === null && typeof windowRef?.setInterval === 'function') {
       logoVideoTimer = windowRef.setInterval(() => {
         if (logoBackdropIsVideo) scheduleLogoContrast();
-      }, 900);
+      }, 500);
     } else if (!logoBackdropIsVideo && logoVideoTimer !== null) {
       windowRef?.clearInterval?.(logoVideoTimer);
       logoVideoTimer = null;
@@ -308,12 +346,9 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     const rect = logo.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const point = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
-
-    // The loading gate is opaque by design. Keep the default white mark there,
-    // then recalculate as soon as its class/visibility changes.
-    if (pageTransition && pageTransition.dataset.loading !== 'ready' &&
-        !pageTransition.classList.contains('is-hidden')) {
+    if (pageTransition && pageTransition.dataset.loading !== 'ready' && !pageTransition.classList.contains('is-hidden')) {
       setVideoBackdropState(false);
+      logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
       return;
     }
@@ -331,47 +366,55 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       setLogoForeground(computedBackdropLuminance(root.body));
       return;
     }
-
-    // An open mobile-menu scrim darkens the page beneath the mark; white wins.
     if (backdrop.classList?.contains('nav-menu-backdrop')) {
       setVideoBackdropState(false);
+      logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.006);
       return;
     }
-
     const heroSection = backdrop.closest?.('.hero-section');
     if (heroSection?.classList.contains('hero-section--message')) {
-      // The enabled hero-message mode intentionally darkens the artwork under
-      // its quote; preserve the white mark that the readability overlay supports.
       setVideoBackdropState(false);
+      logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.02);
       return;
     }
 
-    // If the topmost non-navigation layer has an opaque CSS fill, it is
-    // the visible backdrop. Do not sample a media element hidden underneath
-    // that layer (this also covers the loading gate and other solid surfaces).
-    const backdropColor = parseColor(windowRef?.getComputedStyle?.(backdrop)?.backgroundColor);
-    if (backdropColor && backdropColor.a >= 0.98) {
+    const style = windowRef?.getComputedStyle?.(backdrop);
+    const color = parseColor(style?.backgroundColor);
+    const isHeroMediaContainer = Boolean(backdrop.matches?.('.hero-banner, .slide') || backdrop.closest?.('.hero-banner'));
+    let media = isVisibleMediaAtPoint(backdrop, point.x, point.y) ? backdrop : null;
+    if (!media && isHeroMediaContainer) {
+      const hero = backdrop.matches?.('.hero-banner') ? backdrop : backdrop.closest?.('.hero-banner');
+      const active = hero?.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player') || [];
+      media = Array.from(active).find(candidate => isVisibleMediaAtPoint(candidate, point.x, point.y)) || null;
+    }
+    // The opaque fill of a hero container is behind the artwork; other opaque overlays are not.
+    if (!media && !isHeroMediaContainer && color && color.a >= 0.98) {
       setVideoBackdropState(false);
       setLogoForeground(computedBackdropLuminance(backdrop));
       return;
     }
-
-    const media = findMediaAtPoint(backdrop, point.x, point.y);
-    if (media && (media.matches?.('img, video, canvas') || media.localName === 'lottie-player')) {
+    if (!media && color && color.a > 0.02 && color.a < 0.98) {
+      setLogoContrastFallback();
+      return;
+    }
+    if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
+    if (media) {
       setVideoBackdropState(media.localName === 'video');
       const luminance = sampleMediaLuminance(root, media, point);
       if (Number.isFinite(luminance)) {
         setLogoForeground(luminance);
         return;
       }
-    } else {
-      setVideoBackdropState(false);
+      setLogoContrastFallback();
+      return;
     }
-
-    // Transparent layout nodes are common around cards and sections. Walk up
-    // their ancestry for a real background instead of guessing from the node.
+    setVideoBackdropState(false);
+    if (style?.backgroundImage && style.backgroundImage !== 'none') {
+      setLogoContrastFallback();
+      return;
+    }
     setLogoForeground(computedBackdropLuminance(backdrop));
   }
 
@@ -388,6 +431,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   }
 
   if (logo) {
+    logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
     logo.dataset.logoForeground = 'light';
     logo.style.filter = 'brightness(0) invert(1)';
     bind(windowRef, 'scroll', scheduleLogoContrast, { passive: true });

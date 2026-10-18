@@ -503,6 +503,12 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .landing-lead a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .landing-lead a:hover { color: #ccc; }
 .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  line-height: 1.1;
   background: none; border: none; color: #666; font-size: 0.9rem;
   letter-spacing: 1.5px; cursor: pointer; padding: 8px 16px; transition: color var(--lm-motion-fast); font-weight: 600;
   /* Long-pressing a button on Android fires native TEXT SELECTION, which
@@ -3487,6 +3493,8 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     scroll-snap-type:x mandatory;
     overscroll-behavior-x:contain;
     touch-action:pan-x;
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+    mask-image:linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
     cursor:grab;
   }
   .filter-tabs.is-dragging{
@@ -5907,28 +5915,64 @@ button.hamburger {
 /* Adaptive logo foreground is driven by the navigation feature's
    backdrop sampler. Keep compositing normal: the navbar is a stacking context,
    so a nested difference-blended image cannot reliably sample the page behind it. */
+.nav-logo::before {
+  content: '';
+  position: absolute;
+  inset: -7px -8px;
+  z-index: 0;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px;
+  background: rgba(18,18,18,.76);
+  -webkit-backdrop-filter: blur(10px) saturate(1.12);
+  backdrop-filter: blur(10px) saturate(1.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--lm-motion-standard) ease;
+}
+.nav-logo.logo-contrast-fallback::before { opacity: 1; }
+
 .site-logo {
+  position: relative;
+  z-index: 1;
   mix-blend-mode: normal;
   transition:
     transform 0.3s ease,
     filter var(--lm-motion-standard) ease;
 }
 
-.nav-logo:active .site-logo {
-  transform: scale(.96);
-}
+.nav-logo:active .site-logo { transform: scale(.96); }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-logo {
-    transition: none;
-  }
-
+  .nav-logo::before { transition: none; }
+  .site-logo { transition: none; }
   .site-logo:hover,
-  .nav-logo:active .site-logo {
-    transform: none;
-  }
+  .nav-logo:active .site-logo { transform: none; }
 }
 
+
+/* Works spacing: align the filter rail directly to the hero edge instead of stacking
+   generic page padding and the old filter top margin. About spacing remains unchanged. */
+.hero-section:not(.about-hero) + main.works-main.page-spacing {
+  padding-top: 0;
+}
+.hero-section:not(.about-hero) + main.works-main.page-spacing .filter-tabs {
+  align-items: center;
+  min-height: 48px;
+  margin: 0 auto;
+}
+.hero-section:not(.about-hero) + main.works-main.page-spacing .filter-tabs .tab-btn {
+  min-height: 44px;
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .hero-section:not(.about-hero) + main.works-main.page-spacing {
+    padding-top: 0;
+  }
+  .hero-section:not(.about-hero) + main.works-main.page-spacing .filter-tabs {
+    min-height: 48px;
+    margin: 0 auto;
+  }
+}
 
 /* Optional visitor control for CMS-enabled sound/haptic feedback. */
 footer .interaction-feedback-toggle {

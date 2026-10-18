@@ -762,6 +762,13 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         const bannerRect = banner?.getBoundingClientRect();
         const mainStyle = main ? getComputedStyle(main) : null;
         const fadeStyle = banner ? getComputedStyle(banner, '::before') : null;
+        const filterRail = document.querySelector('.filter-tabs');
+        const filterStyle = filterRail ? getComputedStyle(filterRail) : null;
+        const activeFilter = filterRail?.querySelector('.filter-btn.active, .tab-btn.active');
+        const activeFilterRect = activeFilter?.getBoundingClientRect();
+        const activeFilterRange = document.createRange();
+        if (activeFilter) activeFilterRange.selectNodeContents(activeFilter);
+        const activeFilterTextRect = activeFilter ? activeFilterRange.getBoundingClientRect() : null;
         const logoStyle = logo ? getComputedStyle(logo) : null;
         const navLogoStyle = navLogo ? getComputedStyle(navLogo) : null;
         const navbarStyle = navbar ? getComputedStyle(navbar) : null;
@@ -775,9 +782,18 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           fadeHeight: fadeStyle ? parseFloat(fadeStyle.height) || 0 : 0,
           fadeImage: fadeStyle?.backgroundImage || 'none',
           fadePointerEvents: fadeStyle?.pointerEvents || '',
-          filterLeftInset: (() => { const r = document.querySelector('.filter-tabs')?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? r.left - m.left : -1; })(),
-          filterRightInset: (() => { const r = document.querySelector('.filter-tabs')?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? m.right - r.right : -1; })(),
-          filterCenterDelta: (() => { const r = document.querySelector('.filter-tabs')?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? Math.abs((r.left + r.width / 2) - (m.left + m.width / 2)) : 9999; })(),
+          filterLeftInset: (() => { const r = filterRail?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? r.left - m.left : -1; })(),
+          filterRightInset: (() => { const r = filterRail?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? m.right - r.right : -1; })(),
+          filterCenterDelta: (() => { const r = filterRail?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? Math.abs((r.left + r.width / 2) - (m.left + m.width / 2)) : 9999; })(),
+          filterHeroGap: (() => { const r = filterRail?.getBoundingClientRect(); return r && heroRect ? r.top - heroRect.bottom : 9999; })(),
+          filterStripHeight: filterRail?.getBoundingClientRect().height || 0,
+          filterTabHeight: activeFilterRect?.height || 0,
+          filterTabCenterDeltaX: activeFilterRect && activeFilterTextRect ? Math.abs((activeFilterRect.left + activeFilterRect.width/2)-(activeFilterTextRect.left+activeFilterTextRect.width/2)) : 9999,
+          filterTabCenterDeltaY: activeFilterRect && activeFilterTextRect ? Math.abs((activeFilterRect.top + activeFilterRect.height/2)-(activeFilterTextRect.top+activeFilterTextRect.height/2)) : 9999,
+          filterMaskImage: filterStyle?.maskImage || 'none',
+          filterWebkitMaskImage: filterStyle?.webkitMaskImage || 'none',
+          filterOverflowX: filterStyle?.overflowX || '',
+          filterTouchAction: filterStyle?.touchAction || '',
           mainPaddingLeft: parseFloat(mainStyle?.paddingLeft || '0') || 0,
           mainPaddingRight: parseFloat(mainStyle?.paddingRight || '0') || 0,
           gridWidth: grid?.getBoundingClientRect().width || 0,
@@ -810,6 +826,16 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           Math.abs(layout.filterLeftInset - layout.filterRightInset) > 1.5 ||
           layout.filterCenterDelta > 1.5) {
         throw new Error(label + ' ' + viewport.name + ': filter tabs are not centered within balanced page gutters: ' + JSON.stringify(layout));
+      }
+      if (Math.abs(layout.filterHeroGap) > 1.5 || layout.filterStripHeight < 44 ||
+          layout.filterStripHeight > 56 || layout.filterTabHeight < 44 ||
+          layout.filterTabCenterDeltaX > 1.5 || layout.filterTabCenterDeltaY > 1.5) {
+        throw new Error(label + ' ' + viewport.name + ': filters must sit at the hero edge with centered 44–48px targets: ' + JSON.stringify(layout));
+      }
+      if (viewport.name === 'mobile' &&
+          (!(String(layout.filterMaskImage).includes('linear-gradient') || String(layout.filterWebkitMaskImage).includes('linear-gradient')) ||
+           layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'pan-x')) {
+        throw new Error(label + ' mobile: edge fade must preserve horizontal scroll and touch gestures: ' + JSON.stringify(layout));
       }
       if (layout.logoBlendMode !== 'normal' ||
           !['light', 'dark'].includes(layout.logoForeground) ||
@@ -862,6 +888,65 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         document.getElementById('__smoke-logo-backdrop')?.remove();
         window.dispatchEvent(new Event('scroll'));
       });
+
+      // Inactive bright slides must not outweigh the dark media of the active slide.
+      await page.evaluate(async () => {
+        const logo = document.querySelector('.site-logo');
+        const rect = logo?.getBoundingClientRect();
+        if (!logo || !rect) return;
+        document.getElementById('__smoke-logo-slide-stack')?.remove();
+        const backdrop = document.createElement('div');
+        backdrop.id = '__smoke-logo-slide-stack';
+        Object.assign(backdrop.style, {
+          position:'fixed', left:(rect.left-3)+'px', top:(rect.top-3)+'px',
+          width:(rect.width+6)+'px', height:(rect.height+6)+'px',
+          zIndex:'999', pointerEvents:'auto', background:'transparent', overflow:'hidden'
+        });
+        const svg = color => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" fill="' + color + '"/></svg>'
+        );
+        const addSlide = (color, active, z) => {
+          const slide = document.createElement('div');
+          slide.className = active ? 'slide active' : 'slide';
+          Object.assign(slide.style,{position:'absolute',inset:'0',opacity:'1',zIndex:String(z),pointerEvents:'auto'});
+          const img=document.createElement('img'); img.src=svg(color);
+          Object.assign(img.style,{position:'absolute',inset:'0',width:'100%',height:'100%',objectFit:'fill',pointerEvents:'auto'});
+          slide.appendChild(img); backdrop.appendChild(slide); return img;
+        };
+        const inactive=addSlide('#ffffff',false,2), active=addSlide('#000000',true,1);
+        document.body.appendChild(backdrop);
+        await Promise.all([inactive,active].map(img=>img.decode().catch(()=>{})));
+        logo.dataset.logoForeground='dark'; logo.style.filter='brightness(0)';
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(() => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light', null, {timeout:2500});
+
+      // Unreadable media must receive a pointer-transparent glass fallback.
+      await page.evaluate(() => {
+        document.getElementById('__smoke-logo-slide-stack')?.remove();
+        const logo=document.querySelector('.site-logo'), rect=logo?.getBoundingClientRect();
+        if(!logo||!rect)return;
+        const broken=document.createElement('img');
+        broken.id='__smoke-unreadable-logo-media'; broken.src='data:image/png;base64,AAAA';
+        Object.assign(broken.style,{position:'fixed',left:(rect.left-3)+'px',top:(rect.top-3)+'px',
+          width:(rect.width+6)+'px',height:(rect.height+6)+'px',zIndex:'999',objectFit:'cover',
+          background:'transparent',pointerEvents:'auto'});
+        document.body.appendChild(broken);
+        logo.dataset.logoForeground='dark'; logo.style.filter='brightness(0)';
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(() => document.querySelector('.nav-logo')?.classList.contains('logo-contrast-fallback') &&
+        document.querySelector('.site-logo')?.dataset?.logoForeground==='light', null, {timeout:2500});
+      const fallbackSurface=await page.evaluate(()=>{
+        const link=document.querySelector('.nav-logo'), style=link?getComputedStyle(link,'::before'):null;
+        return {hasClass:Boolean(link?.classList.contains('logo-contrast-fallback')),background:style?.backgroundColor||'',
+          pointerEvents:style?.pointerEvents||'',blur:style?.backdropFilter||''};
+      });
+      if(!fallbackSurface.hasClass||!fallbackSurface.background.includes('18')||
+          fallbackSurface.pointerEvents!=='none'||!fallbackSurface.blur.includes('blur')){
+        throw new Error(label+' '+viewport.name+': unreadable media did not produce a safe blurred capsule: '+JSON.stringify(fallbackSurface));
+      }
+      await page.evaluate(()=>{document.getElementById('__smoke-unreadable-logo-media')?.remove();window.dispatchEvent(new Event('scroll'));});
 
       // Exercise the loading gate and mobile navigation as distinct logo
       // contrast states, not only the static light/dark test fixture.
