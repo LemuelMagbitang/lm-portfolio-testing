@@ -455,6 +455,7 @@ function normalizeCmsPath(filePath) {
 const CMS_WRITABLE_PATHS = new Set([
   'data/about.json',
   'data/filters.json',
+  'data/footer-loop.json',
   'data/hero-loop.json',
   'data/hero.json',
   'data/projects.json',
