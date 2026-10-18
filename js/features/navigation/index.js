@@ -288,11 +288,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (heroBanner) {
       heroBanner.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player').forEach(add);
     }
-    // Search nearby ancestry last; this excludes the logo itself and stale slides.
-    for (let current = target; current && !current.closest?.('.navbar'); current = current.parentElement) {
-      if (!current.querySelectorAll) continue;
-      current.querySelectorAll(mediaSelector).forEach(add);
-      if (current === root.body || current === root.documentElement) break;
+    // Prefer the hit-test paint stack. Only do a document scan if uncommon
+    // transparent wrappers hid every media element from the stack and active-slide lookup.
+    if (!candidates.size && root.querySelectorAll) {
+      root.querySelectorAll(mediaSelector).forEach(add);
     }
     if (!candidates.size) return null;
     const rank = candidate => {
@@ -373,7 +372,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return;
     }
     const heroSection = backdrop.closest?.('.hero-section');
-    if (heroSection?.classList.contains('hero-section--message')) {
+    if (heroSection?.classList.contains('hero-section--message') ||
+        heroSection?.classList.contains('about-hero')) {
+      // Both modes paint a deliberate dark scrim over their media. The raw
+      // image sample underneath that layer is not the color the visitor sees.
       setVideoBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.02);
@@ -545,7 +547,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
         try { windowRef.history.replaceState(null, '', url.pathname + url.search + '#' + encodeURIComponent(curatedSlug)); } catch (_) {}
         try { windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home')); } catch (_) {}
         const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
-        windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+        const instantLogoReset = Boolean(link.matches?.('.nav-logo'));
+        windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion || instantLogoReset ? 'auto' : 'smooth' });
         return;
       }
       link.setAttribute('href', url.pathname + url.search + '#' + encodeURIComponent(curatedSlug));
@@ -575,10 +578,11 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       windowRef.dispatchEvent(new windowRef.CustomEvent('lm:navigate-home'));
     } catch (_) {}
 
-    // Smooth-scroll the document once. Repeated direct scrollTop writes
-    // would cancel this animation and make the logo feel like a snap-to-top.
+    // A logo press is a direct Home affordance. Reset immediately; other
+    // same-page navigation retains the existing smooth scroll behavior.
     const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
-    windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
+    const instantLogoReset = Boolean(link.matches?.('.nav-logo'));
+    windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion || instantLogoReset ? 'auto' : 'smooth' });
   }
 
   function handleSamePageContactNavigation(event) {

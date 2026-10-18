@@ -1656,6 +1656,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
       !navigation.includes("current.classList?.contains('slide') && !current.classList.contains('active')") ||
       !navigation.includes('function setLogoContrastFallback()') ||
+      !navigation.includes("heroSection?.classList.contains('about-hero')") ||
+      !navigation.includes('instantLogoReset') ||
       !navigation.includes('logo-contrast-fallback') ||
       !navigation.includes('MutationObserver') ||
       !navigation.includes('function setVideoBackdropState(isVideo)') ||
