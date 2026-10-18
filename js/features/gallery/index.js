@@ -234,10 +234,18 @@ export async function initGallery(options = {}) {
     return windowRef.innerWidth < 768;
   }
 
-  function centerFilterButton(button, behavior = 'smooth') {
+  function centerFilterButton(button, behavior = 'smooth', force = false) {
     if (!filterTabs || !button || !isFilterScroller()) return false;
     const tabsRect = filterTabs.getBoundingClientRect();
     const buttonRect = button.getBoundingClientRect();
+    const safeInset = Math.min(12, tabsRect.width * 0.04);
+    const comfortablyVisible =
+      buttonRect.left >= tabsRect.left + safeInset &&
+      buttonRect.right <= tabsRect.right - safeInset;
+    // Clicking a pill that is already comfortably visible should not cause a
+    // gratuitous rail glide. Scroll-settlement calls pass force=true because
+    // a completed swipe must land on an actual snap position.
+    if (!force && comfortablyVisible) return false;
     const delta = (buttonRect.left + buttonRect.width / 2) -
       (tabsRect.left + tabsRect.width / 2);
     if (Math.abs(delta) < 1) return false;
@@ -332,7 +340,7 @@ export async function initGallery(options = {}) {
 
     // Native scroll snapping has already settled the gesture. Correct any residual
     // sub-pixel drift instantly instead of launching a second smooth glide.
-    const needsRecentering = center && centerFilterButton(nearest, 'auto');
+    const needsRecentering = center && centerFilterButton(nearest, 'auto', true);
     if (needsRecentering) {
       // Prefer native scrollend; this timer covers engines without that event.
       filterSettleTimer = windowRef.setTimeout(() => {
