@@ -1632,7 +1632,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   const filterWrapperRule = (css.match(/\.filter-nav-wrapper\s*\{([^}]*)\}/) || [])[1] || '';
   const filterScrollerRule = (css.match(/\.filter-tabs\.filter-nav-scroller\s*\{([^}]*)\}/) || [])[1] || '';
   const filterContentRule = (css.match(/\.filter-nav-content\s*\{([^}]*)\}/) || [])[1] || '';
-  if (!/max-width:\s*var\(--lm-container-max\)/.test(filterWrapperRule) ||
+  if (!/width:\s*calc\(100% - 40px\)/.test(filterWrapperRule) ||
+      !/max-width:\s*var\(--lm-container-max\)/.test(filterWrapperRule) ||
       !/padding-block:\s*clamp\(18px,\s*2vw,\s*26px\)/.test(filterWrapperRule) ||
       !/width:\s*100%/.test(filterScrollerRule) ||
       !/overflow-x:\s*auto/.test(filterScrollerRule) ||
@@ -1769,9 +1770,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261018-21') ||
       !works.includes('js/app/page-composition.js?v=20261018-21') ||
-      !works.includes('css/style.css?v=20261018-18') ||
+      !works.includes('css/style.css?v=20261018-19') ||
       !works.includes('js/script.js?v=20261018-21') ||
-      !about.includes('style.css?v=20261018-18') ||
+      !about.includes('style.css?v=20261018-19') ||
       !about.includes('script.js?v=20261018-21') ||
       !about.includes('page-composition.js?v=20261018-21')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

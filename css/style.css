@@ -497,7 +497,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 
 .filter-nav-wrapper {
-  width: 100%;
+  width: calc(100% - 40px);
   max-width: var(--lm-container-max);
   margin: 0 auto;
   padding-block: clamp(18px, 2vw, 26px);
