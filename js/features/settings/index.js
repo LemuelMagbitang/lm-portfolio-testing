@@ -8,7 +8,7 @@ import {
   DEFAULT_SITE_SETTINGS,
   normalizeSiteSettings,
   SOCIAL_PLATFORMS
-} from '../../data/site-settings.js?v=20261018-08';
+} from '../../data/site-settings.js?v=20261018-09';
 
 export async function initSiteSettings({
   url,
@@ -114,7 +114,12 @@ export async function initSiteSettings({
   }
 
   return {
-    getState: () => ({ ...state, formsEnabled: { ...state.formsEnabled }, heroTiming: { ...state.heroTiming } }),
+    getState: () => ({
+      ...state,
+      formsEnabled: { ...state.formsEnabled },
+      heroTiming: { ...state.heroTiming },
+      interactionFeedback: { ...state.interactionFeedback }
+    }),
     applyDom: () => applyDom(state),
     state
   };
