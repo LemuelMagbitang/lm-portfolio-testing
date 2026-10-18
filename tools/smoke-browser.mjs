@@ -869,7 +869,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             throw new Error(label + ': hero video failed to decode or load (MediaError ' + playback.error + ').');
           }
           if (playback.playbackState === 'blocked' || playback.paused) {
-            await page.locator('#heroBanner').dispatchEvent('pointerdown');
+            await page.locator('#heroBanner').click({ position: { x: 12, y: 12 } });
             await page.waitForFunction(() => {
               const video = document.querySelector('#heroBanner .slide.active video');
               return video && (video.error || (!video.paused && video.currentTime > 0.05));
