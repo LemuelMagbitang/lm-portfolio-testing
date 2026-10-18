@@ -7,6 +7,15 @@
 const HERO_LOOP_MODES = new Set(['latest', 'manual', 'mixed']);
 const HERO_TRANSITIONS = new Set(['kenburns', 'fade', 'none']);
 
+const DEFAULT_INTERACTION_FEEDBACK = Object.freeze({
+  enabled: false,
+  soundEnabled: true,
+  hapticsEnabled: false,
+  volume: 0.12,
+  navigationSound: 'assets/projects/site/sounds/navigation.wav',
+  selectionSound: 'assets/projects/site/sounds/selection.wav'
+});
+
 export const SOCIAL_PLATFORMS = Object.freeze([
   Object.freeze({ key: 'instagram', label: 'Instagram', icon: 'fa-brands fa-instagram' }),
   Object.freeze({ key: 'tiktok', label: 'TikTok', icon: 'fa-brands fa-tiktok' }),
@@ -29,6 +38,7 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   showSoftwareLogos: false,
   showHeroMessage: true,
   showFooterMessage: false,
+  interactionFeedback: DEFAULT_INTERACTION_FEEDBACK,
   heroTiming: Object.freeze({
     loopMode: 'latest',
     transitionStyle: 'kenburns',
@@ -70,6 +80,24 @@ function safeSocialUrl(value) {
   }
 }
 
+function safeSoundSource(value) {
+  const source = stringValue(value);
+  const forbidden = source.includes(String.fromCharCode(92))
+    || Array.from(source).some(character => character.charCodeAt(0) < 32);
+  if (!source || forbidden) return '';
+  if (/^https:\/\//i.test(source)) {
+    try {
+      const url = new URL(source);
+      return url.protocol === 'https:' ? url.href : '';
+    } catch (_) { return ''; }
+  }
+  if (!source.startsWith('assets/')) return '';
+  const localPath = source.split(/[?#]/, 1)[0];
+  if (localPath.split('/').some(part => !part || part === '.' || part === '..')) return '';
+  if (!/\.(?:wav|mp3|ogg|m4a|aac|flac|webm)$/i.test(localPath)) return '';
+  return source;
+}
+
 export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const hero = source.heroTiming && typeof source.heroTiming === 'object'
@@ -87,6 +115,16 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
   const socials = source.socials && typeof source.socials === 'object'
     ? source.socials
     : {};
+  const feedback = source.interactionFeedback && typeof source.interactionFeedback === 'object'
+    && !Array.isArray(source.interactionFeedback) ? source.interactionFeedback : {};
+  const feedbackDefaults = defaults.interactionFeedback || DEFAULT_INTERACTION_FEEDBACK;
+  const feedbackVolumeInput = Object.prototype.hasOwnProperty.call(feedback, 'volume')
+    ? Number(feedback.volume) : Number(feedbackDefaults.volume);
+  const feedbackVolume = Number.isFinite(feedbackVolumeInput)
+    ? Math.max(0, Math.min(0.3, feedbackVolumeInput))
+    : DEFAULT_INTERACTION_FEEDBACK.volume;
+  const feedbackSource = key => Object.prototype.hasOwnProperty.call(feedback, key)
+    ? safeSoundSource(feedback[key]) : safeSoundSource(feedbackDefaults[key]);
 
   const loopMode = HERO_LOOP_MODES.has(hero.loopMode)
     ? hero.loopMode
@@ -135,6 +173,14 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
     showSoftwareLogos: booleanValue(source.showSoftwareLogos, defaults.showSoftwareLogos),
     showHeroMessage: booleanValue(source.showHeroMessage, defaults.showHeroMessage),
     showFooterMessage: booleanValue(source.showFooterMessage, defaults.showFooterMessage),
+    interactionFeedback: {
+      enabled: booleanValue(feedback.enabled, feedbackDefaults.enabled),
+      soundEnabled: booleanValue(feedback.soundEnabled, feedbackDefaults.soundEnabled),
+      hapticsEnabled: booleanValue(feedback.hapticsEnabled, feedbackDefaults.hapticsEnabled),
+      volume: feedbackVolume,
+      navigationSound: feedbackSource('navigationSound'),
+      selectionSound: feedbackSource('selectionSound')
+    },
     heroTiming: {
       loopMode,
       transitionStyle,
