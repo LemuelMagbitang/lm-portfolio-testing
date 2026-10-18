@@ -71,8 +71,10 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   transition: transform 0.3s ease;
 }
 
-.site-logo:hover {
-  transform: scale(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .site-logo:hover {
+    transform: translateY(-1px) scale(1.06);
+  }
 }
 
 .nav-links {
@@ -91,6 +93,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  text-align: center;
   min-height: 42px;
   padding: 10px 18px;
   border: 0;
@@ -470,7 +474,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   justify-content: center;
   flex-wrap: wrap;
   gap: 12px 18px;
-  width: 100%;
+  width: calc(100% - var(--lm-page-gutter) - var(--lm-page-gutter));
+  max-width: var(--lm-container-max);
+  box-sizing: border-box;
   margin: 28px auto 10px;
   padding: 0;
   overflow: visible;
@@ -482,6 +488,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .filter-tabs .tab-btn {
   flex: 0 0 auto;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -3467,8 +3474,10 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
     justify-content:flex-start;
     flex-wrap:nowrap;
     gap:8px;
-    width:100%;
-    margin:14px 0 10px;
+    width:calc(100% - var(--lm-page-gutter) - var(--lm-page-gutter));
+    max-width:var(--lm-container-max);
+    box-sizing:border-box;
+    margin:14px auto 10px;
     padding:0;
     overflow-x:auto;
     overflow-y:hidden;
@@ -5893,32 +5902,7 @@ button.hamburger {
   }
 }
 
-/* A separate bottom fade lets the no-message artwork remain full strength
-   while still blending into the actual site canvas color. A separate pseudo
-   layer preserves the existing ::after readability overlay for message mode
-   and leaves it transparent when the CMS toggle is off. It works identically
-   over images, video frames, Lottie, and the banner's fallback background. */
-.hero-section:not(.about-hero) .hero-banner::before {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: clamp(72px, 12vh, 132px);
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--lm-color-background) 100%
-  );
-  pointer-events: none;
-  z-index: 3;
-}
-
-@media (max-width: 767px) {
-  .hero-section:not(.about-hero) .hero-banner::before {
-    height: clamp(64px, 15svh, 112px);
-  }
-}
+/* The Works hero artwork ends cleanly; no bottom-edge fade layer is added. */
 
 /* Adaptive logo foreground is driven by the navigation feature's
    backdrop sampler. Keep compositing normal: the navbar is a stacking context,
@@ -5930,12 +5914,17 @@ button.hamburger {
     filter var(--lm-motion-standard) ease;
 }
 
+.nav-logo:active .site-logo {
+  transform: scale(.96);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-logo {
     transition: none;
   }
 
-  .site-logo:hover {
+  .site-logo:hover,
+  .nav-logo:active .site-logo {
     transform: none;
   }
 }
