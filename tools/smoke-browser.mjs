@@ -5491,6 +5491,38 @@ try {
       // to the top and remove that hash without reloading. Same-document
       // history.replaceState is expected and must not be mistaken for a
       // browser navigation.
+      await page.evaluate(() => {
+        const contact = document.querySelector('#contact-section');
+        if (!contact) throw new Error('Contact logo smoke fixture could not find #contact-section.');
+        window.scrollTo(0, contact.getBoundingClientRect().top + window.scrollY + 80);
+      });
+      await page.waitForFunction(() => {
+        const logo = document.querySelector('.site-logo');
+        const link = logo?.closest('.nav-logo');
+        const capsule = link ? getComputedStyle(link, '::before') : null;
+        const contact = document.querySelector('#contact-section')?.getBoundingClientRect();
+        const logoRect = link?.getBoundingClientRect();
+        const y = logoRect ? logoRect.top + logoRect.height / 2 : -1;
+        return !!contact && !!logo && link?.classList.contains('contact-area-logo') &&
+          !link.classList.contains('logo-contrast-fallback') && logo.dataset.logoForeground === 'light' &&
+          capsule?.opacity === '0' && y >= contact.top && y <= contact.bottom;
+      }, null, { timeout: 4000 });
+      const contactLogoState = await page.evaluate(() => {
+        const logo = document.querySelector('.site-logo');
+        const link = logo?.closest('.nav-logo');
+        const capsule = link ? getComputedStyle(link, '::before') : null;
+        return { foreground: logo?.dataset?.logoForeground,
+          contactClass: !!link?.classList.contains('contact-area-logo'),
+          fallbackClass: !!link?.classList.contains('logo-contrast-fallback'),
+          capsuleOpacity: Number.parseFloat(capsule?.opacity || '1'),
+          logoTransition: getComputedStyle(logo).transitionProperty };
+      });
+      if (!contactLogoState.contactClass || contactLogoState.foreground !== 'light' ||
+          contactLogoState.fallbackClass || contactLogoState.capsuleOpacity > 0.01 ||
+          !contactLogoState.logoTransition.includes('filter')) {
+        throw new Error('Contact-area logo unexpectedly rendered its fallback capsule or lost its white/filter transition: ' + JSON.stringify(contactLogoState));
+      }
+
       await page.locator('.nav-links a[href="#contact-start"]').first().click();
       await page.waitForTimeout(100);
       if (await page.evaluate(() => window.location.hash !== '#contact-start')) {
@@ -6685,36 +6717,9 @@ try {
 
 
 
-      const aboutRailState = await page.evaluate(() => {
-        const rail = document.querySelector('.about-filter-rail');
-        const links = Array.from(rail?.querySelectorAll('a.about-filter-link') || []);
-        const style = rail ? getComputedStyle(rail) : null;
-        return {
-          exists: !!rail,
-          label: rail?.getAttribute('aria-label') || '',
-          links: links.map(link => ({ href: link.getAttribute('href'), label: link.textContent.trim() })),
-          railHeight: rail?.getBoundingClientRect().height || 0,
-          buttonHeights: links.map(link => link.getBoundingClientRect().height),
-          overflowX: style?.overflowX || '',
-          touchAction: style?.touchAction || '',
-          mask: (style?.maskImage || '') + ' ' + (style?.webkitMaskImage || ''),
-          scrollable: Number(rail?.scrollWidth || 0) > Number(rail?.clientWidth || 0)
-        };
-      });
-      const expectedAboutFilterLinks = [
-        ['../', 'ALL'],
-        ['../#3d-motion', '3D & MOTION'],
-        ['../#illustration', 'ILLUSTRATION'],
-        ['../#archive', 'UI/UX & BRAND']
-      ];
-      if (!aboutRailState.exists || aboutRailState.label !== 'Browse designs by category' ||
-          JSON.stringify(aboutRailState.links.map(link => [link.href, link.label])) !== JSON.stringify(expectedAboutFilterLinks)) {
-        throw new Error('About page category rail is missing or its destinations do not match the public Works filters: ' + JSON.stringify(aboutRailState));
-      }
-      if (aboutRailState.railHeight < 44 || aboutRailState.buttonHeights.some(height => height < 44) ||
-          aboutRailState.overflowX !== 'auto' || aboutRailState.touchAction !== 'pan-x' ||
-          !/linear-gradient/i.test(aboutRailState.mask) || !aboutRailState.scrollable) {
-        throw new Error('About category rail lost its mobile touch sizing, horizontal scrolling, or edge fade: ' + JSON.stringify(aboutRailState));
+      const aboutFilterRailCount = await page.locator('.about-filter-rail, .about-filter-link').count();
+      if (aboutFilterRailCount !== 0) {
+        throw new Error('About page must not render Works category filter tabs; found ' + aboutFilterRailCount + ' rail elements.');
       }
 
       // The About hero keeps a dark scrim for text readability. Ensure the logo

@@ -96,7 +96,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   box-sizing: border-box;
   text-align: center;
   min-height: 42px;
-  padding: 10px 18px;
+  padding: 0 18px;
   border: 0;
   border-radius: 999px;
   background: #000;
@@ -1289,7 +1289,7 @@ body.center-page {
   .nav-links a {
     width: 100%;
     min-height: 46px;
-    padding: 13px 18px;
+    padding: 0 18px;
     font-size: 0.8rem;
   }
 
@@ -5930,6 +5930,8 @@ button.hamburger {
   transition: opacity var(--lm-motion-standard) ease;
 }
 .nav-logo.logo-contrast-fallback::before { opacity: 1; }
+/* Keep the mark unobstructed over Contact while preserving filter/press motion. */
+.nav-logo.contact-area-logo::before { opacity: 0 !important; }
 
 .site-logo {
   position: relative;
@@ -6000,11 +6002,7 @@ footer .interaction-feedback-toggle:focus-visible { outline: 2px solid #fff; out
 }
 
 
-/* About-page category rail reuses the Works filter geometry. It navigates
-   to the shared gallery state rather than inventing a second filter model. */
-.about-hero.about-hero--with-filter-rail {
-  padding-bottom: 28px;
-}
+/* About hero uses its visible scrim as part of the adaptive-logo contrast sample. */
 .about-hero .hero-banner {
   --about-hero-scrim-top-alpha: .32;
   --about-hero-scrim-bottom-alpha: .72;
@@ -6015,35 +6013,4 @@ footer .interaction-feedback-toggle:focus-visible { outline: 2px solid #fff; out
     rgba(18, 18, 18, var(--about-hero-scrim-top-alpha, .32)) 0%,
     rgba(18, 18, 18, var(--about-hero-scrim-bottom-alpha, .72)) 100%
   );
-}
-.about-filter-rail {
-  align-items: center;
-  min-height: 48px;
-  margin: 0 auto 18px;
-}
-.about-filter-rail .about-filter-link {
-  min-height: 44px;
-  text-align: center;
-  text-decoration: none;
-}
-.about-main.page-spacing {
-  padding-top: 28px;
-}
-@media (max-width: 767px) {
-  .about-hero.about-hero--with-filter-rail {
-    padding-bottom: 20px;
-  }
-  .about-filter-rail {
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    gap: 8px;
-    margin: 0 auto 12px;
-  }
-  .about-filter-rail .about-filter-link {
-    flex: 0 0 auto;
-    scroll-snap-align: center;
-  }
-  .about-main.page-spacing {
-    padding-top: 20px;
-  }
 }

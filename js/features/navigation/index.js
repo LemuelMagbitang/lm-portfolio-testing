@@ -389,6 +389,19 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     const stack = typeof root.elementsFromPoint === 'function'
       ? (root.elementsFromPoint(point.x, point.y) || [])
       : [root.elementFromPoint(point.x, point.y)].filter(Boolean);
+
+    // Contact keeps the established white mark but omits the fallback capsule.
+    const navLogo = logo.closest?.('.nav-logo');
+    const contactAreaUnderLogo = stack.some(element => element?.closest?.('#contact-section'));
+    if (contactAreaUnderLogo) {
+      navLogo?.classList.add('contact-area-logo');
+      navLogo?.classList.remove('logo-contrast-fallback');
+      setDynamicBackdropState(false);
+      setLogoForeground(0.02);
+      return;
+    }
+    navLogo?.classList.remove('contact-area-logo');
+
     let backdrop = stack.find(element => {
       if (!element || element === logo || element.closest?.('.navbar')) return false;
       if (element.classList?.contains('nav-menu-backdrop')) return true;

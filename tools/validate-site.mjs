@@ -1660,6 +1660,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
       !navigation.includes("setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName))") ||
       !navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
+      !navigation.includes("const contactAreaUnderLogo = stack.some(element => element?.closest?.('#contact-section'))") ||
+      !navigation.includes("navLogo?.classList.add('contact-area-logo')") ||
+      !navigation.includes("setLogoForeground(0.02)") ||
       !navigation.includes("function effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("--about-hero-scrim-top-alpha") ||
@@ -1721,28 +1724,30 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
       !smoke.includes("document.body.classList.contains('menu-open')") ||
       !smoke.includes("gate.dataset.loading = 'active'") ||
-      !about.includes('class="filter-tabs about-filter-rail"') ||
-      !css.includes('.about-filter-rail .about-filter-link') ||
-      !smoke.includes('About page category rail is missing') ||
-      !smoke.includes('About adaptive-logo fixture')) {
+      about.includes('about-filter-rail') ||
+      css.includes('.about-filter-rail') ||
+      !smoke.includes('About page must not render Works category filter tabs') ||
+      !smoke.includes('About adaptive-logo fixture') ||
+      !smoke.includes('Contact-area logo unexpectedly rendered its fallback capsule') ||
+      !css.includes('.nav-logo.contact-area-logo::before { opacity: 0 !important; }')) {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-15") ||
-      !bootstrap.includes("cacheVersion = '20261018-15'") ||
-      !composition.includes("navigation/index.js?v=20261018-15") ||
+  if (!entry.includes("bootstrap.js?v=20261018-16") ||
+      !bootstrap.includes("cacheVersion = '20261018-16'") ||
+      !composition.includes("navigation/index.js?v=20261018-16") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-01") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-15') ||
-      !works.includes('js/app/page-composition.js?v=20261018-15') ||
-      !works.includes('css/style.css?v=20261018-11') ||
-      !works.includes('js/script.js?v=20261018-15') ||
-      !about.includes('style.css?v=20261018-11') ||
-      !about.includes('script.js?v=20261018-15') ||
-      !about.includes('page-composition.js?v=20261018-15')) {
+      !works.includes('js/app/bootstrap.js?v=20261018-16') ||
+      !works.includes('js/app/page-composition.js?v=20261018-16') ||
+      !works.includes('css/style.css?v=20261018-12') ||
+      !works.includes('js/script.js?v=20261018-16') ||
+      !about.includes('style.css?v=20261018-12') ||
+      !about.includes('script.js?v=20261018-16') ||
+      !about.includes('page-composition.js?v=20261018-16')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
