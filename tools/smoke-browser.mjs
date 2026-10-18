@@ -365,7 +365,9 @@ async function assertPublicNavigation(page, { href, label }) {
       viewportWidth: window.innerWidth
     };
   });
-  await assertNavigationLabelsCentered(page, label + ' default navigation state');
+  if ((page.viewportSize()?.width || 0) >= 768) {
+    await assertNavigationLabelsCentered(page, label + ' default navigation state');
+  }
 
   const contrastRatio = (foreground, background) => {
     const luminance = color => {
@@ -510,6 +512,7 @@ async function assertPublicNavigation(page, { href, label }) {
       return menu?.classList.contains('active') && menu.classList.contains('is-open') &&
         document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
+    await assertNavigationLabelsCentered(page, label + ' mobile open-menu state');
     if (supportsHover) await page.mouse.move(0, 0);
     const reducedMotionPreference = await page.evaluate(() =>
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
