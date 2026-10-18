@@ -1586,6 +1586,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   const entry = exists('js/script.js') ? readText('js/script.js') : '';
   const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
   const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const settingsFeature = exists('js/features/settings/index.js') ? readText('js/features/settings/index.js') : '';
   const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
   const hero = exists('js/features/hero/index.js') ? readText('js/features/hero/index.js') : '';
   const footer = exists('js/features/footer/index.js') ? readText('js/features/footer/index.js') : '';
@@ -1625,10 +1626,12 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   if (!contrast.includes('export function sampleMediaLuminance') ||
       !contrast.includes('export function foregroundForLuminance') ||
-      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-06'") ||
+      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-07'") ||
       !navigation.includes('logo.dataset.logoForeground = foreground') ||
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('MutationObserver') ||
+      !navigation.includes('function setVideoBackdropState(isVideo)') ||
+      !navigation.includes('const backdropColor = parseColor(') ||
       !navigation.includes("bind(windowRef, 'scroll', scheduleLogoContrast") ||
       !navigation.includes("bind(root, 'loadeddata', scheduleLogoContrast")) {
     err('Adaptive logo runtime: media sampling, state updates, scrolling, or DOM-state observation are not fully connected.');
@@ -1640,6 +1643,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('activateMedia(slides[currentIndex])') ||
       !hero.includes("media.dataset.playbackState = 'blocked'") ||
       !hero.includes("bind(heroContainer, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes('const activeMediaCleanups = [];') ||
+      !hero.includes('clearActiveMediaListeners()') ||
       !hero.includes('if (reducedMotion) {')) {
     err('Hero media runtime: a single video/Lottie must activate, loop where appropriate, handle rejected playback, and respect reduced motion.');
   }
@@ -1653,7 +1658,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('CMS settings sync: normalized hero timing must preserve the stored Ken Burns scale and duration fields.');
   }
 
-  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-06'") ||
+  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-07'") ||
       !footer.includes('chooseForeground(documentRef, source, media)') ||
       !footer.includes('windowRef.setInterval') ||
       !footer.includes('lifecycle.cleanup()')) {
@@ -1667,22 +1672,27 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
       !smoke.includes('hero video did not resume after a real interaction') ||
+      !smoke.includes("page.locator('#heroBanner').click({ position: { x: 12, y: 12 } })") ||
       !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
       !smoke.includes("document.body.classList.contains('menu-open')") ||
       !smoke.includes("gate.dataset.loading = 'active'")) {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-06") ||
-      !bootstrap.includes("cacheVersion = '20261018-06'") ||
-      !composition.includes("navigation/index.js?v=20261018-06") ||
-      !composition.includes("hero/index.js?v=20261018-06") ||
-      !composition.includes("footer/index.js?v=20261018-06") ||
-      !works.includes('css/style.css?v=20261018-06') ||
-      !works.includes('js/script.js?v=20261018-06') ||
-      !about.includes('style.css?v=20261018-06') ||
-      !about.includes('script.js?v=20261018-06') ||
-      !about.includes('page-composition.js?v=20261018-06')) {
+  if (!entry.includes("bootstrap.js?v=20261018-07") ||
+      !bootstrap.includes("cacheVersion = '20261018-07'") ||
+      !composition.includes("navigation/index.js?v=20261018-07") ||
+      !composition.includes("hero/index.js?v=20261018-07") ||
+      !composition.includes("footer/index.js?v=20261018-07") ||
+      !composition.includes("settings/index.js?v=20261018-07") ||
+      !settingsFeature.includes("site-settings.js?v=20261018-07") ||
+      !works.includes('js/app/bootstrap.js?v=20261018-07') ||
+      !works.includes('js/app/page-composition.js?v=20261018-07') ||
+      !works.includes('css/style.css?v=20261018-07') ||
+      !works.includes('js/script.js?v=20261018-07') ||
+      !about.includes('style.css?v=20261018-07') ||
+      !about.includes('script.js?v=20261018-07') ||
+      !about.includes('page-composition.js?v=20261018-07')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
