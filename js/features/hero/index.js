@@ -504,6 +504,13 @@ import { createLifecycle } from '../../core/lifecycle.js';
     let timer = null;
     let disposed = false;
     const cleanups = [];
+    const activeMediaCleanups = [];
+
+    function clearActiveMediaListeners() {
+      activeMediaCleanups.splice(0).forEach(cleanup => {
+        try { cleanup(); } catch (_) {}
+      });
+    }
 
     function bind(target, type, handler, options) {
       if (!target?.addEventListener) return;
@@ -584,6 +591,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
     function scheduleAdvanceForCurrent() {
       clearTimer();
+      clearActiveMediaListeners();
       if (slides.length <= 1 || reducedMotion) return;
       const slide = slides[currentIndex];
       const type = slide?.dataset?.heroType;
@@ -598,7 +606,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
         const error = () => scheduleAdvance(intervalMs);
         media.addEventListener('ended', ended, { once: true });
         media.addEventListener('error', error, { once: true });
-        cleanups.push(() => {
+        activeMediaCleanups.push(() => {
           media.removeEventListener('ended', ended);
           media.removeEventListener('error', error);
         });
@@ -610,7 +618,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
         const error = () => scheduleAdvance(intervalMs);
         media.addEventListener('complete', complete, { once: true });
         media.addEventListener('error', error, { once: true });
-        cleanups.push(() => {
+        activeMediaCleanups.push(() => {
           media.removeEventListener('complete', complete);
           media.removeEventListener('error', error);
         });
@@ -660,6 +668,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
     return () => {
       disposed = true;
       clearTimer();
+      clearActiveMediaListeners();
       cleanups.splice(0).forEach(cleanup => {
         try { cleanup(); } catch (_) {}
       });
