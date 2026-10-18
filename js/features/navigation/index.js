@@ -210,7 +210,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   const logo = root.querySelector('.site-logo');
   const pageTransition = root.getElementById('pageTransition');
   let logoFrame = null;
-  let setVideoBackdropState(false);
+  let logoBackdropIsVideo = false;
   let logoVideoTimer = null;
   let logoMutationObservers = [];
 
