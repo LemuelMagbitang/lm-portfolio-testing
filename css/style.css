@@ -592,6 +592,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .filter-nav-content {
   position: relative;
+  z-index: 1;
   isolation: isolate;
   display: flex;
   flex-flow: row nowrap;
