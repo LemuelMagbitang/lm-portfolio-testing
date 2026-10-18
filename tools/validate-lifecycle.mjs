@@ -84,7 +84,7 @@ assert.match(pageCompositionSource, /const LOTTIE_PLAYER_STARTUP_WAIT_MS = 2500/
 assert.match(pageCompositionSource, /timerOwner\.setTimeout\?\.\(\(\) =>/);
 assert.match(pageCompositionSource, /Lottie player startup warm-up timed out; continuing startup/);
 const criticalStartupWarmup = pageCompositionSource.match(
-  /await Promise\\.all\\(\\[\\s*projectMediaPreloadPromise,[\\s\\S]*?\\]\\);/
+  /await Promise\.all\(\[\s*projectMediaPreloadPromise,[\s\S]*?\]\);/
 )?.[0] || '';
 assert.match(criticalStartupWarmup, /projectLottiePlayerPreloadPromise/);
 assert.doesNotMatch(
