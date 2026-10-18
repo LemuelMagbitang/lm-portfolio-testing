@@ -1585,7 +1585,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
 
   if (!works.includes('<main class="container page-spacing works-main">') ||
-      !css.includes('.works-main {\\n  padding-inline: 0;\\n}') ||
+      !css.includes('.works-main {\n  padding-inline: 0;\n}') ||
       !css.includes('.hero-section:not(.about-hero):not(.hero-section--message)') ||
       !css.includes('min-height: clamp(440px, 64svh, 780px);') ||
       !css.includes('min-height: clamp(420px, 60svh, 680px);') ||
