@@ -769,7 +769,18 @@ export async function initGallery(options = {}) {
       suppressFilterSettleUntil = Date.now() + 350;
       lastCenteredFilterId = activeBtn?.getAttribute('data-filter') || currentFilter;
       if (activeBtn && isFilterScroller()) centerFilterButton(activeBtn, 'auto');
-      syncFilterActiveIndicator(activeBtn);
+      // Breakpoint/viewport changes are layout corrections, not a user tab
+      // change. Reposition instantly so the indicator cannot lag across an
+      // old viewport width and briefly detach from the selected label.
+      syncFilterActiveIndicator(activeBtn, { followingScroll: true });
+      const indicator = filterActiveIndicator;
+      const restoreIndicatorMotion = () => {
+        if (filterActiveIndicator === indicator && indicator?.isConnected) {
+          indicator.classList.remove('is-following-scroll');
+        }
+      };
+      if (typeof windowRef.requestAnimationFrame === 'function') windowRef.requestAnimationFrame(restoreIndicatorMotion);
+      else windowRef.setTimeout(restoreIndicatorMotion, 0);
       updateFilterPager(filterBtns.indexOf(activeBtn));
       // Re-render at breakpoint changes because card orientation and the
       // collapsed viewport measurement depend on the current width. The
