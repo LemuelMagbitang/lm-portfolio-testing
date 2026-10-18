@@ -1792,6 +1792,18 @@ function validateFilterSoundAndFeedbackContract() {
       !gallery.includes("event.key === 'Home'")) {
     err('Mobile filter behavior: centered changes must settle once, dispatch a cue, support keyboard navigation and respect reduced motion.');
   }
+  if (!css.includes('.filter-active-indicator') ||
+      !css.includes('overscroll-behavior-x: none;') ||
+      !css.includes('transform 280ms cubic-bezier(.22, 1, .36, 1)') ||
+      css.includes('.tab-btn.active::before') ||
+      css.includes('content: "✓"') ||
+      !gallery.includes('function syncFilterActiveIndicator') ||
+      !gallery.includes('function normalizeFilterButtonWidths') ||
+      !smoke.includes('Exercise every filter with the moving indicator') ||
+      !smoke.includes('Desktop hover stays in the existing gray palette')) {
+    err('Filter interaction: one moving gray pill, no decorative check icon, stable label widths, no horizontal overscroll, and desktop hover coverage are required.');
+  }
+
   const works = exists('index.html') ? readText('index.html') : '';
   const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
   if (!works.includes('<div class="filter-nav-wrapper" role="group" aria-label="Project categories">') ||
