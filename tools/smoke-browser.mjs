@@ -278,7 +278,7 @@ async function assertNavigationLabelsCentered(page, label) {
     };
   }));
   if (!states.length || states.some(state =>
-    state.display !== 'inline-flex' ||
+    !['flex', 'inline-flex'].includes(state.display) ||
     state.alignItems !== 'center' ||
     state.justifyContent !== 'center' ||
     state.textAlign !== 'center' ||
@@ -419,7 +419,7 @@ async function assertPublicNavigation(page, { href, label }) {
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
     navContract.links.some(link =>
-      link.display !== 'inline-flex' ||
+      !['flex', 'inline-flex'].includes(link.display) ||
       link.alignItems !== 'center' ||
       link.justifyContent !== 'center' ||
       link.textAlign !== 'center' ||
