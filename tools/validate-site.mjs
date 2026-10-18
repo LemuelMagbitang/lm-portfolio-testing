@@ -1642,7 +1642,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('media.loop = slides.length === 1') ||
       !hero.includes('activateMedia(slides[currentIndex])') ||
       !hero.includes("media.dataset.playbackState = 'blocked'") ||
-      !hero.includes("bind(heroContainer, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes("bind(interactionSurface, 'pointerdown', retryBlockedVideo") ||
       !hero.includes('const activeMediaCleanups = [];') ||
       !hero.includes('clearActiveMediaListeners()') ||
       !hero.includes('if (reducedMotion) {')) {
@@ -1674,7 +1674,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('hero video did not resume after a real interaction') ||
       !smoke.includes("for (const viewport of viewports)") ||
       /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
-      !smoke.includes("page.locator('#heroBanner').click({ position: { x: 12, y: 12 } })") ||
+      !smoke.includes("const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';") ||
+      !smoke.includes("await page.locator('.hero-overlay').click({ position: { x: 12, y: 12 } })") ||
       !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
       !smoke.includes("document.body.classList.contains('menu-open')") ||
       !smoke.includes("gate.dataset.loading = 'active'")) {
