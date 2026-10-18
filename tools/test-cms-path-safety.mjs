@@ -32,6 +32,14 @@ for (const [name, section] of Object.entries(sections)) {
   );
 }
 
+for (const path of ['admin/index.html', 'admin/admin.css', 'admin/admin.js']) {
+  assert.equal(
+    helpers.isCmsWritablePath(path),
+    false,
+    'CMS must not be able to overwrite its own admin shell or controller: ' + path
+  );
+}
+
 for (const value of [
   '../data/projects.json',
   'assets/../data/projects.json',
