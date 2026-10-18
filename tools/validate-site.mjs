@@ -1707,6 +1707,12 @@ function validateCmsRegressionContracts() {
       !admin.includes('validateCmsMediaSource(item.type, item.src, `Hero artwork ${index + 1}`)')) {
     err('CMS media validation: Hero Loop and manual Footer sources must be validated before save.');
   }
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+  if (!smoke.includes("page.on('requestfailed'") ||
+      !smoke.includes('failedSameOriginRequests') ||
+      !smoke.includes('Same-origin HTTP 404 URLs')) {
+    err('Browser smoke network contract: same-origin HTTP 404s and failed requests must fail validation.');
+  }
   if (!/let renderVersion = 0;/.test(admin) ||
       !/const version = \+\+renderVersion;/.test(admin) ||
       !/const section = currentSection;/.test(admin) ||

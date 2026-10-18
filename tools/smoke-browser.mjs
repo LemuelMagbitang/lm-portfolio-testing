@@ -1043,10 +1043,25 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
 
       const errors = [];
       const http404Resources = [];
+      const failedSameOriginRequests = [];
+      const appOrigin = new URL(BASE_URL).origin;
       page.on('response', response => {
         if (response.status() === 404) {
-          http404Resources.push(response.url());
+          let responseOrigin = '';
+          try { responseOrigin = new URL(response.url()).origin; } catch (_) {}
+          if (responseOrigin === appOrigin) http404Resources.push(response.url());
         }
+      });
+      page.on('requestfailed', request => {
+        let requestUrl;
+        try { requestUrl = new URL(request.url()); } catch (_) { return; }
+        if (requestUrl.origin !== appOrigin) return;
+        const failure = request.failure()?.errorText || 'unknown network failure';
+        // Media and fetches may be intentionally cancelled when a user closes
+        // a viewer or navigation replaces stale work. Those are not transport
+        // failures; all other same-origin failures should fail the smoke run.
+        if (/ERR_ABORTED|NS_BINDING_ABORTED|ERR_CANCELED/i.test(failure)) return;
+        failedSameOriginRequests.push(`${requestUrl.href} (${failure})`);
       });
       page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
       page.on('console', message => {
@@ -1071,11 +1086,16 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
         throw error;
       }
 
-      if (errors.length) {
-        const resourceDetails = http404Resources.length
-          ? '\\nHTTP 404 URLs:\\n- ' + [...new Set(http404Resources)].join('\\n- ')
-          : '';
-        throw new Error(`${path} produced browser errors:\\n- ${errors.join('\\n- ')}${resourceDetails}`);
+      if (errors.length || http404Resources.length || failedSameOriginRequests.length) {
+        const details = [];
+        if (errors.length) details.push('Browser errors:\\n- ' + errors.join('\\n- '));
+        if (http404Resources.length) {
+          details.push('Same-origin HTTP 404 URLs:\\n- ' + [...new Set(http404Resources)].join('\\n- '));
+        }
+        if (failedSameOriginRequests.length) {
+          details.push('Failed same-origin network requests:\\n- ' + [...new Set(failedSameOriginRequests)].join('\\n- '));
+        }
+        throw new Error(`${path} failed browser smoke checks:\\n${details.join('\\n\\n')}`);
       }
     }, SMOKE_PAGE_TIMEOUT_MS, `${smokeLabel} caller=${caller}`);
 
