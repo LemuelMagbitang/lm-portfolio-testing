@@ -1770,9 +1770,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261018-22') ||
       !works.includes('js/app/page-composition.js?v=20261018-22') ||
-      !works.includes('css/style.css?v=20261018-20') ||
+      !works.includes('css/style.css?v=20261018-21') ||
       !works.includes('js/script.js?v=20261018-22') ||
-      !about.includes('style.css?v=20261018-20') ||
+      !about.includes('style.css?v=20261018-21') ||
       !about.includes('script.js?v=20261018-22') ||
       !about.includes('page-composition.js?v=20261018-22')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
