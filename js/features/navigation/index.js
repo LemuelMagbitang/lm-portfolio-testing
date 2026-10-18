@@ -210,7 +210,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   const logo = root.querySelector('.site-logo');
   const pageTransition = root.getElementById('pageTransition');
   let logoFrame = null;
-  let logoBackdropIsVideo = false;
+  let setVideoBackdropState(false);
+  let logoVideoTimer = null;
   let logoMutationObservers = [];
 
   function parseColor(value) {
@@ -290,6 +291,18 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
   }
 
+  function setVideoBackdropState(isVideo) {
+    logoBackdropIsVideo = Boolean(isVideo);
+    if (logoBackdropIsVideo && logoVideoTimer === null && typeof windowRef?.setInterval === 'function') {
+      logoVideoTimer = windowRef.setInterval(() => {
+        if (logoBackdropIsVideo) scheduleLogoContrast();
+      }, 900);
+    } else if (!logoBackdropIsVideo && logoVideoTimer !== null) {
+      windowRef?.clearInterval?.(logoVideoTimer);
+      logoVideoTimer = null;
+    }
+  }
+
   function updateLogoContrast() {
     if (!logo || !root.elementsFromPoint) return;
     const rect = logo.getBoundingClientRect();
@@ -300,7 +313,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     // then recalculate as soon as its class/visibility changes.
     if (pageTransition && pageTransition.dataset.loading !== 'ready' &&
         !pageTransition.classList.contains('is-hidden')) {
-      logoBackdropIsVideo = false;
+      setVideoBackdropState(false);
       setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
       return;
     }
@@ -312,14 +325,14 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return !element.closest?.('script, style');
     });
     if (!backdrop) {
-      logoBackdropIsVideo = false;
+      setVideoBackdropState(false);
       setLogoForeground(computedBackdropLuminance(root.body));
       return;
     }
 
     // An open mobile-menu scrim darkens the page beneath the mark; white wins.
     if (backdrop.classList?.contains('nav-menu-backdrop')) {
-      logoBackdropIsVideo = false;
+      setVideoBackdropState(false);
       setLogoForeground(0.006);
       return;
     }
@@ -328,21 +341,31 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (heroSection?.classList.contains('hero-section--message')) {
       // The enabled hero-message mode intentionally darkens the artwork under
       // its quote; preserve the white mark that the readability overlay supports.
-      logoBackdropIsVideo = false;
+      setVideoBackdropState(false);
       setLogoForeground(0.02);
+      return;
+    }
+
+    // If the topmost non-navigation layer has an opaque CSS fill, it is
+    // the visible backdrop. Do not sample a media element hidden underneath
+    // that layer (this also covers the loading gate and other solid surfaces).
+    const backdropColor = parseColor(windowRef?.getComputedStyle?.(backdrop)?.backgroundColor);
+    if (backdropColor && backdropColor.a >= 0.98) {
+      setVideoBackdropState(false);
+      setLogoForeground(computedBackdropLuminance(backdrop));
       return;
     }
 
     const media = findMediaAtPoint(backdrop, point.x, point.y);
     if (media && (media.matches?.('img, video, canvas') || media.localName === 'lottie-player')) {
-      logoBackdropIsVideo = media.localName === 'video';
+      setVideoBackdropState(media.localName === 'video');
       const luminance = sampleMediaLuminance(root, media, point);
       if (Number.isFinite(luminance)) {
         setLogoForeground(luminance);
         return;
       }
     } else {
-      logoBackdropIsVideo = false;
+      setVideoBackdropState(false);
     }
 
     // Transparent layout nodes are common around cards and sections. Walk up
@@ -398,15 +421,12 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       });
     }
 
-    const logoVideoTimer = windowRef?.setInterval?.(() => {
-      if (logoBackdropIsVideo) scheduleLogoContrast();
-    }, 900);
     cleanup.push(() => {
       if (logoFrame !== null) windowRef?.cancelAnimationFrame?.(logoFrame);
       logoFrame = null;
+      setVideoBackdropState(false);
       logoMutationObservers.forEach(observer => observer.disconnect());
       logoMutationObservers = [];
-      if (logoVideoTimer !== undefined) windowRef?.clearInterval?.(logoVideoTimer);
     });
     scheduleLogoContrast();
   }
