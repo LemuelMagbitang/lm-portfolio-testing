@@ -493,6 +493,11 @@ export async function initGallery(options = {}) {
   function resetToAllFilter() {
     const allButton = filterBtns.find(button => (button.getAttribute('data-filter') || 'all') === 'all');
     if (!allButton) return;
+    // Home/Works navigation is an explicit state change. Cancel pending
+    // gesture settlement and guard the reset's own rail-centering scroll from
+    // re-selecting whichever category happens to be nearest after the delay.
+    cancelPendingFilterSettlement();
+    suppressFilterSettleUntil = Date.now() + 750;
     const changed = currentFilter !== 'all';
     const transitionFromRects = changed ? captureGalleryCardRects(portfolioGrid) : null;
     filterBtns.forEach(item => {
