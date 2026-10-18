@@ -372,9 +372,11 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return;
     }
     const heroSection = backdrop.closest?.('.hero-section');
-    if (heroSection?.classList.contains('about-hero')) {
-      // About keeps its existing dark-scrim treatment; the Work hero below
-      // samples its own media so white and black can follow the moving artwork.
+    if (heroSection?.classList.contains('hero-section--message') ||
+        heroSection?.classList.contains('about-hero')) {
+      // Both layouts intentionally dim their art for overlay copy. White is
+      // the correct foreground over that rendered dark scrim; full-color Works
+      // media below is sampled directly and can switch between black and white.
       setVideoBackdropState(false);
       logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
       setLogoForeground(0.02);

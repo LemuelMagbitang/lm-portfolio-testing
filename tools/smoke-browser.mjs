@@ -889,12 +889,12 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         window.dispatchEvent(new Event('scroll'));
       });
 
-      if (expectedMessage) {
+      if (!expectedMessage) {
         await page.evaluate(async () => {
-          const hero = document.querySelector('.hero-section--message');
+          const hero = document.querySelector('.hero-section:not(.about-hero):not(.hero-section--message)');
           const banner = hero?.querySelector('.hero-banner');
           const logo = document.querySelector('.site-logo');
-          if (!banner || !logo) throw new Error('Hero-message contrast fixture could not locate the Works media surface.');
+          if (!banner || !logo) throw new Error('Full-color Works contrast fixture could not locate the Works media surface.');
           const originals = Array.from(banner.querySelectorAll('.slide'));
           window.__lmSmokeHeroSlideSnapshot = originals.map(element => ({
             element,
@@ -934,7 +934,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         );
         await page.evaluate(async () => {
           const image = document.getElementById('__smoke-hero-logo-contrast-image');
-          if (!image) throw new Error('Hero-message contrast fixture image disappeared before the dark-media check.');
+          if (!image) throw new Error('Full-color Works contrast fixture image disappeared before the dark-media check.');
           image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
             '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#000000"/></svg>'
           );
