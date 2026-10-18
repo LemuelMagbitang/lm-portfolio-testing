@@ -304,7 +304,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   }
 
   function updateLogoContrast() {
-    if (!logo || !root.elementsFromPoint) return;
+    if (!logo || (!root.elementsFromPoint && !root.elementFromPoint)) return;
     const rect = logo.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const point = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
@@ -318,7 +318,9 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return;
     }
 
-    const stack = root.elementsFromPoint(point.x, point.y) || [];
+    const stack = typeof root.elementsFromPoint === 'function'
+      ? (root.elementsFromPoint(point.x, point.y) || [])
+      : [root.elementFromPoint(point.x, point.y)].filter(Boolean);
     const backdrop = stack.find(element => {
       if (!element || element === logo || element.closest?.('.navbar')) return false;
       if (element.classList?.contains('nav-menu-backdrop')) return true;
