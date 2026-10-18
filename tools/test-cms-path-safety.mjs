@@ -16,6 +16,22 @@ const helpers = vm.runInNewContext(
   { filename: 'admin-cms-path-safety.js' }
 );
 
+const sectionStart = admin.indexOf('const SECTIONS = {');
+const sectionEnd = admin.indexOf('\n};', sectionStart);
+assert.ok(sectionStart >= 0 && sectionEnd > sectionStart, 'CMS section file map must remain a readable static contract.');
+const sections = vm.runInNewContext(
+  admin.slice(sectionStart, sectionEnd + 3) + '\nSECTIONS',
+  {},
+  { filename: 'admin-cms-sections.js' }
+);
+for (const [name, section] of Object.entries(sections)) {
+  assert.equal(
+    helpers.isCmsWritablePath(section.file),
+    true,
+    'CMS section "' + name + '" must allow writes to ' + section.file
+  );
+}
+
 for (const value of [
   '../data/projects.json',
   'assets/../data/projects.json',
