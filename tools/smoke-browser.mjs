@@ -785,6 +785,31 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
       // Exercise the loading gate and mobile navigation as distinct logo
       // contrast states, not only the static light/dark test fixture.
       await page.evaluate(() => {
+        const logo = document.querySelector('.site-logo');
+        const rect = logo?.getBoundingClientRect();
+        if (logo && rect) {
+          const backdrop = document.createElement('div');
+          backdrop.id = '__smoke-logo-backdrop';
+          Object.assign(backdrop.style, {
+            position: 'fixed',
+            left: (rect.left - 3) + 'px',
+            top: (rect.top - 3) + 'px',
+            width: (rect.width + 6) + 'px',
+            height: (rect.height + 6) + 'px',
+            zIndex: '999',
+            pointerEvents: 'auto',
+            background: '#fff'
+          });
+          document.body.appendChild(backdrop);
+        }
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+        null,
+        { timeout: 2500 }
+      );
+      await page.evaluate(() => {
         const gate = document.getElementById('pageTransition');
         if (gate) {
           gate.classList.remove('is-hidden');
@@ -805,10 +830,36 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           gate.classList.add('is-hidden');
           gate.setAttribute('aria-hidden', 'true');
         }
-        window.dispatchEvent(new Event('resize'));
+        document.getElementById('__smoke-logo-backdrop')?.remove();
+        window.dispatchEvent(new Event('scroll'));
       });
 
       if (viewport.name === 'mobile') {
+        await page.evaluate(() => {
+          const logo = document.querySelector('.site-logo');
+          const rect = logo?.getBoundingClientRect();
+          if (!logo || !rect) return;
+          const backdrop = document.createElement('div');
+          backdrop.id = '__smoke-logo-backdrop';
+          Object.assign(backdrop.style, {
+            position: 'fixed',
+            left: (rect.left - 3) + 'px',
+            top: (rect.top - 3) + 'px',
+            width: (rect.width + 6) + 'px',
+            height: (rect.height + 6) + 'px',
+            zIndex: '999',
+            pointerEvents: 'auto',
+            background: '#fff'
+          });
+          document.body.appendChild(backdrop);
+          window.dispatchEvent(new Event('resize'));
+        });
+        await page.waitForFunction(
+          () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+          null,
+          { timeout: 2500 }
+        );
+        await page.evaluate(() => document.getElementById('__smoke-logo-backdrop')?.remove());
         await page.locator('.hamburger').click();
         await page.waitForFunction(
           () => document.body.classList.contains('menu-open') &&
