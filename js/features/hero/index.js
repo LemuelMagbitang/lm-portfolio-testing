@@ -647,7 +647,11 @@ import { createLifecycle } from '../../core/lifecycle.js';
     // Autoplay is normally allowed for a muted, inline background video, but
     // browsers may still deny it (for example, data-saving or battery modes).
     // Retry from a real gesture and when a background tab becomes visible again.
-    bind(heroContainer, 'pointerdown', retryBlockedVideo, { passive: true });
+    // The quote overlay is a sibling layered over the banner. Bind to the
+    // whole hero section so a gesture over either surface can recover blocked
+    // playback without introducing controls or changing the visual design.
+    const interactionSurface = heroContainer.closest('.hero-section') || heroContainer;
+    bind(interactionSurface, 'pointerdown', retryBlockedVideo, { passive: true });
     bind(windowRef.document, 'visibilitychange', () => {
       if (!windowRef.document.hidden) retryBlockedVideo();
     });
