@@ -706,6 +706,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           gridWidth: grid?.getBoundingClientRect().width || 0,
           mainWidth: main?.getBoundingClientRect().width || 0,
           logoBlendMode: logoStyle?.mixBlendMode || '',
+          logoForeground: logo?.dataset?.logoForeground || '',
           logoFilter: logoStyle?.filter || '',
           logoTransitionProperties: (logoStyle?.transitionProperty || '').split(',').map(x => x.trim()),
           logoTransitionDurations: (logoStyle?.transitionDuration || '').split(',').map(x => x.trim()),
@@ -729,12 +730,115 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           layout.gridWidth <= 0 || layout.gridWidth > layout.mainWidth + 1) {
         throw new Error(label + ' ' + viewport.name + ': Works gallery is still inset by the generic container gutter: ' + JSON.stringify(layout));
       }
-      if (layout.logoBlendMode !== 'difference' ||
-          !layout.logoFilter.includes('invert') ||
-          !layout.logoTransitionProperties.includes('opacity') ||
+      if (layout.logoBlendMode !== 'normal' ||
+          !['light', 'dark'].includes(layout.logoForeground) ||
+          !layout.logoTransitionProperties.includes('transform') ||
           !layout.logoTransitionProperties.includes('filter') ||
+          (layout.logoForeground === 'dark' && layout.logoFilter.includes('invert')) ||
+          (layout.logoForeground === 'light' && !layout.logoFilter.includes('invert')) ||
           layout.navLogoZ <= layout.navbarZ) {
-        throw new Error(label + ' ' + viewport.name + ': adaptive logo contrast, transitions, or stacking regressed: ' + JSON.stringify(layout));
+        throw new Error(label + ' ' + viewport.name + ': backdrop-driven logo foreground, transitions, or stacking regressed: ' + JSON.stringify(layout));
+      }
+
+      // Give the same fixed logo deterministic light and dark backdrops. This
+      // verifies the runtime contrast controller, not only its CSS declaration.
+      await page.evaluate(() => {
+        const logo = document.querySelector('.site-logo');
+        const rect = logo?.getBoundingClientRect();
+        if (!logo || !rect) return;
+        document.getElementById('__smoke-logo-backdrop')?.remove();
+        const backdrop = document.createElement('div');
+        backdrop.id = '__smoke-logo-backdrop';
+        Object.assign(backdrop.style, {
+          position: 'fixed',
+          left: (rect.left - 3) + 'px',
+          top: (rect.top - 3) + 'px',
+          width: (rect.width + 6) + 'px',
+          height: (rect.height + 6) + 'px',
+          zIndex: '999',
+          pointerEvents: 'auto',
+          background: '#fff'
+        });
+        document.body.appendChild(backdrop);
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+        null,
+        { timeout: 2500 }
+      );
+      await page.evaluate(() => {
+        const backdrop = document.getElementById('__smoke-logo-backdrop');
+        if (backdrop) backdrop.style.background = '#000';
+        window.dispatchEvent(new Event('resize'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+        null,
+        { timeout: 2500 }
+      );
+      await page.evaluate(() => {
+        document.getElementById('__smoke-logo-backdrop')?.remove();
+        window.dispatchEvent(new Event('scroll'));
+      });
+
+      if (viewport.name === 'desktop') {
+        const videoContract = await page.evaluate(() => {
+          const active = document.querySelector('#heroBanner .slide.active');
+          const video = active?.querySelector('video');
+          return video ? {
+            present: true,
+            muted: video.muted,
+            playsInline: video.playsInline,
+            loop: video.loop,
+            paused: video.paused,
+            currentTime: video.currentTime,
+            playbackState: video.dataset.playbackState || '',
+            error: video.error ? { code: video.error.code, message: video.error.message || '' } : null,
+            source: video.currentSrc || video.src
+          } : {
+            present: false,
+            activeType: active?.dataset?.heroType || active?.firstElementChild?.localName || ''
+          };
+        });
+        if (videoContract.present) {
+          if (!videoContract.muted || !videoContract.playsInline ||
+              (await page.locator('#heroBanner .slide').count()) === 1 && !videoContract.loop) {
+            throw new Error(label + ': hero video must be muted, inline, and loop when it is the only manual slide: ' + JSON.stringify(videoContract));
+          }
+          await page.waitForFunction(() => {
+            const video = document.querySelector('#heroBanner .slide.active video');
+            return !video || video.error ||
+              video.dataset.playbackState === 'blocked' ||
+              (!video.paused && video.currentTime > 0.05);
+          }, null, { timeout: 5000 });
+          let playback = await page.locator('#heroBanner .slide.active video').evaluate(video => ({
+            paused: video.paused,
+            currentTime: video.currentTime,
+            playbackState: video.dataset.playbackState || '',
+            error: video.error ? video.error.code : 0
+          }));
+          if (playback.error) {
+            throw new Error(label + ': hero video failed to decode or load (MediaError ' + playback.error + ').');
+          }
+          if (playback.playbackState === 'blocked' || playback.paused) {
+            await page.locator('#heroBanner').dispatchEvent('pointerdown');
+            await page.waitForFunction(() => {
+              const video = document.querySelector('#heroBanner .slide.active video');
+              return video && (video.error || (!video.paused && video.currentTime > 0.05));
+            }, null, { timeout: 3000 });
+            playback = await page.locator('#heroBanner .slide.active video').evaluate(video => ({
+              paused: video.paused,
+              currentTime: video.currentTime,
+              error: video.error ? video.error.code : 0
+            }));
+            if (playback.error || playback.paused || playback.currentTime <= 0.05) {
+              throw new Error(label + ': hero video did not resume after a real interaction: ' + JSON.stringify(playback));
+            }
+          }
+        } else if (videoContract.activeType === 'video') {
+          throw new Error(label + ': video hero media was not rendered as a video element.');
+        }
       }
       if (!expectedMessage && layout.heroHeight + 1 < layout.heroMinHeight) {
         throw new Error(label + ' ' + viewport.name + ': message-free hero does not use its responsive minimum height: ' + JSON.stringify(layout));
