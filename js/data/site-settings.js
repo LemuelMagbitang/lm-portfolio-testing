@@ -34,7 +34,10 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
     transitionStyle: 'kenburns',
     crossfadeMs: 3500,
     fadeMs: 600,
-    autoRotateMs: 9000
+    autoRotateMs: 9000,
+    kenBurnsFromScale: 1,
+    kenBurnsToScale: 1.15,
+    kenBurnsDurationS: 14
   }),
   web3forms: Object.freeze({ projectKey: '', reviewKey: '' }),
   redirectUrl: '',
@@ -106,6 +109,22 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
     ? numericAutoRotate
     : defaults.heroTiming.autoRotateMs;
 
+  // Preserve the shared Ken Burns settings consumed by the footer renderer.
+  // These values live in settings.json already, so dropping them here would
+  // silently reset CMS changes to the renderer's own defaults.
+  const numericKenBurnsFrom = Number(hero.kenBurnsFromScale);
+  const kenBurnsFromScale = Number.isFinite(numericKenBurnsFrom) && numericKenBurnsFrom > 0
+    ? numericKenBurnsFrom
+    : (defaults.heroTiming.kenBurnsFromScale ?? 1);
+  const numericKenBurnsTo = Number(hero.kenBurnsToScale);
+  const kenBurnsToScale = Number.isFinite(numericKenBurnsTo) && numericKenBurnsTo > 0
+    ? numericKenBurnsTo
+    : (defaults.heroTiming.kenBurnsToScale ?? 1.15);
+  const numericKenBurnsDuration = Number(hero.kenBurnsDurationS);
+  const kenBurnsDurationS = Number.isFinite(numericKenBurnsDuration) && numericKenBurnsDuration >= 1
+    ? numericKenBurnsDuration
+    : (defaults.heroTiming.kenBurnsDurationS ?? 14);
+
   return {
     protectionEnabled: booleanValue(source.protectionEnabled, defaults.protectionEnabled),
     formsEnabled: {
@@ -121,7 +140,10 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
       transitionStyle,
       crossfadeMs,
       fadeMs,
-      autoRotateMs
+      autoRotateMs,
+      kenBurnsFromScale,
+      kenBurnsToScale,
+      kenBurnsDurationS
     },
     web3forms: {
       projectKey: stringValue(web3forms.projectKey),
