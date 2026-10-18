@@ -209,16 +209,28 @@ export async function initGallery(options = {}) {
   )) {
     const indicator = ensureFilterActiveIndicator();
     if (!indicator || !button || !filterContent.contains(button)) return;
-    const contentRect = filterContent.getBoundingClientRect();
-    const buttonRect = button.getBoundingClientRect();
-    indicator.style.width = `${buttonRect.width}px`;
-    indicator.style.height = `${buttonRect.height}px`;
-    indicator.style.transform = `translate3d(${buttonRect.left - contentRect.left}px, ${buttonRect.top - contentRect.top}px, 0)`;
+    const initialPlacement = !indicator.classList.contains('is-ready');
+    if (!initialPlacement) indicator.classList.add('is-animated');
+    // The indicator is positioned relative to filterContent. Use offset
+    // coordinates in that stable layout space, not getBoundingClientRect()
+    // coordinates (which include the rail's scrollLeft on mobile).
+    indicator.style.width = `${button.offsetWidth}px`;
+    indicator.style.height = `${button.offsetHeight}px`;
+    indicator.style.transform = `translate3d(${button.offsetLeft}px, ${button.offsetTop}px, 0)`;
     // Measure first, then hand visual ownership to the indicator. The static
     // active button remains the CSS fallback until this point, so selection
     // never disappears while Gallery initializes.
     indicator.classList.add('is-ready');
     filterContent.classList.add('has-active-indicator');
+    if (initialPlacement) {
+      const enableMotion = () => {
+        if (filterActiveIndicator === indicator && indicator.isConnected) {
+          indicator.classList.add('is-animated');
+        }
+      };
+      if (typeof windowRef.requestAnimationFrame === 'function') windowRef.requestAnimationFrame(enableMotion);
+      else windowRef.setTimeout(enableMotion, 0);
+    }
   }
 
   // Active labels use a heavier weight, which can otherwise alter flex widths
