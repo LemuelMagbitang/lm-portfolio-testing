@@ -83,7 +83,15 @@ assert.match(pageCompositionSource, /const projectLottiePlayerPreloadPromise = p
 assert.match(pageCompositionSource, /const LOTTIE_PLAYER_STARTUP_WAIT_MS = 2500/);
 assert.match(pageCompositionSource, /timerOwner\.setTimeout\?\.\(\(\) =>/);
 assert.match(pageCompositionSource, /Lottie player startup warm-up timed out; continuing startup/);
-assert.match(pageCompositionSource, /await Promise\.all\(\[\s*projectMediaPreloadPromise,\s*projectLottiePlayerPreloadPromise,/);
+const criticalStartupWarmup = pageCompositionSource.match(
+  /await Promise\\.all\\(\\[\\s*projectMediaPreloadPromise,[\\s\\S]*?\\]\\);/
+)?.[0] || '';
+assert.match(criticalStartupWarmup, /projectLottiePlayerPreloadPromise/);
+assert.doesNotMatch(
+  criticalStartupWarmup,
+  /aboutAssetPreloadPromise/,
+  'Optional About photo/software-logo preloads must not block the initial page transition.'
+);
 
 const lightboxSource = await readFile(new URL('../js/features/lightbox/index.js', import.meta.url), 'utf8');
 assert.match(lightboxSource, /\.lightbox-holographic/);
