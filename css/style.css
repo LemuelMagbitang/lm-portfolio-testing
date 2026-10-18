@@ -556,8 +556,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   transition:
     transform 280ms cubic-bezier(.22, 1, .36, 1),
     width 280ms cubic-bezier(.22, 1, .36, 1),
-    height 180ms ease,
-    opacity 100ms ease;
+    height 180ms ease;
   will-change: transform, width;
 }
 
@@ -663,15 +662,21 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The selected state is a single moving neutral-gray pill beneath the
-   labels. aria-pressed remains the programmatic state; no decorative glyph
-   or per-button border is needed. */
+/* Before Gallery initializes, the active button itself is the gray fallback
+   pill. Once the indicator is measured and ready, its background takes over
+   without a blank frame or layout change. */
 .tab-btn.active,
 .tab-btn[aria-pressed="true"] {
   color: #111;
-  background: transparent;
+  background: #f2f2f2;
   border-color: transparent;
   font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+
+.filter-nav-content.has-active-indicator .tab-btn.active,
+.filter-nav-content.has-active-indicator .tab-btn[aria-pressed="true"] {
+  background: transparent;
   box-shadow: none;
 }
 
