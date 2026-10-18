@@ -193,33 +193,47 @@ export async function initGallery(options = {}) {
     return filterTabs ? Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn')) : [];
   }
 
+  function getFilterIndicatorHost() {
+    return filterTabs?.closest('.filter-nav-viewport') || filterTabs;
+  }
+
   function ensureFilterActiveIndicator() {
-    if (!filterContent) return null;
-    if (!filterActiveIndicator || filterActiveIndicator.parentElement !== filterContent) {
+    const host = getFilterIndicatorHost();
+    if (!host) return null;
+    if (!filterActiveIndicator || filterActiveIndicator.parentElement !== host) {
       filterActiveIndicator = documentRef.createElement('span');
       filterActiveIndicator.className = 'filter-active-indicator';
       filterActiveIndicator.setAttribute('aria-hidden', 'true');
-      filterContent.appendChild(filterActiveIndicator);
+      host.appendChild(filterActiveIndicator);
     }
     return filterActiveIndicator;
   }
 
-  function syncFilterActiveIndicator(button = getFilterButtons().find(item =>
-    item.classList.contains('active') || item.getAttribute('aria-pressed') === 'true'
-  )) {
+  function syncFilterActiveIndicator(
+    button = getFilterButtons().find(item =>
+      item.classList.contains('active') || item.getAttribute('aria-pressed') === 'true'
+    ),
+    { followingScroll = false } = {}
+  ) {
     const indicator = ensureFilterActiveIndicator();
-    if (!indicator || !button || !filterContent.contains(button)) return;
+    const host = getFilterIndicatorHost();
+    if (!indicator || !host || !button || !filterContent.contains(button)) return;
     const initialPlacement = !indicator.classList.contains('is-ready');
+    if (followingScroll) indicator.classList.add('is-following-scroll');
+    else indicator.classList.remove('is-following-scroll');
     if (!initialPlacement) indicator.classList.add('is-animated');
-    // The indicator is positioned relative to filterContent. Use offset
-    // coordinates in that stable layout space, not getBoundingClientRect()
-    // coordinates (which include the rail's scrollLeft on mobile).
-    indicator.style.width = `${button.offsetWidth}px`;
-    indicator.style.height = `${button.offsetHeight}px`;
-    indicator.style.transform = `translate3d(${button.offsetLeft}px, ${button.offsetTop}px, 0)`;
-    // Measure first, then hand visual ownership to the indicator. The static
-    // active button remains the CSS fallback until this point, so selection
-    // never disappears while Gallery initializes.
+
+    // The indicator overlays the stationary viewport, so its coordinates are
+    // measured from that viewport. Scroll frames keep it aligned with the
+    // active label while the contents glide underneath on mobile.
+    const hostRect = host.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    indicator.style.width = `${buttonRect.width}px`;
+    indicator.style.height = `${buttonRect.height}px`;
+    indicator.style.transform = `translate3d(${buttonRect.left - hostRect.left}px, ${buttonRect.top - hostRect.top}px, 0)`;
+
+    // The static active button remains the CSS fallback until the indicator
+    // has a measured position, so selection never disappears during startup.
     indicator.classList.add('is-ready');
     filterContent.classList.add('has-active-indicator');
     if (initialPlacement) {
@@ -419,7 +433,10 @@ export async function initGallery(options = {}) {
     if (!filterTabs || !isFilterScroller() || filterPointerActive || filterSettling ||
         Date.now() < suppressFilterSettleUntil) return;
     windowRef.clearTimeout(filterScrollTimer);
-    filterScrollTimer = windowRef.setTimeout(() => settleCenteredFilter(), 220);
+    filterScrollTimer = windowRef.setTimeout(() => {
+      filterActiveIndicator?.classList.remove('is-following-scroll');
+      settleCenteredFilter();
+    }, 220);
   }
 
   function buildFilterPager() {
@@ -446,8 +463,8 @@ export async function initGallery(options = {}) {
     const activeIndex = Math.max(0, buttons.findIndex(button => (button.getAttribute('data-filter') || 'all') === currentFilter));
     const activeButton = buttons[activeIndex];
     lastCenteredFilterId = activeButton?.getAttribute('data-filter') || currentFilter;
-    syncFilterActiveIndicator(activeButton);
     if (activeButton && isFilterScroller()) centerFilterButton(activeButton, 'auto');
+    syncFilterActiveIndicator(activeButton);
     updateFilterPager(activeIndex >= 0 ? activeIndex : 0);
   }
   function projectMatchesFilter(project, filter) {
@@ -570,11 +587,11 @@ export async function initGallery(options = {}) {
     });
     currentFilter = 'all';
     lastCenteredFilterId = 'all';
-    syncFilterActiveIndicator(allButton);
     isExpanded = false;
     render({ animateTransition: changed, transitionFromRects });
     updateFilterPager(filterBtns.indexOf(allButton));
     if (isFilterScroller()) centerFilterButton(allButton, 'auto');
+    syncFilterActiveIndicator(allButton);
   }
 
   bind(windowRef, 'lm:navigate-home', resetToAllFilter);
@@ -766,6 +783,7 @@ export async function initGallery(options = {}) {
     if (filterScrollFrame) return;
     filterScrollFrame = windowRef.requestAnimationFrame(() => {
       filterScrollFrame = null;
+      syncFilterActiveIndicator(undefined, { followingScroll: true });
       updateFilterPager();
       scheduleCenteredFilter();
     });
@@ -773,6 +791,7 @@ export async function initGallery(options = {}) {
 
   bind(filterTabs, 'scrollend', () => {
     if (!isFilterScroller()) return;
+    filterActiveIndicator?.classList.remove('is-following-scroll');
     if (filterPointerActive) return;
     if (filterSettling) {
       filterSettling = false;
