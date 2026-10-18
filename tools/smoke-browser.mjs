@@ -292,7 +292,7 @@ async function assertNavigationLabelsCentered(page, label) {
     state.textDeltaX > 1.5 ||
     state.textDeltaY > 1.5
   )) {
-    throw new Error(label + ' navigation label box or rendered text is not centered within its pill: ' + JSON.stringify(states));
+    throw new Error(label + ' navigation label box or visible text is not centered within its pill: ' + JSON.stringify(states));
   }
 }
 
