@@ -8,7 +8,7 @@
  * scoped to the portfolio pages only.
  */
 
-import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js';
+import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js?v=20261018-05';
 
 export function initNavigation({ root = globalThis.document, getCuratedViewSlug = () => '' } = {}) {
   const menuButton = root?.querySelector('.hamburger, .menu-button');
