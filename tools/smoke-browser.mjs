@@ -308,6 +308,8 @@ async function assertPublicNavigation(page, { href, label }) {
         borderBottomWidth: navStyle?.borderBottomWidth || ''
       },
       logoBlendMode: logoStyle?.mixBlendMode || '',
+      logoForeground: logo?.dataset?.logoForeground || '',
+      logoFilter: logoStyle?.filter || '',
       hamburgerBlendMode: hamburgerStyle?.mixBlendMode || '',
       hamburgerBackground: hamburgerStyle?.backgroundColor || '',
       hamburgerBackdropFilter: hamburgerStyle?.backdropFilter || '',
@@ -354,7 +356,10 @@ async function assertPublicNavigation(page, { href, label }) {
     navContract.navbar.backgroundImage !== 'none' ||
     navContract.navbar.backdropFilter !== 'none' ||
     parseFloat(navContract.navbar.borderBottomWidth) !== 0 ||
-    navContract.logoBlendMode !== 'difference' ||
+    navContract.logoBlendMode !== 'normal' ||
+    !['light', 'dark'].includes(navContract.logoForeground) ||
+    (navContract.logoForeground === 'dark' && navContract.logoFilter.includes('invert')) ||
+    (navContract.logoForeground === 'light' && !navContract.logoFilter.includes('invert')) ||
     navContract.hamburgerBlendMode !== 'normal' ||
     navContract.hamburgerBackground !== 'rgb(255, 255, 255)' ||
     navContract.hamburgerBackdropFilter !== 'none' ||
@@ -366,7 +371,7 @@ async function assertPublicNavigation(page, { href, label }) {
     navContract.dropdownCount !== 0 ||
     (navContract.viewportWidth >= 768 && navContract.mobileMenuBackground !== 'rgba(0, 0, 0, 0)')
   ) {
-    throw new Error(label + ' navigation visual/markup contract failed: ' + JSON.stringify(navContract));
+    throw new Error(label + ' navigation visual/markup and adaptive logo state contract failed: ' + JSON.stringify(navContract));
   }
 
   const expectedDestination = await link.evaluate(element => {
