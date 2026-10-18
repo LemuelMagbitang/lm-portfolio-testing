@@ -8,6 +8,8 @@
  * scoped to the portfolio pages only.
  */
 
+import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js';
+
 export function initNavigation({ root = globalThis.document, getCuratedViewSlug = () => '' } = {}) {
   const menuButton = root?.querySelector('.hamburger, .menu-button');
   const mobileMenu = root?.querySelector('.nav-links, .mobile-menu');
@@ -201,6 +203,213 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     target.addEventListener(type, handler, options);
     cleanup.push(() => target.removeEventListener(type, handler, options));
   };
+
+  // The navbar is its own stacking context, so mix-blend-mode on the nested
+  // logo image cannot reliably see artwork behind the fixed navbar. Instead,
+  // sample the visible backdrop and switch a normalized black/white logo.
+  const logo = root.querySelector('.site-logo');
+  const pageTransition = root.getElementById('pageTransition');
+  let logoFrame = null;
+  let logoBackdropIsVideo = false;
+  let logoMutationObservers = [];
+
+  function parseColor(value) {
+    const match = String(value || '').match(/rgba?\\(\\s*([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:\\s*[,/ ]\\s*([\\d.]+%?))?\\s*\\)/i);
+    if (!match) return null;
+    const alphaRaw = match[4];
+    const alpha = alphaRaw === undefined ? 1
+      : alphaRaw.endsWith('%') ? Number.parseFloat(alphaRaw) / 100
+      : Number.parseFloat(alphaRaw);
+    return {
+      r: Math.max(0, Math.min(255, Number(match[1]))),
+      g: Math.max(0, Math.min(255, Number(match[2]))),
+      b: Math.max(0, Math.min(255, Number(match[3]))),
+      a: Math.max(0, Math.min(1, Number.isFinite(alpha) ? alpha : 1))
+    };
+  }
+
+  function luminanceFromColor(color) {
+    if (!color) return null;
+    const channel = value => {
+      const normalized = value / 255;
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+  }
+
+  function computedBackdropLuminance(element) {
+    for (let current = element; current && current !== root.documentElement; current = current.parentElement) {
+      const background = parseColor(windowRef?.getComputedStyle?.(current)?.backgroundColor);
+      if (!background || background.a <= 0.02) continue;
+      const under = { r: 18, g: 18, b: 18 };
+      const composited = {
+        r: background.r * background.a + under.r * (1 - background.a),
+        g: background.g * background.a + under.g * (1 - background.a),
+        b: background.b * background.a + under.b * (1 - background.a)
+      };
+      return luminanceFromColor(composited);
+    }
+    return luminanceFromColor({ r: 18, g: 18, b: 18 });
+  }
+
+  function containsViewportPoint(element, x, y) {
+    const rect = element?.getBoundingClientRect?.();
+    return Boolean(rect && rect.width > 0 && rect.height > 0 &&
+      x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom);
+  }
+
+  function findMediaAtPoint(target, x, y) {
+    const mediaSelector = 'video, img, canvas, lottie-player';
+    for (let current = target; current && !current.closest?.('.navbar'); current = current.parentElement) {
+      if (current.matches?.(mediaSelector) && containsViewportPoint(current, x, y)) return current;
+    }
+
+    const heroBanner = target?.closest?.('.hero-banner');
+    if (heroBanner) {
+      const activeMedia = heroBanner.querySelector('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player');
+      if (containsViewportPoint(activeMedia, x, y)) return activeMedia;
+    }
+
+    for (let current = target; current && !current.closest?.('.navbar'); current = current.parentElement) {
+      if (!current.querySelector) continue;
+      const media = Array.from(current.querySelectorAll(mediaSelector))
+        .find(candidate => containsViewportPoint(candidate, x, y));
+      if (media) return media;
+      if (current === root.body || current === root.documentElement) break;
+    }
+    return null;
+  }
+
+  function setLogoForeground(luminance) {
+    if (!logo || !Number.isFinite(luminance)) return;
+    const foreground = foregroundForLuminance(luminance) === '#000' ? 'dark' : 'light';
+    if (logo.dataset.logoForeground === foreground) return;
+    logo.dataset.logoForeground = foreground;
+    logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
+  }
+
+  function updateLogoContrast() {
+    if (!logo || !root.elementsFromPoint) return;
+    const rect = logo.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const point = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
+
+    // The loading gate is opaque by design. Keep the default white mark there,
+    // then recalculate as soon as its class/visibility changes.
+    if (pageTransition && pageTransition.dataset.loading !== 'ready' &&
+        !pageTransition.classList.contains('is-hidden')) {
+      logoBackdropIsVideo = false;
+      setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
+      return;
+    }
+
+    const stack = root.elementsFromPoint(point.x, point.y) || [];
+    const backdrop = stack.find(element => {
+      if (!element || element === logo || element.closest?.('.navbar')) return false;
+      if (element.classList?.contains('nav-menu-backdrop')) return true;
+      return !element.closest?.('script, style');
+    });
+    if (!backdrop) {
+      logoBackdropIsVideo = false;
+      setLogoForeground(computedBackdropLuminance(root.body));
+      return;
+    }
+
+    // An open mobile-menu scrim darkens the page beneath the mark; white wins.
+    if (backdrop.classList?.contains('nav-menu-backdrop')) {
+      logoBackdropIsVideo = false;
+      setLogoForeground(0.006);
+      return;
+    }
+
+    const heroSection = backdrop.closest?.('.hero-section');
+    if (heroSection?.classList.contains('hero-section--message')) {
+      // The enabled hero-message mode intentionally darkens the artwork under
+      // its quote; preserve the white mark that the readability overlay supports.
+      logoBackdropIsVideo = false;
+      setLogoForeground(0.02);
+      return;
+    }
+
+    const media = findMediaAtPoint(backdrop, point.x, point.y);
+    if (media && (media.matches?.('img, video, canvas') || media.localName === 'lottie-player')) {
+      logoBackdropIsVideo = media.localName === 'video';
+      const luminance = sampleMediaLuminance(root, media, point);
+      if (Number.isFinite(luminance)) {
+        setLogoForeground(luminance);
+        return;
+      }
+    } else {
+      logoBackdropIsVideo = false;
+    }
+
+    // Transparent layout nodes are common around cards and sections. Walk up
+    // their ancestry for a real background instead of guessing from the node.
+    setLogoForeground(computedBackdropLuminance(backdrop));
+  }
+
+  function scheduleLogoContrast() {
+    if (!logo || logoFrame !== null) return;
+    if (typeof windowRef?.requestAnimationFrame !== 'function') {
+      updateLogoContrast();
+      return;
+    }
+    logoFrame = windowRef.requestAnimationFrame(() => {
+      logoFrame = null;
+      updateLogoContrast();
+    });
+  }
+
+  if (logo) {
+    logo.dataset.logoForeground = 'light';
+    logo.style.filter = 'brightness(0) invert(1)';
+    bind(windowRef, 'scroll', scheduleLogoContrast, { passive: true });
+    bind(windowRef, 'resize', scheduleLogoContrast, { passive: true });
+    bind(windowRef?.visualViewport, 'resize', scheduleLogoContrast, { passive: true });
+    bind(root, 'load', scheduleLogoContrast, true);
+    bind(root, 'loadeddata', scheduleLogoContrast, true);
+    bind(root, 'playing', scheduleLogoContrast, true);
+    bind(root, 'pointerup', scheduleLogoContrast, true);
+
+    const MutationObserverRef = windowRef?.MutationObserver;
+    if (typeof MutationObserverRef === 'function') {
+      const observe = (target, options) => {
+        if (!target) return;
+        const observer = new MutationObserverRef(scheduleLogoContrast);
+        observer.observe(target, options);
+        logoMutationObservers.push(observer);
+      };
+      observe(root.getElementById('heroBanner'), {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'src', 'style']
+      });
+      observe(root.getElementById('heroBannerAbout'), {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'src', 'style']
+      });
+      observe(root.querySelector('.hero-section'), {
+        attributes: true, attributeFilter: ['class', 'hidden']
+      });
+      observe(pageTransition, {
+        attributes: true, attributeFilter: ['class', 'hidden', 'data-loading', 'aria-hidden']
+      });
+      observe(root.body, {
+        attributes: true, attributeFilter: ['class', 'aria-busy']
+      });
+    }
+
+    const logoVideoTimer = windowRef?.setInterval?.(() => {
+      if (logoBackdropIsVideo) scheduleLogoContrast();
+    }, 900);
+    cleanup.push(() => {
+      if (logoFrame !== null) windowRef?.cancelAnimationFrame?.(logoFrame);
+      logoFrame = null;
+      logoMutationObservers.forEach(observer => observer.disconnect());
+      logoMutationObservers = [];
+      if (logoVideoTimer !== undefined) windowRef?.clearInterval?.(logoVideoTimer);
+    });
+    scheduleLogoContrast();
+  }
 
   bind(menuButton, 'click', toggle);
   mobileMenuLinks.forEach(link => {
