@@ -1563,6 +1563,22 @@ function validateCuratedViewRuntimeContract() {
   }
 }
 
+function validateAboutFirstPaintContract() {
+  const composition = exists('js/app/page-composition.js')
+    ? readText('js/app/page-composition.js')
+    : '';
+  const waitStart = composition.indexOf('await Promise.all([\\n    projectMediaPreloadPromise,');
+  const waitEnd = composition.indexOf('// About-page prefetching and image/logo warm-up', waitStart);
+  if (waitStart < 0 || waitEnd <= waitStart) {
+    err('About first paint: startup media-warm-up boundary could not be verified.');
+    return;
+  }
+  const criticalWait = composition.slice(waitStart, waitEnd);
+  if (criticalWait.includes('aboutAssetPreloadPromise')) {
+    err('About first paint: optional profile/software-logo image preloads must not block the initial transition.');
+  }
+}
+
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
   if (!/let renderVersion = 0;/.test(admin) ||
@@ -1784,6 +1800,7 @@ function validateCmsRegressionContracts() {
 
 validateCuratedViewRuntimeContract();
 validateCuratedViewPresentationContract();
+validateAboutFirstPaintContract();
 validateCmsRegressionContracts();
 validateRuntimeCacheGraph();
 

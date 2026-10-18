@@ -551,12 +551,13 @@ export async function createPortfolioApp({
   // Wait for all local project media before removing the branded loading
   // screen. A Contact hash changes the final scroll target, not which assets
   // are warmed. Each individual preload has its own timeout/error handling.
+  // Profile and software-logo preloads are opportunistic. initAbout already
+  // renders text and visible fallback frames from CMS data; never keep the
+  // first-paint transition open while optional images load from local or remote
+  // sources. The warm-up continues in the background below.
   await Promise.all([
     projectMediaPreloadPromise,
-    projectLottiePlayerPreloadPromise,
-    isAboutPage
-      ? aboutAssetPreloadPromise
-      : Promise.resolve()
+    projectLottiePlayerPreloadPromise
   ]);
 
   // About-page prefetching and image/logo warm-up are non-critical navigation
