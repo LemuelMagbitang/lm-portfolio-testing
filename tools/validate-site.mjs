@@ -1792,6 +1792,19 @@ function validateFilterSoundAndFeedbackContract() {
       !gallery.includes("event.key === 'Home'")) {
     err('Mobile filter behavior: centered changes must settle once, dispatch a cue, support keyboard navigation and respect reduced motion.');
   }
+  const filterHoverStart = css.indexOf('.tab-btn:hover:not(.active):not([aria-pressed="true"])');
+  const filterHoverOpen = css.indexOf('{', filterHoverStart);
+  const filterHoverClose = css.indexOf('}', filterHoverOpen);
+  const filterHoverRule = filterHoverStart >= 0 && filterHoverOpen >= 0 && filterHoverClose > filterHoverOpen
+    ? css.slice(filterHoverOpen + 1, filterHoverClose)
+    : '';
+  if (!filterHoverRule.includes('background: rgba(255, 255, 255, .12)') ||
+      !filterHoverRule.includes('border-color: transparent') ||
+      !filterHoverRule.includes('outline: none') ||
+      !filterHoverRule.includes('box-shadow: none')) {
+    err('Filter tabs: fine-pointer hover must use the neutral gray treatment without an outline, border, or ring.');
+  }
+
   if (!css.includes('.filter-active-indicator') ||
       !css.includes('overscroll-behavior-x: none;') ||
       !css.includes('transform 280ms cubic-bezier(.22, 1, .36, 1)') ||
