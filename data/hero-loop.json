@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "type": "video",
+    "src": "assets/projects/site/banner/hero-reel.mp4",
+    "alt": "hero-reel",
+    "focus": "50% 50%",
+    "zoom": 1,
+    "rotate": 0,
+    "fadeInMs": 1500,
+    "fadeOutMs": 1500
+  }
+]
