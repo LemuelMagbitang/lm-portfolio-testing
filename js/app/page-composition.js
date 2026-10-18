@@ -120,7 +120,7 @@ export async function createPortfolioApp({
     ? import('../data/project-normalizer.js?v=20261010-04')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
-    ? import('../features/gallery/index.js?v=20261018-02').catch(error => {
+    ? import('../features/gallery/index.js?v=20261018-03').catch(error => {
         console.warn('Gallery module failed to load:', error);
         return null;
       })
@@ -318,7 +318,7 @@ export async function createPortfolioApp({
   if (settings.interactionFeedback?.enabled === true &&
       (settings.interactionFeedback.soundEnabled || settings.interactionFeedback.hapticsEnabled)) {
     try {
-      const feedback = await import('../features/interaction-feedback/index.js?v=20261018-02');
+      const feedback = await import('../features/interaction-feedback/index.js?v=20261018-03');
       interactionFeedback = feedback.initInteractionFeedback({
         root, settings: settings.interactionFeedback, resolveAssetUrl: siteAssetUrl
       });

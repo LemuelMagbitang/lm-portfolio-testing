@@ -1739,8 +1739,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
-      !composition.includes("interaction-feedback/index.js?v=20261018-02") ||
-      !composition.includes("gallery/index.js?v=20261018-02") ||
+      !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
+      !composition.includes("gallery/index.js?v=20261018-03") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261018-17') ||
       !works.includes('js/app/page-composition.js?v=20261018-17') ||

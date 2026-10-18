@@ -48,8 +48,8 @@ assert.ok(feedbackSource.includes("root.addEventListener('lm:filter-centered', h
 assert.ok(feedbackSource.includes('typeof nav?.vibrate === \'function\''));
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
-assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-02')"));
-assert.ok(compositionSource.includes("import('../features/gallery/index.js?v=20261018-02')"));
+assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-03')"));
+assert.ok(compositionSource.includes("import('../features/gallery/index.js?v=20261018-03')"));
 
 const explicitMessageToggles = normalizeSiteSettings({ showHeroMessage: false, showFooterMessage: true });
 assert.equal(explicitMessageToggles.showHeroMessage, false, 'CMS can disable the hero message.');
