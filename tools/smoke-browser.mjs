@@ -896,6 +896,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         const quote = hero?.querySelector('.hero-quote');
         const main = document.querySelector('main.works-main');
         const grid = document.querySelector('#portfolioGrid');
+        const portfolioWrapper = document.querySelector('.portfolio-wrapper');
         const logo = document.querySelector('.site-logo');
         const navLogo = document.querySelector('.nav-logo');
         const navbar = document.querySelector('.navbar');
@@ -927,6 +928,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           filterRightInset: (() => { const r = filterRail?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? m.right - r.right : -1; })(),
           filterCenterDelta: (() => { const r = filterRail?.getBoundingClientRect(); const m = main?.getBoundingClientRect(); return r && m ? Math.abs((r.left + r.width / 2) - (m.left + m.width / 2)) : 9999; })(),
           filterHeroGap: (() => { const r = filterRail?.getBoundingClientRect(); return r && heroRect ? r.top - heroRect.bottom : 9999; })(),
+          filterGalleryGap: (() => { const r = filterRail?.getBoundingClientRect(); const g = portfolioWrapper?.getBoundingClientRect(); return r && g ? g.top - r.bottom : 9999; })(),
           filterStripHeight: filterRail?.getBoundingClientRect().height || 0,
           filterTabHeight: activeFilterRect?.height || 0,
           filterTabCenterDeltaX: activeFilterRect && activeFilterTextRect ? Math.abs((activeFilterRect.left + activeFilterRect.width/2)-(activeFilterTextRect.left+activeFilterTextRect.width/2)) : 9999,
@@ -968,14 +970,14 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           layout.filterCenterDelta > 1.5) {
         throw new Error(label + ' ' + viewport.name + ': filter tabs are not centered within balanced page gutters: ' + JSON.stringify(layout));
       }
-      if (Math.abs(layout.filterHeroGap) > 1.5 || layout.filterStripHeight < 44 ||
-          layout.filterStripHeight > 56 || layout.filterTabHeight < 44 ||
+      if (layout.filterHeroGap < 14 || layout.filterGalleryGap < 14 ||
+          layout.filterStripHeight < 44 || layout.filterStripHeight > 56 || layout.filterTabHeight < 44 ||
           layout.filterTabCenterDeltaX > 1.5 || layout.filterTabCenterDeltaY > 1.5) {
-        throw new Error(label + ' ' + viewport.name + ': filters must sit at the hero edge with centered 44–48px targets: ' + JSON.stringify(layout));
+        throw new Error(label + ' ' + viewport.name + ': filters must preserve hero/gallery breathing room and centered 44–48px targets: ' + JSON.stringify(layout));
       }
       if (viewport.name === 'mobile' &&
           (!(String(layout.filterMaskImage).includes('linear-gradient') || String(layout.filterWebkitMaskImage).includes('linear-gradient')) ||
-           layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'pan-x')) {
+           layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'auto')) {
         throw new Error(label + ' mobile: edge fade must preserve horizontal scroll and touch gestures: ' + JSON.stringify(layout));
       }
       if (layout.logoBlendMode !== 'normal' ||
@@ -1772,10 +1774,11 @@ async function assertFilterNavigationResponsive(page, label) {
   await page.waitForTimeout(360);
   const pointerLogo = await page.locator('.nav-logo').evaluate(el => ({
     pointerFocused: el.classList.contains('is-pointer-focused'),
+    focused: el === document.activeElement,
     boxShadow: getComputedStyle(el).boxShadow,
     outlineStyle: getComputedStyle(el).outlineStyle
   }));
-  if (!pointerLogo.pointerFocused || pointerLogo.boxShadow !== 'none' || pointerLogo.outlineStyle !== 'none') {
+  if (pointerLogo.pointerFocused || pointerLogo.focused || pointerLogo.boxShadow !== 'none' || pointerLogo.outlineStyle !== 'none') {
     throw new Error(label + ' pointer activation left the logo ghost focus plate visible: ' + JSON.stringify(pointerLogo));
   }
 }

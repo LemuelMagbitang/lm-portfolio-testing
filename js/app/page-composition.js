@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { initNavigation } from '../features/navigation/index.js?v=20261018-19';
+import { initNavigation } from '../features/navigation/index.js?v=20261018-20';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261013-02';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261018-09';
@@ -120,7 +120,7 @@ export async function createPortfolioApp({
     ? import('../data/project-normalizer.js?v=20261010-04')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
-    ? import('../features/gallery/index.js?v=20261018-04').catch(error => {
+    ? import('../features/gallery/index.js?v=20261018-05').catch(error => {
         console.warn('Gallery module failed to load:', error);
         return null;
       })

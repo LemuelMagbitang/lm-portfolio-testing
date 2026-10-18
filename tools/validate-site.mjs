@@ -1758,22 +1758,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-20") ||
-      !bootstrap.includes("cacheVersion = '20261018-20'") ||
-      !composition.includes("navigation/index.js?v=20261018-19") ||
+  if (!entry.includes("bootstrap.js?v=20261018-21") ||
+      !bootstrap.includes("cacheVersion = '20261018-21'") ||
+      !composition.includes("navigation/index.js?v=20261018-20") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261018-04") ||
+      !composition.includes("gallery/index.js?v=20261018-05") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-20') ||
-      !works.includes('js/app/page-composition.js?v=20261018-20') ||
-      !works.includes('css/style.css?v=20261018-17') ||
-      !works.includes('js/script.js?v=20261018-20') ||
-      !about.includes('style.css?v=20261018-17') ||
-      !about.includes('script.js?v=20261018-20') ||
-      !about.includes('page-composition.js?v=20261018-20')) {
+      !works.includes('js/app/bootstrap.js?v=20261018-21') ||
+      !works.includes('js/app/page-composition.js?v=20261018-21') ||
+      !works.includes('css/style.css?v=20261018-18') ||
+      !works.includes('js/script.js?v=20261018-21') ||
+      !about.includes('style.css?v=20261018-18') ||
+      !about.includes('script.js?v=20261018-21') ||
+      !about.includes('page-composition.js?v=20261018-21')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -1805,6 +1805,12 @@ function validateFilterSoundAndFeedbackContract() {
       !css.includes('.filter-tabs[data-overflow="true"]') ||
       !css.includes('scroll-snap-stop: always') ||
       !css.includes('scroll-snap-type: none') ||
+      !css.includes('-webkit-overflow-scrolling: auto;') ||
+      !gallery.includes("centerFilterButton(nearest, 'auto')") ||
+      !navigation.includes("bind(windowRef, 'pointerup', resetPointerFocus)") ||
+      !navigation.includes('logoLink.blur()') ||
+      !smoke.includes('filterGalleryGap') ||
+      !smoke.includes('layout.filterHeroGap < 14 || layout.filterGalleryGap < 14') ||
       !css.includes('.nav-logo:focus:not(:focus-visible)') ||
       !css.includes('.nav-logo.is-pointer-focused:focus-visible') ||
       !navigation.includes("bind(logoLink, 'pointerdown'") ||

@@ -210,20 +210,49 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   // sample the visible backdrop and switch a normalized black/white logo.
   const logoLink = root.querySelector('.nav-logo');
   if (logoLink) {
-    // Some browsers retain :focus-visible after pointer activation when the
-    // link previously had keyboard focus. Track pointer origin explicitly so
-    // the logo never keeps a ghost focus plate; keyboard input restores the
-    // normal accessible focus ring.
+    // A pointer press can inherit :focus-visible from a previous keyboard
+    // interaction in some browsers. Mark that gesture temporarily, then blur
+    // after click dispatch so the home link cannot keep a ghost focus plate
+    // when same-page navigation is intentionally intercepted.
+    let pointerFocusResetHandle = null;
+    let pointerFocusResetUsesTimer = false;
+    const cancelPointerFocusReset = () => {
+      if (pointerFocusResetHandle === null) return;
+      if (pointerFocusResetUsesTimer) windowRef.clearTimeout(pointerFocusResetHandle);
+      else windowRef.cancelAnimationFrame?.(pointerFocusResetHandle);
+      pointerFocusResetHandle = null;
+    };
+    const resetPointerFocus = () => {
+      cancelPointerFocusReset();
+      const finish = () => {
+        pointerFocusResetHandle = null;
+        if (!logoLink.classList.contains('is-pointer-focused')) return;
+        logoLink.classList.remove('is-pointer-focused');
+        if (root.activeElement === logoLink) logoLink.blur();
+      };
+      if (typeof windowRef.requestAnimationFrame === 'function') {
+        pointerFocusResetUsesTimer = false;
+        pointerFocusResetHandle = windowRef.requestAnimationFrame(finish);
+      } else {
+        pointerFocusResetUsesTimer = true;
+        pointerFocusResetHandle = windowRef.setTimeout(finish, 0);
+      }
+    };
     bind(logoLink, 'pointerdown', event => {
       if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+      cancelPointerFocusReset();
       logoLink.classList.add('is-pointer-focused');
     });
     bind(logoLink, 'blur', () => logoLink.classList.remove('is-pointer-focused'));
+    bind(windowRef, 'pointerup', resetPointerFocus);
+    bind(windowRef, 'pointercancel', resetPointerFocus);
     bind(root, 'keydown', event => {
       if (event.key === 'Tab' || event.key === 'Enter' || event.key === ' ') {
+        cancelPointerFocusReset();
         logoLink.classList.remove('is-pointer-focused');
       }
     }, true);
+    cleanup.push(cancelPointerFocusReset);
   }
 
   const logo = root.querySelector('.site-logo');

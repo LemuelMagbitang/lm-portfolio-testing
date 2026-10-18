@@ -521,7 +521,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  -webkit-overflow-scrolling: touch;
+  /* Native gesture physics + one snap pass; avoid stacking legacy momentum on top. */
+  -webkit-overflow-scrolling: auto;
   scroll-snap-type: x mandatory;
   scroll-behavior: auto;
   overscroll-behavior-x: contain;

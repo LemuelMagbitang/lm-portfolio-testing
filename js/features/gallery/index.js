@@ -329,7 +329,9 @@ export async function initGallery(options = {}) {
     activateFilterButton(nearest, { center: false, updateUrl: true, fromScroll: true });
     updateFilterPager(filterBtns.indexOf(nearest));
 
-    const needsRecentering = center && centerFilterButton(nearest, 'smooth');
+    // Native scroll snapping has already settled the gesture. Correct any residual
+    // sub-pixel drift instantly instead of launching a second smooth glide.
+    const needsRecentering = center && centerFilterButton(nearest, 'auto');
     if (needsRecentering) {
       // Prefer native scrollend; this timer covers engines without that event.
       filterSettleTimer = windowRef.setTimeout(() => {
