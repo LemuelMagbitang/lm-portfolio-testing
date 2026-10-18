@@ -568,6 +568,11 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   opacity: 1;
 }
 
+.filter-active-indicator.is-following-scroll {
+  /* Track the scrolled label without lag; re-enable the pill glide at settle. */
+  transition: none !important;
+}
+
 .filter-tabs .tab-btn {
   position: relative;
   z-index: 1;
