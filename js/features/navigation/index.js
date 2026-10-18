@@ -46,6 +46,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   function syncAria() {
     menuButton.setAttribute('aria-expanded', String(isOpen));
     menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+    syncHamburgerForeground();
   }
 
   function waitForMenuLinkSelection(link) {
@@ -306,6 +307,16 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     })[0] || null;
   }
 
+  function syncHamburgerForeground(preferredForeground = logo?.dataset?.logoForeground || 'light') {
+    // Keep the close mark white while the black full-screen menu is open or
+    // exiting. Only a fully closed menu follows the logo's sampled foreground.
+    const menuIsVisible = mobileMenu.classList.contains('is-open') ||
+      root.body?.classList.contains('menu-open');
+    const resolvedForeground = menuIsVisible ? 'light' : preferredForeground;
+    menuButton.style.setProperty('--hamburger-foreground', resolvedForeground === 'dark' ? '#000' : '#fff');
+    menuButton.dataset.foreground = resolvedForeground;
+  }
+
   function setLogoForeground(luminance) {
     if (!logo || !Number.isFinite(luminance)) return;
     // Hysteresis near the crossover prevents flicker over moving artwork.
@@ -314,9 +325,11 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     if (current === 'dark' && luminance >= 0.145) foreground = 'dark';
     else if (current === 'light' && luminance <= 0.215) foreground = 'light';
     else foreground = foregroundForLuminance(luminance) === '#000' ? 'dark' : 'light';
-    if (current === foreground) return;
-    logo.dataset.logoForeground = foreground;
-    logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
+    if (current !== foreground) {
+      logo.dataset.logoForeground = foreground;
+      logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
+    }
+    syncHamburgerForeground(foreground);
   }
 
   function setLogoFallbackForeground(luminance = 0.02) {

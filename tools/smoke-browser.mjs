@@ -263,15 +263,16 @@ async function assertNavigationLabelsCentered(page, label) {
   const states = await page.locator('.nav-links a[href]').evaluateAll(anchors => anchors.map(anchor => {
     const style = getComputedStyle(anchor);
     const pill = anchor.getBoundingClientRect();
-    const labelBox = anchor.querySelector('.nav-link-label')?.getBoundingClientRect();
+    const labelElement = anchor.querySelector('.nav-link-label');
+    const labelBox = labelElement?.getBoundingClientRect();
     const range = document.createRange();
-    range.selectNodeContents(anchor);
+    range.selectNodeContents(labelElement || anchor);
     const text = range.getBoundingClientRect();
     return {
       label: (anchor.textContent || '').trim(),
       display: style.display,
       alignItems: style.alignItems,
-      justifyItems: style.justifyItems,
+      justifyContent: style.justifyContent,
       textAlign: style.textAlign,
       boxSizing: style.boxSizing,
       labelBoxDeltaX: labelBox ? Math.abs((labelBox.left + labelBox.width / 2) - (pill.left + pill.width / 2)) : Infinity,
@@ -280,10 +281,10 @@ async function assertNavigationLabelsCentered(page, label) {
       textDeltaY: Math.abs((text.top + text.height / 2) - (pill.top + pill.height / 2))
     };
   }));
-  if (!states.length || states.some(state =>
-    state.display !== 'grid' ||
+  if (states.length !== 3 || states.some(state =>
+    state.display !== 'flex' ||
     state.alignItems !== 'center' ||
-    state.justifyItems !== 'center' ||
+    state.justifyContent !== 'center' ||
     state.textAlign !== 'center' ||
     state.boxSizing !== 'border-box' ||
     state.labelBoxDeltaX > 1.5 ||
@@ -291,7 +292,61 @@ async function assertNavigationLabelsCentered(page, label) {
     state.textDeltaX > 1.5 ||
     state.textDeltaY > 1.5
   )) {
-    throw new Error(label + ' navigation label box or visible text is not centered within its pill: ' + JSON.stringify(states));
+    throw new Error(label + ' navigation label box or rendered text is not centered within its pill: ' + JSON.stringify(states));
+  }
+}
+
+async function assertHamburgerForeground(page, label, menuState = 'closed') {
+  await page.waitForTimeout(40);
+  const state = await page.evaluate(() => {
+    const logo = document.querySelector('.site-logo');
+    const button = document.querySelector('.hamburger');
+    const bars = Array.from(button?.querySelectorAll('.hamburger-icon span') || []);
+    return {
+      menuOpen: document.body.classList.contains('menu-open'),
+      logoForeground: logo?.dataset?.logoForeground || '',
+      hamburgerForeground: button?.dataset?.foreground || '',
+      buttonBackground: button ? getComputedStyle(button).backgroundColor : '',
+      buttonBlendMode: button ? getComputedStyle(button).mixBlendMode : '',
+      barColors: bars.map(bar => getComputedStyle(bar).backgroundColor),
+      barBlendModes: bars.map(bar => getComputedStyle(bar).mixBlendMode)
+    };
+  });
+  const expectedForeground = menuState === 'open' ? 'light' : state.logoForeground;
+  const expectedColor = expectedForeground === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
+  if (state.menuOpen !== (menuState === 'open') ||
+      !['light', 'dark'].includes(state.logoForeground) ||
+      state.hamburgerForeground !== expectedForeground ||
+      state.buttonBackground !== 'rgba(0, 0, 0, 0)' ||
+      state.buttonBlendMode !== 'normal' ||
+      state.barColors.length !== 3 ||
+      state.barColors.some(color => color !== expectedColor) ||
+      state.barBlendModes.some(mode => mode !== 'normal')) {
+    throw new Error(label + ' hamburger foreground must match the logo only while closed and remain white on the open black menu: ' + JSON.stringify(state));
+  }
+}
+
+async function assertNavigationAcrossViewports(page, label) {
+  const original = page.viewportSize() || { width: 1280, height: 900 };
+  const sizes = [
+    { width: 320, height: 740 }, { width: 360, height: 800 },
+    { width: 390, height: 844 }, { width: 600, height: 900 },
+    { width: 767, height: 900 }, { width: 768, height: 900 },
+    { width: 820, height: 1024 }, { width: 1024, height: 768 },
+    { width: 1099, height: 900 }, { width: 1100, height: 900 },
+    { width: 1280, height: 900 }, { width: 1440, height: 900 },
+    { width: 1920, height: 1080 }
+  ];
+  try {
+    for (const size of sizes) {
+      await page.setViewportSize(size);
+      await page.waitForTimeout(70);
+      await assertNavigationLabelsCentered(page, label + ' ' + size.width + 'px');
+      await assertHamburgerForeground(page, label + ' ' + size.width + 'px closed menu', 'closed');
+    }
+  } finally {
+    await page.setViewportSize(original);
+    await page.waitForTimeout(80);
   }
 }
 
@@ -389,7 +444,7 @@ async function assertPublicNavigation(page, { href, label }) {
         color: style.color,
         display: style.display,
         alignItems: style.alignItems,
-        justifyItems: style.justifyItems,
+        justifyContent: style.justifyContent,
         textAlign: style.textAlign,
         boxSizing: style.boxSizing,
         centerDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
@@ -416,6 +471,9 @@ async function assertPublicNavigation(page, { href, label }) {
       hamburgerWidth: hamburgerStyle?.width || '',
       hamburgerHeight: hamburgerStyle?.height || '',
       hamburgerIconBlendModes,
+      hamburgerForeground: hamburger?.dataset?.foreground || '',
+      hamburgerIconColors: Array.from(hamburger?.querySelectorAll('.hamburger-icon span') || [])
+        .map(span => getComputedStyle(span).backgroundColor),
       labels: links.map(link => link.label),
       links,
       dropdownCount: menu?.querySelectorAll('.nav-dropdown-menu, .nav-item-dropdown, .nav-dropdown-toggle').length || 0,
@@ -424,8 +482,10 @@ async function assertPublicNavigation(page, { href, label }) {
       viewportWidth: window.innerWidth
     };
   });
-  if ((page.viewportSize()?.width || 0) >= 768) {
-    await assertNavigationLabelsCentered(page, label + ' default navigation state');
+  await assertNavigationLabelsCentered(page, label + ' default navigation state');
+  await assertHamburgerForeground(page, label + ' default hamburger state', navContract.mobileMenuOpen ? 'open' : 'closed');
+  if (label === 'Desktop Works') {
+    await assertNavigationAcrossViewports(page, label + ' responsive geometry');
   }
 
   const contrastRatio = (foreground, background) => {
@@ -466,17 +526,21 @@ async function assertPublicNavigation(page, { href, label }) {
     (navContract.logoForeground === 'dark' && navContract.logoFilter.includes('invert')) ||
     (navContract.logoForeground === 'light' && !navContract.logoFilter.includes('invert')) ||
     navContract.hamburgerBlendMode !== 'normal' ||
-    navContract.hamburgerBackground !== 'rgb(255, 255, 255)' ||
+    navContract.hamburgerBackground !== 'rgba(0, 0, 0, 0)' ||
     navContract.hamburgerBackdropFilter !== 'none' ||
     navContract.hamburgerWidth !== '38px' ||
     navContract.hamburgerHeight !== '38px' ||
-    JSON.stringify(navContract.hamburgerIconBlendModes) !== JSON.stringify(['difference', 'difference', 'difference']) ||
+    navContract.hamburgerForeground !== (navContract.mobileMenuOpen ? 'light' : navContract.logoForeground) ||
+    navContract.hamburgerIconColors.some(color =>
+      color !== ((navContract.mobileMenuOpen ? 'light' : navContract.logoForeground) === 'dark'
+        ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)')) ||
+    JSON.stringify(navContract.hamburgerIconBlendModes) !== JSON.stringify(['normal', 'normal', 'normal']) ||
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
     navContract.links.some(link =>
-      link.display !== 'grid' ||
+      link.display !== 'flex' ||
       link.alignItems !== 'center' ||
-      link.justifyItems !== 'center' ||
+      link.justifyContent !== 'center' ||
       link.textAlign !== 'center' ||
       link.boxSizing !== 'border-box' ||
       ((navContract.viewportWidth >= 768 || navContract.mobileMenuOpen) &&
@@ -572,6 +636,7 @@ async function assertPublicNavigation(page, { href, label }) {
         document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
     await assertNavigationLabelsCentered(page, label + ' mobile open-menu state');
+    await assertHamburgerForeground(page, label + ' mobile open-menu state', 'open');
     await assertNoLogoBackingPlate(page, label + ' mobile open-menu state');
     if (supportsHover) await page.mouse.move(0, 0);
     const reducedMotionPreference = await page.evaluate(() =>
@@ -662,6 +727,7 @@ async function assertPublicNavigation(page, { href, label }) {
         !document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
     await assertNavigationLabelsCentered(page, label + ' mobile closed-menu state');
+    await assertHamburgerForeground(page, label + ' mobile closed-menu state', 'closed');
     await assertNoLogoBackingPlate(page, label + ' mobile closed-menu state');
     await hamburger.click();
     await page.waitForFunction(() => {

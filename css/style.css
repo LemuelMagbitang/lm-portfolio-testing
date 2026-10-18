@@ -90,8 +90,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .nav-links a {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   text-align: center;
   min-height: 42px;
@@ -104,7 +105,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   font-size: 0.78rem;
   font-weight: 650;
   letter-spacing: 0.08em;
-  line-height: 1;
+  line-height: 1.2;
   text-transform: uppercase;
   white-space: nowrap;
   transition: color 0.22s ease, background-color 0.22s ease;
@@ -124,13 +125,17 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .nav-link-label {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 auto;
   width: max-content;
   max-width: 100%;
   min-width: 0;
+  min-height: 1.2em;
   margin: 0;
   padding: 0;
-  line-height: 1;
+  line-height: 1.2;
   text-align: center;
 }
 
@@ -165,9 +170,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #fff;
+  color: var(--hamburger-foreground, #fff);
   cursor: pointer;
-  mix-blend-mode: difference;
+  mix-blend-mode: normal;
 }
 
 .hamburger-icon {
@@ -185,9 +190,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   width: 20px;
   height: 2.5px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--hamburger-foreground, #fff);
   transform-origin: center;
-  transition: top .22s ease, transform .22s ease, opacity .14s ease;
+  transition: top .22s ease, transform .22s ease, opacity .14s ease, background-color .22s ease;
 }
 
 .hamburger-icon span:nth-child(1) { top: 3px; }
@@ -5697,10 +5702,8 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
 /* ============================================================
    FINAL NAVIGATION CONTRAST + FULL-SCREEN MOBILE MENU
    ============================================================ */
-.site-logo,
-.hamburger {
-  mix-blend-mode: difference;
-}
+/* Logo and hamburger foregrounds come from sampled contrast state; avoid
+   difference blending inside the navbar stacking context. */
 
 @media (max-width: 767px) {
   body.menu-open {
@@ -5836,34 +5839,35 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
 }
 
 /* ============================================================
-   HAMBURGER CONTRAST SURFACE + HOVER DELTA
+   HAMBURGER FOREGROUND + TRANSPARENT HIT TARGET
    ============================================================
-   Keep the control minimal and glass-free to match the transparent,
-   artwork-led header. A solid white hit surface gives the difference-blended
-   strokes a predictable high-contrast backdrop; hover/press invert it to black.
+   The button remains a 38px transparent hit target. Closed-state strokes use
+   the same sampled black/white foreground as the logo; the open-menu rule
+   keeps the close mark white on the black full-screen surface.
 */
 .hamburger {
-  background: #fff;
+  background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   mix-blend-mode: normal;
-  transition: background-color .22s ease, transform .22s cubic-bezier(.22, 1, .36, 1);
+  transition: transform .22s cubic-bezier(.22, 1, .36, 1);
 }
 
 .hamburger-icon span {
   width: 20px;
   height: 2.5px;
-  mix-blend-mode: difference;
+  background: var(--hamburger-foreground, #fff);
+  mix-blend-mode: normal;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .hamburger:hover {
-    background: #000;
+    background: transparent;
   }
 }
 
 .hamburger:active {
-  background: #000;
+  background: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5873,14 +5877,19 @@ body.is-curated-view-empty #showMoreWrapper { display: none !important; }
   }
 }
 
-/* Match the native-button reset specificity so the solid surface wins. */
+/* Keep the native button reset transparent so the glyph can sample the page. */
 button.hamburger {
   width: 38px;
   min-width: 38px;
   height: 38px;
-  background: #fff;
+  background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+
+/* Preserve the white close mark throughout menu opening and exit animation. */
+body.menu-open .hamburger-icon span {
+  background: #fff;
 }
 
 

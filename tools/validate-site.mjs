@@ -1342,17 +1342,22 @@ function validateBootstrapHardening() {
   if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
       !/filter:\s*brightness\(0\) invert\(1\)/.test(logoRule) ||
       !/mix-blend-mode\s*:\s*normal/.test(logoRule) ||
-      !/background:\s*#fff/.test(hamburgerButtonRule) ||
+      !/background:\s*transparent/.test(hamburgerButtonRule) ||
       !/mix-blend-mode\s*:\s*normal/.test(hamburgerRule) ||
       !/backdrop-filter:\s*none/.test(hamburgerButtonRule) ||
       !/width:\s*38px/.test(hamburgerButtonRule) ||
       !/min-width:\s*38px/.test(hamburgerButtonRule) ||
       !/height:\s*38px/.test(hamburgerButtonRule) ||
       navigationCss.includes('.navbar::before') ||
-      !/mix-blend-mode\s*:\s*difference/.test(hamburgerIconRule) ||
+      !/mix-blend-mode\s*:\s*normal/.test(hamburgerIconRule) ||
+      !/background:\s*var\(--hamburger-foreground,\s*#fff\)/.test(hamburgerIconRule) ||
       !/height:\s*2\.5px/.test(hamburgerIconRule) ||
-      !/background:\s*#000/.test(hamburgerHoverRule) ||
-      !/background:\s*#000/.test(hamburgerPressRule) ||
+      !/background:\s*transparent/.test(hamburgerHoverRule) ||
+      !/background:\s*transparent/.test(hamburgerPressRule) ||
+      !/body\.menu-open \.hamburger-icon span\s*\{[^}]*background:\s*#fff/s.test(navigationCss) ||
+      !/function syncHamburgerForeground/.test(navigation) ||
+      !/menuButton\.dataset\.foreground = resolvedForeground/.test(navigation) ||
+      !/menuButton\.style\.setProperty\('--hamburger-foreground'/.test(navigation) ||
       !/border-radius\s*:\s*999px/.test(pillRule) ||
       !/border:\s*0/.test(pillRule) ||
       /border-color\s*:/.test(pillRule + activePillRule + hoverPillRule) ||
@@ -1611,13 +1616,17 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   const navigationPillRule = (css.match(/\.nav-links a\s*\{([^}]*)\}/) || [])[1] || '';
   const navigationLabelRule = (css.match(/\.nav-link-label\s*\{([^}]*)\}/) || [])[1] || '';
-  if (!/display:\s*grid/.test(navigationPillRule) ||
-      !/place-items:\s*center/.test(navigationPillRule) ||
+  if (!/display:\s*flex/.test(navigationPillRule) ||
+      !/align-items:\s*center/.test(navigationPillRule) ||
+      !/justify-content:\s*center/.test(navigationPillRule) ||
       !/text-align:\s*center/.test(navigationPillRule) ||
       !/box-sizing:\s*border-box/.test(navigationPillRule) ||
-      !/display:\s*block/.test(navigationLabelRule) ||
+      !/display:\s*inline-flex/.test(navigationLabelRule) ||
+      !/align-items:\s*center/.test(navigationLabelRule) ||
+      !/justify-content:\s*center/.test(navigationLabelRule) ||
       !/width:\s*max-content/.test(navigationLabelRule) ||
-      !/line-height:\s*1/.test(navigationLabelRule)) {
+      !/min-height:\s*1\.2em/.test(navigationLabelRule) ||
+      !/line-height:\s*1\.2/.test(navigationLabelRule)) {
     err('Navigation pills: explicit content-sized label boxes must remain mathematically centered without manual offsets.');
   }
 
