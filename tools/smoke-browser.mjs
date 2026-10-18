@@ -2117,13 +2117,30 @@ try {
         throw new Error('Hero/footer messages did not choose new random entries after refresh: ' + JSON.stringify({ first, refreshed }));
       }
       await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled');
+      await page.waitForFunction(() => {
+        const stage = document.getElementById('footerAnimation');
+        return stage &&
+          stage.style.getPropertyValue('--footer-kenburns-from') &&
+          stage.style.getPropertyValue('--footer-kenburns-to') &&
+          stage.style.getPropertyValue('--footer-kenburns-duration');
+      }, null, { timeout: 5000 });
+      const footerTiming = await page.locator('#footerAnimation').evaluate(stage => ({
+        from: Number(stage.style.getPropertyValue('--footer-kenburns-from')),
+        to: Number(stage.style.getPropertyValue('--footer-kenburns-to')),
+        duration: stage.style.getPropertyValue('--footer-kenburns-duration')
+      }));
+      if (Math.abs(footerTiming.from - 1.23) > 0.001 ||
+          Math.abs(footerTiming.to - 1.34) > 0.001 ||
+          footerTiming.duration !== '8s') {
+        throw new Error('CMS heroTiming Ken Burns values were not synchronized into the footer renderer: ' + JSON.stringify(footerTiming));
+      }
     }, { width: 1280, height: 900 }, async page => {
       await page.route('**/data/settings.json*', async route => {
         const response = await route.fetch();
         const settings = await response.json();
         settings.showHeroMessage = true;
         settings.showFooterMessage = true;
-        settings.heroTiming = { ...(settings.heroTiming || {}), autoRotateMs: 650 };
+        settings.heroTiming = { ...(settings.heroTiming || {}), autoRotateMs: 650, kenBurnsFromScale: 1.23, kenBurnsToScale: 1.34, kenBurnsDurationS: 8 };
         await route.fulfill({ response, body: JSON.stringify(settings) });
       });
     });
