@@ -1627,7 +1627,7 @@ async function assertFilterNavigationResponsive(page, label) {
       const active = buttons.find(button => button.classList.contains('active'));
       const activeRect = active?.getBoundingClientRect();
       const activeStyle = active ? getComputedStyle(active) : null;
-      const indicator = content?.querySelector('.filter-active-indicator');
+      const indicator = viewport?.querySelector('.filter-active-indicator');
       const indicatorRect = indicator?.getBoundingClientRect();
       const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
       const scrollerStyle = scroller ? getComputedStyle(scroller) : null;
@@ -1891,7 +1891,7 @@ async function assertFilterNavigationResponsive(page, label) {
       const scroller = document.querySelector('.filter-nav-scroller');
       const content = scroller?.querySelector('.filter-nav-content');
       const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
-      const indicator = content?.querySelector('.filter-active-indicator');
+      const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
       if (!active || !indicator || active.dataset.filter !== expectedFilter ||
           active.getAttribute('aria-pressed') !== 'true' || !indicator.classList.contains('is-ready')) return false;
       const a = active.getBoundingClientRect();
