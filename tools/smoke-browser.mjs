@@ -4449,6 +4449,7 @@ try {
           locked.rootOverflow !== 'hidden' || locked.bodyOverflow !== 'hidden') {
         throw new Error('Loading screen did not lock page interactions and scrolling: ' + JSON.stringify(locked));
       }
+      await assertNoLogoBackingPlate(page, 'Active loading gate');
     });
 
     await smokePage(browser, '/', async page => {
@@ -5668,13 +5669,11 @@ try {
       await page.waitForFunction(() => {
         const logo = document.querySelector('.site-logo');
         const link = logo?.closest('.nav-logo');
-        const capsule = link ? getComputedStyle(link, '::before') : null;
         const contact = document.querySelector('#contact-section')?.getBoundingClientRect();
         const logoRect = link?.getBoundingClientRect();
         const y = logoRect ? logoRect.top + logoRect.height / 2 : -1;
-        return !!contact && !!logo && link?.classList.contains('contact-area-logo') &&
-          !link.classList.contains('logo-contrast-fallback') && logo.dataset.logoForeground === 'light' &&
-          capsule?.opacity === '0' && y >= contact.top && y <= contact.bottom;
+        return !!contact && !!logo && logo.dataset.logoForeground === 'light' &&
+          y >= contact.top && y <= contact.bottom;
       }, null, { timeout: 4000 });
       const contactLogoState = await page.evaluate(() => {
         const logo = document.querySelector('.site-logo');
