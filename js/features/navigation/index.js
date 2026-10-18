@@ -381,7 +381,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
 
     const style = windowRef?.getComputedStyle?.(backdrop);
-    const color = parseColor(style?.backgroundColor);
+    const backdropColor = parseColor(style?.backgroundColor);
     const isHeroMediaContainer = Boolean(backdrop.matches?.('.hero-banner, .slide') || backdrop.closest?.('.hero-banner'));
     let media = isVisibleMediaAtPoint(backdrop, point.x, point.y) ? backdrop : null;
     if (!media && isHeroMediaContainer) {
@@ -390,12 +390,12 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       media = Array.from(active).find(candidate => isVisibleMediaAtPoint(candidate, point.x, point.y)) || null;
     }
     // The opaque fill of a hero container is behind the artwork; other opaque overlays are not.
-    if (!media && !isHeroMediaContainer && color && color.a >= 0.98) {
+    if (!media && !isHeroMediaContainer && backdropColor && backdropColor.a >= 0.98) {
       setVideoBackdropState(false);
       setLogoForeground(computedBackdropLuminance(backdrop));
       return;
     }
-    if (!media && color && color.a > 0.02 && color.a < 0.98) {
+    if (!media && backdropColor && backdropColor.a > 0.02 && backdropColor.a < 0.98) {
       setLogoContrastFallback();
       return;
     }

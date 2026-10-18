@@ -1662,7 +1662,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('const backdropColor = parseColor(') ||
       !navigation.includes("bind(windowRef, 'scroll', scheduleLogoContrast") ||
       !navigation.includes("bind(root, 'loadeddata', scheduleLogoContrast")) {
-    err('Adaptive logo runtime: media sampling, state updates, scrolling, or DOM-state observation are not fully connected.');
+    err('Adaptive logo runtime: active-media sampling, fallback surface, state updates, and DOM-state observation must remain connected.');
   }
 
   if (!hero.includes('if (!slides.length) return () => {};') ||
