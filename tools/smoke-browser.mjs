@@ -1627,7 +1627,9 @@ async function assertFilterNavigationResponsive(page, label) {
       const active = buttons.find(button => button.classList.contains('active'));
       const activeRect = active?.getBoundingClientRect();
       const activeStyle = active ? getComputedStyle(active) : null;
-      const activeMarker = active ? getComputedStyle(active, '::before').content : '';
+      const indicator = content?.querySelector('.filter-active-indicator');
+      const indicatorRect = indicator?.getBoundingClientRect();
+      const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
       const scrollerStyle = scroller ? getComputedStyle(scroller) : null;
       const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
       return {
@@ -1655,7 +1657,18 @@ async function assertFilterNavigationResponsive(page, label) {
         ariaPressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
         activeRadius: Number.parseFloat(activeStyle?.borderTopLeftRadius || '0') || 0,
         activeBackground: activeStyle?.backgroundColor || '',
-        activeMarker,
+        indicatorExists: !!indicator,
+        indicatorReady: indicator?.classList.contains('is-ready') || false,
+        indicatorBackground: indicatorStyle?.backgroundColor || '',
+        indicatorRadius: Number.parseFloat(indicatorStyle?.borderTopLeftRadius || '0') || 0,
+        indicatorWidthDelta: activeRect && indicatorRect ? Math.abs(activeRect.width - indicatorRect.width) : Infinity,
+        indicatorCenterDelta: activeRect && indicatorRect ? Math.abs(
+          (activeRect.left + activeRect.width / 2) - (indicatorRect.left + indicatorRect.width / 2)
+        ) : Infinity,
+        indicatorCenterDeltaY: activeRect && indicatorRect ? Math.abs(
+          (activeRect.top + activeRect.height / 2) - (indicatorRect.top + indicatorRect.height / 2)
+        ) : Infinity,
+        indicatorTransition: indicatorStyle?.transitionProperty || '',
         documentWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth
       };
     });
@@ -1671,11 +1684,13 @@ async function assertFilterNavigationResponsive(page, label) {
         state.paddingTop < 14 || state.paddingBottom < 14) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    if (state.ariaPressedCount !== 1 || state.activeRadius < 20 ||
-        !state.activeMarker.includes('✓') ||
-        state.activeBackground === 'rgba(0, 0, 0, 0)' ||
-        state.activeBackground === 'transparent') {
-      throw new Error(label + ' accessible pill state or non-colour active marker failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    if (state.ariaPressedCount !== 1 || !state.indicatorExists || !state.indicatorReady ||
+        state.indicatorBackground !== 'rgb(242, 242, 242)' || state.indicatorRadius < 20 ||
+        state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
+        !state.indicatorTransition.includes('transform') ||
+        state.activeBackground !== 'rgba(0, 0, 0, 0)' &&
+        state.activeBackground !== 'transparent') {
+      throw new Error(label + ' accessible sliding-pill state or marker-free button contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.documentWidth > state.viewportWidth + 1) {
       throw new Error(label + ' filter navigation introduced document-level horizontal overflow at ' + viewport.width + 'px: ' + JSON.stringify(state));
@@ -1861,6 +1876,45 @@ async function assertFilterNavigationResponsive(page, label) {
 
   if (!testedCenteredSelection || !testedMouseDrag) {
     throw new Error(label + ' missed centered selection or mouse-drag interaction checks.');
+  }
+
+  // Exercise every filter with the moving indicator at desktop width. The row
+  // stays centered as a group; only the gray indicator follows selection.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForTimeout(160);
+  const filterOptions = page.locator('.filter-nav-scroller [data-filter]');
+  const filterOptionCount = await filterOptions.count();
+  for (let i = 0; i < filterOptionCount; i += 1) {
+    const option = filterOptions.nth(i);
+    await option.click();
+    await page.waitForFunction(expectedFilter => {
+      const scroller = document.querySelector('.filter-nav-scroller');
+      const content = scroller?.querySelector('.filter-nav-content');
+      const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+      const indicator = content?.querySelector('.filter-active-indicator');
+      if (!active || !indicator || active.dataset.filter !== expectedFilter ||
+          active.getAttribute('aria-pressed') !== 'true' || !indicator.classList.contains('is-ready')) return false;
+      const a = active.getBoundingClientRect();
+      const b = indicator.getBoundingClientRect();
+      return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
+        Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
+        Math.abs(a.width - b.width) <= 1;
+    }, await option.getAttribute('data-filter'), { timeout: 1800 });
+  }
+
+  // Desktop hover stays in the existing gray palette; no hover border/ring.
+  const hoverTarget = page.locator('.filter-nav-scroller [data-filter]:not(.active)').first();
+  await hoverTarget.hover();
+  const hoverStyle = await hoverTarget.evaluate(el => ({
+    background: getComputedStyle(el).backgroundColor,
+    borderColor: getComputedStyle(el).borderTopColor,
+    outline: getComputedStyle(el).outlineStyle,
+    shadow: getComputedStyle(el).boxShadow
+  }));
+  if (hoverStyle.outline !== 'none' || hoverStyle.shadow !== 'none' ||
+      hoverStyle.borderColor !== 'rgba(0, 0, 0, 0)' ||
+      !/^rgba\(255, 255, 255, 0\.12\)$/.test(hoverStyle.background)) {
+    throw new Error(label + ' desktop filter hover added an outline or left the gray hover palette: ' + JSON.stringify(hoverStyle));
   }
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
