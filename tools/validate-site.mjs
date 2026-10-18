@@ -1735,7 +1735,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   if (!entry.includes("bootstrap.js?v=20261018-17") ||
       !bootstrap.includes("cacheVersion = '20261018-17'") ||
-      !composition.includes("navigation/index.js?v=20261018-17") ||
+      !composition.includes("navigation/index.js?v=20261018-16") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
