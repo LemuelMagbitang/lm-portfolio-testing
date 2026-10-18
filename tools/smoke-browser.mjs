@@ -5471,10 +5471,11 @@ try {
       const logoReset = await page.evaluate(() => ({
         scrollY: window.scrollY,
         hash: window.location.hash,
-        path: window.location.pathname
+        path: window.location.pathname,
+        unloads: window.__lmSmokeUnloadCount
       }));
       if (Math.abs(logoReset.scrollY) > 8) {
-        throw new Error('Main-page LM logo navigation did not return to the top without reloading.');
+        throw new Error('Main-page LM logo navigation did not return to the top without reloading: ' + JSON.stringify(logoReset));
       }
       if (logoReset.hash !== '') {
         throw new Error('Main-page LM logo navigation did not clear the Contact/filter hash: ' + logoReset.hash);
@@ -6607,6 +6608,12 @@ try {
       }
 
       if (await hero.count() !== 1) throw new Error('About page hero container is missing.');
+      await page.waitForFunction(() =>
+        Boolean(document.querySelector('.about-hero .hero-banner')) &&
+        document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+        null,
+        { timeout: 2500 }
+      );
 
       const aboutSocialGeometry = await page.evaluate(() => {
         const row = document.querySelector('.about-social-icons');
