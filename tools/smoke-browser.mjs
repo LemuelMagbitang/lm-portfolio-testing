@@ -1757,15 +1757,14 @@ async function assertFilterNavigationResponsive(page, label) {
   // Keyboard focus must be visible; pointer activation must not leave a ghost plate.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.waitForTimeout(180);
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  });
-  let logoFocusedByKeyboard = false;
-  for (let index = 0; index < 10; index += 1) {
-    await page.keyboard.press('Tab');
-    logoFocusedByKeyboard = await page.locator('.nav-logo').evaluate(el => el === document.activeElement);
-    if (logoFocusedByKeyboard) break;
-  }
+  // Start on the immediately following navigation link, then traverse backward
+  // with the keyboard. This tests real keyboard-origin :focus-visible without
+  // depending on Chromium's previous sequential-focus starting point after blur.
+  const firstNavLink = page.locator('.nav-links a[href]').first();
+  await firstNavLink.focus();
+  await page.keyboard.press('Shift+Tab');
+  const logoFocusedByKeyboard = await page.locator('.nav-logo')
+    .evaluate(el => el === document.activeElement);
   const keyboardLogo = await page.locator('.nav-logo').evaluate(el => ({
     focused: el === document.activeElement,
     focusVisible: el.matches(':focus-visible'),
@@ -6737,18 +6736,25 @@ try {
       await page.waitForTimeout(60);
       const restoredMobileFilterMode = await filterRail.evaluate(el => {
         const style = getComputedStyle(el);
+        const contentStyle = getComputedStyle(el.querySelector('.filter-nav-content'));
         return {
-          flexWrap: style.flexWrap,
+          contentDisplay: contentStyle.display,
+          contentFlexWrap: contentStyle.flexWrap,
           overflowX: style.overflowX,
           inert: el.inert,
-          pointerEvents: style.pointerEvents
+          pointerEvents: style.pointerEvents,
+          dataOverflow: el.dataset.overflow === 'true',
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth
         };
       });
       if (
-        restoredMobileFilterMode.flexWrap !== 'nowrap' ||
+        restoredMobileFilterMode.contentDisplay !== 'flex' ||
+        restoredMobileFilterMode.contentFlexWrap !== 'nowrap' ||
         restoredMobileFilterMode.overflowX !== 'auto' ||
         restoredMobileFilterMode.inert ||
-        restoredMobileFilterMode.pointerEvents === 'none'
+        restoredMobileFilterMode.pointerEvents === 'none' ||
+        (restoredMobileFilterMode.dataOverflow && restoredMobileFilterMode.scrollWidth <= restoredMobileFilterMode.clientWidth + 1)
       ) {
         throw new Error(
           'Filter rail did not restore a directly interactive mobile carousel after a breakpoint round-trip: ' +
