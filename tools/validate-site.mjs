@@ -751,9 +751,9 @@ function validateAdminConnectionSecurity() {
     ['Media deletion scans docs and common source/config files', /md\|mdx\|txt\|ya\?ml\|toml\|ts\|tsx\|jsx\|vue\|svelte/],
     ['Encoded-path checking remains isolated from rename writes', /if\(scanOnly\)\{\s*if\(mediaSourceReferencesPath\(record\.current\.text,oldPath,isFolder\)\)matched\.push\(\{\.\.\.record,next:record\.current\.text\}\);\s*continue;\s*\}\s*const next=replaceMediaPathReferences\(record\.current\.text,oldPath,newPath,isFolder\)/],
     ['Media deletion uses a guarded tree commit', /await ghCommitTreeEntries\(\[\{path:item\.path,mode:source\.mode\|\|'100644',type:'blob',sha:null\}\],[\s\S]*?parentSha\)/],
-    ['CMS deployment status reads actual workflow-run metadata', /async getWorkflowRuns\(sha\)/],
-    ['CMS deployment status selects the Pages workflow explicitly', /workflowRuns\s*\.filter\(run\s*=>\s*\/\^pages build and deployment\$\/i\.test\(run\.name\s*\|\|\s*''\)\)/],
-    ['CMS distinguishes a live deployment from a failed validation run', /Live on site — validation failed/],
+    ['CMS deployment status uses the documented Checks API permission', /async getCheckRuns\(sha\)/],
+    ['CMS deployment status selects Pages checks by exact job name', /latestNamedCheck\(checks, 'build'\)[\s\S]*?latestNamedCheck\(checks, 'deploy'\)[\s\S]*?latestNamedCheck\(checks, 'validate'\)/],
+    ['CMS does not treat validation failure as a Pages deployment failure', /Live on site — validation failed/],
     ['CMS tracks the latest branch head when deployments are superseded', /branchHead\s*=\s*await GH\.getBranchHead\(\)/],
   ];
 
