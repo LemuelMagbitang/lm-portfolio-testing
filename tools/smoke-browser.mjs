@@ -1885,12 +1885,12 @@ async function assertFilterNavigationResponsive(page, label) {
     return {
       isFilter: !!focused?.matches?.('.filter-nav-scroller [data-filter]'),
       focusVisible: !!focused?.matches?.(':focus-visible'),
-      outlineStyle: focused ? getComputedStyle(focused).outlineStyle : 'none',
+      focusRing: focused ? getComputedStyle(focused).boxShadow : 'none',
       pressedCount: document.querySelectorAll('.filter-nav-scroller [aria-pressed="true"]').length
     };
   });
   if (!filterKeyboardFocus.isFilter || !filterKeyboardFocus.focusVisible ||
-      filterKeyboardFocus.outlineStyle === 'none' || filterKeyboardFocus.pressedCount !== 1) {
+      filterKeyboardFocus.focusRing === 'none' || filterKeyboardFocus.pressedCount !== 1) {
     throw new Error(label + ' filter buttons lost keyboard focus visibility or pressed state: ' +
       JSON.stringify(filterKeyboardFocus));
   }
