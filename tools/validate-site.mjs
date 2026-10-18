@@ -1593,6 +1593,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     ? readText('js/infrastructure/browser/media-contrast.js')
     : '';
   const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+  const siteSettings = exists('js/data/site-settings.js') ? readText('js/data/site-settings.js') : '';
 
   if (!works.includes('<main class="container page-spacing works-main">') ||
       !css.includes('.works-main {\n  padding-inline: 0;\n}') ||
@@ -1624,7 +1625,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   if (!contrast.includes('export function sampleMediaLuminance') ||
       !contrast.includes('export function foregroundForLuminance') ||
-      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-05'") ||
+      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-06'") ||
       !navigation.includes('logo.dataset.logoForeground = foreground') ||
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('MutationObserver') ||
@@ -1643,7 +1644,16 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Hero media runtime: a single video/Lottie must activate, loop where appropriate, handle rejected playback, and respect reduced motion.');
   }
 
-  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-05'") ||
+  if (!siteSettings.includes('kenBurnsFromScale: 1') ||
+      !siteSettings.includes('kenBurnsToScale: 1.15') ||
+      !siteSettings.includes('kenBurnsDurationS: 14') ||
+      !siteSettings.includes('const numericKenBurnsFrom = Number(hero.kenBurnsFromScale)') ||
+      !siteSettings.includes('const numericKenBurnsTo = Number(hero.kenBurnsToScale)') ||
+      !siteSettings.includes('const numericKenBurnsDuration = Number(hero.kenBurnsDurationS)')) {
+    err('CMS settings sync: normalized hero timing must preserve the stored Ken Burns scale and duration fields.');
+  }
+
+  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-06'") ||
       !footer.includes('chooseForeground(documentRef, source, media)') ||
       !footer.includes('windowRef.setInterval') ||
       !footer.includes('lifecycle.cleanup()')) {
@@ -1660,16 +1670,16 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-05") ||
-      !bootstrap.includes("cacheVersion = '20261018-05'") ||
-      !composition.includes("navigation/index.js?v=20261018-05") ||
-      !composition.includes("hero/index.js?v=20261018-05") ||
-      !composition.includes("footer/index.js?v=20261018-05") ||
-      !works.includes('css/style.css?v=20261018-05') ||
-      !works.includes('js/script.js?v=20261018-05') ||
-      !about.includes('style.css?v=20261018-05') ||
-      !about.includes('script.js?v=20261018-05') ||
-      !about.includes('page-composition.js?v=20261018-05')) {
+  if (!entry.includes("bootstrap.js?v=20261018-06") ||
+      !bootstrap.includes("cacheVersion = '20261018-06'") ||
+      !composition.includes("navigation/index.js?v=20261018-06") ||
+      !composition.includes("hero/index.js?v=20261018-06") ||
+      !composition.includes("footer/index.js?v=20261018-06") ||
+      !works.includes('css/style.css?v=20261018-06') ||
+      !works.includes('js/script.js?v=20261018-06') ||
+      !about.includes('style.css?v=20261018-06') ||
+      !about.includes('script.js?v=20261018-06') ||
+      !about.includes('page-composition.js?v=20261018-06')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
