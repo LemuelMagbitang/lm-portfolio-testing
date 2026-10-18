@@ -5855,3 +5855,90 @@ button.hamburger {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+
+
+/* =========================================
+   R/W/E — RESPONSIVE WORKS HERO, GALLERY, AND ADAPTIVE BRAND MARK
+   ========================================= */
+
+/* The Works gallery keeps its 1400px content ceiling, but no longer inherits
+   the generic 24px container inset. About/contact sections retain their own
+   container gutters. The grid's existing inter-card gap stays intentional. */
+.works-main {
+  padding-inline: 0;
+}
+
+/* When the CMS hides the hero statement, spend that recovered space on the
+   artwork itself. Keep this scoped to Works; the About portrait hero has its
+   own content-driven geometry below. */
+.hero-section:not(.about-hero):not(.hero-section--message) {
+  height: auto;
+  min-height: clamp(440px, 64vh, 780px);
+  min-height: clamp(440px, 64svh, 780px);
+  padding: 0;
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .hero-section:not(.about-hero):not(.hero-section--message) {
+    min-height: clamp(420px, 60vh, 680px);
+    min-height: clamp(420px, 60svh, 680px);
+  }
+}
+
+@media (max-width: 767px) {
+  .hero-section:not(.about-hero):not(.hero-section--message) {
+    min-height: clamp(360px, 62vh, 620px);
+    min-height: clamp(360px, 62svh, 620px);
+    padding: 0;
+  }
+}
+
+/* A separate bottom fade lets the no-message artwork remain full strength
+   while still blending into the actual site canvas color. A separate pseudo
+   layer preserves the existing ::after readability overlay for message mode
+   and leaves it transparent when the CMS toggle is off. It works identically
+   over images, video frames, Lottie, and the banner's fallback background. */
+.hero-section:not(.about-hero) .hero-banner::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: clamp(72px, 12vh, 132px);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--lm-color-background) 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (max-width: 767px) {
+  .hero-section:not(.about-hero) .hero-banner::before {
+    height: clamp(64px, 15svh, 112px);
+  }
+}
+
+/* The white-normalized source and difference compositing already adapt to the
+   real rendered pixels underneath the fixed logo. Unlike scroll-triggered
+   color sampling, this keeps working frame-by-frame for video, animation,
+   mixed artwork, cross-origin media, and scroll transitions without layout
+   reads or observers. The transitions soften normal hover/visibility changes;
+   color adaptation remains continuous with the changing backdrop. */
+.site-logo {
+  transition:
+    transform 0.3s ease,
+    opacity var(--lm-motion-standard) ease,
+    filter var(--lm-motion-standard) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-logo {
+    transition: none;
+  }
+
+  .site-logo:hover {
+    transform: none;
+  }
+}
