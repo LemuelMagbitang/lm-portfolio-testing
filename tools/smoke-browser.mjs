@@ -263,6 +263,7 @@ async function assertNavigationLabelsCentered(page, label) {
   const states = await page.locator('.nav-links a[href]').evaluateAll(anchors => anchors.map(anchor => {
     const style = getComputedStyle(anchor);
     const pill = anchor.getBoundingClientRect();
+    const labelBox = anchor.querySelector('.nav-link-label')?.getBoundingClientRect();
     const range = document.createRange();
     range.selectNodeContents(anchor);
     const text = range.getBoundingClientRect();
@@ -270,23 +271,75 @@ async function assertNavigationLabelsCentered(page, label) {
       label: (anchor.textContent || '').trim(),
       display: style.display,
       alignItems: style.alignItems,
-      justifyContent: style.justifyContent,
+      justifyItems: style.justifyItems,
       textAlign: style.textAlign,
       boxSizing: style.boxSizing,
-      centerDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
-      centerDeltaY: Math.abs((text.top + text.height / 2) - (pill.top + pill.height / 2))
+      labelBoxDeltaX: labelBox ? Math.abs((labelBox.left + labelBox.width / 2) - (pill.left + pill.width / 2)) : Infinity,
+      labelBoxDeltaY: labelBox ? Math.abs((labelBox.top + labelBox.height / 2) - (pill.top + pill.height / 2)) : Infinity,
+      textDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
+      textDeltaY: Math.abs((text.top + text.height / 2) - (pill.top + pill.height / 2))
     };
   }));
   if (!states.length || states.some(state =>
-    !['flex', 'inline-flex'].includes(state.display) ||
+    state.display !== 'grid' ||
     state.alignItems !== 'center' ||
-    state.justifyContent !== 'center' ||
+    state.justifyItems !== 'center' ||
     state.textAlign !== 'center' ||
     state.boxSizing !== 'border-box' ||
-    state.centerDeltaX > 1.5 ||
-    state.centerDeltaY > 1.5
+    state.labelBoxDeltaX > 1.5 ||
+    state.labelBoxDeltaY > 1.5 ||
+    state.textDeltaX > 1.5 ||
+    state.textDeltaY > 1.5
   )) {
-    throw new Error(label + ' navigation text is not centered within its pill: ' + JSON.stringify(states));
+    throw new Error(label + ' navigation label box or visible text is not centered within its pill: ' + JSON.stringify(states));
+  }
+}
+
+async function assertNoLogoBackingPlate(page, label) {
+  const state = await page.evaluate(() => {
+    const navLogo = document.querySelector('.nav-logo');
+    const transitionLogo = document.querySelector('.page-transition-logo');
+    const getPseudo = (element, pseudo) => {
+      if (!element) return null;
+      const style = getComputedStyle(element, pseudo);
+      const alpha = color => {
+        const match = String(color || '').match(/rgba?\(([^)]+)\)/i);
+        if (!match) return 0;
+        const channels = match[1].split(/[\s,\/]+/).filter(Boolean);
+        if (channels.length < 3) return 0;
+        return channels.length >= 4 ? Number.parseFloat(channels[3]) || 0 : 1;
+      };
+      return {
+        backgroundAlpha: alpha(style.backgroundColor),
+        borderWidths: ['Top','Right','Bottom','Left'].map(side => Number.parseFloat(style['border' + side + 'Width']) || 0),
+        boxShadow: style.boxShadow,
+        backdropFilter: style.backdropFilter || style.webkitBackdropFilter || 'none',
+        content: style.content,
+        filter: style.filter
+      };
+    };
+    const pseudoStates = [navLogo, transitionLogo].filter(Boolean).flatMap(element =>
+      ['::before','::after'].map(pseudo => ({host:element.className || element.id, pseudo, ...getPseudo(element,pseudo)}))
+    );
+    return {
+      navLogoExists: !!navLogo,
+      navLogoClasses: navLogo?.className || '',
+      pseudoStates,
+      footerBrandMarkCount: document.querySelectorAll('footer .nav-logo, footer .site-logo, footer .page-transition-logo').length
+    };
+  });
+  const paintedPseudo = state.pseudoStates.some(pseudo =>
+    pseudo.backgroundAlpha > .01 ||
+    pseudo.borderWidths.some(width => width > 0) ||
+    pseudo.boxShadow !== 'none' ||
+    pseudo.backdropFilter !== 'none' ||
+    pseudo.filter !== 'none' ||
+    (pseudo.content && !['none','normal','""',"''"].includes(pseudo.content) && pseudo.content !== '""')
+  );
+  if (!state.navLogoExists || paintedPseudo ||
+      /logo-contrast-fallback|contact-area-logo/.test(state.navLogoClasses) ||
+      state.footerBrandMarkCount !== 0) {
+    throw new Error(label + ' logo backing plate detected or duplicate footer brand markup found: ' + JSON.stringify(state));
   }
 }
 
@@ -310,6 +363,7 @@ async function assertPublicNavigation(page, { href, label }) {
         transition.getAttribute('aria-hidden') === 'true';
     }, null, { timeout: 6000 });
   }
+  await assertNoLogoBackingPlate(page, label + ' loaded navigation');
 
   const navContract = await page.evaluate(() => {
     const navbar = document.querySelector('.navbar');
@@ -335,7 +389,7 @@ async function assertPublicNavigation(page, { href, label }) {
         color: style.color,
         display: style.display,
         alignItems: style.alignItems,
-        justifyContent: style.justifyContent,
+        justifyItems: style.justifyItems,
         textAlign: style.textAlign,
         boxSizing: style.boxSizing,
         centerDeltaX: Math.abs((text.left + text.width / 2) - (pill.left + pill.width / 2)),
@@ -420,9 +474,9 @@ async function assertPublicNavigation(page, { href, label }) {
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
     !correctPillStates ||
     navContract.links.some(link =>
-      !['flex', 'inline-flex'].includes(link.display) ||
+      link.display !== 'grid' ||
       link.alignItems !== 'center' ||
-      link.justifyContent !== 'center' ||
+      link.justifyItems !== 'center' ||
       link.textAlign !== 'center' ||
       link.boxSizing !== 'border-box' ||
       ((navContract.viewportWidth >= 768 || navContract.mobileMenuOpen) &&
@@ -518,6 +572,7 @@ async function assertPublicNavigation(page, { href, label }) {
         document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
     await assertNavigationLabelsCentered(page, label + ' mobile open-menu state');
+    await assertNoLogoBackingPlate(page, label + ' mobile open-menu state');
     if (supportsHover) await page.mouse.move(0, 0);
     const reducedMotionPreference = await page.evaluate(() =>
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -606,6 +661,8 @@ async function assertPublicNavigation(page, { href, label }) {
       return !menu?.classList.contains('active') && !menu?.classList.contains('is-open') &&
         !document.body.classList.contains('menu-open');
     }, null, { timeout: 2000 });
+    await assertNavigationLabelsCentered(page, label + ' mobile closed-menu state');
+    await assertNoLogoBackingPlate(page, label + ' mobile closed-menu state');
     await hamburger.click();
     await page.waitForFunction(() => {
       const menu = document.querySelector('.nav-links');
@@ -633,6 +690,7 @@ async function assertPublicNavigation(page, { href, label }) {
       return style.backgroundColor === 'rgb(255, 255, 255)' &&
         style.color === 'rgb(0, 0, 0)';
     }, null, { timeout: 1500 });
+    await assertNavigationLabelsCentered(page, label + ' mobile selected-link state');
 
     await page.waitForFunction(() => {
       const menu = document.querySelector('.nav-links');
@@ -1004,17 +1062,25 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         logo.dataset.logoForeground='dark'; logo.style.filter='brightness(0)';
         window.dispatchEvent(new Event('resize'));
       });
-      await page.waitForFunction(() => document.querySelector('.nav-logo')?.classList.contains('logo-contrast-fallback') &&
-        document.querySelector('.site-logo')?.dataset?.logoForeground==='light', null, {timeout:2500});
+      await page.waitForFunction(() => document.querySelector('.site-logo')?.dataset?.logoForeground==='light' &&
+        !document.querySelector('.nav-logo')?.classList.contains('logo-contrast-fallback'), null, {timeout:2500});
       const fallbackSurface=await page.evaluate(()=>{
         const link=document.querySelector('.nav-logo'), style=link?getComputedStyle(link,'::before'):null;
-        return {hasClass:Boolean(link?.classList.contains('logo-contrast-fallback')),background:style?.backgroundColor||'',
-          pointerEvents:style?.pointerEvents||'',blur:style?.backdropFilter||''};
+        return {
+          foreground:document.querySelector('.site-logo')?.dataset?.logoForeground||'',
+          hasFallbackClass:Boolean(link?.classList.contains('logo-contrast-fallback')),
+          background:style?.backgroundColor||'',
+          borderWidth:style?.borderTopWidth||'',
+          boxShadow:style?.boxShadow||'none',
+          backdropFilter:style?.backdropFilter||'none'
+        };
       });
-      if(!fallbackSurface.hasClass||!fallbackSurface.background.includes('18')||
-          fallbackSurface.pointerEvents!=='none'||!fallbackSurface.blur.includes('blur')){
-        throw new Error(label+' '+viewport.name+': unreadable media did not produce a safe blurred capsule: '+JSON.stringify(fallbackSurface));
+      if(fallbackSurface.foreground!=='light'||fallbackSurface.hasFallbackClass||
+          fallbackSurface.background!=='rgba(0, 0, 0, 0)'||fallbackSurface.borderWidth!=='0px'||
+          fallbackSurface.boxShadow!=='none'||fallbackSurface.backdropFilter!=='none'){
+        throw new Error(label+' '+viewport.name+': unreadable media must keep the mark unplated: '+JSON.stringify(fallbackSurface));
       }
+      await assertNoLogoBackingPlate(page,label+' unreadable-media fallback');
       await page.evaluate(()=>{document.getElementById('__smoke-unreadable-logo-media')?.remove();window.dispatchEvent(new Event('scroll'));});
 
       // Exercise the loading gate and mobile navigation as distinct logo
@@ -4340,6 +4406,7 @@ try {
       }
       const bodyBusy = await page.locator('body').getAttribute('aria-busy');
       if (bodyBusy !== 'false') throw new Error('Portfolio body did not clear aria-busy after startup readiness.');
+      await assertNoLogoBackingPlate(page, 'Loading gate');
       const unlocked = await page.evaluate(() => {
         const overlay = document.querySelector('#pageTransition');
         const background = Array.from(document.body.children).find(el => el !== overlay);
@@ -5611,19 +5678,14 @@ try {
       }, null, { timeout: 4000 });
       const contactLogoState = await page.evaluate(() => {
         const logo = document.querySelector('.site-logo');
-        const link = logo?.closest('.nav-logo');
-        const capsule = link ? getComputedStyle(link, '::before') : null;
         return { foreground: logo?.dataset?.logoForeground,
-          contactClass: !!link?.classList.contains('contact-area-logo'),
-          fallbackClass: !!link?.classList.contains('logo-contrast-fallback'),
-          capsuleOpacity: Number.parseFloat(capsule?.opacity || '1'),
           logoTransition: getComputedStyle(logo).transitionProperty };
       });
-      if (!contactLogoState.contactClass || contactLogoState.foreground !== 'light' ||
-          contactLogoState.fallbackClass || contactLogoState.capsuleOpacity > 0.01 ||
+      if (contactLogoState.foreground !== 'light' ||
           !contactLogoState.logoTransition.includes('filter')) {
-        throw new Error('Contact-area logo unexpectedly rendered its fallback capsule or lost its white/filter transition: ' + JSON.stringify(contactLogoState));
+        throw new Error('Contact-area logo lost its white/filter transition: ' + JSON.stringify(contactLogoState));
       }
+      await assertNoLogoBackingPlate(page, 'Contact section');
 
       await page.locator('.nav-links a[href="#contact-start"]').first().click();
       await page.waitForTimeout(100);
@@ -5632,6 +5694,7 @@ try {
       }
 
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await assertNoLogoBackingPlate(page, 'Footer');
       await page.locator('.nav-links a[href="./"]').first().click();
       await page.waitForFunction(() => Math.abs(window.scrollY) <= 8, null, { timeout: 5000 });
       const worksReset = await page.evaluate(() => ({

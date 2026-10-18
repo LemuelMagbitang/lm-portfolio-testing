@@ -1655,20 +1655,25 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
       !navigation.includes("current.classList?.contains('slide') && !current.classList.contains('active')") ||
-      !navigation.includes('function setLogoContrastFallback()') ||
+      !navigation.includes('function setLogoFallbackForeground(') ||
       !navigation.includes("heroSection?.classList.contains('about-hero')") ||
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
       !navigation.includes("setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName))") ||
       !navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
       !navigation.includes("const contactAreaUnderLogo = stack.some(element => element?.closest?.('#contact-section'))") ||
-      !navigation.includes("navLogo?.classList.add('contact-area-logo')") ||
+      
       !navigation.includes("setLogoForeground(0.02)") ||
+       navigation.includes('contact-area-logo') ||
+       navigation.includes('logo-contrast-fallback') ||
+       css.includes('.nav-logo::before') ||
+       css.includes('.nav-logo.logo-contrast-fallback::before') ||
+       css.includes('.nav-logo.contact-area-logo::before') ||
       !navigation.includes("function effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("--about-hero-scrim-top-alpha") ||
       !navigation.includes("--about-hero-scrim-bottom-alpha") ||
       !navigation.includes('instantLogoReset') ||
-      !navigation.includes('logo-contrast-fallback') ||
+      
       !navigation.includes('MutationObserver') ||
       !navigation.includes('function setDynamicBackdropState(isDynamic)') ||
       !navigation.includes('logoBackdropIsDynamic') ||
@@ -1711,7 +1716,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled')") ||
       !smoke.includes("'Works Hero current CMS setting'") ||
       !smoke.includes('filterHeroGap') || !smoke.includes('filterTabCenterDeltaX') ||
-      !smoke.includes('filterTouchAction') || !smoke.includes('logo-contrast-fallback') ||
+      !smoke.includes('filterTouchAction') || !smoke.includes('async function assertNoLogoBackingPlate') ||
+      !smoke.includes('Loading gate') || !smoke.includes('Footer') ||
       !smoke.includes('logo-slide-stack') ||
       !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
@@ -1728,25 +1734,28 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       css.includes('.about-filter-rail') ||
       !smoke.includes('About page must not render Works category filter tabs') ||
       !smoke.includes('About adaptive-logo fixture') ||
-      !smoke.includes('Contact-area logo unexpectedly rendered its fallback capsule') ||
-      !css.includes('.nav-logo.contact-area-logo::before { opacity: 0 !important; }')) {
+      !smoke.includes('Contact-area logo lost its white/filter transition') ||
+      !smoke.includes('navigation label box or visible text is not centered') ||
+      css.includes('.nav-logo::before') ||
+      css.includes('.nav-logo.logo-contrast-fallback::before') ||
+      css.includes('.nav-logo.contact-area-logo::before')) {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-17") ||
-      !bootstrap.includes("cacheVersion = '20261018-17'") ||
-      !composition.includes("navigation/index.js?v=20261018-16") ||
+  if (!entry.includes("bootstrap.js?v=20261018-18") ||
+      !bootstrap.includes("cacheVersion = '20261018-18'") ||
+      !composition.includes("navigation/index.js?v=20261018-17") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261018-03") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-17') ||
-      !works.includes('js/app/page-composition.js?v=20261018-17') ||
-      !works.includes('css/style.css?v=20261018-13') ||
-      !works.includes('js/script.js?v=20261018-17') ||
-      !about.includes('style.css?v=20261018-13') ||
+      !works.includes('js/app/bootstrap.js?v=20261018-18') ||
+      !works.includes('js/app/page-composition.js?v=20261018-18') ||
+      !works.includes('css/style.css?v=20261018-14') ||
+      !works.includes('js/script.js?v=20261018-18') ||
+      !about.includes('style.css?v=20261018-14') ||
       !about.includes('script.js?v=20261018-17') ||
       !about.includes('page-composition.js?v=20261018-17')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

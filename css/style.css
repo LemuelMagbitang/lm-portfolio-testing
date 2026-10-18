@@ -90,9 +90,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .nav-links a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   box-sizing: border-box;
   text-align: center;
   min-height: 42px;
@@ -122,6 +121,17 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     background: #000;
     color: #fff;
   }
+}
+
+.nav-link-label {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
 }
 
 .nav-links a.active-link {
@@ -5912,27 +5922,8 @@ button.hamburger {
 
 /* The Works hero artwork ends cleanly; no bottom-edge fade layer is added. */
 
-/* Adaptive logo foreground is driven by the navigation feature's
-   backdrop sampler. Keep compositing normal: the navbar is a stacking context,
-   so a nested difference-blended image cannot reliably sample the page behind it. */
-.nav-logo::before {
-  content: '';
-  position: absolute;
-  inset: -7px -8px;
-  z-index: 0;
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 12px;
-  background: rgba(18,18,18,.76);
-  -webkit-backdrop-filter: blur(10px) saturate(1.12);
-  backdrop-filter: blur(10px) saturate(1.12);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--lm-motion-standard) ease;
-}
-.nav-logo.logo-contrast-fallback::before { opacity: 1; }
-/* Keep the mark unobstructed over Contact while preserving filter/press motion. */
-.nav-logo.contact-area-logo::before { opacity: 0 !important; }
-
+/* Adaptive logo foreground is driven by backdrop sampling. The mark stays
+   unplated in every state; contrast comes from switching its white/black filter. */
 .site-logo {
   position: relative;
   z-index: 1;
@@ -5945,7 +5936,6 @@ button.hamburger {
 .nav-logo:active .site-logo { transform: scale(.96); }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav-logo::before { transition: none; }
   .site-logo { transition: none; }
   .site-logo:hover,
   .nav-logo:active .site-logo { transform: none; }

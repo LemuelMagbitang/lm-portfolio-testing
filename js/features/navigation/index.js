@@ -308,7 +308,6 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
 
   function setLogoForeground(luminance) {
     if (!logo || !Number.isFinite(luminance)) return;
-    logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
     // Hysteresis near the crossover prevents flicker over moving artwork.
     const current = logo.dataset.logoForeground;
     let foreground;
@@ -320,12 +319,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
   }
 
-  function setLogoContrastFallback() {
+  function setLogoFallbackForeground(luminance = 0.02) {
     if (!logo) return;
     setDynamicBackdropState(false);
-    logo.dataset.logoForeground = 'light';
-    logo.style.filter = 'brightness(0) invert(1)';
-    logo.closest?.('.nav-logo')?.classList.add('logo-contrast-fallback');
+    setLogoForeground(Number.isFinite(luminance) ? luminance : 0.02);
   }
 
   function setDynamicBackdropState(isDynamic) {
@@ -381,8 +378,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     const point = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
     if (pageTransition && pageTransition.dataset.loading !== 'ready' && !pageTransition.classList.contains('is-hidden')) {
       setDynamicBackdropState(false);
-      logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
-      setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
+        setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
       return;
     }
 
@@ -390,17 +386,13 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       ? (root.elementsFromPoint(point.x, point.y) || [])
       : [root.elementFromPoint(point.x, point.y)].filter(Boolean);
 
-    // Contact keeps the established white mark but omits the fallback capsule.
-    const navLogo = logo.closest?.('.nav-logo');
+    // Contact keeps the established white mark without a backing plate.
     const contactAreaUnderLogo = stack.some(element => element?.closest?.('#contact-section'));
     if (contactAreaUnderLogo) {
-      navLogo?.classList.add('contact-area-logo');
-      navLogo?.classList.remove('logo-contrast-fallback');
       setDynamicBackdropState(false);
       setLogoForeground(0.02);
       return;
     }
-    navLogo?.classList.remove('contact-area-logo');
 
     let backdrop = stack.find(element => {
       if (!element || element === logo || element.closest?.('.navbar')) return false;
@@ -414,16 +406,14 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
     if (backdrop.classList?.contains('nav-menu-backdrop')) {
       setDynamicBackdropState(false);
-      logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
-      setLogoForeground(0.006);
+        setLogoForeground(0.006);
       return;
     }
     const heroSection = backdrop.closest?.('.hero-section');
     if (heroSection?.classList.contains('hero-section--message')) {
       // The Works message hero keeps its established dark scrim and white mark.
       setDynamicBackdropState(false);
-      logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
-      setLogoForeground(0.02);
+        setLogoForeground(0.02);
       return;
     }
     // A message overlay or slide wrapper can be the elementFromPoint result.
@@ -447,7 +437,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       return;
     }
     if (!media && backdropColor && backdropColor.a > 0.02 && backdropColor.a < 0.98) {
-      setLogoContrastFallback();
+      setLogoFallbackForeground(computedBackdropLuminance(backdrop));
       return;
     }
     if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
@@ -461,12 +451,12 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
         setLogoForeground(luminance);
         return;
       }
-      setLogoContrastFallback();
+      setLogoFallbackForeground(computedBackdropLuminance(backdrop));
       return;
     }
     setDynamicBackdropState(false);
     if (style?.backgroundImage && style.backgroundImage !== 'none') {
-      setLogoContrastFallback();
+      setLogoFallbackForeground(computedBackdropLuminance(backdrop));
       return;
     }
     setLogoForeground(computedBackdropLuminance(backdrop));
@@ -485,7 +475,6 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   }
 
   if (logo) {
-    logo.closest?.('.nav-logo')?.classList.remove('logo-contrast-fallback');
     logo.dataset.logoForeground = 'light';
     logo.style.filter = 'brightness(0) invert(1)';
     bind(windowRef, 'scroll', scheduleLogoContrast, { passive: true });
