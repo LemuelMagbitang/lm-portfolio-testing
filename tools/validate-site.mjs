@@ -1702,6 +1702,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
 function validateCmsRegressionContracts() {
   const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  if (!admin.includes('function validateCmsMediaSource(') ||
+      !admin.includes("validateCmsMediaSource(manual.type, manual.src, 'Manual footer media')") ||
+      !admin.includes('validateCmsMediaSource(item.type, item.src, `Hero artwork ${index + 1}`)')) {
+    err('CMS media validation: Hero Loop and manual Footer sources must be validated before save.');
+  }
   if (!/let renderVersion = 0;/.test(admin) ||
       !/const version = \+\+renderVersion;/.test(admin) ||
       !/const section = currentSection;/.test(admin) ||

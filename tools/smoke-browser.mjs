@@ -6824,6 +6824,32 @@ try {
       await page.locator('.nav-item[data-section="hero"].active').waitFor({ state: 'visible', timeout: 10000 });
       await page.locator('#content #heroList, #content #addHero').first().waitFor({ state: 'visible', timeout: 10000 });
 
+      const cmsMediaValidation = await page.evaluate(() => {
+        const check = (type, src) => {
+          try {
+            window.validateCmsMediaSource(type, src, 'Smoke media');
+            return true;
+          } catch (_) {
+            return false;
+          }
+        };
+        return {
+          available: typeof window.validateCmsMediaSource === 'function',
+          validImage: check('image', 'assets/projects/site/portfolio-logo.webp'),
+          validVideoWithQuery: check('video', 'assets/projects/site/banner/hero-reel.mp4?v=smoke'),
+          validExternalDynamicUrl: check('video', 'https://media.example.test/stream?id=smoke'),
+          rejectsImageAsVideo: !check('video', 'assets/projects/site/portfolio-logo.webp'),
+          rejectsVideoAsImage: !check('image', 'assets/projects/site/banner/hero-reel.mp4'),
+          rejectsImageAsLottie: !check('lottie', 'assets/projects/site/portfolio-logo.webp'),
+          rejectsDataUrl: !check('image', 'data:image/png;base64,AAAA'),
+          rejectsBlobUrl: !check('video', 'blob:https://example.test/temporary-id'),
+          rejectsNonAssetLocalPath: !check('image', 'data/hero-loop.json')
+        };
+      });
+      if (Object.values(cmsMediaValidation).some(value => value !== true)) {
+        throw new Error('CMS media source validation failed its valid/invalid source contract: ' + JSON.stringify(cmsMediaValidation));
+      }
+
       const nav = page.locator('.nav-item[data-section="about"]');
       if (await nav.count() !== 1) throw new Error('CMS About navigation item is missing.');
 

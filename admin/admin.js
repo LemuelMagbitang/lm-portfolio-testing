@@ -24,6 +24,99 @@ function toMs(value, unit){
   return Number.isFinite(n) ? Math.round(n * (unit === 's' ? 1000 : 1)) : 0;
 }
 
+const CMS_IMAGE_MEDIA_EXTENSIONS = new Set([
+  'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tif', 'tiff', 'avif', 'svg'
+]);
+const CMS_VIDEO_MEDIA_EXTENSIONS = new Set([
+  'mp4', 'webm', 'mov', 'm4v', 'avi', 'mkv'
+]);
+const CMS_MODEL_MEDIA_EXTENSIONS = new Set([
+  'glb', 'gltf', 'obj', 'mtl', 'fbx', 'dae', 'usd', 'usdz', 'bin', 'ktx2', 'basis'
+]);
+
+// Reject media references that the public site cannot resolve or decode after
+// publication. The CMS preview can display blob/data URLs, but those values are
+// temporary and must never be committed as durable content-model references.
+function validateCmsMediaSource(type, source, label = 'Media') {
+  const value = String(source || '').trim();
+  const context = String(label || 'Media');
+
+  if (!['image', 'video', 'lottie'].includes(type)) {
+    throw new Error(`${context}: choose Image, Video, or Lottie as the media type.`);
+  }
+  if (!value) {
+    throw new Error(`${context}: choose a media source before saving.`);
+  }
+  if (/^(?:blob|data):/i.test(value)) {
+    throw new Error(`${context}: temporary blob/data URLs cannot be saved. Upload the file to the Media Library and select its repository path.`);
+  }
+  if (/^javascript:/i.test(value)) {
+    throw new Error(`${context}: JavaScript URLs are not valid media sources.`);
+  }
+
+  const isExternal = /^(?:https?:)?\/\//i.test(value);
+  let pathname = '';
+  if (isExternal) {
+    let parsed;
+    try {
+      parsed = new URL(value, document.baseURI);
+    } catch (_) {
+      throw new Error(`${context}: enter a valid HTTP(S) media URL.`);
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error(`${context}: media URLs must use HTTP or HTTPS.`);
+    }
+    pathname = parsed.pathname;
+  } else {
+    pathname = value.split(/[?#]/, 1)[0].replace(/^\/+/, '');
+    if (!pathname.startsWith('assets/') || /^[a-z][a-z\d+.-]*:/i.test(pathname)) {
+      throw new Error(`${context}: local media must be selected from the Media Library under assets/, or supplied as an HTTP(S) URL.`);
+    }
+  }
+
+  const extension = (pathname.match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase() || '';
+  const knownTypeExtension =
+    CMS_IMAGE_MEDIA_EXTENSIONS.has(extension) ||
+    CMS_VIDEO_MEDIA_EXTENSIONS.has(extension) ||
+    CMS_MODEL_MEDIA_EXTENSIONS.has(extension) ||
+    extension === 'json';
+
+  // Signed/dynamic external endpoints may intentionally omit a filename
+  // extension. Their response Content-Type is authoritative, so do not guess.
+  if (isExternal && !knownTypeExtension) return value;
+
+  if (type === 'image' &&
+      (CMS_VIDEO_MEDIA_EXTENSIONS.has(extension) ||
+       CMS_MODEL_MEDIA_EXTENSIONS.has(extension) ||
+       extension === 'json')) {
+    throw new Error(`${context}: the .${extension} source is not an image. Match the selected media type to the file.`);
+  }
+  if (type === 'video' &&
+      (CMS_IMAGE_MEDIA_EXTENSIONS.has(extension) ||
+       CMS_MODEL_MEDIA_EXTENSIONS.has(extension) ||
+       extension === 'json')) {
+    throw new Error(`${context}: the .${extension} source is not a video. Match the selected media type to the file.`);
+  }
+  if (type === 'lottie' && extension && extension !== 'json') {
+    throw new Error(`${context}: Lottie media must reference a .json animation file.`);
+  }
+
+  if (!isExternal && !extension) {
+    throw new Error(`${context}: local media source must include a supported file extension.`);
+  }
+  if (!isExternal && type === 'image' && !CMS_IMAGE_MEDIA_EXTENSIONS.has(extension)) {
+    throw new Error(`${context}: .${extension} is not a supported local image format.`);
+  }
+  if (!isExternal && type === 'video' && !CMS_VIDEO_MEDIA_EXTENSIONS.has(extension)) {
+    throw new Error(`${context}: .${extension} is not a supported local video format.`);
+  }
+  if (!isExternal && type === 'lottie' && extension !== 'json') {
+    throw new Error(`${context}: Lottie media must reference a .json animation file.`);
+  }
+
+  return value;
+}
+
 /* THE FIX FOR "everything 404s with the CMS's own folder stuck in the
    URL" — every preview image in this tool (project thumbnails, media
    items, the profile photo, skill logos, folder previews) is built
@@ -1514,10 +1607,18 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
 
   paintHelp();
   refreshPreview();
-  wireSave(()=>({
-    mode,
-    manual
-  }), 'footerLoop', SECTIONS.footerLoop.file);
+  wireSave(()=>{
+    if(mode === 'manual'){
+      manual.src = validateCmsMediaSource(manual.type, manual.src, 'Manual footer media');
+      if(!Number.isFinite(Number(manual.zoom)) || Number(manual.zoom) < 0.5){
+        throw new Error('Manual footer media: Zoom must be a finite number of at least 0.5.');
+      }
+      if(!Number.isFinite(Number(manual.rotate))){
+        throw new Error('Manual footer media: Rotation must be a finite number.');
+      }
+    }
+    return { mode, manual };
+  }, 'footerLoop', SECTIONS.footerLoop.file);
 };
 
 RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
@@ -1606,7 +1707,38 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
     document.getElementById('hl_interval_unit').addEventListener('change',e=>{intervalUnit=e.target.value;const input=document.getElementById('hl_interval');if(input)input.value=formatTimedValue(interval,intervalUnit);flagUnsaved();});
     document.getElementById('hl_add').addEventListener('click',()=>{const x={type:'image',src:'',alt:'',focus:'50% 50%',zoom:1,rotate:0,fadeInMs:1500,fadeOutMs:1500,zoomTransition:transition==='kenburns',fadeTransition:transition!=='none',_uid:uid()};items.push(x);fadeUnits.set(x._uid,{in:'s',out:'s'});openUid=x._uid;mode='manual';flagUnsaved();paint();});
     enableDragReorder(()=>document.getElementById('heroLoopItems'),items,flagUnsaved,paint);
-    wireSave(()=>({items:items.map(x=>({type:x.type,src:x.src,alt:x.alt,focus:x.focus,zoom:x.zoom,rotate:x.rotate,fadeInMs:x.fadeInMs,fadeOutMs:x.fadeOutMs,zoomTransition:x.zoomTransition,fadeTransition:x.fadeTransition})),mode,transition,interval}), 'heroLoop', SECTIONS.heroLoop.file);
+    wireSave(()=>{
+      if(mode !== 'latest'){
+        if(mode === 'manual' && !items.length){
+          throw new Error('Manual Hero Loop mode needs at least one media item.');
+        }
+        items.forEach((item,index)=>{
+          item.src = validateCmsMediaSource(item.type, item.src, `Hero artwork ${index + 1}`);
+          if(!Number.isFinite(Number(item.zoom)) || Number(item.zoom) < 0.5){
+            throw new Error(`Hero artwork ${index + 1}: Zoom must be a finite number of at least 0.5.`);
+          }
+          if(!Number.isFinite(Number(item.rotate))){
+            throw new Error(`Hero artwork ${index + 1}: Rotation must be a finite number.`);
+          }
+          for(const key of ['fadeInMs','fadeOutMs']){
+            if(!Number.isFinite(Number(item[key])) || Number(item[key]) < 0){
+              throw new Error(`Hero artwork ${index + 1}: ${key} must be a finite, non-negative number.`);
+            }
+          }
+        });
+      }
+      if(!Number.isFinite(Number(interval)) || Number(interval) < 500){
+        throw new Error('Hero Loop: Slide interval must be at least 500 milliseconds.');
+      }
+      return {
+        items: items.map(x=>({
+          type:x.type,src:x.src,alt:x.alt,focus:x.focus,zoom:x.zoom,rotate:x.rotate,
+          fadeInMs:x.fadeInMs,fadeOutMs:x.fadeOutMs,
+          zoomTransition:x.zoomTransition,fadeTransition:x.fadeTransition
+        })),
+        mode,transition,interval
+      };
+    }, 'heroLoop', SECTIONS.heroLoop.file);
     currentSave.combined=true;
   }
   paint();
