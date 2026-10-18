@@ -759,3 +759,10 @@ This migration must not:
 - On Works, generic top page padding and filter top margin no longer compound: the filter strip starts at the hero edge, with a 48px rail and 44px targets. Mobile retains horizontal momentum/scroll snapping; a 22px alpha mask fades the rail edges without capturing taps.
 - Extended Chromium smoke coverage checks hero/filter gap, filter dimensions and text centering at desktop/tablet/mobile sizes, horizontal scroll/touch behavior, active-vs-inactive slide contrast, and the unmeasurable-media capsule. Static validators enforce the same layout/runtime contracts.
 - **Verification gate:** cache keys are synchronized for the changed public stylesheet/runtime graph. Run the full Validate portfolio workflow and Pages build/deployment on this commit before calling it verified. A physical phone/tablet check remains useful for real video transitions, motion, and safe-area behavior. The legacy production repository and main remain untouched.
+
+
+## 2026-10-18 — Adaptive logo animation follow-up
+
+- The fixed logo now re-samples active hero artwork while it sits over the hero surface, including still images that zoom or cross-fade. Previously, periodic contrast checks were limited to video/canvas/Lottie, so image animations could outlive the sampled foreground choice.
+- Sampling pauses while the document is hidden and remains event-driven for ordinary page images to keep the additional work bounded.
+- Runtime cache references advanced to `20261018-14`; the validation contract now guards this behavior.
