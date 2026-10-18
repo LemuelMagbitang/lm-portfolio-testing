@@ -1599,7 +1599,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Hero presentation: a non-interactive bottom fade to the site canvas must remain separate from the readability overlay.');
   }
 
-  const logoRuleStart = css.lastIndexOf('.site-logo {');
+  const logoCommentStart = css.lastIndexOf('/* The white-normalized source');
+  const logoRuleStart = logoCommentStart >= 0 ? css.indexOf('.site-logo {', logoCommentStart) : -1;
   const logoRuleEnd = logoRuleStart >= 0 ? css.indexOf('}', logoRuleStart) : -1;
   const logoRule = logoRuleStart >= 0 && logoRuleEnd > logoRuleStart
     ? css.slice(logoRuleStart, logoRuleEnd)
