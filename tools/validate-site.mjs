@@ -1658,12 +1658,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('function setLogoContrastFallback()') ||
       !navigation.includes("heroSection?.classList.contains('about-hero')") ||
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
-      !navigation.includes("setVideoBackdropState(['video', 'canvas', 'lottie-player'].includes(media.localName))") ||
+      !navigation.includes("setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName))") ||
       !navigation.includes("heroSection?.classList.contains('hero-section--message') ||") ||
       !navigation.includes('instantLogoReset') ||
       !navigation.includes('logo-contrast-fallback') ||
       !navigation.includes('MutationObserver') ||
-      !navigation.includes('function setVideoBackdropState(isVideo)') ||
+      !navigation.includes('function setDynamicBackdropState(isDynamic)') ||
+      !navigation.includes('logoBackdropIsDynamic') ||
+      !navigation.includes("root.visibilityState !== 'hidden'") ||
       !navigation.includes('const backdropColor = parseColor(') ||
       !navigation.includes("bind(windowRef, 'scroll', scheduleLogoContrast") ||
       !navigation.includes("bind(root, 'loadeddata', scheduleLogoContrast")) {
@@ -1718,21 +1720,21 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261018-13") ||
-      !bootstrap.includes("cacheVersion = '20261018-13'") ||
-      !composition.includes("navigation/index.js?v=20261018-13") ||
+  if (!entry.includes("bootstrap.js?v=20261018-14") ||
+      !bootstrap.includes("cacheVersion = '20261018-14'") ||
+      !composition.includes("navigation/index.js?v=20261018-14") ||
       !composition.includes("hero/index.js?v=20261018-08") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-01") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261018-13') ||
-      !works.includes('js/app/page-composition.js?v=20261018-13') ||
+      !works.includes('js/app/bootstrap.js?v=20261018-14') ||
+      !works.includes('js/app/page-composition.js?v=20261018-14') ||
       !works.includes('css/style.css?v=20261018-10') ||
-      !works.includes('js/script.js?v=20261018-13') ||
+      !works.includes('js/script.js?v=20261018-14') ||
       !about.includes('style.css?v=20261018-10') ||
-      !about.includes('script.js?v=20261018-13') ||
-      !about.includes('page-composition.js?v=20261018-13')) {
+      !about.includes('script.js?v=20261018-14') ||
+      !about.includes('page-composition.js?v=20261018-14')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
