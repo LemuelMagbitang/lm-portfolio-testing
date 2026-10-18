@@ -1605,10 +1605,24 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive Works presentation: the message-free hero sizing and gallery-specific gutter reset are incomplete.');
   }
 
-  if (!css.includes('.hero-section:not(.about-hero) .hero-banner::before') ||
-      !css.includes('var(--lm-color-background) 100%') ||
-      !/\.hero-section:not\(\.about-hero\) \.hero-banner::before\s*\{[^}]*pointer-events:\s*none/s.test(css)) {
-    err('Hero presentation: a non-interactive bottom fade to the site canvas must remain separate from the readability overlay.');
+  if (/\.hero-section:not\(\.about-hero\) \.hero-banner::before\s*\{[^}]*linear-gradient/s.test(css)) {
+    err('Hero presentation: the Works hero artwork must not have a bottom-edge gradient fade.');
+  }
+
+  const navigationPillRule = (css.match(/\.nav-links a\s*\{([^}]*)\}/) || [])[1] || '';
+  if (!/display:\s*inline-flex/.test(navigationPillRule) ||
+      !/align-items:\s*center/.test(navigationPillRule) ||
+      !/justify-content:\s*center/.test(navigationPillRule) ||
+      !/text-align:\s*center/.test(navigationPillRule) ||
+      !/box-sizing:\s*border-box/.test(navigationPillRule)) {
+    err('Navigation pills: labels must stay geometrically centered in their containers across interaction states.');
+  }
+
+  const filterTabsRule = (css.match(/\.filter-tabs\s*\{([^}]*)\}/) || [])[1] || '';
+  if (!/justify-content:\s*center/.test(filterTabsRule) ||
+      !/max-width:\s*var\(--lm-container-max\)/.test(filterTabsRule) ||
+      !/width:\s*calc\(100% - var\(--lm-page-gutter\) - var\(--lm-page-gutter\)\)/.test(filterTabsRule)) {
+    err('Filter tabs: the strip must be centered within the shared page gutters and container width.');
   }
 
   const logoCommentStart = css.lastIndexOf('/* Adaptive logo foreground is driven');
@@ -1620,8 +1634,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   if (!logoRule.includes('mix-blend-mode: normal') ||
       !logoRule.includes('filter var(--lm-motion-standard) ease') ||
       !logoRule.includes('transform 0.3s ease') ||
-      !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.site-logo\s*\{\s*transition:\s*none/s.test(css)) {
-    err('Adaptive logo: the explicit foreground-state transition and reduced-motion behavior are incomplete.');
+      !/\.site-logo:hover\s*\{\s*transform:\s*translateY\(-1px\) scale\(1\.06\)/s.test(css) ||
+      !/\.nav-logo:active \.site-logo\s*\{\s*transform:\s*scale\(\.96\)\s*;?\s*\}/s.test(css) ||
+      !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.site-logo\s*\{\s*transition:\s*none/s.test(css) ||
+      !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.nav-logo:active \.site-logo\s*\{\s*transform:\s*none/s.test(css)) {
+    err('Adaptive logo: backdrop-state feedback, subtle pointer/press motion, and reduced-motion behavior must remain wired.');
   }
 
   if (!contrast.includes('export function sampleMediaLuminance') ||
@@ -1691,7 +1708,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-08") ||
       !works.includes('js/app/bootstrap.js?v=20261018-08') ||
       !works.includes('js/app/page-composition.js?v=20261018-08') ||
-      !works.includes('css/style.css?v=20261018-07') ||
+      !works.includes('css/style.css?v=20261018-08') ||
       !works.includes('js/script.js?v=20261018-08') ||
       !about.includes('style.css?v=20261018-07') ||
       !about.includes('script.js?v=20261018-08') ||
