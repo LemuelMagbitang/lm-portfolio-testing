@@ -491,7 +491,7 @@ export async function initGallery(options = {}) {
     // If a click/resize initiated the scroll, preserve its chosen category while
     // the rail finishes moving. A delayed settle also clears the centered preview
     // on browsers that do not dispatch the native scrollend event.
-    const delay = Math.max(100, suppressFilterSettleUntil - Date.now() + 16);
+    const delay = Math.max(220, suppressFilterSettleUntil - Date.now() + 16);
     filterScrollTimer = windowRef.setTimeout(() => {
       filterScrollTimer = null;
       filterActiveIndicator?.classList.remove('is-following-scroll');
@@ -1007,6 +1007,10 @@ export async function initGallery(options = {}) {
     if (!hash) return;
     const btn = filterBtns.find(item => item.getAttribute('data-filter') === hash);
     if (!btn || btn.disabled) return;
+    // Deep links are explicit filter state, not a swipe-settlement request.
+    // Centering the selected button emits scroll events; guard those events so
+    // an initial centered preview cannot immediately replace the URL filter.
+    suppressFilterSettleUntil = Date.now() + 750;
     filterBtns.forEach(item => {
       const active = item === btn;
       item.classList.toggle('active', active);
