@@ -941,6 +941,7 @@ function validateGalleryContract() {
   const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const legacy = exists('js/gallery.js') ? readText('js/gallery.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
 
   if (legacy) {
     err('Gallery: retired root module js/gallery.js must not remain after feature cutover.');
@@ -1021,6 +1022,31 @@ function validateGalleryContract() {
       !css.includes('animation: none !important;')) {
     err('Gallery: compact filter navigation must settle without bounce, ignore programmatic scroll previews, and clear stale swipe styling.');
   }
+  const fontRefreshStart = source.indexOf('function refreshFilterGeometryAfterFontsLoad()');
+  const fontRefreshEnd = source.indexOf('\n  function centerFilterButton(', fontRefreshStart);
+  const fontRefreshContract = fontRefreshStart >= 0 && fontRefreshEnd > fontRefreshStart
+    ? source.slice(fontRefreshStart, fontRefreshEnd)
+    : '';
+  const outsidePointerStart = source.indexOf("bind(documentRef, 'pointerdown', event => {");
+  const outsideClickStart = source.indexOf("bind(documentRef, 'click', event => {", outsidePointerStart + 1);
+  const outsideGestureStart = source.indexOf('// Returning to Works/home always means', outsideClickStart);
+  const outsidePointerContract = outsidePointerStart >= 0 && outsideClickStart > outsidePointerStart
+    ? source.slice(outsidePointerStart, outsideClickStart)
+    : '';
+  const outsideClickContract = outsideClickStart >= 0 && outsideGestureStart > outsideClickStart
+    ? source.slice(outsideClickStart, outsideGestureStart)
+    : '';
+  if (!fontRefreshContract.includes('syncFilterActiveIndicator(activeButton);') ||
+      fontRefreshContract.includes('syncFilterActiveIndicator(activeButton, { followingScroll: true });') ||
+      !outsidePointerContract.includes('clearFilterScrollPreview();') ||
+      outsidePointerContract.includes('settleCenteredFilter();') ||
+      !outsideClickContract.includes('clearFilterScrollPreview();') ||
+      outsideClickContract.includes('settleCenteredFilter();') ||
+      !smoke.includes('initial-load active filter contrast failed') ||
+      !smoke.includes('outside tap must remeasure the committed filter pill')) {
+    err('Gallery: startup font/layout work and outside input must restore the committed high-contrast filter without committing an outside selection.');
+  }
+
   if (!/\.filter-page-controls\{\s*display:none;/.test(css)) {
     err('Gallery: filter page controls must be hidden by default on desktop.');
   }
@@ -1802,22 +1828,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261019-19") ||
-      !bootstrap.includes("cacheVersion = '20261019-19'") ||
+  if (!entry.includes("bootstrap.js?v=20261019-20") ||
+      !bootstrap.includes("cacheVersion = '20261019-20'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261019-19") ||
+      !composition.includes("gallery/index.js?v=20261019-20") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261019-19') ||
-      !works.includes('js/app/page-composition.js?v=20261019-19') ||
+      !works.includes('js/app/bootstrap.js?v=20261019-20') ||
+      !works.includes('js/app/page-composition.js?v=20261019-20') ||
       !works.includes('css/style.css?v=20261019-16') ||
-      !works.includes('js/script.js?v=20261019-19') ||
+      !works.includes('js/script.js?v=20261019-20') ||
       !about.includes('style.css?v=20261019-16') ||
-      !about.includes('script.js?v=20261019-19') ||
-      !about.includes('page-composition.js?v=20261019-19')) {
+      !about.includes('script.js?v=20261019-20') ||
+      !about.includes('page-composition.js?v=20261019-20')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }

@@ -358,7 +358,9 @@ export async function initGallery(options = {}) {
     );
     suppressFilterSettleUntil = Date.now() + 750;
     if (activeButton && isFilterScroller()) centerFilterButton(activeButton, 'auto');
-    syncFilterActiveIndicator(activeButton, { followingScroll: true });
+    // Font/layout reconciliation is not user gesture intent. Keep the committed
+    // filter in its resting high-contrast state while the pill is remeasured.
+    syncFilterActiveIndicator(activeButton);
 
     const indicator = filterActiveIndicator;
     const restoreIndicatorMotion = () => {
@@ -678,27 +680,19 @@ export async function initGallery(options = {}) {
 
   bind(documentRef, 'click', handlePublicFilterNavigation);
 
-  // Clear transient swipe styling before outside controls get their pointer event.
-  // Capture phase is intentional: a page-level handler must not be able to leave
-  // the previous filter washed out by stopping the event during bubbling.
+  // Outside input is never a filter selection. Clear transient swipe styling
+  // and remeasure the committed pill before an outside control receives input.
+  // Do not settle to the nearest label here: that can change filters on a tap
+  // outside the rail after a gesture-suppression window has expired.
   bind(documentRef, 'pointerdown', event => {
     if (filterTabs?.contains(event.target)) return;
-    if (!filterContent?.classList.contains('is-following-filter-scroll') &&
-        !filterActiveIndicator?.classList.contains('is-following-scroll')) return;
-    if (!filterPointerActive && !filterSettling &&
-        Date.now() >= suppressFilterSettleUntil) {
-      settleCenteredFilter();
-      return;
-    }
     clearFilterScrollPreview();
   }, { capture: true });
 
-  // Keyboard and synthetic clicks may not have a pointerdown; keep the same
-  // cleanup contract for them without interfering with clicks inside the rail.
+  // Keyboard/synthetic clicks may have no pointerdown. Cleanup is idempotent and
+  // always remeasures the selected pill, even when no preview class is present.
   bind(documentRef, 'click', event => {
     if (filterTabs?.contains(event.target)) return;
-    if (!filterContent?.classList.contains('is-following-filter-scroll') &&
-        !filterActiveIndicator?.classList.contains('is-following-scroll')) return;
     clearFilterScrollPreview();
   }, { capture: true });
 
@@ -1142,6 +1136,9 @@ export async function initGallery(options = {}) {
     render();
     updateFilterAnnouncement(btn);
     if (isFilterScroller()) centerFilterButton(btn, 'auto');
+    // Deep links update selection without a pointer event; place the visible pill
+    // on the newly committed category immediately.
+    syncFilterActiveIndicator(btn);
     updateFilterPager(filterBtns.indexOf(btn));
 
     // Filter links from the public navigation use the same hash contract as
@@ -1183,7 +1180,14 @@ export async function initGallery(options = {}) {
     updateFilterPager(filterBtns.indexOf(activeBtn));
   }, windowRef);
   bind(windowRef, 'hashchange', applyHash);
-  bind(windowRef, 'load', () => { ensureFilterEdges(); if (!isExpanded) render(); });
+  bind(windowRef, 'load', () => {
+    ensureFilterEdges();
+    if (!isExpanded) render();
+    const activeButton = filterBtns.find(button =>
+      (button.getAttribute('data-filter') || 'all') === currentFilter
+    );
+    syncFilterActiveIndicator(activeButton);
+  });
   return {
     render,
     getFilter: () => currentFilter,

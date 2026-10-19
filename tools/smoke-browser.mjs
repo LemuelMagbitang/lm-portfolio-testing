@@ -1661,10 +1661,65 @@ async function assertMobileFilterCenteredSound(page, label) {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
 }
 
-async function assertFilterNavigationResponsive(page, label) {
+async function assertFilterInitialContrast(page, label) {
   await page.waitForFunction(() =>
     document.querySelectorAll('.filter-nav-scroller .filter-btn, .filter-nav-scroller .tab-btn').length >= 2
   );
+  await page.evaluate(() => document.fonts?.ready ?? Promise.resolve());
+  // Let any legitimate desktop pill movement finish, but don't interact with
+  // the rail: this probes the resting state exactly as a visitor first sees it.
+  await page.waitForTimeout(180);
+  await page.waitForFunction(() => {
+    const scroller = document.querySelector('.filter-nav-scroller');
+    const content = scroller?.querySelector('.filter-nav-content');
+    const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    if (!scroller || !active || !indicator?.classList.contains('is-ready')) return false;
+    const a = active.getBoundingClientRect();
+    const b = indicator.getBoundingClientRect();
+    return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
+      Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
+      Math.abs(a.width - b.width) <= 1;
+  }, null, { timeout: 1800 }).catch(() => {});
+  const state = await page.evaluate(() => {
+    const scroller = document.querySelector('.filter-nav-scroller');
+    const content = scroller?.querySelector('.filter-nav-content');
+    const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    const a = active?.getBoundingClientRect();
+    const b = indicator?.getBoundingClientRect();
+    const style = active ? getComputedStyle(active) : null;
+    const pillStyle = indicator ? getComputedStyle(indicator) : null;
+    return {
+      activeFilter: active?.getAttribute('data-filter') || '',
+      activePressed: active?.getAttribute('aria-pressed') || '',
+      activeColor: style?.color || '',
+      indicatorExists: !!indicator,
+      indicatorReady: indicator?.classList.contains('is-ready') || false,
+      indicatorOpacity: Number(pillStyle?.opacity || '0'),
+      indicatorBackground: pillStyle?.backgroundColor || '',
+      centerDelta: a && b ? Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) : Infinity,
+      centerDeltaY: a && b ? Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) : Infinity,
+      widthDelta: a && b ? Math.abs(a.width - b.width) : Infinity,
+      contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
+      indicatorFollowing: indicator?.classList.contains('is-following-scroll') || false,
+      previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
+      pressedCount: content?.querySelectorAll('[aria-pressed="true"]').length || 0
+    };
+  });
+  if (!state.activeFilter || state.activePressed !== 'true' ||
+      state.activeColor !== 'rgb(17, 17, 17)' || !state.indicatorExists ||
+      !state.indicatorReady || state.indicatorOpacity < 0.99 ||
+      state.indicatorBackground !== 'rgb(242, 242, 242)' ||
+      state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1 ||
+      state.contentFollowing || state.indicatorFollowing || state.previewCount !== 0 ||
+      state.pressedCount !== 1) {
+    throw new Error(label + ' initial-load active filter contrast failed: ' + JSON.stringify(state));
+  }
+}
+
+async function assertFilterNavigationResponsive(page, label) {
+  await assertFilterInitialContrast(page, label + ' desktop first load');
 
   const viewports = [
     { width: 320, height: 568 }, { width: 360, height: 740 }, { width: 390, height: 844 },
@@ -1755,6 +1810,8 @@ async function assertFilterNavigationResponsive(page, label) {
           : Infinity,
         activeFilter: active?.getAttribute('data-filter') || '',
         activePressed: active?.getAttribute('aria-pressed') || '',
+        activeColor: activeStyle?.color || '',
+        previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
         ariaPressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
         activeRadius: Number.parseFloat(activeStyle?.borderTopLeftRadius || '0') || 0,
         activeBackground: activeStyle?.backgroundColor || '',
@@ -1791,7 +1848,9 @@ async function assertFilterNavigationResponsive(page, label) {
         state.paddingTop < 14 || state.paddingBottom < 14) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    if (state.ariaPressedCount !== 1 || !state.indicatorExists || !state.indicatorReady ||
+    if (state.ariaPressedCount !== 1 || state.activeColor !== 'rgb(17, 17, 17)' ||
+        state.contentFollowingFilterScroll || state.indicatorFollowingScroll || state.previewCount > 0 ||
+        !state.indicatorExists || !state.indicatorReady ||
         state.indicatorBackground !== 'rgb(242, 242, 242)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
@@ -2147,6 +2206,9 @@ async function assertFilterNavigationResponsive(page, label) {
     if (!stalePreviewProbe.available) {
       throw new Error(label + ' could not prepare an outside-click filter-preview regression state.');
     }
+    // Exercise the formerly problematic branch after the programmatic-scroll
+    // suppression window has expired; an outside tap must not select another tab.
+    if (i === 0) await page.waitForTimeout(780);
     const viewportSize = page.viewportSize();
     await page.mouse.click(Math.max(1, (viewportSize?.width || 1280) - 2), 2);
     const selectedAfterOtherSpaceClick = await option.evaluate(button => {
@@ -2191,6 +2253,71 @@ async function assertFilterNavigationResponsive(page, label) {
       throw new Error(label + ' filter changes must announce the resulting project count politely: ' +
         JSON.stringify(announcementState));
     }
+  }
+
+  const indicatorRepairProbe = await page.evaluate(() => {
+    const scroller = document.querySelector('.filter-nav-scroller');
+    const content = scroller?.querySelector('.filter-nav-content');
+    const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    if (!content || !active || !indicator) return { available: false };
+    content.classList.remove('is-following-filter-scroll');
+    content.querySelectorAll('.is-centered-preview').forEach(button => button.classList.remove('is-centered-preview'));
+    indicator.classList.remove('is-following-scroll');
+    const activeFilter = active.getAttribute('data-filter') || 'all';
+    indicator.style.transform = 'translate3d(-4096px, 0px, 0px)';
+    return { available: true, activeFilter };
+  });
+  if (!indicatorRepairProbe.available) {
+    throw new Error(label + ' could not prepare an outside-tap pill-realignment regression state.');
+  }
+  const repairViewport = page.viewportSize();
+  await page.mouse.click(Math.max(1, (repairViewport?.width || 1280) - 2), 2);
+  await page.waitForFunction(expectedFilter => {
+    const scroller = document.querySelector('.filter-nav-scroller');
+    const content = scroller?.querySelector('.filter-nav-content');
+    const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    if (!scroller || !content || !active || !indicator ||
+        active.getAttribute('data-filter') !== expectedFilter ||
+        active.getAttribute('aria-pressed') !== 'true' ||
+        content.classList.contains('is-following-filter-scroll') ||
+        indicator.classList.contains('is-following-scroll') ||
+        content.querySelector('.is-centered-preview') ||
+        getComputedStyle(active).color !== 'rgb(17, 17, 17)') return false;
+    const a = active.getBoundingClientRect();
+    const b = indicator.getBoundingClientRect();
+    return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
+      Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
+      Math.abs(a.width - b.width) <= 1;
+  }, indicatorRepairProbe.activeFilter, { timeout: 1800 }).catch(() => {});
+  const repairedPillState = await page.evaluate(() => {
+    const scroller = document.querySelector('.filter-nav-scroller');
+    const content = scroller?.querySelector('.filter-nav-content');
+    const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    const a = active?.getBoundingClientRect();
+    const b = indicator?.getBoundingClientRect();
+    return {
+      activeFilter: active?.getAttribute('data-filter') || '',
+      activePressed: active?.getAttribute('aria-pressed') || '',
+      activeColor: active ? getComputedStyle(active).color : '',
+      centerDelta: a && b ? Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) : Infinity,
+      centerDeltaY: a && b ? Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) : Infinity,
+      widthDelta: a && b ? Math.abs(a.width - b.width) : Infinity,
+      contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
+      indicatorFollowing: indicator?.classList.contains('is-following-scroll') || false,
+      previewCount: content?.querySelectorAll('.is-centered-preview').length || 0
+    };
+  });
+  if (repairedPillState.activeFilter !== indicatorRepairProbe.activeFilter ||
+      repairedPillState.activePressed !== 'true' ||
+      repairedPillState.activeColor !== 'rgb(17, 17, 17)' ||
+      repairedPillState.centerDelta > 1 || repairedPillState.centerDeltaY > 1 ||
+      repairedPillState.widthDelta > 1 || repairedPillState.contentFollowing ||
+      repairedPillState.indicatorFollowing || repairedPillState.previewCount !== 0) {
+    throw new Error(label + ' outside tap must remeasure the committed filter pill without changing selection: ' +
+      JSON.stringify(repairedPillState));
   }
 
   // Disabled filter controls must not respond to activation or mimic an active pill.
@@ -9358,6 +9485,9 @@ try {
     await smokePage(browser, '/', async page => {
       await assertFilterNavigationResponsive(page, 'Responsive filter navigation');
     }, { width: 1280, height: 900 });
+    await smokePage(browser, '/', async page => {
+      await assertFilterInitialContrast(page, 'Mobile fresh-load filter contrast');
+    }, { width: 390, height: 844 });
 
 
     await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
