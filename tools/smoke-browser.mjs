@@ -3591,9 +3591,12 @@ try {
           cardWidth: card?.getBoundingClientRect?.().width || 0
         };
       });
-      // ALL is now confirmed centered, so the secondary pill is in the visible
-      // part of the desktop rail and the real pointer activation is meaningful.
-      await secondaryFilter.click();
+      // Dispatch the click handler directly for this geometry-only probe.
+      // Playwright's pointer helper scrolls a horizontally clipped target into
+      // view by also moving the page vertically, which contaminates this test.
+      // Real desktop pointer and drag behavior is exercised in the responsive
+      // filter-navigation smoke test.
+      await secondaryFilter.evaluate(button => button.click());
       await page.waitForTimeout(90);
 
       const midFilterGeometry = await page.evaluate(() => {
