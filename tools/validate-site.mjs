@@ -1655,7 +1655,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !css.includes('.hero-section:not(.about-hero) + main.works-main.page-spacing {\n  padding-top: 0;') ||
       !/mask-image:\s*linear-gradient\(90deg, transparent 0, #000 20px, #000 calc\(100% - 20px\), transparent 100%\)/.test(css) ||
       !/touch-action:\s*pan-y;/.test(filterScrollerRule) ||
-      !css.includes('scroll-snap-stop: always')) {
+      css.includes('scroll-snap-stop: always')) {
     err('Works filters must retain balanced hero/gallery spacing, 44px targets, overflow-edge fading, and natural vertical touch scrolling.');
   }
 
