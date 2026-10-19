@@ -1740,10 +1740,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
       !smoke.includes('hero video did not resume after a real interaction') ||
-      !hero.includes("media.preload = i === 0 && !reducedMotion ? 'auto' : 'metadata';") ||
+      !hero.includes("media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');") ||
+      !hero.includes('if (!reducedMotion) media.src = resolveAssetUrl(source.src);') ||
       !hero.includes("media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');") ||
       !hero.includes("!(reducedMotion && sources[0]?.type === 'video')") ||
-      !smoke.includes('Reduced-motion hero must use a static poster, metadata-only preload, and remain paused without delaying startup') ||
+      !smoke.includes('Reduced-motion hero must show a static poster without attaching/loading the video source or delaying startup') ||
       !smoke.includes("for (const viewport of viewports)") ||
       /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
       !smoke.includes("const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';") ||
@@ -1766,7 +1767,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   if (!entry.includes("bootstrap.js?v=20261019-08") ||
       !bootstrap.includes("cacheVersion = '20261019-08'") ||
       !composition.includes("navigation/index.js?v=20261019-01") ||
-      !composition.includes("hero/index.js?v=20261019-01") ||
+      !composition.includes("hero/index.js?v=20261019-02") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||

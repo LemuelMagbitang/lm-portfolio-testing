@@ -426,9 +426,11 @@ import { createLifecycle } from '../../core/lifecycle.js';
         if (reducedMotion || source.poster) {
           media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');
         }
-        media.preload = i === 0 && !reducedMotion ? 'auto' : 'metadata';
+        media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
         media.autoplay = false;
-        media.src = resolveAssetUrl(source.src);
+        // Reduced-motion visitors see a still poster, not a video download.
+        // Only attach the video source when motion playback is appropriate.
+        if (!reducedMotion) media.src = resolveAssetUrl(source.src);
       } else if (source.type === 'lottie') {
         // <lottie-player> is a custom element from the lottie-player
         // library (loaded in this page's <head>) — it takes a JSON

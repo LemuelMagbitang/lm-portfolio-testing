@@ -8992,15 +8992,18 @@ try {
           preference: matchMedia('(prefers-reduced-motion: reduce)').matches,
           preload: video?.preload || '',
           poster: video?.poster || '',
+          sourceAttribute: video?.getAttribute('src') || '',
+          currentSrc: video?.currentSrc || '',
           paused: video?.paused ?? false,
           loading: transition?.dataset.loading || ''
         };
       });
-      if (!reducedHeroState.preference || reducedHeroState.preload !== 'metadata' ||
+      if (!reducedHeroState.preference || reducedHeroState.preload !== 'none' ||
+          reducedHeroState.sourceAttribute || reducedHeroState.currentSrc ||
           !reducedHeroState.poster.endsWith('/assets/projects/site/og-image.jpg') ||
           !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
         throw new Error(
-          'Reduced-motion hero must use a static poster, metadata-only preload, and remain paused without delaying startup: ' +
+          'Reduced-motion hero must show a static poster without attaching/loading the video source or delaying startup: ' +
           JSON.stringify(reducedHeroState)
         );
       }
