@@ -664,9 +664,9 @@ export async function initGallery(options = {}) {
 
   bind(documentRef, 'click', handlePublicFilterNavigation);
 
-  // An unrelated tap/click can happen while a scroll-preview cleanup timer is
-  // pending. Settle the nearest filter when possible; otherwise immediately
-  // restore the committed pill so the active label cannot stay washed out.
+  // Clear transient swipe styling before outside controls get their pointer event.
+  // Capture phase is intentional: a page-level handler must not be able to leave
+  // the previous filter washed out by stopping the event during bubbling.
   bind(documentRef, 'pointerdown', event => {
     if (filterTabs?.contains(event.target)) return;
     if (!filterContent?.classList.contains('is-following-filter-scroll') &&
@@ -677,7 +677,16 @@ export async function initGallery(options = {}) {
       return;
     }
     clearFilterScrollPreview();
-  });
+  }, { capture: true });
+
+  // Keyboard and synthetic clicks may not have a pointerdown; keep the same
+  // cleanup contract for them without interfering with clicks inside the rail.
+  bind(documentRef, 'click', event => {
+    if (filterTabs?.contains(event.target)) return;
+    if (!filterContent?.classList.contains('is-following-filter-scroll') &&
+        !filterActiveIndicator?.classList.contains('is-following-scroll')) return;
+    clearFilterScrollPreview();
+  }, { capture: true });
 
   // Returning to Works/home always means the public gallery is back to ALL.
   // Navigation publishes the event; Gallery owns the state reset, render, and
