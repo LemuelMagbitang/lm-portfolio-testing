@@ -2068,9 +2068,9 @@ async function assertFilterNavigationResponsive(page, label) {
       }
       if (fastGesture.previewColor !== 'rgb(17, 17, 17)' ||
           fastGesture.committedColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.previewInlineColor !== '#111' ||
+          fastGesture.previewInlineColor !== 'rgb(17, 17, 17)' ||
           fastGesture.previewInlinePriority !== 'important' ||
-          fastGesture.committedInlineColor !== '#111' ||
+          fastGesture.committedInlineColor !== 'rgb(17, 17, 17)' ||
           fastGesture.committedInlinePriority !== 'important' ||
           fastGesture.previewZIndex <= fastGesture.indicatorZIndex ||
           fastGesture.previewAtPill !== true ||
@@ -2080,7 +2080,7 @@ async function assertFilterNavigationResponsive(page, label) {
           JSON.stringify(fastGesture));
       }
       if (fastGesture.activeColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.activeInlineColor !== '#111' ||
+          fastGesture.activeInlineColor !== 'rgb(17, 17, 17)' ||
           fastGesture.activeInlinePriority !== 'important' ||
           fastGesture.activeZIndex <= fastGesture.settledIndicatorZIndex ||
           fastGesture.activeAtPill !== true ||
