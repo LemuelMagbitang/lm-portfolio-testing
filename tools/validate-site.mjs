@@ -1008,7 +1008,7 @@ function validateGalleryContract() {
       !source.includes('syncFilterActiveIndicator(activeBtn);') ||
       source.includes('syncFilterActiveIndicator(activeBtn, { followingScroll: true });') ||
       !source.includes("event.key === 'ArrowRight'") ||
-      !source.includes("activateFilterButton(next, { center: false, updateUrl: true });") ||
+      !source.includes("activateFilterButton(next, { center: true, updateUrl: true });") ||
       !source.includes('signalCenteredFilter(next);') ||
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
