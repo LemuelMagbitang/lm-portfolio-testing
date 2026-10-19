@@ -998,8 +998,13 @@ function validateGalleryContract() {
   }
   if (!source.includes('function clearFilterScrollPreview()') ||
       !source.includes("bind(documentRef, 'pointerdown'") ||
-      !css.includes('@media (max-width: 767px) {\n  /* Small screens should settle directly; no animated easing/bounce. */\n  .filter-active-indicator,\n  .filter-active-indicator.is-animated {\n    transition: none !important;\n  }')) {
-    err('Gallery: small-screen indicator movement must be immediate, and outside interactions must clear stale swipe previews.');
+      !source.includes("bind(documentRef, 'click', event => {") ||
+      !source.includes('}, { capture: true });') ||
+      !css.includes('@media (max-width: 767px) {\n  /* Small screens should settle directly; no animated easing/bounce. */\n  .filter-active-indicator,\n  .filter-active-indicator.is-animated {\n    transition: none !important;\n  }') ||
+      !css.includes('@media (max-width: 1023px)') ||
+      !css.includes('.filter-active-indicator.is-following-scroll') ||
+      !css.includes('animation: none !important;')) {
+    err('Gallery: smaller-screen pill movement must be immediate and all outside interactions must clear transient swipe styling.');
   }
   if (!/\.filter-page-controls\{\s*display:none;/.test(css)) {
     err('Gallery: filter page controls must be hidden by default on desktop.');
