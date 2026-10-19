@@ -915,6 +915,10 @@ export async function initGallery(options = {}) {
 
   bind(filterTabs, 'scrollend', () => {
     if (!isFilterScroller() || filterPointerActive) return;
+    // A release already schedules the single authoritative settle pass.
+    // Browsers may queue scrollend for the final direct-manipulation frame;
+    // consuming it here can recenter immediately and look like post-release coast.
+    if (filterScrollTimer !== null) return;
     if (filterSettling) {
       filterSettling = false;
       windowRef.clearTimeout(filterSettleTimer);
