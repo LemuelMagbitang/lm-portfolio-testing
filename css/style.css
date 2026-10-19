@@ -572,6 +572,16 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   }
 }
 
+@media (max-width: 1023px) {
+  /* Phones and smaller tablets settle directly; never animate the pill after release. */
+  .filter-active-indicator,
+  .filter-active-indicator.is-animated,
+  .filter-active-indicator.is-following-scroll {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 .filter-active-indicator.is-ready {
   opacity: 1;
 }
@@ -720,6 +730,20 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   background: transparent;
   font-weight: 700;
   box-shadow: none;
+  transition: none !important;
+}
+
+.filter-nav-content .tab-btn.is-centered-preview,
+.filter-nav-content .tab-btn.is-centered-preview:hover,
+.filter-nav-content .tab-btn.is-centered-preview:active,
+.filter-nav-content .tab-btn.is-centered-preview:focus,
+.filter-nav-content .tab-btn.is-centered-preview:focus-visible {
+  /* Keep the centered label readable even if hover/focus or parent state changes. */
+  color: #111 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  font-weight: 700;
+  box-shadow: none !important;
   transition: none !important;
 }
 
