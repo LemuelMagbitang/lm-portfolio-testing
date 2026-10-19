@@ -1775,8 +1775,8 @@ async function assertFilterNavigationResponsive(page, label) {
         state.indicatorBackground !== 'rgb(242, 242, 242)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
-        (viewport.width > 767 && !state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
-        (viewport.width <= 767 && state.indicatorTransition !== 'none') ||
+        (viewport.width > 1023 && !state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
+        (viewport.width <= 1023 && state.indicatorTransition !== 'none') ||
         state.activeBackground !== 'rgba(0, 0, 0, 0)' &&
         state.activeBackground !== 'transparent') {
       throw new Error(label + ' accessible sliding-pill state or marker-free button contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
