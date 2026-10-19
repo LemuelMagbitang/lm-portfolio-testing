@@ -1932,6 +1932,7 @@ async function assertFilterNavigationResponsive(page, label) {
         const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
         const previewColor = preview ? getComputedStyle(preview).color : '';
         const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
+        const previewFontWeight = preview ? getComputedStyle(preview).fontWeight : '';
         const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -1948,8 +1949,9 @@ async function assertFilterNavigationResponsive(page, label) {
         return {
           before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
-          previewColor, previewTransition, indicatorTransition,
+          previewColor, previewTransition, previewFontWeight, indicatorTransition,
           activeColor: active ? getComputedStyle(active).color : '',
+          activeFontWeight: active ? getComputedStyle(active).fontWeight : '',
           activeCenterDelta: activeRect
             ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + el.clientWidth / 2))
             : Infinity,
@@ -1970,6 +1972,7 @@ async function assertFilterNavigationResponsive(page, label) {
           JSON.stringify(fastGesture));
       }
       if (fastGesture.activeColor !== 'rgb(17, 17, 17)' ||
+          fastGesture.previewFontWeight !== fastGesture.activeFontWeight ||
           fastGesture.activeCenterDelta > 2 ||
           fastGesture.contentFollowing ||
           fastGesture.indicatorFollowing ||
