@@ -795,6 +795,7 @@ export async function initGallery(options = {}) {
     // A fresh keyboard navigation gesture is intentional user input and
     // must not be blocked by the post-click programmatic-scroll guard.
     suppressFilterSettleUntil = 0;
+    suppressFilterPreviewUntil = 0;
     nextIndex = Math.max(0, Math.min(buttons.length - 1, nextIndex));
     const next = buttons[nextIndex];
     next?.focus?.({ preventScroll: true });
