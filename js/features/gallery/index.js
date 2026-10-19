@@ -227,31 +227,42 @@ export async function initGallery(options = {}) {
     return filterActiveIndicator;
   }
 
-  function syncFilterActiveIndicator(
-    button = getFilterButtons().find(item =>
+  function syncFilterActiveIndicator(button, { followingScroll = false } = {}) {
+    const buttons = getFilterButtons();
+    const activeButton = button || buttons.find(item =>
       item.classList.contains('active') || item.getAttribute('aria-pressed') === 'true'
-    ),
-    { followingScroll = false } = {}
-  ) {
+    );
+    const selectableButtons = buttons.filter(item => !item.disabled);
+    // While the rail moves, preview the pill directly under the viewport's
+    // centerline instead of dragging the old active pill along with its label.
+    // Category state is still committed only when the rail settles.
+    const indicatorButton = followingScroll && isFilterScroller()
+      ? selectableButtons[getNearestCenteredFilterIndex()] || activeButton
+      : activeButton;
     const indicator = ensureFilterActiveIndicator();
     const host = getFilterIndicatorHost();
-    if (!indicator || !host || !button || !filterContent.contains(button)) return;
+    if (!indicator || !host || !indicatorButton || !filterContent.contains(indicatorButton)) return;
+
     const initialPlacement = !indicator.classList.contains('is-ready');
-    if (followingScroll) indicator.classList.add('is-following-scroll');
-    else indicator.classList.remove('is-following-scroll');
+    const isFollowingFilterScroll = followingScroll && isFilterScroller();
+    indicator.classList.toggle('is-following-scroll', isFollowingFilterScroll);
+    filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll);
+    buttons.forEach(item => item.classList.toggle(
+      'is-centered-preview',
+      isFollowingFilterScroll && item === indicatorButton
+    ));
     if (!initialPlacement) indicator.classList.add('is-animated');
 
-    // The indicator overlays the stationary viewport, so its coordinates are
-    // measured from that viewport. Scroll frames keep it aligned with the
-    // active label while the contents glide underneath on mobile.
     const hostRect = host.getBoundingClientRect();
-    const buttonRect = button.getBoundingClientRect();
+    const buttonRect = indicatorButton.getBoundingClientRect();
+    const x = isFollowingFilterScroll
+      ? (hostRect.width - buttonRect.width) / 2
+      : buttonRect.left - hostRect.left;
     indicator.style.width = `${buttonRect.width}px`;
     indicator.style.height = `${buttonRect.height}px`;
-    indicator.style.transform = `translate3d(${buttonRect.left - hostRect.left}px, ${buttonRect.top - hostRect.top}px, 0)`;
+    indicator.style.transform = `translate3d(${x}px, ${buttonRect.top - hostRect.top}px, 0)`;
 
-    // The static active button remains the CSS fallback until the indicator
-    // has a measured position, so selection never disappears during startup.
+    // Keep a visible CSS fallback until the first measured pill is ready.
     indicator.classList.add('is-ready');
     filterContent.classList.add('has-active-indicator');
     if (initialPlacement) {
@@ -265,24 +276,12 @@ export async function initGallery(options = {}) {
     }
   }
 
-  // Active labels use a heavier weight, which can otherwise alter flex widths
-  // on every selection and nudge neighbouring labels. Reserve each label's
-  // natural maximum active/inactive width so only the gray indicator moves.
+  // Pills stay content-sized. Active styling may affect a label's natural
+  // metrics, so clear stale inline measurements and remeasure the edge cushions
+  // after a selection rather than reserving every pill's maximum possible width.
   function normalizeFilterButtonWidths() {
     getFilterButtons().forEach(button => {
       button.style.width = '';
-      const wasActive = button.classList.contains('active');
-      const previousPressed = button.getAttribute('aria-pressed');
-      button.classList.remove('active');
-      button.setAttribute('aria-pressed', 'false');
-      const inactiveWidth = button.getBoundingClientRect().width;
-      button.classList.add('active');
-      button.setAttribute('aria-pressed', 'true');
-      const activeWidth = button.getBoundingClientRect().width;
-      button.classList.toggle('active', wasActive);
-      if (previousPressed === null) button.removeAttribute('aria-pressed');
-      else button.setAttribute('aria-pressed', previousPressed);
-      button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;
     });
   }
 
@@ -423,6 +422,9 @@ export async function initGallery(options = {}) {
       item.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
     currentFilter = nextFilter;
+    // Active font weight changes a pill's natural width; rebuild the edge
+    // cushions before centering so the first and last labels remain reachable.
+    ensureFilterEdges();
     syncFilterActiveIndicator(button);
 
     // Only a real filter change starts a new result set. Centering the
@@ -453,7 +455,7 @@ export async function initGallery(options = {}) {
   function settleCenteredFilter({ center = true } = {}) {
     if (!filterTabs || !isFilterScroller() || filterSettling ||
         Date.now() < suppressFilterSettleUntil) return;
-    const buttons = getFilterButtons();
+    const buttons = getFilterButtons().filter(button => !button.disabled);
     if (!buttons.length) return;
 
     const nearest = buttons[getNearestCenteredFilterIndex()];
@@ -472,7 +474,7 @@ export async function initGallery(options = {}) {
       filterSettleTimer = windowRef.setTimeout(() => {
         filterSettling = false;
         filterSettleTimer = null;
-        const settledButtons = getFilterButtons();
+        const settledButtons = getFilterButtons().filter(button => !button.disabled);
         signalCenteredFilter(settledButtons[getNearestCenteredFilterIndex()] || nearest);
       }, 420);
     } else {
@@ -865,15 +867,20 @@ export async function initGallery(options = {}) {
   }, { passive: true });
 
   bind(filterTabs, 'scrollend', () => {
-    if (!isFilterScroller()) return;
-    filterActiveIndicator?.classList.remove('is-following-scroll');
-    if (filterPointerActive) return;
+    if (!isFilterScroller() || filterPointerActive) return;
     if (filterSettling) {
       filterSettling = false;
       windowRef.clearTimeout(filterSettleTimer);
       filterSettleTimer = null;
-      const buttons = getFilterButtons();
+      syncFilterActiveIndicator();
+      const buttons = getFilterButtons().filter(button => !button.disabled);
       signalCenteredFilter(buttons[getNearestCenteredFilterIndex()]);
+      return;
+    }
+    // A click/resize may intentionally suppress scroll-based category changes.
+    // In that case, finish the visual preview and restore the selected pill.
+    if (Date.now() < suppressFilterSettleUntil) {
+      syncFilterActiveIndicator();
       return;
     }
     settleCenteredFilter();
