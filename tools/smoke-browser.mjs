@@ -3581,6 +3581,22 @@ try {
         return active?.dataset.filter === 'all' && !!railRect && !!activeRect &&
           Math.abs(activeRect.left + activeRect.width / 2 - (railRect.left + rail.clientWidth / 2)) <= 2;
       }, null, { timeout: 1800 });
+      // The assertions above concern horizontal carousel motion. Also let any
+      // document-level scroll caused by preceding real pointer clicks finish;
+      // otherwise the gallery's viewport Y is sampled mid-scroll and falsely
+      // reported as a filter-transition layout shift.
+      await page.waitForFunction(async () => {
+        let previous = window.scrollY;
+        let stableSamples = 0;
+        for (let sample = 0; sample < 12; sample += 1) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          const current = window.scrollY;
+          stableSamples = Math.abs(current - previous) <= 0.5 ? stableSamples + 1 : 0;
+          if (stableSamples >= 3) return true;
+          previous = current;
+        }
+        return false;
+      }, null, { timeout: 2200 });
       const preFilterGeometry = await page.evaluate(() => {
         const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
         const wrapper = document.querySelector('.portfolio-wrapper')?.getBoundingClientRect();
