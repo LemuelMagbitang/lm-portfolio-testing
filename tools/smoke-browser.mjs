@@ -1683,6 +1683,7 @@ async function assertFilterNavigationResponsive(page, label) {
       const gap = Number.parseFloat(content ? getComputedStyle(content).columnGap : '0') || 0;
       const naturalWidth = buttons.reduce((total, button) => total + button.getBoundingClientRect().width, 0) +
         gap * Math.max(0, buttons.length - 1);
+      const naturalOverflow = naturalWidth > (scroller?.clientWidth || 0) + 1;
       const scrollerRect = scroller?.getBoundingClientRect();
       const firstRect = buttons[0]?.getBoundingClientRect();
       const lastRect = buttons[buttons.length - 1]?.getBoundingClientRect();
@@ -1701,7 +1702,10 @@ async function assertFilterNavigationResponsive(page, label) {
         clientWidth: scroller?.clientWidth || 0, scrollWidth: scroller?.scrollWidth || 0,
         dataOverflow: scroller?.dataset.overflow === 'true',
         actualOverflow: (scroller?.scrollWidth || 0) > (scroller?.clientWidth || 0) + 1,
-        expectedOverflow: naturalWidth > (scroller?.clientWidth || 0) + 1,
+        naturalOverflow,
+        // Edge cushions turn every multi-category rail into a true centered
+        // carousel, even where the unpadded labels would fit.
+        expectedOverflow: buttons.length > 1,
         snapType: scrollerStyle?.scrollSnapType || '', touchAction: scrollerStyle?.touchAction || '',
         verticalOverflow: scroller ? scroller.scrollHeight > scroller.clientHeight + 1 : true,
         paddingTop: Number.parseFloat(wrapperStyle?.paddingTop || '0') || 0,
@@ -1740,7 +1744,10 @@ async function assertFilterNavigationResponsive(page, label) {
       throw new Error(label + ' filter navigation structure is incomplete at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.dataOverflow !== state.expectedOverflow || state.actualOverflow !== state.expectedOverflow) {
-      throw new Error(label + ' filter overflow state is inconsistent at ' + viewport.width + 'px: ' + JSON.stringify(state));
+      throw new Error(label + ' centered-carousel overflow state is inconsistent at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.activeCenterDelta > 2) {
+      throw new Error(label + ' active filter must remain centered at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.minButtonHeight < 44 || !state.labelsStayOneLine || state.verticalOverflow ||
         state.paddingTop < 14 || state.paddingBottom < 14) {
@@ -1940,10 +1947,36 @@ async function assertFilterNavigationResponsive(page, label) {
     throw new Error(label + ' missed centered selection or mouse-drag interaction checks.');
   }
 
-  // Exercise every filter with the moving indicator at desktop width. The row
-  // stays centered as a group; only the gray indicator follows selection.
+  // Desktop uses the same centered carousel: primary-button dragging must move
+  // the rail, settle on the nearest label, and keep the preview text dark on gray.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.waitForTimeout(160);
+  const desktopRail = page.locator('.filter-nav-scroller');
+  const desktopRect = await desktopRail.boundingBox();
+  if (desktopRect) {
+    await page.mouse.move(desktopRect.x + desktopRect.width * 0.78, desktopRect.y + desktopRect.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(desktopRect.x + desktopRect.width * 0.22, desktopRect.y + desktopRect.height / 2, { steps: 6 });
+    const previewText = await page.evaluate(() => {
+      const preview = document.querySelector('.filter-nav-scroller .tab-btn.is-centered-preview');
+      if (!preview) return null;
+      const style = getComputedStyle(preview);
+      return { label: preview.textContent.trim(), color: style.color, background: style.backgroundColor };
+    });
+    if (previewText && previewText.color !== 'rgb(17, 17, 17)') {
+      await page.mouse.up();
+      throw new Error(label + ' desktop centered pill preview text must remain dark during hover: ' + JSON.stringify(previewText));
+    }
+    await page.mouse.up();
+    await page.waitForFunction(() => {
+      const scroller = document.querySelector('.filter-nav-scroller');
+      const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
+      const railRect = scroller?.getBoundingClientRect();
+      const activeRect = active?.getBoundingClientRect();
+      return !!railRect && !!activeRect && !scroller.classList.contains('is-gesture-active') &&
+        Math.abs(activeRect.left + activeRect.width / 2 - (railRect.left + scroller.clientWidth / 2)) <= 2;
+    }, null, { timeout: 3000 });
+  }
   const filterOptions = page.locator('.filter-nav-scroller [data-filter]');
   const filterOptionCount = await filterOptions.count();
   for (let i = 0; i < filterOptionCount; i += 1) {
