@@ -782,8 +782,9 @@ export async function initGallery(options = {}) {
     activateFilterButton(btn, { center: true, updateUrl: true });
   }));
 
-  // Arrow keys move focus along the mobile strip; Home/End jump to its bounds.
-  // The settled center remains the owner of filter state and sound timing.
+  // Arrow keys move focus and selection together; Home/End jump to strip bounds.
+  // Keyboard activation centers immediately and guards its programmatic scroll
+  // so a delayed native scrollend cannot duplicate or override the selection.
   bind(filterTabs, 'keydown', event => {
     if (!isFilterScroller()) return;
     const focused = event.target?.closest?.('.filter-btn, .tab-btn');
@@ -805,18 +806,21 @@ export async function initGallery(options = {}) {
     else return;
 
     event.preventDefault();
-    // A fresh keyboard navigation gesture is intentional user input and
-    // must not be blocked by the post-click programmatic-scroll guard.
+    // Keyboard navigation is an explicit selection, not an indirect request
+    // to wait for a scroll event. Guard the programmatic centering from being
+    // misread as a swipe or a second selection by queued scroll/scrollend events.
     cancelPendingFilterSettlement();
-    suppressFilterSettleUntil = 0;
-    suppressFilterPreviewUntil = 0;
-    filterScrollPreviewRequested = true;
+    suppressFilterSettleUntil = Date.now() + 750;
+    suppressFilterPreviewUntil = Date.now() + 750;
+    filterScrollPreviewRequested = false;
     nextIndex = Math.max(0, Math.min(buttons.length - 1, nextIndex));
     const next = buttons[nextIndex];
     next?.focus?.({ preventScroll: true });
     if (next) {
       centerFilterButton(next, 'auto');
-      scheduleCenteredFilter();
+      activateFilterButton(next, { center: false, updateUrl: true });
+      clearFilterScrollPreview();
+      signalCenteredFilter(next);
     }
   });
 
