@@ -288,20 +288,23 @@ export async function initGallery(options = {}) {
 
   function getNearestCenteredFilterIndex() {
     const buttons = getFilterButtons();
-    if (!buttons.length || !filterTabs) return 0;
+    const selectableButtons = buttons.filter(button => !button.disabled);
+    if (!selectableButtons.length || !filterTabs) return 0;
     const center = filterTabs.getBoundingClientRect().left + filterTabs.clientWidth / 2;
-    let nearestIndex = 0;
+    let nearestButton = selectableButtons[0];
     let nearestDistance = Infinity;
 
-    buttons.forEach((button, index) => {
+    selectableButtons.forEach(button => {
       const rect = button.getBoundingClientRect();
       const distance = Math.abs((rect.left + rect.width / 2) - center);
       if (distance < nearestDistance) {
         nearestDistance = distance;
-        nearestIndex = index;
+        nearestButton = button;
       }
     });
-    return nearestIndex;
+    // Callers index the complete button list, so return the original index
+    // while ensuring an inert CMS filter cannot win gesture settlement.
+    return Math.max(0, buttons.indexOf(nearestButton));
   }
 
   function updateFilterPager(activeIndex = getNearestCenteredFilterIndex()) {
@@ -429,8 +432,10 @@ export async function initGallery(options = {}) {
       const transitionFromRects = captureGalleryCardRects(portfolioGrid);
       isExpanded = false;
       render({ animateTransition: true, transitionFromRects });
-      updateFilterAnnouncement(button);
     }
+    // Initialize the live region on the first explicit selection as well as
+    // announce subsequent changes; re-centering alone does not spam updates.
+    if (changed || !filterAnnouncement?.textContent) updateFilterAnnouncement(button);
     if (center && isFilterScroller()) centerFilterButton(button);
     updateFilterPager(filterBtns.indexOf(button));
 
