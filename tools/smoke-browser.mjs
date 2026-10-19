@@ -985,6 +985,55 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
            layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'pan-y')) {
         throw new Error(label + ' mobile: overflowing filters must preserve the edge fade, horizontal scrolling, and natural vertical gestures: ' + JSON.stringify(layout));
       }
+      if (viewport.name === 'mobile' && layout.filterHasOverflow) {
+        const preview = await page.evaluate(async () => {
+          const rail = document.querySelector('.filter-tabs');
+          const indicator = document.querySelector('.filter-active-indicator');
+          const content = rail?.querySelector('.filter-nav-content');
+          const buttons = Array.from(rail?.querySelectorAll('.tab-btn') || []).filter(button => !button.disabled);
+          const active = buttons.find(button => button.classList.contains('active'));
+          if (!rail || !indicator || !content || !active || buttons.length < 2) return { available: false };
+          const activeId = active.dataset.filter || 'all';
+          const target = buttons[(buttons.indexOf(active) + 1) % buttons.length];
+          const centerX = element => {
+            const rect = element.getBoundingClientRect();
+            return rect.left + rect.width / 2;
+          };
+          rail.classList.add('is-gesture-active');
+          rail.scrollLeft += centerX(target) - centerX(rail);
+          rail.dispatchEvent(new Event('scroll'));
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const railCenter = centerX(rail);
+          const nearest = buttons.reduce((best, item) =>
+            Math.abs(centerX(item) - railCenter) < Math.abs(centerX(best) - railCenter) ? item : best
+          );
+          const indicatorRect = indicator.getBoundingClientRect();
+          const nearestRect = nearest.getBoundingClientRect();
+          const state = {
+            available: true,
+            activeId,
+            previewId: nearest.dataset.filter || 'all',
+            isPreview: nearest.classList.contains('is-centered-preview'),
+            indicatorCenterDelta: Math.abs(centerX(indicator) - railCenter),
+            indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
+            hasForcedWidths: buttons.some(button => Boolean(button.style.width))
+          };
+          // Return the rail to the original selected pill and let normal settling
+          // clear the transient preview before the rest of the smoke suite runs.
+          const restore = buttons.find(button => (button.dataset.filter || 'all') === activeId);
+          if (restore) rail.scrollLeft += centerX(restore) - centerX(rail);
+          rail.dispatchEvent(new Event('scroll'));
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          rail.classList.remove('is-gesture-active');
+          rail.dispatchEvent(new Event('scrollend'));
+          return state;
+        });
+        if (preview.available &&
+            (preview.indicatorCenterDelta > 2 || preview.indicatorWidthDelta > 2 ||
+             !preview.isPreview || preview.hasForcedWidths)) {
+          throw new Error(label + ' mobile: active filter pill must remain centered and follow the natural width of the label passing underneath: ' + JSON.stringify(preview));
+        }
+      }
       if (layout.logoBlendMode !== 'normal' ||
           !['light', 'dark'].includes(layout.logoForeground) ||
           !layout.logoTransitionProperties.includes('transform') ||
@@ -1282,6 +1331,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             paused: video.paused,
             currentTime: video.currentTime,
             playbackState: video.dataset.playbackState || '',
+            poster: video.poster || '',
+            posterAttribute: video.getAttribute('poster') || '',
+            readyState: video.readyState,
             error: video.error ? { code: video.error.code, message: video.error.message || '' } : null,
             source: video.currentSrc || video.src
           } : {
@@ -1290,6 +1342,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           };
         });
         if (videoContract.present) {
+          if (!videoContract.poster || !videoContract.posterAttribute) {
+            throw new Error(label + ': hero video needs a poster fallback before its first decodable frame: ' + JSON.stringify(videoContract));
+          }
           if (!videoContract.muted || !videoContract.playsInline ||
               (await page.locator('#heroBanner .slide').count()) === 1 && !videoContract.loop) {
             throw new Error(label + ': hero video must be muted, inline, and loop when it is the only manual slide: ' + JSON.stringify(videoContract));
