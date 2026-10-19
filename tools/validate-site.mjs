@@ -1799,8 +1799,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261019-18") ||
-      !bootstrap.includes("cacheVersion = '20261019-18'") ||
+  if (!entry.includes("bootstrap.js?v=20261019-19") ||
+      !bootstrap.includes("cacheVersion = '20261019-19'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
@@ -1808,12 +1808,12 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261019-19") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261019-18') ||
+      !works.includes('js/app/bootstrap.js?v=20261019-19') ||
       !works.includes('js/app/page-composition.js?v=20261019-19') ||
       !works.includes('css/style.css?v=20261019-16') ||
-      !works.includes('js/script.js?v=20261019-18') ||
+      !works.includes('js/script.js?v=20261019-19') ||
       !about.includes('style.css?v=20261019-16') ||
-      !about.includes('script.js?v=20261019-18') ||
+      !about.includes('script.js?v=20261019-19') ||
       !about.includes('page-composition.js?v=20261019-19')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
