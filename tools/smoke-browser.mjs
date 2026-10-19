@@ -8982,6 +8982,85 @@ try {
       await assertFilterNavigationResponsive(page, 'Responsive filter navigation');
     }, { width: 1280, height: 900 });
 
+
+    await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
+      const reduced = await page.evaluate(async () => {
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261019-01');
+        const options = { resolveAssetUrl: value => value, priority: true };
+        const lottie = buildProjectThumbnailMedia(
+          { type: 'lottie', src: 'data:application/json,%7B%7D' },
+          'Lottie motion fixture',
+          options
+        );
+        const video = buildProjectThumbnailMedia(
+          { type: 'video', src: 'data:video/mp4;base64,AAAA' },
+          'Video motion fixture',
+          options
+        );
+        const image = buildProjectThumbnailMedia(
+          { type: 'image', src: 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22/%3E' },
+          'Still image fixture',
+          options
+        );
+        return {
+          preference: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          lottieAutoplay: lottie.hasAttribute('autoplay'),
+          lottieLoop: lottie.hasAttribute('loop'),
+          videoAutoplay: video.autoplay,
+          videoLoop: video.loop,
+          videoPreload: video.preload,
+          videoFetchPriority: video.fetchPriority,
+          imageLoading: image.loading,
+          imageFetchPriority: image.fetchPriority
+        };
+      });
+      if (!reduced.preference || reduced.lottieAutoplay || reduced.lottieLoop ||
+          reduced.videoAutoplay || reduced.videoLoop || reduced.videoPreload !== 'metadata' ||
+          reduced.videoFetchPriority === 'high' || reduced.imageLoading !== 'eager' ||
+          reduced.imageFetchPriority !== 'high') {
+        throw new Error(
+          'Project thumbnail media must respect prefers-reduced-motion while keeping still-image priority hints: ' +
+          JSON.stringify(reduced)
+        );
+      }
+
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      const standard = await page.evaluate(async () => {
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261019-01');
+        const options = { resolveAssetUrl: value => value, priority: true };
+        const lottie = buildProjectThumbnailMedia(
+          { type: 'lottie', src: 'data:application/json,%7B%7D' },
+          'Lottie motion fixture',
+          options
+        );
+        const video = buildProjectThumbnailMedia(
+          { type: 'video', src: 'data:video/mp4;base64,AAAA' },
+          'Video motion fixture',
+          options
+        );
+        return {
+          preference: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          lottieAutoplay: lottie.hasAttribute('autoplay'),
+          lottieLoop: lottie.hasAttribute('loop'),
+          videoAutoplay: video.autoplay,
+          videoLoop: video.loop,
+          videoPreload: video.preload,
+          videoFetchPriority: video.fetchPriority
+        };
+      });
+      if (standard.preference || !standard.lottieAutoplay || !standard.lottieLoop ||
+          !standard.videoAutoplay || !standard.videoLoop || standard.videoPreload !== 'auto' ||
+          standard.videoFetchPriority !== 'high') {
+        throw new Error(
+          'Project thumbnail autoplay and looping must remain available when reduced motion is not requested: ' +
+          JSON.stringify(standard)
+        );
+      }
+    }, { width: 1280, height: 900 }, async page => {
+      // Emulate the visitor's OS/browser preference before the app and feature modules load.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+    });
+
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
   } finally {
     await browser.close();
