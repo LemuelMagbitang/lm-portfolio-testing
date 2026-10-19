@@ -795,7 +795,7 @@ export async function initGallery(options = {}) {
     // Reconcile the cue deduplication marker with the committed category before
     // keyboard navigation begins. A late prior scroll settlement must not leave
     // a stale marker that suppresses the next legitimate centered-filter cue.
-    lastCenteredFilterId = currentFilter || focused.getAttribute('data-filter') || 'all';
+    lastCenteredFilterId = focused.getAttribute('data-filter') || currentFilter || 'all';
 
     let nextIndex = index;
     if (event.key === 'ArrowRight') nextIndex += 1;
