@@ -3570,7 +3570,17 @@ try {
       const secondaryFilter = filterButtons.nth(1);
       await assertFilterButtonHitTarget(page, 'Desktop Works');
       await allFilter.click();
-      await page.waitForTimeout(120);
+      // Carousel centering uses a 280ms glide; wait for ALL to reach the center
+      // before taking the baseline so the next visible pill can be clicked like
+      // a real visitor would, without Playwright auto-scrolling the document.
+      await page.waitForFunction(() => {
+        const rail = document.querySelector('.filter-nav-scroller');
+        const active = rail?.querySelector('.filter-btn.active, .tab-btn.active');
+        const railRect = rail?.getBoundingClientRect();
+        const activeRect = active?.getBoundingClientRect();
+        return active?.dataset.filter === 'all' && !!railRect && !!activeRect &&
+          Math.abs(activeRect.left + activeRect.width / 2 - (railRect.left + rail.clientWidth / 2)) <= 2;
+      }, null, { timeout: 1800 });
       const preFilterGeometry = await page.evaluate(() => {
         const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
         const wrapper = document.querySelector('.portfolio-wrapper')?.getBoundingClientRect();
@@ -3581,12 +3591,9 @@ try {
           cardWidth: card?.getBoundingClientRect?.().width || 0
         };
       });
-      // The centered desktop carousel intentionally keeps off-center labels
-      // clipped. Use the real button click handler here rather than Playwright's
-      // auto-scroll-to-element helper, which can scroll the entire document
-      // vertically while trying to reveal a horizontally clipped test target.
-      // Real pointer selection and drag settlement are covered above.
-      await secondaryFilter.evaluate(button => button.click());
+      // ALL is now confirmed centered, so the secondary pill is in the visible
+      // part of the desktop rail and the real pointer activation is meaningful.
+      await secondaryFilter.click();
       await page.waitForTimeout(90);
 
       const midFilterGeometry = await page.evaluate(() => {
