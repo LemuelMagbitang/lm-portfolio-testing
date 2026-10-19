@@ -1036,9 +1036,15 @@ function validateGalleryContract() {
   if (!stableSelectedColorContract.includes('color: #111 !important;') ||
       !swipeSelectedColorContract.includes('color: #111 !important;') ||
       !css.includes('.filter-nav-content:not(.is-following-filter-scroll) .tab-btn[aria-pressed="true"]:not(.is-centered-preview)') ||
+      !css.includes('.filter-nav-content .filter-btn.active,') ||
+      !css.includes('z-index: 2 !important;') ||
+      !source.includes("item.style.setProperty('color', '#111', 'important')") ||
+      !source.includes("item.style.removeProperty('color')") ||
+      !smoke.includes('previewAtPill') ||
+      !smoke.includes('activeAtPill') ||
       !smoke.includes('initial-load active filter contrast failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
-    err('Gallery: the resting selected filter must force near-black text and retain first-load/outside-tap contrast coverage.');
+    err('Gallery: active/preview labels must stay dark and paint above the moving pill during swipe and after settlement.');
   }
 
   const fontRefreshStart = source.indexOf('function refreshFilterGeometryAfterFontsLoad()');
@@ -1850,22 +1856,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261020-01") ||
-      !bootstrap.includes("cacheVersion = '20261020-01'") ||
+  if (!entry.includes("bootstrap.js?v=20261020-02") ||
+      !bootstrap.includes("cacheVersion = '20261020-02'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261019-20") ||
+      !composition.includes("gallery/index.js?v=20261020-01") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261020-01') ||
-      !works.includes('js/app/page-composition.js?v=20261020-01') ||
-      !works.includes('css/style.css?v=20261020-02') ||
-      !works.includes('js/script.js?v=20261020-01') ||
-      !about.includes('style.css?v=20261020-02') ||
-      !about.includes('script.js?v=20261020-01') ||
-      !about.includes('page-composition.js?v=20261020-01')) {
+      !works.includes('js/app/bootstrap.js?v=20261020-02') ||
+      !works.includes('js/app/page-composition.js?v=20261020-02') ||
+      !works.includes('css/style.css?v=20261020-03') ||
+      !works.includes('js/script.js?v=20261020-02') ||
+      !about.includes('style.css?v=20261020-03') ||
+      !about.includes('script.js?v=20261020-02') ||
+      !about.includes('page-composition.js?v=20261020-02')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }

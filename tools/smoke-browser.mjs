@@ -2007,9 +2007,19 @@ async function assertFilterNavigationResponsive(page, label) {
         const preview = el.querySelector('.tab-btn.is-centered-preview');
         const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
         const previewColor = preview ? getComputedStyle(preview).color : '';
-        const committedColor = el.querySelector('.tab-btn.active, .filter-btn.active')
-          ? getComputedStyle(el.querySelector('.tab-btn.active, .filter-btn.active')).color
-          : '';
+        const committed = el.querySelector('.tab-btn.active, .filter-btn.active');
+        const committedColor = committed ? getComputedStyle(committed).color : '';
+        const previewInlineColor = preview?.style.getPropertyValue('color') || '';
+        const previewInlinePriority = preview?.style.getPropertyPriority('color') || '';
+        const previewZIndex = preview ? Number.parseInt(getComputedStyle(preview).zIndex, 10) : -1;
+        const indicatorZIndex = indicator ? Number.parseInt(getComputedStyle(indicator).zIndex, 10) : -1;
+        const indicatorRect = indicator?.getBoundingClientRect();
+        const pillHit = indicatorRect
+          ? document.elementFromPoint(indicatorRect.left + indicatorRect.width / 2, indicatorRect.top + indicatorRect.height / 2)
+          : null;
+        const previewAtPill = Boolean(preview && pillHit?.closest?.('.tab-btn') === preview);
+        const committedInlineColor = committed?.style.getPropertyValue('color') || '';
+        const committedInlinePriority = committed?.style.getPropertyPriority('color') || '';
         const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
         const previewFontWeight = preview ? getComputedStyle(preview).fontWeight : '';
         const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
@@ -2025,10 +2035,22 @@ async function assertFilterNavigationResponsive(page, label) {
         const scrollerRect = el.getBoundingClientRect();
         const content = el.querySelector('.filter-nav-content');
         const settledIndicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+        const settledIndicatorRect = settledIndicator?.getBoundingClientRect();
+        const settledPillHit = settledIndicatorRect
+          ? document.elementFromPoint(settledIndicatorRect.left + settledIndicatorRect.width / 2, settledIndicatorRect.top + settledIndicatorRect.height / 2)
+          : null;
+        const activeAtPill = Boolean(active && settledPillHit?.closest?.('.tab-btn') === active);
+        const activeInlineColor = active?.style.getPropertyValue('color') || '';
+        const activeInlinePriority = active?.style.getPropertyPriority('color') || '';
+        const activeZIndex = active ? Number.parseInt(getComputedStyle(active).zIndex, 10) : -1;
+        const settledIndicatorZIndex = settledIndicator ? Number.parseInt(getComputedStyle(settledIndicator).zIndex, 10) : -1;
         return {
           before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
-          previewColor, committedColor, previewTransition, previewFontWeight, indicatorTransition,
+          previewColor, committedColor, previewInlineColor, previewInlinePriority,
+          committedInlineColor, committedInlinePriority, previewZIndex, indicatorZIndex,
+          previewAtPill, activeAtPill, activeInlineColor, activeInlinePriority,
+          activeZIndex, settledIndicatorZIndex, previewTransition, previewFontWeight, indicatorTransition,
           activeColor: active ? getComputedStyle(active).color : '',
           activeFontWeight: active ? getComputedStyle(active).fontWeight : '',
           activeCenterDelta: activeRect
@@ -2046,12 +2068,22 @@ async function assertFilterNavigationResponsive(page, label) {
       }
       if (fastGesture.previewColor !== 'rgb(17, 17, 17)' ||
           fastGesture.committedColor !== 'rgb(17, 17, 17)' ||
+          fastGesture.previewInlineColor !== '#111' ||
+          fastGesture.previewInlinePriority !== 'important' ||
+          fastGesture.committedInlineColor !== '#111' ||
+          fastGesture.committedInlinePriority !== 'important' ||
+          fastGesture.previewZIndex <= fastGesture.indicatorZIndex ||
+          fastGesture.previewAtPill !== true ||
           fastGesture.previewTransition !== 'none' ||
           fastGesture.indicatorTransition !== 'none') {
         throw new Error(label + ' swipe preview must stay dark and motion-free while the pill is moving: ' +
           JSON.stringify(fastGesture));
       }
       if (fastGesture.activeColor !== 'rgb(17, 17, 17)' ||
+          fastGesture.activeInlineColor !== '#111' ||
+          fastGesture.activeInlinePriority !== 'important' ||
+          fastGesture.activeZIndex <= fastGesture.settledIndicatorZIndex ||
+          fastGesture.activeAtPill !== true ||
           fastGesture.previewFontWeight !== fastGesture.activeFontWeight ||
           fastGesture.activeCenterDelta > 2 ||
           fastGesture.contentFollowing ||

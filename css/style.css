@@ -764,6 +764,16 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   color: #111 !important;
 }
 
+/* The moving indicator is only a background surface: it must never cover
+   the selected/preview label or make dark text appear missing on white. */
+.filter-nav-content .filter-btn.active,
+.filter-nav-content .filter-btn[aria-pressed="true"],
+.filter-nav-content .tab-btn.is-centered-preview {
+  position: relative;
+  z-index: 2 !important;
+  color: #111 !important;
+}
+
 /* The hover selector has deliberately high specificity. Match it here so a
    desktop mouse hover cannot turn the centered preview label white on gray. */
 @media (hover: hover) and (pointer: fine) {

@@ -244,15 +244,26 @@ export async function initGallery(options = {}) {
     // centerline instead of dragging the old active pill along with its label.
     // Category state is still committed only when the rail settles.
     const centeredButton = buttons[getNearestCenteredFilterIndex()];
-    const indicatorButton = followingScroll && isFilterScroller()
+    const isFollowingFilterScroll = followingScroll && isFilterScroller();
+    const indicatorButton = isFollowingFilterScroll
       ? (centeredButton && !centeredButton.disabled ? centeredButton : activeButton)
       : activeButton;
+
+    // Keep the committed label and the label directly under the moving pill
+    // dark at the moment their state changes. Inline !important is deliberate:
+    // browser/legacy hover rules must not repaint either label white on white.
+    buttons.forEach(item => {
+      const needsDarkLabel = item === activeButton ||
+        (isFollowingFilterScroll && item === indicatorButton);
+      if (needsDarkLabel) item.style.setProperty('color', '#111', 'important');
+      else item.style.removeProperty('color');
+    });
+
     const indicator = ensureFilterActiveIndicator();
     const host = getFilterIndicatorHost();
     if (!indicator || !host || !indicatorButton || !filterContent.contains(indicatorButton)) return;
 
     const initialPlacement = !indicator.classList.contains('is-ready');
-    const isFollowingFilterScroll = followingScroll && isFilterScroller();
     indicator.classList.toggle('is-following-scroll', isFollowingFilterScroll);
     filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll);
     buttons.forEach(item => item.classList.toggle(
