@@ -6438,10 +6438,35 @@ try {
       // Recreate Contact state before checking the logo independently.
       await page.evaluate(() => {
         history.pushState(null, '', location.pathname + '#contact-start');
-        window.scrollTo(0, document.body.scrollHeight);
+        // Position the fixture at the bottom instantly. Without this guard,
+        // the page's global smooth-scroll setting can leave a synthetic scroll
+        // in flight when the logo click tries to reset Home.
+        const html = document.documentElement;
+        const previousBehavior = html.style.scrollBehavior;
+        html.style.scrollBehavior = 'auto';
+        const maximum = Math.max(
+          0,
+          Math.max(html.scrollHeight, document.body.scrollHeight) - window.innerHeight
+        );
+        window.scrollTo({ left: 0, top: maximum, behavior: 'auto' });
+        html.style.scrollBehavior = previousBehavior;
       });
+      await page.waitForFunction(() => {
+        const maximum = Math.max(
+          0,
+          Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) - window.innerHeight
+        );
+        return Math.abs(window.scrollY - maximum) <= 2;
+      }, null, { timeout: 3000 });
       await page.locator('.nav-logo').first().click();
-      await page.waitForFunction(() => Math.abs(window.scrollY) <= 8, null, { timeout: 5000 });
+      // Wait for the runtime's two-frame layout correction, then verify the
+      // resting position rather than a transient instant-scroll frame.
+      await page.waitForFunction(async () => {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        return Math.abs(window.scrollY) <= 8;
+      }, null, { timeout: 5000 });
       const logoReset = await page.evaluate(() => ({
         scrollY: window.scrollY,
         hash: window.location.hash,
