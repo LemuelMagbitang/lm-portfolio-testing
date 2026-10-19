@@ -710,7 +710,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     // same-page navigation retains the existing smooth scroll behavior.
     const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
     const instantLogoReset = Boolean(link.matches?.('.nav-logo'));
-    windowRef.scrollTo({ left: 0, top: 0, behavior: reducedMotion || instantLogoReset ? 'auto' : 'smooth' });
+    // Reuse the guarded home-reset path: layout/feature updates can otherwise
+    // leave the page a few pixels below the top after a logo click, especially
+    // when the Gallery carousel is re-centering at the same time.
+    scrollToHomePosition(windowRef, reducedMotion || instantLogoReset ? 'auto' : 'smooth');
   }
 
   function handleSamePageContactNavigation(event) {
