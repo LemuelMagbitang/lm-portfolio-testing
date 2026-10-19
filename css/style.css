@@ -702,6 +702,21 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   box-shadow: none;
 }
 
+/* While swiping, the gray pill is pinned to the rail center. Dim the committed
+   category and preview the label crossing the center, without committing a new
+   filter until scroll settlement. The pill width follows that label naturally. */
+.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.active,
+.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn[aria-pressed="true"] {
+  color: rgba(255, 255, 255, .68);
+  font-weight: 580;
+}
+.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview {
+  color: #111;
+  background: transparent;
+  font-weight: 700;
+  box-shadow: none;
+}
+
 /* Pointer focus does not keep a browser-default plate; keyboard users retain
    a distinct high-contrast focus indicator. */
  .tab-btn:disabled,
