@@ -2090,12 +2090,32 @@ function validateCmsRegressionContracts() {
   }
 }
 
+function validateReducedMotionThumbnailContract() {
+  const thumbnail = exists('js/features/projects/project-thumbnail.js')
+    ? readText('js/features/projects/project-thumbnail.js')
+    : '';
+  const smoke = exists('tools/smoke-browser.mjs')
+    ? readText('tools/smoke-browser.mjs')
+    : '';
+
+  if (!thumbnail.includes("matchMedia?.('(prefers-reduced-motion: reduce)')") ||
+      !thumbnail.includes('media.autoplay = !reducedMotion;') ||
+      !thumbnail.includes('media.loop = !reducedMotion;') ||
+      !thumbnail.includes("if (!reducedMotion) {") ||
+      !thumbnail.includes("media.preload = priority && !reducedMotion ? 'auto' : 'metadata';") ||
+      !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
+      !smoke.includes('project-thumbnail.js?v=20261019-01')) {
+    err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
+  }
+}
+
 validateCuratedViewRuntimeContract();
 validateCuratedViewPresentationContract();
 validateAboutFirstPaintContract();
 validateResponsiveHeroGalleryAndLogoContract();
 validateCmsRegressionContracts();
 validateFilterSoundAndFeedbackContract();
+validateReducedMotionThumbnailContract();
 validateRuntimeCacheGraph();
 
 function validatePageAwareFeatureLoading() {
