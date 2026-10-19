@@ -125,6 +125,9 @@ export async function initGallery(options = {}) {
   // Those programmatic scrolls must not be mistaken for a user selecting a new
   // filter, because a filter change intentionally collapses Show More.
   let suppressFilterSettleUntil = 0;
+  // Programmatic centering and post-release correction must not restart the
+  // swipe-preview state when their queued scroll events arrive a frame later.
+  let suppressFilterPreviewUntil = 0;
   // Gallery owns persistent listeners and timers through one lifecycle.
   // Short-lived pagination nodes disappear with the pager rather than
   // accumulating separate global teardown paths.
@@ -485,6 +488,9 @@ export async function initGallery(options = {}) {
       return;
     }
 
+    // Centering the committed label can emit a trailing scroll event. Keep those
+    // events from re-enabling the pale/preview state after the gesture is over.
+    suppressFilterPreviewUntil = Date.now() + 800;
     filterSettling = true;
     windowRef.clearTimeout(filterSettleTimer);
     activateFilterButton(nearest, { center: false, updateUrl: true, fromScroll: true });
@@ -916,8 +922,19 @@ export async function initGallery(options = {}) {
     if (filterScrollFrame) return;
     filterScrollFrame = windowRef.requestAnimationFrame(() => {
       filterScrollFrame = null;
-      syncFilterActiveIndicator(undefined, { followingScroll: true });
+      const suppressPreview = filterSettling ||
+        Date.now() < suppressFilterSettleUntil ||
+        Date.now() < suppressFilterPreviewUntil;
+      // A tap, resize, or exact settle may scroll the rail programmatically.
+      // Only genuine user scrolling should dim the committed label and preview
+      // the label passing under the stationary pill.
+      syncFilterActiveIndicator(undefined, { followingScroll: !suppressPreview });
       updateFilterPager();
+      if (suppressPreview) {
+        windowRef.clearTimeout(filterScrollTimer);
+        filterScrollTimer = null;
+        return;
+      }
       scheduleCenteredFilter();
     });
   }, { passive: true });
@@ -956,6 +973,7 @@ export async function initGallery(options = {}) {
     // A new gesture interrupts pending settlement and starts direct manipulation.
     filterTabs.classList.remove('is-gesture-active', 'is-dragging');
     suppressFilterSettleUntil = 0;
+    suppressFilterPreviewUntil = 0;
     windowRef.clearTimeout(filterScrollTimer);
     filterScrollTimer = null;
     windowRef.clearTimeout(filterSettleTimer);
@@ -1025,7 +1043,24 @@ export async function initGallery(options = {}) {
     if (gesture.axis === 'x' && gesture.moved) {
       suppressFilterClickUntil = Date.now() + 250;
       filterTabs.classList.remove('is-gesture-active');
-      scheduleCenteredFilter();
+      if (windowRef.innerWidth <= 1023) {
+        // Commit on release and correct sub-pixel drift in the same interaction.
+        // Cancelling a queued scroll frame prevents it from restoring swipe styles
+        // after the active label has already been committed.
+        windowRef.clearTimeout(filterScrollTimer);
+        filterScrollTimer = null;
+        if (filterScrollFrame !== null) {
+          if (typeof windowRef.cancelAnimationFrame === 'function') {
+            windowRef.cancelAnimationFrame(filterScrollFrame);
+          } else {
+            windowRef.clearTimeout(filterScrollFrame);
+          }
+          filterScrollFrame = null;
+        }
+        settleCenteredFilter();
+      } else {
+        scheduleCenteredFilter();
+      }
       return;
     }
 
@@ -1033,7 +1068,10 @@ export async function initGallery(options = {}) {
     if (!cancelled) scheduleCenteredFilter();
   }
 
-  bind(filterTabs, 'wheel', () => { suppressFilterSettleUntil = 0; }, { passive: true });
+  bind(filterTabs, 'wheel', () => {
+    suppressFilterSettleUntil = 0;
+    suppressFilterPreviewUntil = 0;
+  }, { passive: true });
   bind(filterTabs, 'pointerup', finishFilterPointer);
   bind(filterTabs, 'pointercancel', finishFilterPointer);
 
