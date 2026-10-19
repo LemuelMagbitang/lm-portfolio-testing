@@ -1674,6 +1674,16 @@ async function assertFilterNavigationResponsive(page, label) {
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.waitForTimeout(160);
+    // Viewport re-centering intentionally disables the indicator transition
+    // while it tracks the moving rail. Let the resize debounce and settlement
+    // finish before asserting the resting-state transition contract.
+    await page.waitForFunction(() => {
+      const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
+      const content = document.querySelector('.filter-nav-scroller .filter-nav-content');
+      return !indicator?.classList.contains('is-following-scroll') &&
+        !content?.classList.contains('is-following-filter-scroll') &&
+        !content?.querySelector('.is-centered-preview');
+    }, null, { timeout: 1800 });
     const state = await page.evaluate(() => {
       const wrapper = document.querySelector('.filter-nav-wrapper');
       const viewport = wrapper?.querySelector('.filter-nav-viewport');
@@ -1735,6 +1745,9 @@ async function assertFilterNavigationResponsive(page, label) {
           (activeRect.top + activeRect.height / 2) - (indicatorRect.top + indicatorRect.height / 2)
         ) : Infinity,
         indicatorTransition: indicatorStyle?.transitionProperty || '',
+        indicatorFollowingScroll: indicator?.classList.contains('is-following-scroll') || false,
+        contentFollowingFilterScroll: content?.classList.contains('is-following-filter-scroll') || false,
+        prefersReducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         documentWidth: document.documentElement.scrollWidth, viewportWidth: innerWidth
       };
     });
@@ -1756,7 +1769,8 @@ async function assertFilterNavigationResponsive(page, label) {
     if (state.ariaPressedCount !== 1 || !state.indicatorExists || !state.indicatorReady ||
         state.indicatorBackground !== 'rgb(242, 242, 242)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
-        !state.indicatorTransition.includes('transform') ||
+        state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
+        (!state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
         state.activeBackground !== 'rgba(0, 0, 0, 0)' &&
         state.activeBackground !== 'transparent') {
       throw new Error(label + ' accessible sliding-pill state or marker-free button contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
