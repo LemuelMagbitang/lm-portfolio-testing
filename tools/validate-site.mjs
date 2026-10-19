@@ -1007,7 +1007,10 @@ function validateGalleryContract() {
       !source.includes('Date.now() < suppressFilterPreviewUntil') ||
       !source.includes('syncFilterActiveIndicator(activeBtn);') ||
       source.includes('syncFilterActiveIndicator(activeBtn, { followingScroll: true });') ||
-      !source.includes('suppressFilterPreviewUntil = 0;\n    filterScrollPreviewRequested = true;') ||
+      !source.includes("event.key === 'ArrowRight'") ||
+      !source.includes("activateFilterButton(next, { center: false, updateUrl: true });") ||
+      !source.includes('signalCenteredFilter(next);') ||
+      !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
       !css.includes('@media (max-width: 767px) {\n  /* Small screens should settle directly; no animated easing/bounce. */\n  .filter-active-indicator,\n  .filter-active-indicator.is-animated {\n    transition: none !important;\n  }') ||
       !css.includes('@media (max-width: 1023px)') ||
