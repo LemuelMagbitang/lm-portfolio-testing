@@ -385,7 +385,7 @@ export async function createPortfolioApp({
   // media warm-up; the custom element can upgrade later if this bounded attempt
   // is still in flight when the loading gate opens.
   const LOTTIE_PLAYER_STARTUP_WAIT_MS = 2500;
-  const projectLottiePlayerPreloadPromise = projectModels.some(
+  const projectLottiePlayerPreloadPromise = hasProjectGallery && projectModels.some(
     project => project?.capabilities?.hasLottie
   )
     ? new Promise(resolve => {

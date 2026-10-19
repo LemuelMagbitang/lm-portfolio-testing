@@ -1658,6 +1658,9 @@ function validateAboutFirstPaintContract() {
     err('About first paint: startup media-warm-up boundary could not be verified.');
     return;
   }
+  if (!composition.includes('const projectLottiePlayerPreloadPromise = hasProjectGallery && projectModels.some(')) {
+    err('About first paint: project-specific Lottie warm-up must be skipped when no Gallery exists.');
+  }
   const criticalWait = composition.slice(waitStart, waitEnd);
   if (criticalWait.includes('aboutAssetPreloadPromise')) {
     err('About first paint: optional profile/software-logo image preloads must not block the initial transition.');
@@ -1847,8 +1850,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261019-20") ||
-      !bootstrap.includes("cacheVersion = '20261019-20'") ||
+  if (!entry.includes("bootstrap.js?v=20261020-01") ||
+      !bootstrap.includes("cacheVersion = '20261020-01'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
@@ -1856,13 +1859,13 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261019-20") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261019-20') ||
-      !works.includes('js/app/page-composition.js?v=20261019-20') ||
+      !works.includes('js/app/bootstrap.js?v=20261020-01') ||
+      !works.includes('js/app/page-composition.js?v=20261020-01') ||
       !works.includes('css/style.css?v=20261020-02') ||
-      !works.includes('js/script.js?v=20261019-20') ||
+      !works.includes('js/script.js?v=20261020-01') ||
       !about.includes('style.css?v=20261020-02') ||
-      !about.includes('script.js?v=20261019-20') ||
-      !about.includes('page-composition.js?v=20261019-20')) {
+      !about.includes('script.js?v=20261020-01') ||
+      !about.includes('page-composition.js?v=20261020-01')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
