@@ -22,22 +22,29 @@ export function buildProjectThumbnailMedia(
 
   const type = String(source.type || mediaTypeFromSrc(source.src));
   const src = resolveAssetUrl(source.src);
+  const windowRef = documentRef?.defaultView || globalThis.window;
+  const reducedMotion = Boolean(windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let media;
 
   if (type === 'video') {
     media = documentRef.createElement('video');
     media.muted = true;
-    media.loop = true;
-    media.autoplay = true;
+    // Project-card media has no player controls, so motion stays still when
+    // the visitor prefers reduced motion. Keep priority hints for still-image
+    // thumbnails, but do not promote animated media ahead of page content.
+    media.loop = !reducedMotion;
+    media.autoplay = !reducedMotion;
     media.playsInline = true;
-    media.preload = priority ? 'auto' : 'metadata';
-    if (priority) media.fetchPriority = 'high';
+    media.preload = priority && !reducedMotion ? 'auto' : 'metadata';
+    if (priority && !reducedMotion) media.fetchPriority = 'high';
     media.src = src;
   } else if (type === 'lottie') {
     media = documentRef.createElement('lottie-player');
     media.setAttribute('src', src);
-    media.setAttribute('autoplay', '');
-    media.setAttribute('loop', '');
+    if (!reducedMotion) {
+      media.setAttribute('autoplay', '');
+      media.setAttribute('loop', '');
+    }
     media.setAttribute('background', 'transparent');
     media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
   } else if (type === 'model') {
