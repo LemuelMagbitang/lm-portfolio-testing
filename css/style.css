@@ -715,6 +715,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   background: transparent;
   font-weight: 700;
   box-shadow: none;
+  /* Prevent a brief mid-transition gray/white label during rapid swipes. */
+  transition: none;
 }
 
 /* The hover selector has deliberately high specificity. Match it here so a
@@ -726,6 +728,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     background: transparent;
     font-weight: 700;
     box-shadow: none;
+    transition: none;
   }
 }
 

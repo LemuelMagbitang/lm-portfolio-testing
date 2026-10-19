@@ -1975,9 +1975,17 @@ async function assertFilterNavigationResponsive(page, label) {
       const preview = document.querySelector('.filter-nav-scroller .tab-btn.is-centered-preview');
       if (!preview) return null;
       const style = getComputedStyle(preview);
-      return { label: preview.textContent.trim(), color: style.color, background: style.backgroundColor };
+      return {
+         label: preview.textContent.trim(),
+         color: style.color,
+         background: style.backgroundColor,
+         transitionProperty: style.transitionProperty
+       };
     });
-    if (previewText && previewText.color !== 'rgb(17, 17, 17)') {
+    if (previewText && (
+         previewText.color !== 'rgb(17, 17, 17)' ||
+         previewText.transitionProperty !== 'none'
+     )) {
       await page.mouse.up();
       throw new Error(label + ' desktop centered pill preview text must remain dark during hover: ' + JSON.stringify(previewText));
     }
