@@ -986,6 +986,14 @@ function validateGalleryContract() {
   if (!/overflow-x:\s*auto/.test(css) || !/scroll-snap-align:\s*center/.test(css)) {
     err('Gallery: small-screen filter carousel CSS contract is missing.');
   }
+  if (!source.includes('const indicatorButton = followingScroll && isFilterScroller()') ||
+      !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
+      !source.includes("'is-centered-preview'") ||
+      !source.includes('const x = isFollowingFilterScroll') ||
+      source.includes('button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;') ||
+      !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview')) {
+    err('Gallery: the filter pill must preview the centered label while swiping and size itself to that label.');
+  }
   if (!/\.filter-page-controls\{\s*display:none;/.test(css)) {
     err('Gallery: filter page controls must be hidden by default on desktop.');
   }
@@ -1706,6 +1714,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('media.loop = slides.length === 1') ||
       !hero.includes('activateMedia(slides[currentIndex])') ||
       !hero.includes("media.dataset.playbackState = 'blocked'") ||
+      !hero.includes("media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');") ||
+      !hero.includes('if (media.readyState < 2)') ||
+      !hero.includes("media.addEventListener('canplay', retryAfterReady, { once: true });") ||
       !hero.includes("bind(interactionSurface, 'pointerdown', retryBlockedVideo") ||
       !hero.includes('const activeMediaCleanups = [];') ||
       !hero.includes('clearActiveMediaListeners()') ||
