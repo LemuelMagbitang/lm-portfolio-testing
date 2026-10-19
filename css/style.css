@@ -590,6 +590,18 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   mask-image: none;
 }
 
+ .filter-announcement {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .filter-nav-content {
   position: relative;
   z-index: 1;
@@ -692,6 +704,16 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 /* Pointer focus does not keep a browser-default plate; keyboard users retain
    a distinct high-contrast focus indicator. */
+ .tab-btn:disabled,
+.tab-btn[aria-disabled="true"] {
+  color: rgba(255, 255, 255, .34);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .tab-btn:focus { outline: none; }
 .tab-btn:focus-visible {
   position: relative;
@@ -745,7 +767,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
    touched — that's what made a previously-tapped tab look like it was
    still selected, or a button look like it never released. */
 @media (hover: hover) and (pointer: fine) {
-  .tab-btn:hover:not(.active):not([aria-pressed="true"]) {
+  .tab-btn:hover:not(.active):not([aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
     color: rgba(255, 255, 255, .94);
     background: rgba(255, 255, 255, .12);
     border-color: transparent;

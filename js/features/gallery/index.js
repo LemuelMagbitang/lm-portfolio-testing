@@ -46,6 +46,7 @@ export async function initGallery(options = {}) {
       if (!hasFilterCollection) return;
 
       const list = Array.isArray(raw) ? raw : raw.filters;
+      const availableProjects = getProjects().filter(project => project && project.id);
       const fragment = documentRef.createDocumentFragment();
 
       const allButton = documentRef.createElement('button');
@@ -64,6 +65,12 @@ export async function initGallery(options = {}) {
         button.dataset.filter = String(filter.id);
         button.setAttribute('aria-pressed', 'false');
         button.textContent = filter.label || filter.name || filter.id;
+        button.disabled = !availableProjects.some(project =>
+          Array.isArray(project.filters) && project.filters.includes(button.dataset.filter)
+        );
+        if (button.disabled) {
+          button.setAttribute('aria-label', button.textContent.trim() + ' — no projects currently available');
+        }
         fragment.appendChild(button);
       });
 
@@ -82,6 +89,16 @@ export async function initGallery(options = {}) {
   const initialCards = getCardSnapshot(initialProjects);
   if (initialProjects.length === 0 || initialCards.length === 0) return;
   const filterBtns = Array.from(documentRef.querySelectorAll('.filter-tabs .filter-btn, .filter-tabs .tab-btn'));
+  const filterNavWrapper = filterTabs?.closest('.filter-nav-wrapper');
+  let filterAnnouncement = null;
+  if (filterNavWrapper) {
+    filterAnnouncement = documentRef.createElement('p');
+    filterAnnouncement.className = 'filter-announcement';
+    filterAnnouncement.setAttribute('role', 'status');
+    filterAnnouncement.setAttribute('aria-live', 'polite');
+    filterAnnouncement.setAttribute('aria-atomic', 'true');
+    filterNavWrapper.insertAdjacentElement('afterend', filterAnnouncement);
+  }
 
   const phoneCount = Number.isFinite(options.phoneCount) ? options.phoneCount : 6;
   const tabletShortCount = Number.isFinite(options.tabletShortCount) ? options.tabletShortCount : 4;
@@ -103,6 +120,7 @@ export async function initGallery(options = {}) {
   let filterInertiaFrame = null;
   let filterActiveIndicator = null;
   let filterSettling = false;
+  let galleryDestroyed = false;
   let suppressFilterClickUntil = 0;
   // Centering the active filter after a viewport resize emits scroll events.
   // Those programmatic scrolls must not be mistaken for a user selecting a new
@@ -310,6 +328,34 @@ export async function initGallery(options = {}) {
     return windowRef.innerWidth < 768;
   }
 
+  function refreshFilterGeometryAfterFontsLoad() {
+    if (galleryDestroyed || !filterTabs?.isConnected) return;
+
+    // Re-measure after web fonts settle so labels and the moving pill cannot
+    // clip or drift when a late font swap changes text metrics.
+    normalizeFilterButtonWidths();
+    ensureFilterEdges();
+    const activeButton = filterBtns.find(button =>
+      (button.getAttribute('data-filter') || 'all') === currentFilter
+    );
+    suppressFilterSettleUntil = Date.now() + 750;
+    if (activeButton && isFilterScroller()) centerFilterButton(activeButton, 'auto');
+    syncFilterActiveIndicator(activeButton, { followingScroll: true });
+
+    const indicator = filterActiveIndicator;
+    const restoreIndicatorMotion = () => {
+      if (!galleryDestroyed && filterActiveIndicator === indicator && indicator?.isConnected) {
+        indicator.classList.remove('is-following-scroll');
+      }
+    };
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      windowRef.requestAnimationFrame(restoreIndicatorMotion);
+    } else {
+      windowRef.setTimeout(restoreIndicatorMotion, 0);
+    }
+    updateFilterPager(filterBtns.indexOf(activeButton));
+  }
+
   function centerFilterButton(button, behavior = 'smooth', force = false) {
     if (!filterTabs || !button || !isFilterScroller()) return false;
     const tabsRect = filterTabs.getBoundingClientRect();
@@ -362,7 +408,7 @@ export async function initGallery(options = {}) {
   }
 
   function activateFilterButton(button, { center = false, updateUrl = true, fromScroll = false } = {}) {
-    if (!button) return;
+    if (!button || button.disabled) return;
     if (!fromScroll) cancelPendingFilterSettlement();
 
     const nextFilter = button.getAttribute('data-filter') || 'all';
@@ -383,6 +429,7 @@ export async function initGallery(options = {}) {
       const transitionFromRects = captureGalleryCardRects(portfolioGrid);
       isExpanded = false;
       render({ animateTransition: true, transitionFromRects });
+      updateFilterAnnouncement(button);
     }
     if (center && isFilterScroller()) centerFilterButton(button);
     updateFilterPager(filterBtns.indexOf(button));
@@ -476,6 +523,17 @@ export async function initGallery(options = {}) {
     return getProjectSnapshot().filter(project => projectMatchesFilter(project, currentFilter));
   }
 
+  function updateFilterAnnouncement(button) {
+    if (!filterAnnouncement || !button) return;
+    const count = getFilteredProjects().length;
+    const noun = count === 1 ? 'project' : 'projects';
+    const filterId = button.getAttribute('data-filter') || 'all';
+    const label = String(button.textContent || '').trim();
+    filterAnnouncement.textContent = filterId === 'all'
+      ? 'Showing all ' + count + ' ' + noun + '.'
+      : 'Showing ' + count + ' ' + noun + ' in ' + label + '.';
+  }
+
   function getCardsForProjects(projects) {
     return projects.map(project => getCardForProject(project.id)).filter(Boolean);
   }
@@ -554,7 +612,7 @@ export async function initGallery(options = {}) {
     if (!filterId) return;
 
     const button = filterBtns.find(item => item.getAttribute('data-filter') === filterId);
-    if (!button) return;
+    if (!button || button.disabled) return;
 
     event.preventDefault();
     activateFilterButton(button, { center: true, updateUrl: true });
@@ -589,6 +647,7 @@ export async function initGallery(options = {}) {
     lastCenteredFilterId = 'all';
     isExpanded = false;
     render({ animateTransition: changed, transitionFromRects });
+    if (changed) updateFilterAnnouncement(allButton);
     updateFilterPager(filterBtns.indexOf(allButton));
     if (isFilterScroller()) centerFilterButton(allButton, 'auto');
     syncFilterActiveIndicator(allButton);
@@ -1005,7 +1064,7 @@ export async function initGallery(options = {}) {
     const hash = decodeURIComponent(windowRef.location.hash.replace('#', ''));
     if (!hash) return;
     const btn = filterBtns.find(item => item.getAttribute('data-filter') === hash);
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     filterBtns.forEach(item => {
       const active = item === btn;
       item.classList.toggle('active', active);
@@ -1015,6 +1074,7 @@ export async function initGallery(options = {}) {
     lastCenteredFilterId = hash;
     isExpanded = false;
     render();
+    updateFilterAnnouncement(btn);
     if (isFilterScroller()) centerFilterButton(btn, 'auto');
     updateFilterPager(filterBtns.indexOf(btn));
 
@@ -1043,6 +1103,10 @@ export async function initGallery(options = {}) {
   });
 
   buildFilterPager();
+  const fontMetricsReady = documentRef.fonts?.ready;
+  if (fontMetricsReady && typeof fontMetricsReady.then === 'function') {
+    fontMetricsReady.then(refreshFilterGeometryAfterFontsLoad).catch(() => {});
+  }
   showMoreBtn?.setAttribute('aria-expanded', 'false');
   showMoreWrapper?.setAttribute('data-expanded', 'false');
   render();
@@ -1061,6 +1125,7 @@ export async function initGallery(options = {}) {
     getAllCards: () => getCardSnapshot(getProjectSnapshot()).slice(),
     getActiveCards: () => getCardsForProjects(getFilteredProjects()).slice(),
     destroy() {
+      galleryDestroyed = true;
       renderToken += 1;
       lifecycle.cleanup();
       filterDrag = null;
@@ -1075,6 +1140,7 @@ export async function initGallery(options = {}) {
       filterPager?.remove();
       filterPager = null;
       filterPageDots = [];
+      filterAnnouncement?.remove();
       filterTabs?.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
       filterTabs?.removeAttribute('inert');
       filterTabs?.removeAttribute('data-filter-viewport');

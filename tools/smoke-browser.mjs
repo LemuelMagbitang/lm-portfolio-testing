@@ -1900,7 +1900,49 @@ async function assertFilterNavigationResponsive(page, label) {
         Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
         Math.abs(a.width - b.width) <= 1;
     }, await option.getAttribute('data-filter'), { timeout: 1800 });
+
+    const announcementState = await page.evaluate(() => {
+      const active = document.querySelector('.filter-nav-scroller [data-filter].active');
+      const status = document.querySelector('.filter-announcement');
+      return {
+        filter: active?.getAttribute('data-filter') || '',
+        label: active?.textContent?.trim() || '',
+        role: status?.getAttribute('role') || '',
+        live: status?.getAttribute('aria-live') || '',
+        text: status?.textContent?.trim() || ''
+      };
+    });
+    const announcementValid = announcementState.role === 'status' &&
+      announcementState.live === 'polite' &&
+      (announcementState.filter === 'all'
+        ? /^Showing all \d+ projects?\.$/.test(announcementState.text)
+        : announcementState.text.includes(announcementState.label) &&
+          /^Showing \d+ projects? in /.test(announcementState.text));
+    if (!announcementValid) {
+      throw new Error(label + ' filter changes must announce the resulting project count politely: ' +
+        JSON.stringify(announcementState));
+    }
   }
+
+  // Disabled filter controls must not respond to activation or mimic an active pill.
+  const disabledProbe = page.locator('.filter-nav-scroller [data-filter]:not(.active)').first();
+  const selectedBeforeDisabledClick = await page.locator('.filter-nav-scroller [data-filter].active').getAttribute('data-filter');
+  await disabledProbe.evaluate(button => { button.disabled = true; });
+  const disabledStyle = await disabledProbe.evaluate(button => ({
+    disabled: button.disabled,
+    cursor: getComputedStyle(button).cursor,
+    background: getComputedStyle(button).backgroundColor,
+    opacity: Number(getComputedStyle(button).opacity)
+  }));
+  await disabledProbe.evaluate(button => button.click());
+  await page.waitForTimeout(80);
+  const selectedAfterDisabledClick = await page.locator('.filter-nav-scroller [data-filter].active').getAttribute('data-filter');
+  if (!disabledStyle.disabled || disabledStyle.cursor !== 'not-allowed' ||
+      disabledStyle.opacity >= 1 || selectedAfterDisabledClick !== selectedBeforeDisabledClick) {
+    throw new Error(label + ' disabled filter state must remain visually distinct and non-interactive: ' +
+      JSON.stringify({ disabledStyle, selectedBeforeDisabledClick, selectedAfterDisabledClick }));
+  }
+  await disabledProbe.evaluate(button => { button.disabled = false; });
 
   // Desktop hover stays in the existing gray palette; no hover border/ring.
   const hoverTarget = page.locator('.filter-nav-scroller [data-filter]:not(.active)').first();
