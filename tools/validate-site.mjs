@@ -1786,11 +1786,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261019-09') ||
       !works.includes('js/app/page-composition.js?v=20261019-09') ||
-      !works.includes('css/style.css?v=20261019-08') ||
-      !works.includes('js/script.js?v=20261019-09') ||
-      !about.includes('style.css?v=20261019-08') ||
-      !about.includes('script.js?v=20261019-09') ||
-      !about.includes('page-composition.js?v=20261019-09')) {
+      !works.includes('css/style.css?v=20261019-09') ||
+      !works.includes('js/script.js?v=20261019-10') ||
+      !about.includes('style.css?v=20261019-09') ||
+      !about.includes('script.js?v=20261019-10') ||
+      !about.includes('page-composition.js?v=20261019-10')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -1802,7 +1802,8 @@ function validateFilterSoundAndFeedbackContract() {
   const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
 
   if (!gallery.includes("new CustomEventConstructor('lm:filter-centered'") ||
-      !gallery.includes("filterActiveIndicator?.classList.remove('is-following-scroll');\n      settleCenteredFilter();") ||
+      !gallery.includes('function scheduleCenteredFilter()') ||
+       !gallery.includes('settleCenteredFilter();') ||
       !gallery.includes("'(prefers-reduced-motion: reduce)'") ||
       !gallery.includes("event.key === 'ArrowRight'") ||
       !gallery.includes("event.key === 'Home'")) {
