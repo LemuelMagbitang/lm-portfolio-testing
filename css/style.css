@@ -727,7 +727,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
    filter until scroll settlement. The pill width follows that label naturally. */
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.active,
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn[aria-pressed="true"] {
-  color: rgba(255, 255, 255, .68);
+  /* Keep the committed/ARIA-selected label dark even while swipe-preview
+     classes overlap it during movement or gesture settlement. */
+  color: #111 !important;
   font-weight: 650;
 }
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview {

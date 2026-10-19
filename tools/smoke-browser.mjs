@@ -2007,6 +2007,9 @@ async function assertFilterNavigationResponsive(page, label) {
         const preview = el.querySelector('.tab-btn.is-centered-preview');
         const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
         const previewColor = preview ? getComputedStyle(preview).color : '';
+        const committedColor = el.querySelector('.tab-btn.active, .filter-btn.active')
+          ? getComputedStyle(el.querySelector('.tab-btn.active, .filter-btn.active')).color
+          : '';
         const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
         const previewFontWeight = preview ? getComputedStyle(preview).fontWeight : '';
         const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
@@ -2025,7 +2028,7 @@ async function assertFilterNavigationResponsive(page, label) {
         return {
           before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
-          previewColor, previewTransition, previewFontWeight, indicatorTransition,
+          previewColor, committedColor, previewTransition, previewFontWeight, indicatorTransition,
           activeColor: active ? getComputedStyle(active).color : '',
           activeFontWeight: active ? getComputedStyle(active).fontWeight : '',
           activeCenterDelta: activeRect
@@ -2042,6 +2045,7 @@ async function assertFilterNavigationResponsive(page, label) {
           JSON.stringify(fastGesture));
       }
       if (fastGesture.previewColor !== 'rgb(17, 17, 17)' ||
+          fastGesture.committedColor !== 'rgb(17, 17, 17)' ||
           fastGesture.previewTransition !== 'none' ||
           fastGesture.indicatorTransition !== 'none') {
         throw new Error(label + ' swipe preview must stay dark and motion-free while the pill is moving: ' +

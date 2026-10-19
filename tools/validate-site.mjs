@@ -1028,7 +1028,13 @@ function validateGalleryContract() {
   const stableSelectedColorContract = stableSelectedColorStart >= 0 && stableSelectedColorEnd > stableSelectedColorStart
     ? css.slice(stableSelectedColorStart, stableSelectedColorEnd)
     : '';
+  const swipeSelectedColorStart = css.indexOf('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.active,');
+  const swipeSelectedColorEnd = css.indexOf('}', swipeSelectedColorStart);
+  const swipeSelectedColorContract = swipeSelectedColorStart >= 0 && swipeSelectedColorEnd > swipeSelectedColorStart
+    ? css.slice(swipeSelectedColorStart, swipeSelectedColorEnd)
+    : '';
   if (!stableSelectedColorContract.includes('color: #111 !important;') ||
+      !swipeSelectedColorContract.includes('color: #111 !important;') ||
       !css.includes('.filter-nav-content:not(.is-following-filter-scroll) .tab-btn[aria-pressed="true"]:not(.is-centered-preview)') ||
       !smoke.includes('initial-load active filter contrast failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
@@ -1852,9 +1858,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261019-20') ||
       !works.includes('js/app/page-composition.js?v=20261019-20') ||
-      !works.includes('css/style.css?v=20261020-01') ||
+      !works.includes('css/style.css?v=20261020-02') ||
       !works.includes('js/script.js?v=20261019-20') ||
-      !about.includes('style.css?v=20261020-01') ||
+      !about.includes('style.css?v=20261020-02') ||
       !about.includes('script.js?v=20261019-20') ||
       !about.includes('page-composition.js?v=20261019-20')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
