@@ -3581,7 +3581,12 @@ try {
           cardWidth: card?.getBoundingClientRect?.().width || 0
         };
       });
-      await secondaryFilter.click();
+      // The centered desktop carousel intentionally keeps off-center labels
+      // clipped. Use the real button click handler here rather than Playwright's
+      // auto-scroll-to-element helper, which can scroll the entire document
+      // vertically while trying to reveal a horizontally clipped test target.
+      // Real pointer selection and drag settlement are covered above.
+      await secondaryFilter.evaluate(button => button.click());
       await page.waitForTimeout(90);
 
       const midFilterGeometry = await page.evaluate(() => {
