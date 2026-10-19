@@ -79,7 +79,7 @@ assert.match(pageCompositionSource, /details\.event\?\.type === 'keydown'/);
 assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
 assert.match(pageCompositionSource, /\[heroFeature, footerFeature, galleryFeature, aboutFeature, reviewsFeature\] = await Promise\.all\(/);
 assert.match(pageCompositionSource, /visibleReviewsPromise/);
-assert.match(pageCompositionSource, /const projectLottiePlayerPreloadPromise = projectModels\.some\(/);
+assert.match(pageCompositionSource, /const projectLottiePlayerPreloadPromise = hasProjectGallery && projectModels\.some\(/);
 assert.match(pageCompositionSource, /const LOTTIE_PLAYER_STARTUP_WAIT_MS = 2500/);
 assert.match(pageCompositionSource, /timerOwner\.setTimeout\?\.\(\(\) =>/);
 assert.match(pageCompositionSource, /Lottie player startup warm-up timed out; continuing startup/);
