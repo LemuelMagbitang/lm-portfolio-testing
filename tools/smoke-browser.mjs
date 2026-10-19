@@ -1722,6 +1722,9 @@ async function assertFilterNavigationResponsive(page, label) {
         // carousel, even where the unpadded labels would fit.
         expectedOverflow: buttons.length > 1,
         snapType: scrollerStyle?.scrollSnapType || '', touchAction: scrollerStyle?.touchAction || '',
+        scrollBehavior: scrollerStyle?.scrollBehavior || '',
+        overscrollBehaviorX: scrollerStyle?.overscrollBehaviorX || '',
+        indicatorAnimation: indicatorStyle?.animationName || '',
         verticalOverflow: scroller ? scroller.scrollHeight > scroller.clientHeight + 1 : true,
         paddingTop: Number.parseFloat(wrapperStyle?.paddingTop || '0') || 0,
         paddingBottom: Number.parseFloat(wrapperStyle?.paddingBottom || '0') || 0,
@@ -1776,7 +1779,13 @@ async function assertFilterNavigationResponsive(page, label) {
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
         (viewport.width > 1023 && !state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
-        (viewport.width <= 1023 && state.indicatorTransition !== 'none') ||
+        (viewport.width <= 1023 && (
+          state.indicatorTransition !== 'none' ||
+          state.indicatorAnimation !== 'none' ||
+          state.scrollBehavior !== 'auto' ||
+          state.snapType !== 'none' ||
+          state.overscrollBehaviorX !== 'none'
+        )) ||
         state.activeBackground !== 'rgba(0, 0, 0, 0)' &&
         state.activeBackground !== 'transparent') {
       throw new Error(label + ' accessible sliding-pill state or marker-free button contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
@@ -1926,20 +1935,46 @@ async function assertFilterNavigationResponsive(page, label) {
         const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const afterRelease = el.scrollLeft;
+        // A compact rail must settle synchronously on release, not jump again
+        // when the old 220ms debounce fires.
+        await new Promise(resolve => setTimeout(resolve, 320));
+        const afterSettle = el.scrollLeft;
+        const active = el.querySelector('.tab-btn.active, .filter-btn.active');
+        const activeRect = active?.getBoundingClientRect();
+        const scrollerRect = el.getBoundingClientRect();
+        const content = el.querySelector('.filter-nav-content');
+        const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
         return {
-          before, direct, afterRelease: el.scrollLeft,
+          before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
-          previewColor, previewTransition, indicatorTransition
+          previewColor, previewTransition, indicatorTransition,
+          activeColor: active ? getComputedStyle(active).color : '',
+          activeCenterDelta: activeRect
+            ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + el.clientWidth / 2))
+            : Infinity,
+          contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
+          indicatorFollowing: indicator?.classList.contains('is-following-scroll') || false,
+          previewCount: content?.querySelectorAll('.is-centered-preview').length || 0
         };
       });
-      if (fastGesture.snapType !== 'none' || Math.abs(fastGesture.afterRelease - fastGesture.direct) > 1) {
-        throw new Error(label + ' fast swipe continued moving after release instead of stopping cleanly: ' +
+      if (fastGesture.snapType !== 'none' ||
+          Math.abs(fastGesture.afterSettle - fastGesture.afterRelease) > 1) {
+        throw new Error(label + ' compact swipe moved again after its release settlement: ' +
           JSON.stringify(fastGesture));
       }
       if (fastGesture.previewColor !== 'rgb(17, 17, 17)' ||
           fastGesture.previewTransition !== 'none' ||
           fastGesture.indicatorTransition !== 'none') {
         throw new Error(label + ' swipe preview must stay dark and motion-free while the pill is moving: ' +
+          JSON.stringify(fastGesture));
+      }
+      if (fastGesture.activeColor !== 'rgb(17, 17, 17)' ||
+          fastGesture.activeCenterDelta > 2 ||
+          fastGesture.contentFollowing ||
+          fastGesture.indicatorFollowing ||
+          fastGesture.previewCount !== 0) {
+        throw new Error(label + ' completed compact swipe must leave a centered, dark active label with no stale preview state: ' +
           JSON.stringify(fastGesture));
       }
       await page.waitForFunction(() => {
