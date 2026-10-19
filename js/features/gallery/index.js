@@ -484,13 +484,21 @@ export async function initGallery(options = {}) {
   }
 
   function scheduleCenteredFilter() {
-    if (!filterTabs || !isFilterScroller() || filterPointerActive || filterSettling ||
-        Date.now() < suppressFilterSettleUntil) return;
+    if (!filterTabs || !isFilterScroller() || filterPointerActive || filterSettling) return;
     windowRef.clearTimeout(filterScrollTimer);
+    // If a click/resize initiated the scroll, preserve its chosen category while
+    // the rail finishes moving. A delayed settle also clears the centered preview
+    // on browsers that do not dispatch the native scrollend event.
+    const delay = Math.max(220, suppressFilterSettleUntil - Date.now() + 16);
     filterScrollTimer = windowRef.setTimeout(() => {
+      filterScrollTimer = null;
       filterActiveIndicator?.classList.remove('is-following-scroll');
+      if (Date.now() < suppressFilterSettleUntil) {
+        syncFilterActiveIndicator();
+        return;
+      }
       settleCenteredFilter();
-    }, 220);
+    }, delay);
   }
 
   function buildFilterPager() {
