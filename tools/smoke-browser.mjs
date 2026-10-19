@@ -994,14 +994,24 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           const active = buttons.find(button => button.classList.contains('active'));
           if (!rail || !indicator || !content || !active || buttons.length < 2) return { available: false };
           const activeId = active.dataset.filter || 'all';
-          const target = buttons[(buttons.indexOf(active) + 1) % buttons.length];
           const centerX = element => {
             const rect = element.getBoundingClientRect();
             return rect.left + rect.width / 2;
           };
-          rail.classList.add('is-gesture-active');
-          rail.scrollLeft += centerX(target) - centerX(rail);
-          rail.dispatchEvent(new Event('scroll'));
+          const centerY = element => {
+            const rect = element.getBoundingClientRect();
+            return rect.top + rect.height / 2;
+          };
+          const startX = centerX(rail);
+          const startY = centerY(rail);
+          const pointer = (type, x, y) => new PointerEvent(type, {
+            pointerId: 47, pointerType: 'touch', isPrimary: true, button: 0,
+            clientX: x, clientY: y, bubbles: true, cancelable: true
+          });
+          // Use the actual rail pointer contract so category settlement is
+          // intentionally suspended while a horizontal swipe is in progress.
+          rail.dispatchEvent(pointer('pointerdown', startX, startY));
+          rail.dispatchEvent(pointer('pointermove', startX - Math.min(150, rail.clientWidth * 0.44), startY));
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           const railCenter = centerX(rail);
           const nearest = buttons.reduce((best, item) =>
@@ -1018,14 +1028,11 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
             hasForcedWidths: buttons.some(button => Boolean(button.style.width))
           };
-          // Return the rail to the original selected pill and let normal settling
-          // clear the transient preview before the rest of the smoke suite runs.
-          const restore = buttons.find(button => (button.dataset.filter || 'all') === activeId);
-          if (restore) rail.scrollLeft += centerX(restore) - centerX(rail);
-          rail.dispatchEvent(new Event('scroll'));
+          // Reverse the gesture before pointer-up; this preserves the original
+          // active category while still testing the pill during a real drag phase.
+          rail.dispatchEvent(pointer('pointermove', startX, startY));
+          rail.dispatchEvent(pointer('pointerup', startX, startY));
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          rail.classList.remove('is-gesture-active');
-          rail.dispatchEvent(new Event('scrollend'));
           return state;
         });
         if (preview.available &&
