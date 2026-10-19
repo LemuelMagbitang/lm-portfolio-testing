@@ -229,6 +229,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       focus: item.focus || null,
       zoom: item.zoom || null,
       rotate: item.rotate || null,
+      poster: item.poster || null,
       background: item.background || null,
       fadeInMs: Number.isFinite(Number(item.fadeInMs)) ? Math.max(0, Number(item.fadeInMs)) : 1500,
       fadeOutMs: Number.isFinite(Number(item.fadeOutMs)) ? Math.max(0, Number(item.fadeOutMs)) : 1500,
@@ -404,6 +405,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
     if (!sources.length) return;
 
+    const reducedMotion = Boolean(isReducedMotion());
+
     if (sources.some(source => source.type === 'lottie')) await ensureLottie();
     if (sources.some(source => source.background)) await ensureMediaBackground();
 
@@ -417,8 +420,15 @@ import { createLifecycle } from '../../core/lifecycle.js';
       let media;
       if (source.type === 'video') {
         media = documentRef.createElement('video');
+        media.muted = true;
+        media.loop = false;
+        media.playsInline = true;
+        if (reducedMotion || source.poster) {
+          media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');
+        }
+        media.preload = i === 0 && !reducedMotion ? 'auto' : 'metadata';
+        media.autoplay = false;
         media.src = resolveAssetUrl(source.src);
-        media.muted = true; media.loop = false; media.playsInline = true; media.preload = i === 0 ? 'auto' : 'metadata'; media.autoplay = false;
       } else if (source.type === 'lottie') {
         // <lottie-player> is a custom element from the lottie-player
         // library (loaded in this page's <head>) — it takes a JSON
@@ -461,11 +471,11 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
     // Hold the branded startup gate until the first hero visual is usable.
     const firstSlide = heroContainer.querySelector('.slide');
-    if (firstSlide) {
+    if (firstSlide && !(reducedMotion && sources[0]?.type === 'video')) {
       try { await waitForHeroMedia(firstSlide.firstElementChild, sources[0]?.type, windowRef); }
       catch (_) { /* An unavailable visual must never trap startup. */ }
     }
-    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef, isReducedMotion);
+    const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef, () => reducedMotion);
     lifecycle.add(stopCrossfade);
 
     return {

@@ -8984,6 +8984,27 @@ try {
 
 
     await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
+      await page.locator('#heroBanner .slide.active video').waitFor({ state: 'attached', timeout: 6000 });
+      const reducedHeroState = await page.evaluate(() => {
+        const video = document.querySelector('#heroBanner .slide.active video');
+        const transition = document.querySelector('#pageTransition');
+        return {
+          preference: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          preload: video?.preload || '',
+          poster: video?.poster || '',
+          paused: video?.paused ?? false,
+          loading: transition?.dataset.loading || ''
+        };
+      });
+      if (!reducedHeroState.preference || reducedHeroState.preload !== 'metadata' ||
+          !reducedHeroState.poster.endsWith('/assets/projects/site/og-image.jpg') ||
+          !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
+        throw new Error(
+          'Reduced-motion hero must use a static poster, metadata-only preload, and remain paused without delaying startup: ' +
+          JSON.stringify(reducedHeroState)
+        );
+      }
+
       const reduced = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261019-01');
         const options = { resolveAssetUrl: value => value, priority: true };
