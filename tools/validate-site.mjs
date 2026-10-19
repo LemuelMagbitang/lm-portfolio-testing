@@ -1806,15 +1806,15 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261019-18") ||
+      !composition.includes("gallery/index.js?v=20261019-19") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261019-18') ||
-      !works.includes('js/app/page-composition.js?v=20261019-18') ||
-      !works.includes('css/style.css?v=20261019-15') ||
+      !works.includes('js/app/page-composition.js?v=20261019-19') ||
+      !works.includes('css/style.css?v=20261019-16') ||
       !works.includes('js/script.js?v=20261019-18') ||
-      !about.includes('style.css?v=20261019-15') ||
+      !about.includes('style.css?v=20261019-16') ||
       !about.includes('script.js?v=20261019-18') ||
-      !about.includes('page-composition.js?v=20261019-18')) {
+      !about.includes('page-composition.js?v=20261019-19')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -1824,6 +1824,16 @@ function validateFilterSoundAndFeedbackContract() {
   const feedback = exists('js/features/interaction-feedback/index.js') ? readText('js/features/interaction-feedback/index.js') : '';
   const css = exists('css/style.css') ? readText('css/style.css') : '';
   const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+
+  const filterStateCss = css.slice(css.indexOf('.tab-btn.active,'), css.indexOf('/* Pointer focus does not keep'));
+  if (!css.includes('font-weight: 650;') ||
+      !filterStateCss.includes('font-weight: 650;') ||
+      /font-weight:\\s*(?:580|700);/.test(filterStateCss) ||
+      !gallery.includes('suppressFilterSettleUntil = Date.now() + 800;') ||
+      !gallery.includes('syncFilterActiveIndicator(undefined, { followingScroll: true });') ||
+      !smoke.includes('previewFontWeight') || !smoke.includes('activeFontWeight')) {
+    err('Filter carousel stability: active/preview label metrics must stay constant, swipe preview must update with the pointer frame, and scrollend must not trigger a second settlement.');
+  }
 
   if (!gallery.includes("new CustomEventConstructor('lm:filter-centered'") ||
       !gallery.includes('function scheduleCenteredFilter()') ||
