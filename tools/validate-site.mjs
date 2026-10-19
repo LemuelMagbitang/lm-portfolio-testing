@@ -1022,6 +1022,19 @@ function validateGalleryContract() {
       !css.includes('animation: none !important;')) {
     err('Gallery: compact filter navigation must settle without bounce, ignore programmatic scroll previews, and clear stale swipe styling.');
   }
+  const stableSelectedColorRule = '.filter-nav-content:not(.is-following-filter-scroll) .tab-btn.active:not(.is-centered-preview)';
+  const stableSelectedColorStart = css.indexOf(stableSelectedColorRule);
+  const stableSelectedColorEnd = css.indexOf('}', stableSelectedColorStart);
+  const stableSelectedColorContract = stableSelectedColorStart >= 0 && stableSelectedColorEnd > stableSelectedColorStart
+    ? css.slice(stableSelectedColorStart, stableSelectedColorEnd)
+    : '';
+  if (!stableSelectedColorContract.includes('color: #111 !important;') ||
+      !css.includes('.filter-nav-content:not(.is-following-filter-scroll) .tab-btn[aria-pressed="true"]:not(.is-centered-preview)') ||
+      !smoke.includes('initial-load active filter contrast failed') ||
+      !smoke.includes('outside tap must remeasure the committed filter pill')) {
+    err('Gallery: the resting selected filter must force near-black text and retain first-load/outside-tap contrast coverage.');
+  }
+
   const fontRefreshStart = source.indexOf('function refreshFilterGeometryAfterFontsLoad()');
   const fontRefreshEnd = source.indexOf('\n  function centerFilterButton(', fontRefreshStart);
   const fontRefreshContract = fontRefreshStart >= 0 && fontRefreshEnd > fontRefreshStart
@@ -1839,9 +1852,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261019-20') ||
       !works.includes('js/app/page-composition.js?v=20261019-20') ||
-      !works.includes('css/style.css?v=20261019-16') ||
+      !works.includes('css/style.css?v=20261020-01') ||
       !works.includes('js/script.js?v=20261019-20') ||
-      !about.includes('style.css?v=20261019-16') ||
+      !about.includes('style.css?v=20261020-01') ||
       !about.includes('script.js?v=20261019-20') ||
       !about.includes('page-composition.js?v=20261019-20')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

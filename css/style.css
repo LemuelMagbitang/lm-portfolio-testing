@@ -753,6 +753,15 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   transition: none !important;
 }
 
+/* Resting selected-state contrast is non-negotiable. A more-specific swipe
+   rule may intentionally dim the committed label only while the user is
+   actively moving the pill; once that transient state clears, active text must
+   be near-black against the gray indicator even after hover/focus/layout events. */
+.filter-nav-content:not(.is-following-filter-scroll) .tab-btn.active:not(.is-centered-preview),
+.filter-nav-content:not(.is-following-filter-scroll) .tab-btn[aria-pressed="true"]:not(.is-centered-preview) {
+  color: #111 !important;
+}
+
 /* The hover selector has deliberately high specificity. Match it here so a
    desktop mouse hover cannot turn the centered preview label white on gray. */
 @media (hover: hover) and (pointer: fine) {
