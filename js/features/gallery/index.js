@@ -128,6 +128,9 @@ export async function initGallery(options = {}) {
   // Programmatic centering and post-release correction must not restart the
   // swipe-preview state when their queued scroll events arrive a frame later.
   let suppressFilterPreviewUntil = 0;
+  // Only explicit user input can opt the rail into swipe-preview styling.
+  // Programmatic centering, resize, and reconciliation scrolls never set this.
+  let filterScrollPreviewRequested = false;
   // Gallery owns persistent listeners and timers through one lifecycle.
   // Short-lived pagination nodes disappear with the pager rather than
   // accumulating separate global teardown paths.
@@ -282,6 +285,7 @@ export async function initGallery(options = {}) {
   }
 
   function clearFilterScrollPreview() {
+    filterScrollPreviewRequested = false;
     filterActiveIndicator?.classList.remove('is-following-scroll');
     filterContent?.classList.remove('is-following-filter-scroll');
     getFilterButtons().forEach(button => button.classList.remove('is-centered-preview'));
@@ -419,6 +423,7 @@ export async function initGallery(options = {}) {
     windowRef.clearTimeout(filterSettleTimer);
     filterSettleTimer = null;
     filterSettling = false;
+    filterScrollPreviewRequested = false;
   }
 
   function activateFilterButton(button, { center = false, updateUrl = true, fromScroll = false } = {}) {
@@ -488,6 +493,8 @@ export async function initGallery(options = {}) {
       return;
     }
 
+    // Committing a gesture ends user-scroll preview intent before final centering.
+    filterScrollPreviewRequested = false;
     // Centering the committed label can emit a trailing scroll event. Keep those
     // events from re-enabling the pale/preview state after the gesture is over.
     suppressFilterPreviewUntil = Date.now() + 800;
@@ -794,8 +801,10 @@ export async function initGallery(options = {}) {
     event.preventDefault();
     // A fresh keyboard navigation gesture is intentional user input and
     // must not be blocked by the post-click programmatic-scroll guard.
+    cancelPendingFilterSettlement();
     suppressFilterSettleUntil = 0;
     suppressFilterPreviewUntil = 0;
+    filterScrollPreviewRequested = true;
     nextIndex = Math.max(0, Math.min(buttons.length - 1, nextIndex));
     const next = buttons[nextIndex];
     next?.focus?.({ preventScroll: true });
@@ -879,6 +888,9 @@ export async function initGallery(options = {}) {
   let resizeTimer = null;
   lifecycle.add(() => windowRef.clearTimeout(resizeTimer));
   bind(windowRef, 'resize', () => {
+    // A viewport/layout correction is not user scroll input and must never
+    // activate the centered-preview/pale-label state.
+    filterScrollPreviewRequested = false;
     // Cancel any scroll-settlement work that was already pending before this
     // resize. Re-centering the active button is presentation-only and must not
     // switch the active filter or collapse the user's expanded gallery.
@@ -901,7 +913,7 @@ export async function initGallery(options = {}) {
       // Breakpoint/viewport changes are layout corrections, not a user tab
       // change. Reposition instantly so the indicator cannot lag across an
       // old viewport width and briefly detach from the selected label.
-      syncFilterActiveIndicator(activeBtn, { followingScroll: true });
+      syncFilterActiveIndicator(activeBtn);
       const indicator = filterActiveIndicator;
       const restoreIndicatorMotion = () => {
         if (filterActiveIndicator === indicator && indicator?.isConnected) {
@@ -923,7 +935,8 @@ export async function initGallery(options = {}) {
     if (filterScrollFrame) return;
     filterScrollFrame = windowRef.requestAnimationFrame(() => {
       filterScrollFrame = null;
-      const suppressPreview = filterSettling ||
+      const suppressPreview = !filterScrollPreviewRequested ||
+        filterSettling ||
         Date.now() < suppressFilterSettleUntil ||
         Date.now() < suppressFilterPreviewUntil;
       // A tap, resize, or exact settle may scroll the rail programmatically.
@@ -975,6 +988,7 @@ export async function initGallery(options = {}) {
     filterTabs.classList.remove('is-gesture-active', 'is-dragging');
     suppressFilterSettleUntil = 0;
     suppressFilterPreviewUntil = 0;
+    filterScrollPreviewRequested = false;
     windowRef.clearTimeout(filterScrollTimer);
     filterScrollTimer = null;
     windowRef.clearTimeout(filterSettleTimer);
@@ -1005,6 +1019,7 @@ export async function initGallery(options = {}) {
       if (Math.abs(distanceX) > Math.abs(distanceY) * 1.15) {
         filterDrag.axis = 'x';
         filterDrag.moved = true;
+        filterScrollPreviewRequested = true;
         filterTabs.classList.add('is-gesture-active', 'is-dragging');
         try { filterTabs.setPointerCapture?.(event.pointerId); } catch (_) {}
       } else if (Math.abs(distanceY) > Math.abs(distanceX) * 1.15) {
@@ -1069,9 +1084,12 @@ export async function initGallery(options = {}) {
     if (!cancelled) scheduleCenteredFilter();
   }
 
-  bind(filterTabs, 'wheel', () => {
+  bind(filterTabs, 'wheel', event => {
     suppressFilterSettleUntil = 0;
     suppressFilterPreviewUntil = 0;
+    filterScrollPreviewRequested =
+      Math.abs(Number(event?.deltaX) || 0) > Math.abs(Number(event?.deltaY) || 0) ||
+      event?.shiftKey === true;
   }, { passive: true });
   bind(filterTabs, 'pointerup', finishFilterPointer);
   bind(filterTabs, 'pointercancel', finishFilterPointer);
@@ -1099,6 +1117,7 @@ export async function initGallery(options = {}) {
     // Deep links are explicit filter state, not a swipe-settlement request.
     // Centering the selected button emits scroll events; guard those events so
     // an initial centered preview cannot immediately replace the URL filter.
+    filterScrollPreviewRequested = false;
     suppressFilterSettleUntil = Date.now() + 750;
     filterBtns.forEach(item => {
       const active = item === btn;
