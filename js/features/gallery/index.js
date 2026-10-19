@@ -162,8 +162,7 @@ export async function initGallery(options = {}) {
   function ensureFilterEdges() {
     if (!filterTabs || !filterContent) return;
 
-    // Edge cushions are useful only when labels need horizontal scrolling.
-    // If the entire row fits, keep it centered without creating fake overflow.
+    // Edge cushions are rebuilt for every viewport to keep the active pill centered.
     filterTabs.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
 
     const buttons = Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn'));
@@ -176,7 +175,12 @@ export async function initGallery(options = {}) {
     const columnGap = Number.parseFloat(contentStyle?.columnGap || contentStyle?.gap || '0') || 0;
     const pillsWidth = buttons.reduce((total, button) => total + button.getBoundingClientRect().width, 0);
     const naturalWidth = pillsWidth + columnGap * Math.max(0, buttons.length - 1);
-    const needsScroller = naturalWidth > filterTabs.clientWidth + 1;
+
+    // The active pill is a centered carousel on every viewport, not only when
+    // the labels exceed the available width. Edge cushions let the first and
+    // last labels reach the centerline, making mouse-drag and touch-swipe use
+    // the same interaction model on desktop, tablet, and mobile.
+    const needsScroller = buttons.length > 1;
     filterTabs.dataset.overflow = needsScroller ? 'true' : 'false';
     if (!needsScroller) return;
 
@@ -236,8 +240,9 @@ export async function initGallery(options = {}) {
     // While the rail moves, preview the pill directly under the viewport's
     // centerline instead of dragging the old active pill along with its label.
     // Category state is still committed only when the rail settles.
+    const centeredButton = buttons[getNearestCenteredFilterIndex()];
     const indicatorButton = followingScroll && isFilterScroller()
-      ? selectableButtons[getNearestCenteredFilterIndex()] || activeButton
+      ? (centeredButton && !centeredButton.disabled ? centeredButton : activeButton)
       : activeButton;
     const indicator = ensureFilterActiveIndicator();
     const host = getFilterIndicatorHost();
@@ -347,7 +352,7 @@ export async function initGallery(options = {}) {
     const indicator = filterActiveIndicator;
     const restoreIndicatorMotion = () => {
       if (!galleryDestroyed && filterActiveIndicator === indicator && indicator?.isConnected) {
-        indicator.classList.remove('is-following-scroll');
+        syncFilterActiveIndicator(activeButton);
       }
     };
     if (typeof windowRef.requestAnimationFrame === 'function') {
@@ -455,8 +460,8 @@ export async function initGallery(options = {}) {
   function settleCenteredFilter({ center = true } = {}) {
     if (!filterTabs || !isFilterScroller() || filterSettling ||
         Date.now() < suppressFilterSettleUntil) return;
-    const buttons = getFilterButtons().filter(button => !button.disabled);
-    if (!buttons.length) return;
+    const buttons = getFilterButtons();
+    if (!buttons.some(button => !button.disabled)) return;
 
     const nearest = buttons[getNearestCenteredFilterIndex()];
     if (!nearest) return;
@@ -474,7 +479,7 @@ export async function initGallery(options = {}) {
       filterSettleTimer = windowRef.setTimeout(() => {
         filterSettling = false;
         filterSettleTimer = null;
-        const settledButtons = getFilterButtons().filter(button => !button.disabled);
+        const settledButtons = getFilterButtons();
         signalCenteredFilter(settledButtons[getNearestCenteredFilterIndex()] || nearest);
       }, 420);
     } else {
@@ -850,7 +855,7 @@ export async function initGallery(options = {}) {
       const indicator = filterActiveIndicator;
       const restoreIndicatorMotion = () => {
         if (filterActiveIndicator === indicator && indicator?.isConnected) {
-          indicator.classList.remove('is-following-scroll');
+          syncFilterActiveIndicator(activeBtn);
         }
       };
       if (typeof windowRef.requestAnimationFrame === 'function') windowRef.requestAnimationFrame(restoreIndicatorMotion);
@@ -881,7 +886,7 @@ export async function initGallery(options = {}) {
       windowRef.clearTimeout(filterSettleTimer);
       filterSettleTimer = null;
       syncFilterActiveIndicator();
-      const buttons = getFilterButtons().filter(button => !button.disabled);
+      const buttons = getFilterButtons();
       signalCenteredFilter(buttons[getNearestCenteredFilterIndex()]);
       return;
     }
