@@ -691,7 +691,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   letter-spacing: .055em;
   cursor: pointer;
   padding: 9px 15px;
-  font-weight: 580;
+  font-weight: 650;
   white-space: nowrap;
   scroll-snap-align: center;
   /* Foreground contrast switches immediately; only the surface fades. */
@@ -712,7 +712,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   color: #111;
   background: #f2f2f2;
   border-color: transparent;
-  font-weight: 700;
+  font-weight: 650;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
 }
 
@@ -728,7 +728,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.active,
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn[aria-pressed="true"] {
   color: rgba(255, 255, 255, .68);
-  font-weight: 580;
+  font-weight: 650;
 }
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview {
   /* The label beneath the light pill must stay dark through swipe/hover. */
@@ -748,7 +748,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   color: #111 !important;
   background: transparent !important;
   border-color: transparent !important;
-  font-weight: 700;
+  font-weight: 650;
   box-shadow: none !important;
   transition: none !important;
 }
@@ -760,7 +760,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   .tab-btn.is-centered-preview:hover:not(.active):not([aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
     color: #111;
     background: transparent;
-    font-weight: 700;
+    font-weight: 650;
     box-shadow: none;
     transition: none;
   }
