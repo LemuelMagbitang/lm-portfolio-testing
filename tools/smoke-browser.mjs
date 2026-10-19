@@ -1917,16 +1917,29 @@ async function assertFilterNavigationResponsive(page, label) {
         dispatch('pointermove', x + fingerDelta * 0.52, y + 1);
         await new Promise(resolve => setTimeout(resolve, 16));
         dispatch('pointermove', x + fingerDelta, y + 1);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const direct = el.scrollLeft;
+        const preview = el.querySelector('.tab-btn.is-centered-preview');
+        const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+        const previewColor = preview ? getComputedStyle(preview).color : '';
+        const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
+        const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         return {
           before, direct, afterRelease: el.scrollLeft,
-          requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType
+          requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
+          previewColor, previewTransition, indicatorTransition
         };
       });
       if (fastGesture.snapType !== 'none' || Math.abs(fastGesture.afterRelease - fastGesture.direct) > 1) {
         throw new Error(label + ' fast swipe continued moving after release instead of stopping cleanly: ' +
+          JSON.stringify(fastGesture));
+      }
+      if (fastGesture.previewColor !== 'rgb(17, 17, 17)' ||
+          fastGesture.previewTransition !== 'none' ||
+          fastGesture.indicatorTransition !== 'none') {
+        throw new Error(label + ' swipe preview must stay dark and motion-free while the pill is moving: ' +
           JSON.stringify(fastGesture));
       }
       await page.waitForFunction(() => {
@@ -2072,6 +2085,8 @@ async function assertFilterNavigationResponsive(page, label) {
       content.classList.add('is-following-filter-scroll');
       indicator.classList.add('is-following-scroll');
       preview.classList.add('is-centered-preview');
+      // Prove capture-phase cleanup survives a page element stopping bubbling.
+      document.documentElement.addEventListener('pointerdown', event => event.stopPropagation(), { once: true });
       return { available: true };
     });
     if (!stalePreviewProbe.available) {
