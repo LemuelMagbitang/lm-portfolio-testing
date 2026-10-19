@@ -734,7 +734,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   /* The label beneath the light pill must stay dark through swipe/hover. */
   color: #111 !important;
   background: transparent;
-  font-weight: 700;
+  font-weight: 650;
   box-shadow: none;
   transition: none !important;
 }
