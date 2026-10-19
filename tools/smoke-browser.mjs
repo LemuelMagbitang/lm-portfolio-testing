@@ -1689,6 +1689,23 @@ async function assertFilterNavigationResponsive(page, label) {
         !content?.classList.contains('is-following-filter-scroll') &&
         !content?.querySelector('.is-centered-preview');
     }, null, { timeout: 1800 });
+    // Resize is debounced by Gallery; at desktop widths the pill then animates
+    // to the newly measured active button. Waiting only for preview classes to
+    // clear can sample that transition mid-flight (especially at 1024px after a
+    // compact viewport), producing a false alignment failure. Wait for measured
+    // geometry to settle, but retain the detailed assertion below as the oracle.
+    await page.waitForFunction(() => {
+      const scroller = document.querySelector('.filter-nav-scroller');
+      const content = scroller?.querySelector('.filter-nav-content');
+      const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+      if (!scroller || !indicator?.classList.contains('is-ready') || !active) return false;
+      const a = active.getBoundingClientRect();
+      const b = indicator.getBoundingClientRect();
+      return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
+        Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
+        Math.abs(a.width - b.width) <= 1;
+    }, null, { timeout: 2200 }).catch(() => {});
     const state = await page.evaluate(() => {
       const wrapper = document.querySelector('.filter-nav-wrapper');
       const viewport = wrapper?.querySelector('.filter-nav-viewport');
