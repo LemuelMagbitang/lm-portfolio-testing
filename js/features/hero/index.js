@@ -421,11 +421,14 @@ import { createLifecycle } from '../../core/lifecycle.js';
       if (source.type === 'video') {
         media = documentRef.createElement('video');
         media.muted = true;
+        media.defaultMuted = true;
+        media.setAttribute('muted', '');
         media.loop = false;
         media.playsInline = true;
-        if (reducedMotion || source.poster) {
-          media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');
-        }
+        media.setAttribute('playsinline', '');
+        // A real poster must be present even when autoplay is delayed/rejected.
+        // Without it, the browser paints a black video surface until frame one.
+        media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');
         media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
         media.autoplay = false;
         // Reduced-motion visitors see a still poster, not a video download.
@@ -563,8 +566,21 @@ import { createLifecycle } from '../../core/lifecycle.js';
             // must not overwrite the active slide's playback status or timer.
             if (disposed || slides[currentIndex] !== slide) return;
             media.dataset.playbackState = 'blocked';
-            // Multi-slide heroes can continue if autoplay is denied. A single
-            // reel stays on its poster/frame and retries only after a gesture.
+
+            // If playback was attempted before the first decodable frame, retry
+            // once when the browser reports enough media is ready. If autoplay
+            // is still denied after data is available, leave the poster visible
+            // and let the existing real-gesture/visibility recovery retry it.
+            if (media.readyState < 2) {
+              const retryAfterReady = () => {
+                if (disposed || slides[currentIndex] !== slide ||
+                    media.dataset.playbackState !== 'blocked') return;
+                activateMedia(slide);
+              };
+              media.addEventListener('canplay', retryAfterReady, { once: true });
+              activeMediaCleanups.push(() => media.removeEventListener('canplay', retryAfterReady));
+            }
+
             if (slides.length > 1) scheduleAdvance(intervalMs);
           });
         } else if (!media.paused) {
