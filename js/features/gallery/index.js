@@ -817,8 +817,7 @@ export async function initGallery(options = {}) {
     const next = buttons[nextIndex];
     next?.focus?.({ preventScroll: true });
     if (next) {
-      centerFilterButton(next, 'auto');
-      activateFilterButton(next, { center: false, updateUrl: true });
+      activateFilterButton(next, { center: true, updateUrl: true });
       clearFilterScrollPreview();
       signalCenteredFilter(next);
     }
