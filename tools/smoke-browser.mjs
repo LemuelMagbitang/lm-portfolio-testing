@@ -3591,12 +3591,16 @@ try {
           cardWidth: card?.getBoundingClientRect?.().width || 0
         };
       });
-      // Dispatch the click handler directly for this geometry-only probe.
-      // Playwright's pointer helper scrolls a horizontally clipped target into
-      // view by also moving the page vertically, which contaminates this test.
+      // This is a geometry-only probe. Move focus with preventScroll before
+      // dispatching activation: otherwise the previously focused ALL pill may
+      // stay focused while the rail moves it away from center, prompting the
+      // browser to scroll the document to keep that old focus target visible.
       // Real desktop pointer and drag behavior is exercised in the responsive
       // filter-navigation smoke test.
-      await secondaryFilter.evaluate(button => button.click());
+      await secondaryFilter.evaluate(button => {
+        button.focus({ preventScroll: true });
+        button.click();
+      });
       await page.waitForTimeout(90);
 
       const midFilterGeometry = await page.evaluate(() => {
