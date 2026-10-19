@@ -1828,7 +1828,7 @@ function validateFilterSoundAndFeedbackContract() {
   const filterStateCss = css.slice(css.indexOf('.tab-btn.active,'), css.indexOf('/* Pointer focus does not keep'));
   if (!css.includes('font-weight: 650;') ||
       !filterStateCss.includes('font-weight: 650;') ||
-      /font-weight:\\s*(?:580|700);/.test(filterStateCss) ||
+      /font-weight:\s*(?:580|700);/.test(filterStateCss) ||
       !gallery.includes('suppressFilterSettleUntil = Date.now() + 800;') ||
       !gallery.includes('syncFilterActiveIndicator(undefined, { followingScroll: true });') ||
       !smoke.includes('previewFontWeight') || !smoke.includes('activeFontWeight')) {
