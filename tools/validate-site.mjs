@@ -987,7 +987,8 @@ function validateGalleryContract() {
   if (!/overflow-x:\s*auto/.test(css) || !/scroll-snap-align:\s*center/.test(css)) {
     err('Gallery: small-screen filter carousel CSS contract is missing.');
   }
-  if (!source.includes('const indicatorButton = followingScroll && isFilterScroller()') ||
+  if (!source.includes('const isFollowingFilterScroll = followingScroll && isFilterScroller()') ||
+      !source.includes('const indicatorButton = isFollowingFilterScroll') ||
       !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
       !source.includes("'is-centered-preview'") ||
       !source.includes('const x = isFollowingFilterScroll') ||
