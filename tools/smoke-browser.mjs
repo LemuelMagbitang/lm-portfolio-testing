@@ -1944,7 +1944,7 @@ async function assertFilterNavigationResponsive(page, label) {
         const activeRect = active?.getBoundingClientRect();
         const scrollerRect = el.getBoundingClientRect();
         const content = el.querySelector('.filter-nav-content');
-        const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+        const settledIndicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
         return {
           before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
@@ -1954,7 +1954,7 @@ async function assertFilterNavigationResponsive(page, label) {
             ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + el.clientWidth / 2))
             : Infinity,
           contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
-          indicatorFollowing: indicator?.classList.contains('is-following-scroll') || false,
+          indicatorFollowing: settledIndicator?.classList.contains('is-following-scroll') || false,
           previewCount: content?.querySelectorAll('.is-centered-preview').length || 0
         };
       });
