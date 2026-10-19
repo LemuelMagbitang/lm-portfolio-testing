@@ -495,9 +495,10 @@ export async function initGallery(options = {}) {
 
     // Committing a gesture ends user-scroll preview intent before final centering.
     filterScrollPreviewRequested = false;
-    // Centering the committed label can emit a trailing scroll event. Keep those
-    // events from re-enabling the pale/preview state after the gesture is over.
+    // The exact centering correction emits its own scroll/scrollend on some
+    // engines. Guard the correction window so compact views cannot settle twice.
     suppressFilterPreviewUntil = Date.now() + 800;
+    suppressFilterSettleUntil = Date.now() + 800;
     filterSettling = true;
     windowRef.clearTimeout(filterSettleTimer);
     activateFilterButton(nearest, { center: false, updateUrl: true, fromScroll: true });
@@ -959,6 +960,12 @@ export async function initGallery(options = {}) {
     // Browsers may queue scrollend for the final direct-manipulation frame;
     // consuming it here can recenter immediately and look like post-release coast.
     if (filterScrollTimer !== null) return;
+    // Consume scrollend events from clicks and exact centering corrections first,
+    // rather than cancelling a pending settle or launching a second pass.
+    if (Date.now() < suppressFilterSettleUntil) {
+      syncFilterActiveIndicator();
+      return;
+    }
     if (filterSettling) {
       filterSettling = false;
       windowRef.clearTimeout(filterSettleTimer);
@@ -966,12 +973,6 @@ export async function initGallery(options = {}) {
       syncFilterActiveIndicator();
       const buttons = getFilterButtons();
       signalCenteredFilter(buttons[getNearestCenteredFilterIndex()]);
-      return;
-    }
-    // A click/resize may intentionally suppress scroll-based category changes.
-    // In that case, finish the visual preview and restore the selected pill.
-    if (Date.now() < suppressFilterSettleUntil) {
-      syncFilterActiveIndicator();
       return;
     }
     settleCenteredFilter();
@@ -1033,6 +1034,9 @@ export async function initGallery(options = {}) {
     if (filterDrag.axis === 'x') {
       if (event.cancelable) event.preventDefault();
       filterTabs.scrollLeft = filterDrag.startScrollLeft - distanceX;
+      // Update the centered preview in this pointer frame, not one scroll event later.
+      syncFilterActiveIndicator(undefined, { followingScroll: true });
+      updateFilterPager();
     }
 
   });
