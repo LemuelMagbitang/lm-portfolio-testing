@@ -1928,6 +1928,12 @@ async function assertFilterNavigationResponsive(page, label) {
   const disabledProbe = page.locator('.filter-nav-scroller [data-filter]:not(.active)').first();
   const selectedBeforeDisabledClick = await page.locator('.filter-nav-scroller [data-filter].active').getAttribute('data-filter');
   await disabledProbe.evaluate(button => { button.disabled = true; });
+  // Disabled state fades through the shared 220ms button transition. Wait for
+  // that transition to settle before asserting its final computed opacity.
+  await page.waitForFunction(() => {
+    const button = document.querySelector('.filter-nav-scroller [data-filter][disabled]:not(.active)');
+    return !!button && Number(getComputedStyle(button).opacity) < 0.99;
+  }, null, { timeout: 700 });
   const disabledStyle = await disabledProbe.evaluate(button => ({
     disabled: button.disabled,
     cursor: getComputedStyle(button).cursor,
