@@ -573,7 +573,13 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 @media (max-width: 1023px) {
-  /* Phones and smaller tablets settle directly; never animate the pill after release. */
+  /* Direct manipulation only: no native momentum, snap, or smooth settle on compact viewports. */
+  .filter-tabs.filter-nav-scroller {
+    scroll-behavior: auto !important;
+    scroll-snap-type: none !important;
+    -webkit-overflow-scrolling: auto !important;
+    overscroll-behavior-x: none !important;
+  }
   .filter-active-indicator,
   .filter-active-indicator.is-animated,
   .filter-active-indicator.is-following-scroll {
