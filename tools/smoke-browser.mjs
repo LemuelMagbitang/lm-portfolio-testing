@@ -1775,7 +1775,8 @@ async function assertFilterNavigationResponsive(page, label) {
         state.indicatorBackground !== 'rgb(242, 242, 242)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
-        (!state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
+        (viewport.width > 767 && !state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
+        (viewport.width <= 767 && state.indicatorTransition !== 'none') ||
         state.activeBackground !== 'rgba(0, 0, 0, 0)' &&
         state.activeBackground !== 'transparent') {
       throw new Error(label + ' accessible sliding-pill state or marker-free button contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
@@ -1786,8 +1787,8 @@ async function assertFilterNavigationResponsive(page, label) {
     if (!state.dataOverflow && state.groupCenterDelta > 2) {
       throw new Error(label + ' fitting filter categories are not centered as a group at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    if (state.dataOverflow && !state.snapType.includes('x mandatory')) {
-      throw new Error(label + ' overflowing filter navigation is missing horizontal snapping at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    if (state.dataOverflow && state.snapType !== 'none') {
+      throw new Error(label + ' overflowing filter navigation must not use native snap momentum at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.touchAction !== 'pan-y') {
       throw new Error(label + ' filter rail must delegate vertical gestures to the page (touch-action: pan-y) at ' + viewport.width + 'px: ' + JSON.stringify(state));
@@ -2060,14 +2061,42 @@ async function assertFilterNavigationResponsive(page, label) {
         }
       }
     }
+    const stalePreviewProbe = await page.evaluate(() => {
+      const rail = document.querySelector('.filter-nav-scroller');
+      const content = rail?.querySelector('.filter-nav-content');
+      const indicator = rail?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+      const preview = Array.from(content?.querySelectorAll('.filter-btn, .tab-btn') || [])
+        .find(button => button !== active && !button.disabled);
+      if (!content || !indicator || !active || !preview) return { available: false };
+      content.classList.add('is-following-filter-scroll');
+      indicator.classList.add('is-following-scroll');
+      preview.classList.add('is-centered-preview');
+      return { available: true };
+    });
+    if (!stalePreviewProbe.available) {
+      throw new Error(label + ' could not prepare an outside-click filter-preview regression state.');
+    }
     const viewportSize = page.viewportSize();
     await page.mouse.click(Math.max(1, (viewportSize?.width || 1280) - 2), 2);
-    const selectedAfterOtherSpaceClick = await option.evaluate(button => ({
-      active: button.classList.contains('active'),
-      color: getComputedStyle(button).color
-    }));
-    if (!selectedAfterOtherSpaceClick.active || selectedAfterOtherSpaceClick.color !== 'rgb(17, 17, 17)') {
-      throw new Error(label + ' clicking elsewhere must not bleach or clear the selected filter label: ' +
+    const selectedAfterOtherSpaceClick = await option.evaluate(button => {
+      const rail = button.closest('.filter-nav-scroller');
+      const content = rail?.querySelector('.filter-nav-content');
+      const indicator = rail?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      return {
+        active: button.classList.contains('active'),
+        color: getComputedStyle(button).color,
+        contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
+        indicatorFollowing: indicator?.classList.contains('is-following-scroll') || false,
+        previewCount: content?.querySelectorAll('.is-centered-preview').length || 0
+      };
+    });
+    if (!selectedAfterOtherSpaceClick.active ||
+        selectedAfterOtherSpaceClick.color !== 'rgb(17, 17, 17)' ||
+        selectedAfterOtherSpaceClick.contentFollowing ||
+        selectedAfterOtherSpaceClick.indicatorFollowing ||
+        selectedAfterOtherSpaceClick.previewCount !== 0) {
+      throw new Error(label + ' clicking elsewhere must clear swipe preview state and keep the selected label dark: ' +
         JSON.stringify(selectedAfterOtherSpaceClick));
     }
 

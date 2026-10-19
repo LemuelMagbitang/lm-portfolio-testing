@@ -564,6 +564,14 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     height 140ms ease-out;
 }
 
+@media (max-width: 767px) {
+  /* Small screens should settle directly; no animated easing/bounce. */
+  .filter-active-indicator,
+  .filter-active-indicator.is-animated {
+    transition: none !important;
+  }
+}
+
 .filter-active-indicator.is-ready {
   opacity: 1;
 }

@@ -278,6 +278,13 @@ export async function initGallery(options = {}) {
     }
   }
 
+  function clearFilterScrollPreview() {
+    filterActiveIndicator?.classList.remove('is-following-scroll');
+    filterContent?.classList.remove('is-following-filter-scroll');
+    getFilterButtons().forEach(button => button.classList.remove('is-centered-preview'));
+    syncFilterActiveIndicator();
+  }
+
   // Pills stay content-sized. Active styling may affect a label's natural
   // metrics, so clear stale inline measurements and remeasure the edge cushions
   // after a selection rather than reserving every pill's maximum possible width.
@@ -455,13 +462,28 @@ export async function initGallery(options = {}) {
   }
 
   function settleCenteredFilter({ center = true } = {}) {
-    if (!filterTabs || !isFilterScroller() || filterSettling ||
-        Date.now() < suppressFilterSettleUntil) return;
+    if (!filterTabs || !isFilterScroller()) {
+      clearFilterScrollPreview();
+      return;
+    }
+    if (filterSettling || Date.now() < suppressFilterSettleUntil) {
+      // A delayed settlement can race a previous commit or explicit selection.
+      // Clear the transient preview on every early exit so the selected label
+      // never remains in the dimmed, in-motion state.
+      clearFilterScrollPreview();
+      return;
+    }
     const buttons = getFilterButtons();
-    if (!buttons.some(button => !button.disabled)) return;
+    if (!buttons.some(button => !button.disabled)) {
+      clearFilterScrollPreview();
+      return;
+    }
 
     const nearest = buttons[getNearestCenteredFilterIndex()];
-    if (!nearest) return;
+    if (!nearest) {
+      clearFilterScrollPreview();
+      return;
+    }
 
     filterSettling = true;
     windowRef.clearTimeout(filterSettleTimer);
@@ -641,6 +663,21 @@ export async function initGallery(options = {}) {
   }
 
   bind(documentRef, 'click', handlePublicFilterNavigation);
+
+  // An unrelated tap/click can happen while a scroll-preview cleanup timer is
+  // pending. Settle the nearest filter when possible; otherwise immediately
+  // restore the committed pill so the active label cannot stay washed out.
+  bind(documentRef, 'pointerdown', event => {
+    if (filterTabs?.contains(event.target)) return;
+    if (!filterContent?.classList.contains('is-following-filter-scroll') &&
+        !filterActiveIndicator?.classList.contains('is-following-scroll')) return;
+    if (!filterPointerActive && !filterSettling &&
+        Date.now() >= suppressFilterSettleUntil) {
+      settleCenteredFilter();
+      return;
+    }
+    clearFilterScrollPreview();
+  });
 
   // Returning to Works/home always means the public gallery is back to ALL.
   // Navigation publishes the event; Gallery owns the state reset, render, and

@@ -996,6 +996,11 @@ function validateGalleryContract() {
         !css.includes('transition: none !important;')) {
     err('Gallery: the filter pill must preview the centered label while swiping and size itself to that label.');
   }
+  if (!source.includes('function clearFilterScrollPreview()') ||
+      !source.includes("bind(documentRef, 'pointerdown'") ||
+      !css.includes('@media (max-width: 767px) {\\n  /* Small screens should settle directly; no animated easing/bounce. */\\n  .filter-active-indicator,\\n  .filter-active-indicator.is-animated {\\n    transition: none !important;\\n  }')) {
+    err('Gallery: small-screen indicator movement must be immediate, and outside interactions must clear stale swipe previews.');
+  }
   if (!/\.filter-page-controls\{\s*display:none;/.test(css)) {
     err('Gallery: filter page controls must be hidden by default on desktop.');
   }
@@ -1784,15 +1789,15 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261019-12") ||
+      !composition.includes("gallery/index.js?v=20261019-13") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261019-13') ||
-      !works.includes('js/app/page-composition.js?v=20261019-13') ||
-      !works.includes('css/style.css?v=20261019-12') ||
+      !works.includes('js/app/page-composition.js?v=20261019-14') ||
+      !works.includes('css/style.css?v=20261019-13') ||
       !works.includes('js/script.js?v=20261019-13') ||
-      !about.includes('style.css?v=20261019-12') ||
+      !about.includes('style.css?v=20261019-13') ||
       !about.includes('script.js?v=20261019-13') ||
-      !about.includes('page-composition.js?v=20261019-13')) {
+      !about.includes('page-composition.js?v=20261019-14')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
