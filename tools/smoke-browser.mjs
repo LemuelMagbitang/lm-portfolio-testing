@@ -1026,6 +1026,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             isPreview: nearest.classList.contains('is-centered-preview'),
             indicatorCenterDelta: Math.abs(centerX(indicator) - railCenter),
             indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
+            previewColor: getComputedStyle(nearest).color,
+            previewTransition: getComputedStyle(nearest).transitionProperty,
+            snapType: getComputedStyle(rail).scrollSnapType,
             hasForcedWidths: buttons.some(button => Boolean(button.style.width))
           };
           // Reverse the gesture before pointer-up; this preserves the original
@@ -1037,7 +1040,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         });
         if (preview.available &&
             (preview.indicatorCenterDelta > 2 || preview.indicatorWidthDelta > 2 ||
-             !preview.isPreview || preview.hasForcedWidths)) {
+             !preview.isPreview || preview.previewColor !== 'rgb(17, 17, 17)' ||
+             preview.previewTransition !== 'none' || preview.snapType !== 'none' ||
+             preview.hasForcedWidths)) {
           throw new Error(label + ' mobile: active filter pill must remain centered and follow the natural width of the label passing underneath: ' + JSON.stringify(preview));
         }
       }
@@ -1890,8 +1895,8 @@ async function assertFilterNavigationResponsive(page, label) {
           JSON.stringify({ ...slowGesture, after: slowAfter }));
       }
 
-      // A fast swipe should travel beyond the finger-tracked distance before
-      // the nearest pill becomes the final active filter.
+      // A fast swipe must stop tracking the pointer immediately on release.
+      // Gallery settles the closest label without inertia or native snapping.
       const fastGesture = await rail.evaluate(async el => {
         const rect = el.getBoundingClientRect();
         const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
@@ -1913,8 +1918,16 @@ async function assertFilterNavigationResponsive(page, label) {
         dispatch('pointermove', x + fingerDelta, y + 1);
         const direct = el.scrollLeft;
         dispatch('pointerup', x + fingerDelta, y + 1);
-        return { before, direct, requestedDistance: distance, towardRight };
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return {
+          before, direct, afterRelease: el.scrollLeft,
+          requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType
+        };
       });
+      if (fastGesture.snapType !== 'none' || Math.abs(fastGesture.afterRelease - fastGesture.direct) > 1) {
+        throw new Error(label + ' fast swipe continued moving after release instead of stopping cleanly: ' +
+          JSON.stringify(fastGesture));
+      }
       await page.waitForFunction(() => {
         const scroller = document.querySelector('.filter-nav-scroller');
         const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
@@ -1924,12 +1937,6 @@ async function assertFilterNavigationResponsive(page, label) {
           !scroller.classList.contains('is-gesture-active') &&
           Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + scroller.clientWidth / 2)) <= 2;
       }, null, { timeout: 3000 });
-      const fastAfter = await rail.evaluate(el => el.scrollLeft);
-      const coastDistance = (fastAfter - fastGesture.direct) * fastGesture.towardRight;
-      if (fastGesture.requestedDistance >= 60 && coastDistance < 4) {
-        throw new Error(label + ' fast horizontal swipe did not coast before snapping: ' +
-          JSON.stringify({ ...fastGesture, after: fastAfter, coastDistance }));
-      }
 
       await page.locator('.filter-nav-scroller [data-filter="all"]').click();
       await page.waitForFunction(() => {
@@ -2017,6 +2024,52 @@ async function assertFilterNavigationResponsive(page, label) {
         Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
         Math.abs(a.width - b.width) <= 1;
     }, await option.getAttribute('data-filter'), { timeout: 1800 });
+
+    const selectedColor = await option.evaluate(button => getComputedStyle(button).color);
+    if (selectedColor !== 'rgb(17, 17, 17)') {
+      throw new Error(label + ' selected filter text must turn dark immediately on tap/click: ' +
+        JSON.stringify({ filter: await option.getAttribute('data-filter'), selectedColor }));
+    }
+    const hoverTargetId = await page.evaluate(() => {
+      const rail = document.querySelector('.filter-nav-scroller');
+      if (!rail) return '';
+      const bounds = rail.getBoundingClientRect();
+      const candidate = Array.from(rail.querySelectorAll('[data-filter]:not(.active):not(:disabled)')).find(button => {
+        const rect = button.getBoundingClientRect();
+        return rect.left >= bounds.left && rect.right <= bounds.right && rect.width > 0 && rect.height > 0;
+      });
+      return candidate?.getAttribute('data-filter') || '';
+    });
+    if (hoverTargetId) {
+      const targetBox = await page.locator('.filter-nav-scroller [data-filter]').evaluateAll((buttons, id) => {
+        const button = buttons.find(item => item.getAttribute('data-filter') === id);
+        if (!button) return null;
+        const rect = button.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      }, hoverTargetId);
+      if (targetBox) {
+        await page.mouse.move(targetBox.x, targetBox.y);
+        const hoverColor = await page.evaluate(id => {
+          const button = Array.from(document.querySelectorAll('.filter-nav-scroller [data-filter]'))
+            .find(item => item.getAttribute('data-filter') === id);
+          return button ? getComputedStyle(button).color : '';
+        }, hoverTargetId);
+        if (hoverColor !== 'rgba(255, 255, 255, 0.68)') {
+          throw new Error(label + ' hovering over another filter must not turn its text white: ' +
+            JSON.stringify({ filter: hoverTargetId, hoverColor }));
+        }
+      }
+    }
+    const viewportSize = page.viewportSize();
+    await page.mouse.click(Math.max(1, (viewportSize?.width || 1280) - 2), 2);
+    const selectedAfterOtherSpaceClick = await option.evaluate(button => ({
+      active: button.classList.contains('active'),
+      color: getComputedStyle(button).color
+    }));
+    if (!selectedAfterOtherSpaceClick.active || selectedAfterOtherSpaceClick.color !== 'rgb(17, 17, 17)') {
+      throw new Error(label + ' clicking elsewhere must not bleach or clear the selected filter label: ' +
+        JSON.stringify(selectedAfterOtherSpaceClick));
+    }
 
     const announcementState = await page.evaluate(() => {
       const active = document.querySelector('.filter-nav-scroller [data-filter].active');

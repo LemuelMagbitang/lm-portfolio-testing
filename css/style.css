@@ -521,10 +521,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  /* Horizontal movement is handled only after the gesture is axis-locked;
-     pan-y leaves normal vertical document scrolling with the browser. */
+  /* Gallery owns centering; don't add native snapping/momentum after release. */
   -webkit-overflow-scrolling: auto;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: none;
   scroll-behavior: auto;
   scroll-padding-inline: 12px;
   overscroll-behavior-x: none;
@@ -558,10 +557,11 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .filter-active-indicator.is-animated {
+  /* A short, neutral movement avoids a springy/overshooting pill feel. */
   transition:
-    transform 280ms cubic-bezier(.22, 1, .36, 1),
-    width 280ms cubic-bezier(.22, 1, .36, 1),
-    height 180ms ease;
+    transform 160ms cubic-bezier(.2, 0, 0, 1),
+    width 160ms cubic-bezier(.2, 0, 0, 1),
+    height 140ms ease-out;
 }
 
 .filter-active-indicator.is-ready {
@@ -580,7 +580,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   text-align: center;
   white-space: nowrap;
   scroll-snap-align: center;
-  scroll-snap-stop: always;
 }
 
 .filter-tabs[data-overflow="true"]:focus-within {
@@ -627,7 +626,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   text-align: center;
   white-space: nowrap;
   scroll-snap-align: center;
-  scroll-snap-stop: always;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -672,10 +670,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   font-weight: 580;
   white-space: nowrap;
   scroll-snap-align: center;
-  scroll-snap-stop: always;
-  transition:
-    color var(--lm-motion-fast),
-    background-color var(--lm-motion-fast);
+  /* Foreground contrast switches immediately; only the surface fades. */
+  transition: background-color .14s ease;
   /* Prevent Android long-press text selection from painting a rectangular
      highlight over the pill without changing its real dimensions. */
   -webkit-user-select: none;
@@ -711,12 +707,12 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   font-weight: 580;
 }
 .filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview {
-  color: #111;
+  /* The label beneath the light pill must stay dark through swipe/hover. */
+  color: #111 !important;
   background: transparent;
   font-weight: 700;
   box-shadow: none;
-  /* Prevent a brief mid-transition gray/white label during rapid swipes. */
-  transition: none;
+  transition: none !important;
 }
 
 /* The hover selector has deliberately high specificity. Match it here so a
@@ -798,7 +794,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
    still selected, or a button look like it never released. */
 @media (hover: hover) and (pointer: fine) {
   .tab-btn:hover:not(.active):not([aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
-    color: rgba(255, 255, 255, .94);
+    /* Hover is background-only; never brighten a filter label to white. */
+    color: rgba(255, 255, 255, .68);
     background: rgba(255, 255, 255, .12);
     border-color: transparent;
     outline: none;
@@ -4459,14 +4456,18 @@ footer > .footer-content p{
 .nav-links a {
   transition: color .22s ease, background-color .22s ease;
 }
-.filter-tabs .tab-btn,.btn-show-more,.submit-btn,.email-me-btn,
+.filter-tabs .tab-btn {
+  transition: background-color .14s ease;
+  transform-origin: center;
+}
+.filter-tabs .tab-btn:active { transform: none; }
+.btn-show-more,.submit-btn,.email-me-btn,
 .social-icons a,.contact-mobile-tab,.hamburger{
   transition:color .22s ease,background-color .22s ease,border-color .22s ease,
     box-shadow .26s ease,transform .26s cubic-bezier(.22,1,.36,1),opacity .22s ease;
 }
-.filter-tabs .tab-btn:active,.btn-show-more:active,
-.submit-btn:active,.email-me-btn:active,.social-icons a:active,
-.contact-mobile-tab:active,.hamburger:active{transform:scale(.975);}
+.btn-show-more:active,.submit-btn:active,.email-me-btn:active,
+.social-icons a:active,.contact-mobile-tab:active,.hamburger:active{transform:scale(.975);}
 @media(hover:hover) and (pointer:fine){
   .btn-show-more:hover,.submit-btn:hover,.email-me-btn:hover{transform:translateY(-2px);}
   .social-icons a:hover{transform:translateY(-3px);}

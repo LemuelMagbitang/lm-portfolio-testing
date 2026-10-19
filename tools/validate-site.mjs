@@ -1776,19 +1776,19 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261019-12") ||
-      !bootstrap.includes("cacheVersion = '20261019-12'") ||
+  if (!entry.includes("bootstrap.js?v=20261019-13") ||
+      !bootstrap.includes("cacheVersion = '20261019-13'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261019-11") ||
+      !composition.includes("gallery/index.js?v=20261019-12") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261019-12') ||
-      !works.includes('js/app/page-composition.js?v=20261019-12') ||
-      !works.includes('css/style.css?v=20261019-11') ||
-      !works.includes('js/script.js?v=20261019-12') ||
+      !works.includes('js/app/bootstrap.js?v=20261019-13') ||
+      !works.includes('js/app/page-composition.js?v=20261019-13') ||
+      !works.includes('css/style.css?v=20261019-12') ||
+      !works.includes('js/script.js?v=20261019-13') ||
       !about.includes('style.css?v=20261019-11') ||
       !about.includes('script.js?v=20261019-12') ||
       !about.includes('page-composition.js?v=20261019-12')) {
@@ -1825,7 +1825,7 @@ function validateFilterSoundAndFeedbackContract() {
 
   if (!css.includes('.filter-active-indicator') ||
       !css.includes('overscroll-behavior-x: none;') ||
-      !css.includes('transform 280ms cubic-bezier(.22, 1, .36, 1)') ||
+      !css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
       !css.includes('.tab-btn:disabled') ||
       css.includes('.tab-btn.active::before') ||
       css.includes('content: "✓"') ||
@@ -1852,10 +1852,14 @@ function validateFilterSoundAndFeedbackContract() {
       !gallery.includes("filterContent.prepend(leading)") ||
       !gallery.includes("filterContent.append(trailing)") ||
       !css.includes('.filter-tabs[data-overflow="true"]') ||
-      !css.includes('scroll-snap-stop: always') ||
+      css.includes('scroll-snap-stop: always') ||
       !css.includes('scroll-snap-type: none') ||
       !css.includes('-webkit-overflow-scrolling: auto;') ||
       !gallery.includes("centerFilterButton(nearest, 'auto', true)") ||
+       gallery.includes('runFilterInertia') ||
+       !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
+       !css.includes('color: #111 !important;') ||
+       !css.includes('.filter-tabs .tab-btn:active { transform: none;') ||
       !navigation.includes("bind(windowRef, 'pointerup', resetPointerFocus)") ||
       !navigation.includes('logoLink.blur()') ||
       !smoke.includes('filterGalleryGap') ||

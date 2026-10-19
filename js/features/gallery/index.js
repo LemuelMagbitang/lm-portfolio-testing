@@ -117,7 +117,6 @@ export async function initGallery(options = {}) {
   let filterScrollFrame = null;
   let filterDrag = null;
   let filterPointerActive = false;
-  let filterInertiaFrame = null;
   let filterActiveIndicator = null;
   let filterSettling = false;
   let galleryDestroyed = false;
@@ -361,7 +360,7 @@ export async function initGallery(options = {}) {
     updateFilterPager(filterBtns.indexOf(activeButton));
   }
 
-  function centerFilterButton(button, behavior = 'smooth', force = false) {
+  function centerFilterButton(button, behavior = 'auto', force = false) {
     if (!filterTabs || !button || !isFilterScroller()) return false;
     const tabsRect = filterTabs.getBoundingClientRect();
     const buttonRect = button.getBoundingClientRect();
@@ -441,7 +440,7 @@ export async function initGallery(options = {}) {
     // Initialize the live region on the first explicit selection as well as
     // announce subsequent changes; re-centering alone does not spam updates.
     if (changed || !filterAnnouncement?.textContent) updateFilterAnnouncement(button);
-    if (center && isFilterScroller()) centerFilterButton(button);
+    if (center && isFilterScroller()) centerFilterButton(button, 'auto');
     updateFilterPager(filterBtns.indexOf(button));
 
     if (updateUrl && changed) {
@@ -492,7 +491,7 @@ export async function initGallery(options = {}) {
     // If a click/resize initiated the scroll, preserve its chosen category while
     // the rail finishes moving. A delayed settle also clears the centered preview
     // on browsers that do not dispatch the native scrollend event.
-    const delay = Math.max(220, suppressFilterSettleUntil - Date.now() + 16);
+    const delay = Math.max(100, suppressFilterSettleUntil - Date.now() + 16);
     filterScrollTimer = windowRef.setTimeout(() => {
       filterScrollTimer = null;
       filterActiveIndicator?.classList.remove('is-following-scroll');
@@ -748,7 +747,7 @@ export async function initGallery(options = {}) {
     const next = buttons[nextIndex];
     next?.focus?.({ preventScroll: true });
     if (next) {
-      centerFilterButton(next, 'smooth');
+      centerFilterButton(next, 'auto');
       scheduleCenteredFilter();
     }
   });
@@ -897,65 +896,15 @@ export async function initGallery(options = {}) {
     settleCenteredFilter();
   }, { passive: true });
 
-  /* Horizontal rail gestures are axis-locked. Touch-action: pan-y lets
-     the browser own vertical scrolling; horizontal dragging only starts
-     after X movement clearly wins over Y movement. */
-  function stopFilterInertia() {
-    if (filterInertiaFrame !== null) windowRef.cancelAnimationFrame?.(filterInertiaFrame);
-    filterInertiaFrame = null;
-    filterTabs?.classList.remove('is-gesture-active', 'is-dragging');
-  }
-
-  function runFilterInertia(initialVelocity) {
-    if (!filterTabs || typeof windowRef.requestAnimationFrame !== 'function') {
-      stopFilterInertia();
-      scheduleCenteredFilter();
-      return;
-    }
-
-    let velocity = Math.max(-2.5, Math.min(2.5, initialVelocity));
-    let previousTime = null;
-    let elapsed = 0;
-    const maxScroll = Math.max(0, filterTabs.scrollWidth - filterTabs.clientWidth);
-
-    const advance = timestamp => {
-      filterInertiaFrame = null;
-      const now = Number.isFinite(timestamp) ? timestamp : Date.now();
-      const deltaTime = previousTime === null
-        ? 16
-        : Math.max(1, Math.min(32, now - previousTime));
-      previousTime = now;
-      elapsed += deltaTime;
-
-      const before = filterTabs.scrollLeft;
-      const next = Math.max(0, Math.min(maxScroll, before + velocity * deltaTime));
-      filterTabs.scrollLeft = next;
-      velocity *= Math.exp(-deltaTime / 230);
-
-      const hitEdge = (next <= 0 && velocity < 0) || (next >= maxScroll && velocity > 0);
-      if (elapsed < 640 && Math.abs(velocity) > 0.035 && !hitEdge) {
-        filterInertiaFrame = windowRef.requestAnimationFrame(advance);
-        return;
-      }
-
-      filterTabs.classList.remove('is-gesture-active', 'is-dragging');
-      scheduleCenteredFilter();
-    };
-
-    if (Math.abs(velocity) < 0.035) {
-      stopFilterInertia();
-      scheduleCenteredFilter();
-      return;
-    }
-    filterInertiaFrame = windowRef.requestAnimationFrame(advance);
-  }
+  /* Horizontal gestures stay axis-locked. Gallery owns movement and centering;
+     no post-release coast or native snap is used. */
 
   bind(filterTabs, 'pointerdown', event => {
     if (!isFilterScroller() || event.isPrimary === false) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
-    // A new gesture interrupts any previous coast or programmatic centering.
-    stopFilterInertia();
+    // A new gesture interrupts pending settlement and starts direct manipulation.
+    filterTabs.classList.remove('is-gesture-active', 'is-dragging');
     suppressFilterSettleUntil = 0;
     windowRef.clearTimeout(filterScrollTimer);
     filterScrollTimer = null;
@@ -970,10 +919,6 @@ export async function initGallery(options = {}) {
       startX: event.clientX,
       startY: event.clientY,
       startScrollLeft: filterTabs.scrollLeft,
-      lastX: event.clientX,
-      lastY: event.clientY,
-      lastTime: Number(event.timeStamp) || Date.now(),
-      velocityX: 0,
       distanceX: 0,
       axis: null,
       moved: false
@@ -982,14 +927,6 @@ export async function initGallery(options = {}) {
 
   bind(filterTabs, 'pointermove', event => {
     if (!filterDrag || event.pointerId !== filterDrag.pointerId) return;
-
-    const now = Number(event.timeStamp) || Date.now();
-    const deltaTime = Math.max(1, now - filterDrag.lastTime);
-    const sampleVelocity = Math.max(
-      -2.5,
-      Math.min(2.5, (event.clientX - filterDrag.lastX) / deltaTime)
-    );
-    filterDrag.velocityX = filterDrag.velocityX * 0.35 + sampleVelocity * 0.65;
 
     const distanceX = event.clientX - filterDrag.startX;
     const distanceY = event.clientY - filterDrag.startY;
@@ -1014,9 +951,6 @@ export async function initGallery(options = {}) {
       filterTabs.scrollLeft = filterDrag.startScrollLeft - distanceX;
     }
 
-    filterDrag.lastX = event.clientX;
-    filterDrag.lastY = event.clientY;
-    filterDrag.lastTime = now;
   });
 
   function finishFilterPointer(event) {
@@ -1040,23 +974,8 @@ export async function initGallery(options = {}) {
 
     if (gesture.axis === 'x' && gesture.moved) {
       suppressFilterClickUntil = Date.now() + 250;
-      const reducedMotion = !!windowRef.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      const travel = Math.abs(gesture.distanceX);
-      const speed = Math.abs(gesture.velocityX);
-      const longGesture = travel >= Math.max(140, filterTabs.clientWidth * 0.42);
-      const shouldCoast = !reducedMotion && !cancelled && (
-        (travel >= 24 && speed >= 0.45) ||
-        (longGesture && speed >= 0.12)
-      );
-
-      if (shouldCoast) {
-        // Finger velocity and scroll velocity have opposite signs. The brief
-        // damped coast is reserved for genuinely fast or long horizontal drags.
-        runFilterInertia(-gesture.velocityX);
-      } else {
-        filterTabs.classList.remove('is-gesture-active');
-        scheduleCenteredFilter();
-      }
+      filterTabs.classList.remove('is-gesture-active');
+      scheduleCenteredFilter();
       return;
     }
 
@@ -1111,7 +1030,6 @@ export async function initGallery(options = {}) {
   lifecycle.add(() => windowRef.clearTimeout(filterScrollTimer));
   lifecycle.add(() => windowRef.clearTimeout(filterSettleTimer));
   lifecycle.add(() => windowRef.cancelAnimationFrame?.(filterScrollFrame));
-  lifecycle.add(() => windowRef.cancelAnimationFrame?.(filterInertiaFrame));
 
   // Re-entry through browser back/forward can restore the page with a stale
   // collapsed gallery measurement. Rebuild the collapsed presentation from
@@ -1154,8 +1072,6 @@ export async function initGallery(options = {}) {
       filterDrag = null;
       filterPointerActive = false;
       filterSettling = false;
-      if (filterInertiaFrame !== null) windowRef.cancelAnimationFrame?.(filterInertiaFrame);
-      filterInertiaFrame = null;
       filterTabs?.classList.remove('is-gesture-active', 'is-dragging');
       filterActiveIndicator?.remove();
       filterActiveIndicator = null;
