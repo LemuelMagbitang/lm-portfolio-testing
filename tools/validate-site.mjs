@@ -1775,7 +1775,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261019-09") ||
+  if (!entry.includes("bootstrap.js?v=20261019-10") ||
       !bootstrap.includes("cacheVersion = '20261019-10'") ||
       !composition.includes("navigation/index.js?v=20261019-01") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
