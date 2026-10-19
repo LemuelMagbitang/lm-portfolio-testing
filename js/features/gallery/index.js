@@ -173,8 +173,6 @@ export async function initGallery(options = {}) {
 
     const contentStyle = windowRef.getComputedStyle?.(filterContent);
     const columnGap = Number.parseFloat(contentStyle?.columnGap || contentStyle?.gap || '0') || 0;
-    const pillsWidth = buttons.reduce((total, button) => total + button.getBoundingClientRect().width, 0);
-    const naturalWidth = pillsWidth + columnGap * Math.max(0, buttons.length - 1);
 
     // The active pill is a centered carousel on every viewport, not only when
     // the labels exceed the available width. Edge cushions let the first and
