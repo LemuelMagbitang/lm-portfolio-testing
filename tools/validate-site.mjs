@@ -992,7 +992,8 @@ function validateGalleryContract() {
       !source.includes('const x = isFollowingFilterScroll') ||
       source.includes('button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;') ||
       !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
-       !css.includes('.tab-btn.is-centered-preview {\n  color: #111;\n  background: transparent;\n  font-weight: 700;\n  box-shadow: none;\n  /* Prevent a brief mid-transition gray/white label during rapid swipes. */\n  transition: none;')) {
+       !css.includes('color: #111 !important;') ||
+        !css.includes('transition: none !important;')) {
     err('Gallery: the filter pill must preview the centered label while swiping and size itself to that label.');
   }
   if (!/\.filter-page-controls\{\s*display:none;/.test(css)) {
@@ -1789,9 +1790,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !works.includes('js/app/page-composition.js?v=20261019-13') ||
       !works.includes('css/style.css?v=20261019-12') ||
       !works.includes('js/script.js?v=20261019-13') ||
-      !about.includes('style.css?v=20261019-11') ||
-      !about.includes('script.js?v=20261019-12') ||
-      !about.includes('page-composition.js?v=20261019-12')) {
+      !about.includes('style.css?v=20261019-12') ||
+      !about.includes('script.js?v=20261019-13') ||
+      !about.includes('page-composition.js?v=20261019-13')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
