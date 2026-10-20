@@ -54,6 +54,7 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   contactEmail: '',
   socials: Object.freeze({ instagram: '', tiktok: '', youtube: '' }),
   siteTitle: '',
+  defaultVideoPoster: '',
   ogImage: '',
   ogImageVersion: '',
   ogImageAlt: ''
@@ -61,6 +62,27 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
 
 function stringValue(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function safeVideoPosterSource(value) {
+  const source = stringValue(value);
+  const forbidden = source.includes(String.fromCharCode(92))
+    || Array.from(source).some(character => character.charCodeAt(0) < 32);
+  if (!source || forbidden) return '';
+  if (/^https:\/\//i.test(source)) {
+    try {
+      const url = new URL(source);
+      return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
+    } catch (_) { return ''; }
+  }
+  if (!source.startsWith('assets/')) return '';
+  const localPath = source.split(/[?#]/, 1)[0];
+  let decodedPath = localPath;
+  try { decodedPath = decodeURIComponent(localPath); }
+  catch (_) { return ''; }
+  if ([localPath, decodedPath].some(candidate => candidate.split('/').some(part => !part || part === '.' || part === '..'))) return '';
+  if (!/\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i.test(localPath)) return '';
+  return source;
 }
 
 function booleanValue(value, fallback) {
@@ -208,6 +230,7 @@ export function normalizeSiteSettings(raw, defaults = DEFAULT_SITE_SETTINGS) {
         ])
     ),
     siteTitle: stringValue(source.siteTitle),
+    defaultVideoPoster: safeVideoPosterSource(source.defaultVideoPoster),
     ogImage: stringValue(source.ogImage),
     ogImageVersion: stringValue(source.ogImageVersion),
     ogImageAlt: stringValue(source.ogImageAlt)

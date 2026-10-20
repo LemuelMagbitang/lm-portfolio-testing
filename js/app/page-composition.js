@@ -9,9 +9,9 @@
 import { initNavigation } from '../features/navigation/index.js?v=20261019-02';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261013-02';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
-import { initSiteSettings } from '../features/settings/index.js?v=20261018-09';
+import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261021-01';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261021-02';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261018-08';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
@@ -427,6 +427,7 @@ export async function createPortfolioApp({
         messageFadeMs: settings.heroTiming.fadeMs,
         showHeroMessage: settings.showHeroMessage,
         showFooterMessage: settings.showFooterMessage,
+        defaultVideoPoster: settings.defaultVideoPoster,
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl,
         getSiteRootUrl,

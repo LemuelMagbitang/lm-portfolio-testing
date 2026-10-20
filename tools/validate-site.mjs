@@ -670,6 +670,22 @@ validateHeroMessages(heroMessages);
 
 if (typeof settings?.showHeroMessage !== 'boolean') err('data/settings.json: showHeroMessage must be a boolean.');
 if (typeof settings?.showFooterMessage !== 'boolean') err('data/settings.json: showFooterMessage must be a boolean.');
+if (settings?.defaultVideoPoster !== undefined && typeof settings.defaultVideoPoster !== 'string') {
+  err('data/settings.json: defaultVideoPoster must be a string when present.');
+} else if (String(settings?.defaultVideoPoster || '').trim()) {
+  const defaultPoster = String(settings.defaultVideoPoster).trim();
+  if (/^https:\/\//i.test(defaultPoster)) {
+    // External HTTPS image URLs are allowed; runtime normalization rejects other URL schemes.
+  } else if (defaultPoster.startsWith('assets/')) {
+    const posterPath = defaultPoster.split(/[?#]/, 1)[0];
+    if (!/\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i.test(posterPath)) {
+      err('data/settings.json: defaultVideoPoster must reference a supported image file.');
+    }
+    checkLocalRef(defaultPoster, 'data/settings.json defaultVideoPoster');
+  } else {
+    err('data/settings.json: defaultVideoPoster must be an image under assets/ or an HTTPS URL.');
+  }
+}
 
 if (settings?.heroTiming) {
   const timing = settings.heroTiming;
@@ -1841,7 +1857,10 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('media.loop = slides.length === 1') ||
       !hero.includes('activateMedia(slides[currentIndex])') ||
       !hero.includes("media.dataset.playbackState = 'blocked'") ||
-      !hero.includes("const posterUrl = source.poster ? resolveAssetUrl(source.poster) : '';") ||
+      !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
+       !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
+       !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
+       !hero.includes("if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {") ||
       hero.includes('og-image.jpg') ||
       !hero.includes('if (media.readyState < 2)') ||
       !hero.includes("media.addEventListener('canplay', retryAfterReady, { once: true });") ||
@@ -1887,7 +1906,10 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('hero video did not resume after a real interaction') ||
       !hero.includes("media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');") ||
       !hero.includes('if (!reducedMotion) media.src = resolveAssetUrl(source.src);') ||
-      !hero.includes("const posterUrl = source.poster ? resolveAssetUrl(source.poster) : '';") ||
+      !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
+       !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
+       !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
+       !hero.includes("if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {") ||
       hero.includes('og-image.jpg') ||
       !hero.includes("sources[0]?.type !== 'video'") ||
       !hero.includes('function scheduleNetworkRetry(slide, media)') ||

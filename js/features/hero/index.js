@@ -261,7 +261,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
       loopMode: ['latest','manual','mixed'].includes(options.loopMode) ? options.loopMode : 'latest',
       transitionStyle: ['kenburns','fade','none'].includes(options.transitionStyle) ? options.transitionStyle : 'kenburns',
       crossfadeMs: Number.isFinite(Number(options.crossfadeMs)) && Number(options.crossfadeMs) >= 500 ? Number(options.crossfadeMs) : 3500,
-      messageFadeMs: Number.isFinite(Number(options.messageFadeMs)) && Number(options.messageFadeMs) >= 0 ? Number(options.messageFadeMs) : 600
+      messageFadeMs: Number.isFinite(Number(options.messageFadeMs)) && Number(options.messageFadeMs) >= 0 ? Number(options.messageFadeMs) : 600,
+      defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''
     };
     const heroContainer = documentRef.getElementById('heroBanner') || documentRef.getElementById('heroBannerAbout');
     if (!heroContainer) return;
@@ -420,6 +421,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       wrap.className = 'slide' + (i === 0 ? ' active' : '');
 
       let media;
+      let hasVideoPoster = false;
       if (source.type === 'video') {
         media = documentRef.createElement('video');
         media.muted = true;
@@ -428,11 +430,14 @@ import { createLifecycle } from '../../core/lifecycle.js';
         media.loop = false;
         media.playsInline = true;
         media.setAttribute('playsinline', '');
-        // Only use a poster explicitly supplied for this video. The Open Graph
-        // image belongs to social previews and is not a representative video frame.
-        // With no custom poster, the slide's neutral surface remains visible to frame one.
-        const posterUrl = source.poster ? resolveAssetUrl(source.poster) : '';
-        if (posterUrl) media.poster = posterUrl;
+        // A poster on this specific item wins; the site-wide CMS setting is only a fallback.
+        // Open Graph images are for social previews and are never reused as video posters.
+        const posterSource = source.poster || config.defaultVideoPoster;
+        const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';
+        if (posterUrl) {
+          media.poster = posterUrl;
+          hasVideoPoster = true;
+        }
         media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
         media.autoplay = false;
         // Reduced-motion visitors see a still poster, not a video download.
@@ -456,7 +461,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
       wrap.dataset.heroType = source.type || 'image';
-      if (source.type === 'video') {
+      if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {
         wrap.classList.add('is-video-pending');
         const clearVideoPending = () => wrap.classList.remove('is-video-pending');
         media.addEventListener('loadeddata', clearVideoPending, { once: true });

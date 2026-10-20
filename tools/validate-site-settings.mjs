@@ -23,6 +23,27 @@ assert.equal(defaults.heroTiming.autoRotateMs, 9000, 'Message loop should rotate
 assert.equal(defaults.interactionFeedback.enabled, false);
 assert.equal(defaults.interactionFeedback.hapticsEnabled, false);
 assert.equal(defaults.interactionFeedback.navigationSound, 'assets/projects/site/sounds/navigation.wav');
+assert.equal(defaults.defaultVideoPoster, '', 'No configured default poster should leave the dark loading surface as the default.');
+assert.equal(
+  normalizeSiteSettings({ defaultVideoPoster: 'assets/projects/site/banner/hero-poster.webp' }).defaultVideoPoster,
+  'assets/projects/site/banner/hero-poster.webp',
+  'CMS image paths should be normalized and preserved.'
+);
+assert.equal(
+  normalizeSiteSettings({ defaultVideoPoster: 'https://cdn.example.test/hero-poster' }).defaultVideoPoster,
+  'https://cdn.example.test/hero-poster',
+  'HTTPS image URLs should be supported.'
+);
+assert.equal(
+  normalizeSiteSettings({ defaultVideoPoster: 'javascript:alert(1)' }).defaultVideoPoster,
+  '',
+  'Unsafe poster URL schemes must be rejected.'
+);
+assert.equal(
+  normalizeSiteSettings({ defaultVideoPoster: 'assets/%2e%2e/private.webp' }).defaultVideoPoster,
+  '',
+  'Encoded parent-directory traversal must be rejected.'
+);
 
 const feedback = normalizeSiteSettings({ interactionFeedback: {
   enabled: true, soundEnabled: false, hapticsEnabled: true, volume: 0.8,
@@ -47,6 +68,13 @@ assert.ok(!feedbackSource.includes('interaction-feedback-toggle'), 'Feedback mus
 assert.ok(feedbackSource.includes("root.addEventListener('lm:filter-centered', handleCenteredFilter)"));
 assert.ok(feedbackSource.includes('typeof nav?.vibrate === \'function\''));
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
+const heroSource = await readFile(new URL('../js/features/hero/index.js', import.meta.url), 'utf8');
+const adminSource = await readFile(new URL('../admin/admin.js', import.meta.url), 'utf8');
+assert.ok(compositionSource.includes('defaultVideoPoster: settings.defaultVideoPoster'), 'The composition root must pass the normalized CMS poster setting into the hero.');
+assert.ok(heroSource.includes('const posterSource = source.poster || config.defaultVideoPoster;'), 'Per-item posters must take priority over the optional default poster.');
+assert.ok(heroSource.includes("if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {"), 'A configured poster must remain visible for reduced-motion visitors; the no-poster default keeps the dark surface.');
+assert.ok(adminSource.includes('id="s_default_video_poster"'), 'The CMS settings section must expose the optional default video poster.');
+assert.ok(adminSource.includes("attachMediaBrowseButton(defaultVideoPosterInput, null, { kind: 'image', title: 'Choose default video poster' })"), 'The CMS poster field must provide the image Media Library picker.');
 assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
 assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-03')"));
 assert.ok(compositionSource.includes("import('../features/gallery/index.js?v=20261020-06')"));

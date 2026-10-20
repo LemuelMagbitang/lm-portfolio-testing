@@ -2120,6 +2120,7 @@ RENDERERS.settings = function(data){
   s.heroTiming = s.heroTiming || {fadeMs:600, autoRotateMs:0, crossfadeMs:3500, kenBurnsFromScale:1, kenBurnsToScale:1.15, kenBurnsDurationS:14, loopMode:'latest', transitionStyle:'kenburns'};
   s.showHeroMessage = s.showHeroMessage !== false;
   s.showFooterMessage = s.showFooterMessage === true;
+  s.defaultVideoPoster = String(s.defaultVideoPoster || '').trim();
   const feedbackDefaults = {
     enabled: false, soundEnabled: true, hapticsEnabled: false, volume: 0.12,
     navigationSound: 'assets/projects/site/sounds/navigation.wav',
@@ -2153,6 +2154,16 @@ RENDERERS.settings = function(data){
       ${toggleRow('showSoftwareLogos','Software skill logos','Shows every Software Skill (About page) as its logo instead of its name. One switch for the whole list — set a specific logo per skill from the About page itself.', s.showSoftwareLogos)}
       ${toggleRow('showHeroMessage','Hero message in hero','Show or hide the rotating statement over the homepage hero artwork.', s.showHeroMessage)}
       ${toggleRow('showFooterMessage','Hero message in footer','Show the current hero statement above the footer links. The footer grows naturally with longer messages.', s.showFooterMessage)}
+    </div>
+
+    <div class="panel">
+      <h3>Hero Video</h3>
+      <p class="panel-sub">Optional fallback poster for hero videos while media is loading. A poster set on an individual Hero Loop item takes priority. Leave this empty to show the neutral dark surface until the first video frame is ready; the Open Graph image is never used as a fallback.</p>
+      <div class="field">
+        <label class="field-label" for="s_default_video_poster">Default video poster (optional)</label>
+        <input id="s_default_video_poster" value="${attr(s.defaultVideoPoster)}" placeholder="assets/projects/site/banner/hero-poster.webp" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="hint">Choose an image from the Media Library or enter an image path under <code class="k">assets/</code>. HTTPS image URLs are also supported.</div>
     </div>
 
     <div class="panel">
@@ -2239,7 +2250,9 @@ RENDERERS.settings = function(data){
   const feedbackVolumeInput = content.querySelector('#s_feedback_volume');
   const feedbackPreviewNavigation = content.querySelector('#s_feedback_preview_navigation');
   const feedbackPreviewSelection = content.querySelector('#s_feedback_preview_selection');
-  [feedbackNavigationInput, feedbackSelectionInput, feedbackVolumeInput].forEach(input => input?.addEventListener('input', flagUnsaved));
+  const defaultVideoPosterInput = content.querySelector('#s_default_video_poster');
+  [feedbackNavigationInput, feedbackSelectionInput, feedbackVolumeInput, defaultVideoPosterInput].forEach(input => input?.addEventListener('input', flagUnsaved));
+  attachMediaBrowseButton(defaultVideoPosterInput, null, { kind: 'image', title: 'Choose default video poster' });
   attachMediaBrowseButton(feedbackNavigationInput, null, { kind: 'other', title: 'Choose navigation cue sound' });
   attachMediaBrowseButton(feedbackSelectionInput, null, { kind: 'other', title: 'Choose selection cue sound' });
 
@@ -2403,6 +2416,30 @@ RENDERERS.settings = function(data){
     });
   }
 
+  function validateVideoPosterPath(raw, label) {
+    const value = String(raw || '').trim();
+    if (!value) return '';
+    if (/^https:\/\//i.test(value)) {
+      try {
+        const url = new URL(value);
+        if (url.protocol === 'https:' && !url.username && !url.password) return url.href;
+      } catch (_) {}
+      throw new Error(label + ' must be a valid HTTPS image URL.');
+    }
+    const path = value.split(/[?#]/, 1)[0];
+    const forbidden = value.includes(String.fromCharCode(92))
+      || Array.from(value).some(character => character.charCodeAt(0) < 32);
+    let decodedPath = path;
+    try { decodedPath = decodeURIComponent(path); }
+    catch (_) { throw new Error(label + ' contains an invalid URL escape.'); }
+    if (!value.startsWith('assets/') || forbidden ||
+        [path, decodedPath].some(candidate => candidate.split('/').some(part => !part || part === '.' || part === '..')) ||
+        !/\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i.test(path)) {
+      throw new Error(label + ' must be an image under assets/ or a valid HTTPS image URL.');
+    }
+    return value;
+  }
+
   function validateFeedbackSoundPath(raw, label) {
     const value = String(raw || '').trim();
     if (!value) return '';
@@ -2423,6 +2460,7 @@ RENDERERS.settings = function(data){
 
   wireSave(()=>({
     protectionEnabled: s.protectionEnabled,
+    defaultVideoPoster: validateVideoPosterPath(val('s_default_video_poster'), 'Default video poster'),
     formsEnabled: { project: s.formsEnabled.project, review: s.formsEnabled.review },
     showReviews: s.showReviews,
     showSoftwareLogos: s.showSoftwareLogos,

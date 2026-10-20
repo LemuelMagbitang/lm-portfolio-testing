@@ -9865,7 +9865,7 @@ try {
       });
       if (!reducedHeroState.preference || reducedHeroState.preload !== 'none' ||
           reducedHeroState.sourceAttribute || reducedHeroState.currentSrc ||
-          reducedHeroState.poster || reducedHeroState.posterAttribute ||
+          /og-image\\.jpg/i.test(reducedHeroState.poster) || /og-image\\.jpg/i.test(reducedHeroState.posterAttribute) ||
           !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
         throw new Error(
           'Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image: ' +
