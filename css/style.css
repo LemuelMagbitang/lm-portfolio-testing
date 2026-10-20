@@ -326,6 +326,17 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   will-change: opacity, transform;
 }
 
+/* A real frame-specific poster can replace this placeholder when configured.
+   Never display the unrelated Open Graph sharing card in the video surface. */
+.hero-banner .slide.is-video-pending::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #121212;
+  pointer-events: none;
+}
+
 /* THREE TRANSITION STYLES, chosen from Settings & Toggles
    (data/settings.json's heroTiming.transitionStyle), applied as a
    class on .hero-banner itself by script.js:
@@ -518,7 +529,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   width: calc(100% - 40px);
   max-width: var(--lm-container-max);
   margin: 0 auto;
-  padding-block: clamp(18px, 2vw, 26px);
+  padding-block: 12px;
 }
 
 .filter-nav-viewport {
@@ -3745,7 +3756,7 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 
 @media (max-width: 767px) {
   .filter-nav-wrapper {
-    padding-block: 18px 20px;
+    padding-block: 12px;
   }
 
   .filter-nav-content {

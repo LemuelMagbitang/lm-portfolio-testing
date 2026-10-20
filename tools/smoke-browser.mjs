@@ -1382,8 +1382,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           };
         });
         if (videoContract.present) {
-          if (!videoContract.poster || !videoContract.posterAttribute) {
-            throw new Error(label + ': hero video needs a poster fallback before its first decodable frame: ' + JSON.stringify(videoContract));
+          if (/og-image\.jpg/i.test(videoContract.poster) || /og-image\.jpg/i.test(videoContract.posterAttribute)) {
+            throw new Error(label + ': Open Graph image must not be used as a hero-video poster: ' + JSON.stringify(videoContract));
           }
           if (!videoContract.muted || !videoContract.playsInline ||
               (await page.locator('#heroBanner .slide').count()) === 1 && !videoContract.loop) {
@@ -1881,7 +1881,7 @@ async function assertFilterNavigationResponsive(page, label) {
       throw new Error(label + ' active filter must remain centered at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.minButtonHeight < 44 || !state.labelsStayOneLine || state.verticalOverflow ||
-        state.paddingTop < 14 || state.paddingBottom < 14) {
+        state.paddingTop !== 12 || state.paddingBottom !== 12) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.ariaPressedCount !== 1 || state.activeColor !== 'rgb(255, 255, 255)' ||
@@ -9856,6 +9856,7 @@ try {
           preference: matchMedia('(prefers-reduced-motion: reduce)').matches,
           preload: video?.preload || '',
           poster: video?.poster || '',
+          posterAttribute: video?.getAttribute('poster') || '',
           sourceAttribute: video?.getAttribute('src') || '',
           currentSrc: video?.currentSrc || '',
           paused: video?.paused ?? false,
@@ -9864,10 +9865,10 @@ try {
       });
       if (!reducedHeroState.preference || reducedHeroState.preload !== 'none' ||
           reducedHeroState.sourceAttribute || reducedHeroState.currentSrc ||
-          !reducedHeroState.poster.endsWith('/assets/projects/site/og-image.jpg') ||
+          reducedHeroState.poster || reducedHeroState.posterAttribute ||
           !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
         throw new Error(
-          'Reduced-motion hero must show a static poster without attaching/loading the video source or delaying startup: ' +
+          'Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image: ' +
           JSON.stringify(reducedHeroState)
         );
       }

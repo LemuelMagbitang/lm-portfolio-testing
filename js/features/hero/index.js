@@ -356,23 +356,25 @@ import { createLifecycle } from '../../core/lifecycle.js';
       }
     }
 
-    // Consume the same normalized Project models used by cards and Lightbox.
-    // On the About page there is no mounted Projects feature, so fall back to
-    // the CMS project source and normalize it at this boundary.
-    try {
-      let models = [];
-      try { models = getProjects?.() || []; } catch (_) { models = []; }
+    // Only resolve project models for latest/mixed mode. Manual mode already
+    // has its complete list in hero-loop.json, so the unrelated Projects feed
+    // must not delay the first hero-video request on Works or About.
+    if (config.loopMode !== 'manual') {
+      try {
+        let models = [];
+        try { models = getProjects?.() || []; } catch (_) { models = []; }
 
-      if (!Array.isArray(models) || !models.length) {
-        const list = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
-        models = normalizeProjects(list);
+        if (!Array.isArray(models) || !models.length) {
+          const list = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
+          models = normalizeProjects(list);
+        }
+
+        latestSources = models
+          .map(project => heroSourceFromProjectData(project, siteRootUrl))
+          .filter(Boolean);
+      } catch (err) {
+        console.warn('Hero banner: could not load normalized artwork from data/projects.json.', err);
       }
-
-      latestSources = models
-        .map(project => heroSourceFromProjectData(project, siteRootUrl))
-        .filter(Boolean);
-    } catch (err) {
-      console.warn('Hero banner: could not load normalized artwork from data/projects.json.', err);
     }
 
     function sourceKey(source) {
@@ -426,9 +428,11 @@ import { createLifecycle } from '../../core/lifecycle.js';
         media.loop = false;
         media.playsInline = true;
         media.setAttribute('playsinline', '');
-        // A real poster must be present even when autoplay is delayed/rejected.
-        // Without it, the browser paints a black video surface until frame one.
-        media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');
+        // Only use a poster explicitly supplied for this video. The Open Graph
+        // image belongs to social previews and is not a representative video frame.
+        // With no custom poster, the slide's neutral surface remains visible to frame one.
+        const posterUrl = source.poster ? resolveAssetUrl(source.poster) : '';
+        if (posterUrl) media.poster = posterUrl;
         media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
         media.autoplay = false;
         // Reduced-motion visitors see a still poster, not a video download.
@@ -452,6 +456,12 @@ import { createLifecycle } from '../../core/lifecycle.js';
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
       wrap.dataset.heroType = source.type || 'image';
+      if (source.type === 'video') {
+        wrap.classList.add('is-video-pending');
+        const clearVideoPending = () => wrap.classList.remove('is-video-pending');
+        media.addEventListener('loadeddata', clearVideoPending, { once: true });
+        media.addEventListener('playing', clearVideoPending, { once: true });
+      }
       wrap.classList.toggle('slide--zoom', zoomTransition);
       wrap.classList.toggle('slide--fade', fadeTransition);
       wrap.style.setProperty('--hero-fade-in-ms', `${fadeInMs}ms`);
@@ -474,9 +484,11 @@ import { createLifecycle } from '../../core/lifecycle.js';
       }
     }
 
-    // Hold the branded startup gate until the first hero visual is usable.
+    // Keep the bounded readiness check for images/Lottie. Do not make a network
+    // video block page composition until its first frame arrives; start playback
+    // and recovery immediately, leaving the neutral loading surface in place.
     const firstSlide = heroContainer.querySelector('.slide');
-    if (firstSlide && !(reducedMotion && sources[0]?.type === 'video')) {
+    if (firstSlide && sources[0]?.type !== 'video') {
       try { await waitForHeroMedia(firstSlide.firstElementChild, sources[0]?.type, windowRef); }
       catch (_) { /* An unavailable visual must never trap startup. */ }
     }
@@ -503,7 +515,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       const handlers={load:()=>finish(true),loadeddata:()=>finish(true),canplay:()=>finish(true),ready:()=>finish(true),error:()=>finish(false)};
       const timer=windowRef.setTimeout(()=>finish(false),3200);
       if(type==='image'){if(media.complete&&media.naturalWidth>0){finish(true);return;}media.addEventListener('load',handlers.load,{once:true});media.addEventListener('error',handlers.error,{once:true});}
-      else if(type==='video'){if(media.readyState>=2){finish(true);return;}media.addEventListener('loadeddata',handlers.loadeddata,{once:true});media.addEventListener('canplay',handlers.canplay,{once:true});media.addEventListener('error',handlers.error,{once:true});try{media.load?.();}catch(_){}}
+      else if(type==='video'){if(media.readyState>=2){finish(true);return;}media.addEventListener('loadeddata',handlers.loadeddata,{once:true});media.addEventListener('canplay',handlers.canplay,{once:true});media.addEventListener('error',handlers.error,{once:true});}
       else{if(media.isReady||media.getLottie?.()){finish(true);return;}media.addEventListener('ready',handlers.ready,{once:true});media.addEventListener('error',handlers.error,{once:true});}
     });
   }
@@ -517,6 +529,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       : 3500;
     let currentIndex = Math.max(0, slides.findIndex(slide => slide.classList.contains('active')));
     let timer = null;
+    let networkRetryTimer = null;
     let disposed = false;
     const cleanups = [];
     const activeMediaCleanups = [];
@@ -544,6 +557,23 @@ import { createLifecycle } from '../../core/lifecycle.js';
       timer = windowRef.setTimeout(advance, Math.max(0, delay));
     }
 
+    function scheduleNetworkRetry(slide, media) {
+      // Retry one transient network failure automatically; reconnects and user
+      // gestures can retry later if connectivity recovers after that attempt.
+      if (disposed || slides[currentIndex] !== slide ||
+          Number(media?.error?.code) !== 2 ||
+          Number(media?.dataset?.networkRetryCount || 0) >= 1 ||
+          networkRetryTimer !== null) return;
+      media.dataset.networkRetryCount = '1';
+      media.dataset.playbackState = 'retrying';
+      networkRetryTimer = windowRef.setTimeout(() => {
+        networkRetryTimer = null;
+        if (disposed || slides[currentIndex] !== slide || !media.isConnected) return;
+        try { media.load?.(); } catch (_) {}
+        activateMedia(slide);
+      }, 500);
+    }
+
     function activateMedia(slide) {
       const media = slide?.firstElementChild;
       if (!media || reducedMotion || disposed) return;
@@ -555,6 +585,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
         // A single CMS-selected video is a continuous hero reel, not a
         // one-slide slideshow that waits for an ended event to restart.
         media.loop = slides.length === 1;
+        media.dataset.playbackState = 'starting';
         const playback = media.play?.();
         if (playback && typeof playback.then === 'function') {
           Promise.resolve(playback).then(() => {
@@ -565,12 +596,16 @@ import { createLifecycle } from '../../core/lifecycle.js';
             // A delayed rejection from a slide that has already been replaced
             // must not overwrite the active slide's playback status or timer.
             if (disposed || slides[currentIndex] !== slide) return;
+            if (Number(media.error?.code) === 2) {
+              media.dataset.playbackState = 'error';
+              scheduleNetworkRetry(slide, media);
+              return;
+            }
             media.dataset.playbackState = 'blocked';
 
             // If playback was attempted before the first decodable frame, retry
-            // once when the browser reports enough media is ready. If autoplay
-            // is still denied after data is available, leave the poster visible
-            // and let the existing real-gesture/visibility recovery retry it.
+            // when data becomes available. Gesture recovery remains the fallback
+            // if autoplay is explicitly denied by the browser.
             if (media.readyState < 2) {
               const retryAfterReady = () => {
                 if (disposed || slides[currentIndex] !== slide ||
@@ -667,9 +702,21 @@ import { createLifecycle } from '../../core/lifecycle.js';
       if (reducedMotion || disposed) return;
       const slide = slides[currentIndex];
       const media = slide?.firstElementChild;
-      if (slide?.dataset?.heroType === 'video' && (media?.dataset?.playbackState === 'blocked' || media?.paused)) {
-        activateMedia(slide);
+      if (slide?.dataset?.heroType !== 'video' || !media) return;
+      const state = media.dataset.playbackState || '';
+      const shouldRetry = state === 'blocked' || state === 'error' ||
+        (media.paused && media.readyState >= 2);
+      if (!shouldRetry) return;
+      if (networkRetryTimer !== null) {
+        windowRef.clearTimeout(networkRetryTimer);
+        networkRetryTimer = null;
       }
+      // Network errors may leave a failed media element; reload the existing
+      // source before requesting playback again.
+      if (Number(media.error?.code) === 2) {
+        try { media.load?.(); } catch (_) {}
+      }
+      activateMedia(slide);
     }
 
     // Autoplay is normally allowed for a muted, inline background video, but
@@ -678,10 +725,32 @@ import { createLifecycle } from '../../core/lifecycle.js';
     // The quote overlay is a sibling layered over the banner. Bind to the
     // whole hero section so a gesture over either surface can recover blocked
     // playback without introducing controls or changing the visual design.
+    // Track frame/error state separately from slideshow advance logic so a
+    // single continuous video receives the same recovery behavior.
+    slides.forEach(slide => {
+      const media = slide.firstElementChild;
+      if (slide.dataset.heroType !== 'video' || !media) return;
+      bind(media, 'playing', () => {
+        if (!disposed && slides[currentIndex] === slide) media.dataset.playbackState = 'playing';
+      });
+      bind(media, 'error', () => {
+        if (disposed || slides[currentIndex] !== slide) return;
+        media.dataset.playbackState = 'error';
+        scheduleNetworkRetry(slide, media);
+      });
+    });
+
     const interactionSurface = heroContainer.closest('.hero-section') || heroContainer;
+    const documentRef = windowRef.document || heroContainer.ownerDocument;
     bind(interactionSurface, 'pointerdown', retryBlockedVideo, { passive: true });
-    bind(windowRef.document, 'visibilitychange', () => {
-      if (!windowRef.document.hidden) retryBlockedVideo();
+    // Gestures outside the hero, reconnects and page restoration can recover
+    // playback without requiring a refresh or navigating to another page.
+    bind(documentRef, 'pointerdown', retryBlockedVideo, { capture: true, passive: true });
+    bind(documentRef, 'keydown', retryBlockedVideo, { capture: true });
+    bind(windowRef, 'online', retryBlockedVideo);
+    bind(windowRef, 'pageshow', retryBlockedVideo);
+    bind(documentRef, 'visibilitychange', () => {
+      if (!documentRef.hidden) retryBlockedVideo();
     });
 
     if (reducedMotion) {
@@ -704,6 +773,10 @@ import { createLifecycle } from '../../core/lifecycle.js';
     return () => {
       disposed = true;
       clearTimer();
+      if (networkRetryTimer !== null) {
+        windowRef.clearTimeout(networkRetryTimer);
+        networkRetryTimer = null;
+      }
       clearActiveMediaListeners();
       cleanups.splice(0).forEach(cleanup => {
         try { cleanup(); } catch (_) {}

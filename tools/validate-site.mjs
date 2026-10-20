@@ -1769,7 +1769,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   const filterContentRule = (css.match(/\.filter-nav-content\s*\{([^}]*)\}/) || [])[1] || '';
   if (!/width:\s*calc\(100% - 40px\)/.test(filterWrapperRule) ||
       !/max-width:\s*var\(--lm-container-max\)/.test(filterWrapperRule) ||
-      !/padding-block:\s*clamp\(18px,\s*2vw,\s*26px\)/.test(filterWrapperRule) ||
+      !/padding-block:\s*12px/.test(filterWrapperRule) ||
       !/width:\s*100%/.test(filterScrollerRule) ||
       !/overflow-x:\s*auto/.test(filterScrollerRule) ||
       !/justify-content:\s*center/.test(filterContentRule)) {
@@ -1841,10 +1841,13 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('media.loop = slides.length === 1') ||
       !hero.includes('activateMedia(slides[currentIndex])') ||
       !hero.includes("media.dataset.playbackState = 'blocked'") ||
-      !hero.includes("media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');") ||
+      !hero.includes("const posterUrl = source.poster ? resolveAssetUrl(source.poster) : '';") ||
+      hero.includes('og-image.jpg') ||
       !hero.includes('if (media.readyState < 2)') ||
       !hero.includes("media.addEventListener('canplay', retryAfterReady, { once: true });") ||
       !hero.includes("bind(interactionSurface, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes("bind(documentRef, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes("bind(windowRef, 'online', retryBlockedVideo") ||
       !hero.includes('const activeMediaCleanups = [];') ||
       !hero.includes('clearActiveMediaListeners()') ||
       !hero.includes('if (reducedMotion) {')) {
@@ -1884,9 +1887,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('hero video did not resume after a real interaction') ||
       !hero.includes("media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');") ||
       !hero.includes('if (!reducedMotion) media.src = resolveAssetUrl(source.src);') ||
-      !hero.includes("media.poster = resolveAssetUrl(source.poster || 'assets/projects/site/og-image.jpg');") ||
-      !hero.includes("!(reducedMotion && sources[0]?.type === 'video')") ||
-      !smoke.includes('Reduced-motion hero must show a static poster without attaching/loading the video source or delaying startup') ||
+      !hero.includes("const posterUrl = source.poster ? resolveAssetUrl(source.poster) : '';") ||
+      hero.includes('og-image.jpg') ||
+      !hero.includes("sources[0]?.type !== 'video'") ||
+      !hero.includes('function scheduleNetworkRetry(slide, media)') ||
+      !smoke.includes('Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image') ||
       !smoke.includes("for (const viewport of viewports)") ||
       /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
       !smoke.includes("const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';") ||
@@ -1906,22 +1911,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261020-05") ||
-      !bootstrap.includes("cacheVersion = '20261020-05'") ||
+  if (!entry.includes("bootstrap.js?v=20261021-01") ||
+      !bootstrap.includes("cacheVersion = '20261021-01'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
-      !composition.includes("hero/index.js?v=20261019-03") ||
+      !composition.includes("hero/index.js?v=20261021-01") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261020-06") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261020-05') ||
-      !works.includes('js/app/page-composition.js?v=20261020-05') ||
-      !works.includes('css/style.css?v=20261020-13') ||
-      !works.includes('js/script.js?v=20261020-05') ||
-      !about.includes('style.css?v=20261020-13') ||
-      !about.includes('script.js?v=20261020-05') ||
-      !about.includes('page-composition.js?v=20261020-05')) {
+      !works.includes('js/app/bootstrap.js?v=20261021-01') ||
+      !works.includes('js/app/page-composition.js?v=20261021-01') ||
+      !works.includes('css/style.css?v=20261021-01') ||
+      !works.includes('js/script.js?v=20261021-01') ||
+      !about.includes('style.css?v=20261021-01') ||
+      !about.includes('script.js?v=20261021-01') ||
+      !about.includes('page-composition.js?v=20261021-01')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
