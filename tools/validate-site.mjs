@@ -1860,7 +1860,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
        !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
        !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
-       !hero.includes("if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {") ||
+       !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
       hero.includes('og-image.jpg') ||
       !hero.includes('if (media.readyState < 2)') ||
       !hero.includes("media.addEventListener('canplay', retryAfterReady, { once: true });") ||
@@ -1909,7 +1909,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
        !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
        !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
-       !hero.includes("if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {") ||
+       !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
       hero.includes('og-image.jpg') ||
       !hero.includes("sources[0]?.type !== 'video'") ||
       !hero.includes('function scheduleNetworkRetry(slide, media)') ||

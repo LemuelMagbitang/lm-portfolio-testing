@@ -461,7 +461,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
       wrap.dataset.heroType = source.type || 'image';
-      if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {
+      if (source.type === 'video' && !hasVideoPoster) {
         wrap.classList.add('is-video-pending');
         const clearVideoPending = () => wrap.classList.remove('is-video-pending');
         media.addEventListener('loadeddata', clearVideoPending, { once: true });

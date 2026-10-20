@@ -72,7 +72,7 @@ const heroSource = await readFile(new URL('../js/features/hero/index.js', import
 const adminSource = await readFile(new URL('../admin/admin.js', import.meta.url), 'utf8');
 assert.ok(compositionSource.includes('defaultVideoPoster: settings.defaultVideoPoster'), 'The composition root must pass the normalized CMS poster setting into the hero.');
 assert.ok(heroSource.includes('const posterSource = source.poster || config.defaultVideoPoster;'), 'Per-item posters must take priority over the optional default poster.');
-assert.ok(heroSource.includes("if (source.type === 'video' && !(reducedMotion && hasVideoPoster)) {"), 'A configured poster must remain visible for reduced-motion visitors; the no-poster default keeps the dark surface.');
+assert.ok(heroSource.includes("if (source.type === 'video' && !hasVideoPoster) {"), 'The dark loading surface should cover only video slides without a configured poster.');
 assert.ok(adminSource.includes('id="s_default_video_poster"'), 'The CMS settings section must expose the optional default video poster.');
 assert.ok(adminSource.includes("attachMediaBrowseButton(defaultVideoPosterInput, null, { kind: 'image', title: 'Choose default video poster' })"), 'The CMS poster field must provide the image Media Library picker.');
 assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
