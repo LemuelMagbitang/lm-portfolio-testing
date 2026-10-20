@@ -571,13 +571,12 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   pointer-events: none;
   transform: translate3d(0, 0, 0);
   transition: none;
-  will-change: transform, width;
+  will-change: width;
 }
 
 .filter-active-indicator.is-animated {
-  /* A short, neutral movement avoids a springy/overshooting pill feel. */
+  /* Keep the pill's center fixed. Only its width morphs to fit the selected label. */
   transition:
-    transform 160ms cubic-bezier(.2, 0, 0, 1),
     width 160ms cubic-bezier(.2, 0, 0, 1),
     height 140ms ease-out,
     background-color 140ms ease-out;

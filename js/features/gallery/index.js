@@ -242,10 +242,8 @@ export async function initGallery(options = {}) {
     const activeButton = button || buttons.find(item =>
       item.classList.contains('active') || item.getAttribute('aria-pressed') === 'true'
     );
-    const selectableButtons = buttons.filter(item => !item.disabled);
-    // While the rail moves, preview the pill directly under the viewport's
-    // centerline instead of dragging the old active pill along with its label.
-    // Category state is still committed only when the rail settles.
+    // During a direct swipe, preview the nearest label. Otherwise, keep the
+    // committed filter as the pill's width source even while the rail settles.
     const centeredButton = buttons[getNearestCenteredFilterIndex()];
     const isFollowingFilterScroll = followingScroll && isFilterScroller();
     const indicatorButton = isFollowingFilterScroll
@@ -268,14 +266,13 @@ export async function initGallery(options = {}) {
     const hostRect = host.getBoundingClientRect();
     const buttonRect = indicatorButton.getBoundingClientRect();
     const scrollerRect = filterTabs.getBoundingClientRect();
-    // The content moves with scrollLeft. For swipe preview, offset the pill
-    // within content coordinates so its painted position remains viewport-centered.
-    const x = isFollowingFilterScroll
-      ? (scrollerRect.left + filterTabs.clientWidth / 2 - hostRect.left - buttonRect.width / 2)
-      : buttonRect.left - hostRect.left;
+    // Anchor the pill's center to the viewport centerline. The label can scroll
+    // underneath it; only the pill width morphs to fit the selected label.
+    const centerX = scrollerRect.left + filterTabs.clientWidth / 2 - hostRect.left;
+    indicator.style.left = `${centerX}px`;
     indicator.style.width = `${buttonRect.width}px`;
     indicator.style.height = `${buttonRect.height}px`;
-    indicator.style.transform = `translate3d(${x}px, ${buttonRect.top - hostRect.top}px, 0)`;
+    indicator.style.transform = `translate3d(-50%, ${buttonRect.top - hostRect.top}px, 0)`;
 
     // Keep a visible CSS fallback until the first measured pill is ready.
     indicator.classList.add('is-ready');
@@ -449,8 +446,9 @@ export async function initGallery(options = {}) {
     });
     currentFilter = nextFilter;
     // Active font weight changes a pill's natural width; rebuild the edge
-    // cushions before centering so the first and last labels remain reachable.
+    // cushions, center the chosen label, then size the stationary pill around it.
     ensureFilterEdges();
+    if (center && isFilterScroller()) centerFilterButton(button, 'auto');
     syncFilterActiveIndicator(button);
 
     // Only a real filter change starts a new result set. Centering the
@@ -464,7 +462,6 @@ export async function initGallery(options = {}) {
     // Initialize the live region on the first explicit selection as well as
     // announce subsequent changes; re-centering alone does not spam updates.
     if (changed || !filterAnnouncement?.textContent) updateFilterAnnouncement(button);
-    if (center && isFilterScroller()) centerFilterButton(button, 'auto');
     updateFilterPager(filterBtns.indexOf(button));
 
     if (updateUrl && changed) {

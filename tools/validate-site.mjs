@@ -1000,13 +1000,19 @@ function validateGalleryContract() {
       !source.includes('const indicatorButton = isFollowingFilterScroll') ||
       !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
       !source.includes("'is-centered-preview'") ||
-      !source.includes('const x = isFollowingFilterScroll') ||
+      !source.includes('const centerX = scrollerRect.left + filterTabs.clientWidth / 2 - hostRect.left') ||
+      !source.includes('indicator.style.left = `${centerX}px`;') ||
+      !source.includes('indicator.style.transform = `translate3d(-50%, ${buttonRect.top - hostRect.top}px, 0)`;') ||
+      css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1),') ||
       source.includes('button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;') ||
       !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
        !css.includes('mix-blend-mode: exclusion;') ||
        !css.includes('mix-blend-mode: normal !important;') ||
         !css.includes('transition: none !important;')) {
-    err('Gallery: the filter pill must preview the centered label while swiping and size itself to that label.');
+    err('Gallery: the pill must stay centered on the rail, preview the centered label while swiping, and morph width only on selection.');
+  }
+  if (!smoke.includes('stationary filter pill must remain centered during direct selection')) {
+    err('Gallery: browser smoke must guard against horizontal pill travel on direct filter selection.');
   }
   if (!source.includes('function clearFilterScrollPreview()') ||
       !source.includes("bind(documentRef, 'pointerdown'") ||

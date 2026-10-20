@@ -1867,7 +1867,8 @@ async function assertFilterNavigationResponsive(page, label) {
         state.indicatorBackground !== 'rgb(255, 255, 255)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
-        (viewport.width > 1023 && !state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
+        (viewport.width > 1023 && !state.prefersReducedMotion &&
+          (!state.indicatorTransition.includes('width') || state.indicatorTransition.includes('transform'))) ||
         (viewport.width <= 1023 && (
           state.indicatorTransition !== 'none' ||
           state.indicatorAnimation !== 'none' ||
@@ -2193,6 +2194,66 @@ async function assertFilterNavigationResponsive(page, label) {
         Math.abs(activeRect.left + activeRect.width / 2 - (railRect.left + scroller.clientWidth / 2)) <= 2;
     }, null, { timeout: 3000 });
   }
+  // Regression: selecting a distant label may scroll the text, but the pill's
+  // center must remain anchored to the rail centerline even in the same JS turn.
+  const stationaryPillProbe = await page.evaluate(() => {
+    const rail = document.querySelector('.filter-nav-scroller');
+    const buttons = Array.from(rail?.querySelectorAll('.filter-btn, .tab-btn') || []);
+    const indicator = rail?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    const initialActive = buttons.find(button => button.classList.contains('active'));
+    if (!rail || buttons.length < 2 || !indicator || !initialActive) return { ready: false };
+    const initialIndex = buttons.indexOf(initialActive);
+    const target = buttons
+      .filter(button => !button.disabled && button !== initialActive)
+      .sort((a, b) =>
+        Math.abs(buttons.indexOf(b) - initialIndex) - Math.abs(buttons.indexOf(a) - initialIndex)
+      )[0];
+    if (!target) return { ready: false };
+    const centerX = () => {
+      const rect = rail.getBoundingClientRect();
+      return rect.left + rail.clientWidth / 2;
+    };
+    const beforeRect = indicator.getBoundingClientRect();
+    const beforeCenter = beforeRect.left + beforeRect.width / 2;
+    const beforeScroll = rail.scrollLeft;
+    target.click();
+    const afterRect = indicator.getBoundingClientRect();
+    const afterCenter = afterRect.left + afterRect.width / 2;
+    const railCenter = centerX();
+    const active = buttons.find(button => button.classList.contains('active'));
+    const activeRect = active?.getBoundingClientRect();
+    return {
+      ready: true,
+      targetFilter: target.getAttribute('data-filter') || '',
+      scrollDelta: Math.abs(rail.scrollLeft - beforeScroll),
+      beforeCenterDelta: Math.abs(beforeCenter - railCenter),
+      afterCenterDelta: Math.abs(afterCenter - railCenter),
+      stationaryDrift: Math.abs(afterCenter - beforeCenter),
+      activeCenterDelta: activeRect ? Math.abs(activeRect.left + activeRect.width / 2 - railCenter) : Infinity,
+      inlineLeft: indicator.style.left,
+      inlineTransform: indicator.style.transform
+    };
+  });
+  if (!stationaryPillProbe.ready || stationaryPillProbe.scrollDelta < 20 ||
+      stationaryPillProbe.beforeCenterDelta > 1.5 || stationaryPillProbe.afterCenterDelta > 1.5 ||
+      stationaryPillProbe.stationaryDrift > 1.5 || stationaryPillProbe.activeCenterDelta > 2 ||
+      !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) {
+    throw new Error(label + ' stationary filter pill must remain centered during direct selection: ' +
+      JSON.stringify(stationaryPillProbe));
+  }
+  await page.waitForFunction(expectedFilter => {
+    const rail = document.querySelector('.filter-nav-scroller');
+    const active = rail?.querySelector('.filter-btn.active, .tab-btn.active');
+    const indicator = rail?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    if (!rail || !active || !indicator || active.getAttribute('data-filter') !== expectedFilter) return false;
+    const activeRect = active.getBoundingClientRect();
+    const indicatorRect = indicator.getBoundingClientRect();
+    const railRect = rail.getBoundingClientRect();
+    return Math.abs(activeRect.left + activeRect.width / 2 - (railRect.left + rail.clientWidth / 2)) <= 2 &&
+      Math.abs(indicatorRect.left + indicatorRect.width / 2 - (railRect.left + rail.clientWidth / 2)) <= 1 &&
+      Math.abs(activeRect.width - indicatorRect.width) <= 1;
+  }, stationaryPillProbe.targetFilter, { timeout: 1800 });
+
   const filterOptions = page.locator('.filter-nav-scroller [data-filter]');
   const filterOptionCount = await filterOptions.count();
   for (let i = 0; i < filterOptionCount; i += 1) {
