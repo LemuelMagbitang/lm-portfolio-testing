@@ -2194,6 +2194,9 @@ async function assertFilterNavigationResponsive(page, label) {
         Math.abs(activeRect.left + activeRect.width / 2 - (railRect.left + scroller.clientWidth / 2)) <= 2;
     }, null, { timeout: 3000 });
   }
+  // The preceding desktop drag intentionally suppresses synthetic click input for
+  // 250ms. Let that gesture guard expire so this probe exercises a normal click.
+  await page.waitForTimeout(300);
   // Regression: selecting a distant label may scroll the text, but the pill's
   // center must remain anchored to the rail centerline even in the same JS turn.
   const stationaryPillProbe = await page.evaluate(() => {
