@@ -5231,8 +5231,9 @@ try {
 
       const collapsedShowMoreMaterial = await showMoreAfterResize.evaluate(el => {
         const style = getComputedStyle(el);
+        const normalizeOpaqueColor = color => String(color || '').replace(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*1(?:\.0+)?\s*\)$/i, 'rgb($1, $2, $3)');
         return {
-          background: style.backgroundColor,
+          background: normalizeOpaqueColor(style.backgroundColor),
           border: style.borderStyle,
           borderWidth: style.borderWidth,
           color: style.color,
@@ -5257,17 +5258,19 @@ try {
         const el = document.querySelector('#showMoreBtn');
         if (!el || !el.classList.contains('expanded')) return false;
         const style = getComputedStyle(el);
+        const normalizeOpaqueColor = color => String(color || '').replace(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*1(?:\.0+)?\s*\)$/i, 'rgb($1, $2, $3)');
         return (
-          style.backgroundColor === 'rgb(255, 255, 255)' &&
+          normalizeOpaqueColor(style.backgroundColor) === 'rgb(255, 255, 255)' &&
           style.color === 'rgb(0, 0, 0)' &&
           style.backdropFilter === 'none'
         );
       }, null, { timeout: 2000 });
       const expandedShowLessMaterial = await showMoreAfterResize.evaluate(el => {
         const style = getComputedStyle(el);
+        const normalizeOpaqueColor = color => String(color || '').replace(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*1(?:\.0+)?\s*\)$/i, 'rgb($1, $2, $3)');
         return {
           expanded: el.classList.contains('expanded'),
-          background: style.backgroundColor,
+          background: normalizeOpaqueColor(style.backgroundColor),
           color: style.color,
           backdropFilter: style.backdropFilter
         };
@@ -5761,6 +5764,7 @@ try {
       if (await mobileShowMore.isVisible().catch(() => false)) {
         const readShowMorePillStyle = () => mobileShowMore.evaluate(button => {
           const style = getComputedStyle(button);
+          const normalizeOpaqueColor = color => String(color || '').replace(/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*1(?:\.0+)?\s*\)$/i, 'rgb($1, $2, $3)');
           return {
             height: button.getBoundingClientRect().height,
             minHeight: parseFloat(style.minHeight) || 0,
@@ -5772,7 +5776,7 @@ try {
             textTransform: style.textTransform,
             expanded: button.classList.contains('expanded'),
             color: style.color,
-            backgroundColor: style.backgroundColor
+            backgroundColor: normalizeOpaqueColor(style.backgroundColor)
           };
         });
         const assertShowMorePillStyle = (style, expandedState) => {
