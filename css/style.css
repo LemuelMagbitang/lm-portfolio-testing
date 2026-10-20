@@ -2529,8 +2529,16 @@ body.center-page {
   /* Visually overlaps the lower fade, but remains in normal document flow.
      A changing grid max-height can no longer pull the control upward. */
 }
-
 .show-more-wrapper .btn-show-more {
+  pointer-events: auto;
+}
+
+.show-more-wrapper.expanded {
+  margin-top: 24px;
+  min-height: 0;
+  padding-bottom: 32px;
+}
+.btn-show-more {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2549,30 +2557,6 @@ body.center-page {
   line-height: var(--lm-nav-pill-line-height);
   text-transform: uppercase;
   white-space: nowrap;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: background-color var(--lm-motion-standard) var(--lm-motion-ease), color var(--lm-motion-standard) var(--lm-motion-ease), transform var(--lm-motion-standard) var(--lm-motion-ease), border-color var(--lm-motion-standard) var(--lm-motion-ease);
-}
-
-.show-more-wrapper.expanded {
-  margin-top: 24px;
-  min-height: 0;
-  padding-bottom: 32px;
-}
-
-.btn-show-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 0;
-  color: #fff;
-  padding: 14px 34px;
-  border-radius: 30px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 1.5px;
   cursor: pointer;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);

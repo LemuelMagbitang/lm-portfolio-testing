@@ -1712,7 +1712,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   }
 
   const filterPillRule = (css.match(/\.filter-tabs\s+\.tab-btn\s*\{([^}]*)\}/) || [])[1] || '';
-  const showMorePillRule = (css.match(/\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
+  const showMorePillRule = (css.match(/(?:^|\n)\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
+  const showMoreHitTargetRule = (css.match(/\.show-more-wrapper\s+\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
   const contactPillRule = (css.match(/\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
   const compactContactPillRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.contact-mobile-tabs\s*\{[\s\S]*?\.contact-mobile-tabs\[data-active="review"\]::before\s*\{[^}]*\}\s*\.contact-mobile-tabs::-webkit-scrollbar\s*\{[^}]*\}\s*\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
   const sharedPillTokenRule = (css.match(/:root\s*\{([^}]*--lm-nav-pill-min-height[^}]*)\}/) || [])[1] || '';
@@ -1736,6 +1737,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       ![navigationPillRule, filterPillRule, showMorePillRule, contactPillRule]
         .every(rule => rule.includes('text-transform: uppercase;')) ||
       !showMorePillRule.includes('font-family: var(--lm-font-label);') ||
+      !showMoreHitTargetRule.includes('pointer-events: auto;') ||
       !contactPillRule.includes('font-family: var(--lm-font-label);') ||
       !compactContactPillRule.includes('min-height: var(--lm-nav-pill-min-height);') ||
       !compactContactPillRule.includes('padding: 0 8px;') ||
@@ -1895,9 +1897,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-04') ||
       !works.includes('js/app/page-composition.js?v=20261020-04') ||
-      !works.includes('css/style.css?v=20261020-07') ||
+      !works.includes('css/style.css?v=20261020-08') ||
       !works.includes('js/script.js?v=20261020-04') ||
-      !about.includes('style.css?v=20261020-07') ||
+      !about.includes('style.css?v=20261020-08') ||
       !about.includes('script.js?v=20261020-04') ||
       !about.includes('page-composition.js?v=20261020-04')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

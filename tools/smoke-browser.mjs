@@ -5230,14 +5230,18 @@ try {
           border: style.borderStyle,
           borderWidth: style.borderWidth,
           color: style.color,
-          backdropFilter: style.backdropFilter
+          backdropFilter: style.backdropFilter,
+          pointerEvents: style.pointerEvents,
+          wrapperPointerEvents: getComputedStyle(el.parentElement).pointerEvents
         };
       });
       if (
         collapsedShowMoreMaterial.color !== 'rgb(255, 255, 255)' ||
         collapsedShowMoreMaterial.borderWidth !== '0px' ||
         collapsedShowMoreMaterial.backdropFilter === 'none' ||
-        collapsedShowMoreMaterial.background === 'rgb(0, 0, 0)'
+        collapsedShowMoreMaterial.background === 'rgb(0, 0, 0)' ||
+        collapsedShowMoreMaterial.pointerEvents !== 'auto' ||
+        collapsedShowMoreMaterial.wrapperPointerEvents !== 'none'
       ) {
         throw new Error('Mobile Show More did not retain the requested glass material: ' + JSON.stringify(collapsedShowMoreMaterial));
       }
