@@ -3630,7 +3630,10 @@ try {
         const hero = document.querySelector('#heroQuote');
         const heroText = document.querySelector('#heroQuoteText')?.textContent?.trim();
         const footerText = document.querySelector('footer .footer-hero-message .hero-quote-text')?.textContent?.trim();
-        return hero?.classList.contains('is-ready') && heroText && footerText;
+        const footerSlides = document.querySelectorAll('footer .footer-animation-slide');
+        const activeFooterSlides = document.querySelectorAll('footer .footer-animation-slide.active');
+        return hero?.classList.contains('is-ready') && heroText && footerText &&
+          footerSlides.length > 0 && activeFooterSlides.length === 1;
       }, null, { timeout: 12000 });
 
       const readQuoteState = () => page.evaluate(() => {
@@ -3685,7 +3688,10 @@ try {
         const hero = document.querySelector('#heroQuote');
         const heroText = document.querySelector('#heroQuoteText')?.textContent?.trim();
         const footerText = document.querySelector('footer .footer-hero-message .hero-quote-text')?.textContent?.trim();
-        return hero?.classList.contains('is-ready') && heroText && footerText;
+        const footerSlides = document.querySelectorAll('footer .footer-animation-slide');
+        const activeFooterSlides = document.querySelectorAll('footer .footer-animation-slide.active');
+        return hero?.classList.contains('is-ready') && heroText && footerText &&
+          footerSlides.length > 0 && activeFooterSlides.length === 1;
       }, null, { timeout: 12000 });
       const refreshed = await readQuoteState();
       if (refreshed.heroIndex === first.heroIndex || refreshed.footerIndex === first.footerIndex) {

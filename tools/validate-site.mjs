@@ -1862,6 +1862,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   if (!smoke.includes('async function assertWorksHeroGalleryResponsive') ||
       !smoke.includes("await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled')") ||
+      smoke.split('footerSlides.length > 0').length - 1 < 2 ||
+      smoke.split('activeFooterSlides.length === 1').length - 1 < 2 ||
       !smoke.includes("'Works Hero current CMS setting'") ||
       !smoke.includes('filterHeroGap') || !smoke.includes('filterTabCenterDeltaX') ||
       !smoke.includes('filterTouchAction') || !smoke.includes('async function assertNoLogoBackingPlate') ||
