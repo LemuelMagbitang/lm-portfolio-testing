@@ -544,6 +544,15 @@ function validateLightboxFeatureStylesheet() {
   }
 
   const featureCss = exists('css/features/lightbox.css') ? readText('css/features/lightbox.css') : '';
+  const desktopCloseRule = (featureCss.match(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.lightbox-close\s*\{([^}]*)\}/) || [])[1] || '';
+  const mobileCloseRule = (featureCss.match(/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.lightbox-close\s*\{([^}]*)\}/) || [])[1] || '';
+  if (!entryHtml.includes('css/features/lightbox.css?v=20261020-01') ||
+      !/width:\s*44px;/.test(desktopCloseRule) ||
+      !/height:\s*44px;/.test(desktopCloseRule) ||
+      !/width:\s*52px;/.test(mobileCloseRule) ||
+      !/height:\s*52px;/.test(mobileCloseRule)) {
+    err('Lightbox close target: desktop must match the 44px navbar pill and mobile must retain its 52px target.');
+  }
   if (!featureCss.includes('.lightbox-inspect-mode{z-index:10002;isolation:isolate;}') ||
       !featureCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') ||
       !featureCss.includes('.lightbox-inspect-mode .lightbox-holographic:focus-visible{') ||

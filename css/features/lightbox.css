@@ -85,14 +85,14 @@
   );
 }
 
-/* Desktop: the close control matches the navbar pill's 42px height.
+/* Desktop: the close control matches the shared 44px navbar pill height.
    Both arrows mirror the same left/right page edges. */
 @media (min-width:768px){
   .lightbox-close{
-    top:16.5px;
+    top:15.5px;
     right:var(--lm-lightbox-control-edge);
-    width:42px;
-    height:42px;
+    width:44px;
+    height:44px;
     font-size:1.7rem;
   }
   .lightbox-close::before{inset:0;}
