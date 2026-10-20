@@ -120,7 +120,7 @@ export async function createPortfolioApp({
     ? import('../data/project-normalizer.js?v=20261010-04')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
-    ? import('../features/gallery/index.js?v=20261020-02').catch(error => {
+    ? import('../features/gallery/index.js?v=20261020-03').catch(error => {
         console.warn('Gallery module failed to load:', error);
         return null;
       })

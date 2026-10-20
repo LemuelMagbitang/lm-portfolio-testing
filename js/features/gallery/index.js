@@ -219,7 +219,10 @@ export async function initGallery(options = {}) {
   }
 
   function getFilterIndicatorHost() {
-    return filterTabs?.closest('.filter-nav-viewport') || filterTabs;
+    // Keep the pill and label inside the same compositing context. The rail's
+    // edge mask creates a stacking context of its own; a sibling pill outside
+    // it cannot be used as the backdrop for mix-blend-mode: exclusion.
+    return filterContent || filterTabs?.closest('.filter-nav-viewport') || filterTabs;
   }
 
   function ensureFilterActiveIndicator() {
@@ -264,8 +267,11 @@ export async function initGallery(options = {}) {
 
     const hostRect = host.getBoundingClientRect();
     const buttonRect = indicatorButton.getBoundingClientRect();
+    const scrollerRect = filterTabs.getBoundingClientRect();
+    // The content moves with scrollLeft. For swipe preview, offset the pill
+    // within content coordinates so its painted position remains viewport-centered.
     const x = isFollowingFilterScroll
-      ? (hostRect.width - buttonRect.width) / 2
+      ? (scrollerRect.left + filterTabs.clientWidth / 2 - hostRect.left - buttonRect.width / 2)
       : buttonRect.left - hostRect.left;
     indicator.style.width = `${buttonRect.width}px`;
     indicator.style.height = `${buttonRect.height}px`;

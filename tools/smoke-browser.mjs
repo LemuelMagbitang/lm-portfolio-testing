@@ -1703,6 +1703,7 @@ async function assertFilterInitialContrast(page, label) {
       activeBlendMode: style?.mixBlendMode || '',
       contentIsolation: content ? getComputedStyle(content).isolation : '',
       indicatorExists: !!indicator,
+      indicatorInsideContent: !!content?.contains(indicator),
       indicatorReady: indicator?.classList.contains('is-ready') || false,
       indicatorOpacity: Number(pillStyle?.opacity || '0'),
       indicatorBackground: pillStyle?.backgroundColor || '',
@@ -1718,7 +1719,7 @@ async function assertFilterInitialContrast(page, label) {
   if (!state.activeFilter || state.activePressed !== 'true' ||
       state.activeColor !== 'rgb(255, 255, 255)' ||
       state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
-      !state.indicatorExists || !state.indicatorReady || state.indicatorOpacity < 0.99 ||
+      !state.indicatorExists || !state.indicatorInsideContent || !state.indicatorReady || state.indicatorOpacity < 0.99 ||
       state.indicatorBackground !== 'rgb(255, 255, 255)' ||
       state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1 ||
       state.contentFollowing || state.indicatorFollowing || state.previewCount !== 0 ||
@@ -2023,8 +2024,9 @@ async function assertFilterNavigationResponsive(page, label) {
         const committedColor = committed ? getComputedStyle(committed).color : '';
         const previewBlendMode = preview ? getComputedStyle(preview).mixBlendMode : '';
         const indicatorBackground = indicator ? getComputedStyle(indicator).backgroundColor : '';
-        const contentIsolation = el.querySelector('.filter-nav-content')
-          ? getComputedStyle(el.querySelector('.filter-nav-content')).isolation : '';
+        const contentDuring = el.querySelector('.filter-nav-content');
+        const contentIsolation = contentDuring ? getComputedStyle(contentDuring).isolation : '';
+        const indicatorInsideContent = !!contentDuring?.contains(indicator);
         const previewZIndex = preview ? Number.parseInt(getComputedStyle(preview).zIndex, 10) : -1;
         const indicatorZIndex = indicator ? Number.parseInt(getComputedStyle(indicator).zIndex, 10) : -1;
         const indicatorRect = indicator?.getBoundingClientRect();
@@ -2062,7 +2064,7 @@ async function assertFilterNavigationResponsive(page, label) {
           before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
           previewColor, committedColor, previewBlendMode, committedBlendMode,
-          indicatorBackground, contentIsolation, previewZIndex, indicatorZIndex,
+          indicatorBackground, contentIsolation, indicatorInsideContent, previewZIndex, indicatorZIndex,
           previewAtPill, activeAtPill, activeBlendMode, settledIndicatorBackground,
           settledContentIsolation, activeZIndex, settledIndicatorZIndex,
           previewTransition, previewFontWeight, indicatorTransition,
@@ -2087,6 +2089,7 @@ async function assertFilterNavigationResponsive(page, label) {
           fastGesture.committedBlendMode !== 'normal' ||
           fastGesture.indicatorBackground !== 'rgb(144, 144, 144)' ||
           fastGesture.contentIsolation !== 'auto' ||
+          fastGesture.indicatorInsideContent !== true ||
           fastGesture.previewZIndex <= fastGesture.indicatorZIndex ||
           fastGesture.previewAtPill !== true ||
           fastGesture.previewTransition !== 'none' ||

@@ -1030,7 +1030,9 @@ function validateGalleryContract() {
       !css.includes('background-color: #909090 !important;') ||
       !css.includes('z-index: auto;\n  isolation: auto;') ||
       !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
+      !source.includes("return filterContent || filterTabs?.closest('.filter-nav-viewport') || filterTabs") ||
       source.includes("item.style.setProperty('color', '#111', 'important')") ||
+      !smoke.includes('indicatorInsideContent') ||
       !smoke.includes("previewBlendMode !== 'normal'") ||
       !smoke.includes("settledIndicatorBackground !== 'rgb(255, 255, 255)'") ||
       !smoke.includes('initial-load active filter contrast failed') ||
@@ -1847,22 +1849,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261020-03") ||
-      !bootstrap.includes("cacheVersion = '20261020-03'") ||
+  if (!entry.includes("bootstrap.js?v=20261020-04") ||
+      !bootstrap.includes("cacheVersion = '20261020-04'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261020-02") ||
+      !composition.includes("gallery/index.js?v=20261020-03") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261020-03') ||
-      !works.includes('js/app/page-composition.js?v=20261020-03') ||
+      !works.includes('js/app/bootstrap.js?v=20261020-04') ||
+      !works.includes('js/app/page-composition.js?v=20261020-04') ||
       !works.includes('css/style.css?v=20261020-05') ||
-      !works.includes('js/script.js?v=20261020-03') ||
+      !works.includes('js/script.js?v=20261020-04') ||
       !about.includes('style.css?v=20261020-05') ||
-      !about.includes('script.js?v=20261020-03') ||
-      !about.includes('page-composition.js?v=20261020-03')) {
+      !about.includes('script.js?v=20261020-04') ||
+      !about.includes('page-composition.js?v=20261020-04')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
