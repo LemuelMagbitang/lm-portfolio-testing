@@ -2264,7 +2264,7 @@ async function assertFilterNavigationResponsive(page, label) {
           !stationaryPillProbe.transitionDuration.includes('0.28s') ||
           (Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
             (Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.beforeWidth) < 1 ||
-              Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.targetWidth) < 1)))) {
+              Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.targetWidth) < 1))))) {
     throw new Error(label + ' stationary filter pill must remain centered and visibly resize during direct selection: ' +
       JSON.stringify(stationaryPillProbe));
   }
