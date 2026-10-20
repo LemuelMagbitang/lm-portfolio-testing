@@ -1875,7 +1875,10 @@ async function assertFilterNavigationResponsive(page, label) {
            state.indicatorTransition.includes('transform') ||
            !state.indicatorTransitionDuration.includes('0.42s') ||
            !state.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) ||
-        (state.indicatorFollowingScroll && state.indicatorTransition !== 'none') ||
+        (state.indicatorFollowingScroll && !state.prefersReducedMotion &&
+          (!state.indicatorTransition.includes('width') ||
+           !state.indicatorTransitionDuration.includes('0.42s') ||
+           !state.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) ||
         (viewport.width <= 1023 && (
           state.indicatorAnimation !== 'none' ||
           state.scrollBehavior !== 'auto' ||
@@ -2365,10 +2368,24 @@ async function assertFilterNavigationResponsive(page, label) {
       preview.classList.add('is-centered-preview');
       // Prove capture-phase cleanup survives a page element stopping bubbling.
       document.documentElement.addEventListener('pointerdown', event => event.stopPropagation(), { once: true });
-      return { available: true };
+      const previewStyle = getComputedStyle(indicator);
+      return {
+        available: true,
+        transitionProperty: previewStyle.transitionProperty,
+        transitionDuration: previewStyle.transitionDuration,
+        transitionTiming: previewStyle.transitionTimingFunction,
+        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
+      };
     });
     if (!stalePreviewProbe.available) {
       throw new Error(label + ' could not prepare an outside-click filter-preview regression state.');
+    }
+    if (!stalePreviewProbe.reducedMotion &&
+        (!stalePreviewProbe.transitionProperty.includes('width') ||
+         !stalePreviewProbe.transitionDuration.includes('0.42s') ||
+         !stalePreviewProbe.transitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) {
+      throw new Error(label + ' swipe-preview pill must use the same width morph as click/tap: ' +
+        JSON.stringify(stalePreviewProbe));
     }
     // Exercise the formerly problematic branch after the programmatic-scroll
     // suppression window has expired; an outside tap must not select another tab.

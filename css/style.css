@@ -590,10 +590,13 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     -webkit-overflow-scrolling: auto !important;
     overscroll-behavior-x: none !important;
   }
-  /* Only direct-manipulation preview is motion-free on compact screens.
-     Normal selection still gets the small width-resize transition. */
+  /* Match click/tap width morphing while previewing labels during a swipe.
+     The rail itself stays directly manipulated; the pill only eases its width. */
   .filter-active-indicator.is-following-scroll {
-    transition: none !important;
+    transition:
+      width 420ms cubic-bezier(.34, 1.45, .64, 1),
+      height 140ms ease-out,
+      background-color 140ms ease-out;
     animation: none !important;
   }
 }
@@ -603,9 +606,12 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .filter-active-indicator.is-following-scroll {
-  /* Gray provides a stable field for the white label during direct manipulation. */
+  /* Keep the gesture preview legible while using the same pill morph as click/tap. */
   background-color: #909090 !important;
-  transition: none !important;
+  transition:
+    width 420ms cubic-bezier(.34, 1.45, .64, 1),
+    height 140ms ease-out,
+    background-color 140ms ease-out;
 }
 
 .filter-tabs .tab-btn {

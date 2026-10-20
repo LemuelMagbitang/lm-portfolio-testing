@@ -1009,7 +1009,7 @@ function validateGalleryContract() {
        !css.includes('mix-blend-mode: exclusion;') ||
        !css.includes('mix-blend-mode: normal !important;') ||
         !css.includes('transition: none !important;')) {
-    err('Gallery: the pill must stay centered on the rail, preview the centered label while swiping, and morph width only on selection.');
+    err('Gallery: the pill must stay centered and use the click/tap width morph during selection and swipe preview.');
   }
   if (!smoke.includes('stationary filter pill must remain centered and visibly resize during direct selection')) {
     err('Gallery: browser smoke must guard against horizontal pill travel on direct filter selection.');
@@ -1031,7 +1031,7 @@ function validateGalleryContract() {
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
       css.includes('Small screens should settle directly; no animated easing/bounce.') ||
-      !css.includes('Only direct-manipulation preview is motion-free on compact screens.') ||
+      !css.includes('Match click/tap width morphing while previewing labels during a swipe.') ||
       !css.includes('@media (max-width: 1023px)') ||
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
@@ -1917,9 +1917,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-05') ||
       !works.includes('js/app/page-composition.js?v=20261020-05') ||
-      !works.includes('css/style.css?v=20261020-12') ||
+      !works.includes('css/style.css?v=20261020-13') ||
       !works.includes('js/script.js?v=20261020-05') ||
-      !about.includes('style.css?v=20261020-12') ||
+      !about.includes('style.css?v=20261020-13') ||
       !about.includes('script.js?v=20261020-05') ||
       !about.includes('page-composition.js?v=20261020-05')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
