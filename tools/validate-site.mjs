@@ -1711,6 +1711,29 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Navigation pills: explicit content-sized label boxes must remain mathematically centered without manual offsets.');
   }
 
+  const filterPillRule = (css.match(/\.filter-tabs\s+\.tab-btn\s*\{([^}]*)\}/) || [])[1] || '';
+  const sharedPillTokenRule = (css.match(/:root\s*\{([^}]*--lm-nav-pill-min-height[^}]*)\}/) || [])[1] || '';
+  const compactPillTokenRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{\s*:root\s*\{([^}]*)\}/) || [])[1] || '';
+  const sharedPillDeclarations = [
+    'min-height: var(--lm-nav-pill-min-height);',
+    'padding: 0 var(--lm-nav-pill-inline-padding);',
+    'font-size: var(--lm-nav-pill-font-size);',
+    'font-weight: var(--lm-nav-pill-font-weight);',
+    'letter-spacing: var(--lm-nav-pill-letter-spacing);',
+    'line-height: var(--lm-nav-pill-line-height);'
+  ];
+  if (!sharedPillTokenRule.includes('--lm-nav-pill-min-height: 42px;') ||
+      !sharedPillTokenRule.includes('--lm-nav-pill-inline-padding: 18px;') ||
+      !sharedPillTokenRule.includes('--lm-nav-pill-font-size: 0.78rem;') ||
+      !compactPillTokenRule.includes('--lm-nav-pill-min-height: 46px;') ||
+      !compactPillTokenRule.includes('--lm-nav-pill-font-size: 0.8rem;') ||
+      !sharedPillDeclarations.every(declaration =>
+        navigationPillRule.includes(declaration) && filterPillRule.includes(declaration)) ||
+      !navigationPillRule.includes('text-transform: uppercase;') ||
+      !filterPillRule.includes('text-transform: uppercase;')) {
+    err('Navigation and filter pills must share typography and responsive sizing tokens.');
+  }
+
   const filterWrapperRule = (css.match(/\.filter-nav-wrapper\s*\{([^}]*)\}/) || [])[1] || '';
   const filterScrollerRule = (css.match(/\.filter-tabs\.filter-nav-scroller\s*\{([^}]*)\}/) || [])[1] || '';
   const filterContentRule = (css.match(/\.filter-nav-content\s*\{([^}]*)\}/) || [])[1] || '';
@@ -1860,9 +1883,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-04') ||
       !works.includes('js/app/page-composition.js?v=20261020-04') ||
-      !works.includes('css/style.css?v=20261020-05') ||
+      !works.includes('css/style.css?v=20261020-06') ||
       !works.includes('js/script.js?v=20261020-04') ||
-      !about.includes('style.css?v=20261020-05') ||
+      !about.includes('style.css?v=20261020-06') ||
       !about.includes('script.js?v=20261020-04') ||
       !about.includes('page-composition.js?v=20261020-04')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

@@ -89,23 +89,41 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   align-items: center;
 }
 
+/* Shared sizing tokens keep filter pills aligned with the navbar at every breakpoint.
+   The compact values follow the navbar's larger touch-friendly mobile pill. */
+:root {
+  --lm-nav-pill-min-height: 42px;
+  --lm-nav-pill-inline-padding: 18px;
+  --lm-nav-pill-font-size: 0.78rem;
+  --lm-nav-pill-font-weight: 650;
+  --lm-nav-pill-letter-spacing: 0.08em;
+  --lm-nav-pill-line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --lm-nav-pill-min-height: 46px;
+    --lm-nav-pill-font-size: 0.8rem;
+  }
+}
+
 .nav-links a {
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   text-align: center;
-  min-height: 42px;
-  padding: 0 18px;
+  min-height: var(--lm-nav-pill-min-height);
+  padding: 0 var(--lm-nav-pill-inline-padding);
   border: 0;
   border-radius: 999px;
   background: #000;
   color: #fff;
   text-decoration: none;
-  font-size: 0.78rem;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
+  font-size: var(--lm-nav-pill-font-size);
+  font-weight: var(--lm-nav-pill-font-weight);
+  letter-spacing: var(--lm-nav-pill-letter-spacing);
+  line-height: var(--lm-nav-pill-line-height);
   text-transform: uppercase;
   white-space: nowrap;
   transition: color 0.22s ease, background-color 0.22s ease;
@@ -603,7 +621,16 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
+  box-sizing: border-box;
+  min-height: var(--lm-nav-pill-min-height);
+  padding: 0 var(--lm-nav-pill-inline-padding);
+  border: 0;
   text-align: center;
+  font-size: var(--lm-nav-pill-font-size);
+  font-weight: var(--lm-nav-pill-font-weight);
+  letter-spacing: var(--lm-nav-pill-letter-spacing);
+  line-height: var(--lm-nav-pill-line-height);
+  text-transform: uppercase;
   white-space: nowrap;
   scroll-snap-align: center;
 }
@@ -1530,9 +1557,9 @@ body.center-page {
 
   .nav-links a {
     width: 100%;
-    min-height: 46px;
-    padding: 0 18px;
-    font-size: 0.8rem;
+    min-height: var(--lm-nav-pill-min-height);
+    padding: 0 var(--lm-nav-pill-inline-padding);
+    font-size: var(--lm-nav-pill-font-size);
   }
 
   /* Viewport-bound backdrop for the open mobile menu. This is a real
@@ -3721,11 +3748,6 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 
   .filter-nav-content {
     gap: 8px;
-  }
-
-  .filter-tabs .tab-btn {
-    font-size: .8rem;
-    letter-spacing: 1.1px;
   }
 
   .filter-page-controls {
@@ -6192,7 +6214,7 @@ body.menu-open .hamburger-icon span {
   margin: 0 auto;
 }
 .hero-section:not(.about-hero) + main.works-main.page-spacing .filter-tabs .tab-btn {
-  min-height: 44px;
+  min-height: var(--lm-nav-pill-min-height);
   text-align: center;
 }
 @media (max-width: 767px) {
