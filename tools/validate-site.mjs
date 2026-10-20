@@ -1030,7 +1030,8 @@ function validateGalleryContract() {
       !source.includes('signalCenteredFilter(next);') ||
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
-      css.includes('@media (max-width: 767px) {\n  /* Small screens should settle directly; no animated easing/bounce. */\n  .filter-active-indicator,\n  .filter-active-indicator.is-animated {\n    transition: none !important;\n  }') ||\n      !css.includes('.filter-active-indicator.is-following-scroll {\n    transition: none !important;\n    animation: none !important;') ||\n      !css.includes('  .filter-tabs .tab-btn,\n  .filter-active-indicator,\n  .filter-page-dot {\n    transition: none !important;') ||
+      css.includes('Small screens should settle directly; no animated easing/bounce.') ||
+      !css.includes('Only direct-manipulation preview is motion-free on compact screens.') ||
       !css.includes('@media (max-width: 1023px)') ||
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
