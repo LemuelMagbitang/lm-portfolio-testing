@@ -1025,7 +1025,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           const indicatorRect = indicator.getBoundingClientRect();
           const nearestRect = nearest.getBoundingClientRect();
           const indicatorStyle = getComputedStyle(indicator);
-          const backgroundChannels = (indicatorStyle.backgroundColor.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
+          const backgroundChannels = (indicatorStyle.backgroundColor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
           const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
           const state = {
             available: true,
@@ -1056,7 +1056,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           return state;
         });
-        const previewWidthMotionFailed = preview.prefersReducedMotion
+        const previewWidthMotionFailed = preview.reducedMotion
           ? preview.indicatorWidthDelta > 2
           : (!preview.indicatorTransition.includes('width') ||
              !preview.indicatorTransitionDuration.includes('0.42s') ||
