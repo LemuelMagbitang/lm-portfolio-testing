@@ -6912,28 +6912,49 @@ try {
       if (unloads !== 0) throw new Error('Main-page Works navigation triggered a document unload/reload.');
 
       // Recreate Contact state before checking the logo independently.
-      await page.evaluate(() => {
+      await page.evaluate(async () => {
         history.pushState(null, '', location.pathname + '#contact-start');
-        // Position the fixture at the bottom instantly. Without this guard,
-        // the page's global smooth-scroll setting can leave a synthetic scroll
-        // in flight when the logo click tries to reset Home.
+        // Gallery/card heights can settle after the first scroll request. Keep
+        // the fixture at the live document bottom until the position is stable,
+        // while bypassing the site's smooth-scroll preference for setup only.
         const html = document.documentElement;
         const previousBehavior = html.style.scrollBehavior;
         html.style.scrollBehavior = 'auto';
-        const maximum = Math.max(
-          0,
-          Math.max(html.scrollHeight, document.body.scrollHeight) - window.innerHeight
-        );
-        window.scrollTo({ left: 0, top: maximum, behavior: 'auto' });
-        html.style.scrollBehavior = previousBehavior;
+        try {
+          await new Promise((resolve, reject) => {
+            const startedAt = performance.now();
+            let stableFrames = 0;
+            const scrollToLiveBottom = () => {
+              const maximum = Math.max(
+                0,
+                Math.max(html.scrollHeight, document.body.scrollHeight) - window.innerHeight
+              );
+              window.scrollTo({ left: 0, top: maximum, behavior: 'auto' });
+              requestAnimationFrame(() => {
+                const updatedMaximum = Math.max(
+                  0,
+                  Math.max(html.scrollHeight, document.body.scrollHeight) - window.innerHeight
+                );
+                stableFrames = Math.abs(window.scrollY - updatedMaximum) <= 2
+                  ? stableFrames + 1
+                  : 0;
+                if (stableFrames >= 3) {
+                  resolve();
+                  return;
+                }
+                if (performance.now() - startedAt > 2500) {
+                  reject(new Error('Smoke fixture could not settle at the live document bottom.'));
+                  return;
+                }
+                scrollToLiveBottom();
+              });
+            };
+            scrollToLiveBottom();
+          });
+        } finally {
+          html.style.scrollBehavior = previousBehavior;
+        }
       });
-      await page.waitForFunction(() => {
-        const maximum = Math.max(
-          0,
-          Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) - window.innerHeight
-        );
-        return Math.abs(window.scrollY - maximum) <= 2;
-      }, null, { timeout: 3000 });
       await page.locator('.nav-logo').first().click();
       // Wait for the runtime's two-frame layout correction, then verify the
       // resting position rather than a transient instant-scroll frame.
