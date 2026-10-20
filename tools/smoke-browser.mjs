@@ -1056,13 +1056,13 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           return state;
         });
-        const previewWidthMotionFailed = preview.reducedMotion
+        const previewWidthMotionFailed = preview.available && (preview.reducedMotion
           ? preview.indicatorWidthDelta > 2
           : (!preview.indicatorTransition.includes('width') ||
              !preview.indicatorTransitionDuration.includes('0.42s') ||
              !preview.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
              preview.indicatorWidthDeltaFromStart <= 2 ||
-             preview.indicatorWidthDelta <= 2);
+             preview.indicatorWidthDelta <= 2));
         if (preview.available &&
             (preview.indicatorCenterDelta > 2 || previewWidthMotionFailed ||
              !preview.isPreview || preview.previewColor !== 'rgb(255, 255, 255)' ||
