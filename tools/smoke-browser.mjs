@@ -2258,7 +2258,7 @@ async function assertFilterNavigationResponsive(page, label) {
   if (!stationaryPillProbe.ready || stationaryPillProbe.scrollDelta < 20 ||
       stationaryPillProbe.beforeCenterDelta > 1.5 || stationaryPillProbe.afterCenterDelta > 1.5 ||
       stationaryPillProbe.stationaryDrift > 1.5 || stationaryPillProbe.activeCenterDelta > 2 ||
-      !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) ||
+      !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%') ||
       (!stationaryPillProbe.prefersReducedMotion &&
         (!stationaryPillProbe.transitionProperty.includes('width') ||
           !stationaryPillProbe.transitionDuration.includes('0.28s') ||
