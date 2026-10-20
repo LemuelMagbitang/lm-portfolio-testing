@@ -5970,7 +5970,21 @@ try {
         }
 
         await mobileShowMore.click();
-        await page.waitForTimeout(350);
+        // Move the synthetic pointer off the control so this asserts the resting
+        // expanded state, not a mid-transition hover frame left by Playwright.
+        await page.mouse.move(4, 4);
+        await page.waitForFunction(() => {
+          const button = document.querySelector('#showMoreBtn');
+          const viewport = document.querySelector('#portfolioGridViewport');
+          if (!button || !viewport || !button.classList.contains('expanded') ||
+              getComputedStyle(viewport).maxHeight !== 'none') return false;
+          const style = getComputedStyle(button);
+          const background = String(style.backgroundColor || '').replace(
+            /^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*1(?:\.0+)?\s*\)$/i,
+            'rgb($1, $2, $3)'
+          );
+          return background === 'rgb(255, 255, 255)' && style.color === 'rgb(0, 0, 0)';
+        }, null, { timeout: 2000 });
         const expanded = await page.locator('#portfolioGridViewport').evaluate(el => getComputedStyle(el).maxHeight === 'none');
         const expandedLabel = await mobileShowMore.locator('.btn-text').textContent().catch(() => '');
         const expandedGeometry = await page.evaluate(() => {
