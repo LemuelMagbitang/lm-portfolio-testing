@@ -1905,22 +1905,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261020-04") ||
-      !bootstrap.includes("cacheVersion = '20261020-04'") ||
+  if (!entry.includes("bootstrap.js?v=20261020-05") ||
+      !bootstrap.includes("cacheVersion = '20261020-05'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261020-03") ||
+      !composition.includes("gallery/index.js?v=20261020-04") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261020-04') ||
-      !works.includes('js/app/page-composition.js?v=20261020-04') ||
-      !works.includes('css/style.css?v=20261020-08') ||
-      !works.includes('js/script.js?v=20261020-04') ||
-      !about.includes('style.css?v=20261020-08') ||
-      !about.includes('script.js?v=20261020-04') ||
-      !about.includes('page-composition.js?v=20261020-04')) {
+      !works.includes('js/app/bootstrap.js?v=20261020-05') ||
+      !works.includes('js/app/page-composition.js?v=20261020-05') ||
+      !works.includes('css/style.css?v=20261020-09') ||
+      !works.includes('js/script.js?v=20261020-05') ||
+      !about.includes('style.css?v=20261020-09') ||
+      !about.includes('script.js?v=20261020-05') ||
+      !about.includes('page-composition.js?v=20261020-05')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -1964,7 +1964,8 @@ function validateFilterSoundAndFeedbackContract() {
 
   if (!css.includes('.filter-active-indicator') ||
       !css.includes('overscroll-behavior-x: none;') ||
-      !css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
+      !css.includes('width 160ms cubic-bezier(.2, 0, 0, 1)') ||
+      css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
       !css.includes('.tab-btn:disabled') ||
       css.includes('.tab-btn.active::before') ||
       css.includes('content: "✓"') ||
@@ -1976,7 +1977,7 @@ function validateFilterSoundAndFeedbackContract() {
       !smoke.includes('filter-announcement') ||
       !smoke.includes('Desktop uses the same centered carousel') ||
       !smoke.includes('Desktop hover stays in the existing gray palette')) {
-    err('Filter interaction: one moving gray pill, content-sized labels, no decorative check icon or horizontal page overscroll, and mobile/desktop swipe plus hover coverage are required.');
+    err('Filter interaction: a stationary center-anchored pill must resize to content labels, avoid page overscroll, and retain mobile/desktop swipe plus hover coverage.');
   }
 
   const works = exists('index.html') ? readText('index.html') : '';
