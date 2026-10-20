@@ -994,7 +994,8 @@ function validateGalleryContract() {
       !source.includes('const x = isFollowingFilterScroll') ||
       source.includes('button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;') ||
       !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
-       !css.includes('color: #111 !important;') ||
+       !css.includes('mix-blend-mode: exclusion;') ||
+       !css.includes('mix-blend-mode: normal !important;') ||
         !css.includes('transition: none !important;')) {
     err('Gallery: the filter pill must preview the centered label while swiping and size itself to that label.');
   }
@@ -1938,7 +1939,8 @@ function validateFilterSoundAndFeedbackContract() {
       !gallery.includes("centerFilterButton(nearest, 'auto', true)") ||
        gallery.includes('runFilterInertia') ||
        !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
-       !css.includes('color: #111 !important;') ||
+       !css.includes('mix-blend-mode: exclusion;') ||
+       !css.includes('mix-blend-mode: normal !important;') ||
        !css.includes('.filter-tabs .tab-btn:active { transform: none;') ||
       !navigation.includes("bind(windowRef, 'pointerup', resetPointerFocus)") ||
       !navigation.includes('logoLink.blur()') ||
