@@ -1839,6 +1839,7 @@ async function assertFilterNavigationResponsive(page, label) {
           (activeRect.top + activeRect.height / 2) - (indicatorRect.top + indicatorRect.height / 2)
         ) : Infinity,
         indicatorTransition: indicatorStyle?.transitionProperty || '',
+        indicatorTransitionDuration: indicatorStyle?.transitionDuration || '',
         indicatorFollowingScroll: indicator?.classList.contains('is-following-scroll') || false,
         contentFollowingFilterScroll: content?.classList.contains('is-following-filter-scroll') || false,
         prefersReducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -1867,10 +1868,13 @@ async function assertFilterNavigationResponsive(page, label) {
         state.indicatorBackground !== 'rgb(255, 255, 255)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
-        (viewport.width > 1023 && !state.prefersReducedMotion &&
-          (!state.indicatorTransition.includes('width') || state.indicatorTransition.includes('transform'))) ||
+        (state.prefersReducedMotion && state.indicatorTransition !== 'none') ||
+        (!state.prefersReducedMotion && !state.indicatorFollowingScroll &&
+          (!state.indicatorTransition.includes('width') ||
+           state.indicatorTransition.includes('transform') ||
+           !state.indicatorTransitionDuration.includes('0.22s'))) ||
+        (state.indicatorFollowingScroll && state.indicatorTransition !== 'none') ||
         (viewport.width <= 1023 && (
-          state.indicatorTransition !== 'none' ||
           state.indicatorAnimation !== 'none' ||
           state.scrollBehavior !== 'auto' ||
           state.snapType !== 'none' ||

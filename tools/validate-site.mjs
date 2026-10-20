@@ -1030,7 +1030,7 @@ function validateGalleryContract() {
       !source.includes('signalCenteredFilter(next);') ||
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
-      !css.includes('@media (max-width: 767px) {\n  /* Small screens should settle directly; no animated easing/bounce. */\n  .filter-active-indicator,\n  .filter-active-indicator.is-animated {\n    transition: none !important;\n  }') ||
+      css.includes('@media (max-width: 767px) {\n  /* Small screens should settle directly; no animated easing/bounce. */\n  .filter-active-indicator,\n  .filter-active-indicator.is-animated {\n    transition: none !important;\n  }') ||\n      !css.includes('.filter-active-indicator.is-following-scroll {\n    transition: none !important;\n    animation: none !important;') ||\n      !css.includes('  .filter-tabs .tab-btn,\n  .filter-active-indicator,\n  .filter-page-dot {\n    transition: none !important;') ||
       !css.includes('@media (max-width: 1023px)') ||
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
@@ -1916,9 +1916,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-05') ||
       !works.includes('js/app/page-composition.js?v=20261020-05') ||
-      !works.includes('css/style.css?v=20261020-09') ||
+      !works.includes('css/style.css?v=20261020-10') ||
       !works.includes('js/script.js?v=20261020-05') ||
-      !about.includes('style.css?v=20261020-09') ||
+      !about.includes('style.css?v=20261020-10') ||
       !about.includes('script.js?v=20261020-05') ||
       !about.includes('page-composition.js?v=20261020-05')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
@@ -1964,7 +1964,7 @@ function validateFilterSoundAndFeedbackContract() {
 
   if (!css.includes('.filter-active-indicator') ||
       !css.includes('overscroll-behavior-x: none;') ||
-      !css.includes('width 160ms cubic-bezier(.2, 0, 0, 1)') ||
+      !css.includes('width 220ms cubic-bezier(.2, 0, 0, 1)') ||
       css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
       !css.includes('.tab-btn:disabled') ||
       css.includes('.tab-btn.active::before') ||

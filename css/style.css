@@ -577,17 +577,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .filter-active-indicator.is-animated {
   /* Keep the pill's center fixed. Only its width morphs to fit the selected label. */
   transition:
-    width 160ms cubic-bezier(.2, 0, 0, 1),
+    width 220ms cubic-bezier(.2, 0, 0, 1),
     height 140ms ease-out,
     background-color 140ms ease-out;
-}
-
-@media (max-width: 767px) {
-  /* Small screens should settle directly; no animated easing/bounce. */
-  .filter-active-indicator,
-  .filter-active-indicator.is-animated {
-    transition: none !important;
-  }
 }
 
 @media (max-width: 1023px) {
@@ -598,8 +590,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     -webkit-overflow-scrolling: auto !important;
     overscroll-behavior-x: none !important;
   }
-  .filter-active-indicator,
-  .filter-active-indicator.is-animated,
+  /* Only direct-manipulation preview is motion-free on compact screens.
+     Normal selection still gets the small width-resize transition. */
   .filter-active-indicator.is-following-scroll {
     transition: none !important;
     animation: none !important;
