@@ -249,16 +249,6 @@ export async function initGallery(options = {}) {
       ? (centeredButton && !centeredButton.disabled ? centeredButton : activeButton)
       : activeButton;
 
-    // Keep the committed label and the label directly under the moving pill
-    // dark at the moment their state changes. Inline !important is deliberate:
-    // browser/legacy hover rules must not repaint either label white on white.
-    buttons.forEach(item => {
-      const needsDarkLabel = item === activeButton ||
-        (isFollowingFilterScroll && item === indicatorButton);
-      if (needsDarkLabel) item.style.setProperty('color', '#111', 'important');
-      else item.style.removeProperty('color');
-    });
-
     const indicator = ensureFilterActiveIndicator();
     const host = getFilterIndicatorHost();
     if (!indicator || !host || !indicatorButton || !filterContent.contains(indicatorButton)) return;

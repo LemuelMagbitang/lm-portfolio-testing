@@ -1023,29 +1023,18 @@ function validateGalleryContract() {
       !css.includes('animation: none !important;')) {
     err('Gallery: compact filter navigation must settle without bounce, ignore programmatic scroll previews, and clear stale swipe styling.');
   }
-  const stableSelectedColorRule = '.filter-nav-content:not(.is-following-filter-scroll) .tab-btn.active:not(.is-centered-preview)';
-  const stableSelectedColorStart = css.indexOf(stableSelectedColorRule);
-  const stableSelectedColorEnd = css.indexOf('}', stableSelectedColorStart);
-  const stableSelectedColorContract = stableSelectedColorStart >= 0 && stableSelectedColorEnd > stableSelectedColorStart
-    ? css.slice(stableSelectedColorStart, stableSelectedColorEnd)
-    : '';
-  const swipeSelectedColorStart = css.indexOf('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.active,');
-  const swipeSelectedColorEnd = css.indexOf('}', swipeSelectedColorStart);
-  const swipeSelectedColorContract = swipeSelectedColorStart >= 0 && swipeSelectedColorEnd > swipeSelectedColorStart
-    ? css.slice(swipeSelectedColorStart, swipeSelectedColorEnd)
-    : '';
-  if (!stableSelectedColorContract.includes('color: #111 !important;') ||
-      !swipeSelectedColorContract.includes('color: #111 !important;') ||
-      !css.includes('.filter-nav-content:not(.is-following-filter-scroll) .tab-btn[aria-pressed="true"]:not(.is-centered-preview)') ||
-      !css.includes('.filter-nav-content .filter-btn.active,') ||
-      !css.includes('z-index: 2 !important;') ||
-      !source.includes("item.style.setProperty('color', '#111', 'important')") ||
-      !source.includes("item.style.removeProperty('color')") ||
-      !smoke.includes('previewAtPill') ||
-      !smoke.includes('activeAtPill') ||
+  if (!css.includes('.filter-nav-content.has-active-indicator .tab-btn') ||
+      !css.includes('mix-blend-mode: exclusion;') ||
+      !css.includes('mix-blend-mode: normal !important;') ||
+      !css.includes('background-color: #909090 !important;') ||
+      !css.includes('z-index: auto;\n  isolation: auto;') ||
+      !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
+      source.includes("item.style.setProperty('color', '#111', 'important')") ||
+      !smoke.includes("previewBlendMode !== 'normal'") ||
+      !smoke.includes("settledIndicatorBackground !== 'rgb(255, 255, 255)'") ||
       !smoke.includes('initial-load active filter contrast failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
-    err('Gallery: active/preview labels must stay dark and paint above the moving pill during swipe and after settlement.');
+    err('Gallery: labels must use exclusion over the settled white pill and switch to white text on a #909090 pill while interacting.');
   }
 
   const fontRefreshStart = source.indexOf('function refreshFilterGeometryAfterFontsLoad()');
@@ -1857,22 +1846,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261020-02") ||
-      !bootstrap.includes("cacheVersion = '20261020-02'") ||
+  if (!entry.includes("bootstrap.js?v=20261020-03") ||
+      !bootstrap.includes("cacheVersion = '20261020-03'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261019-03") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261020-01") ||
+      !composition.includes("gallery/index.js?v=20261020-02") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
-      !works.includes('js/app/bootstrap.js?v=20261020-02') ||
-      !works.includes('js/app/page-composition.js?v=20261020-02') ||
-      !works.includes('css/style.css?v=20261020-03') ||
-      !works.includes('js/script.js?v=20261020-02') ||
-      !about.includes('style.css?v=20261020-03') ||
-      !about.includes('script.js?v=20261020-02') ||
-      !about.includes('page-composition.js?v=20261020-02')) {
+      !works.includes('js/app/bootstrap.js?v=20261020-03') ||
+      !works.includes('js/app/page-composition.js?v=20261020-03') ||
+      !works.includes('css/style.css?v=20261020-04') ||
+      !works.includes('js/script.js?v=20261020-03') ||
+      !about.includes('style.css?v=20261020-04') ||
+      !about.includes('script.js?v=20261020-03') ||
+      !about.includes('page-composition.js?v=20261020-03')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }

@@ -1027,6 +1027,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             indicatorCenterDelta: Math.abs(centerX(indicator) - railCenter),
             indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
             previewColor: getComputedStyle(nearest).color,
+            previewBlendMode: getComputedStyle(nearest).mixBlendMode,
+            indicatorBackground: getComputedStyle(indicator).backgroundColor,
+            contentIsolation: getComputedStyle(content).isolation,
             previewTransition: getComputedStyle(nearest).transitionProperty,
             snapType: getComputedStyle(rail).scrollSnapType,
             hasForcedWidths: buttons.some(button => Boolean(button.style.width))
@@ -1040,7 +1043,10 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         });
         if (preview.available &&
             (preview.indicatorCenterDelta > 2 || preview.indicatorWidthDelta > 2 ||
-             !preview.isPreview || preview.previewColor !== 'rgb(17, 17, 17)' ||
+             !preview.isPreview || preview.previewColor !== 'rgb(255, 255, 255)' ||
+             preview.previewBlendMode !== 'normal' ||
+             preview.indicatorBackground !== 'rgb(144, 144, 144)' ||
+             preview.contentIsolation !== 'auto' ||
              preview.previewTransition !== 'none' || preview.snapType !== 'none' ||
              preview.hasForcedWidths)) {
           throw new Error(label + ' mobile: active filter pill must remain centered and follow the natural width of the label passing underneath: ' + JSON.stringify(preview));
@@ -1694,6 +1700,8 @@ async function assertFilterInitialContrast(page, label) {
       activeFilter: active?.getAttribute('data-filter') || '',
       activePressed: active?.getAttribute('aria-pressed') || '',
       activeColor: style?.color || '',
+      activeBlendMode: style?.mixBlendMode || '',
+      contentIsolation: content ? getComputedStyle(content).isolation : '',
       indicatorExists: !!indicator,
       indicatorReady: indicator?.classList.contains('is-ready') || false,
       indicatorOpacity: Number(pillStyle?.opacity || '0'),
@@ -1708,9 +1716,10 @@ async function assertFilterInitialContrast(page, label) {
     };
   });
   if (!state.activeFilter || state.activePressed !== 'true' ||
-      state.activeColor !== 'rgb(17, 17, 17)' || !state.indicatorExists ||
-      !state.indicatorReady || state.indicatorOpacity < 0.99 ||
-      state.indicatorBackground !== 'rgb(242, 242, 242)' ||
+      state.activeColor !== 'rgb(255, 255, 255)' ||
+      state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
+      !state.indicatorExists || !state.indicatorReady || state.indicatorOpacity < 0.99 ||
+      state.indicatorBackground !== 'rgb(255, 255, 255)' ||
       state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1 ||
       state.contentFollowing || state.indicatorFollowing || state.previewCount !== 0 ||
       state.pressedCount !== 1) {
@@ -1811,6 +1820,8 @@ async function assertFilterNavigationResponsive(page, label) {
         activeFilter: active?.getAttribute('data-filter') || '',
         activePressed: active?.getAttribute('aria-pressed') || '',
         activeColor: activeStyle?.color || '',
+        activeBlendMode: activeStyle?.mixBlendMode || '',
+        contentIsolation: content ? getComputedStyle(content).isolation : '',
         previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
         ariaPressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
         activeRadius: Number.parseFloat(activeStyle?.borderTopLeftRadius || '0') || 0,
@@ -1848,10 +1859,11 @@ async function assertFilterNavigationResponsive(page, label) {
         state.paddingTop < 14 || state.paddingBottom < 14) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    if (state.ariaPressedCount !== 1 || state.activeColor !== 'rgb(17, 17, 17)' ||
+    if (state.ariaPressedCount !== 1 || state.activeColor !== 'rgb(255, 255, 255)' ||
+        state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
         state.contentFollowingFilterScroll || state.indicatorFollowingScroll || state.previewCount > 0 ||
         !state.indicatorExists || !state.indicatorReady ||
-        state.indicatorBackground !== 'rgb(242, 242, 242)' || state.indicatorRadius < 20 ||
+        state.indicatorBackground !== 'rgb(255, 255, 255)' || state.indicatorRadius < 20 ||
         state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
         state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
         (viewport.width > 1023 && !state.prefersReducedMotion && !state.indicatorTransition.includes('transform')) ||
@@ -2009,8 +2021,10 @@ async function assertFilterNavigationResponsive(page, label) {
         const previewColor = preview ? getComputedStyle(preview).color : '';
         const committed = el.querySelector('.tab-btn.active, .filter-btn.active');
         const committedColor = committed ? getComputedStyle(committed).color : '';
-        const previewInlineColor = preview?.style.getPropertyValue('color') || '';
-        const previewInlinePriority = preview?.style.getPropertyPriority('color') || '';
+        const previewBlendMode = preview ? getComputedStyle(preview).mixBlendMode : '';
+        const indicatorBackground = indicator ? getComputedStyle(indicator).backgroundColor : '';
+        const contentIsolation = el.querySelector('.filter-nav-content')
+          ? getComputedStyle(el.querySelector('.filter-nav-content')).isolation : '';
         const previewZIndex = preview ? Number.parseInt(getComputedStyle(preview).zIndex, 10) : -1;
         const indicatorZIndex = indicator ? Number.parseInt(getComputedStyle(indicator).zIndex, 10) : -1;
         const indicatorRect = indicator?.getBoundingClientRect();
@@ -2018,8 +2032,7 @@ async function assertFilterNavigationResponsive(page, label) {
           ? document.elementFromPoint(indicatorRect.left + indicatorRect.width / 2, indicatorRect.top + indicatorRect.height / 2)
           : null;
         const previewAtPill = Boolean(preview && pillHit?.closest?.('.tab-btn') === preview);
-        const committedInlineColor = committed?.style.getPropertyValue('color') || '';
-        const committedInlinePriority = committed?.style.getPropertyPriority('color') || '';
+        const committedBlendMode = committed ? getComputedStyle(committed).mixBlendMode : '';
         const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
         const previewFontWeight = preview ? getComputedStyle(preview).fontWeight : '';
         const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
@@ -2040,17 +2053,19 @@ async function assertFilterNavigationResponsive(page, label) {
           ? document.elementFromPoint(settledIndicatorRect.left + settledIndicatorRect.width / 2, settledIndicatorRect.top + settledIndicatorRect.height / 2)
           : null;
         const activeAtPill = Boolean(active && settledPillHit?.closest?.('.tab-btn') === active);
-        const activeInlineColor = active?.style.getPropertyValue('color') || '';
-        const activeInlinePriority = active?.style.getPropertyPriority('color') || '';
+        const activeBlendMode = active ? getComputedStyle(active).mixBlendMode : '';
+        const settledIndicatorBackground = settledIndicator ? getComputedStyle(settledIndicator).backgroundColor : '';
+        const settledContentIsolation = content ? getComputedStyle(content).isolation : '';
         const activeZIndex = active ? Number.parseInt(getComputedStyle(active).zIndex, 10) : -1;
         const settledIndicatorZIndex = settledIndicator ? Number.parseInt(getComputedStyle(settledIndicator).zIndex, 10) : -1;
         return {
           before, direct, afterRelease, afterSettle,
           requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
-          previewColor, committedColor, previewInlineColor, previewInlinePriority,
-          committedInlineColor, committedInlinePriority, previewZIndex, indicatorZIndex,
-          previewAtPill, activeAtPill, activeInlineColor, activeInlinePriority,
-          activeZIndex, settledIndicatorZIndex, previewTransition, previewFontWeight, indicatorTransition,
+          previewColor, committedColor, previewBlendMode, committedBlendMode,
+          indicatorBackground, contentIsolation, previewZIndex, indicatorZIndex,
+          previewAtPill, activeAtPill, activeBlendMode, settledIndicatorBackground,
+          settledContentIsolation, activeZIndex, settledIndicatorZIndex,
+          previewTransition, previewFontWeight, indicatorTransition,
           activeColor: active ? getComputedStyle(active).color : '',
           activeFontWeight: active ? getComputedStyle(active).fontWeight : '',
           activeCenterDelta: activeRect
@@ -2066,12 +2081,12 @@ async function assertFilterNavigationResponsive(page, label) {
         throw new Error(label + ' compact swipe moved again after its release settlement: ' +
           JSON.stringify(fastGesture));
       }
-      if (fastGesture.previewColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.committedColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.previewInlineColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.previewInlinePriority !== 'important' ||
-          fastGesture.committedInlineColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.committedInlinePriority !== 'important' ||
+      if (fastGesture.previewColor !== 'rgb(255, 255, 255)' ||
+          fastGesture.committedColor !== 'rgb(255, 255, 255)' ||
+          fastGesture.previewBlendMode !== 'normal' ||
+          fastGesture.committedBlendMode !== 'normal' ||
+          fastGesture.indicatorBackground !== 'rgb(144, 144, 144)' ||
+          fastGesture.contentIsolation !== 'auto' ||
           fastGesture.previewZIndex <= fastGesture.indicatorZIndex ||
           fastGesture.previewAtPill !== true ||
           fastGesture.previewTransition !== 'none' ||
@@ -2079,9 +2094,10 @@ async function assertFilterNavigationResponsive(page, label) {
         throw new Error(label + ' swipe preview must stay dark and motion-free while the pill is moving: ' +
           JSON.stringify(fastGesture));
       }
-      if (fastGesture.activeColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.activeInlineColor !== 'rgb(17, 17, 17)' ||
-          fastGesture.activeInlinePriority !== 'important' ||
+      if (fastGesture.activeColor !== 'rgb(255, 255, 255)' ||
+          fastGesture.activeBlendMode !== 'exclusion' ||
+          fastGesture.settledIndicatorBackground !== 'rgb(255, 255, 255)' ||
+          fastGesture.settledContentIsolation !== 'auto' ||
           fastGesture.activeZIndex <= fastGesture.settledIndicatorZIndex ||
           fastGesture.activeAtPill !== true ||
           fastGesture.previewFontWeight !== fastGesture.activeFontWeight ||
@@ -2146,15 +2162,19 @@ async function assertFilterNavigationResponsive(page, label) {
       const preview = document.querySelector('.filter-nav-scroller .tab-btn.is-centered-preview');
       if (!preview) return null;
       const style = getComputedStyle(preview);
+      const indicator = preview.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
       return {
          label: preview.textContent.trim(),
          color: style.color,
-         background: style.backgroundColor,
+         blendMode: style.mixBlendMode,
+         pillColor: indicator ? getComputedStyle(indicator).backgroundColor : '',
          transitionProperty: style.transitionProperty
        };
     });
     if (previewText && (
-         previewText.color !== 'rgb(17, 17, 17)' ||
+         previewText.color !== 'rgb(255, 255, 255)' ||
+         previewText.blendMode !== 'normal' ||
+         previewText.pillColor !== 'rgb(144, 144, 144)' ||
          previewText.transitionProperty !== 'none'
      )) {
       await page.mouse.up();
@@ -2189,10 +2209,22 @@ async function assertFilterNavigationResponsive(page, label) {
         Math.abs(a.width - b.width) <= 1;
     }, await option.getAttribute('data-filter'), { timeout: 1800 });
 
-    const selectedColor = await option.evaluate(button => getComputedStyle(button).color);
-    if (selectedColor !== 'rgb(17, 17, 17)') {
-      throw new Error(label + ' selected filter text must turn dark immediately on tap/click: ' +
-        JSON.stringify({ filter: await option.getAttribute('data-filter'), selectedColor }));
+    const selectedContrast = await option.evaluate(button => {
+      const style = getComputedStyle(button);
+      const indicator = button.closest('.filter-nav-scroller')?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      return { color: style.color, blendMode: style.mixBlendMode,
+        pillColor: indicator ? getComputedStyle(indicator).backgroundColor : '' };
+    });
+    await page.waitForFunction(expectedFilter => {
+      const button = document.querySelector('.filter-nav-scroller [data-filter].active');
+      const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
+      return button?.dataset.filter === expectedFilter &&
+        getComputedStyle(button).mixBlendMode === 'exclusion' &&
+        getComputedStyle(indicator).backgroundColor === 'rgb(255, 255, 255)';
+    }, await option.getAttribute('data-filter'), { timeout: 1000 });
+    if (selectedContrast.color !== 'rgb(255, 255, 255)' || selectedContrast.blendMode !== 'exclusion') {
+      throw new Error(label + ' selected filter text must use exclusion blending over the white pill: ' +
+        JSON.stringify({ filter: await option.getAttribute('data-filter'), selectedContrast }));
     }
     const hoverTargetId = await page.evaluate(() => {
       const rail = document.querySelector('.filter-nav-scroller');
@@ -2254,13 +2286,17 @@ async function assertFilterNavigationResponsive(page, label) {
       return {
         active: button.classList.contains('active'),
         color: getComputedStyle(button).color,
+        blendMode: getComputedStyle(button).mixBlendMode,
+        pillColor: indicator ? getComputedStyle(indicator).backgroundColor : '',
         contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
         indicatorFollowing: indicator?.classList.contains('is-following-scroll') || false,
         previewCount: content?.querySelectorAll('.is-centered-preview').length || 0
       };
     });
     if (!selectedAfterOtherSpaceClick.active ||
-        selectedAfterOtherSpaceClick.color !== 'rgb(17, 17, 17)' ||
+        selectedAfterOtherSpaceClick.color !== 'rgb(255, 255, 255)' ||
+        selectedAfterOtherSpaceClick.blendMode !== 'exclusion' ||
+        selectedAfterOtherSpaceClick.pillColor !== 'rgb(255, 255, 255)' ||
         selectedAfterOtherSpaceClick.contentFollowing ||
         selectedAfterOtherSpaceClick.indicatorFollowing ||
         selectedAfterOtherSpaceClick.previewCount !== 0) {
@@ -2320,7 +2356,9 @@ async function assertFilterNavigationResponsive(page, label) {
         content.classList.contains('is-following-filter-scroll') ||
         indicator.classList.contains('is-following-scroll') ||
         content.querySelector('.is-centered-preview') ||
-        getComputedStyle(active).color !== 'rgb(17, 17, 17)') return false;
+        getComputedStyle(active).color !== 'rgb(255, 255, 255)' ||
+        getComputedStyle(active).mixBlendMode !== 'exclusion' ||
+        getComputedStyle(indicator).backgroundColor !== 'rgb(255, 255, 255)') return false;
     const a = active.getBoundingClientRect();
     const b = indicator.getBoundingClientRect();
     return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
@@ -2338,6 +2376,8 @@ async function assertFilterNavigationResponsive(page, label) {
       activeFilter: active?.getAttribute('data-filter') || '',
       activePressed: active?.getAttribute('aria-pressed') || '',
       activeColor: active ? getComputedStyle(active).color : '',
+      activeBlendMode: active ? getComputedStyle(active).mixBlendMode : '',
+      indicatorBackground: indicator ? getComputedStyle(indicator).backgroundColor : '',
       centerDelta: a && b ? Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) : Infinity,
       centerDeltaY: a && b ? Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) : Infinity,
       widthDelta: a && b ? Math.abs(a.width - b.width) : Infinity,
@@ -2348,7 +2388,9 @@ async function assertFilterNavigationResponsive(page, label) {
   });
   if (repairedPillState.activeFilter !== indicatorRepairProbe.activeFilter ||
       repairedPillState.activePressed !== 'true' ||
-      repairedPillState.activeColor !== 'rgb(17, 17, 17)' ||
+      repairedPillState.activeColor !== 'rgb(255, 255, 255)' ||
+      repairedPillState.activeBlendMode !== 'exclusion' ||
+      repairedPillState.indicatorBackground !== 'rgb(255, 255, 255)' ||
       repairedPillState.centerDelta > 1 || repairedPillState.centerDeltaY > 1 ||
       repairedPillState.widthDelta > 1 || repairedPillState.contentFollowing ||
       repairedPillState.indicatorFollowing || repairedPillState.previewCount !== 0) {

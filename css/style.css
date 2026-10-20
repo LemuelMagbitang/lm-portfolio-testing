@@ -547,7 +547,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   width: 0;
   height: 0;
   border-radius: 999px;
-  background: #f2f2f2;
+  background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
   opacity: 0;
   pointer-events: none;
@@ -561,7 +561,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   transition:
     transform 160ms cubic-bezier(.2, 0, 0, 1),
     width 160ms cubic-bezier(.2, 0, 0, 1),
-    height 140ms ease-out;
+    height 140ms ease-out,
+    background-color 140ms ease-out;
 }
 
 @media (max-width: 767px) {
@@ -593,7 +594,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .filter-active-indicator.is-following-scroll {
-  /* Track the scrolled label without lag; re-enable the pill glide at settle. */
+  /* Gray provides a stable field for the white label during direct manipulation. */
+  background-color: #909090 !important;
   transition: none !important;
 }
 
@@ -627,8 +629,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .filter-nav-content {
   position: relative;
-  z-index: 1;
-  isolation: isolate;
+  z-index: auto;
+  isolation: auto;
   display: flex;
   flex-flow: row nowrap;
   align-items: center;
@@ -704,9 +706,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Before Gallery initializes, the active button itself is the gray fallback
-   pill. Once the indicator is measured and ready, its background takes over
-   without a blank frame or layout change. */
+/* Before Gallery initializes, the active button is a high-contrast fallback pill.
+   Once the measured indicator is ready, the button surface goes transparent and
+   the labels blend against the indicator beneath them. */
 .tab-btn.active,
 .tab-btn[aria-pressed="true"] {
   color: #111;
@@ -716,75 +718,33 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
 }
 
-.filter-nav-content.has-active-indicator .tab-btn.active,
-.filter-nav-content.has-active-indicator .tab-btn[aria-pressed="true"] {
-  background: transparent;
-  box-shadow: none;
-}
-
-/* While swiping, the gray pill is pinned to the rail center. Dim the committed
-   category and preview the label crossing the center, without committing a new
-   filter until scroll settlement. The pill width follows that label naturally. */
-.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.active,
-.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn[aria-pressed="true"] {
-  /* Keep the committed/ARIA-selected label dark even while swipe-preview
-     classes overlap it during movement or gesture settlement. */
-  color: #111 !important;
-  font-weight: 650;
-}
-.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview {
-  /* The label beneath the light pill must stay dark through swipe/hover. */
-  color: #111 !important;
-  background: transparent;
-  font-weight: 650;
-  box-shadow: none;
-  transition: none !important;
-}
-
-.filter-nav-content .tab-btn.is-centered-preview,
-.filter-nav-content .tab-btn.is-centered-preview:hover,
-.filter-nav-content .tab-btn.is-centered-preview:active,
-.filter-nav-content .tab-btn.is-centered-preview:focus,
-.filter-nav-content .tab-btn.is-centered-preview:focus-visible {
-  /* Keep the centered label readable even if hover/focus or parent state changes. */
-  color: #111 !important;
-  background: transparent !important;
-  border-color: transparent !important;
-  font-weight: 650;
-  box-shadow: none !important;
-  transition: none !important;
-}
-
-/* Resting selected-state contrast is non-negotiable. A more-specific swipe
-   rule may intentionally dim the committed label only while the user is
-   actively moving the pill; once that transient state clears, active text must
-   be near-black against the gray indicator even after hover/focus/layout events. */
-.filter-nav-content:not(.is-following-filter-scroll) .tab-btn.active:not(.is-centered-preview),
-.filter-nav-content:not(.is-following-filter-scroll) .tab-btn[aria-pressed="true"]:not(.is-centered-preview) {
-  color: #111 !important;
-}
-
-/* The moving indicator is only a background surface: it must never cover
-   the selected/preview label or make dark text appear missing on white. */
-.filter-nav-content .filter-btn.active,
-.filter-nav-content .filter-btn[aria-pressed="true"],
-.filter-nav-content .tab-btn.is-centered-preview {
+/* The labels are the top layer. With the moving pill beneath them, exclusion
+   renders the white text as black over the settled white pill and keeps it white
+   over the website's black background. Keep the source color fully white. */
+.filter-nav-content.has-active-indicator .tab-btn {
   position: relative;
   z-index: 2 !important;
-  color: #111 !important;
+  color: #fff !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  mix-blend-mode: exclusion;
 }
 
-/* The hover selector has deliberately high specificity. Match it here so a
-   desktop mouse hover cannot turn the centered preview label white on gray. */
-@media (hover: hover) and (pointer: fine) {
-  .filter-nav-content.has-active-indicator.is-following-filter-scroll
-  .tab-btn.is-centered-preview:hover:not(.active):not([aria-pressed="true"]):not(:disabled):not([aria-disabled="true"]) {
-    color: #111;
-    background: transparent;
-    font-weight: 650;
-    box-shadow: none;
-    transition: none;
-  }
+/* During direct manipulation, use white text on a medium-gray moving pill.
+   Returning to exclusion as the gesture settles restores black-on-white contrast. */
+.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn {
+  color: #fff !important;
+  mix-blend-mode: normal !important;
+  transition: none !important;
+}
+
+.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview {
+  font-weight: 650;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transition: none !important;
 }
 
 /* Pointer focus does not keep a browser-default plate; keyboard users retain
