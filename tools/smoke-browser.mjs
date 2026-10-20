@@ -2069,7 +2069,11 @@ async function assertFilterNavigationResponsive(page, label) {
         const committedBlendMode = committed ? getComputedStyle(committed).mixBlendMode : '';
         const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
         const previewFontWeight = preview ? getComputedStyle(preview).fontWeight : '';
-        const indicatorTransition = indicator ? getComputedStyle(indicator).transitionProperty : '';
+        const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
+        const indicatorTransition = indicatorStyle?.transitionProperty || '';
+        const indicatorTransitionDuration = indicatorStyle?.transitionDuration || '';
+        const indicatorTransitionTiming = indicatorStyle?.transitionTimingFunction || '';
+        const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const afterRelease = el.scrollLeft;
@@ -2100,6 +2104,7 @@ async function assertFilterNavigationResponsive(page, label) {
           previewAtPill, activeAtPill, activeBlendMode, settledIndicatorBackground,
           settledContentIsolation, activeZIndex, settledIndicatorZIndex,
           previewTransition, previewFontWeight, indicatorTransition,
+          indicatorTransitionDuration, indicatorTransitionTiming, prefersReducedMotion,
           activeColor: active ? getComputedStyle(active).color : '',
           activeFontWeight: active ? getComputedStyle(active).fontWeight : '',
           activeCenterDelta: activeRect
@@ -2115,18 +2120,31 @@ async function assertFilterNavigationResponsive(page, label) {
         throw new Error(label + ' compact swipe moved again after its release settlement: ' +
           JSON.stringify(fastGesture));
       }
+      const indicatorBackgroundChannels = (fastGesture.indicatorBackground.match(/[\\d.]+/g) || [])
+        .slice(0, 3).map(Number);
+      const indicatorMorphFailed = fastGesture.prefersReducedMotion
+        ? (fastGesture.indicatorTransition !== 'none' ||
+           fastGesture.indicatorBackground !== 'rgb(144, 144, 144)')
+        : (!fastGesture.indicatorTransition.includes('width') ||
+           !fastGesture.indicatorTransition.includes('height') ||
+           !fastGesture.indicatorTransition.includes('background-color') ||
+           !fastGesture.indicatorTransitionDuration.includes('0.42s') ||
+           !fastGesture.indicatorTransitionDuration.includes('0.14s') ||
+           !fastGesture.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
+           !fastGesture.indicatorTransitionTiming.includes('ease-out') ||
+           indicatorBackgroundChannels.length !== 3 ||
+           indicatorBackgroundChannels.some(channel => channel < 144 || channel >= 255));
       if (fastGesture.previewColor !== 'rgb(255, 255, 255)' ||
           fastGesture.committedColor !== 'rgb(255, 255, 255)' ||
           fastGesture.previewBlendMode !== 'normal' ||
           fastGesture.committedBlendMode !== 'normal' ||
-          fastGesture.indicatorBackground !== 'rgb(144, 144, 144)' ||
           fastGesture.contentIsolation !== 'auto' ||
           fastGesture.indicatorInsideContent !== true ||
           fastGesture.previewZIndex <= fastGesture.indicatorZIndex ||
           fastGesture.previewAtPill !== true ||
           fastGesture.previewTransition !== 'none' ||
-          fastGesture.indicatorTransition !== 'none') {
-        throw new Error(label + ' swipe preview must stay dark and motion-free while the pill is moving: ' +
+          indicatorMorphFailed) {
+        throw new Error(label + ' swipe preview must keep the label motion-free while the active pill uses the selection morph: ' +
           JSON.stringify(fastGesture));
       }
       if (fastGesture.activeColor !== 'rgb(255, 255, 255)' ||
