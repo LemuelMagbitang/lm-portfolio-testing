@@ -1913,7 +1913,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261018-09") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261020-04") ||
+      !composition.includes("gallery/index.js?v=20261020-05") ||
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-05') ||
       !works.includes('js/app/page-composition.js?v=20261020-05') ||

@@ -446,9 +446,11 @@ export async function initGallery(options = {}) {
     });
     currentFilter = nextFilter;
     // Active font weight changes a pill's natural width; rebuild the edge
-    // cushions, center the chosen label, then size the stationary pill around it.
+    // cushions, then smoothly carry an explicitly selected label into the
+    // stationary pill. centerFilterButton() falls back to instant motion when
+    // prefers-reduced-motion is enabled.
     ensureFilterEdges();
-    if (center && isFilterScroller()) centerFilterButton(button, 'auto');
+    if (center && isFilterScroller()) centerFilterButton(button, 'smooth');
     syncFilterActiveIndicator(button);
 
     // Only a real filter change starts a new result set. Centering the

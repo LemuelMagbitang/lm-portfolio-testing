@@ -2216,22 +2216,26 @@ async function assertFilterNavigationResponsive(page, label) {
       if (!preview) return null;
       const style = getComputedStyle(preview);
       const indicator = preview.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      const pillColor = indicator ? getComputedStyle(indicator).backgroundColor : '';
+      const pillColorChannels = (pillColor.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
       return {
          label: preview.textContent.trim(),
          color: style.color,
          blendMode: style.mixBlendMode,
-         pillColor: indicator ? getComputedStyle(indicator).backgroundColor : '',
+         pillColor,
+         pillColorChannels,
          transitionProperty: style.transitionProperty
        };
     });
     if (previewText && (
          previewText.color !== 'rgb(255, 255, 255)' ||
          previewText.blendMode !== 'normal' ||
-         previewText.pillColor !== 'rgb(144, 144, 144)' ||
+         previewText.pillColorChannels.length !== 3 ||
+         previewText.pillColorChannels.some(channel => channel < 144 || channel >= 255) ||
          previewText.transitionProperty !== 'none'
      )) {
       await page.mouse.up();
-      throw new Error(label + ' desktop centered pill preview text must remain dark during hover: ' + JSON.stringify(previewText));
+      throw new Error(label + ' desktop swipe preview text must stay legible while the pill transitions to gray: ' + JSON.stringify(previewText));
     }
     await page.mouse.up();
     await page.waitForFunction(() => {
@@ -2275,6 +2279,7 @@ async function assertFilterNavigationResponsive(page, label) {
     const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const beforeScroll = rail.scrollLeft;
     target.click();
+    const immediateScrollDelta = Math.abs(rail.scrollLeft - beforeScroll);
     const afterRect = indicator.getBoundingClientRect();
     const afterCenter = afterRect.left + afterRect.width / 2;
     const railCenter = centerX();
@@ -2283,14 +2288,20 @@ async function assertFilterNavigationResponsive(page, label) {
     const targetWidth = target.getBoundingClientRect().width;
     await new Promise(resolve => setTimeout(resolve, 80));
     const intermediateWidth = indicator.getBoundingClientRect().width;
+    const intermediateActiveRect = target.getBoundingClientRect();
+    const intermediateActiveCenterDelta = Math.abs(
+      intermediateActiveRect.left + intermediateActiveRect.width / 2 - centerX()
+    );
     return {
       ready: true,
       targetFilter: target.getAttribute('data-filter') || '',
+      immediateScrollDelta,
       scrollDelta: Math.abs(rail.scrollLeft - beforeScroll),
       beforeCenterDelta: Math.abs(beforeCenter - railCenter),
       afterCenterDelta: Math.abs(afterCenter - railCenter),
       stationaryDrift: Math.abs(afterCenter - beforeCenter),
       activeCenterDelta: activeRect ? Math.abs(activeRect.left + activeRect.width / 2 - railCenter) : Infinity,
+      intermediateActiveCenterDelta,
       beforeWidth,
       intermediateWidth,
       targetWidth,
@@ -2304,7 +2315,13 @@ async function assertFilterNavigationResponsive(page, label) {
   });
   if (!stationaryPillProbe.ready || stationaryPillProbe.scrollDelta < 20 ||
       stationaryPillProbe.beforeCenterDelta > 1.5 || stationaryPillProbe.afterCenterDelta > 1.5 ||
-      stationaryPillProbe.stationaryDrift > 1.5 || stationaryPillProbe.activeCenterDelta > 2 ||
+      stationaryPillProbe.stationaryDrift > 1.5 ||
+      (stationaryPillProbe.prefersReducedMotion &&
+        (stationaryPillProbe.immediateScrollDelta < 20 || stationaryPillProbe.activeCenterDelta > 2)) ||
+      (!stationaryPillProbe.prefersReducedMotion &&
+        (stationaryPillProbe.immediateScrollDelta > 1.5 ||
+          stationaryPillProbe.scrollDelta <= stationaryPillProbe.immediateScrollDelta + 2 ||
+          stationaryPillProbe.intermediateActiveCenterDelta >= stationaryPillProbe.activeCenterDelta - 2)) ||
       !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%') ||
       (!stationaryPillProbe.prefersReducedMotion &&
         (!stationaryPillProbe.transitionProperty.includes('width') ||
