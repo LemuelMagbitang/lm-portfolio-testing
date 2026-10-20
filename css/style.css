@@ -577,7 +577,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .filter-active-indicator.is-animated {
   /* Keep the pill's center fixed. Only its width morphs to fit the selected label. */
   transition:
-    width 220ms cubic-bezier(.2, 0, 0, 1),
+    width 280ms cubic-bezier(.22, 1, .36, 1),
     height 140ms ease-out,
     background-color 140ms ease-out;
 }

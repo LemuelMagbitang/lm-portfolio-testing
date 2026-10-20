@@ -1872,7 +1872,7 @@ async function assertFilterNavigationResponsive(page, label) {
         (!state.prefersReducedMotion && !state.indicatorFollowingScroll &&
           (!state.indicatorTransition.includes('width') ||
            state.indicatorTransition.includes('transform') ||
-           !state.indicatorTransitionDuration.includes('0.22s'))) ||
+           !state.indicatorTransitionDuration.includes('0.28s'))) ||
         (state.indicatorFollowingScroll && state.indicatorTransition !== 'none') ||
         (viewport.width <= 1023 && (
           state.indicatorAnimation !== 'none' ||
@@ -2203,7 +2203,7 @@ async function assertFilterNavigationResponsive(page, label) {
   await page.waitForTimeout(300);
   // Regression: selecting a distant label may scroll the text, but the pill's
   // center must remain anchored to the rail centerline even in the same JS turn.
-  const stationaryPillProbe = await page.evaluate(() => {
+  const stationaryPillProbe = await page.evaluate(async () => {
     const rail = document.querySelector('.filter-nav-scroller');
     const buttons = Array.from(rail?.querySelectorAll('.filter-btn, .tab-btn') || []);
     const indicator = rail?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
@@ -2222,6 +2222,11 @@ async function assertFilterNavigationResponsive(page, label) {
     };
     const beforeRect = indicator.getBoundingClientRect();
     const beforeCenter = beforeRect.left + beforeRect.width / 2;
+    const beforeWidth = beforeRect.width;
+    const initialTransition = getComputedStyle(indicator);
+    const transitionProperty = initialTransition.transitionProperty;
+    const transitionDuration = initialTransition.transitionDuration;
+    const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const beforeScroll = rail.scrollLeft;
     target.click();
     const afterRect = indicator.getBoundingClientRect();
@@ -2229,6 +2234,9 @@ async function assertFilterNavigationResponsive(page, label) {
     const railCenter = centerX();
     const active = buttons.find(button => button.classList.contains('active'));
     const activeRect = active?.getBoundingClientRect();
+    const targetWidth = target.getBoundingClientRect().width;
+    await new Promise(resolve => setTimeout(resolve, 80));
+    const intermediateWidth = indicator.getBoundingClientRect().width;
     return {
       ready: true,
       targetFilter: target.getAttribute('data-filter') || '',
@@ -2237,6 +2245,12 @@ async function assertFilterNavigationResponsive(page, label) {
       afterCenterDelta: Math.abs(afterCenter - railCenter),
       stationaryDrift: Math.abs(afterCenter - beforeCenter),
       activeCenterDelta: activeRect ? Math.abs(activeRect.left + activeRect.width / 2 - railCenter) : Infinity,
+      beforeWidth,
+      intermediateWidth,
+      targetWidth,
+      transitionProperty,
+      transitionDuration,
+      prefersReducedMotion,
       inlineLeft: indicator.style.left,
       inlineTransform: indicator.style.transform
     };
@@ -2244,8 +2258,14 @@ async function assertFilterNavigationResponsive(page, label) {
   if (!stationaryPillProbe.ready || stationaryPillProbe.scrollDelta < 20 ||
       stationaryPillProbe.beforeCenterDelta > 1.5 || stationaryPillProbe.afterCenterDelta > 1.5 ||
       stationaryPillProbe.stationaryDrift > 1.5 || stationaryPillProbe.activeCenterDelta > 2 ||
-      !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) {
-    throw new Error(label + ' stationary filter pill must remain centered during direct selection: ' +
+      !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) ||
+      (!stationaryPillProbe.prefersReducedMotion &&
+        (!stationaryPillProbe.transitionProperty.includes('width') ||
+          !stationaryPillProbe.transitionDuration.includes('0.28s') ||
+          (Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
+            (Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.beforeWidth) < 1 ||
+              Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.targetWidth) < 1)))) {
+    throw new Error(label + ' stationary filter pill must remain centered and visibly resize during direct selection: ' +
       JSON.stringify(stationaryPillProbe));
   }
   await page.waitForFunction(expectedFilter => {
