@@ -1840,6 +1840,7 @@ async function assertFilterNavigationResponsive(page, label) {
         ) : Infinity,
         indicatorTransition: indicatorStyle?.transitionProperty || '',
         indicatorTransitionDuration: indicatorStyle?.transitionDuration || '',
+        indicatorTransitionTiming: indicatorStyle?.transitionTimingFunction || '',
         indicatorFollowingScroll: indicator?.classList.contains('is-following-scroll') || false,
         contentFollowingFilterScroll: content?.classList.contains('is-following-filter-scroll') || false,
         prefersReducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -1872,7 +1873,8 @@ async function assertFilterNavigationResponsive(page, label) {
         (!state.prefersReducedMotion && !state.indicatorFollowingScroll &&
           (!state.indicatorTransition.includes('width') ||
            state.indicatorTransition.includes('transform') ||
-           !state.indicatorTransitionDuration.includes('0.28s'))) ||
+           !state.indicatorTransitionDuration.includes('0.42s') ||
+           !state.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) ||
         (state.indicatorFollowingScroll && state.indicatorTransition !== 'none') ||
         (viewport.width <= 1023 && (
           state.indicatorAnimation !== 'none' ||
@@ -2226,6 +2228,7 @@ async function assertFilterNavigationResponsive(page, label) {
     const initialTransition = getComputedStyle(indicator);
     const transitionProperty = initialTransition.transitionProperty;
     const transitionDuration = initialTransition.transitionDuration;
+    const transitionTimingFunction = initialTransition.transitionTimingFunction;
     const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const beforeScroll = rail.scrollLeft;
     target.click();
@@ -2250,6 +2253,7 @@ async function assertFilterNavigationResponsive(page, label) {
       targetWidth,
       transitionProperty,
       transitionDuration,
+      transitionTimingFunction,
       prefersReducedMotion,
       inlineLeft: indicator.style.left,
       inlineTransform: indicator.style.transform
@@ -2261,7 +2265,8 @@ async function assertFilterNavigationResponsive(page, label) {
       !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%') ||
       (!stationaryPillProbe.prefersReducedMotion &&
         (!stationaryPillProbe.transitionProperty.includes('width') ||
-          !stationaryPillProbe.transitionDuration.includes('0.28s') ||
+          !stationaryPillProbe.transitionDuration.includes('0.42s') ||
+          !stationaryPillProbe.transitionTimingFunction.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
           (Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
             (Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.beforeWidth) < 1 ||
               Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.targetWidth) < 1))))) {

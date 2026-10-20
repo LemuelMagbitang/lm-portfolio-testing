@@ -1917,9 +1917,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-05') ||
       !works.includes('js/app/page-composition.js?v=20261020-05') ||
-      !works.includes('css/style.css?v=20261020-11') ||
+      !works.includes('css/style.css?v=20261020-12') ||
       !works.includes('js/script.js?v=20261020-05') ||
-      !about.includes('style.css?v=20261020-11') ||
+      !about.includes('style.css?v=20261020-12') ||
       !about.includes('script.js?v=20261020-05') ||
       !about.includes('page-composition.js?v=20261020-05')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
@@ -1965,7 +1965,7 @@ function validateFilterSoundAndFeedbackContract() {
 
   if (!css.includes('.filter-active-indicator') ||
       !css.includes('overscroll-behavior-x: none;') ||
-      !css.includes('width 280ms cubic-bezier(.22, 1, .36, 1)') ||
+      !css.includes('width 420ms cubic-bezier(.34, 1.45, .64, 1)') ||
       css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
       !css.includes('.tab-btn:disabled') ||
       css.includes('.tab-btn.active::before') ||
