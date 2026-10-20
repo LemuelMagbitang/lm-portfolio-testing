@@ -2279,6 +2279,13 @@ async function assertFilterNavigationResponsive(page, label) {
     if (i === 0) await page.waitForTimeout(780);
     const viewportSize = page.viewportSize();
     await page.mouse.click(Math.max(1, (viewportSize?.width || 1280) - 2), 2);
+    await page.waitForFunction(() => {
+      const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
+      const active = document.querySelector('.filter-nav-scroller [data-filter].active');
+      return !!indicator && !!active &&
+        getComputedStyle(indicator).backgroundColor === 'rgb(255, 255, 255)' &&
+        getComputedStyle(active).mixBlendMode === 'exclusion';
+    }, null, { timeout: 1000 });
     const selectedAfterOtherSpaceClick = await option.evaluate(button => {
       const rail = button.closest('.filter-nav-scroller');
       const content = rail?.querySelector('.filter-nav-content');
