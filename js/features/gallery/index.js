@@ -445,11 +445,11 @@ export async function initGallery(options = {}) {
       item.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
     currentFilter = nextFilter;
-    // Active font weight changes a pill's natural width; rebuild the edge
-    // cushions, then smoothly carry an explicitly selected label into the
-    // stationary pill. centerFilterButton() falls back to instant motion when
-    // prefers-reduced-motion is enabled.
-    ensureFilterEdges();
+    // Active and idle labels share the same font metrics, so preserve the
+    // measured edge cushions when a filter is selected. Rebuilding them here
+    // briefly shrinks the rail and can clamp scrollLeft before smooth scrolling
+    // starts. Geometry changes still rebuild cushions through resize/font hooks.
+    // Reduced-motion users receive instant centering from centerFilterButton().
     if (center && isFilterScroller()) centerFilterButton(button, 'smooth');
     syncFilterActiveIndicator(button);
 
