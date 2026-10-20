@@ -92,7 +92,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 /* Shared sizing tokens keep filter pills aligned with the navbar at every breakpoint.
    The compact values follow the navbar's larger touch-friendly mobile pill. */
 :root {
-  --lm-nav-pill-min-height: 42px;
+  --lm-nav-pill-min-height: 44px;
   --lm-nav-pill-inline-padding: 18px;
   --lm-nav-pill-font-size: 0.78rem;
   --lm-nav-pill-font-weight: 650;

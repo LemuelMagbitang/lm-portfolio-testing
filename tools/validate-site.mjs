@@ -1722,7 +1722,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     'letter-spacing: var(--lm-nav-pill-letter-spacing);',
     'line-height: var(--lm-nav-pill-line-height);'
   ];
-  if (!sharedPillTokenRule.includes('--lm-nav-pill-min-height: 42px;') ||
+  if (!sharedPillTokenRule.includes('--lm-nav-pill-min-height: 44px;') ||
       !sharedPillTokenRule.includes('--lm-nav-pill-inline-padding: 18px;') ||
       !sharedPillTokenRule.includes('--lm-nav-pill-font-size: 0.78rem;') ||
       !compactPillTokenRule.includes('--lm-nav-pill-min-height: 46px;') ||
