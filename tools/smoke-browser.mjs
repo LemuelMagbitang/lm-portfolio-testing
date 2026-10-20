@@ -1004,6 +1004,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           };
           const startX = centerX(rail);
           const startY = centerY(rail);
+          const initialIndicatorWidth = indicator.getBoundingClientRect().width;
           const pointer = (type, x, y) => new PointerEvent(type, {
             pointerId: 47, pointerType: 'touch', isPrimary: true, button: 0,
             clientX: x, clientY: y, bubbles: true, cancelable: true
@@ -1012,13 +1013,20 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           // intentionally suspended while a horizontal swipe is in progress.
           rail.dispatchEvent(pointer('pointerdown', startX, startY));
           rail.dispatchEvent(pointer('pointermove', startX - Math.min(150, rail.clientWidth * 0.44), startY));
+          // Sample mid-flight, not immediately after the pointer frame: the pill
+          // should visibly interpolate toward the preview label using the same
+          // timing as click/tap while the scroll position itself remains direct.
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          await new Promise(resolve => setTimeout(resolve, 80));
           const railCenter = centerX(rail);
           const nearest = buttons.reduce((best, item) =>
             Math.abs(centerX(item) - railCenter) < Math.abs(centerX(best) - railCenter) ? item : best
           );
           const indicatorRect = indicator.getBoundingClientRect();
           const nearestRect = nearest.getBoundingClientRect();
+          const indicatorStyle = getComputedStyle(indicator);
+          const backgroundChannels = (indicatorStyle.backgroundColor.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
+          const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
           const state = {
             available: true,
             activeId,
@@ -1026,6 +1034,13 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             isPreview: nearest.classList.contains('is-centered-preview'),
             indicatorCenterDelta: Math.abs(centerX(indicator) - railCenter),
             indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
+            indicatorWidthDeltaFromStart: Math.abs(indicatorRect.width - initialIndicatorWidth),
+            indicatorTransition: indicatorStyle.transitionProperty,
+            indicatorTransitionDuration: indicatorStyle.transitionDuration,
+            indicatorTransitionTiming: indicatorStyle.transitionTimingFunction,
+            reducedMotion,
+            indicatorBackgroundProgressed: backgroundChannels.length >= 3 &&
+              backgroundChannels.every(channel => channel >= 144 && channel < 255),
             previewColor: getComputedStyle(nearest).color,
             previewBlendMode: getComputedStyle(nearest).mixBlendMode,
             indicatorBackground: getComputedStyle(indicator).backgroundColor,
@@ -1041,15 +1056,22 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           return state;
         });
+        const previewWidthMotionFailed = preview.prefersReducedMotion
+          ? preview.indicatorWidthDelta > 2
+          : (!preview.indicatorTransition.includes('width') ||
+             !preview.indicatorTransitionDuration.includes('0.42s') ||
+             !preview.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
+             preview.indicatorWidthDeltaFromStart <= 2 ||
+             preview.indicatorWidthDelta <= 2);
         if (preview.available &&
-            (preview.indicatorCenterDelta > 2 || preview.indicatorWidthDelta > 2 ||
+            (preview.indicatorCenterDelta > 2 || previewWidthMotionFailed ||
              !preview.isPreview || preview.previewColor !== 'rgb(255, 255, 255)' ||
              preview.previewBlendMode !== 'normal' ||
-             preview.indicatorBackground !== 'rgb(144, 144, 144)' ||
+             !preview.indicatorBackgroundProgressed ||
              preview.contentIsolation !== 'auto' ||
              preview.previewTransition !== 'none' || preview.snapType !== 'none' ||
              preview.hasForcedWidths)) {
-          throw new Error(label + ' mobile: active filter pill must remain centered and follow the natural width of the label passing underneath: ' + JSON.stringify(preview));
+          throw new Error(label + ' mobile: active filter pill must stay centered and smoothly morph toward the swiped preview label: ' + JSON.stringify(preview));
         }
       }
       if (layout.logoBlendMode !== 'normal' ||
