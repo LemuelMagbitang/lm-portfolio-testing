@@ -2120,7 +2120,7 @@ async function assertFilterNavigationResponsive(page, label) {
         throw new Error(label + ' compact swipe moved again after its release settlement: ' +
           JSON.stringify(fastGesture));
       }
-      const indicatorBackgroundChannels = (fastGesture.indicatorBackground.match(/[\\d.]+/g) || [])
+      const indicatorBackgroundChannels = (fastGesture.indicatorBackground.match(/[\d.]+/g) || [])
         .slice(0, 3).map(Number);
       const indicatorMorphFailed = fastGesture.prefersReducedMotion
         ? (fastGesture.indicatorTransition !== 'none' ||
