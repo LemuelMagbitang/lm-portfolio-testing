@@ -2217,7 +2217,7 @@ async function assertFilterNavigationResponsive(page, label) {
       const style = getComputedStyle(preview);
       const indicator = preview.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
       const pillColor = indicator ? getComputedStyle(indicator).backgroundColor : '';
-      const pillColorChannels = (pillColor.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
+      const pillColorChannels = (pillColor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
       return {
          label: preview.textContent.trim(),
          color: style.color,
