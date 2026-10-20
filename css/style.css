@@ -721,7 +721,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 /* The labels are the top layer. With the moving pill beneath them, exclusion
    renders the white text as black over the settled white pill and keeps it white
    over the website's black background. Keep the source color fully white. */
-.filter-nav-content.has-active-indicator .tab-btn {
+ .filter-nav-content.has-active-indicator .tab-btn.active,
+.filter-nav-content.has-active-indicator .tab-btn[aria-pressed="true"] {
   position: relative;
   z-index: 2 !important;
   color: #fff !important;
