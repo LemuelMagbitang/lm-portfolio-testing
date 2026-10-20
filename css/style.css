@@ -4496,8 +4496,8 @@ footer > .footer-content p{
     flex:1 1 0;
     box-sizing:border-box;
     min-width:0;
-    min-height:var(--lm-nav-pill-min-height);
-    padding:0 8px;
+    min-height: var(--lm-nav-pill-min-height);
+    padding: 0 8px;
     overflow:hidden;
     text-overflow:ellipsis;
   }
