@@ -2531,7 +2531,28 @@ body.center-page {
 }
 
 .show-more-wrapper .btn-show-more {
-  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--lm-nav-pill-min-height);
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0;
+  color: #fff;
+  padding: 0 var(--lm-nav-pill-inline-padding);
+  border-radius: 999px;
+  font-family: var(--lm-font-label);
+  font-size: var(--lm-nav-pill-font-size);
+  font-weight: var(--lm-nav-pill-font-weight);
+  letter-spacing: var(--lm-nav-pill-letter-spacing);
+  line-height: var(--lm-nav-pill-line-height);
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background-color var(--lm-motion-standard) var(--lm-motion-ease), color var(--lm-motion-standard) var(--lm-motion-ease), transform var(--lm-motion-standard) var(--lm-motion-ease), border-color var(--lm-motion-standard) var(--lm-motion-ease);
 }
 
 .show-more-wrapper.expanded {
@@ -4380,26 +4401,29 @@ footer > .footer-content p{
   display:none;
 }
 .contact-mobile-tab{
-  appearance:none;
-  -webkit-appearance:none;
-  border:1px solid #2a2a2a;
-  background:rgba(255,255,255,.025);
-  color:#858585;
-  min-height:42px;
-  padding:10px 16px;
-  border-radius:999px;
-  font-family:inherit;
-  font-size:.72rem;
-  font-weight:700;
-  letter-spacing:.08em;
-  white-space:nowrap;
-  cursor:pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #2a2a2a;
+  background: rgba(255,255,255,.025);
+  color: #858585;
+  min-height: var(--lm-nav-pill-min-height);
+  padding: 0 var(--lm-nav-pill-inline-padding);
+  border-radius: 999px;
+  font-family: var(--lm-font-label);
+  font-size: var(--lm-nav-pill-font-size);
+  font-weight: var(--lm-nav-pill-font-weight);
+  letter-spacing: var(--lm-nav-pill-letter-spacing);
+  line-height: var(--lm-nav-pill-line-height);
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
   transition:
     color var(--lm-motion-standard) var(--lm-motion-ease),
     background-color var(--lm-motion-standard) var(--lm-motion-ease),
     border-color var(--lm-motion-standard) var(--lm-motion-ease),
     transform var(--lm-motion-standard) var(--lm-motion-ease);
 }
+.contact-mobile-tab.is-active,
 .contact-mobile-tab[aria-selected="true"]{
   background:transparent;
   color:#000;
@@ -4470,9 +4494,10 @@ footer > .footer-content p{
     position:relative;
     z-index:1;
     flex:1 1 0;
+    box-sizing:border-box;
     min-width:0;
-    min-height:40px;
-    padding:9px 12px;
+    min-height:var(--lm-nav-pill-min-height);
+    padding:0 8px;
     overflow:hidden;
     text-overflow:ellipsis;
   }
@@ -4572,6 +4597,8 @@ footer > .footer-content p{
   color:#fff !important;
 }
 .lightbox-close{
+  width:var(--lm-nav-pill-min-height);
+  height:var(--lm-nav-pill-min-height);
   background:rgba(255,255,255,.08) !important;
   background-color:rgba(255,255,255,.08) !important;
   border:0 !important;

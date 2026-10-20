@@ -1712,6 +1712,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   }
 
   const filterPillRule = (css.match(/\.filter-tabs\s+\.tab-btn\s*\{([^}]*)\}/) || [])[1] || '';
+  const showMorePillRule = (css.match(/\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
+  const contactPillRule = (css.match(/\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
+  const compactContactPillRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.contact-mobile-tabs\s*\{[\s\S]*?\.contact-mobile-tabs\[data-active="review"\]::before\s*\{[^}]*\}\s*\.contact-mobile-tabs::-webkit-scrollbar\s*\{[^}]*\}\s*\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
   const sharedPillTokenRule = (css.match(/:root\s*\{([^}]*--lm-nav-pill-min-height[^}]*)\}/) || [])[1] || '';
   const compactPillTokenRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{\s*:root\s*\{([^}]*)\}/) || [])[1] || '';
   const sharedPillDeclarations = [
@@ -1728,10 +1731,19 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !compactPillTokenRule.includes('--lm-nav-pill-min-height: 46px;') ||
       !compactPillTokenRule.includes('--lm-nav-pill-font-size: 0.8rem;') ||
       !sharedPillDeclarations.every(declaration =>
-        navigationPillRule.includes(declaration) && filterPillRule.includes(declaration)) ||
-      !navigationPillRule.includes('text-transform: uppercase;') ||
-      !filterPillRule.includes('text-transform: uppercase;')) {
-    err('Navigation and filter pills must share typography and responsive sizing tokens.');
+        [navigationPillRule, filterPillRule, showMorePillRule, contactPillRule]
+          .every(rule => rule.includes(declaration))) ||
+      ![navigationPillRule, filterPillRule, showMorePillRule, contactPillRule]
+        .every(rule => rule.includes('text-transform: uppercase;')) ||
+      !showMorePillRule.includes('font-family: var(--lm-font-label);') ||
+      !contactPillRule.includes('font-family: var(--lm-font-label);') ||
+      !compactContactPillRule.includes('min-height: var(--lm-nav-pill-min-height);') ||
+      !compactContactPillRule.includes('padding: 0 8px;') ||
+      !css.includes('.contact-mobile-tab.is-active,') ||
+      !css.includes('.btn-show-more.expanded{') ||
+      !css.includes('width:var(--lm-nav-pill-min-height);') ||
+      !css.includes('height:var(--lm-nav-pill-min-height);')) {
+    err('Navigation, filters, Show More/Show Less, mobile Contact tabs, and desktop Lightbox close must share the pill sizing/type system.');
   }
 
   const filterWrapperRule = (css.match(/\.filter-nav-wrapper\s*\{([^}]*)\}/) || [])[1] || '';
@@ -1883,9 +1895,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261018-09") ||
       !works.includes('js/app/bootstrap.js?v=20261020-04') ||
       !works.includes('js/app/page-composition.js?v=20261020-04') ||
-      !works.includes('css/style.css?v=20261020-06') ||
+      !works.includes('css/style.css?v=20261020-07') ||
       !works.includes('js/script.js?v=20261020-04') ||
-      !about.includes('style.css?v=20261020-06') ||
+      !about.includes('style.css?v=20261020-07') ||
       !about.includes('script.js?v=20261020-04') ||
       !about.includes('page-composition.js?v=20261020-04')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

@@ -223,8 +223,8 @@ async function assertLightboxChromeAlignment(page, label, mode) {
       !near(geometry.close.right, geometry.lastPill.right) ||
       !near(geometry.close.top, geometry.lastPill.top) ||
       !near(geometry.close.height, geometry.lastPill.height) ||
-      !near(geometry.close.width, 42) ||
-      !near(geometry.close.height, 42) ||
+      !near(geometry.close.width, 44) ||
+      !near(geometry.close.height, 44) ||
       !near(geometry.next.right, geometry.lastPill.right) ||
       !near(geometry.previous.left, geometry.logo.left) ||
       !near(geometry.previous.width, 42) ||
@@ -5749,6 +5749,36 @@ try {
 
       const mobileShowMore = page.locator('#showMoreBtn').first();
       if (await mobileShowMore.isVisible().catch(() => false)) {
+        const readShowMorePillStyle = () => mobileShowMore.evaluate(button => {
+          const style = getComputedStyle(button);
+          return {
+            height: button.getBoundingClientRect().height,
+            minHeight: parseFloat(style.minHeight) || 0,
+            fontSize: parseFloat(style.fontSize) || 0,
+            fontWeight: style.fontWeight,
+            letterSpacing: parseFloat(style.letterSpacing) || 0,
+            lineHeight: parseFloat(style.lineHeight) || 0,
+            fontFamily: style.fontFamily.toLowerCase(),
+            textTransform: style.textTransform,
+            expanded: button.classList.contains('expanded'),
+            color: style.color,
+            backgroundColor: style.backgroundColor
+          };
+        });
+        const assertShowMorePillStyle = (style, expandedState) => {
+          if (style.height < 46 || style.minHeight < 46 ||
+              Math.abs(style.fontSize - 12.8) > 0.1 ||
+              style.fontWeight !== '650' ||
+              Math.abs(style.letterSpacing - 1.024) > 0.12 ||
+              !style.fontFamily.includes('dm sans') ||
+              style.textTransform !== 'uppercase' ||
+              style.expanded !== expandedState ||
+              (expandedState && (style.color !== 'rgb(0, 0, 0)' || style.backgroundColor !== 'rgb(255, 255, 255)'))) {
+            throw new Error('Mobile Show More/Show Less pill diverged from shared navbar typography/geometry: ' + JSON.stringify(style));
+          }
+        };
+        const collapsedPillStyle = await readShowMorePillStyle();
+        assertShowMorePillStyle(collapsedPillStyle, false);
         const collapsedGeometry = await page.evaluate(() => {
           const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
           const wrapper = document.querySelector('#showMoreWrapper')?.getBoundingClientRect();
@@ -5770,6 +5800,7 @@ try {
         if (!expanded || expandedLabel?.trim().toUpperCase() !== 'SHOW LESS') {
           throw new Error('Mobile Show More did not expand the full-bleed two-column gallery.');
         }
+        assertShowMorePillStyle(await readShowMorePillStyle(), true);
         if (!expandedGeometry || expandedGeometry.wrapperTop < expandedGeometry.gridBottom - 2) {
           throw new Error('Expanded Show More control is still overlapping the gallery.');
         }
@@ -7477,11 +7508,33 @@ try {
 
       const contactTabStyles=await page.locator('.contact-mobile-tab').evaluateAll(tabs=>tabs.map(tab=>{
         const s=getComputedStyle(tab);
-        return {border:s.borderStyle,width:s.borderWidth};
+        return {
+          border:s.borderStyle,
+          borderWidth:s.borderWidth,
+          height:tab.getBoundingClientRect().height,
+          minHeight:parseFloat(s.minHeight)||0,
+          fontSize:parseFloat(s.fontSize)||0,
+          fontWeight:s.fontWeight,
+          letterSpacing:parseFloat(s.letterSpacing)||0,
+          lineHeight:parseFloat(s.lineHeight)||0,
+          fontFamily:s.fontFamily.toLowerCase(),
+          textTransform:s.textTransform,
+          isActive:tab.classList.contains('is-active'),
+          ariaSelected:tab.getAttribute('aria-selected'),
+          color:s.color,
+          borderRadius:s.borderRadius
+        };
       }));
       contactTabStyles.forEach(style=>{
-        if(style.border!=='none' || style.width!=='0px'){
-          throw new Error('Mobile Contact tab retained an individual outline: '+JSON.stringify(style));
+        if(style.border!=='none' || style.borderWidth!=='0px' ||
+           style.height < 46 || style.minHeight < 46 ||
+           Math.abs(style.fontSize-12.8)>0.1 || style.fontWeight!=='650' ||
+           Math.abs(style.letterSpacing-1.024)>0.12 ||
+           !style.fontFamily.includes('dm sans') || style.textTransform!=='uppercase' ||
+           style.isActive !== (style.ariaSelected==='true') ||
+           (style.ariaSelected==='true' && style.color!=='rgb(0, 0, 0)') ||
+           (style.ariaSelected==='false' && style.color!=='rgb(133, 133, 133)')) {
+          throw new Error('Mobile Contact tabs diverged from shared pill typography, active-state contrast, or hit-target geometry: '+JSON.stringify(style));
         }
       });
 
