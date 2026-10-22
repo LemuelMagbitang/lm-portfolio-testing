@@ -4757,7 +4757,9 @@ footer > .footer-content p{
 .btn-show-more{
   border-radius:999px !important;
   corner-shape:initial !important;
-  min-width:136px;
+  width:148px;
+  min-width:148px;
+  max-width:148px;
   transition:
     background-color .28s ease,
     color .28s ease,
