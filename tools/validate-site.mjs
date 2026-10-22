@@ -874,7 +874,7 @@ function validateWorkflowHardening() {
   if (!workflow) return;
   if (!/node-version:\s*24\b/.test(workflow)) err('CI security: validation workflow must use supported Node.js 24 LTS.');
   if (!/permissions:\s*\n\s+contents:\s*read\b/.test(workflow)) err('CI security: validation workflow should explicitly grant only contents: read.');
-  if (!/timeout-minutes:\s*10\b/.test(workflow)) err('CI reliability: validation workflow needs a finite timeout.');
+  if (!/timeout-minutes:\s*[1-9]\d*\b/.test(workflow)) err('CI reliability: validation workflow needs a positive integer timeout.');
   if (!/cancel-in-progress:\s*true\b/.test(workflow)) err('CI reliability: outdated validation runs should be cancelled.');
 }
 
