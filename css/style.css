@@ -4464,23 +4464,7 @@ footer > .footer-content p{
     /* Keep vertical page scrolling native while horizontal touch-drag selects tabs. */
     touch-action:pan-y;
   }
-  .contact-mobile-tabs::before{
-    content:"";
-    position:absolute;
-    top:4px;
-    left:4px;
-    width:calc(50% - 4px);
-    height:calc(100% - 8px);
-    border-radius:999px;
-    background:#fff;
-    box-shadow:0 6px 18px rgba(0,0,0,.20);
-    transform:translateX(0);
-    transition:transform .34s cubic-bezier(.22,1,.36,1);
-    pointer-events:none;
-  }
-  .contact-mobile-tabs[data-active="review"]::before{
-    transform:translateX(calc(100% + 8px));
-  }
+  /* The selected tab paints its own pill; no separate moving indicator. */
   .contact-mobile-tabs::-webkit-scrollbar{display:none;}
   .contact-mobile-tab{
     position:relative;
@@ -4494,6 +4478,22 @@ footer > .footer-content p{
     text-overflow:ellipsis;
   }
 
+  .contact-mobile-tab.is-active,
+  .contact-mobile-tab[aria-selected="true"] {
+    background: #fff;
+    color: #000;
+    border-color: transparent;
+    box-shadow: 0 6px 18px rgba(0,0,0,.20);
+  }
+  .contact-mobile-tab[aria-selected="false"] {
+    background: transparent;
+    color: #858585;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .contact-mobile-tab:active {
+    transform: none;
+  }
   #contact-section .contact-grid{
     display:block;
   }
@@ -4757,14 +4757,14 @@ footer > .footer-content p{
 .btn-show-more{
   border-radius:999px !important;
   corner-shape:initial !important;
+  min-width:136px;
   transition:
     background-color .28s ease,
     color .28s ease,
     border-color .28s ease,
     box-shadow .28s ease,
     backdrop-filter .28s ease,
-    -webkit-backdrop-filter .28s ease,
-    transform .18s ease !important;
+    -webkit-backdrop-filter .28s ease !important;
 }
 .btn-show-more:not(.expanded){
   background:rgba(255,255,255,.08) !important;
@@ -6257,4 +6257,13 @@ body.menu-open .hamburger-icon span {
     rgba(18, 18, 18, var(--about-hero-scrim-top-alpha, .32)) 0%,
     rgba(18, 18, 18, var(--about-hero-scrim-bottom-alpha, .72)) 100%
   );
+}
+
+
+/* FINAL UI PASS 5 — keep Show More stationary in both states. */
+.btn-show-more:hover,
+.btn-show-more:active,
+.btn-show-more.expanded:hover,
+.btn-show-more.expanded:active {
+  transform: none !important;
 }
