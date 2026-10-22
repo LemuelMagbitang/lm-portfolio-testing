@@ -1,5 +1,6 @@
 {
   "protectionEnabled": true,
+  "defaultVideoPoster": "",
   "formsEnabled": {
     "project": true,
     "review": true
@@ -43,6 +44,5 @@
   "ogImageVersion": 2,
   "ogImageAlt": "Lemuel Magbitang — 3D & Motion Illustrator portfolio",
   "ogImageWidth": 1200,
-  "ogImageHeight": 630,
-  "defaultVideoPoster": ""
+  "ogImageHeight": 630
 }
