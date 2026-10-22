@@ -647,6 +647,36 @@ function checkLargeAssets() {
   walk(assetRoot);
 }
 
+function validateDefaultVideoPosterSetting(settings) {
+  const poster = typeof settings?.defaultVideoPoster === 'string'
+    ? settings.defaultVideoPoster.trim()
+    : '';
+  // An empty poster is valid: the site can render without a global poster.
+  if (!poster) return;
+
+  const imageExtension = /\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i;
+  const isLocalAsset = poster.startsWith('assets/');
+  if (isLocalAsset) {
+    const localPath = poster.split(/[?#]/, 1)[0];
+    const unsafeSegment = localPath.split('/').some(segment =>
+      !segment || segment === '.' || segment === '..'
+    );
+    if (unsafeSegment || !imageExtension.test(localPath) || !fs.existsSync(path.join(ROOT, localPath))) {
+      err('Site settings: defaultVideoPoster must reference an existing local image asset, not a page or video URL.');
+    }
+    return;
+  }
+
+  try {
+    const url = new URL(poster);
+    if (url.protocol !== 'https:' || url.username || url.password || !imageExtension.test(url.pathname)) {
+      err('Site settings: defaultVideoPoster must be an HTTPS image URL with a recognized image extension, not a webpage URL.');
+    }
+  } catch (_) {
+    err('Site settings: defaultVideoPoster must be blank or a valid local image asset/HTTPS image URL.');
+  }
+}
+
 const filters = parseJson('data/filters.json', {});
 const projects = parseJson('data/projects.json', []);
 const settings = parseJson('data/settings.json', {});
@@ -660,6 +690,7 @@ validateFilters(filters);
 validateProjects(projects, filters);
 validateCuratedViews(curatedViews, projects, filters);
 validateHeroLoop(heroLoop);
+validateDefaultVideoPosterSetting(settings);
 validateAbout(about);
 validateCssDeclarations();
 
