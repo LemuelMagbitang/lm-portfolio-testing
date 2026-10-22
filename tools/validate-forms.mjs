@@ -74,17 +74,32 @@ function makeContactElement(attributes = {}, active = false) {
   return {
     parentElement: null,
     bounds: null,
-    getBoundingClientRect() { return this.bounds || { left: 0, right: 0 }; },
+    getBoundingClientRect() {
+      const bounds = this.bounds || { left: 0, right: 0 };
+      return {
+        ...bounds,
+        width: Number.isFinite(bounds.width) ? bounds.width : (bounds.right || 0) - (bounds.left || 0),
+        height: Number.isFinite(bounds.height) ? bounds.height : 0
+      };
+    },
     get id() { return values.get('id') || ''; },
     tabIndex: 0,
     focused: false,
     focus() { this.focused = true; },
     classList: {
       contains(name) { return classes.has(name); },
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
       toggle(name, enabled) {
         if (enabled) classes.add(name);
         else classes.delete(name);
       }
+    },
+    style: {
+      properties: new Map(),
+      setProperty(name, value) { this.properties.set(name, String(value)); },
+      removeProperty(name) { this.properties.delete(name); },
+      getPropertyValue(name) { return this.properties.get(name) || ''; }
     },
     addEventListener(type, handler) {
       if (!listeners.has(type)) listeners.set(type, new Set());
