@@ -5963,7 +5963,13 @@ try {
         const collapsedGeometry = await page.evaluate(() => {
           const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
           const wrapper = document.querySelector('#showMoreWrapper')?.getBoundingClientRect();
-          return grid && wrapper ? { gridTop: grid.top, wrapperTop: wrapper.top } : null;
+          const button = document.querySelector('#showMoreBtn')?.getBoundingClientRect();
+          return grid && wrapper && button ? {
+            gridTop: grid.top,
+            wrapperTop: wrapper.top,
+            buttonCenterX: button.left + button.width / 2,
+            buttonWidth: button.width
+          } : null;
         });
         if (!collapsedGeometry || collapsedGeometry.wrapperTop < collapsedGeometry.gridTop - 2) {
           throw new Error('Mobile Show More control escaped above the gallery in its collapsed state.');
@@ -5990,7 +5996,13 @@ try {
         const expandedGeometry = await page.evaluate(() => {
           const grid = document.querySelector('#portfolioGrid')?.getBoundingClientRect();
           const wrapper = document.querySelector('#showMoreWrapper')?.getBoundingClientRect();
-          return grid && wrapper ? { gridBottom: grid.bottom, wrapperTop: wrapper.top } : null;
+          const button = document.querySelector('#showMoreBtn')?.getBoundingClientRect();
+          return grid && wrapper && button ? {
+            gridBottom: grid.bottom,
+            wrapperTop: wrapper.top,
+            buttonCenterX: button.left + button.width / 2,
+            buttonWidth: button.width
+          } : null;
         });
         if (!expanded || expandedLabel?.trim().toUpperCase() !== 'SHOW LESS') {
           throw new Error('Mobile Show More did not expand the full-bleed two-column gallery.');
@@ -5998,6 +6010,12 @@ try {
         assertShowMorePillStyle(await readShowMorePillStyle(), true);
         if (!expandedGeometry || expandedGeometry.wrapperTop < expandedGeometry.gridBottom - 2) {
           throw new Error('Expanded Show More control is still overlapping the gallery.');
+        }
+        if (!collapsedGeometry ||
+            Math.abs(expandedGeometry.buttonCenterX - collapsedGeometry.buttonCenterX) > 2 ||
+            Math.abs(expandedGeometry.buttonWidth - collapsedGeometry.buttonWidth) > 1) {
+          throw new Error('Show More/Show Less moved horizontally or changed width while toggling: ' +
+            JSON.stringify({ collapsed: collapsedGeometry, expanded: expandedGeometry }));
         }
 
         await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
