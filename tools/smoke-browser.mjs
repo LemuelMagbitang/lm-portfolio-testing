@@ -7683,7 +7683,21 @@ try {
       }
 
       await page.locator('#contactTabReview').click();
-      await page.waitForTimeout(40);
+      // The pill's background and foreground transition for 300ms. Wait for
+      // the selected/unselected colors to settle instead of sampling an
+      // intermediate composited color 40ms after the click.
+      await page.waitForFunction(() => {
+        const project = document.querySelector('#contactTabProject');
+        const review = document.querySelector('#contactTabReview');
+        const projectStyle = project ? getComputedStyle(project) : null;
+        const reviewStyle = review ? getComputedStyle(review) : null;
+        return project?.getAttribute('aria-selected') === 'false' &&
+          review?.getAttribute('aria-selected') === 'true' &&
+          projectStyle?.backgroundColor === 'rgba(0, 0, 0, 0)' &&
+          reviewStyle?.backgroundColor === 'rgb(255, 255, 255)' &&
+          projectStyle?.color === 'rgb(133, 133, 133)' &&
+          reviewStyle?.color === 'rgb(0, 0, 0)';
+      }, null, { timeout: 1500 });
       const reviewTabState = await page.evaluate(() => {
         const rail = document.querySelector('.contact-mobile-tabs');
         const project = document.querySelector('#contactTabProject');
