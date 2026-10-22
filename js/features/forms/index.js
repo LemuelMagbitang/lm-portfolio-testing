@@ -155,33 +155,83 @@ export function initForms({
     dragClickResetTimer = null;
   }
 
+  function clearContactPillGesture() {
+    if (!contactTabRail) return;
+    contactTabRail.classList.remove('is-holding', 'is-dragging');
+    contactTabRail.style.removeProperty('--contact-pill-drag-base-x');
+    contactTabRail.style.removeProperty('--contact-pill-drag-x');
+  }
+
   function tabAtClientX(clientX) {
-    return contactTabs.find(tab => {
+    let closestTab = null;
+    let closestDistance = Infinity;
+    contactTabs.forEach(tab => {
       const bounds = tab.getBoundingClientRect?.();
-      return bounds && clientX >= bounds.left && clientX <= bounds.right;
-    }) || null;
+      if (!bounds) return;
+      const center = bounds.left + bounds.width / 2;
+      const distance = Math.abs(clientX - center);
+      if (distance < closestDistance) {
+        closestTab = tab;
+        closestDistance = distance;
+      }
+    });
+    return closestTab;
   }
 
   const contactDragStartHandler = event => {
     const startTab = contactTabs.find(tab => tab === event?.target || tab.contains?.(event?.target));
+    const activeTab = contactTabs.find(tab => tab.getAttribute('aria-selected') === 'true');
     if (!contactTabRail ||
         !windowRef?.matchMedia?.('(max-width: 767px)')?.matches ||
         event?.pointerType !== 'touch' ||
         event?.isPrimary === false ||
         (event?.button !== undefined && event.button !== 0) ||
-        !startTab) {
+        !startTab ||
+        startTab !== activeTab) {
       activeContactDrag = null;
       return;
     }
 
+    const firstBounds = contactTabs[0]?.getBoundingClientRect?.();
+    const activeBounds = activeTab.getBoundingClientRect?.();
+    const baseOffset = firstBounds && activeBounds
+      ? Math.max(0, activeBounds.left - firstBounds.left)
+      : 0;
+    const startX = Number.isFinite(Number(event.clientX)) ? Number(event.clientX) : 0;
+    const startY = Number.isFinite(Number(event.clientY)) ? Number(event.clientY) : 0;
     activeContactDrag = {
       pointerId: event.pointerId,
-      startX: Number.isFinite(Number(event.clientX)) ? Number(event.clientX) : 0,
-      startY: Number.isFinite(Number(event.clientY)) ? Number(event.clientY) : 0,
-      lastX: Number.isFinite(Number(event.clientX)) ? Number(event.clientX) : 0,
+      startX,
+      startY,
+      lastX: startX,
+      startKind: activeTab.getAttribute('data-contact-tab') || 'project',
+      baseOffset,
       dragging: false
     };
+    contactTabRail.classList.add('is-holding');
+    contactTabRail.style.setProperty('--contact-pill-drag-base-x', baseOffset + 'px');
+    contactTabRail.style.setProperty('--contact-pill-drag-x', '0px');
   };
+
+  function updateContactDrag(drag, clientX) {
+    if (!drag || !contactTabRail) return;
+    const firstBounds = contactTabs[0]?.getBoundingClientRect?.();
+    const lastBounds = contactTabs[contactTabs.length - 1]?.getBoundingClientRect?.();
+    const maxOffset = firstBounds && lastBounds
+      ? Math.max(0, lastBounds.left - firstBounds.left)
+      : 0;
+    const visualDelta = Math.max(
+      -drag.baseOffset,
+      Math.min(maxOffset - drag.baseOffset, clientX - drag.startX)
+    );
+    drag.lastX = clientX;
+    contactTabRail.style.setProperty('--contact-pill-drag-x', visualDelta + 'px');
+
+    const hoveredTab = tabAtClientX(clientX);
+    if (hoveredTab && hoveredTab.getAttribute('aria-selected') !== 'true') {
+      setActiveContactTab(hoveredTab.getAttribute('data-contact-tab') || 'project');
+    }
+  }
 
   const contactDragMoveHandler = event => {
     const drag = activeContactDrag;
@@ -193,31 +243,39 @@ export function initForms({
     const deltaX = x - drag.startX;
     const deltaY = y - drag.startY;
 
-    // Let vertical movement remain native page scrolling. A horizontal drag
-    // starts with a small threshold and selects whichever tab is under the finger.
+    // Keep vertical page scrolling native; abandon a horizontal gesture if the
+    // user's intent resolves to a vertical scroll before the drag threshold.
+    if (Math.abs(deltaY) > 10 && Math.abs(deltaY) >= Math.abs(deltaX)) {
+      if (drag.dragging) setActiveContactTab(drag.startKind);
+      activeContactDrag = null;
+      clearContactPillGesture();
+      return;
+    }
     if (!drag.dragging) {
-      if (Math.abs(deltaY) > 10 && Math.abs(deltaY) >= Math.abs(deltaX)) {
-        activeContactDrag = null;
-        return;
-      }
       if (Math.abs(deltaX) < 8 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return;
       drag.dragging = true;
+      contactTabRail.classList.add('is-dragging');
     }
 
-    drag.lastX = x;
-    const hoveredTab = tabAtClientX(x);
-    if (hoveredTab && hoveredTab.getAttribute('aria-selected') !== 'true') {
-      setActiveContactTab(hoveredTab.getAttribute('data-contact-tab') || 'project');
-    }
+    // Move the indicator continuously while held. Crossing the midpoint between
+    // segment centers changes panels immediately, without waiting for pointerup.
+    updateContactDrag(drag, x);
   };
 
   const contactDragEndHandler = event => {
     const drag = activeContactDrag;
+    if (!drag || event?.pointerId !== drag.pointerId) {
+      if (!drag) clearContactPillGesture();
+      return;
+    }
     activeContactDrag = null;
-    if (!drag || event?.pointerId !== drag.pointerId ||
-        !windowRef?.matchMedia?.('(max-width: 767px)')?.matches ||
-        !drag.dragging) return;
+    if (!windowRef?.matchMedia?.('(max-width: 767px)')?.matches || !drag.dragging) {
+      clearContactPillGesture();
+      return;
+    }
 
+    const releaseX = Number.isFinite(Number(event.clientX)) ? Number(event.clientX) : drag.lastX;
+    updateContactDrag(drag, releaseX);
     // Swallow only the click generated by a completed drag; a normal tap still
     // uses the tab's regular click handler.
     suppressDragClick = true;
@@ -227,11 +285,17 @@ export function initForms({
       suppressDragClick = false;
       dragClickResetTimer = null;
     }, 0);
+    clearContactPillGesture();
   };
 
   const contactDragCancelHandler = event => {
-    if (!event || !activeContactDrag || event.pointerId === activeContactDrag.pointerId) {
+    if (!activeContactDrag ||
+        !event ||
+        event.pointerId === activeContactDrag.pointerId) {
+      const cancelledDrag = activeContactDrag;
       activeContactDrag = null;
+      if (cancelledDrag?.dragging) setActiveContactTab(cancelledDrag.startKind);
+      clearContactPillGesture();
     }
   };
 
@@ -283,6 +347,7 @@ export function initForms({
       activeContactDrag = null;
       suppressDragClick = false;
       clearDragClickReset();
+      clearContactPillGesture();
       contactTabRail?.removeEventListener('pointerdown', contactDragStartHandler);
       contactTabRail?.removeEventListener('pointermove', contactDragMoveHandler);
       contactTabRail?.removeEventListener('pointerup', contactDragEndHandler);

@@ -7578,6 +7578,9 @@ try {
           active: tabRow?.getAttribute('data-active') || '',
           activeBackground: activeTab ? getComputedStyle(activeTab).backgroundColor : '',
           activeColor: activeTab ? getComputedStyle(activeTab).color : '',
+          indicatorBackground: tabRow ? getComputedStyle(tabRow, '::before').backgroundColor : '',
+          indicatorWidth: tabRow ? parseFloat(getComputedStyle(tabRow, '::before').width) || 0 : 0,
+          indicatorTransition: tabRow ? getComputedStyle(tabRow, '::before').transitionProperty : '',
           inactiveBackground: inactiveTab ? getComputedStyle(inactiveTab).backgroundColor : '',
           inactiveColor: inactiveTab ? getComputedStyle(inactiveTab).color : '',
           touchAction: tabStyle?.touchAction || '',
@@ -7592,8 +7595,11 @@ try {
       });
       if (mobileContactTabs.tabCount !== 2 || mobileContactTabs.activeTabs !== 1 ||
           mobileContactTabs.visiblePanels !== 1 || mobileContactTabs.display !== 'grid' ||
-          mobileContactTabs.activeBackground !== 'rgb(255, 255, 255)' ||
+          mobileContactTabs.activeBackground !== 'rgba(0, 0, 0, 0)' ||
           mobileContactTabs.activeColor !== 'rgb(0, 0, 0)' ||
+          mobileContactTabs.indicatorBackground !== 'rgb(255, 255, 255)' ||
+          mobileContactTabs.indicatorWidth <= 0 ||
+          !mobileContactTabs.indicatorTransition.includes('transform') ||
           mobileContactTabs.inactiveBackground !== 'rgba(0, 0, 0, 0)' ||
           mobileContactTabs.inactiveColor !== 'rgb(133, 133, 133)' ||
           mobileContactTabs.panelIds.find(panel => panel.id === 'contactProjectPanel')?.ariaHidden !== 'false' ||
@@ -7637,7 +7643,66 @@ try {
           clientX: endX, clientY: contactRailY
         });
       };
-      await dragContactRail(731, '#contactTabProject', projectTabX, reviewTabX);
+      // Hold the active pill, drag it part-way, and verify it follows the
+      // finger without changing panels until the target segment is crossed.
+      await projectTab.dispatchEvent('pointerdown', {
+        pointerType: 'touch', isPrimary: true, pointerId: 730, button: 0, buttons: 1,
+        clientX: projectTabX, clientY: contactRailY
+      });
+      const heldContactStart = await page.evaluate(() => {
+        const rail = document.querySelector('.contact-mobile-tabs');
+        return {
+          holding: Boolean(rail?.classList.contains('is-holding')),
+          dragging: Boolean(rail?.classList.contains('is-dragging')),
+          active: rail?.getAttribute('data-active') || ''
+        };
+      });
+      if (!heldContactStart.holding || heldContactStart.dragging || heldContactStart.active !== 'project') {
+        throw new Error('Mobile Contact pill did not retain its pressed state before a swipe: ' + JSON.stringify(heldContactStart));
+      }
+
+      await contactTabRail.dispatchEvent('pointermove', {
+        pointerType: 'touch', isPrimary: true, pointerId: 730, button: 0, buttons: 1,
+        clientX: projectTabX + 14, clientY: contactRailY
+      });
+      const heldContactMotion = await page.evaluate(() => {
+        const rail = document.querySelector('.contact-mobile-tabs');
+        return {
+          holding: Boolean(rail?.classList.contains('is-holding')),
+          dragging: Boolean(rail?.classList.contains('is-dragging')),
+          active: rail?.getAttribute('data-active') || '',
+          dragOffset: rail?.style.getPropertyValue('--contact-pill-drag-x') || ''
+        };
+      });
+      if (!heldContactMotion.holding || !heldContactMotion.dragging ||
+          heldContactMotion.active !== 'project' || heldContactMotion.dragOffset !== '14px') {
+        throw new Error('Mobile Contact pill did not follow a held pointer before completing the swipe: ' + JSON.stringify(heldContactMotion));
+      }
+
+      // Completing the swipe must select the destination tab before release.
+      await contactTabRail.dispatchEvent('pointermove', {
+        pointerType: 'touch', isPrimary: true, pointerId: 730, button: 0, buttons: 1,
+        clientX: reviewTabX, clientY: contactRailY
+      });
+      const heldContactFullSwipe = await page.evaluate(() => {
+        const rail = document.querySelector('.contact-mobile-tabs');
+        return {
+          holding: Boolean(rail?.classList.contains('is-holding')),
+          dragging: Boolean(rail?.classList.contains('is-dragging')),
+          active: rail?.getAttribute('data-active') || '',
+          projectSelected: document.querySelector('#contactTabProject')?.getAttribute('aria-selected'),
+          reviewSelected: document.querySelector('#contactTabReview')?.getAttribute('aria-selected')
+        };
+      });
+      if (!heldContactFullSwipe.holding || !heldContactFullSwipe.dragging ||
+          heldContactFullSwipe.active !== 'review' ||
+          heldContactFullSwipe.projectSelected !== 'false' || heldContactFullSwipe.reviewSelected !== 'true') {
+        throw new Error('A full Mobile Contact swipe did not change tabs while the pill was still held: ' + JSON.stringify(heldContactFullSwipe));
+      }
+      await contactTabRail.dispatchEvent('pointerup', {
+        pointerType: 'touch', isPrimary: true, pointerId: 730, button: 0, buttons: 0,
+        clientX: reviewTabX, clientY: contactRailY
+      });
       await page.waitForTimeout(20);
       const contactSwipeLeft = await page.evaluate(() => ({
         active: document.querySelector('.contact-mobile-tabs')?.getAttribute('data-active') || '',
@@ -7735,6 +7800,8 @@ try {
           active: rail?.getAttribute('data-active') || '',
           projectBackground: projectStyle?.backgroundColor || '',
           reviewBackground: reviewStyle?.backgroundColor || '',
+          indicatorBackground: rail ? getComputedStyle(rail, '::before').backgroundColor : '',
+          indicatorTranslationX: rail ? new DOMMatrixReadOnly(getComputedStyle(rail, '::before').transform).m41 : 0,
           projectColor: projectStyle?.color || '',
           reviewColor: reviewStyle?.color || '',
           tabWidthDelta: projectRect && reviewRect ? Math.abs(projectRect.width - reviewRect.width) : Infinity,
@@ -7749,7 +7816,9 @@ try {
           reviewTabState.projectAriaHidden !== 'true' || reviewTabState.reviewAriaHidden !== 'false' ||
           reviewTabState.active !== 'review' ||
           reviewTabState.projectBackground !== 'rgba(0, 0, 0, 0)' ||
-          reviewTabState.reviewBackground !== 'rgb(255, 255, 255)' ||
+          reviewTabState.reviewBackground !== 'rgba(0, 0, 0, 0)' ||
+          reviewTabState.indicatorBackground !== 'rgb(255, 255, 255)' ||
+          reviewTabState.indicatorTranslationX <= 0 ||
           reviewTabState.projectColor !== 'rgb(133, 133, 133)' ||
           reviewTabState.reviewColor !== 'rgb(0, 0, 0)' ||
           reviewTabState.tabWidthDelta > 1 ||
