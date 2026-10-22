@@ -1747,7 +1747,18 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   const showMorePillRule = (css.match(/(?:^|\n)\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
   const showMoreHitTargetRule = (css.match(/\.show-more-wrapper\s+\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
   const contactPillRule = (css.match(/\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
-  const compactContactPillRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.contact-mobile-tabs\s*\{[\s\S]*?\.contact-mobile-tabs\[data-active="review"\]::before\s*\{[^}]*\}\s*\.contact-mobile-tabs::-webkit-scrollbar\s*\{[^}]*\}\s*\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
+  // Validate the real compact mobile tab rather than coupling this contract
+  // to a separate sliding pseudo-element. The active pill is now painted by
+  // the selected tab itself, so its geometry follows the tab's own grid cell.
+  const contactTabsMobileRuleStart = css.lastIndexOf('.contact-mobile-tabs{');
+  const contactTabsMobileMediaStart = contactTabsMobileRuleStart >= 0
+    ? css.lastIndexOf('@media', contactTabsMobileRuleStart)
+    : -1;
+  const contactTabsMobileCss = contactTabsMobileMediaStart >= 0
+    ? css.slice(contactTabsMobileMediaStart)
+    : '';
+  const compactContactPillRule = (contactTabsMobileCss.match(/\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
+  const compactContactActivePillRule = (contactTabsMobileCss.match(/\.contact-mobile-tab\.is-active,\s*\.contact-mobile-tab\[aria-selected="true"\]\s*\{([^}]*)\}/) || [])[1] || '';
   const sharedPillTokenRule = (css.match(/:root\s*\{([^}]*--lm-nav-pill-min-height[^}]*)\}/) || [])[1] || '';
   const compactPillTokenRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{\s*:root\s*\{([^}]*)\}/) || [])[1] || '';
   const sharedPillDeclarations = [
@@ -1773,7 +1784,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !contactPillRule.includes('font-family: var(--lm-font-label);') ||
       !compactContactPillRule.includes('min-height: var(--lm-nav-pill-min-height);') ||
       !compactContactPillRule.includes('padding: 0 8px;') ||
-      !css.includes('.contact-mobile-tab.is-active,') ||
+      !compactContactActivePillRule.includes('background: #fff;') ||
+      !compactContactActivePillRule.includes('color: #000;') ||
       !css.includes('.btn-show-more.expanded{') ||
       !css.includes('width:var(--lm-nav-pill-min-height);') ||
       !css.includes('height:var(--lm-nav-pill-min-height);')) {
@@ -1944,9 +1956,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261021-02') ||
       !works.includes('js/app/page-composition.js?v=20261021-02') ||
-      !works.includes('css/style.css?v=20261021-01') ||
+      !works.includes('css/style.css?v=20261023-01') ||
       !works.includes('js/script.js?v=20261021-02') ||
-      !about.includes('style.css?v=20261021-01') ||
+      !about.includes('style.css?v=20261023-01') ||
       !about.includes('script.js?v=20261021-02') ||
       !about.includes('page-composition.js?v=20261021-02')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
