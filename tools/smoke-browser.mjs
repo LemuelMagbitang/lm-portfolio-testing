@@ -7777,7 +7777,7 @@ try {
         return project?.getAttribute('aria-selected') === 'false' &&
           review?.getAttribute('aria-selected') === 'true' &&
           projectStyle?.backgroundColor === 'rgba(0, 0, 0, 0)' &&
-          reviewStyle?.backgroundColor === 'rgb(255, 255, 255)' &&
+          reviewStyle?.backgroundColor === 'rgba(0, 0, 0, 0)' &&
           projectStyle?.color === 'rgb(133, 133, 133)' &&
           reviewStyle?.color === 'rgb(0, 0, 0)';
       }, null, { timeout: 1500 });
