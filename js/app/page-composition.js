@@ -11,9 +11,9 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261021-02';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261023-01';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261018-08';
-import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261008-01';
+import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261023-01';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 
 function applyCuratedViewPresentation(root, resolution) {

@@ -1982,22 +1982,22 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261021-02") ||
-      !bootstrap.includes("cacheVersion = '20261021-02'") ||
+  if (!entry.includes("bootstrap.js?v=20261023-01") ||
+      !bootstrap.includes("cacheVersion = '20261023-01'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
-      !composition.includes("hero/index.js?v=20261021-02") ||
+      !composition.includes("hero/index.js?v=20261023-01") ||
       !composition.includes("footer/index.js?v=20261018-08") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261020-06") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261021-02') ||
-      !works.includes('js/app/page-composition.js?v=20261021-02') ||
+      !works.includes('js/app/bootstrap.js?v=20261023-01') ||
+      !works.includes('js/app/page-composition.js?v=20261023-01') ||
       !works.includes('css/style.css?v=20261023-03') ||
-      !works.includes('js/script.js?v=20261021-02') ||
+      !works.includes('js/script.js?v=20261023-01') ||
       !about.includes('style.css?v=20261023-03') ||
-      !about.includes('script.js?v=20261021-02') ||
-      !about.includes('page-composition.js?v=20261021-02')) {
+      !about.includes('script.js?v=20261023-01') ||
+      !about.includes('page-composition.js?v=20261023-01')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }

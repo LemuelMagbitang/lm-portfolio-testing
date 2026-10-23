@@ -32,6 +32,26 @@ function disposeMaterial(material){
   material.dispose?.();
 }
 
+function clearMediaBackgroundLayers(host) {
+  const background = globalThis.LMMediaBackground;
+  if (typeof background?.clear === 'function') {
+    background.clear(host);
+    return;
+  }
+  ['.lm-media-background-layer', '.lm-media-background-overlay'].forEach(selector => {
+    const layer = host?.querySelector?.(`:scope > ${selector}`);
+    layer?.querySelectorAll?.('video,audio').forEach(media => {
+      try { media.pause?.(); } catch (_) {}
+      try {
+        media.removeAttribute('src');
+        media.querySelectorAll?.('source').forEach(source => source.removeAttribute('src'));
+        media.load?.();
+      } catch (_) {}
+    });
+    layer?.remove?.();
+  });
+}
+
 function disposeObject(root){
   root?.traverse?.(node => {
     node.geometry?.dispose?.();
@@ -546,10 +566,7 @@ export async function mountModelViewer(container, src, options = {}) {
     const label = activate.querySelector('strong');
     if (label) label.textContent = '3D VIEW UNAVAILABLE';
     back.hidden = true;
-    const bgLayer = container.querySelector(':scope > .lm-media-background-layer');
-    if (bgLayer) bgLayer.remove();
-    const bgOverlay = container.querySelector(':scope > .lm-media-background-overlay');
-    if (bgOverlay) bgOverlay.remove();
+    clearMediaBackgroundLayers(container);
     if (container.__modelViewerMountToken === mountToken) {
       delete container.__modelViewerMountToken;
     }
@@ -663,8 +680,7 @@ export async function mountModelViewer(container, src, options = {}) {
     scene.clear();
     renderer.dispose();
     if (renderer.domElement.parentNode === container) renderer.domElement.remove();
-    const bgLayer=container.querySelector(':scope > .lm-media-background-layer'); if(bgLayer) bgLayer.remove();
-    const bgOverlay=container.querySelector(':scope > .lm-media-background-overlay'); if(bgOverlay) bgOverlay.remove();
+    clearMediaBackgroundLayers(container);
     if (container.__modelViewerCleanup === cleanup) delete container.__modelViewerCleanup;
     if (container.__modelViewerMountToken === mountToken) {
       delete container.__modelViewerMountToken;

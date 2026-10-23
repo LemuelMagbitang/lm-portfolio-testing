@@ -12,14 +12,14 @@ import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
 import {
   ensureMediaBackgroundHelper,
   applyMediaBackground
-} from '../infrastructure/media-background/loader.js?v=20261008-01';
+} from '../infrastructure/media-background/loader.js?v=20261023-01';
 import { loadCmsJson } from '../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../infrastructure/youtube/url.js';
 import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261021-02'
+  cacheVersion = '20261023-01'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;

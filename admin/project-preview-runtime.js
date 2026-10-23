@@ -172,7 +172,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     const job=modelQueue.then(async()=>{
       if(!ownsNode(node)||node.dataset.previewActive!=='true')return;
       try {
-        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261010-12');
+        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261023-01');
         if(!ownsNode(node)||node.dataset.previewActive!=='true')return;
         const cleanup=await mountModelViewer(node,src,{
           thumbnail:true,hint:false,alt:node.getAttribute('aria-label')||'3D artwork preview',

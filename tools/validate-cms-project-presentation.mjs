@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-04';
-import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261010-05';
+import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261023-01';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
 
 const root = process.cwd();
@@ -15,6 +15,7 @@ const renderer = fs.readFileSync(path.join(root, 'js/features/lightbox/media-ren
 const foilNormalRendererSource = fs.readFileSync(path.join(root, 'js/features/lightbox/foil-normal-renderer.js'), 'utf8');
 const previewRuntime = fs.readFileSync(path.join(root, 'admin/project-preview-runtime.js'), 'utf8');
 const modelViewer = fs.readFileSync(path.join(root, 'js/infrastructure/three/model-viewer.js'), 'utf8');
+const mediaBackgroundEngine = fs.readFileSync(path.join(root, 'js/infrastructure/media-background/engine.js'), 'utf8');
 const projectsData = JSON.parse(fs.readFileSync(path.join(root, 'data/projects.json'), 'utf8'));
 
 function createTestEventTarget() {
@@ -377,7 +378,7 @@ for (const marker of [
 assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must be lazy-loaded.');
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
-assert.ok(/project-preview-runtime\.js\?v=20261010-05/.test(admin),
+assert.ok(/project-preview-runtime\.js\?v=20261023-01/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
 assert.ok(/admin\.js\?v=\d{8}-\d{2}/.test(adminHtml),
   'The CMS HTML entrypoint must use a versioned cache-busting URL for editor JavaScript.');
@@ -433,8 +434,15 @@ assert.ok(/typeof node\.load === 'function'\) node\.load\(src\)/.test(previewRun
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
   'CMS multimedia thumbnails are mounted lazily in static 3D mode.');
 assert.ok(/options\.thumbnail === true/.test(modelViewer), 'The 3D viewer supports static thumbnail rendering.');
-assert.ok(/model-viewer\.js\?v=20261015-01/.test(admin),
-  'The expanded CMS 3D editor must use the same current viewer module as collapsed thumbnails.');
+assert.ok(/model-viewer\.js\?v=20261023-01/.test(admin),
+  'The expanded CMS 3D editor must use the current viewer module cache key.');
+assert.match(mediaBackgroundEngine, /function releaseLayerMedia\(layer\) \{[\s\S]*?media\.pause\?\.\(\)[\s\S]*?removeAttribute\('src'\)[\s\S]*?media\.load\?\.\(\)/);
+assert.match(mediaBackgroundEngine, /function clear\(host\) \{[\s\S]*?releaseLayerMedia\(oldLayer\)[\s\S]*?oldLayer\.remove\(\)/);
+assert.match(mediaBackgroundEngine, /global\.LMMediaBackground = \{ DEFAULTS, normalize: normalizeBackground, apply, clear \}/);
+assert.match(admin, /function releasePreviewMedia\(root\) \{/);
+assert.match(admin, /releasePreviewMedia\(old\); old\.remove\(\)/);
+assert.match(admin, /releasePreviewMedia\(previewEl\);\s*previewEl\.replaceChildren\(\)/);
+assert.match(admin, /releasePreviewMedia\(previewEl\);\s*previewEl\.innerHTML = buildMediaPreviewHtml\(m\)/);
 
 assert.ok(/let openUid\s*=\s*null/.test(admin), 'Projects must start with every project row closed.');
 assert.ok(/isOpen \? ' is-open' : ' is-collapsed'/.test(admin) || /isOpen \? ' is-open' : ' is-collapsed'/.test(admin.replace(/\n/g,'')),

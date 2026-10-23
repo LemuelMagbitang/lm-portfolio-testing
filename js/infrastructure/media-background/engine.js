@@ -108,6 +108,36 @@
     };
   }
 
+  function releaseLayerMedia(layer) {
+    const mediaNodes = Array.from(layer?.querySelectorAll?.('video,audio') || []);
+    mediaNodes.forEach(media => {
+      try { media.pause?.(); } catch (_) {}
+      try {
+        media.removeAttribute('src');
+        media.querySelectorAll?.('source').forEach(source => source.removeAttribute('src'));
+        media.load?.();
+      } catch (_) {}
+    });
+  }
+
+  function clear(host) {
+    if (!host) return false;
+    let cleared = false;
+    const oldLayer = host.querySelector(':scope > .lm-media-background-layer');
+    if (oldLayer) {
+      releaseLayerMedia(oldLayer);
+      oldLayer.remove();
+      cleared = true;
+    }
+    const oldOverlay = host.querySelector(':scope > .lm-media-background-overlay');
+    if (oldOverlay) {
+      releaseLayerMedia(oldOverlay);
+      oldOverlay.remove();
+      cleared = true;
+    }
+    return cleared;
+  }
+
   function apply(host, input, resolveUrl) {
     if (!host) return null;
     const bg = normalizeBackground(input);
@@ -116,10 +146,7 @@
     host.style.isolation = 'isolate';
     host.classList.add('lm-media-background-host');
 
-    const old = host.querySelector(':scope > .lm-media-background-layer');
-    if (old) old.remove();
-    const oldOverlay = host.querySelector(':scope > .lm-media-background-overlay');
-    if (oldOverlay) oldOverlay.remove();
+    clear(host);
 
     if (!bg || bg.type === 'none') return bg;
 
@@ -219,5 +246,5 @@
     return bg;
   }
 
-  global.LMMediaBackground = { DEFAULTS, normalize: normalizeBackground, apply };
+  global.LMMediaBackground = { DEFAULTS, normalize: normalizeBackground, apply, clear };
 })(window);

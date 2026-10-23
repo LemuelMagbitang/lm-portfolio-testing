@@ -2901,6 +2901,37 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   root.__holoEditorSync=sync;sync();
 }
 
+function releasePreviewMedia(root) {
+  if (!root) return;
+  const backgroundHosts = [];
+  if (root.classList?.contains('lm-media-background-host')) backgroundHosts.push(root);
+  root.querySelectorAll?.('.lm-media-background-host').forEach(host => backgroundHosts.push(host));
+  backgroundHosts.forEach(host => {
+    try { globalThis.LMMediaBackground?.clear?.(host); } catch (_) {}
+  });
+
+  const mediaNodes = [];
+  if (root.matches?.('video,audio')) mediaNodes.push(root);
+  root.querySelectorAll?.('video,audio').forEach(media => mediaNodes.push(media));
+  mediaNodes.forEach(media => {
+    try { media.pause?.(); } catch (_) {}
+    try {
+      media.removeAttribute('src');
+      media.querySelectorAll?.('source').forEach(source => source.removeAttribute('src'));
+      media.load?.();
+    } catch (_) {}
+  });
+
+  const lottieNodes = [];
+  if (root.matches?.('lottie-player')) lottieNodes.push(root);
+  root.querySelectorAll?.('lottie-player').forEach(player => lottieNodes.push(player));
+  lottieNodes.forEach(player => {
+    try { player.pause?.(); } catch (_) {}
+    try { player.stop?.(); } catch (_) {}
+    try { player.removeAttribute('src'); } catch (_) {}
+  });
+}
+
 function buildMediaPreviewHtml(m){
   const sourceError = validateMediaSource(m.type, m.src);
   if (sourceError) return `<div class="media-preview media-preview-error">${sourceTypeErrorHtml(sourceError)}</div>`;
@@ -3100,7 +3131,8 @@ function buildProjectBody(el, p, options = {}){
     const picker = el.querySelector('[data-focuspicker]');
     const note = el.querySelector('[data-thumb-fallback-note]');
     if(!picker) return;
-    const old = picker.querySelector('[data-thumb-media]'); if(old) old.remove();
+    const old = picker.querySelector('[data-thumb-media]');
+    if (old) { releasePreviewMedia(old); old.remove(); }
     const oldSourceError = picker.querySelector('[data-thumb-source-error]');
     if (oldSourceError) oldSourceError.remove();
     const explicit = p.thumbnail.src;
@@ -3463,6 +3495,7 @@ function buildProjectBody(el, p, options = {}){
         previewDisposed = true;
         previewGeneration += 1;
         invalidateCurrentModelViewer();
+        releasePreviewMedia(previewEl);
         previewEl.replaceChildren();
       }
       row.__disposeMediaPreview = disposeMediaPreview;
@@ -3471,6 +3504,7 @@ function buildProjectBody(el, p, options = {}){
         if (previewDisposed) return;
         const generation = ++previewGeneration;
         invalidateCurrentModelViewer();
+        releasePreviewMedia(previewEl);
         previewEl.innerHTML = buildMediaPreviewHtml(m);
         wirePreviewAspect(previewEl.firstElementChild, m);
         const previewBox = previewEl.firstElementChild;
@@ -3480,7 +3514,7 @@ function buildProjectBody(el, p, options = {}){
         if (m.type === 'model' && m.src) {
           const host = previewEl.querySelector('[data-model-preview]');
           try {
-            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261015-01');
+            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261023-01');
             // The row may have been deleted/rebuilt while the module import
             // was pending. Do not mount unless this generation still owns the
             // live preview host.
@@ -3832,7 +3866,7 @@ let projectListPreviewRuntimePromise = null;
 let disposeProjectListPreviews = () => {};
 function activateProjectListPreviews(root){
   let disposed = false, cleanup = () => {};
-  if (!projectListPreviewRuntimePromise) projectListPreviewRuntimePromise = import('./project-preview-runtime.js?v=20261010-05');
+  if (!projectListPreviewRuntimePromise) projectListPreviewRuntimePromise = import('./project-preview-runtime.js?v=20261023-01');
   projectListPreviewRuntimePromise.then(({mountProjectListPreviews}) => {
     if (disposed || !root?.isConnected) return;
     cleanup = mountProjectListPreviews(root, {resolveUrl:ghRawUrl});
@@ -4768,7 +4802,7 @@ function openMediaFullPreview(item,trigger){
     });
     (async()=>{
       try{
-        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261015-01');
+        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261023-01');
         if(!overlay.isConnected)return;
         modelCleanup=await mountModelViewer(host,src,{hint:true,resolveUrl:ghRawUrl,enablePan:true,enableZoom:true});
         if(!overlay.isConnected){
