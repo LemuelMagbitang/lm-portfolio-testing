@@ -3447,6 +3447,11 @@ function buildProjectBody(el, p, options = {}){
       });
       card.querySelector('[data-remove-group]')?.addEventListener('click', () => {
         const assignedCount = p.media.filter(media => media.groupId === group.id).length;
+        const confirmed = assignedCount === 0 || window.confirm(
+          'Remove artwork group "' + group.name + '"? This will unassign ' + assignedCount +
+          ' artwork item' + (assignedCount === 1 ? '' : 's') + ', but will not delete the artwork itself.'
+        );
+        if (!confirmed) return;
         p.media.forEach(media => { if (media.groupId === group.id) delete media.groupId; });
         p.mediaGroups = p.mediaGroups.filter(item => item.id !== group.id);
         markChanged();
