@@ -3317,8 +3317,18 @@ function buildProjectBody(el, p, options = {}){
   const groupStatus = el.querySelector('[data-group-status]');
   let medWrap = el.querySelector('[data-medialist]');
 
+  const CREATE_ARTWORK_GROUP_OPTION = '__create_artwork_group__';
+
   function artworkGroupFor(media) {
     return p.mediaGroups.find(group => group.id === String(media?.groupId || '')) || null;
+  }
+
+  function artworkGroupOptionMarkup(media = null) {
+    return '<option value="">Ungrouped — vertical list</option>' + p.mediaGroups.map(group =>
+      '<option value="' + attr(group.id) + '"' + (media?.groupId === group.id ? ' selected' : '') + '>' +
+        esc(group.name || group.id) + '</option>'
+    ).join('') +
+      '<option value="' + CREATE_ARTWORK_GROUP_OPTION + '">+ Create new group…</option>';
   }
 
   function syncArtworkGroupCard(row, media) {
@@ -3363,9 +3373,7 @@ function buildProjectBody(el, p, options = {}){
       const selector = row.querySelector('[data-artwork-group-select]');
       if (!media || !selector) return;
       const group = artworkGroupFor(media);
-      selector.innerHTML = '<option value="">Ungrouped — vertical list</option>' + p.mediaGroups.map(item =>
-        '<option value="' + attr(item.id) + '">' + esc(item.name || item.id) + '</option>'
-      ).join('');
+      selector.innerHTML = artworkGroupOptionMarkup(media);
       selector.value = group?.id || '';
       syncArtworkGroupCard(row, media);
     });
@@ -3452,19 +3460,25 @@ function buildProjectBody(el, p, options = {}){
     updateArtworkGroupCounts();
   }
 
-  createGroupButton?.addEventListener('click', () => {
-    const requestedName = String(groupNameInput?.value || '').trim();
-    const name = requestedName || 'Artwork Group ' + (p.mediaGroups.length + 1);
+  function createArtworkGroupRecord(requestedName, requestedColor, requestedLayout = 'grid') {
+    const requested = String(requestedName || '').trim();
+    const name = requested || 'Artwork Group ' + (p.mediaGroups.length + 1);
     const baseId = slugify(name) || 'artwork-group';
     let id = baseId, suffix = 2;
     while (p.mediaGroups.some(group => group.id === id)) id = baseId + '-' + suffix++;
     const group = {
       id,
       name,
-      layout: ['grid','stack','cards'].includes(groupLayoutInput?.value) ? groupLayoutInput.value : 'grid',
-      color: normalizeArtworkGroupColor(groupColorInput?.value)
+      layout: ['grid','stack','cards'].includes(requestedLayout) ? requestedLayout : 'grid',
+      color: normalizeArtworkGroupColor(requestedColor)
     };
     p.mediaGroups.push(group);
+    return group;
+  }
+
+  createGroupButton?.addEventListener('click', () => {
+    const group = createArtworkGroupRecord(groupNameInput?.value, groupColorInput?.value, groupLayoutInput?.value);
+    const { id, name } = group;
     if (groupNameInput) groupNameInput.value = '';
     if (groupLayoutInput) groupLayoutInput.value = 'grid';
     if (groupColorInput) groupColorInput.value = DEFAULT_ARTWORK_GROUP_COLOR;
@@ -3486,9 +3500,7 @@ function buildProjectBody(el, p, options = {}){
       row.className = 'card-item';
       row.style.background = '#191919';
       row.dataset.uid = m._uid;
-      const groupOptionMarkup = '<option value="">Ungrouped — vertical list</option>' + p.mediaGroups.map(group =>
-        '<option value="' + attr(group.id) + '"' + (m.groupId === group.id ? ' selected' : '') + '>' + esc(group.name || group.id) + '</option>'
-      ).join('');
+      const groupOptionMarkup = artworkGroupOptionMarkup(m);
       row.innerHTML = `
         <div class="card-item-head collapsible-head" data-toggle-open>
           <span class="drag-handle" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
@@ -3512,6 +3524,20 @@ function buildProjectBody(el, p, options = {}){
             ${groupOptionMarkup}
           </select>
         </div>
+        <form class="artwork-card-inline-group-create" data-inline-group-create hidden>
+          <div class="field">
+            <label class="field-label" for="artwork-inline-group-name-${attr(m._uid)}">New group name</label>
+            <input id="artwork-inline-group-name-${attr(m._uid)}" data-inline-group-name maxlength="80" required placeholder="e.g. Character studies">
+          </div>
+          <div class="field artwork-group-color-field">
+            <label class="field-label" for="artwork-inline-group-color-${attr(m._uid)}">Group color</label>
+            <input id="artwork-inline-group-color-${attr(m._uid)}" type="color" data-inline-group-color value="${DEFAULT_ARTWORK_GROUP_COLOR}" aria-label="Color for the new artwork group">
+          </div>
+          <div class="artwork-card-inline-group-actions">
+            <button type="submit" class="primary">Create &amp; assign</button>
+            <button type="button" data-inline-group-cancel>Cancel</button>
+          </div>
+        </form>
         <div class="collapsible-body media-editor-body" style="display:${isOpen?'block':'none'};" data-mbody>
           <div class="row media-editor-row">
             <div class="field" style="max-width:140px"><label class="field-label">Type</label>
@@ -3547,8 +3573,19 @@ function buildProjectBody(el, p, options = {}){
         paintMedia();
       });
       syncArtworkGroupCard(row, m);
-      row.querySelector('[data-artwork-group-select]')?.addEventListener('change', event => {
+      const groupSelector = row.querySelector('[data-artwork-group-select]');
+      const inlineGroupForm = row.querySelector('[data-inline-group-create]');
+      const inlineGroupName = row.querySelector('[data-inline-group-name]');
+      const inlineGroupColor = row.querySelector('[data-inline-group-color]');
+      groupSelector?.addEventListener('change', event => {
         const nextGroupId = String(event.target.value || '');
+        if (nextGroupId === CREATE_ARTWORK_GROUP_OPTION) {
+          // Keep the current assignment intact while the inline form is open.
+          groupSelector.value = String(m.groupId || '');
+          if (inlineGroupForm) inlineGroupForm.hidden = false;
+          inlineGroupName?.focus({ preventScroll: true });
+          return;
+        }
         if (nextGroupId && p.mediaGroups.some(group => group.id === nextGroupId)) m.groupId = nextGroupId;
         else delete m.groupId;
         syncArtworkGroupCard(row, m);
@@ -3560,6 +3597,32 @@ function buildProjectBody(el, p, options = {}){
             : 'Artwork ungrouped; its original appearance is preserved.';
         }
         markChanged();
+      });
+      inlineGroupForm?.addEventListener('submit', event => {
+        event.preventDefault();
+        const requestedName = String(inlineGroupName?.value || '').trim();
+        if (!requestedName) {
+          inlineGroupName?.focus();
+          return;
+        }
+        const group = createArtworkGroupRecord(requestedName, inlineGroupColor?.value, 'grid');
+        m.groupId = group.id;
+        inlineGroupForm.hidden = true;
+        if (inlineGroupName) inlineGroupName.value = '';
+        if (inlineGroupColor) inlineGroupColor.value = DEFAULT_ARTWORK_GROUP_COLOR;
+        markChanged();
+        paintGroups();
+        syncArtworkGroupSelectors();
+        syncArtworkGroupCards();
+        updateArtworkGroupCounts();
+        if (groupStatus) groupStatus.textContent = 'Created and assigned ' + group.name + '. Remember to publish your changes.';
+        toast('Created and assigned artwork group: ' + group.name + '.');
+        try { groupSelector?.focus({ preventScroll: true }); } catch (_) { groupSelector?.focus(); }
+      });
+      row.querySelector('[data-inline-group-cancel]')?.addEventListener('click', () => {
+        if (inlineGroupForm) inlineGroupForm.hidden = true;
+        if (groupSelector) groupSelector.value = String(m.groupId || '');
+        try { groupSelector?.focus({ preventScroll: true }); } catch (_) { groupSelector?.focus(); }
       });
       const previewEl = row.querySelector('[data-mediapreview]');
       let modelViewerCleanup = null;

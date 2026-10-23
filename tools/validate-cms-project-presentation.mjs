@@ -356,6 +356,10 @@ assert.ok(foilNormalRendererSource.includes('uniform float u_uvScale;') &&
 for (const marker of [
   "data-artwork-groups",
   "data-artwork-group-select",
+  "data-inline-group-create",
+  "data-inline-group-name",
+  "data-inline-group-color",
+  "data-inline-group-cancel",
   "data-group-create",
   "data-new-group-color",
   "data-edit-group-layout",
@@ -437,6 +441,15 @@ assert.ok(cardSelectorStart >= cardTemplateStart && cardBodyStart > cardSelector
   admin.includes('syncArtworkGroupCards()') &&
   admin.includes('group.color = normalizeArtworkGroupColor(event.target.value)'),
   'Each card must expose an always-visible group selector, accessible group color editor, and live color propagation.');
+assert.ok(admin.includes("const CREATE_ARTWORK_GROUP_OPTION = '__create_artwork_group__'") &&
+  admin.includes("nextGroupId === CREATE_ARTWORK_GROUP_OPTION") &&
+  admin.includes('createArtworkGroupRecord(requestedName, inlineGroupColor?.value, \'grid\')') &&
+  admin.includes('m.groupId = group.id;') &&
+  admin.includes('groupSelector?.focus({ preventScroll: true })') &&
+  css.includes('.artwork-card-inline-group-create[hidden]{display:none!important;}') &&
+  css.includes('@media(max-width:720px)') &&
+  css.includes('@media(max-width:520px)'),
+  'Each artwork card must support an accessible in-context create-and-assign flow that stays usable on smaller screens.');
 assert.ok(css.includes('.project-media-panel [data-medialist]>.card-item.has-artwork-group') &&
   css.includes('.artwork-group-badge[hidden]') &&
   css.includes('@media(max-width:720px)') &&
