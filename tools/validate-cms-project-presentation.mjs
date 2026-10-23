@@ -458,6 +458,16 @@ assert.ok(css.includes('.project-media-panel [data-medialist]>.card-item.has-art
 assert.ok(css.includes('.project-media-panel [data-medialist]>.card-item{') &&
   css.includes('background:transparent!important;border:0;border-bottom:1px solid var(--line-soft)'),
   'Individual artworks must use compact divider rows rather than stacked nested cards.');
+const removeGroupHandlerStart = admin.indexOf("card.querySelector('[data-remove-group]')?.addEventListener('click'");
+const removeGroupUnassignStart = admin.indexOf('p.media.forEach(media => { if (media.groupId === group.id) delete media.groupId; });', removeGroupHandlerStart);
+const removeGroupHandler = removeGroupHandlerStart >= 0 && removeGroupUnassignStart > removeGroupHandlerStart
+  ? admin.slice(removeGroupHandlerStart, removeGroupUnassignStart + 100)
+  : '';
+assert.ok(removeGroupHandler.includes('assignedCount === 0 || window.confirm(') &&
+  removeGroupHandler.includes('if (!confirmed) return;') &&
+  removeGroupHandler.indexOf('window.confirm(') < removeGroupHandler.indexOf('if (!confirmed) return;') &&
+  removeGroupHandler.indexOf('if (!confirmed) return;') < removeGroupHandler.indexOf('p.media.forEach'),
+  'Removing a group with assigned artwork must require confirmation before unassigning; cancelling must preserve the assignments.');
 assert.ok(css.includes('.project-list-item.is-open .project-collapsed-preview{display:flex;flex:0 0 140px;width:140px;height:76px;margin-left:auto;}') &&
   /@media\(max-width:520px\)\{[\s\S]*?\.project-list-item\.is-open \.project-collapsed-preview\{flex-basis:72px;width:72px;height:56px;\}/.test(css),
   'Expanded CMS project cards must retain their own thumbnail with a compact mobile layout.');
