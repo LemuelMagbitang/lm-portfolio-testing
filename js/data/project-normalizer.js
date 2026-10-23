@@ -10,6 +10,11 @@ const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'm
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 const HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
 const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards']);
+const DEFAULT_ARTWORK_GROUP_COLOR = '#849573';
+function normalizeArtworkGroupColor(value) {
+  const color = normalizeString(value);
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : DEFAULT_ARTWORK_GROUP_COLOR;
+}
 function normalizeMediaGroups(groups) {
   if (!Array.isArray(groups)) return [];
   const seen = new Set();
@@ -20,7 +25,7 @@ function normalizeMediaGroups(groups) {
     seen.add(id);
     const name = normalizeString(group.name) || id;
     const layout = normalizeString(group.layout).toLowerCase();
-    return {id,name,layout:ARTWORK_GROUP_LAYOUTS.has(layout)?layout:'grid'};
+    return {id,name,layout:ARTWORK_GROUP_LAYOUTS.has(layout)?layout:'grid',color:normalizeArtworkGroupColor(group.color)};
   }).filter(Boolean);
 }
 

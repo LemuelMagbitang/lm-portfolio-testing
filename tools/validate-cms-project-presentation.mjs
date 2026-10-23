@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261010-04';
+import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261023-02';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261023-01';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
 
@@ -278,14 +278,19 @@ assert.notEqual(foilCanvas.dataset.normalMapStatus, 'ready', 'A destroyed render
 
 const groupedProject = normalizeProject({
   id:'group-contract-test',title:'Group contract',subtitle:'Optional layout groups',
-  mediaGroups:[{id:'studies',name:'Studies',layout:'grid'}],
+  mediaGroups:[
+    {id:'studies',name:'Studies',layout:'grid',color:'#B6D2A7'},
+    {id:'legacy',name:'Legacy group',layout:'stack'}
+  ],
   media:[
     {type:'image',src:'assets/projects/test/one.jpg',groupId:'studies'},
     {type:'image',src:'assets/projects/test/two.jpg',groupId:'missing-group'}
   ]
 });
-assert.deepEqual(groupedProject.mediaGroups,[{id:'studies',name:'Studies',layout:'grid'}],
-  'Valid project groups must survive normalization.');
+assert.deepEqual(groupedProject.mediaGroups,[
+  {id:'studies',name:'Studies',layout:'grid',color:'#b6d2a7'},
+  {id:'legacy',name:'Legacy group',layout:'stack',color:'#849573'}
+], 'Group colors must persist and legacy groups must receive a stable color.');
 assert.equal(groupedProject.media[0].groupId,'studies',
   'Artwork membership must survive normalization.');
 assert.equal(groupedProject.media[1].groupId,undefined,
@@ -407,14 +412,35 @@ for (const marker of ['.media-action-btn:hover','.media-delete-action:hover','.m
 assert.ok(admin.includes('class="panel project-editor-panel project-thumbnail-panel"') &&
   admin.includes('class="panel project-editor-panel project-media-panel"'),
   'Project editor sections must use the flatter editor-panel surface rather than another nested card.');
-assert.ok(admin.includes('data-artwork-group-disclosure') &&
-  admin.includes('data-group-count') &&
-  admin.includes('data-artwork-group-list'),
-  'Existing artwork-group management must be separate from sticky selection controls.');
-assert.ok(css.includes('position:sticky;top:70px') &&
-  css.includes('.artwork-group-manager{') &&
-  css.includes('.artwork-group-manager{position:static;grid-template-columns:minmax(0,1fr)'),
-  'Artwork grouping controls must stay reachable while scrolling on desktop and return to normal flow on mobile.');
+const groupManagerStart = admin.indexOf('<section class="artwork-group-manager"');
+const groupManagerEnd = admin.indexOf('<div data-medialist></div>', groupManagerStart);
+const groupManagerMarkup = groupManagerStart >= 0 && groupManagerEnd > groupManagerStart
+  ? admin.slice(groupManagerStart, groupManagerEnd)
+  : '';
+const groupManagerRule = (css.match(/\.artwork-group-manager\s*\{([^}]*)\}/) || [])[1] || '';
+const cardTemplateStart = admin.indexOf('function paintMedia(){', admin.indexOf('function paintGroups()'));
+const cardSelectorStart = admin.indexOf('data-artwork-group-select', cardTemplateStart);
+const cardBodyStart = admin.indexOf('data-mbody', cardTemplateStart);
+assert.ok(groupManagerMarkup.includes('data-group-create') &&
+  groupManagerMarkup.includes('data-new-group-color') &&
+  groupManagerMarkup.includes('data-artwork-group-list') &&
+  groupManagerMarkup.includes('data-group-count') &&
+  !admin.includes('data-artwork-group-disclosure') &&
+  !admin.includes('data-group-target') &&
+  !admin.includes('data-media-select'),
+  'Artwork groups must use one cohesive create/manage section without duplicated selection controls.');
+assert.ok(!/position\s*:\s*(?:sticky|fixed)/i.test(groupManagerRule),
+  'The artwork-group manager must remain in normal document flow on every viewport.');
+assert.ok(cardSelectorStart >= cardTemplateStart && cardBodyStart > cardSelectorStart &&
+  admin.includes('data-edit-group-color') &&
+  admin.includes('syncArtworkGroupCards()') &&
+  admin.includes('group.color = normalizeArtworkGroupColor(event.target.value)'),
+  'Each card must expose an always-visible group selector, accessible group color editor, and live color propagation.');
+assert.ok(css.includes('.project-media-panel [data-medialist]>.card-item.has-artwork-group') &&
+  css.includes('.artwork-group-badge[hidden]') &&
+  css.includes('@media(max-width:720px)') &&
+  css.includes('@media(max-width:520px)'),
+  'Only assigned cards receive a visible group accent while group controls remain responsive.');
 assert.ok(css.includes('.project-media-panel [data-medialist]>.card-item{') &&
   css.includes('background:transparent!important;border:0;border-bottom:1px solid var(--line-soft)'),
   'Individual artworks must use compact divider rows rather than stacked nested cards.');

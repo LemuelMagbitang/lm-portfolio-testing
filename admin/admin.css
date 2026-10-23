@@ -895,61 +895,65 @@ button.icon-btn,
 }
 
 
-/* Project media-group editor
-   Sticky selection controls stay reachable while scanning long galleries.
-   Group definitions themselves sit in a disclosure below the controls, not
-   inside the sticky surface, so adding many groups does not make it expand. */
+/* Artwork-group controls — cohesive, normal-flow creation and management. */
 .artwork-group-manager{
-  position:sticky;top:70px;z-index:25;align-self:start;
-  display:grid;grid-template-columns:minmax(145px,.72fr) minmax(0,2fr);
-  gap:8px 14px;margin:10px 0 8px;padding:10px 12px;
-  border:1px solid rgba(255,255,255,.1);border-radius:10px;
-  background:rgba(29,29,29,.97);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-  box-shadow:0 8px 22px rgba(0,0,0,.2);
+  display:grid;gap:12px;margin:10px 0 14px;padding:14px;
+  border:1px solid rgba(255,255,255,.1);border-radius:10px;background:#151515;
 }
-.artwork-group-manager-copy{display:grid;gap:3px;align-self:center;}
+.artwork-group-manager-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;min-width:0;}
+.artwork-group-manager-copy{display:grid;gap:4px;min-width:0;}
 .artwork-group-manager-copy strong{font-size:12px;color:#f4f4f4;}
-.artwork-group-manager-copy span,.artwork-group-selection-status{font-size:10.5px;line-height:1.4;color:#8d8d8d;}
-.artwork-group-manager-copy span{max-width:31ch;}
-.artwork-group-create-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,.8fr) minmax(145px,.9fr);gap:8px;align-items:end;}
-.artwork-group-create-row .field{min-width:0;flex:initial;margin:0;}
-.artwork-group-create-row .field-label{font-size:9px;letter-spacing:.04em;margin-bottom:4px;}
-.artwork-group-create-row input,.artwork-group-create-row select{box-sizing:border-box;width:100%;min-width:0;padding:8px 9px;font-size:12px;border-radius:7px;}
-.artwork-group-actions{display:flex;flex-wrap:wrap;grid-column:2;gap:6px;align-items:center;justify-content:flex-end;}
-.artwork-group-actions button,.artwork-group-card-meta button{padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#202020;color:#ddd;font-size:11px;cursor:pointer;}
-.artwork-group-actions button.primary{background:#eee;color:#141414;border-color:#eee;}
-.artwork-group-actions button:disabled{opacity:.35;cursor:not-allowed;}
-.artwork-group-selection-status{grid-column:1/-1;margin:0;padding-top:6px;border-top:1px solid var(--line-soft);}
-.artwork-group-existing{margin:4px 0 10px;border-bottom:1px solid var(--line-soft);}
-.artwork-group-existing[hidden]{display:none!important;}
-.artwork-group-existing>summary{display:flex;align-items:center;gap:10px;padding:9px 2px;color:#aaa;font-size:11px;font-weight:650;cursor:pointer;list-style:none;}
-.artwork-group-existing>summary::-webkit-details-marker{display:none;}
-.artwork-group-existing>summary::after{content:'+';margin-left:auto;color:#777;font-size:15px;font-weight:400;}
-.artwork-group-existing[open]>summary::after{content:'−';}
-.artwork-group-existing>summary [data-group-count]{color:#777;font-weight:500;}
+.artwork-group-manager-copy span,.artwork-group-selection-status{font-size:11px;line-height:1.45;color:#929292;}
+.artwork-group-manager-copy span{max-width:60ch;}
+.artwork-group-count{flex:0 0 auto;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#c7c7c7;font-size:10px;font-weight:650;white-space:nowrap;}
+.artwork-group-create-row{display:grid;grid-template-columns:minmax(150px,1.3fr) minmax(150px,1fr) minmax(76px,.35fr) auto;gap:9px;align-items:end;}
+.artwork-group-create-row .field,.artwork-group-card-fields .field{min-width:0;margin:0;}
+.artwork-group-create-row .field-label,.artwork-group-card-fields .field-label{font-size:10px;letter-spacing:.02em;margin-bottom:5px;}
+.artwork-group-create-row input:not([type="color"]),.artwork-group-create-row select,.artwork-group-card-fields input:not([type="color"]),.artwork-group-card-fields select{box-sizing:border-box;width:100%;min-width:0;padding:8px 9px;font-size:12px;border-radius:7px;}
+.artwork-group-color-field input[type="color"]{display:block;box-sizing:border-box;width:48px;min-width:48px;height:35px;padding:3px;border:1px solid rgba(255,255,255,.18);border-radius:7px;background:#202020;cursor:pointer;}
+.artwork-group-create-button{min-height:35px;padding:8px 13px;white-space:nowrap;}
+.artwork-group-selection-status{margin:0;}
 .artwork-group-list{display:grid;gap:8px;}
-.artwork-group-card{padding:10px 0;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;background:transparent;}
+.artwork-group-card{padding:10px 10px 10px 12px;border:0;border-left:3px solid var(--artwork-group-color,#849573);border-bottom:1px solid var(--line-soft);border-radius:0 0 0 3px;background:rgba(255,255,255,.018);}
 .artwork-group-card:last-child{border-bottom:0;}
-.artwork-group-card-fields{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(150px,1fr);gap:10px;align-items:end;}
+.artwork-group-card-fields{display:grid;grid-template-columns:minmax(130px,1.25fr) minmax(150px,1fr) minmax(58px,.35fr);gap:10px;align-items:end;}
 .artwork-group-card-fields .field{min-width:0;}
-.artwork-group-card-fields input,.artwork-group-card-fields select{box-sizing:border-box;width:100%;min-width:0;}
-.artwork-group-card-meta{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#969696;font-size:11px;}
-.artwork-group-card-meta button{color:#e5aaa4;border-color:rgba(224,88,79,.2);}
-.artwork-select-handle{display:inline-flex;align-items:center;gap:10px;flex:0 0 auto;}
-.artwork-select-input{width:15px!important;height:15px;margin:0;flex:0 0 15px;accent-color:#f2f2f2;cursor:pointer;}
-.artwork-group-assignment{max-width:420px;}
-.artwork-group-assignment select{width:100%;}
+.artwork-group-card-meta{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#969696;font-size:10.5px;}
+.artwork-group-card-meta button{padding:7px 10px;border:1px solid rgba(224,88,79,.25);border-radius:8px;background:#202020;color:#e5aaa4;font-size:11px;cursor:pointer;white-space:nowrap;}
+.artwork-group-manager button:focus-visible,.artwork-group-manager input:focus-visible,.artwork-group-manager select:focus-visible,.artwork-card-group-select:focus-visible{outline:2px solid #d9e6cb;outline-offset:2px;}
+.artwork-card-group-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:1px 0 9px;min-width:0;}
+.artwork-card-group-summary{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-width:0;}
+.artwork-card-group-label{font-size:10.5px;font-weight:600;color:#999;white-space:nowrap;}
+.artwork-group-badge{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.035);color:#e4e4e4;font-size:10px;line-height:1.25;font-weight:650;}
+.artwork-group-badge[hidden]{display:none!important;}
+.artwork-group-color-swatch{width:8px;height:8px;flex:0 0 8px;border-radius:2px;background:#849573;box-shadow:0 0 0 1px rgba(255,255,255,.16);}
+.artwork-card-group-select{box-sizing:border-box;width:min(270px,58%);min-width:0;padding:7px 9px;border:1px solid var(--line-soft);border-radius:7px;background:#101010;color:#ddd;font-size:11px;}
+/* Only assigned cards receive an accent; ungrouped rows retain their existing appearance. */
+.project-media-panel [data-medialist]>.card-item.has-artwork-group{border-left:3px solid var(--artwork-group-color);padding-left:10px;}
 @media(max-width:720px){
-  .artwork-group-manager{position:static;grid-template-columns:minmax(0,1fr);gap:8px;margin:8px 0 10px;padding:10px 0;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
-  .artwork-group-manager-copy span{max-width:none;}
-  .artwork-group-create-row{display:flex;flex-direction:column;gap:8px;align-items:stretch;}
-  .artwork-group-create-row .field,.artwork-group-create-row>.field{width:100%;min-width:0;margin:0;}
-  .artwork-group-actions{grid-column:auto;justify-content:flex-start;}
-  .artwork-group-selection-status{grid-column:auto;}
-  .artwork-group-card-fields{grid-template-columns:minmax(0,1fr);}
-  .artwork-group-card-meta{grid-column:auto;align-items:flex-start;flex-direction:column;}
+  .artwork-group-manager{gap:10px;margin:8px 0 12px;padding:11px;}
+  .artwork-group-create-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
+  .artwork-group-create-row .field{width:100%;}
+  .artwork-group-create-button{justify-self:start;align-self:end;}
+  .artwork-group-card-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 58px;gap:8px;}
+  .artwork-group-card-meta{grid-column:1/-1;align-items:center;flex-direction:row;}
+  .artwork-card-group-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin:3px 0 9px;}
+  .artwork-card-group-select{width:100%;max-width:none;}
   .project-editor-body > .project-editor-panel{padding:12px 0 15px;}
   .project-media-panel [data-medialist]>.card-item{padding:9px 0;}
+  .project-media-panel [data-medialist]>.card-item.has-artwork-group{padding-left:9px;}
+}
+@media(max-width:520px){
+  .artwork-group-manager{padding:10px;}
+  .artwork-group-manager-heading{align-items:flex-start;flex-direction:column;gap:6px;}
+  .artwork-group-create-row{grid-template-columns:minmax(0,1fr) 56px;}
+  .artwork-group-create-row>.field:nth-child(1),.artwork-group-create-row>.field:nth-child(2){grid-column:1/-1;}
+  .artwork-group-create-button{grid-column:2;grid-row:3;justify-self:stretch;white-space:normal;padding:7px 8px;font-size:11px;}
+  .artwork-group-create-row>.artwork-group-color-field{grid-column:1;grid-row:3;}
+  .artwork-group-card-fields{grid-template-columns:minmax(0,1fr) 58px;align-items:end;}
+  .artwork-group-card-fields>.field:nth-child(1),.artwork-group-card-fields>.field:nth-child(2){grid-column:1/-1;}
+  .artwork-group-card-meta{grid-column:1/-1;flex-wrap:wrap;align-items:flex-start;}
+  .artwork-group-card-meta button{white-space:normal;text-align:left;}
 }
 
 /* ---------- Full media preview from the CMS Media Library ---------- */
