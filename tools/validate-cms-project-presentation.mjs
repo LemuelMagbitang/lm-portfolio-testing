@@ -355,11 +355,12 @@ assert.ok(foilNormalRendererSource.includes('uniform float u_uvScale;') &&
 
 for (const marker of [
   "data-artwork-groups",
-  "data-media-select",
-  "data-group-apply",
-  "data-group-target",
+  "data-artwork-group-select",
+  "data-group-create",
+  "data-new-group-color",
   "data-edit-group-layout",
-  "Remove group &amp; ungroup artwork",
+  "data-edit-group-color",
+  "Remove group",
   "project-list-item",
   "project-card-head",
   "project-collapsed-preview",

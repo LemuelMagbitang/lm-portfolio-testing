@@ -1986,7 +1986,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !bootstrap.includes("cacheVersion = '20261023-02'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("hero/index.js?v=20261023-02") ||
-      !composition.includes("footer/index.js?v=20261018-08") ||
+      !composition.includes("footer/index.js?v=20261023-02") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261020-06") ||
