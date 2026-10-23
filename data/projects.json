@@ -479,12 +479,14 @@
       {
         "id": "group1",
         "name": "group1",
-        "layout": "cards"
+        "layout": "cards",
+        "color": "#849573"
       },
       {
         "id": "group2",
         "name": "group2",
-        "layout": "cards"
+        "layout": "cards",
+        "color": "#ff0000"
       }
     ],
     "media": [
