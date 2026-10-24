@@ -1707,14 +1707,7 @@ export function createLightboxMediaRenderer({
         if (youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
         iframe.dataset.lmYoutubeLoadError = 'true';
         const artwork = iframe.closest?.('.lightbox-artwork');
-        if (artwork) showLightboxMediaFallback(
-          artwork,
-          project,
-          item.src,
-          'youtube',
-          'error',
-          parsed?.id ? 'https://img.youtube.com/vi/' + parsed.id + '/hqdefault.jpg' : ''
-        );
+        if (artwork) showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'error');
       }, { once: true });
       iframe.src = embedSrc;
     } else {
@@ -1738,19 +1731,11 @@ export function createLightboxMediaRenderer({
     const artwork = entry.querySelector('.lightbox-artwork');
     artwork?.classList.add('is-youtube-artwork');
     artwork?.setAttribute('data-youtube-orientation', resolvedOrientation);
-    const youtubePoster = parsed?.id ? 'https://img.youtube.com/vi/' + parsed.id + '/hqdefault.jpg' : '';
     if (iframe.dataset.lmYoutubeLoaded !== 'true' && iframe.dataset.lmYoutubeLoadError !== 'true') {
-      showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'loading', youtubePoster);
+      showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'loading');
     }
     if (iframe.dataset.lmYoutubeLoadError === 'true') {
-      showLightboxMediaFallback(
-        artwork,
-        project,
-        item.src,
-        'youtube',
-        'error',
-        parsed?.id ? 'https://img.youtube.com/vi/' + parsed.id + '/hqdefault.jpg' : ''
-      );
+      showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'error');
     }
     if (resolvedOrientation === 'portrait') setAspectRatio(artwork, 9, 16);
     else if (resolvedOrientation === 'square') setAspectRatio(artwork, 1, 1);
