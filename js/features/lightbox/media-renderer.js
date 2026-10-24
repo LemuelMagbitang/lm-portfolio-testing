@@ -1459,8 +1459,9 @@ export function createLightboxMediaRenderer({
     for (const item of items) {
       const raw = String(item?.src || '').trim();
       if (!raw || raw === failed) continue;
-      const type = String(item?.type || 'image').toLowerCase();
-      if (type !== 'image') continue;
+      const type = String(item?.type || '').toLowerCase();
+      const knownNonImage = /\.(mp4|webm|mov|m4v|ogv|ogg|json|obj|gltf|glb|fbx)(?:[?#]|$)/i.test(raw);
+      if (type ? type !== 'image' : knownNonImage) continue;
       const resolved = resolveAssetUrl(raw);
       if (resolved && resolved !== failed) return resolved;
     }
