@@ -81,21 +81,38 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
       if(node.__modelViewerMountToken)delete node.__modelViewerMountToken;
       node.replaceChildren();
     }
+    clearPreviewFallback(node);
     node.dataset.previewState='idle';
   }
-  function setPreviewError(node, message) {
+  function setPreviewFallback(node, mediaType = node?.dataset?.previewType) {
     const surface = node?.parentElement?.parentElement;
-    if (!surface) return;
-    let note = surface.querySelector?.('.project-collapsed-preview-error');
+    if (!surface || !doc?.createElement) return;
+    let note = surface.querySelector?.('.project-collapsed-preview-fallback');
     if (!note) {
       note = doc.createElement('span');
-      note.className = 'project-collapsed-preview-error';
+      note.className = 'project-collapsed-preview-fallback';
       surface.appendChild(note);
     }
-    note.textContent = message;
+    if (typeof note.replaceChildren === 'function') note.replaceChildren();
+    else note.textContent = '';
+    const type = String(mediaType || '').toLowerCase();
+    const label = type === 'model' ? '3D ARTWORK' :
+      type === 'lottie' ? 'ANIMATED ARTWORK' :
+      type === 'video' ? 'VIDEO ARTWORK' : 'PROJECT ARTWORK';
+    note.setAttribute('role', 'img');
+    note.setAttribute('aria-label', label);
+    const icon = doc.createElement('i');
+    icon.className = type === 'model' ? 'fa-solid fa-cube' :
+      type === 'lottie' ? 'fa-solid fa-wand-magic-sparkles' :
+      type === 'video' ? 'fa-solid fa-film' : 'fa-regular fa-image';
+    icon.setAttribute('aria-hidden', 'true');
+    const caption = doc.createElement('span');
+    caption.textContent = label;
+    note.appendChild(icon);
+    note.appendChild(caption);
   }
-  function clearPreviewError(node) {
-    node?.parentElement?.parentElement?.querySelector?.('.project-collapsed-preview-error')?.remove();
+  function clearPreviewFallback(node) {
+    node?.parentElement?.parentElement?.querySelector?.('.project-collapsed-preview-fallback, .project-collapsed-preview-error')?.remove();
   }
   function activate(node) {
     if(!ownsNode(node)||node.dataset.previewActive==='true'||node.dataset.previewState==='loading')return;
@@ -105,9 +122,39 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     activationGeneration.set(node, generation);
     node.dataset.previewActive='true';node.dataset.previewState='loading';
     if(type==='video') {
-      node.muted=true;node.loop=true;node.autoplay=true;node.playsInline=true;node.preload='metadata';node.src=src;
-      try{node.load();}catch(_){} const playback=node.play?.();if(playback&&typeof playback.catch==='function')playback.catch(()=>{});
-      active.set(node,{type:'video'});node.dataset.previewState='ready';return;
+      let loadTimer = null;
+      const isCurrent = () => ownsNode(node) &&
+        node.dataset.previewActive === 'true' &&
+        activationGeneration.get(node) === generation;
+      const markReady = () => {
+        if (!isCurrent()) return;
+        if (loadTimer !== null) { clearTimeout(loadTimer); loadTimer = null; }
+        clearPreviewFallback(node);
+        node.dataset.previewState = 'ready';
+      };
+      const markFallback = () => {
+        if (!isCurrent()) return;
+        if (loadTimer !== null) { clearTimeout(loadTimer); loadTimer = null; }
+        setPreviewFallback(node, 'video');
+        node.dataset.previewState = 'error';
+      };
+      const cleanup = () => {
+        if (loadTimer !== null) { clearTimeout(loadTimer); loadTimer = null; }
+        node.removeEventListener('loadeddata', markReady);
+        node.removeEventListener('canplay', markReady);
+        node.removeEventListener('error', markFallback);
+      };
+      node.addEventListener('loadeddata', markReady);
+      node.addEventListener('canplay', markReady);
+      node.addEventListener('error', markFallback);
+      active.set(node,{type:'video',cleanup});
+      node.muted=true;node.loop=true;node.autoplay=true;node.playsInline=true;node.preload='metadata';
+      loadTimer = setTimeout(markFallback, 15000);
+      node.src=src;
+      try{node.load();}catch(_){}
+      const playback=node.play?.();
+      if(playback&&typeof playback.catch==='function')playback.catch(()=>{});
+      return;
     }
     if(type==='lottie') {
       const job = (async () => {
@@ -125,13 +172,13 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
         }
         if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
         if (!playerAvailable) {
-          setPreviewError(node, 'Lottie preview unavailable');
+          setPreviewFallback(node, 'lottie');
           node.dataset.previewState = 'error';
           return;
         }
         if (node.updateComplete && typeof node.updateComplete.then === 'function') await node.updateComplete;
         if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
-        clearPreviewError(node);
+        clearPreviewFallback(node);
         node.setAttribute('background','transparent');
         node.setAttribute('preserveAspectRatio','xMidYMid slice');
         node.setAttribute('renderer','svg');
@@ -155,7 +202,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
         const animation = node.getLottie?.();
         const svg = node.shadowRoot?.querySelector?.('svg');
         if (!rendered || !animation || !svg) {
-          setPreviewError(node, 'Lottie preview failed to render');
+          setPreviewFallback(node, 'lottie');
           node.dataset.previewState = 'error';
           return;
         }
@@ -164,7 +211,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
       })();
       void job.catch(() => {
         if (!ownsNode(node) || node.dataset.previewActive !== 'true') return;
-        setPreviewError(node, 'Lottie preview unavailable');
+        setPreviewFallback(node, 'lottie');
         node.dataset.previewState = 'error';
       });
       return;
@@ -183,7 +230,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
         active.set(node,{type:'model',cleanup});node.dataset.previewState='ready';
       } catch(_) {
         if(!ownsNode(node)||node.dataset.previewActive!=='true')return;
-        node.dataset.previewState='error';node.innerHTML='<span class="project-collapsed-preview-error">3D preview unavailable</span>';
+        node.dataset.previewState='error';setPreviewFallback(node, 'model');
       }
     });
     modelQueue=job.catch(()=>{});
