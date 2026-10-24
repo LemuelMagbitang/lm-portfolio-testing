@@ -201,6 +201,24 @@ export function buildProjectCardElement(
     if (t.zoom && Number(t.zoom) !== 1) thumbnail.dataset.zoom = String(t.zoom);
     if (t.rotate) thumbnail.dataset.rotate = String(t.rotate);
   }
+  // Never leave the card's reserved media surface empty. Malformed records,
+  // unsupported URL formats, or missing source resolvers retain a stable
+  // artwork placeholder while the project itself remains openable.
+  if (!thumbnail.children?.length) {
+    const fallback = documentRef.createElement('span');
+    fallback.className = 'project-thumb-media-fallback project-thumb-static-fallback';
+    fallback.dataset.state = 'error';
+    fallback.setAttribute('role', 'img');
+    fallback.setAttribute('aria-label', `${String(project.title || 'Project').trim() || 'Project'} artwork preview`);
+    const icon = documentRef.createElement('i');
+    icon.className = 'fa-regular fa-image';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = documentRef.createElement('span');
+    label.className = 'project-thumb-media-fallback-label';
+    label.textContent = 'PROJECT ARTWORK';
+    fallback.append(icon, label);
+    thumbnail.appendChild(fallback);
+  }
   card.appendChild(thumbnail);
 
   const info = documentRef.createElement('div');
