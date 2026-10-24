@@ -1996,7 +1996,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261024-10") ||
-      !composition.includes("lightbox/index.js?v=20261024-09") ||
+      !composition.includes("lightbox/index.js?v=20261024-10") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261024-17') ||
       !works.includes('js/app/page-composition.js?v=20261024-17') ||
