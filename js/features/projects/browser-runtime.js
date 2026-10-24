@@ -13,8 +13,8 @@
  */
 
 import { loadProjects } from './project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from './project-card.js?v=20261024-01';
-import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261024-01';
+import { buildProjectCardElement } from './project-card.js?v=20261024-02';
+import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261024-02';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
 import { parseYouTubeUrl as defaultParseYouTubeUrl } from '../../infrastructure/youtube/url.js';
@@ -30,6 +30,7 @@ export async function mountProjects({
   onCardActivate,
   applyMediaBackground,
   parseYouTubeUrl = defaultParseYouTubeUrl,
+  ensureLottiePlayer = null,
   waitForThumbnailReadiness = true,
   buildCard = (project, index = 0) => buildProjectCardElement(project, {
     resolveAssetUrl,
@@ -37,7 +38,8 @@ export async function mountProjects({
     documentRef,
     onActivate: onCardActivate,
     priority: index < (Number(documentRef?.defaultView?.innerWidth) < 768 ? 2 : 3),
-    parseYouTubeUrl
+    parseYouTubeUrl,
+    ensureLottiePlayer
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;
