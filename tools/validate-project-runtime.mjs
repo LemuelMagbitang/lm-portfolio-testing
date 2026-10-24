@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-03';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-03';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-04';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-03';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-02';
 import {
@@ -854,6 +854,29 @@ assert.equal(getProjectCardOrientation({
   mediaType: 'youtube'
 }), 'square');
 
+const firstArtworkFallbackCard = buildProjectCardElement({
+  id: 'first-artwork-fallback',
+  title: 'First Artwork Fallback',
+  thumbnail: { type: 'image', src: '' },
+  media: [
+    // Even a missing or incorrect media type must not turn a YouTube link
+    // into a visual thumbnail. Select the first actual artwork after it.
+    { src: 'https://www.youtube.com/watch?v=abcdefgh' },
+    { type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefgh' },
+    { type: 'video', src: 'media/first-artwork.mp4' },
+    { type: 'image', src: 'media/later-image.webp' }
+  ]
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value
+});
+const firstArtworkMedia = firstArtworkFallbackCard.children[0]?.children[0];
+assert.equal(firstArtworkFallbackCard.children[0]?.dataset?.thumbnailType, 'video',
+  'An empty CMS thumbnail must use the first real project artwork in media order.');
+assert.equal(firstArtworkMedia?.dataset?.mediaType, 'video');
+assert.equal(firstArtworkMedia?.src, '/assets/media/first-artwork.mp4',
+  'The card must render the first non-YouTube artwork rather than a synthesized YouTube poster.');
+
 const youtubeFallbackCard = buildProjectCardElement({
   id: 'youtube-fallback-regression',
   title: 'YouTube Fallback Regression',
@@ -861,11 +884,12 @@ const youtubeFallbackCard = buildProjectCardElement({
   media: [{ type: 'youtube', src: 'https://www.youtube.com/shorts/abcdefgh' }]
 }, {
   documentRef: cardDocument,
-  resolveAssetUrl: value => value,
-  parseYouTubeUrl
+  resolveAssetUrl: value => value
 });
-assert.equal(youtubeFallbackCard.children[0]?.dataset?.thumbnailType, 'youtube');
-assert.equal(youtubeFallbackCard.dataset.cardOrientation, 'square');
+assert.equal(youtubeFallbackCard.children[0]?.children[0]?.className,
+  'project-thumb-media-fallback project-thumb-static-fallback',
+  'A YouTube-only project must retain the neutral placeholder rather than a YouTube-derived thumbnail.');
+assert.equal(youtubeFallbackCard.children[0]?.children[0]?.children[1]?.textContent, 'PROJECT ARTWORK');
 
 const youtubeIntrinsicMedia = makeElement();
 youtubeIntrinsicMedia.tagName = 'IMG';
