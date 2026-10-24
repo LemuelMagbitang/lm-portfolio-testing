@@ -1717,14 +1717,15 @@ function validateAboutFirstPaintContract() {
   const composition = exists('js/app/page-composition.js')
     ? readText('js/app/page-composition.js')
     : '';
-  const waitStart = composition.search(/await Promise\.all\(\[\s*projectMediaPreloadPromise,/);
+  const waitStart = composition.search(/await projectMediaPreloadPromise;/);
   const waitEnd = composition.indexOf('// About-page prefetching and image/logo warm-up', waitStart);
   if (waitStart < 0 || waitEnd <= waitStart) {
     err('About first paint: startup media-warm-up boundary could not be verified.');
     return;
   }
-  if (!composition.includes('const projectLottiePlayerPreloadPromise = hasProjectGallery && projectModels.some(')) {
-    err('About first paint: project-specific Lottie warm-up must be skipped when no Gallery exists.');
+  if (composition.includes('projectLottiePlayerPreloadPromise') ||
+      !composition.includes('applyMediaBackground,\n          ensureLottiePlayer,\n          waitForThumbnailReadiness')) {
+    err('Project Lottie thumbnails must request the player on demand instead of warming it during startup.');
   }
   const criticalWait = composition.slice(waitStart, waitEnd);
   if (criticalWait.includes('aboutAssetPreloadPromise')) {
@@ -1985,8 +1986,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261024-04") ||
-      !bootstrap.includes("cacheVersion = '20261024-04'") ||
+  if (!entry.includes("bootstrap.js?v=20261024-05") ||
+      !bootstrap.includes("cacheVersion = '20261024-05'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261024-01") ||
@@ -1994,17 +1995,17 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
-      !composition.includes("projects/index.js?v=20261024-01") ||
+      !composition.includes("projects/index.js?v=20261024-02") ||
       !composition.includes("lightbox/index.js?v=20261024-03") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261024-04') ||
-      !works.includes('js/app/page-composition.js?v=20261024-04') ||
+      !works.includes('js/app/bootstrap.js?v=20261024-05') ||
+      !works.includes('js/app/page-composition.js?v=20261024-05') ||
       !works.includes('css/style.css?v=20261024-01') ||
-      !works.includes('js/script.js?v=20261024-04') ||
+      !works.includes('js/script.js?v=20261024-05') ||
       !about.includes('style.css?v=20261024-01') ||
-      !about.includes('js/app/bootstrap.js?v=20261024-04') ||
-      !about.includes('script.js?v=20261024-04') ||
-      !about.includes('page-composition.js?v=20261024-04')) {
+      !about.includes('js/app/bootstrap.js?v=20261024-05') ||
+      !about.includes('script.js?v=20261024-05') ||
+      !about.includes('page-composition.js?v=20261024-05')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2373,12 +2374,13 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes("if (!reducedMotion) media.setAttribute('loop', '');") ||
       !thumbnail.includes("media.preload = reducedMotion || priority ? 'metadata' : 'none';") ||
       !thumbnail.includes("rootMargin: '640px 0px'") ||
+      !thumbnail.includes(".then(() => ensureLottiePlayer())") ||
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
       !styles.includes('opacity: 0;') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261024-01')) {
+      !smoke.includes('project-thumbnail.js?v=20261024-02')) {
     err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
   }
 }
