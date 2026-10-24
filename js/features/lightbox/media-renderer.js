@@ -1684,7 +1684,7 @@ export function createLightboxMediaRenderer({
     };
 
     if (typeof mountModelViewer !== 'function') {
-      modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
+      modelWrap.innerHTML = '<div class="model-viewer-error model-viewer-fallback" role="img" aria-label="3D artwork"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D ARTWORK</span></div>';
       return modelEntry;
     }
 
@@ -1785,7 +1785,7 @@ export function createLightboxMediaRenderer({
       })
       .catch(error => {
         if (!modelWrap.isConnected) return;
-        modelWrap.innerHTML = '<div class="model-viewer-error">3D model preview is unavailable.</div>';
+        modelWrap.innerHTML = '<div class="model-viewer-error model-viewer-fallback" role="img" aria-label="3D artwork"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D ARTWORK</span></div>';
         console.warn('3D model viewer:', error);
       });
 
