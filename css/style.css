@@ -1821,6 +1821,24 @@ body.center-page {
   border-radius:4px;
 }
 
+#lightboxMediaContainer .lightbox-media-fallback{
+  position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;overflow:hidden;padding:18px;border-radius:inherit;background:linear-gradient(145deg,rgba(15,19,23,.95),rgba(25,31,32,.9));
+  color:rgba(255,255,255,.78);font-size:11px;font-weight:800;letter-spacing:.12em;text-align:center;pointer-events:none;
+}
+#lightboxMediaContainer .lightbox-media-fallback-image{
+  position:absolute;inset:0;z-index:0;display:block;width:100%;height:100%;object-fit:contain;object-position:center;
+}
+#lightboxMediaContainer .lightbox-media-fallback>i,
+#lightboxMediaContainer .lightbox-media-fallback>span:not(.lightbox-media-fallback-label){
+  position:relative;z-index:1;
+}
+#lightboxMediaContainer .lightbox-media-fallback>i{font-size:26px;color:rgba(255,255,255,.68);}
+#lightboxMediaContainer .lightbox-media-fallback-label{
+  position:absolute;inset:auto 10px 10px;z-index:2;padding:7px 10px;border-radius:999px;
+  background:rgba(10,12,14,.72);color:rgba(255,255,255,.78);font-size:9px;font-weight:800;letter-spacing:.1em;
+}
+
 #lightboxMediaContainer .lightbox-artwork.has-holographic{
   isolation:isolate;
   perspective:1200px;
