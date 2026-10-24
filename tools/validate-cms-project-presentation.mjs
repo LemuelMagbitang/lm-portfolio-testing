@@ -613,7 +613,7 @@ assert.ok(/holo-style-intensity holo-main-controls/.test(admin) &&
   'CMS foil controls should keep style/strength visible and tuck texture/mask/reverse options into Advanced.');
 for (const marker of [
   'data-holo-style aria-label="Holographic effect style"',
-  'aria-label="Holographic foil strength"',
+  'aria-label="Front foil strength slider"',
   'data-holo-texture aria-label="Front foil pattern source"',
   'data-holo-mask aria-label="Front foil mask source"',
   'data-holo-back aria-label="Custom reverse card image source"',
@@ -622,9 +622,9 @@ for (const marker of [
 ]) {
   assert.ok(admin.includes(marker), `CMS foil control is missing an accessible name: ${marker}`);
 }
-assert.ok(/function updateIntensityAccessibility\(\)/.test(admin) &&
-  /setAttribute\('aria-valuetext',percent\+'%'\)/.test(admin) &&
-  /updateIntensityAccessibility\(\)/.test(admin),
+assert.ok(/function syncFromRange\(rangeInput,numberInput,label\)/.test(admin) &&
+  admin.includes("rangeInput?.setAttribute?.('aria-valuetext',percent+'%')") &&
+  admin.includes("syncFromRange(intensityInput,intensityNumberInput,intensityLabel)"),
   'CMS foil strength must announce its updated percentage to assistive technology.');
 
 assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin),

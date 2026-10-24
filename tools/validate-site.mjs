@@ -1986,7 +1986,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261024-09") ||
+  if (!entry.includes("bootstrap.js?v=20261024-10") ||
       !bootstrap.includes("cacheVersion = '20261024-09'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
@@ -1998,13 +1998,13 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("projects/index.js?v=20261024-06") ||
       !composition.includes("lightbox/index.js?v=20261024-05") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261024-09') ||
+      !works.includes('js/app/bootstrap.js?v=20261024-10') ||
       !works.includes('js/app/page-composition.js?v=20261024-10') ||
       !works.includes('css/style.css?v=20261024-03') ||
-      !works.includes('js/script.js?v=20261024-09') ||
+      !works.includes('js/script.js?v=20261024-10') ||
       !about.includes('style.css?v=20261024-03') ||
-      !about.includes('js/app/bootstrap.js?v=20261024-09') ||
-      !about.includes('script.js?v=20261024-09') ||
+      !about.includes('js/app/bootstrap.js?v=20261024-10') ||
+      !about.includes('script.js?v=20261024-10') ||
       !about.includes('page-composition.js?v=20261024-10')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
