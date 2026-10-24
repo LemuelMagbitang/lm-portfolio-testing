@@ -560,11 +560,11 @@ export async function mountModelViewer(container, src, options = {}) {
     container.classList.remove('is-interactive');
     container.setAttribute('aria-busy', 'false');
     container.setAttribute('role', 'img');
-    container.setAttribute('aria-label', '3D view unavailable');
+    container.setAttribute('aria-label', '3D artwork preview');
     container.removeAttribute('tabindex');
     container.removeAttribute('aria-expanded');
     const label = activate.querySelector('strong');
-    if (label) label.textContent = '3D VIEW UNAVAILABLE';
+    if (label) label.textContent = '3D ARTWORK';
     back.hidden = true;
     clearMediaBackgroundLayers(container);
     if (container.__modelViewerMountToken === mountToken) {
