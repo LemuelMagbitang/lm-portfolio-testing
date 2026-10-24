@@ -69,6 +69,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
     activationGeneration.set(node, (activationGeneration.get(node) || 0) + 1);
     const resource=active.get(node); active.delete(node); node.dataset.previewActive='false';
     if(resource?.type==='video') {
+      try{resource.cleanup?.();}catch(_){}
       try{node.pause();}catch(_){} node.removeAttribute('src'); try{node.load();}catch(_){}
     } else if(resource?.type==='lottie') {
       try{node.pause?.();node.stop?.();}catch(_){} node.removeAttribute('src');
