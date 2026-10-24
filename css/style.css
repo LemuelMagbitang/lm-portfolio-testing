@@ -3574,6 +3574,9 @@ footer{
 .model-viewer-back:focus{outline:none;}
 .model-viewer-back:focus-visible{outline:2px solid #fff;outline-offset:3px;}
 .model-viewer-error{padding:20px;text-align:center;color:#aaa;font-size:clamp(12px,2.1vw,14px);line-height:1.5;}
+.model-viewer-fallback{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:220px;width:100%;height:100%;border-radius:inherit;background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.09),rgba(255,255,255,.02) 58%,rgba(0,0,0,.12));color:rgba(255,255,255,.72);font-size:10px;font-weight:800;letter-spacing:.14em;}
+.model-viewer-fallback i{font-size:26px;color:rgba(255,255,255,.62);}
+.model-viewer-fallback span{font-size:10px;font-weight:800;letter-spacing:.14em;}
 
 /* Orientation drives the normal media-list presentation. Auto is square
    until the model viewer inspects the model bounds and refines it. */
