@@ -94,9 +94,6 @@ assert.match(cmsPreviewRuntimeSource, /node\.addEventListener\('canplay', markRe
 assert.match(cmsPreviewRuntimeSource, /setTimeout\(markFallback, 15000\)/);
 assert.match(cmsPreviewRuntimeSource, /project-collapsed-preview-fallback/);
 assert.doesNotMatch(cmsPreviewRuntimeSource, /Lottie preview unavailable|Lottie preview failed to render|3D preview unavailable/);
-assert.match(mediaRendererSource, /model-viewer-fallback/);
-assert.doesNotMatch(mediaRendererSource, /3D model preview is unavailable/);
-assert.doesNotMatch(modelViewerSource, /3D VIEW UNAVAILABLE|3D view unavailable/);
 const criticalStartupWarmup = pageCompositionSource.match(
   /await projectMediaPreloadPromise;/
 )?.[0] || '';
@@ -246,6 +243,9 @@ assert.ok(
   successfulModelCleanup.indexOf('mixers.forEach') < successfulModelCleanup.indexOf('disposeObject(root)'),
   'Animation mixers must be stopped and uncached before their model root is disposed.'
 );
+assert.match(mediaRendererSource, /model-viewer-fallback/);
+assert.doesNotMatch(mediaRendererSource, /3D model preview is unavailable/);
+assert.doesNotMatch(modelViewerSource, /3D VIEW UNAVAILABLE|3D view unavailable/);
 
 const foilNormalRendererSource = await readFile(new URL('../js/features/lightbox/foil-normal-renderer.js', import.meta.url), 'utf8');
 assert.match(foilNormalRendererSource, /gl\.getExtension\('WEBGL_lose_context'\)\?\.loseContext\(\)/);
