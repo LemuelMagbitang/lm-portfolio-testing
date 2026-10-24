@@ -4,8 +4,20 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-09';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-10';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
+
+function getStaticThumbnailFallback(project = {}, currentSource = '') {
+  const media = Array.isArray(project.media) ? project.media : [];
+  const current = String(currentSource || '').trim();
+  const image = media.find(item => {
+    const src = String(item?.src || '').trim();
+    if (!src || src === current) return false;
+    const type = String(item?.type || mediaTypeFromSrc(src)).toLowerCase();
+    return type === 'image';
+  });
+  return String(image?.src || '').trim();
+}
 
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
   const media = Array.isArray(project.media) ? project.media : [];
@@ -129,6 +141,7 @@ export function buildProjectCardElement(
   const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
+  const staticFallbackSrc = String(t.fallbackSrc || getStaticThumbnailFallback(project, t.src)).trim();
 
   if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
   if (t.orientation) thumbnail.dataset.thumbnailOrientation = String(t.orientation);
@@ -137,7 +150,7 @@ export function buildProjectCardElement(
     const thumbnailHolographic = thumbnailMediaType === 'image' && t.holographic &&
       typeof t.holographic === 'object' && !Array.isArray(t.holographic) ? t.holographic : null;
     const media = buildProjectThumbnailMedia(
-      { type: thumbnailMediaType, src: t.src, background },
+      { type: thumbnailMediaType, src: t.src, background, fallbackSrc: staticFallbackSrc },
       project.title || 'Project artwork',
       { resolveAssetUrl, documentRef, priority, ensureLottiePlayer, mountModelViewer }
     );
