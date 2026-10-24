@@ -7,19 +7,34 @@ import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
 import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261025-03';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
+function isYouTubeMedia(item = {}) {
+  const src = String(item?.src || '').trim();
+  if (String(item?.type || '').trim().toLowerCase() === 'youtube') return true;
+  if (!src) return false;
+  try {
+    const hostname = new URL(src, 'https://portfolio-asset.invalid').hostname.toLowerCase();
+    return hostname === 'youtu.be' ||
+      hostname.endsWith('.youtu.be') ||
+      hostname === 'youtube.com' ||
+      hostname.endsWith('.youtube.com');
+  } catch (_) {
+    return /youtube\.com|youtu\.be/i.test(src);
+  }
+}
+
 function getStaticThumbnailFallback(project = {}, currentSource = '') {
   const media = Array.isArray(project.media) ? project.media : [];
   const current = String(currentSource || '').trim();
   const image = media.find(item => {
     const src = String(item?.src || '').trim();
-    if (!src || src === current) return false;
+    if (!src || src === current || isYouTubeMedia(item)) return false;
     const type = String(item?.type || mediaTypeFromSrc(src)).toLowerCase();
     return type === 'image';
   });
   return String(image?.src || '').trim();
 }
 
-function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
+function getFallbackThumbnailSource(project = {}, thumbnail = {}) {
   const media = Array.isArray(project.media) ? project.media : [];
   const presentation = {
     focus: thumbnail.focus || '',
@@ -35,13 +50,14 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
   };
 
   for (const item of media) {
-    if (!item?.src) continue;
-    const type = String(item.type || mediaTypeFromSrc(item.src)).toLowerCase();
+    const src = String(item?.src || '').trim();
+    if (!src || isYouTubeMedia(item)) continue;
+    const type = String(item.type || mediaTypeFromSrc(src)).toLowerCase();
     if (['image', 'video', 'lottie', 'model'].includes(type)) {
       return {
         ...presentation,
         type,
-        src: item.src,
+        src,
         background: item.background && typeof item.background === 'object'
           ? item.background
           : presentation.background,
@@ -52,18 +68,9 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
     }
   }
 
-  const youtube = media.find(item => String(item?.type || '').toLowerCase() === 'youtube' && item?.src);
-  const parsed = youtube && typeof parseYouTube === 'function' ? parseYouTube(youtube.src) : null;
-  const id = parsed?.id || '';
-  return id ? {
-    // Keep the source type as YouTube even though the visible fallback is an
-    // image. The card-presentation contract uses this metadata to avoid
-    // classifying a generated YouTube preview by its unreliable thumbnail
-    // aspect ratio (especially for Shorts).
-    type: 'youtube',
-    src: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
-    ...presentation
-  } : null;
+  // A project with no non-YouTube artwork should use the neutral card
+  // placeholder. YouTube links are not project artwork thumbnails.
+  return null;
 }
 
 function buildProjectThumbnailFoil(holographic = {}, artworkSrc = '', {resolveAssetUrl, documentRef} = {}) {
@@ -109,7 +116,6 @@ export function buildProjectCardElement(
     documentRef = globalThis.document,
     onActivate,
     priority = false,
-    parseYouTubeUrl = null,
     ensureLottiePlayer = null,
     mountModelViewer = null
   } = {}
@@ -135,10 +141,14 @@ export function buildProjectCardElement(
   const thumbnail = documentRef.createElement('div');
   thumbnail.className = 'card-thumbnail';
   const explicitThumbnail = project.thumbnail || {};
-  const fallbackThumbnail = explicitThumbnail.src
+  const explicitThumbnailHasSource = Boolean(String(explicitThumbnail.src || '').trim()) &&
+    !isYouTubeMedia(explicitThumbnail);
+  const fallbackThumbnail = explicitThumbnailHasSource
     ? null
-    : getFallbackThumbnailSource(project, explicitThumbnail, parseYouTubeUrl);
-  const t = explicitThumbnail.src ? explicitThumbnail : (fallbackThumbnail || explicitThumbnail);
+    : getFallbackThumbnailSource(project, explicitThumbnail);
+  const t = explicitThumbnailHasSource
+    ? explicitThumbnail
+    : (fallbackThumbnail || { ...explicitThumbnail, src: '' });
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
   const staticFallbackSrc = String(t.fallbackSrc || getStaticThumbnailFallback(project, t.src)).trim();
