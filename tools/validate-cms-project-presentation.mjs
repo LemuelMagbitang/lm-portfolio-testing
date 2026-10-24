@@ -477,6 +477,8 @@ assert.ok(hero.includes('timeoutMs: 3500') &&
   hero.includes('manual loop unavailable; showing latest project media as a fallback.') &&
   hero.includes('sources = latestSources.slice(0, 5);'),
   'A missing or slow manual hero-loop file must fall back to project media rather than leaving the hero blank.');
+assert.ok(/if \(bundled\) \{[\s\S]*?candidates\.push\(bundled\);[\s\S]*?\} else \{[\s\S]*?simpleIconsUrl\(slug\)/.test(logoLookup),
+  'Known software with bundled logos must prefer local assets and avoid predictable Simple Icons 404 requests.');
 assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
 assert.ok(/ensureLottiePlayer/.test(previewRuntime) &&
