@@ -4,7 +4,7 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-07';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-08';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
@@ -16,6 +16,9 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
     orientation: thumbnail.orientation || '',
     background: thumbnail.background && typeof thumbnail.background === 'object'
       ? thumbnail.background
+      : null,
+    holographic: thumbnail.holographic && typeof thumbnail.holographic === 'object' && !Array.isArray(thumbnail.holographic)
+      ? thumbnail.holographic
       : null
   };
 
@@ -32,7 +35,7 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
           : presentation.background,
         ...(type === 'image' && item.holographic && typeof item.holographic === 'object'
           ? {holographic: item.holographic}
-          : {})
+          : (type === 'image' && presentation.holographic ? {holographic: presentation.holographic} : {}))
       };
     }
   }

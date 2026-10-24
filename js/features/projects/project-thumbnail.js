@@ -10,6 +10,7 @@ export function mediaTypeFromSrc(src = '') {
   const clean = String(src).split('?')[0].split('#')[0].toLowerCase();
   if (/\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(clean)) return 'video';
   if (/\.json$/.test(clean)) return 'lottie';
+  if (/\.(obj|gltf|glb|fbx)$/.test(clean)) return 'model';
   return 'image';
 }
 
@@ -166,7 +167,10 @@ function registerThumbnailMediaState(media, {
   } else if (type === 'video') {
     listen('loadeddata', setReady); listen('canplay', setReady); listen('error', setFailed);
   } else if (type === 'lottie') {
-    listen('ready', setReady); listen('load', setReady); listen('error', setFailed);
+    // "load" means the JSON has been accepted, but the SVG can still be
+    // initializing. Reveal the thumbnail only when the player signals that
+    // its DOM is rendered; otherwise first paint can show a blank frame.
+    listen('ready', setReady); listen('error', setFailed);
   }
 
   const state = {
@@ -366,7 +370,6 @@ export function buildProjectThumbnailMedia(
   }
 
   media.classList.add('project-thumb-media');
-  media.classList.add('project-thumb-media');
   media.classList.add('is-media-loading');
   media.dataset.mediaState = 'loading';
   media.dataset.mediaType = type;
@@ -481,8 +484,9 @@ export async function waitForProjectThumbnailReadiness(
         finish(target.dataset.mediaState === 'ready');
         return;
       }
+      // The Lottie "load" event means its data is loaded, not that its SVG
+      // has finished rendering; "ready" is the actual thumbnail-ready signal.
       target.addEventListener?.('ready', onReady, { once: true });
-      target.addEventListener?.('load', onReady, { once: true });
       target.addEventListener?.('error', onFailure, { once: true });
     } else {
       finish(true);

@@ -126,11 +126,14 @@ export function normalizeProjectMedia(media = {}) {
   if (!src) return null;
 
   const explicitType = normalizeString(media.type).toLowerCase();
-  const inferredType = /\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(src.split('?')[0].split('#')[0].toLowerCase())
+  const sourcePath = src.split('?')[0].split('#')[0].toLowerCase();
+  const inferredType = /\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(sourcePath)
     ? 'video'
-    : /\.json$/.test(src.split('?')[0].split('#')[0].toLowerCase())
+    : /\.json$/.test(sourcePath)
       ? 'lottie'
-      : 'image';
+      : /\.(obj|gltf|glb|fbx)$/.test(sourcePath)
+        ? 'model'
+        : 'image';
   const type = explicitType || inferredType;
   const orientation = normalizeString(media.orientation).toLowerCase();
   const normalized = {

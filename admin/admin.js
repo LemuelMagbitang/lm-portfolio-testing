@@ -2897,10 +2897,12 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   }
   function syncFromNumber(numberInput,rangeInput,label,finalize=false){
     if(!numberInput||!rangeInput)return null;
-    const strength=normalizeStrength(numberInput.value,null);
+    const raw=String(numberInput.value ?? '').trim();
+    const strength=normalizeStrength(raw,null);
     if(strength===null){numberInput.setAttribute?.('aria-invalid','true');return null;}
     rangeInput.value=String(strength);
-    if(finalize)numberInput.value=strength.toFixed(2);
+    const numeric=Number(raw);
+    if(finalize || numeric<0 || numeric>1)numberInput.value=strength.toFixed(2);
     numberInput.removeAttribute?.('aria-invalid');
     const percent=Math.round(strength*100);
     if(label)label.textContent=percent+'%';
