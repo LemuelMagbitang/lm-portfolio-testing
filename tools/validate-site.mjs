@@ -2401,7 +2401,7 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
       !smoke.includes('project-thumbnail.js?v=20261025-03') ||
-      /project-thumbnail\\.js\\?v=(?!20261025-03)[^'"]+/.test(smoke)) {
+      /project-thumbnail[.]js[?]v=(?!20261025-03)[^'"]+/.test(smoke)) {
     err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
   }
 }
