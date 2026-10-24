@@ -3357,7 +3357,8 @@ footer{
   color:rgba(255,255,255,.76);font-size:9px;font-weight:700;letter-spacing:.12em;text-align:center;pointer-events:none;
 }
 .card-thumbnail .project-thumb-media-fallback-image{
-  position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center;
+  position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;object-fit:cover;object-position:center;
+  opacity:1!important;transform:none!important;transition:none!important;
 }
 .card-thumbnail .project-thumb-media-fallback>i{
   position:relative;z-index:1;font-size:23px;color:rgba(255,255,255,.68);
