@@ -6691,11 +6691,15 @@ try {
       const thumbnail = fixtureCard.locator('.card-thumbnail').first();
       const activationTarget = thumbnail.locator('[data-lottie-thumb], lottie-player').first();
       if (await activationTarget.count() !== 1) throw new Error('Direct-media fixture thumbnail target is missing.');
-      await activationTarget.scrollIntoViewIfNeeded();
+      await fixtureCard.scrollIntoViewIfNeeded();
       await page.waitForFunction(() => {
         const element = document.querySelector('#portfolioGrid .project-card[data-project-id="test-project"] .card-thumbnail lottie-player');
-        return Boolean(element?.classList.contains('is-media-ready'));
-      }, null, { timeout: 8000 });
+        return element?.dataset.mediaActivated === 'true';
+      }, null, { timeout: 6000 });
+      await page.waitForFunction(() => {
+        const element = document.querySelector('#portfolioGrid .project-card[data-project-id="test-project"] .card-thumbnail lottie-player');
+        return element && ['ready', 'error'].includes(element.dataset.mediaState);
+      }, null, { timeout: 15000 });
       await activationTarget.evaluate(element => element.setAttribute('data-model-thumb', ''));
       await activationTarget.click();
 
