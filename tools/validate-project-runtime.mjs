@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-01';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-02';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-01';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-01';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-02';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-02';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-03';
 import {
   applyProjectCardOrientation,
@@ -237,14 +237,21 @@ assert.equal(videoThumbnail.src, '/assets/media/lazy.mp4');
 disposeProjectThumbnailMedia(videoThumbnail);
 assert.equal(videoThumbnail.src, '');
 
+let lottiePlayerWarmups = 0;
 const lottieThumbnail = buildProjectThumbnailMedia(
   { type: 'lottie', src: 'media/lazy.json' },
   'Lazy Lottie',
-  { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
+  { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value, ensureLottiePlayer: () => {
+    lottiePlayerWarmups += 1;
+    return Promise.resolve(true);
+  } }
 );
 assert.equal(lottieThumbnail.attributes.has('src'), false);
 assert.equal(lottieThumbnail.dataset.lazySrc, '/assets/media/lazy.json');
 preloadObserver.trigger(lottieThumbnail, true);
+assert.equal(lottieThumbnail.attributes.has('src'), false, 'the player should resolve before Lottie JSON attaches');
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(lottiePlayerWarmups, 1);
 assert.equal(lottieThumbnail.attributes.get('src'), '/assets/media/lazy.json');
 visibilityObserver.trigger(lottieThumbnail, true);
 assert.equal(lottieThumbnail.playCount, 1);
