@@ -7,9 +7,26 @@
  */
 
 export function mediaTypeFromSrc(src = '') {
-  const clean = String(src).split('?')[0].split('#')[0].toLowerCase();
+  const raw = String(src || '').trim();
+  if (!raw) return 'image';
+
+  // Classify data URLs by MIME type. For remote URLs, separate the pathname
+  // from query parameters so signed and cache-busted links classify correctly.
+  const mime = raw.match(/^data:([^;,]+)/i)?.[1]?.toLowerCase() || '';
+  if (mime.startsWith('video/')) return 'video';
+  if (mime.startsWith('image/')) return 'image';
+  if (mime === 'application/json' || mime === 'application/ld+json') return 'lottie';
+
+  let pathname = raw;
+  try {
+    pathname = new URL(raw, 'https://portfolio-asset.invalid').pathname;
+  } catch (_) {
+    pathname = raw.split(/[?#]/, 1)[0];
+  }
+  const clean = String(pathname || '').toLowerCase();
   if (/\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(clean)) return 'video';
   if (/\.json$/.test(clean)) return 'lottie';
+  // Keep this list aligned with the formats supported by the 3D viewer.
   if (/\.(obj|gltf|glb|fbx)$/.test(clean)) return 'model';
   return 'image';
 }
@@ -57,7 +74,7 @@ function getThumbnailViewportObservers(windowRef) {
 function registerThumbnailMediaState(media, {
   type, src, priority, reducedMotion, windowRef,
   ensureLottiePlayer = null, mountModelViewer = null, resolveAssetUrl = value => value,
-  background = null
+  background = null, fallbackSrc = '', altText = 'Project artwork', documentRef = null
 } = {}) {
   const usesViewportLifecycle = type === 'video' || type === 'lottie' || type === 'model';
   const observers = type === 'image' || usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
@@ -66,7 +83,7 @@ function registerThumbnailMediaState(media, {
   let disposed = false;
   let modelGeneration = 0;
   let modelCleanup = null;
-  let lottieFallback = null;
+  let mediaFallback = null;
   const modelFallbackMarkup = type === 'model' ? String(media.innerHTML || '') : '';
   const timerOwner = windowRef || globalThis;
   const setTimer = typeof timerOwner.setTimeout === 'function' ? timerOwner.setTimeout.bind(timerOwner) : globalThis.setTimeout;
@@ -123,29 +140,73 @@ function registerThumbnailMediaState(media, {
     media.addEventListener?.(eventName, handler);
     listeners.push([eventName, handler]);
   };
-  const removeLottieFallback = () => {
-    if (lottieFallback?.parentNode) lottieFallback.parentNode.removeChild(lottieFallback);
-    lottieFallback = null;
+  const removeMediaFallback = () => {
+    if (mediaFallback?.parentNode) mediaFallback.parentNode.removeChild(mediaFallback);
+    mediaFallback = null;
   };
-  const showLottieFallback = status => {
-    if (type !== 'lottie') return;
+  const fallbackLabel = () => ({
+    image: 'PROJECT ARTWORK',
+    video: 'VIDEO ARTWORK',
+    lottie: 'ANIMATED ARTWORK',
+    model: '3D ARTWORK'
+  }[type] || 'PROJECT ARTWORK');
+  const appendFallbackLabel = status => {
+    if (!mediaFallback) return;
+    const doc = media.ownerDocument || documentRef || globalThis.document;
+    if (!doc?.createElement) return;
+    const icon = doc.createElement('i');
+    icon.className = type === 'model' ? 'fa-solid fa-cube' :
+      type === 'video' ? 'fa-solid fa-film' :
+      type === 'lottie' ? 'fa-solid fa-wand-magic-sparkles' : 'fa-regular fa-image';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = doc.createElement('span');
+    label.className = 'project-thumb-media-fallback-label';
+    label.textContent = status === 'loading'
+      ? (type === 'lottie' ? 'LOADING ANIMATION' : type === 'video' ? 'LOADING VIDEO' : 'LOADING ARTWORK')
+      : fallbackLabel();
+    mediaFallback.appendChild(icon);
+    mediaFallback.appendChild(label);
+  };
+  const showMediaFallback = status => {
+    if (!['image', 'video', 'lottie', 'model'].includes(type)) return;
+    // A model already has a designed cube placeholder. Use raster artwork only
+    // when an explicit or project-level static fallback has been provided.
+    if (type === 'model' && !fallbackSrc) return;
     const parent = media.parentElement || media.parentNode;
-    if (!parent || !documentRefForMedia(media)?.createElement) return;
-    const documentRef = documentRefForMedia(media);
-    if (!lottieFallback || lottieFallback.parentNode !== parent) {
-      removeLottieFallback();
-      lottieFallback = documentRef.createElement('span');
-      lottieFallback.className = 'project-thumb-media-fallback';
-      lottieFallback.setAttribute('role', 'img');
-      parent.appendChild(lottieFallback);
+    const doc = media.ownerDocument || documentRef || globalThis.document;
+    if (!parent || !doc?.createElement) return;
+    if (!mediaFallback || mediaFallback.parentNode !== parent) {
+      removeMediaFallback();
+      mediaFallback = doc.createElement('span');
+      mediaFallback.className = 'project-thumb-media-fallback';
+      parent.appendChild(mediaFallback);
     }
-    const isError = status === 'error';
-    lottieFallback.dataset.state = isError ? 'error' : 'loading';
-    lottieFallback.setAttribute('aria-label', isError ? 'Animation preview unavailable' : 'Loading animation preview');
-    lottieFallback.textContent = isError ? 'ANIMATION PREVIEW UNAVAILABLE' : 'LOADING ANIMATION';
+    if (typeof mediaFallback.replaceChildren === 'function') mediaFallback.replaceChildren();
+    else mediaFallback.textContent = '';
+    mediaFallback.dataset.state = status === 'error' ? 'error' : 'loading';
+    mediaFallback.setAttribute('role', 'img');
+    mediaFallback.setAttribute('aria-label', status === 'loading'
+      ? 'Loading ' + (type === 'lottie' ? 'animation' : type === 'model' ? '3D' : type) + ' preview'
+      : String(altText || 'Project artwork') + ' preview');
+
+    if (fallbackSrc && fallbackSrc !== src) {
+      const image = doc.createElement('img');
+      image.className = 'project-thumb-media-fallback-image';
+      image.alt = '';
+      image.setAttribute('aria-hidden', 'true');
+      image.loading = 'eager';
+      image.decoding = 'async';
+      image.addEventListener('error', () => {
+        image.remove?.();
+        if (mediaFallback?.parentNode) appendFallbackLabel(mediaFallback.dataset.state || status);
+      }, { once: true });
+      image.src = fallbackSrc;
+      mediaFallback.appendChild(image);
+    } else {
+      appendFallbackLabel(status);
+    }
   };
-  const mediaDocument = () => media.ownerDocument || globalThis.document;
-  function documentRefForMedia(){ return mediaDocument(); }
+  const mediaDocument = () => media.ownerDocument || documentRef || globalThis.document;
   const dispatchLifecycleEvent = eventName => {
     try {
       const EventConstructor = windowRef?.CustomEvent || globalThis.CustomEvent;
@@ -185,7 +246,7 @@ function registerThumbnailMediaState(media, {
       media.dataset.mediaState = 'ready';
       media.classList.remove('is-media-loading', 'is-media-error');
       media.classList.add('is-media-ready');
-      removeLottieFallback();
+      removeMediaFallback();
       dispatchLifecycleEvent('project-thumbnail-ready');
       if (type === 'video' && media.dataset.mediaVisible === 'true' && !reducedMotion) {
         Promise.resolve(media.play?.()).catch(() => {});
@@ -208,13 +269,14 @@ function registerThumbnailMediaState(media, {
       try { media.pause?.(); } catch (_) {}
       try { media.removeAttribute?.('autoplay'); } catch (_) {}
       try { media.removeAttribute?.('src'); } catch (_) {}
-      showLottieFallback('error');
+      // The shared fallback below replaces the failed animation.
     }
     if (type === 'model') {
       activated = false;
       delete media.dataset.mediaActivated;
       resetModelPreview();
     }
+    showMediaFallback('error');
     media.dataset.mediaState = 'error';
     media.classList.remove('is-media-loading', 'is-media-ready');
     media.classList.add('is-media-error');
@@ -258,9 +320,15 @@ function registerThumbnailMediaState(media, {
         }
         return;
       }
-      if (type === 'video') { media.preload = 'metadata'; media.src = src; return; }
+      if (type === 'video') {
+        showMediaFallback('loading');
+        media.preload = 'metadata';
+        media.src = src;
+        return;
+      }
       if (type === 'model') {
         if (typeof mountModelViewer !== 'function') { setReady(); return; }
+        showMediaFallback('loading');
         const generation = ++modelGeneration;
         media.dataset.mediaState = 'loading';
         media.dataset.previewStatus = 'loading';
@@ -293,7 +361,7 @@ function registerThumbnailMediaState(media, {
       }
       if (type === 'lottie') {
         const generation = ++lottieGeneration;
-        showLottieFallback('loading');
+        showMediaFallback('loading');
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
@@ -375,7 +443,7 @@ function registerThumbnailMediaState(media, {
       if (type === 'video' || type === 'lottie') try { media.pause?.(); } catch (_) {}
       try { media.removeAttribute?.('src'); } catch (_) {}
       if (type === 'video') try { media.load?.(); } catch (_) {}
-      removeLottieFallback();
+      removeMediaFallback();
       thumbnailMediaStateByElement.delete(media);
     }
   };
@@ -404,6 +472,10 @@ export function buildProjectThumbnailMedia(
 
   const type = String(source.type || mediaTypeFromSrc(source.src)).toLowerCase();
   const src = resolveAssetUrl(source.src);
+  const rawFallbackSrc = String(source.fallbackSrc || '').trim();
+  const fallbackSrc = rawFallbackSrc && rawFallbackSrc !== String(source.src || '').trim()
+    ? resolveAssetUrl(rawFallbackSrc)
+    : '';
   const windowRef = documentRef?.defaultView || globalThis.window;
   const reducedMotion = Boolean(windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   let media;
@@ -470,7 +542,9 @@ export function buildProjectThumbnailMedia(
     mountModelViewer,
     resolveAssetUrl,
     documentRef,
-    background: source.background
+    background: source.background,
+    fallbackSrc,
+    altText
   });
   const observers = state.observers;
   const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);
