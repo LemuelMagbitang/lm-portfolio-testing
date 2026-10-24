@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-03';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-04';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-03';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-03';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-04';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-04';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-04';
 import {
   applyProjectCardOrientation,
@@ -207,6 +207,12 @@ const imageThumbnail = buildProjectThumbnailMedia(
 );
 assert.equal(imageThumbnail.loading, 'lazy');
 assert.equal(imageThumbnail.dataset.mediaState, 'loading');
+const preloadObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '640px 0px');
+assert.equal(imageThumbnail.src, '');
+assert.equal(imageThumbnail.dataset.lazySrc, '/assets/media/lazy.webp');
+preloadObserver.trigger(imageThumbnail, true);
+assert.equal(imageThumbnail.src, '/assets/media/lazy.webp');
+assert.equal(imageThumbnail.dataset.lazySrc, undefined);
 imageThumbnail.complete = true;
 imageThumbnail.naturalWidth = 100;
 imageThumbnail.dispatch('load');
@@ -217,7 +223,6 @@ const videoThumbnail = buildProjectThumbnailMedia(
   'Lazy video',
   { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
 );
-const preloadObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '640px 0px');
 const visibilityObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '0px');
 assert.equal(videoThumbnail.src, '');
 assert.equal(videoThumbnail.dataset.lazySrc, '/assets/media/lazy.mp4');

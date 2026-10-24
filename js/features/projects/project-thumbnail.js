@@ -55,7 +55,9 @@ function getThumbnailViewportObservers(windowRef) {
 
 function registerThumbnailMediaState(media, { type, src, priority, reducedMotion, windowRef, ensureLottiePlayer = null } = {}) {
   const usesViewportLifecycle = type === 'video' || type === 'lottie';
-  const observers = usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
+  const observers = type === 'image' || usesViewportLifecycle
+    ? getThumbnailViewportObservers(windowRef)
+    : null;
   const listeners = [];
   let activated = false;
   let disposed = false;
@@ -339,8 +341,14 @@ export function buildProjectThumbnailMedia(
       ensureLottiePlayer
     });
     const observers = state.observers;
-    if (type === 'image' || !['video', 'lottie'].includes(type)) {
-      state.activate();
+    const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);
+    if (shouldDeferStillImage) {
+      if (priority || !observers?.preload) {
+        state.activate();
+      } else {
+        media.dataset.lazySrc = src;
+        observers.preload.observe(media);
+      }
     } else if (observers?.preload && observers?.visibility) {
       observers.visibility.observe(media);
       if (priority) {
