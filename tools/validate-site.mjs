@@ -1986,8 +1986,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261024-21") ||
-      !bootstrap.includes("cacheVersion = '20261024-21'") ||
+  if (!entry.includes("bootstrap.js?v=20261025-01") ||
+      !bootstrap.includes("cacheVersion = '20261025-01'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261024-01") ||
@@ -1995,17 +1995,17 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
-      !composition.includes("projects/index.js?v=20261024-10") ||
-      !composition.includes("lightbox/index.js?v=20261024-14") ||
+      !composition.includes("projects/index.js?v=20261025-01") ||
+      !composition.includes("lightbox/index.js?v=20261025-01") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261024-21') ||
-      !works.includes('js/app/page-composition.js?v=20261024-21') ||
+      !works.includes('js/app/bootstrap.js?v=20261025-01') ||
+      !works.includes('js/app/page-composition.js?v=20261025-01') ||
       !works.includes('css/style.css?v=20261024-06') ||
-      !works.includes('js/script.js?v=20261024-21') ||
+      !works.includes('js/script.js?v=20261025-01') ||
       !about.includes('style.css?v=20261024-06') ||
-      !about.includes('js/app/bootstrap.js?v=20261024-21') ||
-      !about.includes('script.js?v=20261024-21') ||
-      !about.includes('page-composition.js?v=20261024-21')) {
+      !about.includes('js/app/bootstrap.js?v=20261025-01') ||
+      !about.includes('script.js?v=20261025-01') ||
+      !about.includes('page-composition.js?v=20261025-01')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2364,6 +2364,9 @@ function validateReducedMotionThumbnailContract() {
   const thumbnail = exists('js/features/projects/project-thumbnail.js')
     ? readText('js/features/projects/project-thumbnail.js')
     : '';
+  const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
+    ? readText('js/features/lightbox/media-renderer.js')
+    : '';
   const smoke = exists('tools/smoke-browser.mjs')
     ? readText('tools/smoke-browser.mjs')
     : '';
@@ -2383,16 +2386,20 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes("const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);") ||
       !thumbnail.includes(".then(() => ensureLottiePlayer())") ||
       !thumbnail.includes('playerLoadTimer = setTimer(() => {') ||
-      !thumbnail.includes('resolve(false);') ||
+      !thumbnail.includes('const MEDIA_SLOW_LOAD_TIMEOUT_MS = 12000;') ||
+      !thumbnail.includes('const armSlowLoadFallback =') ||
+      !thumbnail.includes("media.dataset.mediaState !== 'loading'") ||
+      !thumbnail.includes('}, MEDIA_SLOW_LOAD_TIMEOUT_MS);') ||
       !thumbnail.includes('}, 6000);') ||
-      !thumbnail.includes('}, 10000);') ||
+      thumbnail.includes('playerLoadTimeout') ||
       !thumbnail.includes('clearLoadTimers();') ||
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
+      !mediaRenderer.includes('if (!embedSrc) return renderUnsupported(item, project);') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
       !styles.includes('opacity: 0;') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261024-09')) {
+      !smoke.includes('project-thumbnail.js?v=20261025-01')) {
     err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
   }
 }

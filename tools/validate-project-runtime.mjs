@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-10';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-01';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-10';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261024-10';
-import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-14';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-01';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-01';
+import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-01';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
@@ -762,6 +762,23 @@ const presentationRegressionCard = buildProjectCardElement({
 });
 assert.equal(presentationRegressionCard.dataset.cardOrientation, 'landscape');
 assert.equal(presentationRegressionCard.classList.values.has('card-orientation-landscape'), true);
+
+const emptyMediaCard = buildProjectCardElement({
+  id: 'empty-media-fallback',
+  title: 'Empty Media Fallback',
+  thumbnail: { src: '' },
+  media: []
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value
+});
+const emptyMediaSurface = emptyMediaCard.children[0];
+assert.equal(emptyMediaSurface.children.length, 1,
+  'Cards with no usable media source must retain a visible fallback surface.');
+assert.equal(emptyMediaSurface.children[0].className,
+  'project-thumb-media-fallback project-thumb-static-fallback');
+assert.equal(emptyMediaSurface.children[0].children[1].textContent, 'PROJECT ARTWORK',
+  'The empty-card fallback must use a neutral label rather than an unavailable error message.');
 
 assert.equal(orientationFromAspectRatio(1000, 1000), 'square');
 assert.equal(orientationFromAspectRatio(1600, 1000), 'landscape');
