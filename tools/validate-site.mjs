@@ -2000,9 +2000,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261024-05') ||
       !works.includes('js/app/page-composition.js?v=20261024-05') ||
-      !works.includes('css/style.css?v=20261024-01') ||
+      !works.includes('css/style.css?v=20261024-02') ||
       !works.includes('js/script.js?v=20261024-05') ||
-      !about.includes('style.css?v=20261024-01') ||
+      !about.includes('style.css?v=20261024-02') ||
       !about.includes('js/app/bootstrap.js?v=20261024-05') ||
       !about.includes('script.js?v=20261024-05') ||
       !about.includes('page-composition.js?v=20261024-05')) {
