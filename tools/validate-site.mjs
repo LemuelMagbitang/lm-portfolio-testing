@@ -1987,7 +1987,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   }
 
   if (!entry.includes("bootstrap.js?v=20261024-10") ||
-      !bootstrap.includes("cacheVersion = '20261024-09'") ||
+      !bootstrap.includes("cacheVersion = '20261024-10'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261024-01") ||
