@@ -103,10 +103,15 @@ export function getSoftwareLogoDirectCandidates(name) {
   if (!slug) return [];
 
   const bundled = BUNDLED_SOFTWARE_LOGOS[slug];
-  if (bundled) candidates.push(bundled);
-
-  const remote = simpleIconsUrl(slug);
-  if (remote) candidates.push(remote);
+  if (bundled) {
+    // Prefer repository-hosted artwork for known portfolio tools. A stale or
+    // unsupported Simple Icons slug should not generate a predictable 404
+    // when a local logo is already available.
+    candidates.push(bundled);
+  } else {
+    const remote = simpleIconsUrl(slug);
+    if (remote) candidates.push(remote);
+  }
 
   return candidates;
 }
