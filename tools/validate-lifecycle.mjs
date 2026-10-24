@@ -86,6 +86,17 @@ const projectThumbnailSource = await readFile(new URL('../js/features/projects/p
 assert.match(projectThumbnailSource, /mediaReadyTimer = setTimer\(\(\) => \{[\s\S]*?setFailed\(\);[\s\S]*?\}, 10000\)/);
 assert.match(projectThumbnailSource, /const clearLoadTimers = \(\) => \{[\s\S]*?clearTimer\?\.\(playerLoadTimer\)[\s\S]*?clearTimer\?\.\(mediaReadyTimer\)/);
 assert.match(projectThumbnailSource, /dispose\(\) \{[\s\S]*?clearLoadTimers\(\);/);
+assert.doesNotMatch(projectThumbnailSource, /ANIMATION PREVIEW UNAVAILABLE|Animation preview unavailable/);
+
+const cmsPreviewRuntimeSource = await readFile(new URL('../admin/project-preview-runtime.js', import.meta.url), 'utf8');
+assert.match(cmsPreviewRuntimeSource, /node\.addEventListener\('loadeddata', markReady\)/);
+assert.match(cmsPreviewRuntimeSource, /node\.addEventListener\('canplay', markReady\)/);
+assert.match(cmsPreviewRuntimeSource, /setTimeout\(markFallback, 15000\)/);
+assert.match(cmsPreviewRuntimeSource, /project-collapsed-preview-fallback/);
+assert.doesNotMatch(cmsPreviewRuntimeSource, /Lottie preview unavailable|Lottie preview failed to render|3D preview unavailable/);
+assert.match(mediaRendererSource, /model-viewer-fallback/);
+assert.doesNotMatch(mediaRendererSource, /3D model preview is unavailable/);
+assert.doesNotMatch(modelViewerSource, /3D VIEW UNAVAILABLE|3D view unavailable/);
 const criticalStartupWarmup = pageCompositionSource.match(
   /await projectMediaPreloadPromise;/
 )?.[0] || '';
