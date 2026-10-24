@@ -1047,9 +1047,12 @@ function validateGalleryContract() {
       !source.includes('const indicatorButton = isFollowingFilterScroll') ||
       !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
       !source.includes("'is-centered-preview'") ||
-      !source.includes('const centerX = scrollerRect.left + filterTabs.clientWidth / 2 - hostRect.left') ||
+      !source.includes('function getFilterViewportCenterX()') ||
+      !source.includes('const centerX = getFilterViewportCenterX() - hostRect.left - hostClientLeft;') ||
+      !source.includes("indicator.style.translate = '-50% 0'") ||
+      !source.includes("indicator.style.transform = 'translate3d(-50%, 0, 0)'") ||
       !source.includes('indicator.style.left = `${centerX}px`;') ||
-      !source.includes('indicator.style.transform = `translate3d(-50%, ${buttonRect.top - hostRect.top}px, 0)`;') ||
+      !source.includes('indicator.style.top = `${buttonRect.top - hostRect.top - hostClientTop}px`;') ||
       css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1),') ||
       source.includes('button.style.width = `${Math.ceil(Math.max(inactiveWidth, activeWidth))}px`;') ||
       !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
