@@ -446,6 +446,26 @@ function registerThumbnailMediaState(media, {
           media.classList.add('is-media-loading');
           media.setAttribute('src', src);
           try { media.removeAttribute?.('autoplay'); } catch (_) {}
+
+          // The player may have upgraded and rendered before this lazy source
+          // is assigned. Its firstUpdated hook only loads an initial src, so
+          // explicitly start it after the new attribute update if needed.
+          Promise.resolve(media.updateComplete).then(() => {
+            if (disposed || !activated || generation !== lottieGeneration ||
+                media.dataset.mediaActivated !== 'true' || !hasSource()) return;
+            let playerInstance = null;
+            try { playerInstance = media.getLottie?.() || null; } catch (_) {}
+            if (playerInstance || typeof media.load !== 'function') return;
+            try {
+              Promise.resolve(media.load(src)).catch(() => {
+                if (!disposed && generation === lottieGeneration) setFailed();
+              });
+            } catch (_) {
+              if (!disposed && generation === lottieGeneration) setFailed();
+            }
+          }).catch(() => {
+            if (!disposed && generation === lottieGeneration) setFailed();
+          });
         };
         if (typeof ensureLottiePlayer !== 'function') { attachSource(); return; }
         // Do not insert a loader or poster during async setup. Reveal the

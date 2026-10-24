@@ -2401,8 +2401,8 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('opacity: 0;') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261025-04') ||
-      /project-thumbnail[.]js[?]v=(?!20261025-04)[^'"]+/.test(smoke)) {
+      !smoke.includes('project-thumbnail.js?v=20261025-05') ||
+      /project-thumbnail[.]js[?]v=(?!20261025-05)[^'"]+/.test(smoke)) {
     err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
   }
 }

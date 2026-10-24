@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-04';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-04';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-04';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-05';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-02';
 import {
   applyProjectCardOrientation,
@@ -386,6 +386,16 @@ const lottieThumbnail = buildProjectThumbnailMedia(
     return Promise.resolve(true);
   } }
 );
+let lottieExplicitLoadCount = 0;
+let lottieLoadedInstance = null;
+// Model the real player API for a component that upgraded before lazy src was set.
+lottieThumbnail.load = source => {
+  lottieExplicitLoadCount += 1;
+  lottieThumbnail.loadedSource = source;
+  lottieLoadedInstance = { source };
+  return Promise.resolve();
+};
+lottieThumbnail.getLottie = () => lottieLoadedInstance;
 lottieLoadingContainer.appendChild(lottieThumbnail);
 const hasLottieLoadingFallback = () => lottieLoadingContainer.children.some(
   child => child.className === 'project-thumb-media-fallback'
@@ -399,6 +409,9 @@ assert.equal(lottieThumbnail.attributes.has('src'), false, 'the player should re
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(lottiePlayerWarmups, 1);
 assert.equal(lottieThumbnail.attributes.get('src'), '/assets/media/lazy.json');
+assert.equal(lottieExplicitLoadCount, 1,
+  'A late-assigned Lottie source must initialize an already-upgraded player.');
+assert.equal(lottieThumbnail.loadedSource, '/assets/media/lazy.json');
 assert.equal(hasLottieLoadingFallback(), false,
   'A Lottie thumbnail must not show a loading label or poster while its source initializes.');
 visibilityObserver.trigger(lottieThumbnail, true);
