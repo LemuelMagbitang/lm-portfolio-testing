@@ -59,6 +59,25 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
   const listeners = [];
   let activated = false;
   let disposed = false;
+  const timerOwner = windowRef || globalThis;
+  const setTimer = typeof timerOwner.setTimeout === 'function'
+    ? timerOwner.setTimeout.bind(timerOwner)
+    : globalThis.setTimeout;
+  const clearTimer = typeof timerOwner.clearTimeout === 'function'
+    ? timerOwner.clearTimeout.bind(timerOwner)
+    : globalThis.clearTimeout;
+  let playerLoadTimer = null;
+  let mediaReadyTimer = null;
+  const clearLoadTimers = () => {
+    if (playerLoadTimer !== null) {
+      clearTimer?.(playerLoadTimer);
+      playerLoadTimer = null;
+    }
+    if (mediaReadyTimer !== null) {
+      clearTimer?.(mediaReadyTimer);
+      mediaReadyTimer = null;
+    }
+  };
 
   const listen = (eventName, handler) => {
     media.addEventListener?.(eventName, handler);
@@ -66,6 +85,7 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
   };
   const setReady = () => {
     if (disposed) return;
+    clearLoadTimers();
     const reveal = () => {
       if (disposed) return;
       media.dataset.mediaState = 'ready';
@@ -83,6 +103,7 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
   };
   const setFailed = () => {
     if (disposed) return;
+    clearLoadTimers();
     media.dataset.mediaState = 'error';
     media.classList.remove('is-media-loading', 'is-media-ready');
     media.classList.add('is-media-error');
@@ -126,6 +147,14 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
       if (type === 'lottie') {
         const attachSource = () => {
           if (disposed) return;
+          // Player-script readiness does not guarantee the animation source
+          // will emit a ready/error event. Bound that second stage too, so a
+          // failed or blocked JSON request cannot leave an invisible thumbnail.
+          if (mediaReadyTimer !== null) clearTimer?.(mediaReadyTimer);
+          mediaReadyTimer = setTimer(() => {
+            mediaReadyTimer = null;
+            setFailed();
+          }, 10000);
           media.setAttribute('src', src);
           if (media.dataset.mediaVisible === 'true' && !reducedMotion) {
             media.setAttribute('autoplay', '');
@@ -142,16 +171,11 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
-        let playerLoadTimer = null;
-        const timerOwner = windowRef || globalThis;
-        const setTimer = typeof timerOwner.setTimeout === 'function'
-          ? timerOwner.setTimeout.bind(timerOwner)
-          : globalThis.setTimeout;
-        const clearTimer = typeof timerOwner.clearTimeout === 'function'
-          ? timerOwner.clearTimeout.bind(timerOwner)
-          : globalThis.clearTimeout;
         const playerLoadTimeout = new Promise(resolve => {
-          playerLoadTimer = setTimer(() => resolve(false), 6000);
+          playerLoadTimer = setTimer(() => {
+            playerLoadTimer = null;
+            resolve(false);
+          }, 6000);
         });
 
         Promise.race([
@@ -159,7 +183,10 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
           playerLoadTimeout
         ])
           .then(ready => {
-            if (playerLoadTimer !== null) clearTimer(playerLoadTimer);
+            if (playerLoadTimer !== null) {
+              clearTimer?.(playerLoadTimer);
+              playerLoadTimer = null;
+            }
             if (disposed) return;
             if (ready === false) {
               activated = false;
@@ -169,7 +196,10 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
             attachSource();
           })
           .catch(() => {
-            if (playerLoadTimer !== null) clearTimer(playerLoadTimer);
+            if (playerLoadTimer !== null) {
+              clearTimer?.(playerLoadTimer);
+              playerLoadTimer = null;
+            }
             if (disposed) return;
             activated = false;
             setFailed();
@@ -204,6 +234,7 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
       if (disposed) return;
       disposed = true;
       state.disposed = true;
+      clearLoadTimers();
       observers?.preload?.unobserve(media);
       observers?.visibility?.unobserve(media);
       listeners.forEach(([eventName, handler]) => {
