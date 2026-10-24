@@ -2202,9 +2202,10 @@ function validateCmsRegressionContracts() {
       !renderer.includes('/^(?:slow-)?[23]g$/.test(effectiveType)') ||
       !renderer.includes('downlink < 1.5') ||
       !renderer.includes('roundTripTime > 500') ||
-      !renderer.includes('const CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT = 4;') ||
-      !renderer.includes('projectIndex < CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT')) {
-    err('Lightbox preload policy: cap critical media warm-ups to the first four projects on constrained links and skip secondary warm-ups on Data Saver, 2G/3G, or slow/high-latency connections.');
+      !renderer.includes('const STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT = 4;') ||
+      !renderer.includes('projectIndex < STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT') ||
+      !renderer.includes('if (!critical && !nonBlocking) return;')) {
+    err('Lightbox preload policy: restrict startup to four primary project previews, intentional 3D warm-ups, and the capped nonblocking YouTube cache.');
   }
 
   if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {})") ||
