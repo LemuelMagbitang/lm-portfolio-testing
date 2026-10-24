@@ -2193,6 +2193,15 @@ function validateCmsRegressionContracts() {
     err('CMS 3D preview: the Projects editor must import the infrastructure Three.js adapter.');
   }
   if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
+  if (!renderer.includes("const effectiveType = String(connection?.effectiveType || '').trim().toLowerCase();") ||
+      !renderer.includes('const downlink = Number(connection?.downlink);') ||
+      !renderer.includes('const roundTripTime = Number(connection?.rtt);') ||
+      !renderer.includes('/^(?:slow-)?[23]g$/.test(effectiveType)') ||
+      !renderer.includes('downlink < 1.5') ||
+      !renderer.includes('roundTripTime > 500')) {
+    err('Lightbox preload policy: skip secondary media warm-ups on Data Saver, 2G/3G, or slow/high-latency connections.');
+  }
+
   if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {})") ||
       !renderer.includes('layer.style.maskMode = modeList') ||
       !renderer.includes("const asCssUrl = value => 'url(\"' + String(value).split('\"').join('%22') + '\")';") ||

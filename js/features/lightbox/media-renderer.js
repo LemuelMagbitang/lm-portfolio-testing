@@ -444,9 +444,20 @@ export function createLightboxMediaRenderer({
     const connection = globalThis.navigator?.connection ||
       globalThis.navigator?.mozConnection ||
       globalThis.navigator?.webkitConnection;
+    // Large creative assets should not compete with visible content on
+    // Data Saver, 2G/3G, or measured slow/high-latency connections. Keep the
+    // first local-renderable item per project warm, but skip secondary and
+    // speculative YouTube warm-ups; opened media will still load on demand.
+    const effectiveType = String(connection?.effectiveType || '').trim().toLowerCase();
+    const downlink = Number(connection?.downlink);
+    const roundTripTime = Number(connection?.rtt);
+    const slowBandwidth = Number.isFinite(downlink) && downlink > 0 && downlink < 1.5;
+    const highLatency = Number.isFinite(roundTripTime) && roundTripTime > 500;
     const constrainedNetwork = Boolean(
       connection?.saveData ||
-      /(^|-)2g$/i.test(String(connection?.effectiveType || ''))
+      /^(?:slow-)?[23]g$/.test(effectiveType) ||
+      slowBandwidth ||
+      highLatency
     );
     const scheduleYouTubeWarmup = (key, url) => {
       if (constrainedNetwork || !key || !url || youtubeWarmupKeys.has(key)) return;
@@ -605,7 +616,7 @@ export function createLightboxMediaRenderer({
     // project backgrounds, models, and the viewer module remain startup-blocking.
     // The secondary queue keeps warming in the background if its short grace
     // period expires, avoiding a multi-minute gate on slow/save-data networks.
-    // Respect Data Saver/2G by skipping off-screen secondary media warm-ups.
+    // Respect Data Saver and constrained mobile links by skipping secondary media warm-ups.
     // The viewer will still load an asset normally when the visitor opens it.
     if (!constrainedNetwork) {
       void runPreloadPool(nonBlockingJobs, 2).catch(() => {});
