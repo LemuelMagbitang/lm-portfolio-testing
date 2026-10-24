@@ -473,6 +473,10 @@ assert.ok(css.includes('.project-list-item.is-open .project-collapsed-preview{di
   'Expanded CMS project cards must retain their own thumbnail with a compact mobile layout.');
 assert.ok(/\.media-preview\s*>\s*lottie-player\s*\{[^}]*position:absolute[^}]*display:block[^}]*width:100%[^}]*height:100%/s.test(css),
   'Expanded CMS Lottie previews must receive a concrete visible layout box.');
+assert.ok(hero.includes('timeoutMs: 3500') &&
+  hero.includes('manual loop unavailable; showing latest project media as a fallback.') &&
+  hero.includes('sources = latestSources.slice(0, 5);'),
+  'A missing or slow manual hero-loop file must fall back to project media rather than leaving the hero blank.');
 assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"/.test(admin) && /data-collapsed-preview-media/.test(admin),
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
 assert.ok(/ensureLottiePlayer/.test(previewRuntime) &&
