@@ -1685,7 +1685,7 @@ export function createLightboxMediaRenderer({
     const parsed = parseYouTube(item.src);
     const isShort = Boolean(parsed?.isShort);
     const embedSrc = buildYouTubeEmbedUrl(item.src);
-    if (!embedSrc) return null;
+    if (!embedSrc) return renderUnsupported(item, project);
 
     // Promote the newly requested player to the sole playback owner before
     // reusing a cached iframe. This covers the hidden-preload lifecycle as well
