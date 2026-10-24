@@ -2,7 +2,7 @@
  * CMS project-row preview lifecycle, isolated from data and editor markup.
  * Media loads only near the viewport; hidden 3D viewers release WebGL resources.
  */
-export function mountProjectListPreviews(root, {resolveUrl = value => value} = {}) {
+export function mountProjectListPreviews(root, {resolveUrl = value => value, lottiePlayerTimeoutMs = 6000, lottieMediaTimeoutMs = 12000} = {}) {
   if (!root) return () => {};
   const doc = root.ownerDocument || globalThis.document;
   const view = doc?.defaultView || globalThis.window;
@@ -72,6 +72,7 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
       try{resource.cleanup?.();}catch(_){}
       try{node.pause();}catch(_){} node.removeAttribute('src'); try{node.load();}catch(_){}
     } else if(resource?.type==='lottie') {
+      try{resource.cleanup?.();}catch(_){}
       try{node.pause?.();node.stop?.();}catch(_){} node.removeAttribute('src');
     } else if(resource?.type==='model') {
       try{resource.cleanup?.();}catch(_){}
@@ -158,6 +159,40 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
       return;
     }
     if(type==='lottie') {
+      let slowLoadTimer = null;
+      let cancelReadinessWait = null;
+      let cancelActivation = () => {};
+      const cancelled = new Promise(resolve => { cancelActivation = () => resolve(false); });
+      const isCurrent = () => ownsNode(node) &&
+        node.dataset.previewActive === 'true' &&
+        activationGeneration.get(node) === generation;
+      const clearSlowLoadTimer = () => {
+        if (slowLoadTimer !== null) { clearTimeout(slowLoadTimer); slowLoadTimer = null; }
+      };
+      const showSlowLoadFallback = () => {
+        if (!isCurrent()) return;
+        setPreviewFallback(node, 'lottie');
+        node.dataset.previewState = 'error';
+      };
+      const armSlowLoadFallback = timeoutMs => {
+        clearSlowLoadTimer();
+        slowLoadTimer = setTimeout(() => {
+          slowLoadTimer = null;
+          // A timeout changes only the visible state. Do not cancel the player
+          // or source request: a late ready event can still replace the fallback.
+          showSlowLoadFallback();
+        }, Math.max(0, Number(timeoutMs) || 0));
+      };
+      const cleanup = () => {
+        clearSlowLoadTimer();
+        try { cancelReadinessWait?.(); } catch (_) {}
+        cancelReadinessWait = null;
+        cancelActivation();
+      };
+      // Register cleanup before awaiting the external player or animation so
+      // leaving the viewport can release listeners/timers and settle the job.
+      active.set(node, {type:'lottie', cleanup});
+      armSlowLoadFallback(lottiePlayerTimeoutMs);
       const job = (async () => {
         let playerAvailable = !!view?.customElements?.get?.('lottie-player');
         if (!playerAvailable) {
@@ -166,58 +201,71 @@ export function mountProjectListPreviews(root, {resolveUrl = value => value} = {
             // the shared adapter if that request failed or the definition is
             // not ready yet, rather than leaving a valid thumbnail blank.
             const {ensureLottiePlayer} = await import('../js/infrastructure/lottie/player.js');
-            playerAvailable = await ensureLottiePlayer();
+            playerAvailable = await Promise.race([Promise.resolve().then(() => ensureLottiePlayer()), cancelled]);
           } catch (_) {
             playerAvailable = false;
           }
         }
-        if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
+        if (!isCurrent()) return;
+        clearSlowLoadTimer();
         if (!playerAvailable) {
-          setPreviewFallback(node, 'lottie');
-          node.dataset.previewState = 'error';
+          showSlowLoadFallback();
           return;
         }
         if (node.updateComplete && typeof node.updateComplete.then === 'function') await node.updateComplete;
-        if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
-        clearPreviewFallback(node);
+        if (!isCurrent()) return;
         node.setAttribute('background','transparent');
         node.setAttribute('preserveAspectRatio','xMidYMid slice');
         node.setAttribute('renderer','svg');
         node.setAttribute('autoplay','');
         node.setAttribute('loop','');
+        node.dataset.previewState = 'loading';
         const rendered = await new Promise(resolve => {
           let settled = false;
-          const finish = value => { if (settled) return; settled = true; node.removeEventListener('ready', onReady); node.removeEventListener('error', onError); clearTimeout(timer); resolve(value); };
-          const onReady = () => finish(true);
-          const onError = () => finish(false);
-          const timer = setTimeout(() => finish(false), 12000);
-          node.addEventListener('ready', onReady, {once:true});
-          node.addEventListener('error', onError, {once:true});
+          const finish = value => {
+            if (settled) return;
+            settled = true;
+            clearSlowLoadTimer();
+            node.removeEventListener('ready', onReady);
+            node.removeEventListener('error', onError);
+            if (cancelReadinessWait === cancelWait) cancelReadinessWait = null;
+            resolve(value);
+          };
+          const onReady = () => finish(isCurrent());
+          const onError = () => {
+            showSlowLoadFallback();
+            finish(false);
+          };
+          const cancelWait = () => finish(false);
+          cancelReadinessWait = cancelWait;
+          node.addEventListener('ready', onReady);
+          node.addEventListener('error', onError);
+          armSlowLoadFallback(lottieMediaTimeoutMs);
           node.setAttribute('src',src);
           // lottie-player 2.0.12 loads src during firstUpdated. CMS thumbnails
           // are upgraded before the lazy source is assigned, so attribute-only
           // updates do not reliably start the animation. Use its public loader.
           if (typeof node.load === 'function') node.load(src);
         });
-        if (!ownsNode(node) || node.dataset.previewActive !== 'true' || activationGeneration.get(node) !== generation) return;
+        if (!isCurrent()) return;
         const animation = node.getLottie?.();
         const svg = node.shadowRoot?.querySelector?.('svg');
         if (!rendered || !animation || !svg) {
-          setPreviewFallback(node, 'lottie');
-          node.dataset.previewState = 'error';
+          showSlowLoadFallback();
           return;
         }
-        active.set(node,{type:'lottie'});
+        clearPreviewFallback(node);
         node.dataset.previewState='ready';
       })();
       void job.catch(() => {
-        if (!ownsNode(node) || node.dataset.previewActive !== 'true') return;
+        if (!isCurrent()) return;
+        clearSlowLoadTimer();
         setPreviewFallback(node, 'lottie');
         node.dataset.previewState = 'error';
       });
       return;
     }
-    const job=modelQueue.then(async()=>{
+        const job=modelQueue.then(async()=>{
       if(!ownsNode(node)||node.dataset.previewActive!=='true')return;
       try {
         const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261023-01');
