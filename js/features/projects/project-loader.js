@@ -57,7 +57,8 @@ export async function loadProjects({
   resolveUrl,
   buildCard,
   getGrid,
-  createFragment
+  createFragment,
+  disposePreviousCards = null
 } = {}) {
   if (
     (!url && projectData === undefined) ||
@@ -89,6 +90,8 @@ export async function loadProjects({
     const projects = normalizeProjects(raw);
     if (!projects.length) {
       if (loadToken !== projectLoadToken) return false;
+      const previousCards = Array.from(grid.querySelectorAll?.('.project-card') || []);
+      disposePreviousCards?.(previousCards);
       grid.replaceChildren();
       projectModels = [];
       projectCardMap.clear();
@@ -121,6 +124,8 @@ export async function loadProjects({
     // replace the normalized project index.
     if (loadToken !== projectLoadToken) return false;
 
+    const previousCards = Array.from(grid.querySelectorAll?.('.project-card') || []);
+    disposePreviousCards?.(previousCards);
     grid.replaceChildren(fragment);
 
     projectModels = projects.slice();
