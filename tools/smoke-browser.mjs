@@ -10007,10 +10007,14 @@ try {
       }
     }, { width: 1280, height: 900 }, async page => {
       await page.route('**/data/hero-loop.json*', async route => {
+        // Keep the HTTP transport successful so the generic smoke harness does
+        // not classify this intentional fixture as an unexpected browser error.
+        // Invalid JSON still exercises loadCmsJson's fallback path, and the
+        // hero must continue with normalized project media.
         await route.fulfill({
-          status: 503,
+          status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ error: 'Intentional hero-loop fallback smoke fixture.' })
+          body: '{ intentionally invalid hero-loop JSON'
         });
       });
     });
