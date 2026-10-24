@@ -262,7 +262,7 @@ function registerThumbnailMediaState(media, {
         }
         if (type === 'video') {
           media.preload = 'auto';
-          if (media.dataset.mediaState === 'ready') Promise.resolve(media.play?.()).catch(() => {});
+          Promise.resolve(media.play?.()).catch(() => {});
         } else if (type === 'lottie') {
           startLottiePlayback();
         }
