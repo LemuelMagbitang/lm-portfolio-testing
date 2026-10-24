@@ -38,6 +38,8 @@ export function createLightboxMediaRenderer({
   const artworkGroupLayoutCleanups = new Set();
   const artworkGroupInteractionCleanups = new Set();
   const activePreloadCleanups = new Set();
+  const lightboxMediaCleanups = new WeakMap();
+  const activeLightboxMediaCleanups = new Set();
   const MEDIA_PRELOAD_TIMEOUT_MS = 9000;
   // External model-viewer module imports can wait on the Three.js CDN. Bound
   // how long they hold the startup gate; a pending import can still complete
@@ -1423,6 +1425,107 @@ export function createLightboxMediaRenderer({
     p.className = 'media-caption';
     p.textContent = value;
     return p;
+  }
+
+  function registerLightboxMediaCleanup(media, cleanup) {
+    if (!media || typeof cleanup !== 'function') return () => {};
+    let active = true;
+    const record = {
+      media,
+      run() {
+        if (!active) return;
+        active = false;
+        activeLightboxMediaCleanups.delete(record);
+        lightboxMediaCleanups.delete(media);
+        try { cleanup(); } catch (_) {}
+      }
+    };
+    lightboxMediaCleanups.set(media, record);
+    activeLightboxMediaCleanups.add(record);
+    return () => record.run();
+  }
+
+  function cleanupLightboxMediaIn(container) {
+    if (!container) return;
+    const nodes = [];
+    if (container.matches?.('img,video,lottie-player')) nodes.push(container);
+    container.querySelectorAll?.('img,video,lottie-player').forEach(node => nodes.push(node));
+    nodes.forEach(node => lightboxMediaCleanups.get(node)?.run());
+  }
+
+  function getStaticImageFallback(project = {}, failedSrc = '') {
+    const failed = String(failedSrc || '').trim();
+    const items = Array.isArray(project.media) ? project.media : [];
+    for (const item of items) {
+      const raw = String(item?.src || '').trim();
+      if (!raw || raw === failed) continue;
+      const type = String(item?.type || 'image').toLowerCase();
+      if (type !== 'image') continue;
+      const resolved = resolveAssetUrl(raw);
+      if (resolved && resolved !== failed) return resolved;
+    }
+    const thumbnail = project.thumbnail || {};
+    const rawThumbnail = String(thumbnail.src || '').trim();
+    const thumbnailType = String(thumbnail.type || 'image').toLowerCase();
+    if (rawThumbnail && thumbnailType === 'image' && rawThumbnail !== failed) {
+      const resolved = resolveAssetUrl(rawThumbnail);
+      if (resolved && resolved !== failed) return resolved;
+    }
+    return '';
+  }
+
+  function showLightboxMediaFallback(artwork, project = {}, failedSrc = '', mediaType = 'image', status = 'error', explicitFallback = '') {
+    if (!artwork || !documentRef?.createElement) return;
+    let fallback = artwork.querySelector?.('.lightbox-media-fallback');
+    if (!fallback) {
+      fallback = documentRef.createElement('div');
+      fallback.className = 'lightbox-media-fallback';
+      artwork.appendChild(fallback);
+    }
+    if (typeof fallback.replaceChildren === 'function') fallback.replaceChildren();
+    else fallback.textContent = '';
+    const type = String(mediaType || 'image').toLowerCase();
+    const labels = { image: 'PROJECT ARTWORK', video: 'VIDEO ARTWORK', lottie: 'ANIMATED ARTWORK', youtube: 'PROJECT VIDEO' };
+    const labelText = labels[type] || (type === 'model' ? '3D ARTWORK' : 'PROJECT ARTWORK');
+    fallback.dataset.state = status === 'loading' ? 'loading' : 'error';
+    fallback.setAttribute('role', 'img');
+    fallback.setAttribute('aria-label', labelText);
+
+    const imageSrc = String(explicitFallback || getStaticImageFallback(project, failedSrc) || '').trim();
+    const appendLabel = () => {
+      if (!fallback?.isConnected && !artwork.contains?.(fallback)) return;
+      fallback.replaceChildren?.();
+      const icon = documentRef.createElement('i');
+      icon.className = type === 'video' || type === 'youtube' ? 'fa-solid fa-film' :
+        type === 'lottie' ? 'fa-solid fa-wand-magic-sparkles' :
+        type === 'model' ? 'fa-solid fa-cube' : 'fa-regular fa-image';
+      icon.setAttribute('aria-hidden', 'true');
+      const label = documentRef.createElement('span');
+      label.textContent = status === 'loading' ? 'LOADING ' + labelText : labelText;
+      fallback.append(icon, label);
+    };
+    if (imageSrc && imageSrc !== failedSrc) {
+      const image = documentRef.createElement('img');
+      image.className = 'lightbox-media-fallback-image';
+      image.alt = '';
+      image.setAttribute('aria-hidden', 'true');
+      image.decoding = 'async';
+      image.loading = 'eager';
+      image.addEventListener('error', () => appendLabel(), { once: true });
+      image.src = imageSrc;
+      fallback.appendChild(image);
+      const badge = documentRef.createElement('span');
+      badge.className = 'lightbox-media-fallback-label';
+      badge.textContent = status === 'loading' ? 'LOADING ' + labelText : labelText;
+      fallback.appendChild(badge);
+    } else {
+      appendLabel();
+    }
+    return fallback;
+  }
+
+  function clearLightboxMediaFallback(artwork) {
+    artwork?.querySelector?.('.lightbox-media-fallback')?.remove();
   }
 
   function buildMediaEntry(mediaEl, captionText, background) {
