@@ -6691,6 +6691,11 @@ try {
       const thumbnail = fixtureCard.locator('.card-thumbnail').first();
       const activationTarget = thumbnail.locator('[data-lottie-thumb], lottie-player').first();
       if (await activationTarget.count() !== 1) throw new Error('Direct-media fixture thumbnail target is missing.');
+      await activationTarget.scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => {
+        const element = document.querySelector('#portfolioGrid .project-card[data-project-id="test-project"] .card-thumbnail lottie-player');
+        return Boolean(element?.classList.contains('is-media-ready'));
+      }, null, { timeout: 8000 });
       await activationTarget.evaluate(element => element.setAttribute('data-model-thumb', ''));
       await activationTarget.click();
 
