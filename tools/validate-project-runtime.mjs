@@ -188,6 +188,13 @@ assert.equal(mediaTypeFromSrc('models/legacy.obj?raw=1'), 'model',
   'Legacy OBJ paths without an explicit type should infer a 3D thumbnail.');
 assert.equal(mediaTypeFromSrc('models/legacy.glb#preview'), 'model');
 assert.equal(mediaTypeFromSrc('animations/legacy.json?raw=1'), 'lottie');
+assert.equal(mediaTypeFromSrc('https://cdn.example.test/video.webm?token=abc'), 'video',
+  'Video URLs with signed query parameters should retain their media type.');
+assert.equal(mediaTypeFromSrc('data:video/mp4;base64,AAAA'), 'video',
+  'Data URLs should use their declared media MIME type.');
+assert.equal(mediaTypeFromSrc('data:image/webp;base64,AAAA'), 'image');
+assert.equal(mediaTypeFromSrc('data:application/json;base64,AAAA'), 'lottie',
+  'JSON data URLs should be recognized as Lottie-compatible sources.');
 const readinessEvents = new Map();
 let readinessTimerCleared = false;
 let readinessResolved = false;
@@ -397,6 +404,41 @@ assert.equal(
 retryableLottieThumbnail.dispatch('ready');
 assert.equal(retryableLottieThumbnail.dataset.mediaState, 'ready');
 disposeProjectThumbnailMedia(retryableLottieThumbnail);
+
+// Failed animation previews should retain a real static fallback when the
+// project has raster artwork, instead of replacing it with an unavailable label.
+const fallbackContainer = {
+  children: [],
+  appendChild(node) { node.parentNode = this; node.parentElement = this; this.children.push(node); return node; },
+  removeChild(node) {
+    this.children = this.children.filter(child => child !== node);
+    node.parentNode = null;
+    node.parentElement = null;
+    return node;
+  }
+};
+const fallbackLottie = buildProjectThumbnailMedia(
+  { type: 'lottie', src: 'media/broken.json', fallbackSrc: 'media/poster.webp' },
+  'Broken animation',
+  {
+    documentRef: thumbnailDocument,
+    resolveAssetUrl: value => '/assets/' + value,
+    ensureLottiePlayer: () => Promise.resolve(false)
+  }
+);
+fallbackLottie.parentElement = fallbackContainer;
+preloadObserver.trigger(fallbackLottie, true);
+await new Promise(resolve => setTimeout(resolve, 0));
+const fallbackSurface = fallbackContainer.children.find(node => node.className === 'project-thumb-media-fallback');
+assert.ok(fallbackSurface, 'Failed Lottie should retain a visible fallback surface.');
+assert.equal(fallbackSurface.dataset.state, 'error');
+assert.equal(fallbackSurface.children[0]?.src, '/assets/media/poster.webp',
+  'Failed Lottie should show the project static artwork if it exists.');
+assert.ok(
+  fallbackSurface.children.every(node => !/unavailable/i.test(String(node.textContent || ''))),
+  'Preview failure UI should not expose an unavailable error label.'
+);
+disposeProjectThumbnailMedia(fallbackLottie);
 
 // If the optional player finishes loading after its thumbnail has been
 // disposed, the completion must not attach the animation source to dead media.
