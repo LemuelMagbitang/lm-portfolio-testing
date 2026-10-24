@@ -218,6 +218,18 @@ export async function initGallery(options = {}) {
     return filterTabs ? Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn')) : [];
   }
 
+  // Share one inner-viewport center between the rail's scroll target and the
+  // indicator. Using client geometry avoids border-box/client-box drift.
+  function getFilterViewportCenterX() {
+    if (!filterTabs) return 0;
+    const rect = filterTabs.getBoundingClientRect();
+    const clientLeft = Number(filterTabs.clientLeft) || 0;
+    const clientWidth = Number.isFinite(filterTabs.clientWidth)
+      ? filterTabs.clientWidth
+      : rect.width;
+    return rect.left + clientLeft + clientWidth / 2;
+  }
+
   function getFilterIndicatorHost() {
     // Keep the pill and label inside the same compositing context. The rail's
     // edge mask creates a stacking context of its own; a sibling pill outside
@@ -265,14 +277,26 @@ export async function initGallery(options = {}) {
 
     const hostRect = host.getBoundingClientRect();
     const buttonRect = indicatorButton.getBoundingClientRect();
-    const scrollerRect = filterTabs.getBoundingClientRect();
-    // Anchor the pill's center to the viewport centerline. The label can scroll
-    // underneath it; only the pill width morphs to fit the selected label.
-    const centerX = scrollerRect.left + filterTabs.clientWidth / 2 - hostRect.left;
+    const hostClientLeft = Number(host.clientLeft) || 0;
+    const hostClientTop = Number(host.clientTop) || 0;
+    // Anchor the pill's center to the rail's inner viewport. Keep horizontal
+    // centering independent from vertical placement so every width change grows
+    // equally in both directions from the same center anchor.
+    const centerX = getFilterViewportCenterX() - hostRect.left - hostClientLeft;
     indicator.style.left = `${centerX}px`;
+    indicator.style.top = `${buttonRect.top - hostRect.top - hostClientTop}px`;
     indicator.style.width = `${buttonRect.width}px`;
     indicator.style.height = `${buttonRect.height}px`;
-    indicator.style.transform = `translate3d(-50%, ${buttonRect.top - hostRect.top}px, 0)`;
+    indicator.style.transformOrigin = 'center center';
+    if ('translate' in indicator.style) {
+      // Individual translate keeps the X anchor tied to the pill's own center
+      // while width animates, without coupling it to the Y positioning.
+      indicator.style.translate = '-50% 0';
+      indicator.style.transform = 'translate3d(0, 0, 0)';
+    } else {
+      // Fallback for engines without individual transform properties.
+      indicator.style.transform = 'translate3d(-50%, 0, 0)';
+    }
 
     // Keep a visible CSS fallback until the first measured pill is ready.
     indicator.classList.add('is-ready');
@@ -382,10 +406,9 @@ export async function initGallery(options = {}) {
 
   function centerFilterButton(button, behavior = 'auto', force = false) {
     if (!filterTabs || !button || !isFilterScroller()) return false;
-    const tabsRect = filterTabs.getBoundingClientRect();
     const buttonRect = button.getBoundingClientRect();
     const delta = (buttonRect.left + buttonRect.width / 2) -
-      (tabsRect.left + tabsRect.width / 2);
+      getFilterViewportCenterX();
     // Keep the selected item on the viewport's horizontal centerline. A small
     // tolerance prevents re-scrolling when it's already centered, while force
     // is reserved for precise post-swipe snap settlement.
