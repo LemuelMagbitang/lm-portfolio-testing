@@ -1670,7 +1670,11 @@ export function createLightboxMediaRenderer({
       }
     }
 
-    if (!imageSettled) {
+    if (imageSettled && !(Number(image.naturalWidth) > 0)) {
+      // Applying the holographic wrapper can replace artwork children. Reassert
+      // the error fallback afterward for an already-failed cached image.
+      showLightboxMediaFallback(artwork, project, item.src, 'image', 'error');
+    } else if (!imageSettled) {
       showLightboxMediaFallback(artwork, project, item.src, 'image', 'loading');
     }
 
