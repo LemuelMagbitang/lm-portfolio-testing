@@ -1984,11 +1984,16 @@ export function createLightboxMediaRenderer({
     let frameId = null;
     let frameIsTimer = false;
     let loadTimer = null;
+    let playerTimer = null;
     let startAttempts = 0;
     const clearLoadTimer = () => {
       if (loadTimer !== null) {
         (windowRef?.clearTimeout || globalThis.clearTimeout)?.call(windowRef || globalThis, loadTimer);
         loadTimer = null;
+      }
+      if (playerTimer !== null) {
+        (windowRef?.clearTimeout || globalThis.clearTimeout)?.call(windowRef || globalThis, playerTimer);
+        playerTimer = null;
       }
     };
     const clearFrame = () => {
@@ -2056,9 +2061,34 @@ export function createLightboxMediaRenderer({
         }
         return;
       }
-      player.setAttribute('src', resolvedSrc);
-      try { player.load?.(resolvedSrc); } catch (_) {}
-      loadTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, onError, 12000);
+      const loadPlayer = async () => {
+        let available = Boolean(windowRef?.customElements?.get?.('lottie-player'));
+        if (!available) {
+          try {
+            const { ensureLottiePlayer } = await import('../../infrastructure/lottie/player.js');
+            const loader = Promise.resolve().then(() => ensureLottiePlayer());
+            const timeout = new Promise(resolve => {
+              playerTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, () => resolve(false), 6000);
+            });
+            available = await Promise.race([loader, timeout]);
+            if (playerTimer !== null) {
+              (windowRef?.clearTimeout || globalThis.clearTimeout)?.call(windowRef || globalThis, playerTimer);
+              playerTimer = null;
+            }
+          } catch (_) {
+            available = false;
+          }
+        }
+        if (disposed || destroyed || !player.isConnected || !artwork?.isConnected) return;
+        if (!available || !windowRef?.customElements?.get?.('lottie-player')) {
+          onError();
+          return;
+        }
+        player.setAttribute('src', resolvedSrc);
+        try { player.load?.(resolvedSrc); } catch (_) {}
+        loadTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, onError, 12000);
+      };
+      void loadPlayer().catch(onError);
     };
     frameIsTimer = typeof windowRef?.requestAnimationFrame !== 'function';
     frameId = frameIsTimer
