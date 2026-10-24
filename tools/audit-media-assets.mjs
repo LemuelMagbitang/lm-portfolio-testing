@@ -222,7 +222,7 @@ function auditLargeVideoReferences() {
   // Large videos are shipped with the Pages artifact even when no page ever
   // requests them. Search runtime/data/config files, but exclude docs and tools
   // so explanatory text cannot make an unused asset look live.
-  const sourceRoots = ['data', 'js', 'css', 'admin'];
+  const sourceRoots = ['data', 'js', 'css', 'admin', 'about', 'success'];
   const referenceFiles = [];
 
   function visit(current) {
