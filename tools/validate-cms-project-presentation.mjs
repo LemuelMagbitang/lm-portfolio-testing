@@ -574,8 +574,17 @@ snapToStart('target-card');
 assert.equal(snapCalls.length, 0,
   'The snap helper must not scroll to a card detached before the scheduled frame.');
 
-assert.equal(admin.split('if (willOpen) snapCmsCardToStart(item._uid);').length - 1, 2,
-  'Both Hero Messages and Reviews must snap only when a card is opened.');
+const heroDisclosureSourceStart = admin.indexOf('RENDERERS.hero = function(data){');
+const reviewsDisclosureSourceStart = admin.indexOf('RENDERERS.reviews = async function');
+const aboutDisclosureSourceStart = admin.indexOf('RENDERERS.about = function(data){', reviewsDisclosureSourceStart);
+assert.ok(heroDisclosureSourceStart >= 0 && reviewsDisclosureSourceStart > heroDisclosureSourceStart,
+  'Hero Messages and Reviews renderer boundaries should remain discoverable.');
+assert.ok(aboutDisclosureSourceStart > reviewsDisclosureSourceStart,
+  'The Reviews renderer should remain separately testable.');
+assert.ok(admin.slice(heroDisclosureSourceStart, reviewsDisclosureSourceStart).includes('if (willOpen) snapCmsCardToStart(item._uid);'),
+  'Hero Messages must snap only when opening a card.');
+assert.ok(admin.slice(reviewsDisclosureSourceStart, aboutDisclosureSourceStart).includes('if (willOpen) snapCmsCardToStart(item._uid);'),
+  'Reviews must snap only when opening a card.');
 for (const marker of [
   'if(willOpen)snapCmsCardToStart(item._uid);',
   'if (willOpen) snapCmsCardToStart(p._uid);',

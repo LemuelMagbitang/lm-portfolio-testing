@@ -1407,7 +1407,7 @@ RENDERERS.hero = function(data){
 
       card.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if(e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
-        const willOpen = !isOpen; const willOpen = !isOpen; openUid = isOpen ? null : item._uid; paint(); if (willOpen) snapCmsCardToStart(item._uid); if (willOpen) snapCmsCardToStart(item._uid);
+        const willOpen = !isOpen; openUid = isOpen ? null : item._uid; paint(); if (willOpen) snapCmsCardToStart(item._uid);
       });
       card.querySelector('[data-act="del"]').addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -2551,7 +2551,7 @@ RENDERERS.reviews = async function(data, isCurrent=()=>true){
 
       row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if(e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
-        openUid = isOpen ? null : item._uid; paint();
+        const willOpen = !isOpen; openUid = isOpen ? null : item._uid; paint(); if (willOpen) snapCmsCardToStart(item._uid);
       });
       row.querySelector('[data-act="del"]').addEventListener('click', (e)=>{
         e.stopPropagation();
