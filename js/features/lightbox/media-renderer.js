@@ -2107,16 +2107,33 @@ export function createLightboxMediaRenderer({
     return entry;
   }
 
-  function renderItem(item, project, index = 0) {
-    if (!item?.src) return null;
+  function renderUnsupported(item, project) {
+    const placeholder = documentRef.createElement('div');
+    placeholder.className = 'lightbox-unsupported-media';
+    const entry = buildMediaEntry(
+      placeholder,
+      item?.caption || item?.description,
+      item?.background
+    );
+    const artwork = entry.querySelector('.lightbox-artwork');
+    // Keep the gallery item present even when its media type is unknown or the
+    // record is malformed. Reuse project artwork when available; otherwise
+    // the shared helper renders a stable local artwork placeholder.
+    showLightboxMediaFallback(artwork, project, item?.src || '', 'unsupported', 'error');
+    return entry;
+  }
 
-    const type = String(item.type || 'image').toLowerCase();
+  function renderItem(item, project, index = 0) {
+    if (!item || typeof item !== 'object') return null;
+
+    const type = String(item.type || 'image').trim().toLowerCase();
+    if (!String(item.src || '').trim()) return renderUnsupported(item, project);
     if (type === 'image') return renderImage(item, project, index);
     if (type === 'youtube') return renderYouTube(item, project, index);
     if (type === 'video') return renderVideo(item, index, project);
     if (type === 'model') return renderModel(item, project);
     if (type === 'lottie') return renderLottie(item, project);
-    return null;
+    return renderUnsupported(item, project);
   }
 
   function buildInspectTransform(fromRect, toRect) {
