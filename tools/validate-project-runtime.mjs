@@ -608,6 +608,40 @@ assert.ok(inheritedThumbnailFoil,
 assert.equal(inheritedThumbnailFoil.style['--thumb-holo-intensity'],'0.24');
 assert.equal(inheritedThumbnailFoil.dataset.holoStyle,'aurora');
 
+const combinedEffectsProject = {
+  id:'combined-effects-thumbnail',
+  title:'Combined effects thumbnail',
+  thumbnail:{src:''},
+  media:[
+    {type:'image',src:'media/combined-front.webp',holographic:{
+      style:'aurora',intensity:0.37,texture:'foil.svg',textureMode:'tile',
+      back:'media/combined-back.webp',backFoilEnabled:true,backIntensity:0.82
+    }},
+    {type:'lottie',src:'media/combined-motion.json'},
+    {type:'model',src:'models/combined.glb',background:{type:'color',color:'#123456'}}
+  ]
+};
+const combinedEffectsCard = buildProjectCardElement(combinedEffectsProject,{
+  documentRef:cardDocument,
+  resolveAssetUrl:value=>'/assets/'+value
+});
+const combinedThumbnail = combinedEffectsCard.children[0];
+const combinedFoilOverlay = combinedThumbnail.children.find(child=>child.className==='project-thumb-foil');
+assert.equal(combinedThumbnail.dataset.thumbnailType,'image',
+  'Auto thumbnail selection should preserve the first image despite Lottie/3D gallery media.');
+assert.ok(combinedFoilOverlay,
+  'An auto-generated image thumbnail should retain foil with Lottie and 3D media in the same project.');
+assert.equal(combinedFoilOverlay.style['--thumb-holo-intensity'],'0.37',
+  'Generated card foil should use front strength.');
+assert.equal(combinedFoilOverlay.dataset.holoStyle,'aurora');
+const normalizedCombinedEffects = normalizeProjects([combinedEffectsProject])[0];
+assert.equal(normalizedCombinedEffects.media[0].holographic.intensity,0.37);
+assert.equal(normalizedCombinedEffects.media[0].holographic.backIntensity,0.82,
+  'Combined media projects should retain the independent back strength.');
+assert.equal(normalizedCombinedEffects.media[1].type,'lottie');
+assert.equal(normalizedCombinedEffects.media[2].type,'model');
+disposeProjectThumbnailMedia(combinedEffectsCard);
+
 const normalizedSeparateThumbnailFoil = normalizeProjects([{
   id:'separate-thumbnail-foil-strengths',title:'Separate thumbnail foil strengths',
   thumbnail:{src:'',holographic:{style:'aurora',intensity:0.24,back:'media/back.webp',backFoilEnabled:true,backIntensity:0.81}},
