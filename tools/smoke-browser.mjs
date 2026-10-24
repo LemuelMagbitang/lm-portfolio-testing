@@ -10049,7 +10049,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261019-01');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261024-01');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10090,7 +10090,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261019-01');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261024-01');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10112,8 +10112,8 @@ try {
           videoFetchPriority: video.fetchPriority
         };
       });
-      if (standard.preference || !standard.lottieAutoplay || !standard.lottieLoop ||
-          !standard.videoAutoplay || !standard.videoLoop || standard.videoPreload !== 'auto' ||
+      if (standard.preference || standard.lottieAutoplay || !standard.lottieLoop ||
+          standard.videoAutoplay || !standard.videoLoop || standard.videoPreload !== 'metadata' ||
           standard.videoFetchPriority !== 'high') {
         throw new Error(
           'Project thumbnail autoplay and looping must remain available when reduced motion is not requested: ' +
