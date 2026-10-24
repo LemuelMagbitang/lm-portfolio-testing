@@ -2074,10 +2074,16 @@ export function createLightboxMediaRenderer({
           try {
             const { ensureLottiePlayer } = await import('../../infrastructure/lottie/player.js');
             const loader = Promise.resolve().then(() => ensureLottiePlayer());
-            const timeout = new Promise(resolve => {
-              playerTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, () => resolve(false), 6000);
-            });
-            available = await Promise.race([loader, timeout]);
+            playerTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, () => {
+              playerTimer = null;
+              if (disposed || destroyed || !player.isConnected || !artwork?.isConnected) return;
+              showLightboxMediaFallback(artwork, project, item.src, 'lottie', 'error');
+              artwork.dataset.mediaState = 'error';
+            }, 6000);
+            // Do not race the loader against a terminal false value. The timer
+            // only exposes a fallback; if the shared player loads late, keep
+            // going and let the normal Lottie ready/error lifecycle settle it.
+            available = await loader;
             if (playerTimer !== null) {
               (windowRef?.clearTimeout || globalThis.clearTimeout)?.call(windowRef || globalThis, playerTimer);
               playerTimer = null;
@@ -2091,6 +2097,7 @@ export function createLightboxMediaRenderer({
           onError();
           return;
         }
+        artwork.dataset.mediaState = 'loading';
         player.setAttribute('src', resolvedSrc);
         try { player.load?.(resolvedSrc); } catch (_) {}
         loadTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, onError, 12000);

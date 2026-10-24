@@ -144,6 +144,10 @@ assert.match(mediaRendererSource, /function registerLightboxMediaCleanup\(/);
 assert.match(mediaRendererSource, /function cleanupLightboxMediaIn\(container\)/);
 assert.match(mediaRendererSource, /player\.load\?\.\(resolvedSrc\)/);
 assert.match(mediaRendererSource, /ensureLottiePlayer\(\)/);
+assert.doesNotMatch(mediaRendererSource, /Promise\.race\(\[loader, timeout\]\)/,
+  'A slow Lightbox Lottie player must not be converted to a terminal failure before its loader settles.');
+assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'lottie', 'error'\);[\s\S]*?artwork\.dataset\.mediaState = 'error';/,
+  'A slow Lightbox Lottie player must expose a visible fallback while keeping the source load recoverable.');
 assert.match(mediaRendererSource, /video\.addEventListener\('loadeddata', onVideoReady\)/);
 assert.match(mediaRendererSource, /video\.addEventListener\('error', onVideoError\)/);
 assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'image', 'error'\)/);
