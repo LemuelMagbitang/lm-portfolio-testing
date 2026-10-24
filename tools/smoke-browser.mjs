@@ -6695,6 +6695,13 @@ try {
       const thumbnail = fixtureCard.locator('.card-thumbnail').first();
       const activationTarget = thumbnail.locator('[data-lottie-thumb], lottie-player').first();
       if (await activationTarget.count() !== 1) throw new Error('Direct-media fixture thumbnail target is missing.');
+      await activationTarget.evaluate(element => {
+        const events = [];
+        ['load', 'ready', 'rendered', 'error'].forEach(name =>
+          element.addEventListener(name, () => events.push(name))
+        );
+        window.__lmLottieSmokeEvents = events;
+      });
       await fixtureCard.scrollIntoViewIfNeeded();
       await page.waitForFunction(() => {
         const element = document.querySelector('#portfolioGrid .project-card[data-project-id="test-project"] .card-thumbnail lottie-player');
@@ -6713,10 +6720,32 @@ try {
       if (lottieLoadingSurface.state === 'loading' && lottieLoadingSurface.fallbackPresent) {
         throw new Error('Lottie thumbnail displayed a loading/poster overlay before rendering.');
       }
-      await page.waitForFunction(() => {
-        const element = document.querySelector('#portfolioGrid .project-card[data-project-id="test-project"] .card-thumbnail lottie-player');
-        return element && ['ready', 'error'].includes(element.dataset.mediaState);
-      }, null, { timeout: 25000 });
+      try {
+        await page.waitForFunction(() => {
+          const element = document.querySelector('#portfolioGrid .project-card[data-project-id="test-project"] .card-thumbnail lottie-player');
+          return element && ['ready', 'error'].includes(element.dataset.mediaState);
+        }, null, { timeout: 25000 });
+      } catch (error) {
+        const diagnostic = await thumbnail.evaluate(host => {
+          const player = host.querySelector('lottie-player');
+          const root = player?.shadowRoot;
+          return {
+            appState: player?.dataset.mediaState || '',
+            source: player?.getAttribute('src') || '',
+            activated: player?.dataset.mediaActivated || '',
+            generation: player?.dataset.mediaGeneration || '',
+            playerState: player?.currentState || '',
+            defined: Boolean(customElements.get('lottie-player')),
+            hasLottieInstance: Boolean(player?.getLottie?.()),
+            svgCount: root?.querySelectorAll('svg').length || 0,
+            pathCount: root?.querySelectorAll('path').length || 0,
+            eventLog: window.__lmLottieSmokeEvents || [],
+            fallbackPresent: Boolean(host.querySelector('.project-thumb-media-fallback')),
+            rect: (() => { const r = host.getBoundingClientRect(); return {width:r.width,height:r.height}; })()
+          };
+        });
+        throw new Error('Lottie fixture did not reach ready/error: ' + JSON.stringify(diagnostic) + '; ' + error.message);
+      }
       const desktopLottieSurface = await thumbnail.evaluate(host => {
         const player = host.querySelector('lottie-player');
         const rect = host.getBoundingClientRect();
