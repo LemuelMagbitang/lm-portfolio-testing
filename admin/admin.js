@@ -3731,7 +3731,7 @@ function buildProjectBody(el, p, options = {}){
         if (m.type === 'model' && m.src) {
           const host = previewEl.querySelector('[data-model-preview]');
           try {
-            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261023-01');
+            const { mountModelViewer } = await import('../js/infrastructure/three/model-viewer.js?v=20261024-02');
             // The row may have been deleted/rebuilt while the module import
             // was pending. Do not mount unless this generation still owns the
             // live preview host.
@@ -5025,7 +5025,7 @@ function openMediaFullPreview(item,trigger){
     });
     (async()=>{
       try{
-        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261023-01');
+        const {mountModelViewer}=await import('../js/infrastructure/three/model-viewer.js?v=20261024-02');
         if(!overlay.isConnected)return;
         modelCleanup=await mountModelViewer(host,src,{hint:true,resolveUrl:ghRawUrl,enablePan:true,enableZoom:true});
         if(!overlay.isConnected){
