@@ -13,6 +13,178 @@ export function mediaTypeFromSrc(src = '') {
   return 'image';
 }
 
+
+const thumbnailMediaStateByElement = new WeakMap();
+const thumbnailViewportObserversByWindow = new WeakMap();
+
+function getThumbnailViewportObservers(windowRef) {
+  if (!windowRef || (typeof windowRef !== 'object' && typeof windowRef !== 'function')) return null;
+  const cached = thumbnailViewportObserversByWindow.get(windowRef);
+  if (cached) return cached;
+  const Observer = windowRef.IntersectionObserver || globalThis.IntersectionObserver;
+  if (typeof Observer !== 'function') return null;
+
+  const observers = { preload: null, visibility: null };
+  observers.preload = new Observer(entries => {
+    entries.forEach(entry => {
+      const state = thumbnailMediaStateByElement.get(entry.target);
+      if (!state || state.disposed) {
+        observers.preload.unobserve(entry.target);
+        return;
+      }
+      if (!entry.isIntersecting) return;
+      observers.preload.unobserve(entry.target);
+      state.activate();
+    });
+  }, { rootMargin: '640px 0px', threshold: 0.01 });
+
+  observers.visibility = new Observer(entries => {
+    entries.forEach(entry => {
+      const state = thumbnailMediaStateByElement.get(entry.target);
+      if (!state || state.disposed) {
+        observers.visibility.unobserve(entry.target);
+        return;
+      }
+      state.setVisible(entry.isIntersecting && entry.intersectionRatio > 0);
+    });
+  }, { rootMargin: '0px', threshold: 0.01 });
+
+  thumbnailViewportObserversByWindow.set(windowRef, observers);
+  return observers;
+}
+
+function registerThumbnailMediaState(media, { type, src, priority, reducedMotion, windowRef } = {}) {
+  const usesViewportLifecycle = type === 'video' || type === 'lottie';
+  const observers = usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
+  const listeners = [];
+  let activated = false;
+  let disposed = false;
+
+  const listen = (eventName, handler) => {
+    media.addEventListener?.(eventName, handler);
+    listeners.push([eventName, handler]);
+  };
+  const setReady = () => {
+    if (disposed) return;
+    const reveal = () => {
+      if (disposed) return;
+      media.dataset.mediaState = 'ready';
+      media.classList.remove('is-media-loading', 'is-media-error');
+      media.classList.add('is-media-ready');
+      if (type === 'video' && media.dataset.mediaVisible === 'true' && !reducedMotion) {
+        Promise.resolve(media.play?.()).catch(() => {});
+      }
+    };
+    if (String(media.tagName || '').toLowerCase() === 'img' && typeof media.decode === 'function') {
+      Promise.resolve().then(() => media.decode()).catch(() => {}).then(reveal);
+    } else {
+      reveal();
+    }
+  };
+  const setFailed = () => {
+    if (disposed) return;
+    media.dataset.mediaState = 'error';
+    media.classList.remove('is-media-loading', 'is-media-ready');
+    media.classList.add('is-media-error');
+  };
+
+  if (type === 'image') {
+    listen('load', setReady);
+    listen('error', setFailed);
+  } else if (type === 'video') {
+    listen('loadeddata', setReady);
+    listen('canplay', setReady);
+    listen('error', setFailed);
+  } else if (type === 'lottie') {
+    listen('ready', setReady);
+    listen('load', setReady);
+    listen('error', setFailed);
+  }
+
+  const state = {
+    type,
+    observers,
+    disposed: false,
+    activate() {
+      if (disposed || activated) return;
+      activated = true;
+      media.dataset.mediaActivated = 'true';
+      delete media.dataset.lazySrc;
+      if (type === 'image') {
+        media.src = src;
+        if (media.complete) {
+          if (Number(media.naturalWidth) > 0) setReady();
+          else setFailed();
+        }
+        return;
+      }
+      if (type === 'video') {
+        media.preload = 'metadata';
+        media.src = src;
+        return;
+      }
+      if (type === 'lottie') media.setAttribute('src', src);
+    },
+    setVisible(visible) {
+      if (disposed || !usesViewportLifecycle) return;
+      const isVisible = Boolean(visible);
+      media.dataset.mediaVisible = isVisible ? 'true' : 'false';
+      if (isVisible) {
+        state.activate();
+        if (reducedMotion) {
+          try { media.pause?.(); } catch (_) {}
+          media.removeAttribute?.('autoplay');
+          return;
+        }
+        if (type === 'video') {
+          media.preload = 'auto';
+          Promise.resolve(media.play?.()).catch(() => {});
+        } else {
+          media.setAttribute('autoplay', '');
+          media.setAttribute('loop', '');
+          Promise.resolve(media.play?.()).catch(() => {});
+        }
+        return;
+      }
+      try { media.pause?.(); } catch (_) {}
+      if (type === 'lottie') media.removeAttribute?.('autoplay');
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      state.disposed = true;
+      observers?.preload?.unobserve(media);
+      observers?.visibility?.unobserve(media);
+      listeners.forEach(([eventName, handler]) => {
+        try { media.removeEventListener?.(eventName, handler); } catch (_) {}
+      });
+      listeners.length = 0;
+      if (type === 'video' || type === 'lottie') {
+        try { media.pause?.(); } catch (_) {}
+      }
+      try { media.removeAttribute?.('src'); } catch (_) {}
+      if (type === 'video') {
+        try { media.load?.(); } catch (_) {}
+      }
+      thumbnailMediaStateByElement.delete(media);
+    }
+  };
+  thumbnailMediaStateByElement.set(media, state);
+  return state;
+}
+
+/**
+ * Release media only when a card is removed/replaced; scrolling out of view
+ * pauses expensive animation without throwing away useful browser cache state.
+ */
+export function disposeProjectThumbnailMedia(root) {
+  if (!root) return;
+  const media = [];
+  if (root.matches?.('.project-thumb-media')) media.push(root);
+  root.querySelectorAll?.('.project-thumb-media').forEach(item => media.push(item));
+  media.forEach(item => thumbnailMediaStateByElement.get(item)?.dispose());
+}
+
 export function buildProjectThumbnailMedia(
   source = {},
   altText = 'Project artwork',
@@ -20,7 +192,7 @@ export function buildProjectThumbnailMedia(
 ) {
   if (!source?.src || typeof resolveAssetUrl !== 'function') return null;
 
-  const type = String(source.type || mediaTypeFromSrc(source.src));
+  const type = String(source.type || mediaTypeFromSrc(source.src)).toLowerCase();
   const src = resolveAssetUrl(source.src);
   const windowRef = documentRef?.defaultView || globalThis.window;
   const reducedMotion = Boolean(windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
@@ -29,43 +201,31 @@ export function buildProjectThumbnailMedia(
   if (type === 'video') {
     media = documentRef.createElement('video');
     media.muted = true;
-    // Project-card media has no player controls, so motion stays still when
-    // the visitor prefers reduced motion. Keep priority hints for still-image
-    // thumbnails, but do not promote animated media ahead of page content.
     media.loop = !reducedMotion;
-    media.autoplay = !reducedMotion;
+    media.autoplay = false;
     media.playsInline = true;
-    media.preload = priority && !reducedMotion ? 'auto' : 'metadata';
-    if (priority && !reducedMotion) media.fetchPriority = 'high';
-    media.src = src;
+    media.preload = reducedMotion || priority ? 'metadata' : 'none';
+    media.fetchPriority = priority && !reducedMotion ? 'high' : 'low';
   } else if (type === 'lottie') {
     media = documentRef.createElement('lottie-player');
-    media.setAttribute('src', src);
-    if (!reducedMotion) {
-      media.setAttribute('autoplay', '');
-      media.setAttribute('loop', '');
-    }
+    if (!reducedMotion) media.setAttribute('loop', '');
     media.setAttribute('background', 'transparent');
     media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
   } else if (type === 'model') {
     media = documentRef.createElement('div');
     media.className = 'project-thumb-model';
     media.setAttribute('role', 'img');
-    media.setAttribute('aria-label', `${altText} — 3D artwork`);
+    media.setAttribute('aria-label', String(altText) + ' — 3D artwork');
 
     const content = documentRef.createElement('div');
     content.className = 'project-thumb-model-content';
-
     const icon = documentRef.createElement('i');
     icon.className = 'fa-solid fa-cube';
     icon.setAttribute('aria-hidden', 'true');
-
     const label = documentRef.createElement('span');
     label.textContent = '3D ARTWORK';
-
     const hint = documentRef.createElement('small');
     hint.textContent = 'View project';
-
     content.append(icon, label, hint);
     media.appendChild(content);
   } else {
@@ -73,14 +233,43 @@ export function buildProjectThumbnailMedia(
     media.alt = altText;
     media.loading = priority ? 'eager' : 'lazy';
     media.decoding = 'async';
-    if (priority) media.fetchPriority = 'high';
-    media.src = src;
+    media.fetchPriority = priority ? 'high' : 'low';
   }
 
   media.classList.add('project-thumb-media');
+  if (type !== 'model') {
+    media.classList.add('is-media-loading');
+    media.dataset.mediaState = 'loading';
+    media.dataset.mediaType = type;
+  }
   if (type === 'model') media.dataset.modelThumb = String(source.src);
   if (source.background && typeof source.background === 'object') {
     media.dataset.background = JSON.stringify(source.background);
+  }
+
+  if (type !== 'model') {
+    const state = registerThumbnailMediaState(media, {
+      type: ['image', 'video', 'lottie'].includes(type) ? type : 'image',
+      src,
+      priority,
+      reducedMotion,
+      windowRef
+    });
+    const observers = state.observers;
+    if (type === 'image' || !['video', 'lottie'].includes(type)) {
+      state.activate();
+    } else if (observers?.preload && observers?.visibility) {
+      observers.visibility.observe(media);
+      if (priority) {
+        state.activate();
+      } else {
+        media.dataset.lazySrc = src;
+        observers.preload.observe(media);
+      }
+    } else {
+      state.activate();
+      state.setVisible(!reducedMotion);
+    }
   }
 
   return media;
