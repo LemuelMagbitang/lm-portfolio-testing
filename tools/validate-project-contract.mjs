@@ -3,7 +3,7 @@ import {
   normalizeProject,
   normalizeProjectMedia,
   normalizeProjects
-} from '../js/data/project-normalizer.js?v=20261024-03';
+} from '../js/data/project-normalizer.js?v=20261024-04';
 
 const project = normalizeProject({
   id: '  demo-project  ',
@@ -115,6 +115,20 @@ assert.deepEqual(holographic.holographic, {
   backIntensity: 1,
   mask: 'assets/front-mask.png'
 });
+
+for (const [src, expected] of [
+  ['models/legacy.obj','model'],
+  ['models/legacy.gltf?download=1','model'],
+  ['models/legacy.glb#preview','model'],
+  ['models/legacy.fbx','model'],
+  ['animations/legacy.json?raw=1','lottie'],
+  ['videos/legacy.webm?raw=1','video']
+]) {
+  assert.equal(normalizeProjectMedia({src})?.type, expected,
+    'Media without an explicit type should infer ' + expected + ' from ' + src + '.');
+}
+assert.equal(normalizeProjectMedia({type:'image',src:'models/explicit.obj'})?.type,'image',
+  'An explicit type must continue to take precedence over extension inference.');
 const supportedHolographicStyles = [
   'holographic',
   'cosmos',

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261024-03';
+import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261024-04';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261023-01';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
 
@@ -638,6 +638,124 @@ assert.ok(admin.includes('function normalizeFoilStrength(value, fallback = 0.7)'
   'Foil strength must validate empty and non-numeric values.');
 assert.ok(admin.includes('backStrengthControl.hidden=!hasBack||!Boolean(backFoilInput?.checked)'),
   'Back strength control must only show when back foil is enabled.');
+
+const foilHelperStart = admin.indexOf('function normalizeFoilStrength(value, fallback = 0.7){');
+const foilHelperEnd = admin.indexOf('\nfunction holographicControlHtml', foilHelperStart);
+assert.ok(foilHelperStart >= 0 && foilHelperEnd > foilHelperStart,
+  'Foil strength normalization helpers should remain separately testable.');
+const foilHelperSource = admin.slice(foilHelperStart, foilHelperEnd);
+const foilHelpers = vm.runInNewContext(
+  '(()=>{' + foilHelperSource + ';return {normalizeFoilStrength,normalizeEditorHolographic};})()'
+);
+assert.equal(foilHelpers.normalizeFoilStrength('',0.7),0.7);
+assert.equal(foilHelpers.normalizeFoilStrength('not-a-number',null),null);
+assert.equal(foilHelpers.normalizeFoilStrength(1.24),1);
+assert.equal(foilHelpers.normalizeFoilStrength(-0.12),0);
+assert.equal(foilHelpers.normalizeFoilStrength(0.735),0.74);
+assert.equal(foilHelpers.normalizeEditorHolographic({style:'cosmos',intensity:0.46}).backIntensity,0.46,
+  'Existing foil settings without a separate reverse strength should inherit the front strength.');
+
+function makeFoilField({value='',checked=false,textContent=''}={}) {
+  const listeners=new Map(), attributes=new Map();
+  return {
+    value:String(value),checked,hidden:false,textContent,attributes,
+    addEventListener(type,callback){if(!listeners.has(type))listeners.set(type,[]);listeners.get(type).push(callback);},
+    setAttribute(name,next){attributes.set(name,String(next));},
+    removeAttribute(name){attributes.delete(name);},
+    dispatch(type){for(const callback of [...(listeners.get(type)||[])])callback({target:this});}
+  };
+}
+const foilSelectors = [
+  ['[data-holo-enabled]',makeFoilField({checked:true})],
+  ['[data-holo-options]',{hidden:false}],
+  ['[data-holo-style]',makeFoilField({value:'cosmos'})],
+  ['[data-holo-intensity]',makeFoilField({value:'0.42'})],
+  ['[data-holo-intensity-number]',makeFoilField({value:'0.42'})],
+  ['[data-holo-intensity-value]',makeFoilField()],
+  ['[data-holo-texture]',makeFoilField()],
+  ['[data-holo-texture-mode]',makeFoilField({value:'fill'})],
+  ['[data-holo-back]',makeFoilField({value:'assets/back.png'})],
+  ['[data-holo-mask]',makeFoilField()],
+  ['[data-holo-back-options]',{hidden:false}],
+  ['[data-holo-grain-layer]',makeFoilField({checked:true})],
+  ['[data-holo-glitter-layer]',makeFoilField()],
+  ['[data-holo-back-texture]',makeFoilField()],
+  ['[data-holo-back-texture-mode]',makeFoilField({value:'fill'})],
+  ['[data-holo-back-mask]',makeFoilField()],
+  ['[data-holo-back-enabled]',makeFoilField({checked:true})],
+  ['[data-holo-back-strength-control]',{hidden:false}],
+  ['[data-holo-back-intensity]',makeFoilField({value:'0.83'})],
+  ['[data-holo-back-intensity-number]',makeFoilField({value:'0.83'})],
+  ['[data-holo-back-intensity-value]',makeFoilField()]
+];
+const foilFields=new Map(foilSelectors);
+const foilControl={hidden:false,querySelector(selector){return foilFields.get(selector)||null;}};
+const foilRoot={querySelector(selector){return selector==='[data-holo-control]'?foilControl:null;}};
+const wireStart=admin.indexOf('function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){');
+const wireEnd=admin.indexOf('\nfunction releasePreviewMedia',wireStart);
+assert.ok(wireStart>=0&&wireEnd>wireStart,'Holographic control wiring should remain a standalone CMS helper.');
+const wireSource=admin.slice(wireStart,wireEnd);
+const wireHolographicControl=vm.runInNewContext('('+wireSource+')',{
+  normalizeFoilStrength:foilHelpers.normalizeFoilStrength,
+  normalizeEditorHolographic:foilHelpers.normalizeEditorHolographic
+});
+let foilModel={style:'cosmos',intensity:0.42,back:'assets/back.png',backFoilEnabled:true,backIntensity:0.83};
+let foilChanged=0;
+wireHolographicControl(foilRoot,()=> 'image',()=>foilModel,value=>{foilModel=value;},()=>{foilChanged++;});
+const frontRange=foilFields.get('[data-holo-intensity]');
+const frontNumber=foilFields.get('[data-holo-intensity-number]');
+const backRange=foilFields.get('[data-holo-back-intensity]');
+const backNumber=foilFields.get('[data-holo-back-intensity-number]');
+const backStrengthControl=foilFields.get('[data-holo-back-strength-control]');
+assert.equal(frontRange.value,'0.42');
+assert.equal(frontNumber.value,'0.42');
+assert.equal(backRange.value,'0.83');
+assert.equal(backNumber.value,'0.83');
+assert.equal(backStrengthControl.hidden,false);
+
+frontRange.value='0.61';frontRange.dispatch('input');
+assert.equal(frontNumber.value,'0.61','Moving the front slider should update its numeric input.');
+assert.equal(foilModel.intensity,0.61);
+backRange.value='0.59';backRange.dispatch('input');
+assert.equal(backNumber.value,'0.59','Moving the reverse slider should update its numeric input.');
+assert.equal(foilModel.backIntensity,0.59);
+frontNumber.value='0.23';frontNumber.dispatch('input');
+assert.equal(frontRange.value,'0.23','Typing front strength should update the slider.');
+assert.equal(foilModel.intensity,0.23);
+backNumber.value='0.34';backNumber.dispatch('input');
+assert.equal(backRange.value,'0.34','Typing reverse strength should update the slider.');
+assert.equal(foilModel.backIntensity,0.34);
+
+const intactFront=foilModel.intensity;
+frontNumber.value='';frontNumber.dispatch('input');
+assert.equal(frontNumber.attributes.get('aria-invalid'),'true',
+  'Empty numeric input should be marked invalid without silently overwriting the saved value.');
+assert.equal(foilModel.intensity,intactFront);
+frontNumber.dispatch('change');
+assert.equal(frontNumber.value,'0.23','Leaving an invalid field should restore the last valid slider value.');
+assert.equal(frontNumber.attributes.has('aria-invalid'),false);
+
+frontNumber.value='1.7';frontNumber.dispatch('input');
+assert.equal(frontRange.value,'1');
+assert.equal(frontNumber.value,'1.00','Out-of-range typing should be clamped immediately.');
+assert.equal(foilModel.intensity,1);
+frontNumber.value='-0.3';frontNumber.dispatch('input');
+assert.equal(frontRange.value,'0');
+assert.equal(frontNumber.value,'0.00');
+assert.equal(foilModel.intensity,0);
+
+{
+  const backEnabled=foilFields.get('[data-holo-back-enabled]');
+  backEnabled.checked=false;backEnabled.dispatch('change');
+  assert.equal(backStrengthControl.hidden,true,
+    'The reverse strength control should be hidden when reverse foil is disabled.');
+  assert.equal(foilModel.backFoilEnabled,false);
+  assert.equal(foilModel.backIntensity,0.34,'Disabling reverse foil should retain its independent strength for re-enabling.');
+  backEnabled.checked=true;backEnabled.dispatch('change');
+  assert.equal(backStrengthControl.hidden,false);
+  assert.equal(foilModel.backFoilEnabled,true);
+}
+assert.ok(foilChanged>=6,'Valid edits should propagate to the CMS project model immediately.');
 assert.ok(admin.includes('project.thumbnail?.holographic') && admin.includes('p.thumbnail?.holographic'),
   'Explicit thumbnail foil settings must survive CMS load and save.');
 

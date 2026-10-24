@@ -1987,7 +1987,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   }
 
   if (!entry.includes("bootstrap.js?v=20261024-12") ||
-      !bootstrap.includes("cacheVersion = '20261024-12'") ||
+      !bootstrap.includes("cacheVersion = '20261024-13'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261024-01") ||
@@ -1995,7 +1995,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
-      !composition.includes("projects/index.js?v=20261024-07") ||
+      !composition.includes("projects/index.js?v=20261024-08") ||
       !composition.includes("lightbox/index.js?v=20261024-06") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261024-12') ||
@@ -2392,7 +2392,7 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('opacity: 0;') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261024-07')) {
+      !smoke.includes('project-thumbnail.js?v=20261024-08')) {
     err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
   }
 }

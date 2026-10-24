@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-07';
-import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-07';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness } from '../js/features/projects/project-thumbnail.js?v=20261024-07';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-08';
+import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-08';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261024-08';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-06';
 import {
   applyProjectCardOrientation,
@@ -10,7 +10,7 @@ import {
   orientationFromAspectRatio,
   observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
-import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261024-03';
+import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261024-04';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js?v=20261004-01';
 
@@ -165,6 +165,38 @@ const lottieReadinessCard = { querySelector(selector) { lottieReadinessSelectors
 assert.equal(await waitForProjectThumbnailReadiness([lottieReadinessCard], {count:1,includeLottie:true}), true);
 assert.equal(lottieReadinessSelectors[0], '.card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player',
   'Explicit callers can still wait for Lottie source readiness.');
+
+assert.equal(mediaTypeFromSrc('models/legacy.obj?raw=1'), 'model',
+  'Legacy OBJ paths without an explicit type should infer a 3D thumbnail.');
+assert.equal(mediaTypeFromSrc('models/legacy.glb#preview'), 'model');
+assert.equal(mediaTypeFromSrc('animations/legacy.json?raw=1'), 'lottie');
+const readinessEvents = new Map();
+let readinessTimerCleared = false;
+let readinessResolved = false;
+const readinessPlayer = {
+  tagName:'LOTTIE-PLAYER',
+  dataset:{mediaState:'loading'},
+  addEventListener(name,handler){if(!readinessEvents.has(name))readinessEvents.set(name,new Set());readinessEvents.get(name).add(handler);},
+  removeEventListener(name,handler){readinessEvents.get(name)?.delete(handler);},
+  dispatch(name){for(const handler of [...(readinessEvents.get(name)||[])])handler({type:name,target:this});}
+};
+const readinessTimerWindow = {
+  setTimeout(){return 101;},
+  clearTimeout(id){assert.equal(id,101);readinessTimerCleared=true;}
+};
+const readinessWait = waitForProjectThumbnailReadiness(
+  [{querySelector(){return readinessPlayer;}}],
+  {count:1,timeoutMs:1200,windowRef:readinessTimerWindow,includeLottie:true}
+).then(()=>{readinessResolved=true;});
+readinessPlayer.dispatch('load');
+await Promise.resolve();
+assert.equal(readinessResolved,false,
+  'Lottie data-load must not be mistaken for completed SVG rendering.');
+readinessPlayer.dataset.mediaState='ready';
+readinessPlayer.dispatch('ready');
+await readinessWait;
+assert.equal(readinessResolved,true);
+assert.equal(readinessTimerCleared,true);
 const thumbnailObservers = [];
 class TestThumbnailIntersectionObserver {
   constructor(callback, options) {
@@ -290,6 +322,7 @@ const lottieThumbnail = buildProjectThumbnailMedia(
 assert.equal(lottieThumbnail.attributes.has('src'), false);
 assert.equal(lottieThumbnail.dataset.lazySrc, '/assets/media/lazy.json');
 preloadObserver.trigger(lottieThumbnail, true);
+preloadObserver.trigger(lottieThumbnail, true); // duplicate observer notifications must not initialize the player twice
 assert.equal(lottieThumbnail.attributes.has('src'), false, 'the player should resolve before Lottie JSON attaches');
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(lottiePlayerWarmups, 1);
@@ -298,6 +331,11 @@ visibilityObserver.trigger(lottieThumbnail, true);
 assert.equal(lottieThumbnail.playCount, 0,
   'Visibility alone must not play a Lottie source that is still loading.');
 assert.equal(lottieThumbnail.attributes.has('autoplay'), false);
+lottieThumbnail.dispatch('load');
+assert.equal(lottieThumbnail.dataset.mediaState, 'loading',
+  'The Lottie thumbnail must remain hidden until its SVG render is ready.');
+assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), false);
+assert.equal(lottieThumbnail.playCount, 0);
 lottieThumbnail.dispatch('ready');
 assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), true);
 assert.equal(lottieThumbnail.playCount, 1,
@@ -416,6 +454,34 @@ const autoFoilCard = buildProjectCardElement({
 });
 assert.equal(autoFoilCard.children[0].children.some(child=>child.className==='project-thumb-foil'),true,
   'A generated thumbnail should inherit the first image artwork’s foil settings.');
+
+const autoFoilFromThumbnailCard = buildProjectCardElement({
+  id:'auto-foil-from-thumbnail-settings',
+  title:'Auto foil from thumbnail settings',
+  thumbnail:{src:'',holographic:{style:'aurora',intensity:0.24}},
+  media:[{type:'image',src:'media/plain-front.webp'}]
+},{
+  documentRef:cardDocument,
+  resolveAssetUrl:value=>'/assets/'+value
+});
+const inheritedThumbnailFoil = autoFoilFromThumbnailCard.children[0].children.find(child=>child.className==='project-thumb-foil');
+assert.ok(inheritedThumbnailFoil,
+  'A generated image thumbnail should inherit its saved thumbnail-level foil settings when media has none.');
+assert.equal(inheritedThumbnailFoil.style['--thumb-holo-intensity'],'0.24');
+assert.equal(inheritedThumbnailFoil.dataset.holoStyle,'aurora');
+
+const inferredModelCard = buildProjectCardElement({
+  id:'auto-model-from-extension',
+  title:'Auto model from extension',
+  thumbnail:{src:''},
+  media:[{src:'models/legacy.obj?raw=1'}]
+},{
+  documentRef:cardDocument,
+  resolveAssetUrl:value=>'/assets/'+value
+});
+assert.equal(inferredModelCard.children[0].dataset.thumbnailType,'model');
+assert.equal(inferredModelCard.children[0].children[0].className,'project-thumb-model',
+  'A generated thumbnail for an untyped OBJ asset should use the 3D preview path.');
 
 const explicitFoilCard = buildProjectCardElement({
   id:'explicit-foil-card',

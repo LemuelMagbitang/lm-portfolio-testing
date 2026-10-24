@@ -30,16 +30,16 @@ const canonicalModuleQueries = new Map([
   ['infrastructure/browser/site-paths.js', '?v=20261004-01'],
   ['infrastructure/media-background/loader.js', '?v=20261023-01'],
   ['infrastructure/software-logo/lookup.js', '?v=20261008-01'],
-  ['features/projects/index.js', '?v=20261024-07'],
-  ['features/projects/browser-runtime.js', '?v=20261024-07'],
-  ['features/projects/project-loader.js', '?v=20261024-01'],
-  ['features/projects/project-card.js', '?v=20261024-07'],
-  ['features/projects/project-thumbnail.js', '?v=20261024-07'],
+  ['features/projects/index.js', '?v=20261024-08'],
+  ['features/projects/browser-runtime.js', '?v=20261024-08'],
+  ['features/projects/project-loader.js', '?v=20261024-02'],
+  ['features/projects/project-card.js', '?v=20261024-08'],
+  ['features/projects/project-thumbnail.js', '?v=20261024-08'],
   ['features/gallery/index.js', '?v=20261024-02'],
   ['features/lightbox/index.js', '?v=20261024-06'],
   ['features/lightbox/media-renderer.js', '?v=20261024-05'],
   ['features/lightbox/foil-normal-renderer.js', '?v=20261016-01'],
-  ['data/project-normalizer.js', '?v=20261024-03']
+  ['data/project-normalizer.js', '?v=20261024-04']
 ]);
 
 for (const legacy of legacyRootModules) {
