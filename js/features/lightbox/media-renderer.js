@@ -1782,7 +1782,8 @@ export function createLightboxMediaRenderer({
     video.addEventListener('canplay', onVideoReady);
     video.addEventListener('error', onVideoError);
     showLightboxMediaFallback(artwork, project, item.src, 'video', 'loading');
-    if (video.readyState >= 2) onVideoReady();
+    if (video.error) onVideoError();
+    else if (video.readyState >= 2) onVideoReady();
     registerLightboxMediaCleanup(video, () => {
       video.removeEventListener('loadeddata', onVideoReady);
       video.removeEventListener('canplay', onVideoReady);
