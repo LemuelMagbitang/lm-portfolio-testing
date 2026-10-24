@@ -499,11 +499,16 @@ assert.ok(playerTimerEntry,'Lottie player readiness should keep its 6-second tim
 pendingLottieTimers.delete(playerTimerEntry[0]);
 playerTimerEntry[1].callback();
 await new Promise(resolve=>setTimeout(resolve,0));
-assert.equal(timedOutLottie.dataset.mediaState,'error');
+assert.equal(timedOutLottie.dataset.mediaState,'loading',
+  'A slow player should remain in the active load state after its visual fallback timeout.');
 resolveTimedOutPlayer(true);
 await new Promise(resolve=>setTimeout(resolve,0));
-assert.equal(timedOutLottie.attributes.has('src'),false,
-  'A late player promise must not reattach source after timeout.');
+assert.equal(timedOutLottie.attributes.has('src'),true,
+  'A slow but successful player load must still attach its source after the visual fallback timeout.');
+timedOutLottie.dispatch('ready');
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(timedOutLottie.dataset.mediaState,'ready',
+  'Late Lottie readiness must replace the slow-load fallback with the rendered animation.');
 disposeProjectThumbnailMedia(timedOutLottie);
 
 const disconnectedFrames = new Map();
