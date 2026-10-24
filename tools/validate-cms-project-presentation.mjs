@@ -497,14 +497,14 @@ assert.ok(/data-preview-type="lottie"/.test(admin) && /data-preview-type="model"
   'Collapsed CMS rows expose deferred Lottie and 3D preview targets.');
 assert.ok(/ensureLottiePlayer/.test(previewRuntime) &&
   /import\('\.\.\/js\/infrastructure\/lottie\/player\.js'\)/.test(previewRuntime) &&
-  /Lottie preview unavailable/.test(previewRuntime),
+  /setPreviewFallback\(node, 'lottie'\)/.test(previewRuntime),
   'CMS Lottie thumbnails must use the shared fallback loader and expose a useful failed-load state.');
 assert.ok(/typeof node\.load === 'function'\) node\.load\(src\)/.test(previewRuntime),
   'Lazy CMS Lottie thumbnails must explicitly load sources assigned after component upgrade.');
 assert.ok(/IntersectionObserver/.test(previewRuntime) && /mountModelViewer\(node,src,\{[\s\S]*?thumbnail:true/.test(previewRuntime),
   'CMS multimedia thumbnails are mounted lazily in static 3D mode.');
 assert.ok(/options\.thumbnail === true/.test(modelViewer), 'The 3D viewer supports static thumbnail rendering.');
-assert.ok(/model-viewer\.js\?v=20261023-01/.test(admin),
+assert.ok(/model-viewer\.js\?v=20261024-02/.test(admin),
   'The expanded CMS 3D editor must use the current viewer module cache key.');
 assert.match(mediaBackgroundEngine, /function releaseLayerMedia\(layer\) \{[\s\S]*?media\.pause\?\.\(\)[\s\S]*?removeAttribute\('src'\)[\s\S]*?media\.load\?\.\(\)/);
 assert.match(mediaBackgroundEngine, /function clear\(host\) \{[\s\S]*?releaseLayerMedia\(oldLayer\)[\s\S]*?oldLayer\.remove\(\)/);
