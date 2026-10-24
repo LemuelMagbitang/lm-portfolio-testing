@@ -86,8 +86,10 @@ const projectThumbnailSource = await readFile(new URL('../js/features/projects/p
 assert.match(projectThumbnailSource, /const showSlowLoadFallback = \(isCurrent = \(\) => true\) => \{[\s\S]*?media\.dataset\.mediaState = 'error';[\s\S]*?showMediaFallback\('error'\)/);
 assert.match(projectThumbnailSource, /const armSlowLoadFallback = \(isCurrent = \(\) => true\) => \{[\s\S]*?showSlowLoadFallback\(isCurrent\)[\s\S]*?MEDIA_SLOW_LOAD_TIMEOUT_MS/);
 assert.doesNotMatch(projectThumbnailSource, /mediaReadyTimer = setTimer\(\(\) => \{[\s\S]*?setFailed\(\);[\s\S]*?\}, 10000\)/,
-  'A slow Lottie load must show a fallback without cancelling a request that may still succeed.');
-assert.match(projectThumbnailSource, /const clearLoadTimers = \(\) => \{[\s\S]*?clearTimer\?\.\(playerLoadTimer\)[\s\S]*?clearTimer\?\.\(mediaReadyTimer\)/);
+  'A slow media load must not be converted into a cancelled request.');
+assert.match(projectThumbnailSource, /const clearLoadTimers = \(\) => \{[\s\S]*?clearTimer\?\.\(mediaReadyTimer\)/);
+assert.doesNotMatch(projectThumbnailSource, /playerLoadTimer/,
+  'Lottie player initialization must not schedule or clear a timeout that reveals a loading placeholder.');
 assert.match(projectThumbnailSource, /dispose\(\) \{[\s\S]*?clearLoadTimers\(\);/);
 assert.doesNotMatch(projectThumbnailSource, /ANIMATION PREVIEW UNAVAILABLE|Animation preview unavailable/);
 
