@@ -1667,7 +1667,8 @@ export function createLightboxMediaRenderer({
   }
 
   function renderYouTube(item, project, index = 0) {
-    const { isShort } = parseYouTube(item.src);
+    const parsed = parseYouTube(item.src);
+    const isShort = Boolean(parsed?.isShort);
     const embedSrc = buildYouTubeEmbedUrl(item.src);
     if (!embedSrc) return null;
 
