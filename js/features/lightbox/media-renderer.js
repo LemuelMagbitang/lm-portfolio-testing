@@ -689,10 +689,14 @@ export function createLightboxMediaRenderer({
   function normalizeHolographicConfig(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
     const style = String(value.style || '').trim().toLowerCase();
-    const intensityValue = Number(value.intensity);
+    const intensityValue = value.intensity === '' || value.intensity == null ? NaN : Number(value.intensity);
     const intensity = Number.isFinite(intensityValue)
-      ? Math.max(0, Math.min(1, intensityValue))
+      ? Math.round(Math.max(0, Math.min(1, intensityValue)) * 100) / 100
       : 0.7;
+    const rawBackIntensity = value.backIntensity === '' || value.backIntensity == null ? intensity : Number(value.backIntensity);
+    const backIntensity = Number.isFinite(rawBackIntensity)
+      ? Math.round(Math.max(0, Math.min(1, rawBackIntensity)) * 100) / 100
+      : intensity;
     const texture = String(value.texture || '').trim();
     const textureModeValue = String(value.textureMode || 'fill').trim().toLowerCase();
     const textureMode = ['tile', 'fill'].includes(textureModeValue) ? textureModeValue : 'fill';
@@ -708,7 +712,7 @@ export function createLightboxMediaRenderer({
     );
     return {
       style: ['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora'].includes(style) ? style : 'holographic',
-      intensity, textureMode, backTextureMode,
+      intensity, backIntensity, textureMode, backTextureMode,
       glitterLayer: value.glitterLayer === true,
       grainLayer: value.grainLayer !== false,
       ...(texture ? { texture } : {}), ...(back ? { back, backFoilEnabled } : {}), ...(mask ? { mask } : {}),
@@ -971,6 +975,9 @@ export function createLightboxMediaRenderer({
       const faceTextureUrl = isFront ? frontTextureUrl : backTextureUrl;
       const faceTextureMode = isFront ? config.textureMode : config.backTextureMode;
       const faceImage = isFront ? frontImage : backImage;
+      const faceStrength = isFront ? config.intensity : config.backIntensity;
+      face.style.setProperty('--holo-intensity', String(faceStrength));
+      face.style.setProperty('--holo-visual-intensity', 'calc(var(--holo-intensity,.7) * .68)');
       const faceArtworkUrl = faceImage.currentSrc || faceImage.src;
       const cosmosClipUrl = config.style === 'cosmos'
         ? resolveAssetUrl(HOLOGRAPHIC_COSMOS_MAPS['cosmos-top'])
@@ -1100,7 +1107,7 @@ export function createLightboxMediaRenderer({
         applyFaceHolographicMask(normalCanvas);
         face.appendChild(normalCanvas);
         const controller = createFoilNormalRenderer(normalCanvas, normalPatternUrls, {
-          intensity: config.intensity,
+          intensity: faceStrength,
           phase: isFront ? 0.17 : 0.43,
           uvScale: config.style === 'cosmos' ? 2 : (faceTextureMode === 'tile' ? 2 : 1)
         });

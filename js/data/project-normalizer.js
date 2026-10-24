@@ -58,9 +58,9 @@ function normalizeHolographicEffect(effect) {
   if (!effect || typeof effect !== 'object' || Array.isArray(effect)) return undefined;
 
   const style = normalizeString(effect.style).toLowerCase();
-  const intensityValue = Number(effect.intensity);
+  const intensityValue = effect.intensity === '' || effect.intensity == null ? NaN : Number(effect.intensity);
   const intensity = Number.isFinite(intensityValue)
-    ? Math.max(0, Math.min(1, intensityValue))
+    ? Math.round(Math.max(0, Math.min(1, intensityValue)) * 100) / 100
     : 0.7;
   const texture = normalizeString(effect.texture);
   const textureModeValue = normalizeString(effect.textureMode).toLowerCase();
@@ -80,6 +80,12 @@ function normalizeHolographicEffect(effect) {
     effect.backFoilEnabled === true ||
     (effect.backFoilEnabled == null && Boolean(backTexture || backMask))
   );
+  const rawBackIntensity = effect.backIntensity === '' || effect.backIntensity == null
+    ? intensity
+    : Number(effect.backIntensity);
+  const backIntensity = Number.isFinite(rawBackIntensity)
+    ? Math.round(Math.max(0, Math.min(1, rawBackIntensity)) * 100) / 100
+    : intensity;
 
   if (!HOLOGRAPHIC_STYLES.has(style) && !texture && !back && !mask && !backTexture && !backMask &&
       effect.intensity === undefined && effect.glitterLayer === undefined && effect.grainLayer === undefined) {
@@ -94,7 +100,7 @@ function normalizeHolographicEffect(effect) {
     grainLayer,
     ...(back ? { backTextureMode } : {}),
     ...(texture ? { texture } : {}),
-    ...(back ? { back, backFoilEnabled: Boolean(backFoilEnabled) } : {}),
+    ...(back ? { back, backFoilEnabled: Boolean(backFoilEnabled), backIntensity } : {}),
     ...(mask ? { mask } : {}),
     ...(backTexture ? { backTexture } : {}),
     ...(backMask ? { backMask } : {})
@@ -204,6 +210,8 @@ export function normalizeProject(project = {}) {
   if (thumbnailSrc) {
     normalized.thumbnail.src = thumbnailSrc;
   }
+  const thumbnailHolographic = normalizeHolographicEffect(thumbnailSource.holographic);
+  if (thumbnailHolographic) normalized.thumbnail.holographic = thumbnailHolographic;
 
   const thumbnailType = normalizeString(thumbnailSource.type).toLowerCase();
   // Preserve an explicitly declared type. If CMS data omits it, leave the

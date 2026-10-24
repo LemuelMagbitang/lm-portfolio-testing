@@ -112,6 +112,7 @@ assert.deepEqual(holographic.holographic, {
   backTextureMode: 'fill',
   back: 'assets/back.png',
   backFoilEnabled: false,
+  backIntensity: 1,
   mask: 'assets/front-mask.png'
 });
 const supportedHolographicStyles = [
@@ -161,6 +162,23 @@ const explicitlyDisabledBackFoil = normalizeProjectMedia({
 });
 assert.equal(explicitlyDisabledBackFoil.holographic.backFoilEnabled, false,
   'An explicit reverse-side foil opt-out must survive normalization.');
+const separateBackStrength = normalizeProjectMedia({
+  type:'image',src:'front.png',
+  holographic:{style:'cosmos',intensity:0.42,back:'assets/back.png',backFoilEnabled:true,backIntensity:0.83}
+});
+assert.equal(separateBackStrength.holographic.intensity,0.42);
+assert.equal(separateBackStrength.holographic.backIntensity,0.83);
+const legacyBackStrength = normalizeProjectMedia({
+  type:'image',src:'front.png',
+  holographic:{style:'holographic',intensity:0.62,back:'assets/back.png',backFoilEnabled:true}
+});
+assert.equal(legacyBackStrength.holographic.backIntensity,0.62,
+  'Old projects should default back foil to the previous front strength.');
+const invalidBackStrength = normalizeProjectMedia({
+  type:'image',src:'front.png',
+  holographic:{style:'holographic',intensity:0.62,back:'assets/back.png',backIntensity:'invalid'}
+});
+assert.equal(invalidBackStrength.holographic.backIntensity,0.62);
 const explicitlyEnabledBackFoil = normalizeProjectMedia({
   type: 'image',
   src: 'front.png',
@@ -181,6 +199,13 @@ assert.equal(normalizeProjectMedia({
   src: 'plain.png',
   holographic: { intensity: -2 }
 }).holographic.intensity, 0);
+
+const normalizedThumbnailFoil = normalizeProject({
+  id:'thumbnail-foil',title:'Thumbnail foil',
+  thumbnail:{type:'image',src:'thumb.webp',holographic:{style:'aurora',intensity:0.35}},
+  media:[{type:'image',src:'front.png'}]
+});
+assert.equal(normalizedThumbnailFoil.thumbnail.holographic.intensity,0.35);
 
 const mixed = normalizeProject({
   id: 'mixed',
