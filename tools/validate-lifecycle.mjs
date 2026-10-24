@@ -134,6 +134,9 @@ assert.match(lightboxSource, /openRenderToken !== openToken/);
 assert.match(lightboxSource, /openRenderToken \+= 1;/);
 const mediaRendererSource = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 assert.match(mediaRendererSource, /function showLightboxMediaFallback\(/);
+assert.match(mediaRendererSource, /function renderUnsupported\(item, project\)/);
+assert.match(mediaRendererSource, /return renderUnsupported\(item, project\)/,
+  'Unknown or malformed media items must retain a visible fallback entry.');
 assert.match(mediaRendererSource, /function registerLightboxMediaCleanup\(/);
 assert.match(mediaRendererSource, /function cleanupLightboxMediaIn\(container\)/);
 assert.match(mediaRendererSource, /player\.load\?\.\(resolvedSrc\)/);
