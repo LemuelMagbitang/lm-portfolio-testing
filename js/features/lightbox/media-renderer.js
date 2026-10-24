@@ -1737,6 +1737,10 @@ export function createLightboxMediaRenderer({
     const artwork = entry.querySelector('.lightbox-artwork');
     artwork?.classList.add('is-youtube-artwork');
     artwork?.setAttribute('data-youtube-orientation', resolvedOrientation);
+    const youtubePoster = parsed?.id ? 'https://img.youtube.com/vi/' + parsed.id + '/hqdefault.jpg' : '';
+    if (iframe.dataset.lmYoutubeLoaded !== 'true' && iframe.dataset.lmYoutubeLoadError !== 'true') {
+      showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'loading', youtubePoster);
+    }
     if (iframe.dataset.lmYoutubeLoadError === 'true') {
       showLightboxMediaFallback(
         artwork,
