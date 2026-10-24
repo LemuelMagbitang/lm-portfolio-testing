@@ -2310,7 +2310,8 @@ async function assertFilterNavigationResponsive(page, label) {
       transitionTimingFunction,
       prefersReducedMotion,
       inlineLeft: indicator.style.left,
-      inlineTransform: indicator.style.transform
+      inlineTransform: indicator.style.transform,
+      inlineTranslate: indicator.style.translate
     };
   });
   if (!stationaryPillProbe.ready || stationaryPillProbe.scrollDelta < 20 ||
@@ -2322,7 +2323,9 @@ async function assertFilterNavigationResponsive(page, label) {
         (stationaryPillProbe.immediateScrollDelta > 1.5 ||
           stationaryPillProbe.scrollDelta <= stationaryPillProbe.immediateScrollDelta + 2 ||
           stationaryPillProbe.intermediateActiveCenterDelta >= stationaryPillProbe.activeCenterDelta - 2)) ||
-      !stationaryPillProbe.inlineLeft || !stationaryPillProbe.inlineTransform.includes('translate3d(-50%') ||
+      !stationaryPillProbe.inlineLeft ||
+      !(stationaryPillProbe.inlineTranslate.includes('-50%') ||
+        stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) ||
       (!stationaryPillProbe.prefersReducedMotion &&
         (!stationaryPillProbe.transitionProperty.includes('width') ||
           !stationaryPillProbe.transitionDuration.includes('0.42s') ||
