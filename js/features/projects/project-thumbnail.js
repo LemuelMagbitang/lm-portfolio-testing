@@ -53,7 +53,7 @@ function getThumbnailViewportObservers(windowRef) {
   return observers;
 }
 
-function registerThumbnailMediaState(media, { type, src, priority, reducedMotion, windowRef } = {}) {
+function registerThumbnailMediaState(media, { type, src, priority, reducedMotion, windowRef, ensureLottiePlayer = null } = {}) {
   const usesViewportLifecycle = type === 'video' || type === 'lottie';
   const observers = usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
   const listeners = [];
@@ -123,7 +123,42 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
         media.src = src;
         return;
       }
-      if (type === 'lottie') media.setAttribute('src', src);
+      if (type === 'lottie') {
+        const attachSource = () => {
+          if (disposed) return;
+          media.setAttribute('src', src);
+          if (media.dataset.mediaVisible === 'true' && !reducedMotion) {
+            media.setAttribute('autoplay', '');
+            media.setAttribute('loop', '');
+            Promise.resolve(media.play?.()).catch(() => {});
+          }
+        };
+
+        if (typeof ensureLottiePlayer !== 'function') {
+          attachSource();
+          return;
+        }
+
+        media.dataset.mediaState = 'loading';
+        media.classList.remove('is-media-ready', 'is-media-error');
+        media.classList.add('is-media-loading');
+        Promise.resolve()
+          .then(() => ensureLottiePlayer())
+          .then(ready => {
+            if (disposed) return;
+            if (ready === false) {
+              activated = false;
+              setFailed();
+              return;
+            }
+            attachSource();
+          })
+          .catch(() => {
+            if (disposed) return;
+            activated = false;
+            setFailed();
+          });
+      }
     },
     setVisible(visible) {
       if (disposed || !usesViewportLifecycle) return;
@@ -188,7 +223,7 @@ export function disposeProjectThumbnailMedia(root) {
 export function buildProjectThumbnailMedia(
   source = {},
   altText = 'Project artwork',
-  { resolveAssetUrl, documentRef = globalThis.document, priority = false } = {}
+  { resolveAssetUrl, documentRef = globalThis.document, priority = false, ensureLottiePlayer = null } = {}
 ) {
   if (!source?.src || typeof resolveAssetUrl !== 'function') return null;
 
@@ -253,7 +288,8 @@ export function buildProjectThumbnailMedia(
       src,
       priority,
       reducedMotion,
-      windowRef
+      windowRef,
+      ensureLottiePlayer
     });
     const observers = state.observers;
     if (type === 'image' || !['video', 'lottie'].includes(type)) {
