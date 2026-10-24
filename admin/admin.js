@@ -2737,12 +2737,24 @@ function wireBackgroundControl(root, getType, getBackground, setBackground, onCh
   sync();
 }
 
+function normalizeFoilStrength(value, fallback = 0.7){
+  const raw = typeof value === 'string' ? value.trim() : value;
+  const numeric = raw === '' || raw === null || raw === undefined ? NaN : Number(raw);
+  if (!Number.isFinite(numeric)) {
+    const fallbackRaw = typeof fallback === 'string' ? fallback.trim() : fallback;
+    const fallbackValue = fallbackRaw === '' || fallbackRaw === null || fallbackRaw === undefined ? NaN : Number(fallbackRaw);
+    if (!Number.isFinite(fallbackValue)) return null;
+    return Math.round(Math.max(0, Math.min(1, fallbackValue)) * 100) / 100;
+  }
+  return Math.round(Math.max(0, Math.min(1, numeric)) * 100) / 100;
+}
+
 function normalizeEditorHolographic(value){
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const styles = new Set(['holographic','cosmos','brushed','beams','crosshatch','shattered','glitter','waves','cat-eye','iridescent','aurora']);
   const style = String(value.style || '').trim().toLowerCase();
-  const intensityValue = Number(value.intensity);
-  const intensity = Number.isFinite(intensityValue) ? Math.max(0, Math.min(1, intensityValue)) : 0.7;
+  const intensity = normalizeFoilStrength(value.intensity, 0.7);
+  const backIntensity = normalizeFoilStrength(value.backIntensity, intensity);
   const texture = String(value.texture || '').trim();
   const textureModeValue = String(value.textureMode || 'fill').trim().toLowerCase();
   const textureMode = ['tile','fill'].includes(textureModeValue) ? textureModeValue : 'fill';
@@ -2762,7 +2774,7 @@ function normalizeEditorHolographic(value){
   return {
     style: styles.has(style) ? style : 'holographic',
     intensity, textureMode, glitterLayer, grainLayer, ...(back ? {backTextureMode} : {}),
-    ...(texture ? {texture} : {}), ...(back ? {back, backFoilEnabled} : {}), ...(mask ? {mask} : {}),
+    ...(texture ? {texture} : {}), ...(back ? {back, backFoilEnabled, backIntensity} : {}), ...(mask ? {mask} : {}),
     ...(backTexture ? {backTexture} : {}), ...(backMask ? {backMask} : {})
   };
 }
@@ -2771,7 +2783,8 @@ function holographicControlHtml(holographic){
   const value = normalizeEditorHolographic(holographic);
   const enabled = !!value;
   const style = value?.style || 'holographic';
-  const intensity = Number.isFinite(Number(value?.intensity)) ? Number(value.intensity) : 0.7;
+  const intensity = normalizeFoilStrength(value?.intensity, 0.7);
+  const backIntensity = normalizeFoilStrength(value?.backIntensity, intensity);
   const textureMode = value?.textureMode || 'fill';
   const backTextureMode = value?.backTextureMode || 'fill';
   return `
@@ -2793,8 +2806,11 @@ function holographicControlHtml(holographic){
             <option value="iridescent" ${style==='iridescent'?'selected':''}>Pearlescent foil</option>
             <option value="aurora" ${style==='aurora'?'selected':''}>Aurora gradient</option>
           </select></div>
-          <div class="field"><label class="field-label">Foil strength <span data-holo-intensity-value>${Math.round(intensity*100)}%</span></label>
-            <input data-holo-intensity type="range" min="0" max="1" step="0.01" value="${intensity}" aria-label="Holographic foil strength" aria-valuetext="${Math.round(intensity*100)}%">
+          <div class="field"><label class="field-label">Front foil strength <span data-holo-intensity-value>${Math.round(intensity*100)}%</span></label>
+            <div class="holo-strength-controls">
+              <input data-holo-intensity type="range" min="0" max="1" step="0.01" value="${intensity}" aria-label="Front foil strength slider" aria-valuetext="${Math.round(intensity*100)}%">
+              <input data-holo-intensity-number type="number" min="0" max="1" step="0.01" value="${intensity.toFixed(2)}" inputmode="decimal" aria-label="Front foil strength value">
+            </div>
           </div>
         </div>
         <details class="holo-settings-group" data-holo-front-settings>
@@ -2823,6 +2839,13 @@ function holographicControlHtml(holographic){
             </div>
             <div class="holo-back-settings" data-holo-back-options ${value?.back ? '' : 'hidden'}>
               <label class="media-bg-toggle holo-enable-row holo-back-enable-row"><input type="checkbox" data-holo-back-enabled ${value?.backFoilEnabled?'checked':''}> <span>Enable interactive foil on back</span></label>
+              <div class="field holo-back-strength" data-holo-back-strength-control ${value?.backFoilEnabled ? '' : 'hidden'}>
+                <label class="field-label">Back foil strength <span data-holo-back-intensity-value>${Math.round(backIntensity*100)}%</span></label>
+                <div class="holo-strength-controls">
+                  <input data-holo-back-intensity type="range" min="0" max="1" step="0.01" value="${backIntensity}" aria-label="Back foil strength slider" aria-valuetext="${Math.round(backIntensity*100)}%">
+                  <input data-holo-back-intensity-number type="number" min="0" max="1" step="0.01" value="${backIntensity.toFixed(2)}" inputmode="decimal" aria-label="Back foil strength value">
+                </div>
+              </div>
               <details class="holo-settings-group holo-back-group">
                 <summary>Reverse-side foil options <span>Pattern and mask (optional)</span></summary>
                 <div class="holo-settings-panel">
@@ -2851,41 +2874,69 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   const control=root?.querySelector('[data-holo-control]');if(!control)return;
   const enabledInput=control.querySelector('[data-holo-enabled]'),options=control.querySelector('[data-holo-options]');
   const styleInput=control.querySelector('[data-holo-style]'),intensityInput=control.querySelector('[data-holo-intensity]');
+  const intensityNumberInput=control.querySelector('[data-holo-intensity-number]');
   const intensityLabel=control.querySelector('[data-holo-intensity-value]'),textureInput=control.querySelector('[data-holo-texture]');
   const textureModeInput=control.querySelector('[data-holo-texture-mode]'),backInput=control.querySelector('[data-holo-back]');
   const maskInput=control.querySelector('[data-holo-mask]'),backOptions=control.querySelector('[data-holo-back-options]');
   const grainLayerInput=control.querySelector('[data-holo-grain-layer]'),glitterLayerInput=control.querySelector('[data-holo-glitter-layer]');
   const backTextureInput=control.querySelector('[data-holo-back-texture]'),backTextureModeInput=control.querySelector('[data-holo-back-texture-mode]');
-  const backMaskInput=control.querySelector('[data-holo-back-mask]');
-  const backFoilInput=control.querySelector('[data-holo-back-enabled]');
-  function syncVisibility(){options.hidden=!enabledInput.checked;if(backOptions)backOptions.hidden=!String(backInput.value||'').trim();}
-  function updateIntensityAccessibility(){const percent=Math.round(Number(intensityInput.value)*100);if(intensityLabel)intensityLabel.textContent=percent+'%';intensityInput.setAttribute('aria-valuetext',percent+'%');}
+  const backMaskInput=control.querySelector('[data-holo-back-mask]'),backFoilInput=control.querySelector('[data-holo-back-enabled]');
+  const backStrengthControl=control.querySelector('[data-holo-back-strength-control]');
+  const backIntensityInput=control.querySelector('[data-holo-back-intensity]');
+  const backIntensityNumberInput=control.querySelector('[data-holo-back-intensity-number]');
+  const backIntensityLabel=control.querySelector('[data-holo-back-intensity-value]');
+  function normalizeStrength(raw,fallback){return normalizeFoilStrength(raw,fallback);}
+  function syncFromRange(rangeInput,numberInput,label){
+    const strength=normalizeStrength(rangeInput?.value,0.7);
+    if(rangeInput)rangeInput.value=String(strength);
+    if(numberInput){numberInput.value=strength.toFixed(2);numberInput.removeAttribute?.('aria-invalid');}
+    const percent=Math.round(strength*100);
+    if(label)label.textContent=percent+'%';
+    rangeInput?.setAttribute?.('aria-valuetext',percent+'%');
+    return strength;
+  }
+  function syncFromNumber(numberInput,rangeInput,label,finalize=false){
+    if(!numberInput||!rangeInput)return null;
+    const strength=normalizeStrength(numberInput.value,null);
+    if(strength===null){numberInput.setAttribute?.('aria-invalid','true');return null;}
+    rangeInput.value=String(strength);
+    if(finalize)numberInput.value=strength.toFixed(2);
+    numberInput.removeAttribute?.('aria-invalid');
+    const percent=Math.round(strength*100);
+    if(label)label.textContent=percent+'%';
+    rangeInput.setAttribute?.('aria-valuetext',percent+'%');
+    return strength;
+  }
+  function syncVisibility(){
+    options.hidden=!enabledInput.checked;
+    const hasBack=Boolean(String(backInput.value||'').trim());
+    if(backOptions)backOptions.hidden=!hasBack;
+    if(backStrengthControl)backStrengthControl.hidden=!hasBack||!Boolean(backFoilInput?.checked);
+  }
   function sync(){
     const supported=String(getType()||'').toLowerCase()==='image';control.hidden=!supported;if(!supported)return;
     const value=normalizeEditorHolographic(getEffect());enabledInput.checked=!!value;
     styleInput.value=value?.style||'holographic';intensityInput.value=String(value?.intensity??0.7);
+    syncFromRange(intensityInput,intensityNumberInput,intensityLabel);
     textureInput.value=value?.texture||'';textureModeInput.value=value?.textureMode||'fill';
     backInput.value=value?.back||'';maskInput.value=value?.mask||'';
     if(backTextureInput)backTextureInput.value=value?.backTexture||'';
     if(backTextureModeInput)backTextureModeInput.value=value?.backTextureMode||'fill';
     if(backMaskInput)backMaskInput.value=value?.backMask||'';
     if(backFoilInput)backFoilInput.checked=!!value?.backFoilEnabled;
+    if(backIntensityInput){backIntensityInput.value=String(value?.backIntensity??value?.intensity??0.7);syncFromRange(backIntensityInput,backIntensityNumberInput,backIntensityLabel);}
     if(grainLayerInput)grainLayerInput.checked=value?.grainLayer!==false;
     if(glitterLayerInput)glitterLayerInput.checked=value?.glitterLayer===true;
-    updateIntensityAccessibility();syncVisibility();
+    syncVisibility();
   }
   function read(){
-    const backSrc=backInput.value.trim();
-    const backTexture=backTextureInput?.value.trim()||'';
-    const backMask=backMaskInput?.value.trim()||'';
+    const backSrc=backInput.value.trim(),backTexture=backTextureInput?.value.trim()||'',backMask=backMaskInput?.value.trim()||'';
+    const intensity=normalizeStrength(intensityInput.value,0.7),backIntensity=normalizeStrength(backIntensityInput?.value,intensity);
     return {
-      style:styleInput.value||'holographic',
-      intensity:Math.max(0,Math.min(1,Number(intensityInput.value)||0)),
-      textureMode:textureModeInput.value||'fill',
-      grainLayer:grainLayerInput ? grainLayerInput.checked : true,
-      glitterLayer:glitterLayerInput ? glitterLayerInput.checked : false,
+      style:styleInput.value||'holographic',intensity,textureMode:textureModeInput.value||'fill',
+      grainLayer:grainLayerInput?grainLayerInput.checked:true,glitterLayer:glitterLayerInput?glitterLayerInput.checked:false,
       ...(textureInput.value.trim()?{texture:textureInput.value.trim()}:{}),
-      ...(backSrc?{back:backSrc,backFoilEnabled:!!backFoilInput?.checked}:{}),
+      ...(backSrc?{back:backSrc,backFoilEnabled:!!backFoilInput?.checked,backIntensity}:{}),
       ...(maskInput.value.trim()?{mask:maskInput.value.trim()}:{}),
       ...(backSrc&&backTexture?{backTexture,backTextureMode:backTextureModeInput.value||'fill'}:{}),
       ...(backSrc&&backMask?{backMask}:{})
@@ -2893,14 +2944,18 @@ function wireHolographicControl(root, getType, getEffect, setEffect, onChanged){
   }
   enabledInput.addEventListener('change',()=>{setEffect(enabledInput.checked?read():null);sync();onChanged?.();});
   styleInput.addEventListener('change',()=>{if(enabledInput.checked){setEffect(read());onChanged?.();}});
-  intensityInput.addEventListener('input',()=>{updateIntensityAccessibility();if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  intensityInput.addEventListener('input',()=>{syncFromRange(intensityInput,intensityNumberInput,intensityLabel);if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  intensityNumberInput?.addEventListener('input',()=>{if(syncFromNumber(intensityNumberInput,intensityInput,intensityLabel)===null)return;if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  intensityNumberInput?.addEventListener('change',()=>{if(syncFromNumber(intensityNumberInput,intensityInput,intensityLabel,true)===null)syncFromRange(intensityInput,intensityNumberInput,intensityLabel);});
+  backIntensityInput?.addEventListener('input',()=>{syncFromRange(backIntensityInput,backIntensityNumberInput,backIntensityLabel);if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  backIntensityNumberInput?.addEventListener('input',()=>{if(syncFromNumber(backIntensityNumberInput,backIntensityInput,backIntensityLabel)===null)return;if(enabledInput.checked){setEffect(read());onChanged?.();}});
+  backIntensityNumberInput?.addEventListener('change',()=>{if(syncFromNumber(backIntensityNumberInput,backIntensityInput,backIntensityLabel,true)===null)syncFromRange(backIntensityInput,backIntensityNumberInput,backIntensityLabel);});
   const update=()=>{syncVisibility();if(enabledInput.checked){setEffect(read());onChanged?.();}};
   [textureInput,backInput,maskInput,backTextureInput,backMaskInput].filter(Boolean).forEach(el=>el.addEventListener('input',update));
   [textureModeInput,backTextureModeInput,grainLayerInput,glitterLayerInput].filter(Boolean).forEach(el=>el.addEventListener('change',update));
   backFoilInput?.addEventListener('change',update);
   root.__holoEditorSync=sync;sync();
 }
-
 function releasePreviewMedia(root) {
   if (!root) return;
   const backgroundHosts = [];

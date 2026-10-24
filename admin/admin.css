@@ -880,11 +880,17 @@ button.icon-btn,
 .holo-settings-group>summary span{color:#777;font-size:10px;font-weight:500;}
 .holo-settings-panel{display:grid;gap:9px;padding:10px;border-top:1px solid rgba(255,255,255,.07);}
 .holo-settings-panel .field{min-width:0;margin:0;}
+.holo-strength-controls{display:grid;grid-template-columns:minmax(0,1fr) 82px;align-items:center;gap:8px;}
+.holo-strength-controls input[type="range"]{min-width:0;width:100%;margin:0;padding:0;accent-color:#d7e4c8;}
+.holo-strength-controls input[type="number"]{width:82px;min-width:0;padding:8px 9px;font-variant-numeric:tabular-nums;}
+.holo-strength-controls input[aria-invalid="true"]{border-color:#e0584f;box-shadow:0 0 0 1px rgba(224,88,79,.3);}
+.holo-back-strength{margin:10px 0 0!important;}
+.holo-back-strength[hidden]{display:none!important;}
 .holo-style-intensity{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.8fr);align-items:end;gap:10px;}
 .holo-settings-panel .holo-field-note{margin:5px 0 0;color:#777;font-size:10px;line-height:1.45;}
 .holo-settings-panel input,.holo-settings-panel select{min-width:0;}
 .holo-back-settings[hidden]{display:none!important;}
-@media(max-width:560px){.holo-style-intensity{grid-template-columns:1fr;}.holo-settings-group>summary span{flex-basis:100%;}}
+@media(max-width:560px){.holo-style-intensity{grid-template-columns:1fr;}.holo-settings-group>summary span{flex-basis:100%;}.holo-strength-controls{grid-template-columns:minmax(0,1fr) 74px;}.holo-strength-controls input[type="number"]{width:74px;}}
 /* Keep project artwork visible while a row is expanded, with smaller footprints on touch layouts. */
 @media(max-width:720px){
   .project-list-item.is-open .project-collapsed-preview{flex-basis:110px;width:110px;height:62px;}

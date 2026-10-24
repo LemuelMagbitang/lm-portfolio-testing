@@ -629,6 +629,16 @@ assert.ok(/function updateIntensityAccessibility\(\)/.test(admin) &&
 
 assert.ok(/data-holo-intensity type="range" min="0" max="1" step="0\.01"/.test(admin),
   'CMS foil strength should have fine-grained control.');
+assert.ok(admin.includes('data-holo-intensity-number type="number" min="0" max="1" step="0.01"'),
+  'Front strength must have a synchronized, bounded numeric input.');
+assert.ok(admin.includes('data-holo-back-intensity-number type="number" min="0" max="1" step="0.01"'),
+  'Back strength must have its own synchronized, bounded numeric input.');
+assert.ok(admin.includes('function normalizeFoilStrength(value, fallback = 0.7)') &&
+  admin.includes("numberInput.setAttribute?.('aria-invalid','true')"),
+  'Foil strength must validate empty and non-numeric values.');
+assert.ok(admin.includes('backStrengthControl.hidden=!hasBack||!Boolean(backFoilInput?.checked)'),
+  'Back strength control must only show when back foil is enabled.');
+
 
 assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
   renderer.includes("'cosmos-bottom': 'assets/holographic/cosmos-bottom.webp'") &&
