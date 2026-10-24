@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-06';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-07';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-06';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness } from '../js/features/projects/project-thumbnail.js?v=20261024-06';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-07';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness } from '../js/features/projects/project-thumbnail.js?v=20261024-07';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-06';
 import {
   applyProjectCardOrientation,
