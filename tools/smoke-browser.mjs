@@ -9998,7 +9998,8 @@ try {
       });
 
       if (fallbackState.loading !== 'ready' || fallbackState.slideCount < 1 ||
-          !fallbackState.activeSource || /hero-reel\\.mp4(?:[?#]|$)/i.test(fallbackState.activeSource)) {
+          !fallbackState.activeVisible || !fallbackState.activeSource ||
+          /hero-reel\.mp4(?:[?#]|$)/i.test(fallbackState.activeSource)) {
         throw new Error(
           'Hero must render project media when data/hero-loop.json fails instead of remaining blank: ' +
           JSON.stringify(fallbackState)
