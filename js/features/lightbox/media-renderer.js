@@ -47,6 +47,7 @@ export function createLightboxMediaRenderer({
   // grace period on ordinary links, but never make a constrained connection
   // wait for the entire secondary queue before the page becomes interactive.
   const SECONDARY_MEDIA_STARTUP_WAIT_MS = 4000;
+  const CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT = 4;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
     let settled = false;
     const finish = value => {
@@ -445,9 +446,9 @@ export function createLightboxMediaRenderer({
       globalThis.navigator?.mozConnection ||
       globalThis.navigator?.webkitConnection;
     // Large creative assets should not compete with visible content on
-    // Data Saver, 2G/3G, or measured slow/high-latency connections. Keep the
-    // first local-renderable item per project warm, but skip secondary and
-    // speculative YouTube warm-ups; opened media will still load on demand.
+    // Data Saver, 2G/3G, or measured slow/high-latency connections. Keep only
+    // the first four projects' primary media critical; remaining assets load
+    // on demand when opened, while secondary warm-ups are skipped.
     const effectiveType = String(connection?.effectiveType || '').trim().toLowerCase();
     const downlink = Number(connection?.downlink);
     const roundTripTime = Number(connection?.rtt);
@@ -466,7 +467,7 @@ export function createLightboxMediaRenderer({
       scheduleJob(key, () => preloadYouTube(url), false, true);
     };
 
-    (Array.isArray(projects) ? projects : []).forEach(project => {
+    (Array.isArray(projects) ? projects : []).forEach((project, projectIndex) => {
       const thumbnail = project?.thumbnail;
       if (thumbnail?.src) {
         const cleanSrc = String(thumbnail.src).split('?')[0].split('#')[0].toLowerCase();
@@ -503,18 +504,20 @@ export function createLightboxMediaRenderer({
       const primaryIndex = !constrainedNetwork && firstMediaType === 'youtube'
         ? firstMediaIndex
         : criticalIndex;
-      media.forEach(item => {
+      const primaryMediaIsStartupCritical =
+        !constrainedNetwork || projectIndex < CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT;
+      media.forEach((item, mediaIndex) => {
         if (!item?.src) return;
         const type = String(item.type || '').toLowerCase();
         const url = resolveAssetUrl(item.src);
         const key = type + ':' + url;
 
-        // Keep the first local-renderable item critical for every project.
-        // Models are an intentional exception: the 3D viewer is a distinct
-        // interaction surface, and preloading its binary removes the remaining
-        // first-open fetch after the viewer module graph is already warm.
+        // On constrained networks, only the first four projects' primary
+        // media stay startup-critical. Models remain an intentional exception:
+        // warming the 3D binary avoids a first-open fetch after its module graph
+        // is ready.
         const critical =
-          media.indexOf(item) === primaryIndex ||
+          (mediaIndex === primaryIndex && primaryMediaIsStartupCritical) ||
           type === 'model';
 
         const fetchPriority = critical ? 'high' : 'low';
