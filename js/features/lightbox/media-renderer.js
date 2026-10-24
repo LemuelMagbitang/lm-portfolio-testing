@@ -1511,7 +1511,9 @@ export function createLightboxMediaRenderer({
       image.alt = '';
       image.setAttribute('aria-hidden', 'true');
       image.decoding = 'async';
-      image.loading = 'eager';
+      // Do not make fallback posters eager: secondary Lightbox items retain
+      // progressive loading and will fetch artwork when it approaches view.
+      image.loading = 'lazy';
       image.addEventListener('error', () => appendLabel(), { once: true });
       image.src = imageSrc;
       fallback.appendChild(image);
