@@ -2375,6 +2375,7 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes("media.preload = reducedMotion || priority ? 'metadata' : 'none';") ||
       !thumbnail.includes("rootMargin: '640px 0px'") ||
       !thumbnail.includes(".then(() => ensureLottiePlayer())") ||
+      !thumbnail.includes("resolve(false), 6000") ||
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
       !styles.includes('opacity: 0;') ||
