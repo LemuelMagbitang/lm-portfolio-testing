@@ -1624,6 +1624,7 @@ export function createLightboxMediaRenderer({
     const entry = buildMediaEntry(image, item.caption || item.description, item.background);
     const artwork = entry.querySelector('.lightbox-artwork');
     const sourceUrl = resolveAssetUrl(item.src);
+    let imageSettled = false;
     const applyIntrinsicRatio = () => {
       const cached = imageDimensionCache.get(sourceUrl);
       setAspectRatio(
@@ -1633,10 +1634,14 @@ export function createLightboxMediaRenderer({
       );
     };
     const onImageLoad = () => {
+      imageSettled = true;
       clearLightboxMediaFallback(artwork);
       applyIntrinsicRatio();
     };
-    const onImageError = () => showLightboxMediaFallback(artwork, project, item.src, 'image', 'error');
+    const onImageError = () => {
+      imageSettled = true;
+      showLightboxMediaFallback(artwork, project, item.src, 'image', 'error');
+    };
     image.addEventListener('load', onImageLoad);
     image.addEventListener('error', onImageError);
     if (image.complete) {
@@ -1663,6 +1668,10 @@ export function createLightboxMediaRenderer({
           else entry.appendChild(hint);
         }
       }
+    }
+
+    if (!imageSettled) {
+      showLightboxMediaFallback(artwork, project, item.src, 'image', 'loading');
     }
 
     return entry;
