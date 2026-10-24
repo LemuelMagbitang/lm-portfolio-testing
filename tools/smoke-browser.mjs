@@ -6619,38 +6619,6 @@ try {
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
 
-      // The same thumbnail must retain its artwork surface after a mobile
-      // breakpoint change; this catches responsive viewport collapse without
-      // adding another player initialization or an alternate loader state.
-      await page.setViewportSize({ width: 390, height: 844 });
-      const mobileLottieSurface = await thumbnail.evaluate(host => {
-        const player = host.querySelector('lottie-player');
-        const cardRect = host.getBoundingClientRect();
-        const mediaRect = player?.getBoundingClientRect();
-        return {
-          state: player?.dataset.mediaState || '',
-          fallbackPresent: Boolean(host.querySelector('.project-thumb-media-fallback')),
-          cardWidth: cardRect.width,
-          cardHeight: cardRect.height,
-          mediaWidth: mediaRect?.width || 0,
-          mediaHeight: mediaRect?.height || 0
-        };
-      });
-      if (mobileLottieSurface.state === 'ready' &&
-          (mobileLottieSurface.fallbackPresent ||
-           mobileLottieSurface.mediaWidth <= 0 || mobileLottieSurface.mediaHeight <= 0)) {
-        throw new Error('Rendered mobile Lottie artwork is hidden or still covered by a placeholder: ' + JSON.stringify(mobileLottieSurface));
-      }
-      if (mobileLottieSurface.state === 'loading' && mobileLottieSurface.fallbackPresent) {
-        throw new Error('Mobile Lottie thumbnail displayed a loading/poster overlay before rendering.');
-      }
-      if (mobileLottieSurface.cardWidth <= 0 || mobileLottieSurface.cardHeight <= 0 ||
-          (mobileLottieSurface.state === 'ready' &&
-           (Math.abs(mobileLottieSurface.mediaWidth - mobileLottieSurface.cardWidth) > 1 ||
-            Math.abs(mobileLottieSurface.mediaHeight - mobileLottieSurface.cardHeight) > 1))) {
-        throw new Error('Mobile Lottie thumbnail lost its reserved responsive dimensions: ' + JSON.stringify(mobileLottieSurface));
-      }
-      await page.setViewportSize({ width: 1280, height: 900 });
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
@@ -6807,6 +6775,38 @@ try {
 
       await page.locator('#lightboxClose').click();
       await page.waitForTimeout(100);
+
+      // Keep the same artwork surface stable when the gallery changes from
+      // desktop to mobile sizing; no loading/poster overlay should appear.
+      await page.setViewportSize({ width: 390, height: 844 });
+      const mobileLottieSurface = await thumbnail.evaluate(host => {
+        const player = host.querySelector('lottie-player');
+        const cardRect = host.getBoundingClientRect();
+        const mediaRect = player?.getBoundingClientRect();
+        return {
+          state: player?.dataset.mediaState || '',
+          fallbackPresent: Boolean(host.querySelector('.project-thumb-media-fallback')),
+          cardWidth: cardRect.width,
+          cardHeight: cardRect.height,
+          mediaWidth: mediaRect?.width || 0,
+          mediaHeight: mediaRect?.height || 0
+        };
+      });
+      if (mobileLottieSurface.state === 'ready' &&
+          (mobileLottieSurface.fallbackPresent ||
+           mobileLottieSurface.mediaWidth <= 0 || mobileLottieSurface.mediaHeight <= 0)) {
+        throw new Error('Rendered mobile Lottie artwork is hidden or still covered by a placeholder: ' + JSON.stringify(mobileLottieSurface));
+      }
+      if (mobileLottieSurface.state === 'loading' && mobileLottieSurface.fallbackPresent) {
+        throw new Error('Mobile Lottie thumbnail displayed a loading/poster overlay before rendering.');
+      }
+      if (mobileLottieSurface.cardWidth <= 0 || mobileLottieSurface.cardHeight <= 0 ||
+          (mobileLottieSurface.state === 'ready' &&
+           (Math.abs(mobileLottieSurface.mediaWidth - mobileLottieSurface.cardWidth) > 1 ||
+            Math.abs(mobileLottieSurface.mediaHeight - mobileLottieSurface.cardHeight) > 1))) {
+        throw new Error('Mobile Lottie thumbnail lost its reserved responsive dimensions: ' + JSON.stringify(mobileLottieSurface));
+      }
+      await page.setViewportSize({ width: 1280, height: 900 });
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
