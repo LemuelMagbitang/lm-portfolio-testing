@@ -61,7 +61,8 @@ const findings = {
   largeAssets: [],
   nonPreferredVideo: [],
   unknownFiles: [],
-  avifVideoReferences: []
+  avifVideoReferences: [],
+  unreferencedLargeVideos: []
 };
 
 function extensionOf(value) {
@@ -217,6 +218,63 @@ function auditAssets() {
   }
 }
 
+function auditLargeVideoReferences() {
+  // Large videos are shipped with the Pages artifact even when no page ever
+  // requests them. Search runtime/data/config files, but exclude docs and tools
+  // so explanatory text cannot make an unused asset look live.
+  const sourceRoots = ['data', 'js', 'css', 'admin'];
+  const referenceFiles = [];
+
+  function visit(current) {
+    if (!fs.existsSync(current)) return;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        visit(fullPath);
+      } else if (entry.isFile() &&
+          ['.html', '.css', '.js', '.mjs', '.json', '.yml', '.yaml', '.xml'].includes(extensionOf(fullPath))) {
+        try {
+          referenceFiles.push({
+            path: path.relative(ROOT, fullPath).split(path.sep).join('/'),
+            content: fs.readFileSync(fullPath, 'utf8')
+          });
+        } catch (_) {
+          // An unreadable source is handled by the site validator; skip it here.
+        }
+      }
+    }
+  }
+
+  sourceRoots.forEach(root => visit(path.join(ROOT, root)));
+  for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (!entry.isFile() || extensionOf(entry.name) !== '.html') continue;
+    const fullPath = path.join(ROOT, entry.name);
+    try {
+      referenceFiles.push({
+        path: entry.name,
+        content: fs.readFileSync(fullPath, 'utf8')
+      });
+    } catch (_) {}
+  }
+
+  const largeVideoThreshold = 4 * MIB;
+  for (const file of collectFiles(ASSET_ROOT)) {
+    if (!VIDEO_EXTENSIONS.has(extensionOf(file)) || fs.statSync(file).size < largeVideoThreshold) continue;
+    const relative = path.relative(ROOT, file).split(path.sep).join('/');
+    const basename = path.basename(file);
+    const referencedBy = referenceFiles
+      .filter(source => source.content.includes(relative) || source.content.includes(basename))
+      .map(source => source.path);
+    if (!referencedBy.length) {
+      findings.unreferencedLargeVideos.push({
+        path: relative,
+        size: fs.statSync(file).size,
+        ext: extensionOf(file)
+      });
+    }
+  }
+}
+
 function inspectVideoReferences(value, context = 'data') {
   if (!value || typeof value !== 'object') return;
 
@@ -268,6 +326,7 @@ if (!fs.existsSync(ASSET_ROOT)) {
 
 auditAssets();
 auditDataReferences();
+auditLargeVideoReferences();
 
 reportItems(
   'Raster files to review for WebP conversion (non-blocking backlog)',
@@ -294,6 +353,11 @@ reportItems(
 reportItems(
   'Video files using less-preferred delivery containers',
   findings.nonPreferredVideo,
+  item => item.path + ' — ' + bytesLabel(item.size)
+);
+reportItems(
+  'Large video assets with no runtime/data reference (review before removal)',
+  findings.unreferencedLargeVideos,
   item => item.path + ' — ' + bytesLabel(item.size)
 );
 reportItems(
