@@ -3,7 +3,7 @@ import { mountProjects } from '../js/features/projects/browser-runtime.js?v=2026
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-10';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261024-10';
-import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-07';
+import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-08';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
