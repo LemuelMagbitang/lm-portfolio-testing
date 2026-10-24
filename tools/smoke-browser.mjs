@@ -9972,6 +9972,48 @@ try {
     }, { width: 390, height: 844 });
 
 
+    // The hero-loop JSON is optional presentation data. A failed request must
+    // not leave the hero empty or prevent the loading gate from opening.
+    await smokePage(browser, '/?hero-loop-fallback-smoke=1', async page => {
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' &&
+          transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 7000 });
+
+      const fallbackState = await page.evaluate(() => {
+        const banner = document.querySelector('#heroBanner');
+        const slides = Array.from(banner?.querySelectorAll('.slide') || []);
+        const active = slides.find(slide => slide.classList.contains('active'));
+        const media = active?.firstElementChild;
+        const transition = document.querySelector('#pageTransition');
+        return {
+          loading: transition?.dataset.loading || '',
+          slideCount: slides.length,
+          activeType: active?.dataset?.heroType || media?.localName || '',
+          activeSource: media?.currentSrc || media?.src || media?.getAttribute('src') || '',
+          activeVisible: Boolean(active && getComputedStyle(active).display !== 'none' &&
+            Number.parseFloat(getComputedStyle(active).opacity || '0') > 0)
+        };
+      });
+
+      if (fallbackState.loading !== 'ready' || fallbackState.slideCount < 1 ||
+          !fallbackState.activeSource || /hero-reel\\.mp4(?:[?#]|$)/i.test(fallbackState.activeSource)) {
+        throw new Error(
+          'Hero must render project media when data/hero-loop.json fails instead of remaining blank: ' +
+          JSON.stringify(fallbackState)
+        );
+      }
+    }, { width: 1280, height: 900 }, async page => {
+      await page.route('**/data/hero-loop.json*', async route => {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Intentional hero-loop fallback smoke fixture.' })
+        });
+      });
+    });
+
     await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
       await page.locator('#heroBanner .slide.active video').waitFor({ state: 'attached', timeout: 6000 });
       const reducedHeroState = await page.evaluate(() => {
