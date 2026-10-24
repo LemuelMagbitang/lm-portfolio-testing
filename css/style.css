@@ -941,7 +941,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .card-thumbnail img,
 .card-thumbnail video,
-.card-thumbnail .project-thumb-media.lottie-player {
+.card-thumbnail .project-thumb-media.lottie-player,
+.card-thumbnail lottie-player.project-thumb-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -950,17 +951,34 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
      settings survive fallback resolution without a second DOM pass. */
   --thumb-zoom: 1;
   --thumb-rotate: 0deg;
-  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  opacity: 0;
+  transform: scale(calc(var(--thumb-zoom) * 1.035)) rotate(var(--thumb-rotate));
   transform-origin: center center;
-  transition: transform var(--lm-motion-image) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition:
+    opacity var(--lm-motion-standard) var(--lm-motion-ease),
+    transform var(--lm-motion-image) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.card-thumbnail .project-thumb-media.is-media-ready,
+.card-thumbnail .project-thumb-media.is-media-error {
+  opacity: 1;
+  transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
 }
 
 .project-card:hover .card-thumbnail img,
 .project-card:hover .card-thumbnail video,
-.project-card:hover .card-thumbnail .project-thumb-media.lottie-player {
+.project-card:hover .card-thumbnail .project-thumb-media.lottie-player,
+.project-card:hover .card-thumbnail lottie-player.project-thumb-media {
   /* Multiplies on top of any manual zoom rather than overriding it,
      so the hover effect still works even on an already-zoomed thumbnail. */
   transform: scale(calc(var(--thumb-zoom) * 1.05)) rotate(var(--thumb-rotate));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-thumbnail .project-thumb-media { transition: none; }
+  .project-card:hover .card-thumbnail .project-thumb-media {
+    transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg));
+  }
 }
 
 .glass-info {
