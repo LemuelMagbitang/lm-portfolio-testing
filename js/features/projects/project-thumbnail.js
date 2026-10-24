@@ -426,12 +426,19 @@ export async function waitForProjectThumbnailReadiness(
   {
     count = 6,
     timeoutMs = 2200,
-    windowRef = globalThis.window
+    windowRef = globalThis.window,
+    includeLottie = false
   } = {}
 ) {
+  // First-paint readiness must not block gallery startup on animated JSON.
+  // Lottie uses its own source-ready/error lifecycle and loading fallback;
+  // callers can opt in when explicitly waiting for the animation itself.
+  const selector = includeLottie
+    ? '.card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player'
+    : '.card-thumbnail img, .card-thumbnail video';
   const targets = (Array.isArray(cards) ? cards : [])
     .slice(0, Math.max(0, Number(count) || 0))
-    .map(card => card?.querySelector?.('.card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player'))
+    .map(card => card?.querySelector?.(selector))
     .filter(Boolean);
 
   if (!targets.length) return true;

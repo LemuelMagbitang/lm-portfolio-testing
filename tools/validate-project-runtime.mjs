@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-06';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-01';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-06';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-06';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness } from '../js/features/projects/project-thumbnail.js?v=20261024-06';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-06';
 import {
   applyProjectCardOrientation,
@@ -149,6 +149,22 @@ const cardDocument = {
 };
 
 
+const readinessSelectors = [];
+const readinessProbeCard = { querySelector(selector) { readinessSelectors.push(selector); return null; } };
+assert.equal(await waitForProjectThumbnailReadiness([readinessProbeCard], {count:1}), true);
+assert.equal(readinessSelectors[0], '.card-thumbnail img, .card-thumbnail video',
+  'First-paint readiness must not wait on Lottie JSON and delay Gallery initialization.');
+const readinessLottie = {
+  tagName:'LOTTIE-PLAYER',
+  dataset:{mediaState:'ready'},
+  addEventListener(){},
+  removeEventListener(){}
+};
+const lottieReadinessSelectors = [];
+const lottieReadinessCard = { querySelector(selector) { lottieReadinessSelectors.push(selector); return readinessLottie; } };
+assert.equal(await waitForProjectThumbnailReadiness([lottieReadinessCard], {count:1,includeLottie:true}), true);
+assert.equal(lottieReadinessSelectors[0], '.card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player',
+  'Explicit callers can still wait for Lottie source readiness.');
 const thumbnailObservers = [];
 class TestThumbnailIntersectionObserver {
   constructor(callback, options) {
