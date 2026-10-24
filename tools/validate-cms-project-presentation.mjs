@@ -402,7 +402,7 @@ for (const marker of [
 assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must be lazy-loaded.');
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
-assert.ok(/project-preview-runtime\.js\?v=20261023-01/.test(admin),
+assert.ok(/project-preview-runtime\.js\?v=20261024-01/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
 assert.ok(/admin\.js\?v=\d{8}-\d{2}/.test(adminHtml),
   'The CMS HTML entrypoint must use a versioned cache-busting URL for editor JavaScript.');
