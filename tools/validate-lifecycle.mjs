@@ -144,6 +144,8 @@ assert.match(mediaRendererSource, /ensureLottiePlayer\(\)/);
 assert.match(mediaRendererSource, /video\.addEventListener\('loadeddata', onVideoReady\)/);
 assert.match(mediaRendererSource, /video\.addEventListener\('error', onVideoError\)/);
 assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'image', 'error'\)/);
+assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'image', 'loading'\)/,
+  'Lightbox images should show a visual fallback while they are being fetched.');
 assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'video', 'loading'\)/);
 assert.match(mediaRendererSource, /showLightboxMediaFallback\(\s*artwork,\s*project,\s*item\.src,\s*'youtube'/);
 assert.match(mediaRendererSource, /cleanupLightboxMediaIn\(container\)/);
