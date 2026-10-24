@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-04';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-04';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-03';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-04';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-02';
 import {
   applyProjectCardOrientation,
@@ -368,6 +368,16 @@ disposeProjectThumbnailMedia(videoThumbnail);
 assert.equal(videoThumbnail.src, '');
 
 let lottiePlayerWarmups = 0;
+const lottieLoadingContainer = {
+  children: [],
+  appendChild(node) { node.parentNode = this; node.parentElement = this; this.children.push(node); return node; },
+  removeChild(node) {
+    this.children = this.children.filter(child => child !== node);
+    node.parentNode = null;
+    node.parentElement = null;
+    return node;
+  }
+};
 const lottieThumbnail = buildProjectThumbnailMedia(
   { type: 'lottie', src: 'media/lazy.json' },
   'Lazy Lottie',
@@ -376,6 +386,11 @@ const lottieThumbnail = buildProjectThumbnailMedia(
     return Promise.resolve(true);
   } }
 );
+lottieLoadingContainer.appendChild(lottieThumbnail);
+const hasLottieLoadingFallback = () => lottieLoadingContainer.children.some(
+  child => child.className === 'project-thumb-media-fallback'
+);
+assert.equal(hasLottieLoadingFallback(), false);
 assert.equal(lottieThumbnail.attributes.has('src'), false);
 assert.equal(lottieThumbnail.dataset.lazySrc, '/assets/media/lazy.json');
 preloadObserver.trigger(lottieThumbnail, true);
@@ -384,6 +399,8 @@ assert.equal(lottieThumbnail.attributes.has('src'), false, 'the player should re
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(lottiePlayerWarmups, 1);
 assert.equal(lottieThumbnail.attributes.get('src'), '/assets/media/lazy.json');
+assert.equal(hasLottieLoadingFallback(), false,
+  'A Lottie thumbnail must not show a loading label or poster while its source initializes.');
 visibilityObserver.trigger(lottieThumbnail, true);
 assert.equal(lottieThumbnail.playCount, 0,
   'Visibility alone must not play a Lottie source that is still loading.');
@@ -392,9 +409,13 @@ lottieThumbnail.dispatch('load');
 assert.equal(lottieThumbnail.dataset.mediaState, 'loading',
   'The Lottie thumbnail must remain hidden until its SVG render is ready.');
 assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), false);
+assert.equal(hasLottieLoadingFallback(), false,
+  'The Lottie data-load event must not display a placeholder before SVG rendering is ready.');
 assert.equal(lottieThumbnail.playCount, 0);
 lottieThumbnail.dispatch('ready');
 assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), true);
+assert.equal(hasLottieLoadingFallback(), false,
+  'A ready Lottie thumbnail should display only the rendered artwork.');
 assert.equal(lottieThumbnail.playCount, 1,
   'A visible Lottie should start only after the source-ready event.');
 assert.equal(lottieThumbnail.attributes.has('autoplay'), true);

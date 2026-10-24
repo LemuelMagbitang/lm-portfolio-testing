@@ -10061,7 +10061,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-03');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-04');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10102,7 +10102,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-03');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-04');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10143,7 +10143,7 @@ try {
     await smokePage(browser, '/?media-cache-disabled=1', async page => {
       const result = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
-          await import('/js/features/projects/project-thumbnail.js?v=20261025-03');
+          await import('/js/features/projects/project-thumbnail.js?v=20261025-04');
         const makeHost = () => {
           const host = document.createElement('div');
           host.className = 'card-thumbnail';

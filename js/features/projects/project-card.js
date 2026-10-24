@@ -4,7 +4,7 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261025-03';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261025-04';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
 function isYouTubeMedia(item = {}) {

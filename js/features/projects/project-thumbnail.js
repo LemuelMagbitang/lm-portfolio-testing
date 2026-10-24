@@ -89,7 +89,6 @@ function registerThumbnailMediaState(media, {
   const timerOwner = windowRef || globalThis;
   const setTimer = typeof timerOwner.setTimeout === 'function' ? timerOwner.setTimeout.bind(timerOwner) : globalThis.setTimeout;
   const clearTimer = typeof timerOwner.clearTimeout === 'function' ? timerOwner.clearTimeout.bind(timerOwner) : globalThis.clearTimeout;
-  let playerLoadTimer = null;
   let mediaReadyTimer = null;
   let activationFrameId = null;
   let activationFrameIsTimer = false;
@@ -97,7 +96,6 @@ function registerThumbnailMediaState(media, {
   let lottieGeneration = 0;
 
   const clearLoadTimers = () => {
-    if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
   };
   let fallbackAttachTimer = null;
@@ -433,7 +431,9 @@ function registerThumbnailMediaState(media, {
       }
       if (type === 'lottie') {
         const generation = ++lottieGeneration;
-        showMediaFallback('loading');
+        // Clear a previous error surface on retry. Keep the thumbnail itself
+        // free of loader/poster overlays while the Lottie player initializes.
+        removeMediaFallback();
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
@@ -444,27 +444,19 @@ function registerThumbnailMediaState(media, {
           media.dataset.mediaState = 'loading';
           media.classList.remove('is-media-ready', 'is-media-error');
           media.classList.add('is-media-loading');
-          showMediaFallback('loading');
-          armSlowLoadFallback(() => generation === lottieGeneration);
           media.setAttribute('src', src);
           try { media.removeAttribute?.('autoplay'); } catch (_) {}
         };
         if (typeof ensureLottiePlayer !== 'function') { attachSource(); return; }
-        // Show artwork if the player library is slow, but keep waiting for the
-        // actual import/CDN result so a late successful load can still render.
-        playerLoadTimer = setTimer(() => {
-          playerLoadTimer = null;
-          if (!disposed && generation === lottieGeneration) showSlowLoadFallback(() => generation === lottieGeneration);
-        }, 6000);
+        // Do not insert a loader or poster during async setup. Reveal the
+        // actual animation when the player emits its render-ready event.
         Promise.resolve().then(() => ensureLottiePlayer())
           .then(ready => {
-            if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
             if (disposed || generation !== lottieGeneration) return;
             if (ready === false) { setFailed(); return; }
             attachSource();
           })
           .catch(() => {
-            if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
             if (disposed || generation !== lottieGeneration) return;
             setFailed();
           });

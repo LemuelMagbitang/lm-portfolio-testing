@@ -2385,13 +2385,14 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes("rootMargin: '640px 0px'") ||
       !thumbnail.includes("const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);") ||
       !thumbnail.includes(".then(() => ensureLottiePlayer())") ||
-      !thumbnail.includes('playerLoadTimer = setTimer(() => {') ||
+      thumbnail.includes('playerLoadTimer') ||
       !thumbnail.includes('const MEDIA_SLOW_LOAD_TIMEOUT_MS = 12000;') ||
       !thumbnail.includes('const armSlowLoadFallback =') ||
       !thumbnail.includes('const showSlowLoadFallback =') ||
+      thumbnail.includes("armSlowLoadFallback(() => generation === lottieGeneration)") ||
+      !thumbnail.includes("removeMediaFallback();\n        media.dataset.mediaState = 'loading';") ||
       !thumbnail.includes("media.dataset.mediaState !== 'loading'") ||
       !thumbnail.includes('}, MEDIA_SLOW_LOAD_TIMEOUT_MS);') ||
-      !thumbnail.includes('}, 6000);') ||
       thumbnail.includes('playerLoadTimeout') ||
       !thumbnail.includes('clearLoadTimers();') ||
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
@@ -2400,8 +2401,8 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('opacity: 0;') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261025-03') ||
-      /project-thumbnail[.]js[?]v=(?!20261025-03)[^'"]+/.test(smoke)) {
+      !smoke.includes('project-thumbnail.js?v=20261025-04') ||
+      /project-thumbnail[.]js[?]v=(?!20261025-04)[^'"]+/.test(smoke)) {
     err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
   }
 }
