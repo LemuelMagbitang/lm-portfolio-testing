@@ -87,7 +87,7 @@ export async function createPortfolioApp({
   // explicitly warms the viewer module graph during startup when a project
   // contains 3D media so the first viewer open does not pay the module-load cost.
   const loadModelViewerModule = async () => (
-    import('../infrastructure/three/model-viewer.js?v=20261023-01')
+    import('../infrastructure/three/model-viewer.js?v=20261024-02')
   );
 
   const mountModelViewer = async (...args) => {
@@ -114,7 +114,7 @@ export async function createPortfolioApp({
   // Load their public APIs in parallel on Works; About keeps the shared app
   // shell but skips the project card/media implementation entirely.
   const projectsModulePromise = hasProjectGallery
-    ? import('../features/projects/index.js?v=20261024-09')
+    ? import('../features/projects/index.js?v=20261024-10')
     : Promise.resolve(null);
   const projectNormalizerModulePromise = shouldLoadProjectModels
     ? import('../data/project-normalizer.js?v=20261024-04')
@@ -126,7 +126,7 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(null);
   const lightboxModulePromise = hasProjectGallery
-    ? import('../features/lightbox/index.js?v=20261024-06').catch(error => {
+    ? import('../features/lightbox/index.js?v=20261024-07').catch(error => {
         console.warn('Lightbox module failed to load:', error);
         return null;
       })
