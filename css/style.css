@@ -3336,6 +3336,7 @@ footer{
    set by script.js and this host rule keeps the player itself full-bleed. */
 .hero-banner .slide lottie-player,
 .card-thumbnail .project-thumb-media.lottie-player,
+.card-thumbnail lottie-player.project-thumb-media,
 .lightbox-artwork > lottie-player{
   display:block!important;
   width:100%!important;
@@ -3923,6 +3924,7 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 .card-thumbnail > img,
 .card-thumbnail > video,
 .card-thumbnail > .project-thumb-media.lottie-player,
+.card-thumbnail > lottie-player.project-thumb-media,
 .card-thumbnail > .project-thumb-model{
   position:absolute;
   inset:0;
@@ -3935,7 +3937,8 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
 }
 .card-thumbnail > img,
 .card-thumbnail > video,
-.card-thumbnail > .project-thumb-media.lottie-player{
+.card-thumbnail > .project-thumb-media.lottie-player,
+.card-thumbnail > lottie-player.project-thumb-media{
   display:block;
   object-fit:cover;
 }
