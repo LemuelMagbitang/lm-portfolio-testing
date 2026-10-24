@@ -6817,8 +6817,12 @@ try {
           fallbackPresent: Boolean(host.querySelector('.project-thumb-media-fallback')),
           cardWidth: cardRect.width,
           cardHeight: cardRect.height,
-          mediaWidth: mediaRect?.width || 0,
-          mediaHeight: mediaRect?.height || 0
+          // offsetWidth/Height measure the reserved layout, while the visual
+          // rect also includes the gallery's existing hover-scale transform.
+          mediaWidth: player?.offsetWidth || 0,
+          mediaHeight: player?.offsetHeight || 0,
+          visualWidth: mediaRect?.width || 0,
+          visualHeight: mediaRect?.height || 0
         };
       });
       if (mobileLottieSurface.state === 'ready' &&
@@ -6831,8 +6835,11 @@ try {
       }
       if (mobileLottieSurface.cardWidth <= 0 || mobileLottieSurface.cardHeight <= 0 ||
           (mobileLottieSurface.state === 'ready' &&
-           (Math.abs(mobileLottieSurface.mediaWidth - mobileLottieSurface.cardWidth) > 1 ||
-            Math.abs(mobileLottieSurface.mediaHeight - mobileLottieSurface.cardHeight) > 1))) {
+           (mobileLottieSurface.mediaWidth <= 0 || mobileLottieSurface.mediaHeight <= 0 ||
+            Math.abs(mobileLottieSurface.mediaWidth - mobileLottieSurface.cardWidth) > 1 ||
+            Math.abs(mobileLottieSurface.mediaHeight - mobileLottieSurface.cardHeight) > 1 ||
+            mobileLottieSurface.visualWidth > mobileLottieSurface.cardWidth * 1.05 ||
+            mobileLottieSurface.visualHeight > mobileLottieSurface.cardHeight * 1.05))) {
         throw new Error('Mobile Lottie thumbnail lost its reserved responsive dimensions: ' + JSON.stringify(mobileLottieSurface));
       }
       await page.setViewportSize({ width: 1280, height: 900 });
