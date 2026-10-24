@@ -13,11 +13,24 @@
  */
 
 import { loadProjects } from './project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from './project-card.js?v=20261024-05';
-import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261024-05';
+import { buildProjectCardElement } from './project-card.js?v=20261024-06';
+import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261024-06';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
 import { parseYouTubeUrl as defaultParseYouTubeUrl } from '../../infrastructure/youtube/url.js';
+
+async function mountThumbnailModelViewer(container, src, options = {}) {
+  if (typeof options.isCurrent === 'function' && !options.isCurrent()) return null;
+  const { mountModelViewer } = await import('../../infrastructure/three/model-viewer.js?v=20261023-01');
+  if (typeof options.isCurrent === 'function' && !options.isCurrent()) return null;
+  return mountModelViewer(container, src, {
+    ...options,
+    thumbnail: true,
+    hint: false,
+    autoRotate: false,
+    isCurrent: undefined
+  });
+}
 
 export async function mountProjects({
   url,
@@ -39,7 +52,8 @@ export async function mountProjects({
     onActivate: onCardActivate,
     priority: index < (Number(documentRef?.defaultView?.innerWidth) < 768 ? 2 : 3),
     parseYouTubeUrl,
-    ensureLottiePlayer
+    ensureLottiePlayer,
+    mountModelViewer: mountThumbnailModelViewer
   })
 } = {}) {
   if (!documentRef || typeof loadJson !== 'function') return false;

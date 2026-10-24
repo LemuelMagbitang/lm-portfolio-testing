@@ -4,7 +4,7 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-05';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-06';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
@@ -29,7 +29,10 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
         src: item.src,
         background: item.background && typeof item.background === 'object'
           ? item.background
-          : presentation.background
+          : presentation.background,
+        ...(type === 'image' && item.holographic && typeof item.holographic === 'object'
+          ? {holographic: item.holographic}
+          : {})
       };
     }
   }
@@ -48,6 +51,41 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube =
   } : null;
 }
 
+function buildProjectThumbnailFoil(holographic = {}, artworkSrc = '', {resolveAssetUrl, documentRef} = {}) {
+  if (!holographic || typeof holographic !== 'object' || typeof resolveAssetUrl !== 'function') return null;
+  const rawIntensity = holographic.intensity === '' || holographic.intensity == null ? NaN : Number(holographic.intensity);
+  const intensity = Number.isFinite(rawIntensity) ? Math.max(0, Math.min(1, rawIntensity)) : 0.7;
+  const style = String(holographic.style || 'holographic').trim().toLowerCase();
+  const overlay = documentRef.createElement('span');
+  overlay.className = 'project-thumb-foil';
+  overlay.dataset.holoStyle = ['holographic','cosmos','brushed','beams','crosshatch','shattered','glitter','waves','cat-eye','iridescent','aurora'].includes(style) ? style : 'holographic';
+  overlay.setAttribute('aria-hidden','true');
+  overlay.style.setProperty('--thumb-holo-intensity',String(intensity));
+  const safeUrl = value => String(value || '').replace(/"/g,'%22');
+  const texture = holographic.texture ? resolveAssetUrl(holographic.texture) : '';
+  const tile = holographic.textureMode === 'tile';
+  const layers = [
+    'conic-gradient(from 146deg at 34% 26%, #ffe87a 0deg, #adff67 42deg, #47f3ce 86deg, #57cfff 130deg, #8f7bff 176deg, #ef70f5 222deg, #ff75ac 266deg, #ff9a6b 316deg, #ffe87a 360deg)',
+    'linear-gradient(124deg, transparent 24%, rgba(0,8,24,.34) 34%, rgba(255,255,255,.04) 39%, rgba(255,255,255,.48) 47%, rgba(174,245,255,.24) 51%, rgba(8,16,40,.16) 58%, transparent 70%)',
+    'radial-gradient(ellipse 42% 36% at 34% 26%, rgba(255,255,255,.44), rgba(186,238,255,.12) 38%, transparent 74%)'
+  ];
+  overlay.style.backgroundImage=[...(texture?['url("'+safeUrl(texture)+'")']:[]),...layers].join(', ');
+  overlay.style.backgroundRepeat=[...(texture?[tile?'repeat':'no-repeat']:[]),'no-repeat','no-repeat','no-repeat'].join(', ');
+  overlay.style.backgroundSize=[...(texture?[tile?'auto':'100% 100%']:[]),'320% 280%','250% 220%','170% 170%'].join(', ');
+  overlay.style.backgroundPosition=[...(texture?[tile?'0 0':'center']:[]),'50% 50%','50% 50%','34% 26%'].join(', ');
+  const maskSource = holographic.mask ? resolveAssetUrl(holographic.mask) : (artworkSrc ? resolveAssetUrl(artworkSrc) : '');
+  if (maskSource) {
+    const image = 'url("'+safeUrl(maskSource)+'")';
+    overlay.style.maskImage=image;
+    overlay.style.webkitMaskImage=image;
+    if (holographic.mask) {
+      overlay.style.maskMode='luminance';
+      overlay.style.webkitMaskMode='luminance';
+    }
+  }
+  return overlay;
+}
+
 export function buildProjectCardElement(
   project = {},
   {
@@ -57,7 +95,8 @@ export function buildProjectCardElement(
     onActivate,
     priority = false,
     parseYouTubeUrl = null,
-    ensureLottiePlayer = null
+    ensureLottiePlayer = null,
+    mountModelViewer = null
   } = {}
 ) {
   const card = documentRef.createElement('div');
@@ -91,10 +130,13 @@ export function buildProjectCardElement(
   if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
   if (t.orientation) thumbnail.dataset.thumbnailOrientation = String(t.orientation);
   if (t.src && typeof resolveAssetUrl === 'function') {
+    const thumbnailMediaType = String(t.type || mediaTypeFromSrc(t.src)).toLowerCase();
+    const thumbnailHolographic = thumbnailMediaType === 'image' && t.holographic &&
+      typeof t.holographic === 'object' && !Array.isArray(t.holographic) ? t.holographic : null;
     const media = buildProjectThumbnailMedia(
-      { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
+      { type: thumbnailMediaType, src: t.src, background },
       project.title || 'Project artwork',
-      { resolveAssetUrl, documentRef, priority, ensureLottiePlayer }
+      { resolveAssetUrl, documentRef, priority, ensureLottiePlayer, mountModelViewer }
     );
     if (media) {
       // Apply CMS crop/zoom/rotation directly at card-build time. The old
@@ -118,6 +160,17 @@ export function buildProjectCardElement(
         media.setAttribute('data-model-thumb', '');
       }
       thumbnail.appendChild(media);
+      if (thumbnailHolographic) {
+        const foilOverlay = buildProjectThumbnailFoil(thumbnailHolographic, t.src, {resolveAssetUrl, documentRef});
+        if (foilOverlay) {
+          thumbnail.appendChild(foilOverlay);
+          const revealFoil = () => foilOverlay.classList.add('is-foil-ready');
+          const hideFoil = () => foilOverlay.classList.remove('is-foil-ready');
+          media.addEventListener?.('load', revealFoil, {once:true});
+          media.addEventListener?.('error', hideFoil, {once:true});
+          if (media.dataset.mediaState === 'ready' || (media.complete && Number(media.naturalWidth)>0)) revealFoil();
+        }
+      }
       observeProjectCardOrientation(card, project, media, {
         mediaType: t.type || mediaTypeFromSrc(t.src)
       });

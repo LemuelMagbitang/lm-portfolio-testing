@@ -53,66 +53,108 @@ function getThumbnailViewportObservers(windowRef) {
   return observers;
 }
 
-function registerThumbnailMediaState(media, { type, src, priority, reducedMotion, windowRef, ensureLottiePlayer = null } = {}) {
-  const usesViewportLifecycle = type === 'video' || type === 'lottie';
-  const observers = type === 'image' || usesViewportLifecycle
-    ? getThumbnailViewportObservers(windowRef)
-    : null;
+function registerThumbnailMediaState(media, {
+  type, src, priority, reducedMotion, windowRef,
+  ensureLottiePlayer = null, mountModelViewer = null, resolveAssetUrl = value => value
+} = {}) {
+  const usesViewportLifecycle = type === 'video' || type === 'lottie' || type === 'model';
+  const observers = type === 'image' || usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
   const listeners = [];
   let activated = false;
   let disposed = false;
+  let modelGeneration = 0;
+  let modelCleanup = null;
+  let lottieFallback = null;
+  const modelFallbackMarkup = type === 'model' ? String(media.innerHTML || '') : '';
   const timerOwner = windowRef || globalThis;
-  const setTimer = typeof timerOwner.setTimeout === 'function'
-    ? timerOwner.setTimeout.bind(timerOwner)
-    : globalThis.setTimeout;
-  const clearTimer = typeof timerOwner.clearTimeout === 'function'
-    ? timerOwner.clearTimeout.bind(timerOwner)
-    : globalThis.clearTimeout;
+  const setTimer = typeof timerOwner.setTimeout === 'function' ? timerOwner.setTimeout.bind(timerOwner) : globalThis.setTimeout;
+  const clearTimer = typeof timerOwner.clearTimeout === 'function' ? timerOwner.clearTimeout.bind(timerOwner) : globalThis.clearTimeout;
   let playerLoadTimer = null;
   let mediaReadyTimer = null;
-  const clearLoadTimers = () => {
-    if (playerLoadTimer !== null) {
-      clearTimer?.(playerLoadTimer);
-      playerLoadTimer = null;
-    }
-    if (mediaReadyTimer !== null) {
-      clearTimer?.(mediaReadyTimer);
-      mediaReadyTimer = null;
-    }
-  };
 
+  const clearLoadTimers = () => {
+    if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
+    if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
+  };
+  const hasSource = () => typeof media.hasAttribute === 'function'
+    ? media.hasAttribute('src')
+    : (typeof media.getAttribute === 'function' ? Boolean(media.getAttribute('src')) : Boolean(media.attributes?.has?.('src')));
   const listen = (eventName, handler) => {
     media.addEventListener?.(eventName, handler);
     listeners.push([eventName, handler]);
   };
+  const removeLottieFallback = () => {
+    if (lottieFallback?.parentNode) lottieFallback.parentNode.removeChild(lottieFallback);
+    lottieFallback = null;
+  };
+  const showLottieFallback = status => {
+    if (type !== 'lottie') return;
+    const parent = media.parentElement || media.parentNode;
+    if (!parent || !documentRefForMedia(media)?.createElement) return;
+    const documentRef = documentRefForMedia(media);
+    if (!lottieFallback || lottieFallback.parentNode !== parent) {
+      removeLottieFallback();
+      lottieFallback = documentRef.createElement('span');
+      lottieFallback.className = 'project-thumb-media-fallback';
+      lottieFallback.setAttribute('role', 'img');
+      parent.appendChild(lottieFallback);
+    }
+    const isError = status === 'error';
+    lottieFallback.dataset.state = isError ? 'error' : 'loading';
+    lottieFallback.setAttribute('aria-label', isError ? 'Animation preview unavailable' : 'Loading animation preview');
+    lottieFallback.textContent = isError ? 'ANIMATION PREVIEW UNAVAILABLE' : 'LOADING ANIMATION';
+  };
+  const mediaDocument = () => media.ownerDocument || globalThis.document;
+  function documentRefForMedia(){ return mediaDocument(); }
+  const resetModelPreview = () => {
+    modelGeneration += 1;
+    if (media.__modelViewerMountToken) {
+      try { delete media.__modelViewerMountToken; } catch (_) {}
+    }
+    try { modelCleanup?.(); } catch (_) {}
+    modelCleanup = null;
+    if (type === 'model') media.innerHTML = modelFallbackMarkup;
+  };
+  const isCurrentModelMount = generation => !disposed && activated &&
+    generation === modelGeneration && media.dataset.mediaVisible !== 'false' && media.isConnected !== false;
+  const startLottiePlayback = () => {
+    if (disposed || type !== 'lottie' || reducedMotion ||
+        media.dataset.mediaVisible !== 'true' || media.dataset.mediaState !== 'ready' || !hasSource()) return;
+    try { media.setAttribute('loop', ''); media.setAttribute('autoplay', ''); } catch (_) {}
+    Promise.resolve(media.play?.()).catch(() => {});
+  };
   const setReady = () => {
-    if (disposed) return;
+    if (disposed || (type === 'lottie' && !hasSource())) return;
     clearLoadTimers();
     const reveal = () => {
       if (disposed) return;
       media.dataset.mediaState = 'ready';
       media.classList.remove('is-media-loading', 'is-media-error');
       media.classList.add('is-media-ready');
+      removeLottieFallback();
       if (type === 'video' && media.dataset.mediaVisible === 'true' && !reducedMotion) {
         Promise.resolve(media.play?.()).catch(() => {});
       }
+      // Lottie starts only after its source is ready and it is actually visible.
+      startLottiePlayback();
     };
     if (String(media.tagName || '').toLowerCase() === 'img' && typeof media.decode === 'function') {
       Promise.resolve().then(() => media.decode()).catch(() => {}).then(reveal);
-    } else {
-      reveal();
-    }
+    } else reveal();
   };
   const setFailed = () => {
     if (disposed) return;
     clearLoadTimers();
     if (type === 'lottie') {
-      // Failed or timed-out animation sources can retry when the card re-enters the viewport.
-      // Clear the source so the custom element observes a fresh src on the next attempt.
       activated = false;
       try { media.pause?.(); } catch (_) {}
       try { media.removeAttribute?.('autoplay'); } catch (_) {}
       try { media.removeAttribute?.('src'); } catch (_) {}
+      showLottieFallback('error');
+    }
+    if (type === 'model') {
+      activated = false;
+      resetModelPreview();
     }
     media.dataset.mediaState = 'error';
     media.classList.remove('is-media-loading', 'is-media-ready');
@@ -120,16 +162,11 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
   };
 
   if (type === 'image') {
-    listen('load', setReady);
-    listen('error', setFailed);
+    listen('load', setReady); listen('error', setFailed);
   } else if (type === 'video') {
-    listen('loadeddata', setReady);
-    listen('canplay', setReady);
-    listen('error', setFailed);
+    listen('loadeddata', setReady); listen('canplay', setReady); listen('error', setFailed);
   } else if (type === 'lottie') {
-    listen('ready', setReady);
-    listen('load', setReady);
-    listen('error', setFailed);
+    listen('ready', setReady); listen('load', setReady); listen('error', setFailed);
   }
 
   const state = {
@@ -144,75 +181,71 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
       if (type === 'image') {
         media.src = src;
         if (media.complete) {
-          if (Number(media.naturalWidth) > 0) setReady();
-          else setFailed();
+          if (Number(media.naturalWidth) > 0) setReady(); else setFailed();
         }
         return;
       }
-      if (type === 'video') {
-        media.preload = 'metadata';
-        media.src = src;
+      if (type === 'video') { media.preload = 'metadata'; media.src = src; return; }
+      if (type === 'model') {
+        if (typeof mountModelViewer !== 'function') { setReady(); return; }
+        const generation = ++modelGeneration;
+        media.dataset.mediaState = 'loading';
+        media.dataset.previewStatus = 'loading';
+        media.classList.remove('is-media-ready', 'is-media-error');
+        media.classList.add('is-media-loading');
+        Promise.resolve().then(() => {
+          if (!isCurrentModelMount(generation)) return null;
+          return mountModelViewer(media, src, {
+            thumbnail: true,
+            hint: false,
+            autoRotate: false,
+            background: null,
+            resolveUrl: resolveAssetUrl,
+            isCurrent: () => isCurrentModelMount(generation)
+          });
+        }).then(cleanup => {
+          if (!cleanup) {
+            if (!disposed && generation === modelGeneration && media.dataset.mediaVisible !== 'false') setFailed();
+            return;
+          }
+          if (!isCurrentModelMount(generation)) { try { cleanup(); } catch (_) {} return; }
+          modelCleanup = typeof cleanup === 'function' ? cleanup : null;
+          media.dataset.previewStatus = 'ready';
+          setReady();
+        }).catch(() => {
+          if (!isCurrentModelMount(generation)) return;
+          setFailed();
+        });
         return;
       }
       if (type === 'lottie') {
-        const attachSource = () => {
-          if (disposed) return;
-          // Player-script readiness does not guarantee the animation source
-          // will emit a ready/error event. Bound that second stage too, so a
-          // failed or blocked JSON request cannot leave an invisible thumbnail.
-          if (mediaReadyTimer !== null) clearTimer?.(mediaReadyTimer);
-          mediaReadyTimer = setTimer(() => {
-            mediaReadyTimer = null;
-            setFailed();
-          }, 10000);
-          media.setAttribute('src', src);
-          if (media.dataset.mediaVisible === 'true' && !reducedMotion) {
-            media.setAttribute('autoplay', '');
-            media.setAttribute('loop', '');
-            Promise.resolve(media.play?.()).catch(() => {});
-          }
-        };
-
-        if (typeof ensureLottiePlayer !== 'function') {
-          attachSource();
-          return;
-        }
-
+        showLottieFallback('loading');
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
+        const attachSource = () => {
+          if (disposed || media.dataset.mediaActivated !== 'true') return;
+          if (mediaReadyTimer !== null) clearTimer?.(mediaReadyTimer);
+          mediaReadyTimer = setTimer(() => { mediaReadyTimer = null; setFailed(); }, 10000);
+          media.setAttribute('src', src);
+          // Deliberately do not autoplay here: source attachment is not readiness.
+          try { media.removeAttribute?.('autoplay'); } catch (_) {}
+        };
+        if (typeof ensureLottiePlayer !== 'function') { attachSource(); return; }
         const playerLoadTimeout = new Promise(resolve => {
-          playerLoadTimer = setTimer(() => {
-            playerLoadTimer = null;
-            resolve(false);
-          }, 6000);
+          playerLoadTimer = setTimer(() => { playerLoadTimer = null; resolve(false); }, 6000);
         });
-
-        Promise.race([
-          Promise.resolve().then(() => ensureLottiePlayer()),
-          playerLoadTimeout
-        ])
+        Promise.race([Promise.resolve().then(() => ensureLottiePlayer()), playerLoadTimeout])
           .then(ready => {
-            if (playerLoadTimer !== null) {
-              clearTimer?.(playerLoadTimer);
-              playerLoadTimer = null;
-            }
+            if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
             if (disposed) return;
-            if (ready === false) {
-              activated = false;
-              setFailed();
-              return;
-            }
+            if (ready === false) { activated = false; setFailed(); return; }
             attachSource();
           })
           .catch(() => {
-            if (playerLoadTimer !== null) {
-              clearTimer?.(playerLoadTimer);
-              playerLoadTimer = null;
-            }
+            if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
             if (disposed) return;
-            activated = false;
-            setFailed();
+            activated = false; setFailed();
           });
       }
     },
@@ -224,40 +257,40 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
         state.activate();
         if (reducedMotion) {
           try { media.pause?.(); } catch (_) {}
-          media.removeAttribute?.('autoplay');
-          return;
+          try { media.removeAttribute?.('autoplay'); } catch (_) {}
+          if (type === 'lottie' || type === 'video') return;
         }
         if (type === 'video') {
           media.preload = 'auto';
-          Promise.resolve(media.play?.()).catch(() => {});
-        } else {
-          media.setAttribute('autoplay', '');
-          media.setAttribute('loop', '');
-          Promise.resolve(media.play?.()).catch(() => {});
+          if (media.dataset.mediaState === 'ready') Promise.resolve(media.play?.()).catch(() => {});
+        } else if (type === 'lottie') {
+          startLottiePlayback();
         }
         return;
       }
       try { media.pause?.(); } catch (_) {}
-      if (type === 'lottie') media.removeAttribute?.('autoplay');
+      if (type === 'lottie') try { media.removeAttribute?.('autoplay'); } catch (_) {}
+      if (type === 'model') {
+        resetModelPreview();
+        activated = false;
+        media.dataset.mediaState = 'idle';
+        media.classList.remove('is-media-loading', 'is-media-ready', 'is-media-error');
+      }
     },
     dispose() {
       if (disposed) return;
       disposed = true;
       state.disposed = true;
       clearLoadTimers();
+      if (type === 'model') resetModelPreview();
       observers?.preload?.unobserve(media);
       observers?.visibility?.unobserve(media);
-      listeners.forEach(([eventName, handler]) => {
-        try { media.removeEventListener?.(eventName, handler); } catch (_) {}
-      });
+      listeners.forEach(([eventName, handler]) => { try { media.removeEventListener?.(eventName, handler); } catch (_) {} });
       listeners.length = 0;
-      if (type === 'video' || type === 'lottie') {
-        try { media.pause?.(); } catch (_) {}
-      }
+      if (type === 'video' || type === 'lottie') try { media.pause?.(); } catch (_) {}
       try { media.removeAttribute?.('src'); } catch (_) {}
-      if (type === 'video') {
-        try { media.load?.(); } catch (_) {}
-      }
+      if (type === 'video') try { media.load?.(); } catch (_) {}
+      removeLottieFallback();
       thumbnailMediaStateByElement.delete(media);
     }
   };
@@ -280,7 +313,7 @@ export function disposeProjectThumbnailMedia(root) {
 export function buildProjectThumbnailMedia(
   source = {},
   altText = 'Project artwork',
-  { resolveAssetUrl, documentRef = globalThis.document, priority = false, ensureLottiePlayer = null } = {}
+  { resolveAssetUrl, documentRef = globalThis.document, priority = false, ensureLottiePlayer = null, mountModelViewer = null } = {}
 ) {
   if (!source?.src || typeof resolveAssetUrl !== 'function') return null;
 
@@ -300,6 +333,10 @@ export function buildProjectThumbnailMedia(
     media.fetchPriority = priority && !reducedMotion ? 'high' : 'low';
   } else if (type === 'lottie') {
     media = documentRef.createElement('lottie-player');
+    media.setAttribute('role', 'img');
+    media.setAttribute('aria-label', String(altText || 'Project artwork'));
+    media.style.width = '100%';
+    media.style.height = '100%';
     if (!reducedMotion) media.setAttribute('loop', '');
     media.setAttribute('background', 'transparent');
     media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
@@ -329,46 +366,50 @@ export function buildProjectThumbnailMedia(
   }
 
   media.classList.add('project-thumb-media');
-  if (type !== 'model') {
-    media.classList.add('is-media-loading');
-    media.dataset.mediaState = 'loading';
-    media.dataset.mediaType = type;
-  }
+  media.classList.add('project-thumb-media');
+  media.classList.add('is-media-loading');
+  media.dataset.mediaState = 'loading';
+  media.dataset.mediaType = type;
   if (type === 'model') media.dataset.modelThumb = String(source.src);
   if (source.background && typeof source.background === 'object') {
     media.dataset.background = JSON.stringify(source.background);
   }
 
-  if (type !== 'model') {
-    const state = registerThumbnailMediaState(media, {
-      type: ['image', 'video', 'lottie'].includes(type) ? type : 'image',
-      src,
-      priority,
-      reducedMotion,
-      windowRef,
-      ensureLottiePlayer
-    });
-    const observers = state.observers;
-    const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);
-    if (shouldDeferStillImage) {
-      if (priority || !observers?.preload) {
-        state.activate();
-      } else {
-        media.dataset.lazySrc = src;
-        observers.preload.observe(media);
-      }
-    } else if (observers?.preload && observers?.visibility) {
-      observers.visibility.observe(media);
-      if (priority) {
-        state.activate();
-      } else {
-        media.dataset.lazySrc = src;
-        observers.preload.observe(media);
-      }
-    } else {
-      state.activate();
-      state.setVisible(!reducedMotion);
+  const lifecycleType = ['image', 'video', 'lottie', 'model'].includes(type) ? type : 'image';
+  const state = registerThumbnailMediaState(media, {
+    type: lifecycleType,
+    src,
+    priority,
+    reducedMotion,
+    windowRef,
+    ensureLottiePlayer,
+    mountModelViewer,
+    resolveAssetUrl,
+    documentRef
+  });
+  const observers = state.observers;
+  const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);
+  if (shouldDeferStillImage) {
+    if (priority || !observers?.preload) state.activate();
+    else {
+      media.dataset.lazySrc = src;
+      observers.preload.observe(media);
     }
+  } else if (type === 'model') {
+    // The model viewer's thumbnail profile renders one static frame only.
+    // It mounts on visibility and is torn down on exit to bound WebGL usage.
+    if (observers?.visibility) observers.visibility.observe(media);
+    else state.setVisible(true);
+  } else if (observers?.preload && observers?.visibility) {
+    observers.visibility.observe(media);
+    if (priority) state.activate();
+    else {
+      media.dataset.lazySrc = src;
+      observers.preload.observe(media);
+    }
+  } else {
+    state.activate();
+    state.setVisible(!reducedMotion);
   }
 
   return media;
@@ -390,7 +431,7 @@ export async function waitForProjectThumbnailReadiness(
 ) {
   const targets = (Array.isArray(cards) ? cards : [])
     .slice(0, Math.max(0, Number(count) || 0))
-    .map(card => card?.querySelector?.('.card-thumbnail img, .card-thumbnail video'))
+    .map(card => card?.querySelector?.('.card-thumbnail img, .card-thumbnail video, .card-thumbnail lottie-player'))
     .filter(Boolean);
 
   if (!targets.length) return true;
@@ -427,6 +468,14 @@ export async function waitForProjectThumbnailReadiness(
       }
       target.addEventListener?.('loadeddata', onReady, { once: true });
       target.addEventListener?.('canplay', onReady, { once: true });
+      target.addEventListener?.('error', onFailure, { once: true });
+    } else if (String(target.tagName || '').toLowerCase() === 'lottie-player') {
+      if (target.dataset?.mediaState === 'ready' || target.dataset?.mediaState === 'error') {
+        finish(target.dataset.mediaState === 'ready');
+        return;
+      }
+      target.addEventListener?.('ready', onReady, { once: true });
+      target.addEventListener?.('load', onReady, { once: true });
       target.addEventListener?.('error', onFailure, { once: true });
     } else {
       finish(true);
