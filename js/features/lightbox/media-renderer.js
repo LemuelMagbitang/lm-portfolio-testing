@@ -976,8 +976,12 @@ export function createLightboxMediaRenderer({
       const faceTextureMode = isFront ? config.textureMode : config.backTextureMode;
       const faceImage = isFront ? frontImage : backImage;
       const faceStrength = isFront ? config.intensity : config.backIntensity;
-      face.style.setProperty('--holo-intensity', String(faceStrength));
-      face.style.setProperty('--holo-visual-intensity', 'calc(var(--holo-intensity,.7) * .68)');
+      // Keep the front strength inherited from the surface so existing live
+      // intensity interactions continue to respond; only the reverse overrides it.
+      if (!isFront) {
+        face.style.setProperty('--holo-intensity', String(faceStrength));
+        face.style.setProperty('--holo-visual-intensity', 'calc(var(--holo-intensity,.7) * .68)');
+      }
       const faceArtworkUrl = faceImage.currentSrc || faceImage.src;
       const cosmosClipUrl = config.style === 'cosmos'
         ? resolveAssetUrl(HOLOGRAPHIC_COSMOS_MAPS['cosmos-top'])
