@@ -1982,24 +1982,24 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261024-01") ||
-      !bootstrap.includes("cacheVersion = '20261024-01'") ||
+  if (!entry.includes("bootstrap.js?v=20261024-02") ||
+      !bootstrap.includes("cacheVersion = '20261024-02'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261024-01") ||
       !composition.includes("footer/index.js?v=20261023-02") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261020-06") ||
+      !composition.includes("gallery/index.js?v=20261024-02") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261024-01') ||
-      !works.includes('js/app/page-composition.js?v=20261024-01') ||
+      !works.includes('js/app/bootstrap.js?v=20261024-02') ||
+      !works.includes('js/app/page-composition.js?v=20261024-02') ||
       !works.includes('css/style.css?v=20261023-03') ||
-      !works.includes('js/script.js?v=20261024-01') ||
+      !works.includes('js/script.js?v=20261024-02') ||
       !about.includes('style.css?v=20261023-03') ||
-      !about.includes('js/app/bootstrap.js?v=20261024-01') ||
-      !about.includes('script.js?v=20261024-01') ||
-      !about.includes('page-composition.js?v=20261024-01')) {
+      !about.includes('js/app/bootstrap.js?v=20261024-02') ||
+      !about.includes('script.js?v=20261024-02') ||
+      !about.includes('page-composition.js?v=20261024-02')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2042,6 +2042,11 @@ function validateFilterSoundAndFeedbackContract() {
   }
 
   if (!css.includes('.filter-active-indicator') ||
+      !gallery.includes('function getFilterViewportCenterX()') ||
+      !gallery.includes('const centerX = getFilterViewportCenterX() - hostRect.left - hostClientLeft;') ||
+      !gallery.includes("indicator.style.translate = '-50% 0'") ||
+      !gallery.includes("indicator.style.transform = 'translate3d(-50%, 0, 0)'") ||
+      !gallery.includes('const delta = (buttonRect.left + buttonRect.width / 2) -\n      getFilterViewportCenterX();') ||
       !css.includes('overscroll-behavior-x: none;') ||
       !css.includes('width 420ms cubic-bezier(.34, 1.45, .64, 1)') ||
       css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
