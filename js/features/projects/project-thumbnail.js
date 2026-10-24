@@ -32,6 +32,7 @@ export function mediaTypeFromSrc(src = '') {
 }
 
 
+const MEDIA_SLOW_LOAD_TIMEOUT_MS = 12000;
 const thumbnailMediaStateByElement = new WeakMap();
 const thumbnailViewportObserversByWindow = new WeakMap();
 
@@ -98,6 +99,17 @@ function registerThumbnailMediaState(media, {
   const clearLoadTimers = () => {
     if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
+  };
+  // A slow resource should reveal its static fallback without cancelling the
+  // browser request. If it eventually succeeds, the normal ready event removes
+  // the fallback and reveals the real media.
+  const armSlowLoadFallback = (isCurrent = () => true) => {
+    if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
+    mediaReadyTimer = setTimer(() => {
+      mediaReadyTimer = null;
+      if (disposed || !isCurrent() || media.dataset.mediaState !== 'loading') return;
+      showMediaFallback('error');
+    }, MEDIA_SLOW_LOAD_TIMEOUT_MS);
   };
   const hasSource = () => typeof media.hasAttribute === 'function'
     ? media.hasAttribute('src')
@@ -169,9 +181,8 @@ function registerThumbnailMediaState(media, {
   };
   const showMediaFallback = status => {
     if (!['image', 'video', 'lottie', 'model'].includes(type)) return;
-    // A model already has a designed cube placeholder. Use raster artwork only
-    // when an explicit or project-level static fallback has been provided.
-    if (type === 'model' && !fallbackSrc) return;
+    // 3D renderers clear their container while mounting, so a loading/error
+    // surface is required even when no raster poster was supplied.
     const parent = media.parentElement || media.parentNode;
     const doc = media.ownerDocument || documentRef || globalThis.document;
     if (!parent || !doc?.createElement) return;
@@ -314,6 +325,8 @@ function registerThumbnailMediaState(media, {
       media.dataset.mediaActivated = 'true';
       delete media.dataset.lazySrc;
       if (type === 'image') {
+        showMediaFallback('loading');
+        armSlowLoadFallback();
         media.src = src;
         if (media.complete) {
           if (Number(media.naturalWidth) > 0) setReady(); else setFailed();
@@ -323,6 +336,7 @@ function registerThumbnailMediaState(media, {
       if (type === 'video') {
         showMediaFallback('loading');
         media.preload = 'metadata';
+        armSlowLoadFallback();
         media.src = src;
         return;
       }
@@ -334,6 +348,7 @@ function registerThumbnailMediaState(media, {
         media.dataset.previewStatus = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
+        armSlowLoadFallback(() => generation === modelGeneration && media.dataset.mediaVisible !== 'false');
         Promise.resolve().then(() => {
           if (!isCurrentModelMount(generation)) return null;
           return mountModelViewer(media, src, {
@@ -368,20 +383,19 @@ function registerThumbnailMediaState(media, {
         const attachSource = () => {
           if (disposed || !activated || generation !== lottieGeneration ||
               media.dataset.mediaActivated !== 'true') return;
-          if (mediaReadyTimer !== null) clearTimer?.(mediaReadyTimer);
           media.dataset.mediaGeneration = String(generation);
-          mediaReadyTimer = setTimer(() => {
-            mediaReadyTimer = null;
-            if (!disposed && generation === lottieGeneration) setFailed();
-          }, 10000);
+          armSlowLoadFallback(() => generation === lottieGeneration);
           media.setAttribute('src', src);
           try { media.removeAttribute?.('autoplay'); } catch (_) {}
         };
         if (typeof ensureLottiePlayer !== 'function') { attachSource(); return; }
-        const playerLoadTimeout = new Promise(resolve => {
-          playerLoadTimer = setTimer(() => { playerLoadTimer = null; resolve(false); }, 6000);
-        });
-        Promise.race([Promise.resolve().then(() => ensureLottiePlayer()), playerLoadTimeout])
+        // Show artwork if the player library is slow, but keep waiting for the
+        // actual import/CDN result so a late successful load can still render.
+        playerLoadTimer = setTimer(() => {
+          playerLoadTimer = null;
+          if (!disposed && generation === lottieGeneration) showMediaFallback('error');
+        }, 6000);
+        Promise.resolve().then(() => ensureLottiePlayer())
           .then(ready => {
             if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
             if (disposed || generation !== lottieGeneration) return;
