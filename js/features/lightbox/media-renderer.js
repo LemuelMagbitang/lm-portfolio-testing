@@ -2458,6 +2458,10 @@ export function createLightboxMediaRenderer({
   }
   function destroy() {
     destroyed = true;
+    Array.from(activeLightboxMediaCleanups).reverse().forEach(record => {
+      try { record.run(); } catch (_) {}
+    });
+    activeLightboxMediaCleanups.clear();
     if (activeInspector) closeArtworkInspect({immediate:true});
     disposeArtworkGroupLayouts();
     artworkGroupInteractionCleanups.forEach(cleanup => { try { cleanup(); } catch (_) {} });
@@ -2497,6 +2501,7 @@ export function createLightboxMediaRenderer({
 
   function dispose(container) {
     if (!container) return;
+    cleanupLightboxMediaIn(container);
     if (activeInspector?.container === container) closeArtworkInspect({immediate:true});
     disposeArtworkGroupLayouts(container);
     artworkGroupInteractionCleanups.forEach(cleanup => { try { cleanup(); } catch (_) {} });
