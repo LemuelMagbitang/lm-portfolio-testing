@@ -17,6 +17,8 @@ const previewRuntime = fs.readFileSync(path.join(root, 'admin/project-preview-ru
 const modelViewer = fs.readFileSync(path.join(root, 'js/infrastructure/three/model-viewer.js'), 'utf8');
 const mediaBackgroundEngine = fs.readFileSync(path.join(root, 'js/infrastructure/media-background/engine.js'), 'utf8');
 const projectsData = JSON.parse(fs.readFileSync(path.join(root, 'data/projects.json'), 'utf8'));
+const hero = fs.readFileSync(path.join(root, 'js/features/hero/index.js'), 'utf8');
+const logoLookup = fs.readFileSync(path.join(root, 'js/infrastructure/software-logo/lookup.js'), 'utf8');
 
 function createTestEventTarget() {
   const listeners = new Map();
