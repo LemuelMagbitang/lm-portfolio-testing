@@ -148,6 +148,115 @@ const cardDocument = {
   }
 };
 
+
+const thumbnailObservers = [];
+class TestThumbnailIntersectionObserver {
+  constructor(callback, options) {
+    this.callback = callback;
+    this.options = options;
+    this.targets = new Set();
+    thumbnailObservers.push(this);
+  }
+  observe(target) { this.targets.add(target); }
+  unobserve(target) { this.targets.delete(target); }
+  trigger(target, isIntersecting) {
+    this.callback([{ target, isIntersecting, intersectionRatio: isIntersecting ? 1 : 0 }]);
+  }
+}
+const thumbnailDocument = {
+  defaultView: {
+    matchMedia: () => ({ matches: false }),
+    IntersectionObserver: TestThumbnailIntersectionObserver
+  },
+  createElement(tagName) {
+    const element = makeElement();
+    element.tagName = String(tagName).toUpperCase();
+    element.src = '';
+    element.complete = false;
+    element.naturalWidth = 0;
+    element.listeners = new Map();
+    element.playCount = 0;
+    element.pauseCount = 0;
+    element.addEventListener = (name, callback) => {
+      if (!element.listeners.has(name)) element.listeners.set(name, []);
+      element.listeners.get(name).push(callback);
+    };
+    element.removeEventListener = (name, callback) => {
+      const listeners = element.listeners.get(name) || [];
+      element.listeners.set(name, listeners.filter(listener => listener !== callback));
+    };
+    element.dispatch = name => (element.listeners.get(name) || []).slice()
+      .forEach(callback => callback({ type: name, target: element }));
+    element.removeAttribute = name => {
+      element.attributes.delete(name);
+      if (name === 'src') element.src = '';
+    };
+    element.play = () => { element.playCount += 1; return Promise.resolve(); };
+    element.pause = () => { element.pauseCount += 1; };
+    element.load = () => { element.loadCount = (element.loadCount || 0) + 1; };
+    element.querySelectorAll = () => [];
+    element.matches = selector => selector === '.project-thumb-media';
+    return element;
+  }
+};
+
+const imageThumbnail = buildProjectThumbnailMedia(
+  { type: 'image', src: 'media/lazy.webp' },
+  'Lazy image',
+  { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
+);
+assert.equal(imageThumbnail.loading, 'lazy');
+assert.equal(imageThumbnail.dataset.mediaState, 'loading');
+imageThumbnail.complete = true;
+imageThumbnail.naturalWidth = 100;
+imageThumbnail.dispatch('load');
+assert.equal(imageThumbnail.classList.values.has('is-media-ready'), true);
+
+const videoThumbnail = buildProjectThumbnailMedia(
+  { type: 'video', src: 'media/lazy.mp4' },
+  'Lazy video',
+  { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
+);
+const preloadObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '640px 0px');
+const visibilityObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '0px');
+assert.equal(videoThumbnail.src, '');
+assert.equal(videoThumbnail.dataset.lazySrc, '/assets/media/lazy.mp4');
+assert.equal(videoThumbnail.preload, 'none');
+preloadObserver.trigger(videoThumbnail, true);
+assert.equal(videoThumbnail.src, '/assets/media/lazy.mp4');
+assert.equal(videoThumbnail.dataset.lazySrc, undefined);
+assert.equal(videoThumbnail.preload, 'metadata');
+visibilityObserver.trigger(videoThumbnail, true);
+assert.equal(videoThumbnail.playCount, 1);
+assert.equal(videoThumbnail.preload, 'auto');
+videoThumbnail.dispatch('loadeddata');
+assert.equal(videoThumbnail.classList.values.has('is-media-ready'), true);
+visibilityObserver.trigger(videoThumbnail, false);
+assert.ok(videoThumbnail.pauseCount > 0);
+assert.equal(videoThumbnail.src, '/assets/media/lazy.mp4');
+disposeProjectThumbnailMedia(videoThumbnail);
+assert.equal(videoThumbnail.src, '');
+
+const lottieThumbnail = buildProjectThumbnailMedia(
+  { type: 'lottie', src: 'media/lazy.json' },
+  'Lazy Lottie',
+  { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
+);
+assert.equal(lottieThumbnail.attributes.has('src'), false);
+assert.equal(lottieThumbnail.dataset.lazySrc, '/assets/media/lazy.json');
+preloadObserver.trigger(lottieThumbnail, true);
+assert.equal(lottieThumbnail.attributes.get('src'), '/assets/media/lazy.json');
+visibilityObserver.trigger(lottieThumbnail, true);
+assert.equal(lottieThumbnail.playCount, 1);
+assert.equal(lottieThumbnail.attributes.has('autoplay'), true);
+lottieThumbnail.dispatch('ready');
+assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), true);
+visibilityObserver.trigger(lottieThumbnail, false);
+assert.ok(lottieThumbnail.pauseCount > 0);
+assert.equal(lottieThumbnail.attributes.has('autoplay'), false);
+disposeProjectThumbnailMedia(lottieThumbnail);
+assert.equal(lottieThumbnail.attributes.has('src'), false);
+
 const capabilityCard = buildProjectCardElement({
   id: 'capability-regression',
   title: 'Capability Regression',
