@@ -106,6 +106,14 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
   const setFailed = () => {
     if (disposed) return;
     clearLoadTimers();
+    if (type === 'lottie') {
+      // Failed or timed-out animation sources can retry when the card re-enters the viewport.
+      // Clear the source so the custom element observes a fresh src on the next attempt.
+      activated = false;
+      try { media.pause?.(); } catch (_) {}
+      try { media.removeAttribute?.('autoplay'); } catch (_) {}
+      try { media.removeAttribute?.('src'); } catch (_) {}
+    }
     media.dataset.mediaState = 'error';
     media.classList.remove('is-media-loading', 'is-media-ready');
     media.classList.add('is-media-error');

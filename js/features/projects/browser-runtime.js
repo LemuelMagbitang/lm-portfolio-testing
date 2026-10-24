@@ -13,8 +13,8 @@
  */
 
 import { loadProjects } from './project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from './project-card.js?v=20261024-04';
-import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261024-04';
+import { buildProjectCardElement } from './project-card.js?v=20261024-05';
+import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261024-05';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
 import { parseYouTubeUrl as defaultParseYouTubeUrl } from '../../infrastructure/youtube/url.js';
