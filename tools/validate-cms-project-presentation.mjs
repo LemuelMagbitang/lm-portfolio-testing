@@ -652,7 +652,7 @@ assert.equal(foilHelpers.normalizeFoilStrength('not-a-number',null),null);
 assert.equal(foilHelpers.normalizeFoilStrength(1.24),1);
 assert.equal(foilHelpers.normalizeFoilStrength(-0.12),0);
 assert.equal(foilHelpers.normalizeFoilStrength(0.735),0.74);
-assert.equal(foilHelpers.normalizeEditorHolographic({style:'cosmos',intensity:0.46}).backIntensity,0.46,
+assert.equal(foilHelpers.normalizeEditorHolographic({style:'cosmos',intensity:0.46,back:'back.png',backFoilEnabled:true}).backIntensity,0.46,
   'Existing foil settings without a separate reverse strength should inherit the front strength.');
 
 function makeFoilField({value='',checked=false,textContent=''}={}) {
