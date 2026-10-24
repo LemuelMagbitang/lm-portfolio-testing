@@ -499,8 +499,8 @@ assert.ok(playerTimerEntry,'Lottie player readiness should keep its 6-second tim
 pendingLottieTimers.delete(playerTimerEntry[0]);
 playerTimerEntry[1].callback();
 await new Promise(resolve=>setTimeout(resolve,0));
-assert.equal(timedOutLottie.dataset.mediaState,'loading',
-  'A slow player should remain in the active load state after its visual fallback timeout.');
+assert.equal(timedOutLottie.dataset.mediaState,'error',
+  'A slow player should settle into a recoverable fallback state after its visual timeout.');
 resolveTimedOutPlayer(true);
 await new Promise(resolve=>setTimeout(resolve,0));
 assert.equal(timedOutLottie.attributes.has('src'),true,

@@ -101,14 +101,21 @@ function registerThumbnailMediaState(media, {
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
   };
   // A slow resource should reveal its static fallback without cancelling the
-  // browser request. If it eventually succeeds, the normal ready event removes
-  // the fallback and reveals the real media.
+  // browser request. Mark the visual as settled-but-recoverable so lifecycle
+  // consumers do not wait forever if the player library never resolves.
+  const showSlowLoadFallback = (isCurrent = () => true) => {
+    if (disposed || !isCurrent()) return;
+    media.dataset.mediaState = 'error';
+    media.classList.remove('is-media-loading', 'is-media-ready');
+    media.classList.add('is-media-error');
+    showMediaFallback('error');
+  };
   const armSlowLoadFallback = (isCurrent = () => true) => {
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
     mediaReadyTimer = setTimer(() => {
       mediaReadyTimer = null;
       if (disposed || !isCurrent() || media.dataset.mediaState !== 'loading') return;
-      showMediaFallback('error');
+      showSlowLoadFallback(isCurrent);
     }, MEDIA_SLOW_LOAD_TIMEOUT_MS);
   };
   const hasSource = () => typeof media.hasAttribute === 'function'
@@ -384,6 +391,10 @@ function registerThumbnailMediaState(media, {
           if (disposed || !activated || generation !== lottieGeneration ||
               media.dataset.mediaActivated !== 'true') return;
           media.dataset.mediaGeneration = String(generation);
+          media.dataset.mediaState = 'loading';
+          media.classList.remove('is-media-ready', 'is-media-error');
+          media.classList.add('is-media-loading');
+          showMediaFallback('loading');
           armSlowLoadFallback(() => generation === lottieGeneration);
           media.setAttribute('src', src);
           try { media.removeAttribute?.('autoplay'); } catch (_) {}
@@ -393,7 +404,7 @@ function registerThumbnailMediaState(media, {
         // actual import/CDN result so a late successful load can still render.
         playerLoadTimer = setTimer(() => {
           playerLoadTimer = null;
-          if (!disposed && generation === lottieGeneration) showMediaFallback('error');
+          if (!disposed && generation === lottieGeneration) showSlowLoadFallback(() => generation === lottieGeneration);
         }, 6000);
         Promise.resolve().then(() => ensureLottiePlayer())
           .then(ready => {

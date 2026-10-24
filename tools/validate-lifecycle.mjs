@@ -83,7 +83,8 @@ assert.doesNotMatch(pageCompositionSource, /projectLottiePlayerPreloadPromise/);
 assert.doesNotMatch(pageCompositionSource, /LOTTIE_PLAYER_STARTUP_WAIT_MS/);
 assert.match(pageCompositionSource, /ensureLottiePlayer,\s*waitForThumbnailReadiness/);
 const projectThumbnailSource = await readFile(new URL('../js/features/projects/project-thumbnail.js', import.meta.url), 'utf8');
-assert.match(projectThumbnailSource, /const armSlowLoadFallback = \(isCurrent = \(\) => true\) => \{[\s\S]*?showMediaFallback\('error'\);[\s\S]*?MEDIA_SLOW_LOAD_TIMEOUT_MS/);
+assert.match(projectThumbnailSource, /const showSlowLoadFallback = \(isCurrent = \(\) => true\) => \{[\s\S]*?media\.dataset\.mediaState = 'error';[\s\S]*?showMediaFallback\('error'\)/);
+assert.match(projectThumbnailSource, /const armSlowLoadFallback = \(isCurrent = \(\) => true\) => \{[\s\S]*?showSlowLoadFallback\(isCurrent\)[\s\S]*?MEDIA_SLOW_LOAD_TIMEOUT_MS/);
 assert.doesNotMatch(projectThumbnailSource, /mediaReadyTimer = setTimer\(\(\) => \{[\s\S]*?setFailed\(\);[\s\S]*?\}, 10000\)/,
   'A slow Lottie load must show a fallback without cancelling a request that may still succeed.');
 assert.match(projectThumbnailSource, /const clearLoadTimers = \(\) => \{[\s\S]*?clearTimer\?\.\(playerLoadTimer\)[\s\S]*?clearTimer\?\.\(mediaReadyTimer\)/);

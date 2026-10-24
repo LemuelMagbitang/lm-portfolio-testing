@@ -2388,6 +2388,7 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('playerLoadTimer = setTimer(() => {') ||
       !thumbnail.includes('const MEDIA_SLOW_LOAD_TIMEOUT_MS = 12000;') ||
       !thumbnail.includes('const armSlowLoadFallback =') ||
+      !thumbnail.includes('const showSlowLoadFallback =') ||
       !thumbnail.includes("media.dataset.mediaState !== 'loading'") ||
       !thumbnail.includes('}, MEDIA_SLOW_LOAD_TIMEOUT_MS);') ||
       !thumbnail.includes('}, 6000);') ||
