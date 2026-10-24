@@ -289,6 +289,66 @@ assert.equal(lottieThumbnail.attributes.has('autoplay'), false);
 disposeProjectThumbnailMedia(lottieThumbnail);
 assert.equal(lottieThumbnail.attributes.has('src'), false);
 
+// A transient failure to load the optional player must be recoverable when the
+// thumbnail leaves and re-enters the viewport, rather than remaining blank.
+let lottieRetryAttempts = 0;
+const retryableLottieThumbnail = buildProjectThumbnailMedia(
+  { type: 'lottie', src: 'media/retryable.json' },
+  'Retryable Lottie',
+  {
+    documentRef: thumbnailDocument,
+    resolveAssetUrl: value => '/assets/' + value,
+    ensureLottiePlayer: () => {
+      lottieRetryAttempts += 1;
+      return Promise.resolve(lottieRetryAttempts > 1);
+    }
+  }
+);
+preloadObserver.trigger(retryableLottieThumbnail, true);
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(lottieRetryAttempts, 1);
+assert.equal(retryableLottieThumbnail.dataset.mediaState, 'error');
+assert.equal(retryableLottieThumbnail.classList.values.has('is-media-error'), true);
+visibilityObserver.trigger(retryableLottieThumbnail, false);
+visibilityObserver.trigger(retryableLottieThumbnail, true);
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(lottieRetryAttempts, 2);
+assert.equal(
+  retryableLottieThumbnail.attributes.get('src'),
+  '/assets/media/retryable.json',
+  'A later viewport entry should retry player loading after an initial failure.'
+);
+retryableLottieThumbnail.dispatch('ready');
+assert.equal(retryableLottieThumbnail.dataset.mediaState, 'ready');
+disposeProjectThumbnailMedia(retryableLottieThumbnail);
+
+// If the optional player finishes loading after its thumbnail has been
+// disposed, the completion must not attach the animation source to dead media.
+let resolveLateLottiePlayer;
+const lateLottieThumbnail = buildProjectThumbnailMedia(
+  { type: 'lottie', src: 'media/late.json' },
+  'Late Lottie',
+  {
+    documentRef: thumbnailDocument,
+    resolveAssetUrl: value => '/assets/' + value,
+    ensureLottiePlayer: () => new Promise(resolve => {
+      resolveLateLottiePlayer = resolve;
+    })
+  }
+);
+preloadObserver.trigger(lateLottieThumbnail, true);
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(typeof resolveLateLottiePlayer, 'function');
+disposeProjectThumbnailMedia(lateLottieThumbnail);
+resolveLateLottiePlayer(true);
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(
+  lateLottieThumbnail.attributes.has('src'),
+  false,
+  'A late player-load completion must not attach a source after thumbnail disposal.'
+);
+assert.equal(lateLottieThumbnail.listeners.get('ready')?.length || 0, 0);
+
 const capabilityCard = buildProjectCardElement({
   id: 'capability-regression',
   title: 'Capability Regression',
