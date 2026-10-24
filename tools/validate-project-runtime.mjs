@@ -548,20 +548,39 @@ const timedOutLottie = buildProjectThumbnailMedia(
 );
 await Promise.resolve();
 const playerTimerEntry = [...pendingLottieTimers.entries()].find(([,timer])=>timer.delay===6000);
-assert.ok(playerTimerEntry,'Lottie player readiness should keep its 6-second timeout.');
-pendingLottieTimers.delete(playerTimerEntry[0]);
-playerTimerEntry[1].callback();
-await new Promise(resolve=>setTimeout(resolve,0));
-assert.equal(timedOutLottie.dataset.mediaState,'error',
-  'A slow player should settle into a recoverable fallback state after its visual timeout.');
+assert.equal(playerTimerEntry, undefined,
+  'Lottie loading must not schedule a timeout that replaces the animation with a placeholder.');
+const timedOutLottieHost = {
+  children: [],
+  appendChild(node) { node.parentNode = this; node.parentElement = this; this.children.push(node); return node; },
+  removeChild(node) {
+    this.children = this.children.filter(child => child !== node);
+    node.parentNode = null;
+    node.parentElement = null;
+    return node;
+  }
+};
+timedOutLottieHost.appendChild(timedOutLottie);
+const hasTimedOutLottieFallback = () => timedOutLottieHost.children.some(
+  child => child.className === 'project-thumb-media-fallback'
+);
+assert.equal(timedOutLottie.dataset.mediaState,'loading',
+  'A slow Lottie player should remain in its loading state until the actual animation is ready.');
+assert.equal(hasTimedOutLottieFallback(), false,
+  'A slow player must not cover a Lottie thumbnail with a loader or static poster.');
 resolveTimedOutPlayer(true);
 await new Promise(resolve=>setTimeout(resolve,0));
 assert.equal(timedOutLottie.attributes.has('src'),true,
-  'A slow but successful player load must still attach its source after the visual fallback timeout.');
+  'A slow but successful player load must still attach its source.');
+assert.equal(timedOutLottie.dataset.mediaState,'loading',
+  'Attaching the source must not prematurely mark the Lottie artwork ready.');
+assert.equal(hasTimedOutLottieFallback(), false);
 timedOutLottie.dispatch('ready');
 await new Promise(resolve=>setTimeout(resolve,0));
 assert.equal(timedOutLottie.dataset.mediaState,'ready',
-  'Late Lottie readiness must replace the slow-load fallback with the rendered animation.');
+  'Late Lottie readiness must reveal the rendered animation.');
+assert.equal(hasTimedOutLottieFallback(), false,
+  'The rendered Lottie thumbnail should not have a replacement placeholder.');
 disposeProjectThumbnailMedia(timedOutLottie);
 
 const disconnectedFrames = new Map();
