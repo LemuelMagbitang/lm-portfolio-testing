@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261024-04';
-import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261023-01';
+import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261024-01';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
 
 const root = process.cwd();
@@ -62,6 +62,7 @@ const fallbackDocument = createTestEventTarget();
 fallbackDocument.defaultView = fallbackView;
 fallbackDocument.documentElement = {clientHeight:600, clientWidth:800};
 const previewVideo = {
+  listeners:new Map(),
   isConnected:true,
   top:900,
   src:'',
@@ -74,6 +75,16 @@ const previewVideo = {
   loadCount:0,
   playCount:0,
   pauseCount:0,
+  addEventListener(type, callback) {
+    if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+    this.listeners.get(type).add(callback);
+  },
+  removeEventListener(type, callback) {
+    this.listeners.get(type)?.delete(callback);
+  },
+  dispatchEvent(type) {
+    for (const callback of [...(this.listeners.get(type) || [])]) callback({type,target:this});
+  },
   getBoundingClientRect() {
     return {top:this.top,bottom:this.top+120,left:0,right:160};
   },
