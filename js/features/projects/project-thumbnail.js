@@ -100,6 +100,51 @@ function registerThumbnailMediaState(media, {
     if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
   };
+  let fallbackAttachTimer = null;
+  let fallbackAttachObserver = null;
+  let pendingFallbackStatus = '';
+  let fallbackAttachAttempts = 0;
+  const clearFallbackAttachmentWatch = () => {
+    if (fallbackAttachTimer !== null) { clearTimer?.(fallbackAttachTimer); fallbackAttachTimer = null; }
+    try { fallbackAttachObserver?.disconnect?.(); } catch (_) {}
+    fallbackAttachObserver = null;
+    pendingFallbackStatus = '';
+    fallbackAttachAttempts = 0;
+  };
+  const queueFallbackAttachment = status => {
+    if (!pendingFallbackStatus) fallbackAttachAttempts = 0;
+    pendingFallbackStatus = status;
+    const doc = media.ownerDocument || documentRef || globalThis.document;
+    const MutationObserverConstructor = windowRef?.MutationObserver || doc?.defaultView?.MutationObserver || globalThis.MutationObserver;
+    if (!fallbackAttachObserver && typeof MutationObserverConstructor === 'function' && doc?.documentElement) {
+      try {
+        fallbackAttachObserver = new MutationObserverConstructor(() => {
+          if (disposed || !(media.parentElement || media.parentNode)) return;
+          const nextStatus = pendingFallbackStatus;
+          clearFallbackAttachmentWatch();
+          if (nextStatus) showMediaFallback(nextStatus);
+        });
+        fallbackAttachObserver.observe(doc.documentElement, {childList:true,subtree:true});
+      } catch (_) { fallbackAttachObserver = null; }
+    }
+    const checkAttachment = () => {
+      fallbackAttachTimer = null;
+      if (disposed) { clearFallbackAttachmentWatch(); return; }
+      if (!(media.parentElement || media.parentNode)) {
+        // Old/non-browser test hosts may not expose MutationObserver. Retry
+        // briefly instead of losing the fallback while a card is being mounted.
+        if (!fallbackAttachObserver && fallbackAttachAttempts < 60) {
+          fallbackAttachAttempts += 1;
+          fallbackAttachTimer = setTimer(checkAttachment, 16);
+        }
+        return;
+      }
+      const nextStatus = pendingFallbackStatus;
+      clearFallbackAttachmentWatch();
+      if (nextStatus) showMediaFallback(nextStatus);
+    };
+    if (fallbackAttachTimer === null) fallbackAttachTimer = setTimer(checkAttachment, 0);
+  };
   // A slow resource should reveal its static fallback without cancelling the
   // browser request. Mark the visual as settled-but-recoverable so lifecycle
   // consumers do not wait forever if the player library never resolves.
@@ -160,6 +205,7 @@ function registerThumbnailMediaState(media, {
     listeners.push([eventName, handler]);
   };
   const removeMediaFallback = () => {
+    clearFallbackAttachmentWatch();
     if (mediaFallback?.parentNode) mediaFallback.parentNode.removeChild(mediaFallback);
     mediaFallback = null;
   };
@@ -192,7 +238,11 @@ function registerThumbnailMediaState(media, {
     // surface is required even when no raster poster was supplied.
     const parent = media.parentElement || media.parentNode;
     const doc = media.ownerDocument || documentRef || globalThis.document;
-    if (!parent || !doc?.createElement) return;
+    if (!parent || !doc?.createElement) {
+      if (doc?.createElement) queueFallbackAttachment(status);
+      return;
+    }
+    clearFallbackAttachmentWatch();
     if (!mediaFallback || mediaFallback.parentNode !== parent) {
       removeMediaFallback();
       mediaFallback = doc.createElement('span');
