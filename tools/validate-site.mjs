@@ -1985,8 +1985,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261024-02") ||
-      !bootstrap.includes("cacheVersion = '20261024-02'") ||
+  if (!entry.includes("bootstrap.js?v=20261024-03") ||
+      !bootstrap.includes("cacheVersion = '20261024-03'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261024-01") ||
@@ -1994,15 +1994,16 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
+      !composition.includes("lightbox/index.js?v=20261024-03") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261024-02') ||
-      !works.includes('js/app/page-composition.js?v=20261024-02') ||
+      !works.includes('js/app/bootstrap.js?v=20261024-03') ||
+      !works.includes('js/app/page-composition.js?v=20261024-03') ||
       !works.includes('css/style.css?v=20261023-03') ||
-      !works.includes('js/script.js?v=20261024-02') ||
+      !works.includes('js/script.js?v=20261024-03') ||
       !about.includes('style.css?v=20261023-03') ||
-      !about.includes('js/app/bootstrap.js?v=20261024-02') ||
-      !about.includes('script.js?v=20261024-02') ||
-      !about.includes('page-composition.js?v=20261024-02')) {
+      !about.includes('js/app/bootstrap.js?v=20261024-03') ||
+      !about.includes('script.js?v=20261024-03') ||
+      !about.includes('page-composition.js?v=20261024-03')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2198,8 +2199,10 @@ function validateCmsRegressionContracts() {
       !renderer.includes('const roundTripTime = Number(connection?.rtt);') ||
       !renderer.includes('/^(?:slow-)?[23]g$/.test(effectiveType)') ||
       !renderer.includes('downlink < 1.5') ||
-      !renderer.includes('roundTripTime > 500')) {
-    err('Lightbox preload policy: skip secondary media warm-ups on Data Saver, 2G/3G, or slow/high-latency connections.');
+      !renderer.includes('roundTripTime > 500') ||
+      !renderer.includes('const CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT = 4;') ||
+      !renderer.includes('projectIndex < CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT')) {
+    err('Lightbox preload policy: cap critical media warm-ups to the first four projects on constrained links and skip secondary warm-ups on Data Saver, 2G/3G, or slow/high-latency connections.');
   }
 
   if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {})") ||
