@@ -47,7 +47,7 @@ export function createLightboxMediaRenderer({
   // grace period on ordinary links, but never make a constrained connection
   // wait for the entire secondary queue before the page becomes interactive.
   const SECONDARY_MEDIA_STARTUP_WAIT_MS = 4000;
-  const CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT = 4;
+  const STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT = 4;
   const withPreloadTimeout = (promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null) => new Promise(resolve => {
     let settled = false;
     const finish = value => {
@@ -434,6 +434,9 @@ export function createLightboxMediaRenderer({
     const scheduledJobs = new Map();
     const scheduleJob = (key, job, critical = false, nonBlocking = false) => {
       if (!key || typeof job !== 'function') return;
+      // Reserve startup work for critical primary media and small nonblocking
+      // warm-ups. Everything else loads near the viewport or on project open.
+      if (!critical && !nonBlocking) return;
       const existing = scheduledJobs.get(key);
       if (!existing || (critical && !existing.critical) || (!nonBlocking && existing.nonBlocking)) {
         scheduledJobs.set(key, { job, critical, nonBlocking });
@@ -445,10 +448,9 @@ export function createLightboxMediaRenderer({
     const connection = globalThis.navigator?.connection ||
       globalThis.navigator?.mozConnection ||
       globalThis.navigator?.webkitConnection;
-    // Large creative assets should not compete with visible content on
-    // Data Saver, 2G/3G, or measured slow/high-latency connections. Keep only
-    // the first four projects' primary media critical; remaining assets load
-    // on demand when opened, while secondary warm-ups are skipped.
+    // Keep startup work small on every connection type. The first four
+    // projects' primary media are eligible; secondary assets load when cards
+    // approach the viewport or when the visitor opens a project.
     const effectiveType = String(connection?.effectiveType || '').trim().toLowerCase();
     const downlink = Number(connection?.downlink);
     const roundTripTime = Number(connection?.rtt);
@@ -470,6 +472,7 @@ export function createLightboxMediaRenderer({
     (Array.isArray(projects) ? projects : []).forEach((project, projectIndex) => {
       const thumbnail = project?.thumbnail;
       if (thumbnail?.src) {
+        const thumbnailIsStartupCritical = projectIndex < STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT;
         const cleanSrc = String(thumbnail.src).split('?')[0].split('#')[0].toLowerCase();
         const type = String(thumbnail.type || (
           /\.(mp4|webm|mov|m4v)$/.test(cleanSrc) ? 'video' :
@@ -480,15 +483,15 @@ export function createLightboxMediaRenderer({
         const key = type + ':' + url;
         if (type === 'model') {
           hasModel = true;
-          scheduleJob(key, () => preloadFetch(url, { fetchPriority: 'low' }), false);
+          scheduleJob(key, () => preloadFetch(url, { fetchPriority: 'high' }), thumbnailIsStartupCritical);
         } else if (type === 'video') {
-          scheduleJob(key, () => preloadVideo(url, { fetchPriority: 'low' }), false);
+          scheduleJob(key, () => preloadVideo(url, { fetchPriority: 'high' }), thumbnailIsStartupCritical);
         } else if (type === 'lottie') {
-          scheduleJob(key, () => preloadLottie(url, { fetchPriority: 'low' }), false);
+          scheduleJob(key, () => preloadLottie(url, { fetchPriority: 'high' }), thumbnailIsStartupCritical);
         } else if (type === 'youtube') {
           scheduleYouTubeWarmup(key, url);
         } else {
-          scheduleJob(key, () => preloadImage(url, { fetchPriority: 'low' }), false);
+          scheduleJob(key, () => preloadImage(url, { fetchPriority: 'high' }), thumbnailIsStartupCritical);
         }
       }
 
@@ -505,7 +508,7 @@ export function createLightboxMediaRenderer({
         ? firstMediaIndex
         : criticalIndex;
       const primaryMediaIsStartupCritical =
-        !constrainedNetwork || projectIndex < CONSTRAINED_PRIMARY_MEDIA_PROJECT_LIMIT;
+        projectIndex < STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT;
       media.forEach((item, mediaIndex) => {
         if (!item?.src) return;
         const type = String(item.type || '').toLowerCase();
@@ -615,12 +618,9 @@ export function createLightboxMediaRenderer({
       else secondaryJobs.push(job);
     }
 
-    // Start every scheduled warm-up before handoff. Critical first media,
-    // project backgrounds, models, and the viewer module remain startup-blocking.
-    // The secondary queue keeps warming in the background if its short grace
-    // period expires, avoiding a multi-minute gate on slow/save-data networks.
-    // Respect Data Saver and constrained mobile links by skipping secondary media warm-ups.
-    // The viewer will still load an asset normally when the visitor opens it.
+    // Only primary media for the startup tier and the viewer module are critical.
+    // Secondary gallery assets are loaded by viewport behavior or on project open.
+    // Limited YouTube warm-ups remain explicitly nonblocking.
     if (!constrainedNetwork) {
       void runPreloadPool(nonBlockingJobs, 2).catch(() => {});
     }
