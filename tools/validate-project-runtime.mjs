@@ -218,6 +218,26 @@ imageThumbnail.naturalWidth = 100;
 imageThumbnail.dispatch('load');
 assert.equal(imageThumbnail.classList.values.has('is-media-ready'), true);
 
+// Disposing a still thumbnail before it reaches the preload margin must detach
+// its observer and prevent a delayed intersection callback from starting a fetch.
+const disposedDeferredImage = buildProjectThumbnailMedia(
+  { type: 'image', src: 'media/disposed-lazy.webp' },
+  'Disposed lazy image',
+  { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
+);
+assert.equal(disposedDeferredImage.src, '');
+assert.equal(disposedDeferredImage.dataset.lazySrc, '/assets/media/disposed-lazy.webp');
+disposeProjectThumbnailMedia(disposedDeferredImage);
+assert.equal(disposedDeferredImage.src, '');
+assert.equal(disposedDeferredImage.dataset.mediaActivated, undefined);
+preloadObserver.trigger(disposedDeferredImage, true);
+assert.equal(
+  disposedDeferredImage.src,
+  '',
+  'A deferred thumbnail disposed before intersection must not start a late asset request.'
+);
+assert.equal(disposedDeferredImage.dataset.mediaActivated, undefined);
+
 const videoThumbnail = buildProjectThumbnailMedia(
   { type: 'video', src: 'media/lazy.mp4' },
   'Lazy video',
