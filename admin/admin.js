@@ -3041,12 +3041,9 @@ function buildProjectBody(el, p, options = {}){
   (Array.isArray(p.media) ? p.media : []).forEach(media => {
     if (media.groupId && !validArtworkGroupIds.has(String(media.groupId))) delete media.groupId;
   });
-  // Which artwork cards are expanded, by _uid. Starts empty (every
-  // artwork loads collapsed to just its title bar) so opening a
-  // project with a dozen images doesn't dump a dozen full editors
-  // on screen at once — newly-added artworks are the one exception,
-  // added straight into this set so they open ready to fill in.
-  const openMediaUids = new Set();
+  // Only one artwork editor stays expanded at a time. This keeps projects
+  // with long galleries compact and gives the selected artwork clear focus.
+  let openMediaUid = null;
   el.innerHTML = `
     <div class="row">
       <div class="field"><label class="field-label">Title</label><input data-f="title" value="${attr(p.title)}"></div>
@@ -3500,7 +3497,7 @@ function buildProjectBody(el, p, options = {}){
     const freshWrap = document.createElement('div');
     freshWrap.setAttribute('data-medialist', '');
     p.media.forEach((m)=>{
-      const isOpen = openMediaUids.has(m._uid);
+      const isOpen = openMediaUid === m._uid;
       const row = document.createElement('div');
       row.className = 'card-item';
       row.style.background = '#191919';
@@ -3574,7 +3571,7 @@ function buildProjectBody(el, p, options = {}){
       `;
       row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if (e.target.closest('[data-mact]') && e.target.closest('[data-mact]').dataset.mact !== 'toggle') return;
-        if (isOpen) openMediaUids.delete(m._uid); else openMediaUids.add(m._uid);
+        openMediaUid = toggleExclusiveOpenUid(openMediaUid, m._uid);
         paintMedia();
       });
       syncArtworkGroupCard(row, m);
@@ -3774,6 +3771,7 @@ function buildProjectBody(el, p, options = {}){
       row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
         const idx = p.media.findIndex(x=>x._uid===m._uid);
         if (idx > -1) p.media.splice(idx, 1);
+        if (openMediaUid === m._uid) openMediaUid = null;
         markChanged(); paintGroups(); paintMedia();
       });
       row.querySelector('[data-mact="up"]').addEventListener('click', ()=>{
@@ -3804,7 +3802,7 @@ function buildProjectBody(el, p, options = {}){
   el.querySelector('[data-addmedia]').addEventListener('click', ()=>{
     const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,holographic:null,_uid:uid()};
     p.media.push(fresh);
-    openMediaUids.add(fresh._uid); // new artwork opens straight into edit mode
+    openMediaUid = fresh._uid; // new artwork becomes the sole open editor
     markChanged(); paintMedia();
   });
 }
@@ -4089,7 +4087,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
         if(!isOpen && lastMediaImpact.projectIds.includes(impactId)){
           lastMediaImpact.projectIds=lastMediaImpact.projectIds.filter(id=>id!==impactId);
         }
-        openUid = isOpen ? null : p._uid; paint();
+        openUid = toggleExclusiveOpenUid(openUid, p._uid); paint();
       });
       wrap.querySelector('[data-act="del"]').addEventListener('click',(e)=>{
         e.stopPropagation();
@@ -6033,6 +6031,9 @@ function attr(s){ return esc(s).replace(/"/g,'&quot;'); }
 function val(id){ return document.getElementById(id).value; }
 function numVal(id){ return parseFloat(document.getElementById(id).value)||0; }
 function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+function toggleExclusiveOpenUid(currentUid, selectedUid){
+  return currentUid === selectedUid ? null : selectedUid;
+}
 function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 /* Ensures every item in a list has a stable client-side-only _uid,

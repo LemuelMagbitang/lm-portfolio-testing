@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261023-02';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261023-01';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
@@ -505,6 +506,33 @@ assert.match(admin, /releasePreviewMedia\(previewEl\);\s*previewEl\.innerHTML = 
 assert.ok(/let openUid\s*=\s*null/.test(admin), 'Projects must start with every project row closed.');
 assert.ok(/isOpen \? ' is-open' : ' is-collapsed'/.test(admin) || /isOpen \? ' is-open' : ' is-collapsed'/.test(admin.replace(/\n/g,'')),
   'Projects renderer must expose explicit open/collapsed row state.');
+
+const exclusiveDisclosure = admin.match(/function toggleExclusiveOpenUid\(currentUid, selectedUid\)\s*\{[^}]*\}/);
+assert.ok(exclusiveDisclosure, 'Projects and artwork must share the exclusive-open disclosure helper.');
+const toggleExclusiveOpenUid = vm.runInNewContext('(' + exclusiveDisclosure[0] + ')');
+assert.equal(toggleExclusiveOpenUid(null, 'project-a'), 'project-a',
+  'Opening an item should make it the only open item.');
+assert.equal(toggleExclusiveOpenUid('project-a', 'project-a'), null,
+  'Selecting the currently open item should collapse it.');
+assert.equal(toggleExclusiveOpenUid('project-a', 'project-b'), 'project-b',
+  'Opening another item should replace the previous open item.');
+
+const projectsRendererSource = admin.match(/RENDERERS\\.projects = async function[\\s\\S]*?(?=RENDERERS\\.curatedViews = async function)/);
+assert.ok(projectsRendererSource, 'CMS Projects renderer should remain a distinct section.');
+assert.match(projectsRendererSource[0], /openUid = toggleExclusiveOpenUid\\(openUid, p\\._uid\\); paint\\(\\);/,
+  'Opening a project must collapse the previously open project.');
+assert.match(admin, /let openMediaUid = null/,
+  'Artwork should keep exactly one active editor ID instead of a multi-open set.');
+assert.match(admin, /const isOpen = openMediaUid === m\\._uid;/,
+  'Artwork expansion should derive from the single active artwork ID.');
+assert.match(admin, /openMediaUid = toggleExclusiveOpenUid\\(openMediaUid, m\\._uid\\);[\\s\\S]*?paintMedia\\(\\);/,
+  'Opening artwork must collapse the previously expanded artwork.');
+assert.match(admin, /if \\(openMediaUid === m\\._uid\\) openMediaUid = null;/,
+  'Deleting the active artwork should clear its disclosure state.');
+assert.match(admin, /openMediaUid = fresh\\._uid; \/\/ new artwork becomes the sole open editor/,
+  'New artwork should open immediately and replace any previously expanded artwork.');
+assert.doesNotMatch(admin, /openMediaUids/,
+  'The artwork editor must not retain a multi-open state set.');
 assert.ok(css.includes('.project-list-item.is-collapsed .project-card-head'),
   'Closed Project rows need a dedicated card-shell header layout.');
 assert.ok(css.includes('.project-list-item.is-open .project-card-head'),

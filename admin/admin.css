@@ -137,7 +137,7 @@
 .project-editor-panel .field{min-width:0;}
 .project-media-panel .add-btn{margin-top:9px;}
 .project-media-panel [data-medialist]>.card-item{
-  margin:0;padding:10px 0;background:transparent!important;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;
+  margin:0;padding:8px 0;background:transparent!important;border:0;border-bottom:1px solid var(--line-soft);border-radius:0;
 }
 .project-media-panel [data-medialist]>.card-item:last-child{border-bottom:0;}
 .project-media-panel [data-medialist]>.card-item>.card-item-head{margin:0;min-height:38px;}
@@ -956,7 +956,7 @@ button.icon-btn,
   .artwork-card-inline-group-actions{grid-column:1/-1;}
   .artwork-card-inline-group-actions button{flex:1 1 auto;}
   .project-editor-body > .project-editor-panel{padding:12px 0 15px;}
-  .project-media-panel [data-medialist]>.card-item{padding:9px 0;}
+  .project-media-panel [data-medialist]>.card-item{padding:7px 0;}
   .project-media-panel [data-medialist]>.card-item.has-artwork-group{padding-left:9px;}
 }
 @media(max-width:520px){
