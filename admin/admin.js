@@ -4086,7 +4086,7 @@ let projectListPreviewRuntimePromise = null;
 let disposeProjectListPreviews = () => {};
 function activateProjectListPreviews(root){
   let disposed = false, cleanup = () => {};
-  if (!projectListPreviewRuntimePromise) projectListPreviewRuntimePromise = import('./project-preview-runtime.js?v=20261024-01');
+  if (!projectListPreviewRuntimePromise) projectListPreviewRuntimePromise = import('./project-preview-runtime.js?v=20261025-02');
   projectListPreviewRuntimePromise.then(({mountProjectListPreviews}) => {
     if (disposed || !root?.isConnected) return;
     cleanup = mountProjectListPreviews(root, {resolveUrl:ghRawUrl});

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261024-04';
-import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261024-01';
+import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261025-02';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
 
 const root = process.cwd();
@@ -121,6 +121,106 @@ disposeFallbackPreviews();
 assert.equal(fallbackView.listeners.get('scroll')?.size || 0, 0, 'Fallback scroll listeners must be removed on cleanup.');
 assert.equal(fallbackView.listeners.get('resize')?.size || 0, 0, 'Fallback resize listeners must be removed on cleanup.');
 assert.equal(fallbackDocument.listeners.get('scroll')?.size || 0, 0, 'Captured document scroll listeners must be removed on cleanup.');
+
+// A CMS Lottie source that exceeds its visual timeout must remain recoverable.
+// Use a short timeout here so the regression stays deterministic in CI.
+const cmsLottieView = createTestEventTarget();
+cmsLottieView.innerHeight = 600;
+cmsLottieView.innerWidth = 800;
+cmsLottieView.customElements = {get: name => name === 'lottie-player' ? function LottiePlayer() {} : null};
+class ImmediatePreviewObserver {
+  constructor(callback) { this.callback = callback; }
+  observe(target) { this.callback([{target,isIntersecting:true,intersectionRatio:1}]); }
+  disconnect() {}
+}
+cmsLottieView.IntersectionObserver = ImmediatePreviewObserver;
+const makePreviewElement = tagName => {
+  const listeners = new Map();
+  return {
+    tagName: String(tagName || 'span').toUpperCase(),
+    className: '',
+    dataset: {},
+    attributes: new Map(),
+    children: [],
+    parentNode: null,
+    appendChild(child) { child.parentNode = this; this.children.push(child); return child; },
+    replaceChildren(...children) {
+      this.children.forEach(child => { child.parentNode = null; });
+      this.children = [];
+      children.forEach(child => this.appendChild(child));
+    },
+    setAttribute(name,value) { this.attributes.set(name,String(value)); },
+    removeAttribute(name) { this.attributes.delete(name); },
+    addEventListener(name,callback) {
+      if (!listeners.has(name)) listeners.set(name,new Set());
+      listeners.get(name).add(callback);
+    },
+    removeEventListener(name,callback) { listeners.get(name)?.delete(callback); },
+    dispatchEvent(name) {
+      for (const callback of [...(listeners.get(name)||[])]) callback({type:name,target:this});
+    },
+    querySelector(selector) {
+      return this.children.find(child => String(selector).includes(child.className) || child.className === selector) || null;
+    },
+    remove() {
+      if (!this.parentNode) return;
+      const index = this.parentNode.children.indexOf(this);
+      if (index >= 0) this.parentNode.children.splice(index,1);
+      this.parentNode = null;
+    },
+    pause() {}, stop() {}, load() {},
+    getLottie() { return cmsLottieReady ? {} : null; }
+  };
+};
+let cmsLottieReady = false;
+const cmsLottieDocument = {
+  defaultView: cmsLottieView,
+  documentElement: {clientHeight:600,clientWidth:800},
+  createElement(tagName) { return makePreviewElement(tagName); }
+};
+const cmsLottieSurface = makePreviewElement('div');
+cmsLottieSurface.querySelector = () =>
+  cmsLottieSurface.children.find(child => /project-collapsed-preview-fallback|project-collapsed-preview-error/.test(child.className)) || null;
+const cmsLottieWrapper = makePreviewElement('div');
+cmsLottieWrapper.parentElement = cmsLottieSurface;
+const cmsLottieNode = makePreviewElement('lottie-player');
+cmsLottieNode.isConnected = true;
+cmsLottieNode.dataset = {previewType:'lottie',previewSrc:'animations/slow.json',previewActive:'false',previewState:'idle'};
+cmsLottieNode.parentElement = cmsLottieWrapper;
+cmsLottieNode.ownerDocument = cmsLottieDocument;
+cmsLottieNode.shadowRoot = {querySelector: selector => selector === 'svg' && cmsLottieReady ? {} : null};
+cmsLottieNode.setAttribute = function(name,value) {
+  this.attributes.set(name,String(value));
+  if (name === 'src') this.src = String(value);
+};
+cmsLottieNode.removeAttribute = function(name) {
+  this.attributes.delete(name);
+  if (name === 'src') this.src = '';
+};
+const cmsLottieRoot = {
+  isConnected:true,
+  ownerDocument:cmsLottieDocument,
+  querySelectorAll: selector => selector === '[data-collapsed-preview-media]' ? [cmsLottieNode] : [],
+  contains: node => node === cmsLottieNode && node.isConnected
+};
+const disposeCmsLottie = mountProjectListPreviews(cmsLottieRoot,{
+  resolveUrl:src => 'https://cdn.example.test/' + src,
+  lottiePlayerTimeoutMs:100,
+  lottieMediaTimeoutMs:12
+});
+await new Promise(resolve => setTimeout(resolve,30));
+assert.equal(cmsLottieNode.dataset.previewState,'error',
+  'A delayed CMS Lottie preview must expose a settled fallback state.');
+assert.ok(cmsLottieSurface.querySelector('.project-collapsed-preview-fallback'),
+  'A delayed CMS Lottie preview must show a visible fallback while waiting.');
+cmsLottieReady = true;
+cmsLottieNode.dispatchEvent('ready');
+await new Promise(resolve => setTimeout(resolve,0));
+assert.equal(cmsLottieNode.dataset.previewState,'ready',
+  'A late CMS Lottie ready event must recover the preview without viewport re-entry.');
+assert.equal(cmsLottieSurface.querySelector('.project-collapsed-preview-fallback'),null,
+  'Successful late rendering must clear the temporary fallback.');
+disposeCmsLottie();
 
 
 // Runtime regression checks: normalization must not erase the reverse-side foil switch.
@@ -402,7 +502,7 @@ for (const marker of [
 assert.ok(/loading="lazy"/.test(admin), 'Collapsed project image previews must be lazy-loaded.');
 assert.ok(/decoding="async"/.test(admin), 'Collapsed project image previews must decode asynchronously.');
 assert.ok(/computeFallbackThumb\(project\?\.media/.test(admin), 'Collapsed previews must reuse the existing thumbnail fallback contract.');
-assert.ok(/project-preview-runtime\.js\?v=20261024-01/.test(admin),
+assert.ok(/project-preview-runtime\.js\?v=20261025-02/.test(admin),
   'CMS Projects must reference the current preview lifecycle module version.');
 assert.ok(/admin\.js\?v=\d{8}-\d{2}/.test(adminHtml),
   'The CMS HTML entrypoint must use a versioned cache-busting URL for editor JavaScript.');
