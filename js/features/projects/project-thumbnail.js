@@ -142,9 +142,24 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
-        Promise.resolve()
-          .then(() => ensureLottiePlayer())
+        let playerLoadTimer = null;
+        const timerOwner = windowRef || globalThis;
+        const setTimer = typeof timerOwner.setTimeout === 'function'
+          ? timerOwner.setTimeout.bind(timerOwner)
+          : globalThis.setTimeout;
+        const clearTimer = typeof timerOwner.clearTimeout === 'function'
+          ? timerOwner.clearTimeout.bind(timerOwner)
+          : globalThis.clearTimeout;
+        const playerLoadTimeout = new Promise(resolve => {
+          playerLoadTimer = setTimer(() => resolve(false), 6000);
+        });
+
+        Promise.race([
+          Promise.resolve().then(() => ensureLottiePlayer()),
+          playerLoadTimeout
+        ])
           .then(ready => {
+            if (playerLoadTimer !== null) clearTimer(playerLoadTimer);
             if (disposed) return;
             if (ready === false) {
               activated = false;
@@ -154,6 +169,7 @@ function registerThumbnailMediaState(media, { type, src, priority, reducedMotion
             attachSource();
           })
           .catch(() => {
+            if (playerLoadTimer !== null) clearTimer(playerLoadTimer);
             if (disposed) return;
             activated = false;
             setFailed();
