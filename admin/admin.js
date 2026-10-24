@@ -1407,7 +1407,7 @@ RENDERERS.hero = function(data){
 
       card.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if(e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
-        openUid = isOpen ? null : item._uid; paint();
+        const willOpen = !isOpen; const willOpen = !isOpen; openUid = isOpen ? null : item._uid; paint(); if (willOpen) snapCmsCardToStart(item._uid); if (willOpen) snapCmsCardToStart(item._uid);
       });
       card.querySelector('[data-act="del"]').addEventListener('click', (e)=>{
         e.stopPropagation();
@@ -1436,7 +1436,7 @@ RENDERERS.hero = function(data){
     document.getElementById('addHero').addEventListener('click', ()=>{
       items.push({label:'',text:'',author:'',source:'',weight:1,_uid:uid()});
       openUid = items[items.length-1]._uid;
-      flagUnsaved(); paint();
+      flagUnsaved(); paint(); snapCmsCardToStart(openUid);
     });
     enableDragReorder(() => document.getElementById('heroList'), items, flagUnsaved, paint);
     wireSave(()=> items.map(x=>({label:x.label,text:x.text,author:x.author,source:x.source,weight:x.weight})), 'hero', SECTIONS.hero.file);
@@ -1695,7 +1695,7 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
         body.querySelectorAll('[data-time-f]').forEach(inp=>inp.addEventListener('input',()=>{const f=inp.dataset.timeF;const unit=body.querySelector(`[data-time-unit="${f}"]`)?.value||'s';item[f]=Math.max(0,toMs(inp.value,unit));flagUnsaved();}));
         body.querySelectorAll('[data-time-unit]').forEach(sel=>sel.addEventListener('change',()=>{const f=sel.dataset.timeUnit;const unit=sel.value;const units={...(fadeUnits.get(item._uid)||{})};units[f==='fadeInMs'?'in':'out']=unit;fadeUnits.set(item._uid,units);const field=body.querySelector(`[data-time-f="${f}"]`);if(field)field.value=formatTimedValue(item[f],unit);flagUnsaved();}));
       }
-      row.querySelector('[data-open]').addEventListener('click',e=>{if(e.target.closest('[data-a]')&&e.target.closest('[data-a]').dataset.a!=='toggle')return;openUid=open?null:item._uid;paint();});
+      row.querySelector('[data-open]').addEventListener('click',e=>{if(e.target.closest('[data-a]')&&e.target.closest('[data-a]').dataset.a!=='toggle')return;const willOpen=!open;openUid=open?null:item._uid;paint();if(willOpen)snapCmsCardToStart(item._uid);});
       row.querySelector('[data-a=del]').addEventListener('click',e=>{e.stopPropagation();items=items.filter(x=>x._uid!==item._uid);flagUnsaved();paint();});
       row.querySelector('[data-a=up]').addEventListener('click',e=>{e.stopPropagation();const i=items.indexOf(item);if(i>0){[items[i-1],items[i]]=[items[i],items[i-1]];flagUnsaved();paint();}});
       row.querySelector('[data-a=down]').addEventListener('click',e=>{e.stopPropagation();const i=items.indexOf(item);if(i<items.length-1){[items[i+1],items[i]]=[items[i],items[i+1]];flagUnsaved();paint();}});
@@ -1705,7 +1705,7 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
     document.getElementById('hl_transition').addEventListener('change',e=>{transition=e.target.value;flagUnsaved();});
     document.getElementById('hl_interval').addEventListener('input',e=>{interval=Math.max(500,toMs(e.target.value,intervalUnit)||3500);flagUnsaved();});
     document.getElementById('hl_interval_unit').addEventListener('change',e=>{intervalUnit=e.target.value;const input=document.getElementById('hl_interval');if(input)input.value=formatTimedValue(interval,intervalUnit);flagUnsaved();});
-    document.getElementById('hl_add').addEventListener('click',()=>{const x={type:'image',src:'',alt:'',focus:'50% 50%',zoom:1,rotate:0,fadeInMs:1500,fadeOutMs:1500,zoomTransition:transition==='kenburns',fadeTransition:transition!=='none',_uid:uid()};items.push(x);fadeUnits.set(x._uid,{in:'s',out:'s'});openUid=x._uid;mode='manual';flagUnsaved();paint();});
+    document.getElementById('hl_add').addEventListener('click',()=>{const x={type:'image',src:'',alt:'',focus:'50% 50%',zoom:1,rotate:0,fadeInMs:1500,fadeOutMs:1500,zoomTransition:transition==='kenburns',fadeTransition:transition!=='none',_uid:uid()};items.push(x);fadeUnits.set(x._uid,{in:'s',out:'s'});openUid=x._uid;mode='manual';flagUnsaved();paint();snapCmsCardToStart(x._uid);});
     enableDragReorder(()=>document.getElementById('heroLoopItems'),items,flagUnsaved,paint);
     wireSave(()=>{
       if(mode !== 'latest'){
@@ -2574,7 +2574,7 @@ RENDERERS.reviews = async function(data, isCurrent=()=>true){
     });
     document.getElementById('addReview').addEventListener('click', ()=>{
       const item = {stars:5,quote:'',author:'',_uid:uid()};
-      items.push(item); openUid = item._uid; flagUnsaved(); paint();
+      items.push(item); openUid = item._uid; flagUnsaved(); paint(); snapCmsCardToStart(item._uid);
     });
     enableDragReorder(() => document.getElementById('reviewList'), items, flagUnsaved, paint);
     wireSave(()=> items.map(x=>({stars:x.stars,quote:x.quote,author:x.author})), 'reviews', SECTIONS.reviews.file);
@@ -3571,8 +3571,10 @@ function buildProjectBody(el, p, options = {}){
       `;
       row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if (e.target.closest('[data-mact]') && e.target.closest('[data-mact]').dataset.mact !== 'toggle') return;
+        const willOpen = !isOpen;
         openMediaUid = toggleExclusiveOpenUid(openMediaUid, m._uid);
         paintMedia();
+        if (willOpen) snapCmsCardToStart(m._uid);
       });
       syncArtworkGroupCard(row, m);
       const groupSelector = row.querySelector('[data-artwork-group-select]');
@@ -3803,7 +3805,7 @@ function buildProjectBody(el, p, options = {}){
     const fresh = {type:'image',src:'',caption:'',orientation:'',background:null,holographic:null,_uid:uid()};
     p.media.push(fresh);
     openMediaUid = fresh._uid; // new artwork becomes the sole open editor
-    markChanged(); paintMedia();
+    markChanged(); paintMedia(); snapCmsCardToStart(fresh._uid);
   });
 }
 
@@ -3862,7 +3864,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
     views.forEach(v=>{
       const open=v._uid===openUid,card=document.createElement('div');card.className='card-item';card.dataset.uid=v._uid;
       card.innerHTML=`<div class="card-item-head collapsible-head" data-toggle-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="project-item-label"><span class="item-title">${esc(v.name)||'(untitled Curated View)'}</span><span class="project-preview-text">#${esc(v.slug)} · ${v.projects.length} project${v.projects.length===1?'':'s'}</span></span><div class="card-item-actions"><button class="icon-btn" data-act="copy" title="Copy link"><i class="fa-solid fa-link"></i></button><button class="icon-btn" data-act="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-act="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-act="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-act="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px" data-body></div>`;
-      card.querySelector('[data-toggle-open]').onclick=e=>{if(e.target.closest('[data-act]')?.dataset.act!=='toggle'&&e.target.closest('[data-act]'))return;openUid=open?null:v._uid;paint();};
+      card.querySelector('[data-toggle-open]').onclick=e=>{if(e.target.closest('[data-act]')?.dataset.act!=='toggle'&&e.target.closest('[data-act]'))return;const willOpen=!open;openUid=open?null:v._uid;paint();if(willOpen)snapCmsCardToStart(v._uid);};
       card.querySelector('[data-act="copy"]').onclick=e=>{e.stopPropagation();copyLink(v);};
       card.querySelector('[data-act="del"]').onclick=e=>{e.stopPropagation();if(!confirm(`Delete "${v.name||'this Curated View'}"? Main Portfolio projects will not be deleted.`))return;views=views.filter(x=>x!==v);if(openUid===v._uid)openUid=null;markDirty();paint();};
       card.querySelector('[data-act="up"]').onclick=e=>{e.stopPropagation();const i=views.indexOf(v);if(i===0)return;[views[i-1],views[i]]=[views[i],views[i-1]];markDirty();paint();};
@@ -3870,7 +3872,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
       if(open)buildBody(card.querySelector('[data-body]'),v);
       list.appendChild(card);
     });
-    document.getElementById('addCuratedView').onclick=()=>{const name=prompt('Curated View name:');if(!name?.trim())return;const s=uniqueSlug(name.trim()),v={id:s,name:name.trim(),slug:s,projects:[],_uid:uid()};views.push(v);openUid=v._uid;markDirty();paint();};
+    document.getElementById('addCuratedView').onclick=()=>{const name=prompt('Curated View name:');if(!name?.trim())return;const s=uniqueSlug(name.trim()),v={id:s,name:name.trim(),slug:s,projects:[],_uid:uid()};views.push(v);openUid=v._uid;markDirty();paint();snapCmsCardToStart(v._uid);};
     wireSave(()=>views.map(serialize),'curatedViews',SECTIONS.curatedViews.file);
   }
 
@@ -4087,7 +4089,9 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
         if(!isOpen && lastMediaImpact.projectIds.includes(impactId)){
           lastMediaImpact.projectIds=lastMediaImpact.projectIds.filter(id=>id!==impactId);
         }
+        const willOpen = !isOpen;
         openUid = toggleExclusiveOpenUid(openUid, p._uid); paint();
+        if (willOpen) snapCmsCardToStart(p._uid);
       });
       wrap.querySelector('[data-act="del"]').addEventListener('click',(e)=>{
         e.stopPropagation();
@@ -4114,7 +4118,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     document.getElementById('addProj').addEventListener('click', ()=>{
       const p = {id:'',title:'',subtitle:'',badge:'',badges:[],filters:[],description:'',thumbnail:{type:'image',src:'',focus:'50% 50%',zoom:1},media:[],_uid:uid()};
       items.push(p);
-      openUid = p._uid; flagUnsaved(); paint();
+      openUid = p._uid; flagUnsaved(); paint(); snapCmsCardToStart(p._uid);
     });
     enableDragReorder(() => document.getElementById('projList'), items, flagUnsaved, paint);
 
@@ -4567,7 +4571,7 @@ RENDERERS.about = function(data){
       a.education.forEach((edu,i)=>{
         const open=openUids.has(edu._uid), row=document.createElement('div'); row.className='card-item'; row.dataset.uid=edu._uid;
         row.innerHTML=`<div class="card-item-head collapsible-head" data-toggle-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(edu.school||edu.title||'New education entry')}${edu.degree?' — '+esc(edu.degree):''}${edu.graduationDate?' · '+esc(edu.graduationDate):''}</span><div class="card-item-actions"><button class="icon-btn" data-act="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-act="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-act="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-act="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px;"><div class="row"><div class="field"><label class="field-label">School name</label><input data-f="school" value="${attr(edu.school||'')}" placeholder="University, college, school, or training provider"></div><div class="field"><label class="field-label">Degree or other <span style="opacity:.5">(optional)</span></label><input data-f="degree" value="${attr(edu.degree||'')}" placeholder="Degree, certificate, diploma, course, etc."></div></div><div class="field"><label class="field-label">Graduation / completion date <span style="opacity:.5">(optional)</span></label><div class="row"><input data-date-for="graduationDate" type="month" value="${/^\d{4}-\d{2}$/.test(edu.graduationDate||'')?edu.graduationDate:''}" style="max-width:150px"><input data-f="graduationDate" type="text" value="${attr(edu.graduationDate||'')}" placeholder="YYYY-MM or text such as Mid-2025"></div></div></div>`;
-        row.querySelector('[data-toggle-open]').addEventListener('click',e=>{if(e.target.closest('[data-act]')&&e.target.closest('[data-act]').dataset.act!=='toggle')return;open?openUids.delete(edu._uid):openUids.add(edu._uid);repaint();});
+        row.querySelector('[data-toggle-open]').addEventListener('click',e=>{if(e.target.closest('[data-act]')&&e.target.closest('[data-act]').dataset.act!=='toggle')return;if(open)openUids.delete(edu._uid);else openUids.add(edu._uid);repaint();if(!open)snapCmsCardToStart(edu._uid);});
         row.querySelectorAll('[data-f]').forEach(inp=>inp.addEventListener('input',()=>{edu[inp.dataset.f]=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');flagUnsaved();}));
         row.querySelectorAll('[data-date-for]').forEach(inp=>inp.addEventListener('change',()=>{const f=inp.dataset.dateFor;edu[f]=inp.value;const text=row.querySelector('[data-f="'+f+'"]');if(text)text.value=inp.value;row.querySelector('.preview-line').textContent=(edu.school||edu.title||'New education entry')+(edu.degree?' — '+edu.degree:'')+(edu.graduationDate?' · '+edu.graduationDate:'');flagUnsaved();}));
         row.querySelector('[data-act=del]').addEventListener('click',e=>{e.stopPropagation();a.education.splice(i,1);flagUnsaved();repaint();});
@@ -4576,7 +4580,7 @@ RENDERERS.about = function(data){
         list.appendChild(row);
       });
     }
-    document.getElementById('addEdu').addEventListener('click',()=>{const fresh={school:'',degree:'',graduationDate:'',_uid:uid()};a.education.push(fresh);openUids.add(fresh._uid);flagUnsaved();repaint();});
+    document.getElementById('addEdu').addEventListener('click',()=>{const fresh={school:'',degree:'',graduationDate:'',_uid:uid()};a.education.push(fresh);openUids.add(fresh._uid);flagUnsaved();repaint();snapCmsCardToStart(fresh._uid);});
     repaint(); enableDragReorder(()=>document.getElementById('eduList'),a.education,flagUnsaved,repaint);
   }
 
@@ -4625,6 +4629,7 @@ RENDERERS.about = function(data){
           if (e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
           if (isOpen) openUids.delete(exp._uid); else openUids.add(exp._uid);
           repaint();
+          if (!isOpen) snapCmsCardToStart(exp._uid);
         });
         row.querySelectorAll('[data-f]').forEach(inp=> inp.addEventListener('input', ()=>{
           exp[inp.dataset.f]=inp.value;
@@ -4657,7 +4662,7 @@ RENDERERS.about = function(data){
       const fresh = {role:'',company:'',startDate:'',endDate:'',bullets:[''],_uid:uid()};
       a.experience.push(fresh);
       openUids.add(fresh._uid);
-      flagUnsaved(); repaint();
+      flagUnsaved(); repaint(); snapCmsCardToStart(fresh._uid);
     });
     repaint();
     // Same reasoning as buildSimpleRepeater above: #expList's own node
@@ -6033,6 +6038,23 @@ function numVal(id){ return parseFloat(document.getElementById(id).value)||0; }
 function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function toggleExclusiveOpenUid(currentUid, selectedUid){
   return currentUid === selectedUid ? null : selectedUid;
+}
+
+// Align the opened card beneath the fixed CMS top bar after its list re-renders.
+// Use an instant scroll, and call this helper only for opening actions.
+function snapCmsCardToStart(uidValue){
+  const targetUid = String(uidValue || '');
+  if (!targetUid || typeof window === 'undefined') return;
+  window.requestAnimationFrame(() => {
+    const card = Array.from(document.querySelectorAll('.card-item[data-uid]'))
+      .find(candidate => candidate.dataset.uid === targetUid);
+    if (!card?.isConnected) return;
+    const topbar = document.getElementById('topbar');
+    const topbarOffset = (Number(topbar?.getBoundingClientRect?.().height) || 58) + 12;
+    const currentScroll = Number(window.scrollY ?? document.documentElement?.scrollTop ?? 0) || 0;
+    const cardTop = Number(card.getBoundingClientRect()?.top) || 0;
+    window.scrollTo(0, Math.max(0, currentScroll + cardTop - topbarOffset));
+  });
 }
 function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 

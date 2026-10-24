@@ -533,6 +533,62 @@ assert.match(admin, /openMediaUid = fresh\._uid; \/\/ new artwork becomes the so
   'New artwork should open immediately and replace any previously expanded artwork.');
 assert.doesNotMatch(admin, /openMediaUids/,
   'The artwork editor must not retain a multi-open state set.');
+
+const snapHelperStart = admin.indexOf('function snapCmsCardToStart(uidValue){');
+const snapHelperEnd = admin.indexOf('\n}\nfunction uid()', snapHelperStart);
+assert.ok(snapHelperStart >= 0 && snapHelperEnd > snapHelperStart,
+  'The shared CMS card snap helper should remain a separate function.');
+const snapCalls = [];
+const targetCard = {
+  isConnected: true,
+  dataset: { uid: 'target-card' },
+  getBoundingClientRect: () => ({ top: 360 })
+};
+const snapWindow = {
+  scrollY: 100,
+  requestAnimationFrame(callback) { callback(); },
+  scrollTo(...args) { snapCalls.push(args); }
+};
+const snapDocument = {
+  querySelectorAll(selector) {
+    assert.equal(selector, '.card-item[data-uid]');
+    return [targetCard];
+  },
+  getElementById(id) {
+    assert.equal(id, 'topbar');
+    return { getBoundingClientRect: () => ({ height: 58 }) };
+  },
+  documentElement: { scrollTop: 100 }
+};
+const snapHelperSource = admin.slice(snapHelperStart, snapHelperEnd + 2);
+const snapToStart = vm.runInNewContext('(' + snapHelperSource + ')', {
+  window: snapWindow,
+  document: snapDocument
+});
+snapToStart('target-card');
+assert.deepEqual(snapCalls, [[0, 390]],
+  'Opening a card should align its top edge below the fixed CMS top bar.');
+snapCalls.length = 0;
+targetCard.isConnected = false;
+snapToStart('target-card');
+assert.equal(snapCalls.length, 0,
+  'The snap helper must not scroll to a card detached before the scheduled frame.');
+
+assert.equal(admin.split('if (willOpen) snapCmsCardToStart(item._uid);').length - 1, 2,
+  'Both Hero Messages and Reviews must snap only when a card is opened.');
+for (const marker of [
+  'if(willOpen)snapCmsCardToStart(item._uid);',
+  'if (willOpen) snapCmsCardToStart(p._uid);',
+  'if (willOpen) snapCmsCardToStart(m._uid);',
+  'if(willOpen)snapCmsCardToStart(v._uid);',
+  'if(!open)snapCmsCardToStart(edu._uid);',
+  'if (!isOpen) snapCmsCardToStart(exp._uid);',
+  'snapCmsCardToStart(openUid)',
+  'snapCmsCardToStart(x._uid)',
+  'snapCmsCardToStart(fresh._uid)'
+]) {
+  assert.ok(admin.includes(marker), 'A CMS card-opening path is missing its snap behavior: ' + marker);
+}
 assert.ok(css.includes('.project-list-item.is-collapsed .project-card-head'),
   'Closed Project rows need a dedicated card-shell header layout.');
 assert.ok(css.includes('.project-list-item.is-open .project-card-head'),
