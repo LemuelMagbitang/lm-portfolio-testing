@@ -10058,7 +10058,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261024-05');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261024-06');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10099,7 +10099,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261024-05');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261024-06');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },

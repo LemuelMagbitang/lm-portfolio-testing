@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-05';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-06';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-01';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-05';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-05';
-import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-04';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-06';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } from '../js/features/projects/project-thumbnail.js?v=20261024-06';
+import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-05';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
   orientationFromAspectRatio,
   observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
-import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261023-02';
+import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261024-03';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js?v=20261004-01';
 
@@ -279,10 +279,14 @@ await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(lottiePlayerWarmups, 1);
 assert.equal(lottieThumbnail.attributes.get('src'), '/assets/media/lazy.json');
 visibilityObserver.trigger(lottieThumbnail, true);
-assert.equal(lottieThumbnail.playCount, 1);
-assert.equal(lottieThumbnail.attributes.has('autoplay'), true);
+assert.equal(lottieThumbnail.playCount, 0,
+  'Visibility alone must not play a Lottie source that is still loading.');
+assert.equal(lottieThumbnail.attributes.has('autoplay'), false);
 lottieThumbnail.dispatch('ready');
 assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), true);
+assert.equal(lottieThumbnail.playCount, 1,
+  'A visible Lottie should start only after the source-ready event.');
+assert.equal(lottieThumbnail.attributes.has('autoplay'), true);
 visibilityObserver.trigger(lottieThumbnail, false);
 assert.ok(lottieThumbnail.pauseCount > 0);
 assert.equal(lottieThumbnail.attributes.has('autoplay'), false);
@@ -348,6 +352,66 @@ assert.equal(
   'A late player-load completion must not attach a source after thumbnail disposal.'
 );
 assert.equal(lateLottieThumbnail.listeners.get('ready')?.length || 0, 0);
+
+let modelMounts = 0;
+let modelCleanups = 0;
+const lifecycleModelThumbnail = buildProjectThumbnailMedia(
+  {type:'model',src:'models/lifecycle.glb'},
+  'Lifecycle model',
+  {
+    documentRef: thumbnailDocument,
+    resolveAssetUrl: value => '/assets/' + value,
+    mountModelViewer: async (container, src, options) => {
+      modelMounts += 1;
+      assert.equal(src, '/assets/models/lifecycle.glb');
+      assert.equal(options.thumbnail, true);
+      assert.equal(options.hint, false);
+      assert.equal(options.autoRotate, false);
+      return () => { modelCleanups += 1; };
+    }
+  }
+);
+assert.equal(lifecycleModelThumbnail.dataset.mediaActivated, undefined,
+  '3D card previews must not start WebGL while outside the viewport.');
+visibilityObserver.trigger(lifecycleModelThumbnail, true);
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(modelMounts, 1);
+assert.equal(lifecycleModelThumbnail.dataset.mediaState, 'ready');
+visibilityObserver.trigger(lifecycleModelThumbnail, false);
+assert.equal(modelCleanups, 1,
+  'A 3D preview should dispose its renderer when leaving the viewport.');
+assert.equal(lifecycleModelThumbnail.dataset.mediaState, 'idle');
+visibilityObserver.trigger(lifecycleModelThumbnail, true);
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.equal(modelMounts, 2,
+  'Re-entering the viewport should create only one new static preview.');
+disposeProjectThumbnailMedia(lifecycleModelThumbnail);
+assert.equal(modelCleanups, 2,
+  'Unmounting a card should release the final WebGL preview.');
+
+const autoFoilCard = buildProjectCardElement({
+  id:'auto-foil-card',
+  title:'Auto foil card',
+  thumbnail:{},
+  media:[{type:'image',src:'media/front.webp',holographic:{style:'cosmos',intensity:0.61,texture:'foil.svg',textureMode:'tile'}}]
+},{
+  documentRef:cardDocument,
+  resolveAssetUrl:value=>'/assets/'+value
+});
+assert.equal(autoFoilCard.children[0].children.some(child=>child.className==='project-thumb-foil'),true,
+  'A generated thumbnail should inherit the first image artwork’s foil settings.');
+
+const explicitFoilCard = buildProjectCardElement({
+  id:'explicit-foil-card',
+  title:'Explicit foil card',
+  thumbnail:{type:'image',src:'media/thumb.webp',holographic:{style:'aurora',intensity:0.4}},
+  media:[{type:'image',src:'media/front.webp'}]
+},{
+  documentRef:cardDocument,
+  resolveAssetUrl:value=>'/assets/'+value
+});
+assert.equal(explicitFoilCard.children[0].children.some(child=>child.className==='project-thumb-foil'),true,
+  'An explicit thumbnail may apply its own saved front-foil strength.');
 
 const capabilityCard = buildProjectCardElement({
   id: 'capability-regression',
