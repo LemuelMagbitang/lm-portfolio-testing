@@ -21,7 +21,7 @@ import { parseYouTubeUrl as defaultParseYouTubeUrl } from '../../infrastructure/
 
 async function mountThumbnailModelViewer(container, src, options = {}) {
   if (typeof options.isCurrent === 'function' && !options.isCurrent()) return null;
-  const { mountModelViewer } = await import('../../infrastructure/three/model-viewer.js?v=20261023-01');
+  const { mountModelViewer } = await import('../../infrastructure/three/model-viewer.js?v=20261024-02');
   if (typeof options.isCurrent === 'function' && !options.isCurrent()) return null;
   return mountModelViewer(container, src, {
     ...options,
