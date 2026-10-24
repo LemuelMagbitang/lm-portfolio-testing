@@ -6662,7 +6662,10 @@ try {
         throw new Error('Rapid navigation left YouTube players mounted in a project that contains no YouTube media.');
       }
 
-      const imageCount = await page.locator('#lightboxMediaContainer img').count();
+      // Static poster fallbacks may temporarily render their own <img> while
+      // a primary image/animation resolves. Count only primary media images so
+      // the contract measures saved image entries rather than fallback layers.
+      const imageCount = await page.locator('#lightboxMediaContainer img:not(.lightbox-media-fallback-image)').count();
       if (imageCount !== expectedMediaCounts.images) {
         throw new Error(`Rapid navigation left ${imageCount} images in Haeru; saved project data contains ${expectedMediaCounts.images} image media entries.`);
       }
