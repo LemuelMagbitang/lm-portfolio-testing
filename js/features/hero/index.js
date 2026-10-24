@@ -348,7 +348,12 @@ import { createLifecycle } from '../../core/lifecycle.js';
     // cacheable, and easy to replace from the Media Library.
     if (config.loopMode === 'manual' || config.loopMode === 'mixed') {
       try {
-        const list = await loadJson(heroLoopUrl, [], { resolveUrl: resolveAssetUrl });
+        // The manual loop is optional presentation data. Bound its request so a
+        // slow/missing JSON file cannot hold the hero behind the startup gate.
+        const list = await loadJson(heroLoopUrl, [], {
+          resolveUrl: resolveAssetUrl,
+          timeoutMs: 3500
+        });
         manualSources = (Array.isArray(list) ? list : [])
           .map(item => heroSourceFromManualEntry(item, siteRootUrl))
           .filter(Boolean);
@@ -384,6 +389,28 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
     if (config.loopMode === 'manual') {
       sources = manualSources;
+      // A manually curated loop must never be a single point of failure. If its
+      // JSON times out, is empty, or contains invalid entries, use the already
+      // normalized project thumbnails as the visual fallback instead.
+      if (!sources.length) {
+        let fallbackModels = [];
+        try { fallbackModels = getProjects?.() || []; } catch (_) { fallbackModels = []; }
+        if (!Array.isArray(fallbackModels) || !fallbackModels.length) {
+          try {
+            const projectList = await loadJson(projectsUrl, [], { resolveUrl: resolveAssetUrl });
+            fallbackModels = normalizeProjects(projectList);
+          } catch (_) {
+            fallbackModels = [];
+          }
+        }
+        latestSources = fallbackModels
+          .map(project => heroSourceFromProjectData(project, siteRootUrl))
+          .filter(Boolean);
+        sources = latestSources.slice(0, 5);
+        if (sources.length) {
+          console.warn('Hero banner: manual loop unavailable; showing latest project media as a fallback.');
+        }
+      }
     } else if (config.loopMode === 'mixed') {
       // Manual additions take priority; newest projects fill the remaining
       // slots until the five-slide hero is full. Dedupe prevents adding the
