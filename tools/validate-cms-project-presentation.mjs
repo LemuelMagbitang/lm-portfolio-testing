@@ -726,6 +726,16 @@ backNumber.value='0.34';backNumber.dispatch('input');
 assert.equal(backRange.value,'0.34','Typing reverse strength should update the slider.');
 assert.equal(foilModel.backIntensity,0.34);
 
+const intactBack=foilModel.backIntensity;
+backNumber.value='not-a-number';backNumber.dispatch('input');
+assert.equal(backNumber.attributes.get('aria-invalid'),'true',
+  'Non-numeric back strength input should be marked invalid.');
+assert.equal(foilModel.backIntensity,intactBack,
+  'Invalid back strength must not overwrite the last valid model value.');
+backNumber.dispatch('change');
+assert.equal(backNumber.value,'0.34','Leaving invalid back strength should restore the last valid value.');
+assert.equal(backNumber.attributes.has('aria-invalid'),false);
+
 const intactFront=foilModel.intensity;
 frontNumber.value='';frontNumber.dispatch('input');
 assert.equal(frontNumber.attributes.get('aria-invalid'),'true',
@@ -760,6 +770,9 @@ assert.ok(admin.includes('project.thumbnail?.holographic') && admin.includes('p.
   'Explicit thumbnail foil settings must survive CMS load and save.');
 
 
+assert.ok(renderer.includes('const faceStrength = isFront ? config.intensity : config.backIntensity') &&
+  renderer.includes('intensity: faceStrength'),
+  'The interactive foil preview must apply front/back strengths independently per face.');
 assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
   renderer.includes("'cosmos-bottom': 'assets/holographic/cosmos-bottom.webp'") &&
   renderer.includes("'cosmos-middle': 'assets/holographic/cosmos-middle-trans.webp'") &&

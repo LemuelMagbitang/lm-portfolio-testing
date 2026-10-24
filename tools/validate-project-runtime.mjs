@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-08';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261024-09';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-08';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261024-08';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261024-09';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261024-09';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261024-06';
 import {
   applyProjectCardOrientation,
@@ -123,6 +123,7 @@ const makeElement = () => ({
   dataset: {},
   children: [],
   attributes: new Map(),
+  listeners: new Map(),
   style: {
     objectPosition: '',
     transformOrigin: '',
@@ -136,15 +137,32 @@ const makeElement = () => ({
   append(...nodes) { this.children.push(...nodes); },
   appendChild(node) { this.children.push(node); return node; },
   setAttribute(name, value) { this.attributes.set(name, String(value)); },
-  addEventListener() {},
-  removeEventListener() {},
+  addEventListener(name, handler) {
+    if (!this.listeners.has(name)) this.listeners.set(name, new Set());
+    this.listeners.get(name).add(handler);
+  },
+  removeEventListener(name, handler) { this.listeners.get(name)?.delete(handler); },
+  dispatchEvent(event) {
+    for (const handler of [...(this.listeners.get(event?.type) || [])]) handler(event);
+    return true;
+  },
+  dispatch(name) {
+    for (const handler of [...(this.listeners.get(name) || [])]) handler({type:name,target:this});
+  },
   textContent: '',
   innerHTML: ''
 });
 
 const cardDocument = {
-  createElement() {
-    return makeElement();
+  defaultView: {
+    matchMedia: () => ({ matches: false }),
+    CustomEvent: globalThis.CustomEvent
+  },
+  createElement(tagName) {
+    const element = makeElement();
+    element.tagName = String(tagName).toUpperCase();
+    element.ownerDocument = cardDocument;
+    return element;
   }
 };
 
@@ -407,6 +425,113 @@ assert.equal(
 );
 assert.equal(lateLottieThumbnail.listeners.get('ready')?.length || 0, 0);
 
+const pendingLottieTimers = new Map();
+let nextLottieTimer = 0;
+const timeoutDocument = {
+  defaultView: {
+    matchMedia: () => ({matches:false}),
+    setTimeout(callback, delay) {
+      const id = ++nextLottieTimer;
+      pendingLottieTimers.set(id,{callback,delay});
+      return id;
+    },
+    clearTimeout(id) { pendingLottieTimers.delete(id); }
+  },
+  createElement(tagName) {
+    const element = thumbnailDocument.createElement(tagName);
+    element.isConnected = true;
+    element.ownerDocument = timeoutDocument;
+    return element;
+  }
+};
+let resolveTimedOutPlayer;
+const timedOutLottie = buildProjectThumbnailMedia(
+  {type:'lottie',src:'media/late-after-timeout.json'},
+  'Late after timeout',
+  {documentRef:timeoutDocument,resolveAssetUrl:value=>'/assets/'+value,
+   ensureLottiePlayer:()=>new Promise(resolve=>{resolveTimedOutPlayer=resolve;})}
+);
+await Promise.resolve();
+const playerTimerEntry = [...pendingLottieTimers.entries()].find(([,timer])=>timer.delay===6000);
+assert.ok(playerTimerEntry,'Lottie player readiness should keep its 6-second timeout.');
+pendingLottieTimers.delete(playerTimerEntry[0]);
+playerTimerEntry[1].callback();
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(timedOutLottie.dataset.mediaState,'error');
+resolveTimedOutPlayer(true);
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(timedOutLottie.attributes.has('src'),false,
+  'A late player promise must not reattach source after timeout.');
+disposeProjectThumbnailMedia(timedOutLottie);
+
+const disconnectedFrames = new Map();
+let nextDisconnectedFrame = 0;
+const disconnectedWindow = {
+  matchMedia: () => ({matches:false}),
+  CustomEvent: globalThis.CustomEvent,
+  requestAnimationFrame(callback) {
+    const id = ++nextDisconnectedFrame;
+    disconnectedFrames.set(id, callback);
+    return id;
+  },
+  cancelAnimationFrame(id) { disconnectedFrames.delete(id); }
+};
+const disconnectedDocument = {
+  defaultView: disconnectedWindow,
+  createElement(tagName) {
+    const element = thumbnailDocument.createElement(tagName);
+    element.isConnected = false;
+    element.ownerDocument = disconnectedDocument;
+    return element;
+  }
+};
+function flushDisconnectedFrames() {
+  let batches = 0;
+  while (disconnectedFrames.size && batches++ < 10) {
+    const callbacks = [...disconnectedFrames.entries()];
+    callbacks.forEach(([id, callback]) => { disconnectedFrames.delete(id); callback(); });
+  }
+}
+let detachedLottieWarmups = 0;
+const detachedLottie = buildProjectThumbnailMedia(
+  {type:'lottie',src:'media/detached.json'},
+  'Detached Lottie',
+  {documentRef:disconnectedDocument,resolveAssetUrl:value=>'/assets/'+value,priority:true,
+   ensureLottiePlayer:()=>{detachedLottieWarmups++;return Promise.resolve(true);}}
+);
+assert.equal(detachedLottie.dataset.mediaActivated,undefined,
+  'A priority Lottie must wait for the connected card container.');
+assert.equal(detachedLottie.attributes.has('src'),false);
+detachedLottie.isConnected=true;
+flushDisconnectedFrames();
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(detachedLottieWarmups,1);
+assert.equal(detachedLottie.attributes.get('src'),'/assets/media/detached.json');
+detachedLottie.dispatch('ready');
+assert.equal(detachedLottie.dataset.mediaState,'ready');
+disposeProjectThumbnailMedia(detachedLottie);
+
+let detachedModelMounts=0,detachedModelCleanups=0,detachedModelBackground=null;
+const detachedModel=buildProjectThumbnailMedia(
+  {type:'model',src:'models/detached.glb',background:{type:'color',color:'#123456'}},
+  'Detached model',
+  {documentRef:disconnectedDocument,resolveAssetUrl:value=>'/assets/'+value,
+   mountModelViewer:async(container,src,options)=>{
+     detachedModelMounts++;detachedModelBackground=options.background;
+     assert.equal(src,'/assets/models/detached.glb');
+     return ()=>{detachedModelCleanups++;};
+   }}
+);
+assert.equal(detachedModelMounts,0,'A 3D thumbnail must not mount WebGL while detached.');
+detachedModel.isConnected=true;
+flushDisconnectedFrames();
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(detachedModelMounts,1);
+assert.deepEqual(detachedModelBackground,{type:'color',color:'#123456'});
+assert.equal(detachedModel.dataset.mediaState,'ready');
+disposeProjectThumbnailMedia(detachedModel);
+assert.equal(detachedModelCleanups,1);
+
 let modelMounts = 0;
 let modelCleanups = 0;
 const lifecycleModelThumbnail = buildProjectThumbnailMedia(
@@ -455,6 +580,19 @@ const autoFoilCard = buildProjectCardElement({
 assert.equal(autoFoilCard.children[0].children.some(child=>child.className==='project-thumb-foil'),true,
   'A generated thumbnail should inherit the first image artwork’s foil settings.');
 
+const autoFoilMedia = autoFoilCard.children[0].children[0];
+const autoFoilOverlay = autoFoilCard.children[0].children.find(child=>child.className==='project-thumb-foil');
+assert.ok(autoFoilMedia && autoFoilOverlay);
+assert.equal(autoFoilOverlay.classList.values.has('is-foil-ready'),false);
+autoFoilMedia.dispatch('load');
+assert.equal(autoFoilMedia.dataset.mediaState,'ready');
+assert.equal(autoFoilOverlay.classList.values.has('is-foil-ready'),true,
+  'Foil should reveal after decoded thumbnail media is ready.');
+autoFoilMedia.dispatch('error');
+assert.equal(autoFoilOverlay.classList.values.has('is-foil-ready'),false,
+  'Foil should hide when thumbnail media reports an error.');
+disposeProjectThumbnailMedia(autoFoilCard);
+
 const autoFoilFromThumbnailCard = buildProjectCardElement({
   id:'auto-foil-from-thumbnail-settings',
   title:'Auto foil from thumbnail settings',
@@ -469,6 +607,17 @@ assert.ok(inheritedThumbnailFoil,
   'A generated image thumbnail should inherit its saved thumbnail-level foil settings when media has none.');
 assert.equal(inheritedThumbnailFoil.style['--thumb-holo-intensity'],'0.24');
 assert.equal(inheritedThumbnailFoil.dataset.holoStyle,'aurora');
+
+const normalizedSeparateThumbnailFoil = normalizeProjects([{
+  id:'separate-thumbnail-foil-strengths',title:'Separate thumbnail foil strengths',
+  thumbnail:{src:'',holographic:{style:'aurora',intensity:0.24,back:'media/back.webp',backFoilEnabled:true,backIntensity:0.81}},
+  media:[{type:'image',src:'media/front.webp'}]
+}])[0];
+assert.equal(normalizedSeparateThumbnailFoil.thumbnail.holographic.intensity,0.24);
+assert.equal(normalizedSeparateThumbnailFoil.thumbnail.holographic.backIntensity,0.81,
+  'Automatic thumbnail normalization must preserve independent back strength.');
+assert.equal(inheritedThumbnailFoil.style['--thumb-holo-intensity'],'0.24',
+  'Static foil thumbnails use front strength; back strength is used by the interactive flip preview.');
 
 const inferredModelCard = buildProjectCardElement({
   id:'auto-model-from-extension',

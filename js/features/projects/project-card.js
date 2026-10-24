@@ -4,7 +4,7 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-08';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-09';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
@@ -169,9 +169,10 @@ export function buildProjectCardElement(
           thumbnail.appendChild(foilOverlay);
           const revealFoil = () => foilOverlay.classList.add('is-foil-ready');
           const hideFoil = () => foilOverlay.classList.remove('is-foil-ready');
-          media.addEventListener?.('load', revealFoil, {once:true});
-          media.addEventListener?.('error', hideFoil, {once:true});
+          media.addEventListener?.('project-thumbnail-ready', revealFoil);
+          media.addEventListener?.('project-thumbnail-error', hideFoil);
           if (media.dataset.mediaState === 'ready' || (media.complete && Number(media.naturalWidth)>0)) revealFoil();
+          else if (media.dataset.mediaState === 'error') hideFoil();
         }
       }
       observeProjectCardOrientation(card, project, media, {

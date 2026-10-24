@@ -56,7 +56,8 @@ function getThumbnailViewportObservers(windowRef) {
 
 function registerThumbnailMediaState(media, {
   type, src, priority, reducedMotion, windowRef,
-  ensureLottiePlayer = null, mountModelViewer = null, resolveAssetUrl = value => value
+  ensureLottiePlayer = null, mountModelViewer = null, resolveAssetUrl = value => value,
+  background = null
 } = {}) {
   const usesViewportLifecycle = type === 'video' || type === 'lottie' || type === 'model';
   const observers = type === 'image' || usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
@@ -72,6 +73,10 @@ function registerThumbnailMediaState(media, {
   const clearTimer = typeof timerOwner.clearTimeout === 'function' ? timerOwner.clearTimeout.bind(timerOwner) : globalThis.clearTimeout;
   let playerLoadTimer = null;
   let mediaReadyTimer = null;
+  let activationFrameId = null;
+  let activationFrameIsTimer = false;
+  let activationScheduled = false;
+  let lottieGeneration = 0;
 
   const clearLoadTimers = () => {
     if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
@@ -80,6 +85,40 @@ function registerThumbnailMediaState(media, {
   const hasSource = () => typeof media.hasAttribute === 'function'
     ? media.hasAttribute('src')
     : (typeof media.getAttribute === 'function' ? Boolean(media.getAttribute('src')) : Boolean(media.attributes?.has?.('src')));
+  // Cards are constructed off-tree before Gallery commits their fragment. Lottie
+  // measures its SVG viewport on initialization, and the 3D viewer rejects
+  // detached mounts, so defer these renderers until the real card exists.
+  const deferUntilConnected = () => {
+    if (!['lottie', 'model'].includes(type) || media.isConnected !== false) return false;
+    if (activationScheduled) return true;
+    const requestFrame = typeof windowRef?.requestAnimationFrame === 'function'
+      ? windowRef.requestAnimationFrame.bind(windowRef)
+      : null;
+    activationScheduled = true;
+    const runWhenConnected = () => {
+      activationFrameId = null;
+      activationFrameIsTimer = false;
+      if (disposed) { activationScheduled = false; return; }
+      if (media.isConnected === false && requestFrame) {
+        activationFrameId = requestFrame(runWhenConnected);
+        return;
+      }
+      activationScheduled = false;
+      if (media.isConnected === false) return;
+      state.activate();
+    };
+    if (requestFrame) {
+      activationFrameId = requestFrame(runWhenConnected);
+      return true;
+    }
+    if (typeof setTimer === 'function') {
+      activationFrameIsTimer = true;
+      activationFrameId = setTimer(runWhenConnected, 0);
+      return true;
+    }
+    activationScheduled = false;
+    return false;
+  };
   const listen = (eventName, handler) => {
     media.addEventListener?.(eventName, handler);
     listeners.push([eventName, handler]);
@@ -107,6 +146,20 @@ function registerThumbnailMediaState(media, {
   };
   const mediaDocument = () => media.ownerDocument || globalThis.document;
   function documentRefForMedia(){ return mediaDocument(); }
+  const dispatchLifecycleEvent = eventName => {
+    try {
+      const EventConstructor = windowRef?.CustomEvent || globalThis.CustomEvent;
+      let event = typeof EventConstructor === 'function'
+        ? new EventConstructor(eventName, {detail: {mediaType: type}})
+        : null;
+      if (!event) {
+        const legacyEvent = mediaDocument()?.createEvent?.('Event');
+        legacyEvent?.initEvent?.(eventName, false, false);
+        event = legacyEvent || null;
+      }
+      if (event) media.dispatchEvent?.(event);
+    } catch (_) {}
+  };
   const resetModelPreview = () => {
     modelGeneration += 1;
     if (media.__modelViewerMountToken) {
@@ -133,6 +186,7 @@ function registerThumbnailMediaState(media, {
       media.classList.remove('is-media-loading', 'is-media-error');
       media.classList.add('is-media-ready');
       removeLottieFallback();
+      dispatchLifecycleEvent('project-thumbnail-ready');
       if (type === 'video' && media.dataset.mediaVisible === 'true' && !reducedMotion) {
         Promise.resolve(media.play?.()).catch(() => {});
       }
@@ -144,10 +198,13 @@ function registerThumbnailMediaState(media, {
     } else reveal();
   };
   const setFailed = () => {
-    if (disposed) return;
+    if (disposed || (type === 'lottie' && media.dataset.mediaState === 'error' && !activated)) return;
     clearLoadTimers();
     if (type === 'lottie') {
+      lottieGeneration += 1;
       activated = false;
+      delete media.dataset.mediaActivated;
+      delete media.dataset.mediaGeneration;
       try { media.pause?.(); } catch (_) {}
       try { media.removeAttribute?.('autoplay'); } catch (_) {}
       try { media.removeAttribute?.('src'); } catch (_) {}
@@ -155,11 +212,13 @@ function registerThumbnailMediaState(media, {
     }
     if (type === 'model') {
       activated = false;
+      delete media.dataset.mediaActivated;
       resetModelPreview();
     }
     media.dataset.mediaState = 'error';
     media.classList.remove('is-media-loading', 'is-media-ready');
     media.classList.add('is-media-error');
+    dispatchLifecycleEvent('project-thumbnail-error');
   };
 
   if (type === 'image') {
@@ -170,7 +229,17 @@ function registerThumbnailMediaState(media, {
     // "load" means the JSON has been accepted, but the SVG can still be
     // initializing. Reveal the thumbnail only when the player signals that
     // its DOM is rendered; otherwise first paint can show a blank frame.
-    listen('ready', setReady); listen('error', setFailed);
+    listen('ready', () => {
+      const eventGeneration = Number(media.dataset.mediaGeneration);
+      if (eventGeneration && eventGeneration !== lottieGeneration) return;
+      setReady();
+    });
+    listen('error', () => {
+      const eventGeneration = Number(media.dataset.mediaGeneration);
+      if ((eventGeneration && eventGeneration !== lottieGeneration) ||
+          (media.dataset.mediaState === 'error' && !activated)) return;
+      setFailed();
+    });
   }
 
   const state = {
@@ -178,7 +247,7 @@ function registerThumbnailMediaState(media, {
     observers,
     disposed: false,
     activate() {
-      if (disposed || activated) return;
+      if (disposed || activated || deferUntilConnected()) return;
       activated = true;
       media.dataset.mediaActivated = 'true';
       delete media.dataset.lazySrc;
@@ -203,7 +272,7 @@ function registerThumbnailMediaState(media, {
             thumbnail: true,
             hint: false,
             autoRotate: false,
-            background: null,
+            background: background && typeof background === 'object' ? background : null,
             resolveUrl: resolveAssetUrl,
             isCurrent: () => isCurrentModelMount(generation)
           });
@@ -223,16 +292,21 @@ function registerThumbnailMediaState(media, {
         return;
       }
       if (type === 'lottie') {
+        const generation = ++lottieGeneration;
         showLottieFallback('loading');
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
         const attachSource = () => {
-          if (disposed || media.dataset.mediaActivated !== 'true') return;
+          if (disposed || !activated || generation !== lottieGeneration ||
+              media.dataset.mediaActivated !== 'true') return;
           if (mediaReadyTimer !== null) clearTimer?.(mediaReadyTimer);
-          mediaReadyTimer = setTimer(() => { mediaReadyTimer = null; setFailed(); }, 10000);
+          media.dataset.mediaGeneration = String(generation);
+          mediaReadyTimer = setTimer(() => {
+            mediaReadyTimer = null;
+            if (!disposed && generation === lottieGeneration) setFailed();
+          }, 10000);
           media.setAttribute('src', src);
-          // Deliberately do not autoplay here: source attachment is not readiness.
           try { media.removeAttribute?.('autoplay'); } catch (_) {}
         };
         if (typeof ensureLottiePlayer !== 'function') { attachSource(); return; }
@@ -242,14 +316,14 @@ function registerThumbnailMediaState(media, {
         Promise.race([Promise.resolve().then(() => ensureLottiePlayer()), playerLoadTimeout])
           .then(ready => {
             if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
-            if (disposed) return;
-            if (ready === false) { activated = false; setFailed(); return; }
+            if (disposed || generation !== lottieGeneration) return;
+            if (ready === false) { setFailed(); return; }
             attachSource();
           })
           .catch(() => {
             if (playerLoadTimer !== null) { clearTimer?.(playerLoadTimer); playerLoadTimer = null; }
-            if (disposed) return;
-            activated = false; setFailed();
+            if (disposed || generation !== lottieGeneration) return;
+            setFailed();
           });
       }
     },
@@ -286,6 +360,13 @@ function registerThumbnailMediaState(media, {
       disposed = true;
       state.disposed = true;
       clearLoadTimers();
+      if (activationFrameId !== null) {
+        if (activationFrameIsTimer) clearTimer?.(activationFrameId);
+        else windowRef?.cancelAnimationFrame?.(activationFrameId);
+        activationFrameId = null;
+      }
+      activationScheduled = false;
+      lottieGeneration += 1;
       if (type === 'model') resetModelPreview();
       observers?.preload?.unobserve(media);
       observers?.visibility?.unobserve(media);
@@ -388,7 +469,8 @@ export function buildProjectThumbnailMedia(
     ensureLottiePlayer,
     mountModelViewer,
     resolveAssetUrl,
-    documentRef
+    documentRef,
+    background: source.background
   });
   const observers = state.observers;
   const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);
