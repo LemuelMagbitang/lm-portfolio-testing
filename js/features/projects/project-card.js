@@ -4,7 +4,7 @@
  */
 
 import { findProjectMediaBackground } from './project-media.js?v=20261004-03';
-import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-01';
+import { buildProjectThumbnailMedia, mediaTypeFromSrc } from './project-thumbnail.js?v=20261024-02';
 import { observeProjectCardOrientation } from './card-presentation.js?v=20261005-02';
 
 function getFallbackThumbnailSource(project = {}, thumbnail = {}, parseYouTube = null) {
@@ -56,7 +56,8 @@ export function buildProjectCardElement(
     documentRef = globalThis.document,
     onActivate,
     priority = false,
-    parseYouTubeUrl = null
+    parseYouTubeUrl = null,
+    ensureLottiePlayer = null
   } = {}
 ) {
   const card = documentRef.createElement('div');
@@ -93,7 +94,7 @@ export function buildProjectCardElement(
     const media = buildProjectThumbnailMedia(
       { type: t.type || mediaTypeFromSrc(t.src), src: t.src, background },
       project.title || 'Project artwork',
-      { resolveAssetUrl, documentRef, priority }
+      { resolveAssetUrl, documentRef, priority, ensureLottiePlayer }
     );
     if (media) {
       // Apply CMS crop/zoom/rotation directly at card-build time. The old
