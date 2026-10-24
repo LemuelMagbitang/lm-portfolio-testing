@@ -114,7 +114,7 @@ export async function createPortfolioApp({
   // Load their public APIs in parallel on Works; About keeps the shared app
   // shell but skips the project card/media implementation entirely.
   const projectsModulePromise = hasProjectGallery
-    ? import('../features/projects/index.js?v=20261024-01')
+    ? import('../features/projects/index.js?v=20261024-02')
     : Promise.resolve(null);
   const projectNormalizerModulePromise = shouldLoadProjectModels
     ? import('../data/project-normalizer.js?v=20261023-02')
@@ -201,6 +201,7 @@ export async function createPortfolioApp({
           documentRef: root,
           getGrid: () => root.getElementById('portfolioGrid'),
           applyMediaBackground,
+          ensureLottiePlayer,
           waitForThumbnailReadiness: !initialContactNavigation,
           onCardActivate: details => {
             if (lightboxFeature?.openCard) {
@@ -380,41 +381,8 @@ export async function createPortfolioApp({
     : Promise.resolve({ total: 0, ready: 0 });
 
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
-  // Warm the Lottie player before handoff when possible, but do not let an
-  // external CDN stall the whole site. Project Lottie JSON has its own local
-  // media warm-up; the custom element can upgrade later if this bounded attempt
-  // is still in flight when the loading gate opens.
-  const LOTTIE_PLAYER_STARTUP_WAIT_MS = 2500;
-  const projectLottiePlayerPreloadPromise = hasProjectGallery && projectModels.some(
-    project => project?.capabilities?.hasLottie
-  )
-    ? new Promise(resolve => {
-        const timerOwner = root.defaultView || globalThis;
-        let settled = false;
-        let timer = null;
-        const finish = ready => {
-          if (settled) return;
-          settled = true;
-          if (timer !== null) timerOwner.clearTimeout?.(timer);
-          resolve(Boolean(ready));
-        };
-        timer = timerOwner.setTimeout?.(() => {
-          console.warn('Lottie player startup warm-up timed out; continuing startup.');
-          finish(false);
-        }, LOTTIE_PLAYER_STARTUP_WAIT_MS) ?? null;
+  // Project-card Lottie thumbnails load the player only as they approach the viewport.
 
-        Promise.resolve()
-          .then(() => ensureLottiePlayer())
-          .then(ready => {
-            if (!ready) console.warn('Lottie player could not be loaded during startup.');
-            finish(ready);
-          })
-          .catch(error => {
-            console.warn('Lottie player warm-up failed:', error);
-            finish(false);
-          });
-      })
-    : Promise.resolve(true);
 
   const heroPromise = hero
     ? initHeroBannerV2({
@@ -570,10 +538,7 @@ export async function createPortfolioApp({
   // renders text and visible fallback frames from CMS data; never keep the
   // first-paint transition open while optional images load from local or remote
   // sources. The warm-up continues in the background below.
-  await Promise.all([
-    projectMediaPreloadPromise,
-    projectLottiePlayerPreloadPromise
-  ]);
+  await projectMediaPreloadPromise;
 
   // About-page prefetching and image/logo warm-up are non-critical navigation
   // optimizations. Run them in the background so they cannot delay the initial
