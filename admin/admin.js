@@ -3052,6 +3052,9 @@ function serializeProjectEditorModel(project){
       zoom:project.thumbnail?.zoom,
       ...(project.thumbnail?.background && typeof project.thumbnail.background === 'object'
         ? {background:project.thumbnail.background}
+        : {}),
+      ...(project.thumbnail?.holographic && typeof project.thumbnail.holographic === 'object' && !Array.isArray(project.thumbnail.holographic)
+        ? {holographic:normalizeEditorHolographic(project.thumbnail.holographic)}
         : {})
     },
     mediaGroups:(Array.isArray(project.mediaGroups) ? project.mediaGroups : []).map(group => ({
@@ -3881,7 +3884,16 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
           id:String(p.id||slugify(p.title||'')),title:p.title||'',subtitle:p.subtitle||'',badge:p.badge||'',
           badges:Array.isArray(p.badges)?[...new Set(p.badges.map(x=>String(x||'').trim()).filter(Boolean))]:(p.badge?[String(p.badge).trim()]:[]),filters:[],description:p.description||'',
           extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
-          thumbnail:{type:p.thumbnail?.type||'image',src:p.thumbnail?.src||'',focus:p.thumbnail?.focus||'50% 50%',zoom:p.thumbnail?.zoom||1,background:p.thumbnail?.background||null},
+          thumbnail:{
+            type:p.thumbnail?.type||'image',
+            src:p.thumbnail?.src||'',
+            focus:p.thumbnail?.focus||'50% 50%',
+            zoom:p.thumbnail?.zoom||1,
+            background:p.thumbnail?.background||null,
+            ...(p.thumbnail?.holographic && typeof p.thumbnail.holographic === 'object' && !Array.isArray(p.thumbnail.holographic)
+              ? {holographic:structuredClone(p.thumbnail.holographic)}
+              : {})
+          },
           mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),color:normalizeArtworkGroupColor(g.color)})):[],
           media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
         }};

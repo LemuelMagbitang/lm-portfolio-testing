@@ -638,6 +638,8 @@ assert.ok(admin.includes('function normalizeFoilStrength(value, fallback = 0.7)'
   'Foil strength must validate empty and non-numeric values.');
 assert.ok(admin.includes('backStrengthControl.hidden=!hasBack||!Boolean(backFoilInput?.checked)'),
   'Back strength control must only show when back foil is enabled.');
+assert.ok(admin.includes('project.thumbnail?.holographic') && admin.includes('p.thumbnail?.holographic'),
+  'Explicit thumbnail foil settings must survive CMS load and save.');
 
 
 assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
