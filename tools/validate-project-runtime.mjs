@@ -756,6 +756,8 @@ const explicitFoilCard = buildProjectCardElement({
 });
 assert.equal(explicitFoilCard.children[0].children.some(child=>child.className==='project-thumb-foil'),true,
   'An explicit thumbnail may apply its own saved front-foil strength.');
+assert.equal(explicitFoilCard.children[0].children[0]?.src,'/assets/media/thumb.webp',
+  'A manually selected project thumbnail must remain the card artwork ahead of the first lightbox media item.');
 
 const capabilityCard = buildProjectCardElement({
   id: 'capability-regression',
