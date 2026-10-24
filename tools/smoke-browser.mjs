@@ -10137,6 +10137,113 @@ try {
       await page.emulateMedia({ reducedMotion: 'reduce' });
     });
 
+    // Exercise real thumbnail loading with Chromium's HTTP cache explicitly
+    // disabled, including a corrupt-but-200 image response that must reveal a
+    // valid static poster instead of leaving the preview blank.
+    await smokePage(browser, '/?media-cache-disabled=1', async page => {
+      const result = await page.evaluate(async () => {
+        const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
+          await import('/js/features/projects/project-thumbnail.js?v=20261025-03');
+        const makeHost = () => {
+          const host = document.createElement('div');
+          host.className = 'card-thumbnail';
+          Object.assign(host.style, {position:'relative',width:'320px',height:'180px',overflow:'hidden'});
+          document.body.appendChild(host);
+          return host;
+        };
+        const waitForState = (media, accepted, timeoutMs = 9000) => new Promise(resolve => {
+          let settled = false;
+          const finish = state => {
+            if (settled) return;
+            settled = true;
+            observer.disconnect();
+            clearTimeout(timer);
+            resolve(state);
+          };
+          const check = () => {
+            const state = String(media.dataset.mediaState || '');
+            if (accepted.includes(state)) finish(state);
+          };
+          const observer = new MutationObserver(check);
+          observer.observe(media, {attributes:true,attributeFilter:['data-media-state']});
+          const timer = setTimeout(() => finish(String(media.dataset.mediaState || 'timeout')), timeoutMs);
+          check();
+        });
+        const waitForFallback = host => new Promise(resolve => {
+          let settled = false;
+          const finish = fallback => {
+            if (settled) return;
+            settled = true;
+            observer.disconnect();
+            clearTimeout(timer);
+            resolve(fallback);
+          };
+          const check = () => {
+            const fallback = host.querySelector('.project-thumb-media-fallback');
+            if (fallback) finish(fallback);
+          };
+          const observer = new MutationObserver(check);
+          observer.observe(host, {childList:true,subtree:true});
+          const timer = setTimeout(() => finish(null), 9000);
+          check();
+        });
+        const goodHost = makeHost();
+        const failedHost = makeHost();
+        const options = {resolveAssetUrl:value=>value,priority:true};
+        const good = buildProjectThumbnailMedia(
+          {type:'image',src:'/assets/projects/site/portfolio-logo.webp'},
+          'Cache-disabled valid image',
+          options
+        );
+        const failed = buildProjectThumbnailMedia(
+          {type:'image',src:'/__smoke/invalid-thumbnail.png',fallbackSrc:'/assets/projects/site/portfolio-logo.webp'},
+          'Cache-disabled corrupt image',
+          options
+        );
+        const goodReady = waitForState(good, ['ready']);
+        const failedSettled = waitForState(failed, ['error']);
+        const fallbackReady = waitForFallback(failedHost);
+        goodHost.appendChild(good);
+        failedHost.appendChild(failed);
+        try {
+          const [goodState, failedState, fallback] =
+            await Promise.all([goodReady, failedSettled, fallbackReady]);
+          const poster = fallback?.querySelector('.project-thumb-media-fallback-image');
+          if (poster && typeof poster.decode === 'function') await poster.decode().catch(() => {});
+          const posterRect = poster?.getBoundingClientRect();
+          return {
+            goodState,
+            goodNaturalWidth: Number(good.naturalWidth) || 0,
+            failedState,
+            fallbackPresent: Boolean(fallback),
+            fallbackPosterWidth: Number(poster?.naturalWidth) || 0,
+            fallbackVisible: Boolean(fallback && posterRect?.width > 0 && posterRect?.height > 0)
+          };
+        } finally {
+          disposeProjectThumbnailMedia(goodHost);
+          disposeProjectThumbnailMedia(failedHost);
+          goodHost.remove();
+          failedHost.remove();
+        }
+      });
+      if (result.goodState !== 'ready' || result.goodNaturalWidth < 1 ||
+          result.failedState !== 'error' || !result.fallbackPresent ||
+          result.fallbackPosterWidth < 1 || !result.fallbackVisible) {
+        throw new Error('Cache-disabled image loading/fallback contract failed: ' + JSON.stringify(result));
+      }
+    }, {width:1280,height:900}, async page => {
+      const session = await page.context().newCDPSession(page);
+      await session.send('Network.enable');
+      await session.send('Network.setCacheDisabled', {cacheDisabled:true});
+      // Keep the CDP session reachable until this isolated page closes.
+      page.__lmCacheDisabledSession = session;
+      await page.route('**/__smoke/invalid-thumbnail.png', route => route.fulfill({
+        status:200,
+        contentType:'image/png',
+        body:'not a valid PNG image'
+      }));
+    });
+
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
   } finally {
     await browser.close();

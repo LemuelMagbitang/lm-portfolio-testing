@@ -291,6 +291,38 @@ imageThumbnail.naturalWidth = 100;
 imageThumbnail.dispatch('load');
 assert.equal(imageThumbnail.classList.values.has('is-media-ready'), true);
 
+// If a cached/broken image settles synchronously before its card is attached,
+// the fallback must wait for the DOM parent and still render once the card mounts.
+const immediateFailureDocument = {
+  defaultView: thumbnailDocument.defaultView,
+  createElement(tagName) {
+    const element = thumbnailDocument.createElement(tagName);
+    element.ownerDocument = immediateFailureDocument;
+    if (String(tagName).toLowerCase() === 'img') {
+      element.complete = true;
+      element.naturalWidth = 0;
+    }
+    return element;
+  }
+};
+const immediateFailureThumbnail = buildProjectThumbnailMedia(
+  {type:'image',src:'media/already-failed.webp',fallbackSrc:'media/static-fallback.webp'},
+  'Immediate failure',
+  {documentRef:immediateFailureDocument,resolveAssetUrl:value=>'/assets/'+value,priority:true}
+);
+assert.equal(immediateFailureThumbnail.dataset.mediaState,'error');
+const immediateFailureHost = immediateFailureDocument.createElement('div');
+immediateFailureHost.appendChild(immediateFailureThumbnail);
+immediateFailureThumbnail.parentNode = immediateFailureHost;
+await new Promise(resolve => setTimeout(resolve, 0));
+const immediateFailureFallback = immediateFailureHost.children.find(child =>
+  child.className === 'project-thumb-media-fallback'
+);
+assert.ok(immediateFailureFallback,
+  'A failed image that settles before card insertion must gain its fallback when the card mounts.');
+assert.equal(immediateFailureFallback.dataset.state,'error');
+disposeProjectThumbnailMedia(immediateFailureThumbnail);
+
 // Disposing a still thumbnail before it reaches the preload margin must detach
 // its observer and prevent a delayed intersection callback from starting a fetch.
 const disposedDeferredImage = buildProjectThumbnailMedia(

@@ -1998,12 +1998,12 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("projects/index.js?v=20261025-03") ||
       !composition.includes("lightbox/index.js?v=20261025-02") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261025-02') ||
+      !works.includes('js/app/bootstrap.js?v=20261025-03') ||
       !works.includes('js/app/page-composition.js?v=20261025-03') ||
       !works.includes('css/style.css?v=20261024-06') ||
       !works.includes('js/script.js?v=20261025-03') ||
       !about.includes('style.css?v=20261024-06') ||
-      !about.includes('js/app/bootstrap.js?v=20261025-02') ||
+      !about.includes('js/app/bootstrap.js?v=20261025-03') ||
       !about.includes('script.js?v=20261025-03') ||
       !about.includes('page-composition.js?v=20261025-03')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
