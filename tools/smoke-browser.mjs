@@ -1570,7 +1570,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
         // is explicitly a YouTube embed. All other console errors remain fatal.
         const embeddedComputePressurePolicyWarning =
           messageText === 'Permissions policy violation: compute-pressure is not allowed in this document.' &&
-          /^https?:\\/\\/(?:www\\.|m\\.)?(?:youtube\\.com|youtube-nocookie\\.com)(?:\\/|$)/i.test(sourceUrl);
+          /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com|youtube-nocookie\.com)(?:\/|$)/i.test(sourceUrl);
         if (embeddedComputePressurePolicyWarning) return;
         errors.push(`console.error: ${messageText}${sourceUrl ? ` (source: ${sourceUrl})` : ''}`);
       });
