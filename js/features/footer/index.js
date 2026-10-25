@@ -8,6 +8,7 @@
  */
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
+import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261025-07';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
@@ -21,12 +22,18 @@ function mediaTypeFromSrc(src) {
 }
 
 function resolveSource(item, resolveAssetUrl) {
-  if (!item || !item.src) return null;
-  const type = item.type || mediaTypeFromSrc(item.src);
-  if (!['image', 'video', 'lottie'].includes(type)) return null;
+  if (!item) return null;
+  const playbackId = String(item.playbackId || '').trim();
+  const type = item.type || (playbackId ? 'mux' : mediaTypeFromSrc(item.src));
+  if (!['image', 'video', 'lottie', 'mux'].includes(type)) return null;
+  if (!item.src && !(type === 'mux' && playbackId)) return null;
+  const poster = String(item.poster || item.src || (playbackId
+    ? 'https://image.mux.com/' + encodeURIComponent(playbackId) + '/thumbnail.jpg?time=1.5&width=1600'
+    : '')).trim();
   return {
     type,
-    src: resolveAssetUrl(item.src),
+    src: resolveAssetUrl(type === 'mux' ? poster : item.src),
+    ...(type === 'mux' ? { playbackId, poster: resolveAssetUrl(poster) } : {}),
     alt: item.alt || 'Footer artwork',
     focus: item.focus || '50% 50%',
     zoom: Number.isFinite(Number(item.zoom)) ? Number(item.zoom) : 1,
@@ -38,10 +45,13 @@ function resolveSource(item, resolveAssetUrl) {
 function sourceFromProject(project, resolveAssetUrl) {
   if (!project) return null;
   const thumb = project.thumbnail || {};
-  if (thumb.src && ['image', 'video', 'lottie'].includes(thumb.type || mediaTypeFromSrc(thumb.src))) {
+  if (thumb.src && ['image', 'video', 'lottie', 'mux'].includes(thumb.type || mediaTypeFromSrc(thumb.src)) ||
+      thumb.type === 'mux' && thumb.playbackId) {
     return resolveSource({
       type: thumb.type || mediaTypeFromSrc(thumb.src),
       src: thumb.src,
+      ...(thumb.playbackId ? { playbackId: thumb.playbackId } : {}),
+      ...(thumb.poster ? { poster: thumb.poster } : {}),
       alt: project.title || 'Featured artwork',
       focus: thumb.focus,
       zoom: thumb.zoom,
@@ -49,7 +59,8 @@ function sourceFromProject(project, resolveAssetUrl) {
     }, resolveAssetUrl);
   }
   const media = Array.isArray(project.media)
-    ? project.media.find(item => item?.src && ['image', 'video', 'lottie'].includes(item.type))
+    ? project.media.find(item => item?.src && ['image', 'video', 'lottie', 'mux'].includes(item.type) &&
+      (item.type !== 'mux' || item.playbackId))
     : null;
   return media
     ? resolveSource({ ...media, alt: project.title || media.alt || 'Featured artwork' }, resolveAssetUrl)
@@ -57,7 +68,7 @@ function sourceFromProject(project, resolveAssetUrl) {
 }
 
 function sourceKey(source) {
-  return source ? source.type + '|' + source.src : '';
+  return source ? source.type + '|' + (source.type === 'mux' ? source.playbackId : source.src) : '';
 }
 
 async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJson, resolveAssetUrl, projects }) {
@@ -103,7 +114,17 @@ async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJs
 
 function buildMedia(documentRef, source) {
   let media;
-  if (source.type === 'video') {
+  if (source.type === 'mux') {
+    media = documentRef.createElement('mux-player');
+    media.setAttribute('playback-id', source.playbackId);
+    media.setAttribute('stream-type', 'on-demand');
+    media.setAttribute('muted', '');
+    media.setAttribute('loop', '');
+    media.setAttribute('playsinline', '');
+    media.setAttribute('preload', 'none');
+    if (source.poster) media.setAttribute('poster', source.poster);
+    media.setAttribute('metadata-video-title', source.alt || 'Footer video');
+  } else if (source.type === 'video') {
     media = documentRef.createElement('video');
     media.autoplay = true;
     media.muted = true;
@@ -180,6 +201,15 @@ export async function initFooterAnimation(options = {}) {
   if (sources.some(source => source.type === 'lottie')) {
     try { await (options.ensureLottiePlayer || ensureLottiePlayer)(); } catch (_) {}
   }
+  if (sources.some(source => source.type === 'mux')) {
+    let muxReady = false;
+    try { muxReady = await (options.ensureMuxPlayer || ensureMuxPlayer)(); } catch (_) {}
+    if (!muxReady) {
+      sources = sources.map(source => source.type === 'mux'
+        ? { ...source, type: 'image', src: source.poster || source.src }
+        : source).filter(source => source.src);
+    }
+  }
 
   const lifecycle = createLifecycle();
   const reducedMotion = typeof options.prefersReducedMotion === 'function'
@@ -240,9 +270,13 @@ export async function initFooterAnimation(options = {}) {
   });
 
   applyForeground(0);
+  const firstMuxPlayer = container.querySelector('.footer-animation-slide.active mux-player');
+  if (firstMuxPlayer) {
+    try { const playback = firstMuxPlayer.play?.(); playback?.catch?.(() => {}); } catch (_) {}
+  }
 
   let contrastIntervalId = null;
-  if (sources.some(source => source.type === 'video')) {
+  if (sources.some(source => source.type === 'video' || source.type === 'mux')) {
     contrastIntervalId = windowRef.setInterval(() => {
       const activeIndex = Number(container.querySelector('.footer-animation-slide.active')?.dataset?.index || 0);
       applyForeground(activeIndex);
@@ -256,16 +290,24 @@ export async function initFooterAnimation(options = {}) {
     intervalId = windowRef.setInterval(() => {
       const slides = Array.from(container.querySelectorAll('.footer-animation-slide'));
       if (!slides.length) return;
-      slides[index]?.classList.remove('active');
+      const previous = slides[index];
+      previous?.classList.remove('active');
+      const previousMux = previous?.querySelector('mux-player');
+      if (previousMux) { try { previousMux.pause?.(); } catch (_) {} }
       index = (index + 1) % slides.length;
       slides[index]?.classList.add('active');
+      const currentMux = slides[index]?.querySelector('mux-player');
+      if (currentMux) { try { const playback = currentMux.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
       applyForeground(index);
     }, crossfadeMs);
     lifecycle.add(() => windowRef.clearInterval(intervalId));
   }
 
   lifecycle.add(() => {
-    container.querySelectorAll('video').forEach(video => video.pause?.());
+    container.querySelectorAll('video,mux-player').forEach(video => {
+      try { video.pause?.(); } catch (_) {}
+      if (video.matches('mux-player')) video.removeAttribute('playback-id');
+    });
     container.replaceChildren();
     container.hidden = true;
     container.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
