@@ -3758,6 +3758,119 @@ function buildProjectBody(el, p, options = {}){
       let modelViewerCleanup = null;
       let previewGeneration = 0;
       let previewDisposed = false;
+      const sourceWrap = row.querySelector('[data-media-source-wrap]');
+      const muxPickerWrap = row.querySelector('[data-mux-picker-wrap]');
+      const muxSelect = row.querySelector('[data-mux-selection]');
+      const muxPickerStatus = row.querySelector('[data-mux-picker-status]');
+      let muxCatalog = [];
+      let muxCatalogLoaded = false;
+
+      function syncMuxPickerVisibility() {
+        const isMux = m.type === 'mux';
+        if (sourceWrap) sourceWrap.style.display = isMux ? 'none' : '';
+        if (muxPickerWrap) muxPickerWrap.style.display = isMux ? '' : 'none';
+        if (isMux && muxSelect && !muxCatalogLoaded) {
+          muxCatalogLoaded = true;
+          void populateMuxPicker();
+        }
+      }
+
+      async function populateMuxPicker(force = false) {
+        if (!muxSelect) return;
+        const savedPlaybackId = String(m.playbackId || '');
+        muxSelect.disabled = true;
+        muxSelect.replaceChildren();
+        const loadingOption = document.createElement('option');
+        loadingOption.value = '';
+        loadingOption.textContent = 'Loading published videos…';
+        muxSelect.appendChild(loadingOption);
+        if (muxPickerStatus) muxPickerStatus.textContent = 'Loading the published Mux catalog…';
+        try {
+          muxCatalog = await loadPublishedMuxVideoCatalog({ force });
+          if (previewDisposed) return;
+          muxSelect.replaceChildren();
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = muxCatalog.length ? 'Choose a published video…' : 'No published Mux videos found';
+          muxSelect.appendChild(placeholder);
+          muxCatalog.forEach(video => {
+            const option = document.createElement('option');
+            option.value = String(video.playbackId);
+            const duration = Number(video.durationSeconds);
+            const durationLabel = Number.isFinite(duration) && duration > 0
+              ? Math.floor(duration / 60) + ':' + String(Math.floor(duration % 60)).padStart(2, '0')
+              : '';
+            option.textContent = [
+              String(video.title || video.slug || 'Untitled Mux video'),
+              String(video.placement || 'other').replace(/\b\w/g, value => value.toUpperCase()),
+              durationLabel
+            ].filter(Boolean).join(' · ');
+            muxSelect.appendChild(option);
+          });
+          if (savedPlaybackId && !muxCatalog.some(video => String(video.playbackId) === savedPlaybackId)) {
+            const savedOption = document.createElement('option');
+            savedOption.value = savedPlaybackId;
+            savedOption.textContent = 'Saved video (not currently published/available)';
+            muxSelect.appendChild(savedOption);
+          }
+          muxSelect.value = savedPlaybackId;
+          if (muxPickerStatus) {
+            muxPickerStatus.textContent = muxCatalog.length
+              ? muxCatalog.length + ' ready published Mux video' + (muxCatalog.length === 1 ? '' : 's') + ' available. The card uses a poster; streaming starts when the lightbox opens.'
+              : 'No videos are available yet. Open Video Library, wait for the asset to become Ready, then Publish it.';
+          }
+        } catch (error) {
+          if (previewDisposed) return;
+          muxSelect.replaceChildren();
+          if (savedPlaybackId) {
+            const savedOption = document.createElement('option');
+            savedOption.value = savedPlaybackId;
+            savedOption.textContent = 'Saved Mux video (catalog unavailable)';
+            muxSelect.appendChild(savedOption);
+          } else {
+            const errorOption = document.createElement('option');
+            errorOption.value = '';
+            errorOption.textContent = 'Could not load published videos';
+            muxSelect.appendChild(errorOption);
+          }
+          muxSelect.value = savedPlaybackId;
+          if (muxPickerStatus) muxPickerStatus.textContent = 'Could not load the public video list. Check data/video-platform.json and the Supabase public feed, then use Refresh list. ' + (error?.message || '');
+        } finally {
+          muxSelect.disabled = false;
+        }
+      }
+
+      muxSelect?.addEventListener('change', () => {
+        const selectedId = String(muxSelect.value || '');
+        const selected = muxCatalog.find(video => String(video.playbackId) === selectedId);
+        if (!selected) {
+          delete m.playbackId;
+          delete m.poster;
+          delete m.durationSeconds;
+          delete m.aspectRatio;
+          m.src = '';
+        } else {
+          m.playbackId = String(selected.playbackId);
+          m.poster = String(selected.posterUrl || '') || muxPosterUrl(selected.playbackId, selected.posterTimeSeconds);
+          m.src = m.poster;
+          m.durationSeconds = Number.isFinite(Number(selected.durationSeconds)) ? Number(selected.durationSeconds) : undefined;
+          m.aspectRatio = String(selected.aspectRatio || '');
+          if (!String(m.caption || '').trim()) m.caption = String(selected.title || 'Mux video');
+          const captionInput = row.querySelector('[data-mf="caption"]');
+          if (captionInput) captionInput.value = m.caption;
+        }
+        const sourceInput = row.querySelector('[data-mf="src"]');
+        if (sourceInput) sourceInput.value = m.src || '';
+        row.querySelector('.item-title').textContent = m.caption || (selected ? String(selected.title || 'Mux video') : '(mux)');
+        refreshPreview();
+        if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
+        markChanged();
+      });
+      row.querySelector('[data-mux-refresh]')?.addEventListener('click', () => {
+        muxCatalogLoaded = true;
+        void populateMuxPicker(true);
+      });
+      syncMuxPickerVisibility();
 
       // Invalidate the container token as well as the local generation. The
       // viewer loader may still be awaiting a large model file when this row is
@@ -3884,17 +3997,40 @@ function buildProjectBody(el, p, options = {}){
       }));
 
       row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('input', ()=>{
-        m[inp.dataset.mf]=inp.value;
-        if (inp.dataset.mf === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
-        if (inp.dataset.mf === 'type' || inp.dataset.mf === 'src') {
+        const field = inp.dataset.mf;
+        const previousType = String(m.type || 'image');
+        m[field] = inp.value;
+        if (field === 'type' && inp.value !== previousType) {
+          if (inp.value === 'mux') {
+            m.src = '';
+            const sourceInput = row.querySelector('[data-mf="src"]');
+            if (sourceInput) sourceInput.value = '';
+          } else if (previousType === 'mux') {
+            delete m.playbackId;
+            delete m.poster;
+            delete m.durationSeconds;
+            delete m.aspectRatio;
+            m.src = '';
+            const sourceInput = row.querySelector('[data-mf="src"]');
+            if (sourceInput) sourceInput.value = '';
+          }
+          syncMuxPickerVisibility();
+        }
+        if (field === 'caption') row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
+        if (field === 'type' || field === 'src') {
           refreshPreview();
           row.__bgEditorSync?.();
           row.__holoEditorSync?.();
         }
+        if (field === 'type' && typeof refreshThumbPreview === 'function') refreshThumbPreview();
         markChanged();
       }));
       row.querySelectorAll('[data-mf]').forEach(inp=> inp.addEventListener('change', ()=>{
-        if (inp.dataset.mf === 'type') { row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')'; refreshPreview(); }
+        if (inp.dataset.mf === 'type') {
+          row.querySelector('.item-title').textContent = m.caption || '(' + m.type + ')';
+          syncMuxPickerVisibility();
+          refreshPreview();
+        }
       }));
       row.querySelector('[data-mact="del"]').addEventListener('click', ()=>{
         const idx = p.media.findIndex(x=>x._uid===m._uid);
@@ -3963,7 +4099,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
               : {})
           },
           mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),color:normalizeArtworkGroupColor(g.color)})):[],
-          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
+          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',playbackId:String(m.playbackId||''),poster:String(m.poster||''),durationSeconds:m.durationSeconds,aspectRatio:String(m.aspectRatio||''),groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
         }};
       }
       return {source:'main',projectId:String(e?.projectId||''),_uid:uid()};
@@ -4170,7 +4306,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
     mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),color:normalizeArtworkGroupColor(g.color)})):[],
-          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
+          media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',playbackId:String(m.playbackId||''),poster:String(m.poster||''),durationSeconds:m.durationSeconds,aspectRatio:String(m.aspectRatio||''),groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
   })));
   let filterDefs = [];
   let badgeDefs = [];
