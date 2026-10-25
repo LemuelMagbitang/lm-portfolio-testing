@@ -40,6 +40,41 @@ Deno.serve(async (request: Request) => {
     const route = parts.slice(at >= 0 ? at + 1 : 0);
     const body = request.method === "GET" ? {} : await request.json().catch(() => ({}));
 
+    if (request.method === "GET" && route.length === 1 && route[0] === "mux-assets") {
+      const { data: linkedRows, error: linkedError } = await db.from("video_assets").select("mux_asset_id");
+      if (linkedError) throw new Error("Could not check which Mux uploads are already linked: " + errorMessage(linkedError));
+      const linkedIds = new Set((linkedRows || []).map((item: any) => String(item.mux_asset_id || "")).filter(Boolean));
+      const remote = await muxRequest("/assets?limit=100");
+      const assets = (Array.isArray(remote) ? remote : [])
+        .filter((item: any) => {
+          const state = String(item?.status || "").toLowerCase();
+          const playbacks = Array.isArray(item?.playback_ids) ? item.playback_ids : [];
+          return Boolean(item?.id) && !linkedIds.has(String(item.id)) &&
+            ["ready", "preparing"].includes(state) &&
+            playbacks.some((p: any) => p?.policy === "public" && String(p?.id || "").trim());
+        })
+        .map((item: any) => ({
+          id: safeText(item.id, 255),
+          title: safeText(item?.meta?.title) || safeText(item?.meta?.external_id) || "Untitled Mux video",
+          status: safeText(item.status, 40) || "unknown",
+          createdAt: muxTimestampToIso(item.created_at),
+          durationSeconds: Number.isFinite(Number(item.duration)) ? Number(item.duration) : null,
+          aspectRatio: safeText(item.aspect_ratio, 32),
+          resolutionTier: safeText(item.resolution_tier, 32)
+        }));
+      return jsonResponse(request, { assets, checked: Array.isArray(remote) ? remote.length : 0 });
+    }
+
+    if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "placement") {
+      const place = placement(body.placement);
+      if (!place) return jsonResponse(request, { error: "Choose a valid website placement." }, 400);
+      const { data: video, error } = await db.from("videos").update({ placement: place })
+        .eq("id", route[1]).select("*").maybeSingle();
+      if (error) throw new Error("Could not update this video's website placement: " + errorMessage(error));
+      if (!video) return jsonResponse(request, { error: "Video record not found." }, 404);
+      return jsonResponse(request, { video });
+    }
+
     if (request.method === "GET" && route.length === 1 && route[0] === "videos") {
       const { data: videos, error: ve } = await db.from("videos").select("*").order("created_at", { ascending: false });
       if (ve) throw ve;

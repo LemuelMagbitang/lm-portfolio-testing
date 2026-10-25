@@ -7,7 +7,8 @@ This repository remains a static site with its existing GitHub-backed JSON CMS. 
 - admin/videos.html is a Video Library page linked from the current CMS; it does not replace the GitHub JSON editor.
 - New uploads create a video row and asset-version row before requesting a Mux Direct Upload.
 - The internal asset-version UUID is sent to Mux as external_id for new CMS uploads.
-- Existing Mux Dashboard uploads can be imported by Mux asset ID without uploading the file twice. Import normalizes Mux's Unix-second `created_at` value to an ISO timestamp before storing `uploaded_at` in Postgres.
+- Existing Mux Dashboard uploads can be browsed by title and imported without manually copying Asset IDs or Playback IDs. Import normalizes Mux's Unix-second `created_at` value to an ISO timestamp before storing `uploaded_at` in Postgres.
+- The Video Library lets you change an existing video's website placement without SQL or re-importing the asset.
 - Existing hosted static MP4 paths can be registered; old project media is not migrated automatically.
 
 ## Provision Supabase
@@ -87,9 +88,10 @@ Changing the title or slug does not require a new Mux asset. Replacing media cre
 
 No Asset ID or Playback ID needs to be copied into project JSON by hand.
 
-1. Open **Video Library** from the main CMS. Import an existing Mux asset or upload a new video. Wait until its status is **Ready**, then select **Publish**.
-2. To use it as the homepage hero, set its Video Library placement to **Hero**. In the main CMS, open **Hero Loop Animation** and select **Only what I add** or **My additions + latest fill**. The published Hero feed is added automatically; the local MP4 stays as a fallback if the feed/player is unavailable.
-3. To use it inside a project's lightbox, open **Projects**, expand the project, scroll to **Media (lightbox gallery)**, click **Add media item**, choose **Mux video (streamed)**, then choose the published video from the dropdown. Optionally add a caption and click **Save to GitHub**. The CMS stores the public playback reference and poster automatically.
+1. Open **Video Library** from the main CMS. To link an upload already in Mux Dashboard, choose it by title in **Available Mux uploads**; the CMS hides the IDs and only shows compatible, unlinked assets. For a new file, enter a title and slug, choose a destination, then upload the MP4.
+2. Wait until its asset status is **Ready**, then click **Publish**. On each video record, you can change its website placement without re-importing or using SQL.
+3. To use it as the homepage hero, set placement to **Homepage hero loop**. In the main CMS, open **Hero Loop Animation**, select **Only what I add** or **My additions + latest fill**, and click **Save to GitHub**. The published Hero feed is added automatically; the local MP4 stays as a fallback if the feed/player is unavailable.
+4. To use it inside a project's lightbox, open **Projects**, expand the project, scroll to **Media (lightbox gallery)**, click **Add media item**, choose **Mux video (streamed)**, select the video by title, and click **Save to GitHub**. The CMS stores the playback reference and poster automatically; do not paste IDs by hand.
 4. Project cards use a still poster. The Mux stream player is initialized only when someone opens the project lightbox, so the full video is not mounted on every card/grid render and the MP4 is not committed to GitHub.
 5. If you publish a video while the CMS is already open, use **Refresh list** in the Mux selector. Only ready videos with public playback that are published appear.
 

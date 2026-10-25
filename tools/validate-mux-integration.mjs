@@ -69,6 +69,12 @@ check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElemen
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
+check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] === "placement"') && admin.includes('"/assets?limit=100"'),
+  "Video Library must browse unlinked Mux assets and allow placement changes without SQL.");
+check(page.includes('id="muxAssetSelect"') && page.includes('id="refreshMuxAssetsButton"') &&
+  script.includes('api("mux-assets")') && script.includes('"/placement"') &&
+  script.includes("No unlinked, public-playback videos found"),
+  "Video Library must allow title-based Mux importing without manual IDs and explain empty states.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
 const mainCmsScript = read("admin/admin.js");
 check(mainCmsScript.includes("loadPublishedMuxVideoCatalog") &&

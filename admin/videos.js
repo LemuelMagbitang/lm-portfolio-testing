@@ -3,7 +3,15 @@ const SESSION_KEY = "lm_mux_video_session_v1";
 const $ = (id) => document.getElementById(id);
 let config = { supabaseUrl: "", supabaseAnonKey: "" };
 let inFlight = false;
+let muxImportAssets = [];
 function status(id, message, kind = "") { const node = $(id); if (node) { node.textContent = message || ""; node.className = "status" + (kind ? " " + kind : ""); } }
+function slugify(value) {
+  return String(value || "").normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100) || "mux-video";
+}
+function placementLabel(value) {
+  return ({ hero: "Homepage hero loop", project: "Project media / lightbox", background: "Background (not connected yet)", footer: "Footer (not connected yet)", other: "Other (not connected yet)" })[value] || String(value || "Unknown");
+}
 function normalizeBase(value) {
   const url = new URL(String(value || "").trim());
   if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) throw new Error("Use an HTTPS Supabase project URL.");
@@ -95,6 +103,47 @@ function assetStatus(asset) {
   if (asset.asset_status === "preparing") return "Processing"; if (asset.upload_state === "awaiting_upload") return "Awaiting upload";
   return String(asset.asset_status || asset.upload_state || "Not started");
 }
+async function loadMuxImportAssets() {
+  const select = $("muxAssetSelect");
+  if (!select) return;
+  const hint = $("muxAssetsHint"), refresh = $("refreshMuxAssetsButton"), previous = select.value;
+  select.replaceChildren();
+  const loading = document.createElement("option"); loading.value = ""; loading.textContent = "Loading Mux uploads…"; select.append(loading);
+  select.disabled = true; if (refresh) refresh.disabled = true;
+  try {
+    const result = await api("mux-assets");
+    muxImportAssets = Array.isArray(result.assets) ? result.assets : [];
+    select.replaceChildren();
+    const placeholder = document.createElement("option"); placeholder.value = "";
+    placeholder.textContent = muxImportAssets.length ? "Choose a Mux video…" : "No unlinked videos found in recent Mux assets";
+    select.append(placeholder);
+    for (const asset of muxImportAssets) {
+      const option = document.createElement("option"); option.value = String(asset.id || "");
+      const duration = Number.isFinite(Number(asset.durationSeconds)) ? " · " + Math.round(Number(asset.durationSeconds)) + " sec" : "";
+      const date = asset.createdAt ? " · " + new Date(asset.createdAt).toLocaleDateString() : "";
+      option.textContent = String(asset.title || "Untitled Mux video") + " · " + String(asset.status || "unknown") + duration + date;
+      select.append(option);
+    }
+    select.value = muxImportAssets.some(asset => String(asset.id) === previous) ? previous : "";
+    if (hint) hint.textContent = muxImportAssets.length
+      ? muxImportAssets.length + " unlinked, public-playback video(s) found in the most recent " + Number(result.checked || 100) + " Mux assets. Select one; IDs stay behind the scenes."
+      : "No unlinked, public-playback videos found in recent Mux assets. Videos already linked to this CMS appear under Video records below.";
+  } catch (error) {
+    muxImportAssets = []; select.replaceChildren();
+    const failed = document.createElement("option"); failed.value = ""; failed.textContent = "Could not load Mux uploads"; select.append(failed);
+    if (hint) hint.textContent = "Could not load Mux uploads. Try Refresh uploads. " + (error?.message || "");
+  } finally {
+    select.disabled = false; if (refresh) refresh.disabled = false;
+  }
+}
+function suggestImportDetails() {
+  const id = String($("muxAssetSelect")?.value || "");
+  $("muxAssetId").value = id;
+  const asset = muxImportAssets.find(item => String(item.id) === id);
+  if (!asset) return;
+  $("importTitle").value = String(asset.title || "Imported Mux video");
+  $("importSlug").value = slugify(asset.title || "mux-video");
+}
 async function refreshList() {
   status("listStatus", "Loading video records…");
   try { const result = await api("videos"); renderVideos(Array.isArray(result.videos) ? result.videos : []); status("listStatus", result.videos?.length ? "Loaded " + result.videos.length + " record(s)." : "No video records yet.", "good"); }
@@ -122,7 +171,25 @@ function renderVideos(videos) {
       try { const created = await api("videos/" + encodeURIComponent(video.id) + "/assets", { method: "POST", body: {} }); await startUpload(video, created.asset); }
       catch (error) { status("listStatus", error.message, "bad"); }
     }));
-    card.append(header, meta, actions); list.append(card);
+    const placementRow = document.createElement("div"); placementRow.className = "row"; placementRow.style.margin = "0 0 12px";
+    const placementLabelEl = document.createElement("label"); placementLabelEl.className = "hint"; placementLabelEl.textContent = "Website placement";
+    const placementSelect = document.createElement("select"); placementSelect.className = "placement-select";
+    placementSelect.setAttribute("aria-label", "Website placement for " + (video.title || video.slug));
+    const placementOptions = [["hero", "Homepage hero loop"], ["project", "Project media / lightbox"], ["background", "Background (not connected yet)"], ["footer", "Footer (not connected yet)"], ["other", "Other (not connected yet)"]];
+    if (!placementOptions.some(([value]) => value === video.placement)) placementOptions.push([String(video.placement || "other"), placementLabel(video.placement)]);
+    for (const [value, labelText] of placementOptions) {
+      const option = document.createElement("option"); option.value = value; option.textContent = labelText;
+      option.selected = value === video.placement; placementSelect.append(option);
+    }
+    placementLabelEl.append(placementSelect);
+    placementRow.append(placementLabelEl, button("Save placement", async () => {
+      try {
+        await api("videos/" + encodeURIComponent(video.id) + "/placement", { method: "POST", body: { placement: placementSelect.value } });
+        status("listStatus", "Placement saved. " + (placementSelect.value === "hero" ? "The published video is now available to the homepage hero feed." : placementSelect.value === "project" ? "The published video is available in the Projects CMS Mux selector." : "This placement is saved, but its page integration is not wired yet."), "good");
+        await refreshList();
+      } catch (error) { status("listStatus", error.message, "bad"); }
+    }));
+    card.append(header, meta, placementRow, actions); list.append(card);
   }
 }
 async function startUpload(video, asset) {
@@ -150,7 +217,7 @@ $("loginForm").addEventListener("submit", async (event) => {
     headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" },
     body: JSON.stringify({ email: $("loginEmail").value.trim(), password: $("loginPassword").value }), credentials: "omit" });
     const result = await response.json().catch(() => ({})); if (!response.ok || !result.access_token) throw new Error(result.msg || result.message || "Sign-in failed.");
-    saveSession(result); $("loginPassword").value = ""; updatePanels(); await refreshList();
+    saveSession(result); $("loginPassword").value = ""; updatePanels(); await refreshList(); await loadMuxImportAssets();
   } catch (error) { sessionStorage.removeItem(SESSION_KEY); updatePanels(); status("loginStatus", error.message, "bad"); }
 });
 $("signOutButton").addEventListener("click", () => { sessionStorage.removeItem(SESSION_KEY); updatePanels(); $("videoList").replaceChildren(); status("listStatus", "Signed out."); });
@@ -160,10 +227,16 @@ $("newVideoForm").addEventListener("submit", async (event) => {
     await refreshList(); await startUpload(result.video, result.asset); status("uploadStatus", "Record created. Upload your file, then wait for webhook processing.", "good");
   } catch (error) { status("uploadStatus", error.message, "bad"); } finally { inFlight = false; if (submitter) submitter.disabled = false; }
 });
+$("muxAssetSelect").addEventListener("change", suggestImportDetails);
+$("refreshMuxAssetsButton").addEventListener("click", loadMuxImportAssets);
 $("importMuxForm").addEventListener("submit", async (event) => {
-  event.preventDefault(); status("importStatus", "Importing existing Mux asset…");
-  try { await api("videos/import-mux", { method: "POST", body: { muxAssetId: $("muxAssetId").value.trim(), title: $("importTitle").value.trim(), slug: $("importSlug").value.trim(), placement: $("importPlacement").value } });
-    status("importStatus", "Existing asset linked without re-uploading the MP4.", "good"); await refreshList();
+  event.preventDefault(); status("importStatus", "Adding selected Mux video…");
+  try {
+    const muxAssetId = String($("muxAssetSelect").value || "").trim();
+    if (!muxAssetId) throw new Error("Choose a Mux upload first.");
+    await api("videos/import-mux", { method: "POST", body: { muxAssetId, title: $("importTitle").value.trim(), slug: $("importSlug").value.trim(), placement: $("importPlacement").value } });
+    status("importStatus", "Video added. Wait until its record says Ready, then publish it.", "good");
+    await refreshList(); await loadMuxImportAssets();
   } catch (error) { status("importStatus", error.message, "bad"); }
 });
 $("staticVideoForm").addEventListener("submit", async (event) => {
@@ -172,5 +245,6 @@ $("staticVideoForm").addEventListener("submit", async (event) => {
     status("staticStatus", "Registered as a draft. Publish when ready.", "good"); await refreshList();
   } catch (error) { status("staticStatus", error.message, "bad"); }
 });
-$("refreshButton").addEventListener("click", refreshList);
-await loadConfig(); updatePanels(); if (getSession()?.access_token && config.supabaseUrl && config.supabaseAnonKey) await refreshList();
+$("refreshButton").addEventListener("click", async () => { await refreshList(); await loadMuxImportAssets(); });
+await loadConfig(); updatePanels();
+if (getSession()?.access_token && config.supabaseUrl && config.supabaseAnonKey) { await refreshList(); await loadMuxImportAssets(); }
