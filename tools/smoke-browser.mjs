@@ -4048,7 +4048,7 @@ try {
       if (!firstActiveSlide) throw new Error('Works Hero has no active artwork slide.');
 
       const heroTransformContract = await page.locator('#heroBanner .slide').first().evaluate(slide => {
-        const media = slide.querySelector('img, video, lottie-player');
+        const media = slide.querySelector('img, video, lottie-player, mux-player');
         return {
           zoom: media?.style.getPropertyValue('--thumb-zoom').trim() || '',
           rotate: media?.style.getPropertyValue('--thumb-rotate').trim() || ''
