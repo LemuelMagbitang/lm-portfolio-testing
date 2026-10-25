@@ -2000,9 +2000,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261025-05') ||
       !works.includes('js/app/page-composition.js?v=20261025-05') ||
-      !works.includes('css/style.css?v=20261025-01') ||
+      !works.includes('css/style.css?v=20261025-02') ||
       !works.includes('js/script.js?v=20261025-05') ||
-      !about.includes('style.css?v=20261025-01') ||
+      !about.includes('style.css?v=20261025-02') ||
       !about.includes('js/app/bootstrap.js?v=20261025-05') ||
       !about.includes('script.js?v=20261025-05') ||
       !about.includes('page-composition.js?v=20261025-05')) {
@@ -2381,6 +2381,12 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('mountModelViewer') ||
       !styles.includes('.card-thumbnail .project-thumb-foil.is-foil-ready') ||
       !styles.includes('.card-thumbnail .project-thumb-media-fallback') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-state="loading"]::before') ||
+      !styles.includes('background:rgba(0,0,0,.5)') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-state="loading"]::after') ||
+      !styles.includes('mix-blend-mode:difference') ||
+      !smoke.includes('thumbnail-loading-fixtures') ||
+      !smoke.includes('overlayBackground') ||
       !thumbnail.includes("media.preload = reducedMotion || priority ? 'metadata' : 'none';") ||
       !thumbnail.includes("rootMargin: '640px 0px'") ||
       !thumbnail.includes("const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);") ||
@@ -2403,7 +2409,7 @@ function validateReducedMotionThumbnailContract() {
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
       !smoke.includes('project-thumbnail.js?v=20261025-05') ||
       /project-thumbnail[.]js[?]v=(?!20261025-05)[^'"]+/.test(smoke)) {
-    err('Project thumbnails: video and Lottie must honor prefers-reduced-motion while retaining browser smoke coverage and consistent module caching.');
+    err('Project thumbnails: retain reduced-motion behavior, selected-source loading overlays, 50% veil/text layering, adaptive status contrast, responsive smoke coverage, and consistent module caching.');
   }
 }
 

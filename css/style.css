@@ -3369,35 +3369,49 @@ footer{
 .card-thumbnail .project-thumb-media.lottie-player,
 .card-thumbnail lottie-player.project-thumb-media{position:absolute;inset:0;display:block;min-width:0;min-height:0;object-fit:cover;overflow:hidden;}
 .card-thumbnail lottie-player.project-thumb-media.is-media-error{opacity:0!important;transform:none!important;}
+/* Keep selected image/video pixels visible while loading; the shared card
+   * builder remains the source of truth for custom/default thumbnail selection. */
+.card-thumbnail img.project-thumb-media.is-media-loading,
+.card-thumbnail video.project-thumb-media.is-media-loading{opacity:1!important;}
+
 .card-thumbnail .project-thumb-media-fallback{
-  position:absolute;inset:0;z-index:4;display:grid;place-items:center;
+  position:absolute;inset:0;z-index:auto;display:grid;place-items:center;
   overflow:hidden;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;
   color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-align:center;pointer-events:none;
 }
-/* Blend text-only fallbacks against the thumbnail for adaptive contrast, but
-   leave an explicitly configured static poster image unmodified. */
-.card-thumbnail .project-thumb-media-fallback:has(> .project-thumb-media-fallback-label){
-  mix-blend-mode:difference;
+/* Keep all layers in the thumbnail's shared stacking context. */
+.card-thumbnail .project-thumb-media-fallback[data-state="loading"]::before{
+  content:"";position:absolute;inset:0;z-index:2;display:block;
+  background:rgba(0,0,0,.5);pointer-events:none;
 }
+.card-thumbnail .project-thumb-media-fallback[data-state="loading"]::after{
+  content:"LOADING ARTWORK";position:absolute;top:50%;left:50%;z-index:3;
+  display:block;width:max-content;max-width:calc(100% - 8px);transform:translate(-50%,-50%);
+  font-size:clamp(8px,.75vw,10px);font-weight:750;line-height:1.45;
+  letter-spacing:clamp(.06em,.15vw,.12em);color:#fff;text-align:center;
+  white-space:normal;overflow-wrap:anywhere;background:transparent;border:0;border-radius:0;padding:0;
+  box-shadow:none;mix-blend-mode:difference;pointer-events:none;
+}
+.card-thumbnail[data-thumbnail-type="video"] .project-thumb-media-fallback[data-state="loading"]::after{content:"LOADING VIDEO";}
+.card-thumbnail[data-thumbnail-type="lottie"] .project-thumb-media-fallback[data-state="loading"]::after{content:"LOADING ANIMATION";}
+.card-thumbnail[data-thumbnail-type="model"] .project-thumb-media-fallback[data-state="loading"]::after{content:"LOADING 3D PREVIEW";}
+.card-thumbnail .project-thumb-media-fallback[data-state="loading"] .project-thumb-media-fallback-label{display:none;}
+
 .card-thumbnail .project-thumb-media-fallback-image{
   position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;object-fit:cover;object-position:center;
   opacity:1!important;transform:none!important;transition:none!important;
 }
-.card-thumbnail .project-thumb-media-fallback>i{
-  display:none;
-}
+.card-thumbnail .project-thumb-media-fallback>i{display:none;}
 .card-thumbnail .project-thumb-media-fallback-label{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  display:block;width:max-content;max-width:calc(100% - 24px);
+  position:absolute;top:50%;left:50%;z-index:3;transform:translate(-50%,-50%);
+  display:block;width:max-content;max-width:calc(100% - 8px);
   font-size:clamp(8px,.75vw,10px);font-weight:750;line-height:1.45;
   letter-spacing:clamp(.06em,.15vw,.12em);color:#fff;text-align:center;
-  white-space:normal;overflow-wrap:anywhere;background:transparent;border:0;border-radius:0;padding:0;box-shadow:none;
+  white-space:normal;overflow-wrap:anywhere;background:transparent;border:0;border-radius:0;padding:0;
+  box-shadow:none;mix-blend-mode:difference;
 }
 .card-thumbnail .project-thumb-model{overflow:hidden;}
-.card-thumbnail .project-thumb-model.is-media-loading::after{
-  content:"LOADING 3D PREVIEW";position:absolute;inset:auto 8px 10px;z-index:3;text-align:center;
-  font-size:9px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.7);pointer-events:none;
-}
+.card-thumbnail .project-thumb-model.is-media-loading::after{display:none;}
 .card-thumbnail .project-thumb-model.is-media-error::after,
 .card-thumbnail .project-thumb-model.is-media-ready::after{display:none;}
 .card-thumbnail .project-thumb-foil{

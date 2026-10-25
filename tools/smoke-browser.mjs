@@ -10346,6 +10346,210 @@ try {
     });
 
     await smokePage(browser, '/?project-thumbnail-presentation=1', async page => {
+      // Keep project-card image requests pending long enough to inspect the live loader.
+      await page.route('**/__smoke/loading-thumbnails/**', async route => {
+        await new Promise(resolve => setTimeout(resolve, 1800));
+        await route.fulfill({
+          status:200,
+          contentType:'image/svg+xml',
+          body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#c8c8c8"/></svg>'
+        });
+      });
+
+      await page.evaluate(async () => {
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-05');
+        const fixture = document.createElement('section');
+        fixture.id = 'thumbnail-loading-fixtures';
+        Object.assign(fixture.style, {
+          width:'calc(100% - 32px)', maxWidth:'960px', margin:'24px auto',
+          display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:'12px',
+          alignItems:'start'
+        });
+        document.body.appendChild(fixture);
+
+        const fixtures = [
+          {
+            id:'thumbnail-loading-custom-wide', ratio:'16 / 9',
+            project:{
+              id:'thumbnail-loading-custom-wide', title:'Custom wide thumbnail',
+              thumbnail:{type:'image',src:'/__smoke/loading-thumbnails/custom-wide.svg'},
+              media:[{type:'image',src:'/__smoke/loading-thumbnails/alternate-artwork.svg'}]
+            }
+          },
+          {
+            id:'thumbnail-loading-default-square', ratio:'1 / 1',
+            project:{
+              id:'thumbnail-loading-default-square', title:'Default square thumbnail',
+              thumbnail:{type:'image',src:''},
+              media:[
+                {type:'image',src:'/__smoke/loading-thumbnails/default-primary.svg'},
+                {type:'image',src:'/__smoke/loading-thumbnails/default-secondary.svg'}
+              ]
+            }
+          },
+          {
+            id:'thumbnail-loading-custom-portrait', ratio:'3 / 5',
+            project:{
+              id:'thumbnail-loading-custom-portrait', title:'Custom portrait thumbnail',
+              thumbnail:{type:'image',src:'/__smoke/loading-thumbnails/custom-portrait.svg'},
+              media:[]
+            }
+          },
+          {
+            id:'thumbnail-loading-tiny', ratio:'auto', tiny:true,
+            project:{
+              id:'thumbnail-loading-tiny', title:'Tiny thumbnail',
+              thumbnail:{type:'image',src:'/__smoke/loading-thumbnails/custom-tiny.svg'},
+              media:[]
+            }
+          }
+        ];
+
+        for (const fixtureData of fixtures) {
+          const card = buildProjectCardElement(fixtureData.project, {
+            documentRef:document, resolveAssetUrl:value=>value, priority:true
+          });
+          card.id = fixtureData.id;
+          Object.assign(card.style, {
+            position:'relative', display:'block', width:fixtureData.tiny?'56px':'100%',
+            height:fixtureData.tiny?'28px':'auto',
+            aspectRatio:fixtureData.ratio==='auto'?'auto':fixtureData.ratio,
+            overflow:'hidden', minWidth:'0'
+          });
+          fixture.appendChild(card);
+        }
+
+        // Stress-test a longer status string through the same production layer.
+        const statusStyle = document.createElement('style');
+        statusStyle.id = 'thumbnail-loading-long-text-test-style';
+        statusStyle.textContent = '#thumbnail-loading-custom-wide .project-thumb-media-fallback[data-state="loading"]::after{content:"LOADING HIGH-RESOLUTION PROJECT THUMBNAIL PREVIEW";}';
+        document.head.appendChild(statusStyle);
+      });
+
+      await page.waitForFunction(() =>
+        document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media-fallback[data-state="loading"]').length === 4,
+        null, {timeout:2500}
+      );
+
+      const inspectLoading = () => page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll('#thumbnail-loading-fixtures .project-card'));
+        return cards.map(card => {
+          const thumb = card.querySelector('.card-thumbnail');
+          const media = thumb?.querySelector('.project-thumb-media');
+          const fallback = thumb?.querySelector('.project-thumb-media-fallback[data-state="loading"]');
+          if (!thumb || !media || !fallback) throw new Error('Loading thumbnail fixture did not mount: '+card.id);
+          const t = thumb.getBoundingClientRect();
+          const f = fallback.getBoundingClientRect();
+          const imageStyle = getComputedStyle(media);
+          const root = getComputedStyle(fallback);
+          const overlay = getComputedStyle(fallback,'::before');
+          const status = getComputedStyle(fallback,'::after');
+          const poster = fallback.querySelector('.project-thumb-media-fallback-image');
+          return {
+            id:card.id,
+            selectedSource:media.getAttribute('src') || media.getAttribute('data-lazy-src') || '',
+            expectedSourceSuffix:card.id === 'thumbnail-loading-default-square' ? 'default-primary.svg' :
+              card.id === 'thumbnail-loading-custom-wide' ? 'custom-wide.svg' :
+              card.id === 'thumbnail-loading-custom-portrait' ? 'custom-portrait.svg' : 'custom-tiny.svg',
+            posterSource:poster?.getAttribute('src') || '',
+            thumbnailWidth:t.width, thumbnailHeight:t.height,
+            fallbackWidth:f.width, fallbackHeight:f.height,
+            mediaOpacity:imageStyle.opacity,
+            rootZ:root.zIndex, rootBlend:root.mixBlendMode,
+            overlayContent:overlay.content, overlayTop:overlay.top, overlayRight:overlay.right,
+            overlayBottom:overlay.bottom, overlayLeft:overlay.left,
+            overlayZ:overlay.zIndex, overlayBackground:overlay.backgroundColor,
+            textContent:status.content, textTop:status.top, textLeft:status.left,
+            textZ:status.zIndex, textBlend:status.mixBlendMode, textTransform:status.transform,
+            textMaxWidth:status.maxWidth, textWrap:status.overflowWrap
+          };
+        });
+      });
+
+      const verifyLoading = (viewportName, rows) => {
+        for (const r of rows) {
+          const text = String(r.textContent || '').replace(/^["']|["']$/g,'');
+          if (!r.selectedSource.endsWith('/'+r.expectedSourceSuffix) ||
+              r.mediaOpacity !== '1' ||
+              r.rootZ !== 'auto' || r.rootBlend !== 'normal' ||
+              r.fallbackWidth <= 0 || r.fallbackHeight <= 0 ||
+              Math.abs(r.thumbnailWidth-r.fallbackWidth)>1 ||
+              Math.abs(r.thumbnailHeight-r.fallbackHeight)>1 ||
+              r.overlayContent === 'none' || r.overlayTop !== '0px' || r.overlayRight !== '0px' ||
+              r.overlayBottom !== '0px' || r.overlayLeft !== '0px' ||
+              r.overlayZ !== '2' || r.overlayBackground !== 'rgba(0, 0, 0, 0.5)' ||
+              r.textTop !== '50%' || r.textLeft !== '50%' || r.textTransform === 'none' ||
+              r.textZ !== '3' || r.textBlend !== 'difference' ||
+              !r.textMaxWidth || r.textWrap !== 'anywhere') {
+            throw new Error('Thumbnail loading layer/source contract failed ('+viewportName+'): '+JSON.stringify(r));
+          }
+          if (r.id === 'thumbnail-loading-default-square' &&
+              !r.posterSource.endsWith('/default-secondary.svg')) {
+            throw new Error('Default thumbnail did not retain the card renderer’s existing static fallback: '+JSON.stringify(r));
+          }
+          if (r.id !== 'thumbnail-loading-default-square' && r.posterSource) {
+            throw new Error('Custom thumbnail unexpectedly substituted another poster: '+JSON.stringify(r));
+          }
+          if (r.id === 'thumbnail-loading-custom-wide' &&
+              !text.includes('LOADING HIGH-RESOLUTION PROJECT THUMBNAIL PREVIEW')) {
+            throw new Error('Long loading status text did not use the centered responsive layer.');
+          }
+          if (r.id === 'thumbnail-loading-default-square' && !text.includes('LOADING VIDEO')) {
+            throw new Error('Type-specific loading status text was not updated.');
+          }
+          if (r.id === 'thumbnail-loading-custom-portrait' && !text.includes('LOADING ANIMATION')) {
+            throw new Error('Animation loading status text was not updated.');
+          }
+          if (r.id === 'thumbnail-loading-tiny' && !text.includes('LOADING 3D PREVIEW')) {
+            throw new Error('3D loading status text was not updated.');
+          }
+        }
+      };
+
+      // First confirm the configured/default image source before test-only
+      // thumbnail type overrides exercise different status text lengths.
+      const sourceCheck = await inspectLoading();
+      const sourceById = Object.fromEntries(sourceCheck.map(r=>[r.id,r.selectedSource]));
+      if (!sourceById['thumbnail-loading-custom-wide'].endsWith('/custom-wide.svg') ||
+          !sourceById['thumbnail-loading-default-square'].endsWith('/default-primary.svg') ||
+          !sourceById['thumbnail-loading-custom-portrait'].endsWith('/custom-portrait.svg') ||
+          !sourceById['thumbnail-loading-tiny'].endsWith('/custom-tiny.svg')) {
+        throw new Error('Project card did not preserve the configured/default thumbnail sources: '+JSON.stringify(sourceById));
+      }
+
+      await page.evaluate(() => {
+        document.querySelector('#thumbnail-loading-default-square .card-thumbnail').dataset.thumbnailType = 'video';
+        document.querySelector('#thumbnail-loading-custom-portrait .card-thumbnail').dataset.thumbnailType = 'lottie';
+        document.querySelector('#thumbnail-loading-tiny .card-thumbnail').dataset.thumbnailType = 'model';
+      });
+      verifyLoading('desktop',await inspectLoading());
+
+      await page.setViewportSize({width:390,height:844});
+      await page.evaluate(() => {
+        const fixture = document.querySelector('#thumbnail-loading-fixtures');
+        if (fixture) fixture.style.gridTemplateColumns = 'minmax(0,1fr)';
+      });
+      await page.waitForTimeout(50);
+      verifyLoading('mobile resize',await inspectLoading());
+
+      await page.waitForFunction(() =>
+        Array.from(document.querySelectorAll('#thumbnail-loading-fixtures .project-card .project-thumb-media'))
+          .every(media=>media.dataset.mediaState==='ready'),
+        null, {timeout:5000}
+      );
+      const readyState = await page.evaluate(() => ({
+        fallbacks:document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media-fallback').length,
+        ready:Array.from(document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media'))
+          .every(media=>media.dataset.mediaState==='ready')
+      }));
+      if (!readyState.ready || readyState.fallbacks !== 0) {
+        throw new Error('Loading overlay did not clear after the selected thumbnail became ready: '+JSON.stringify(readyState));
+      }
+      await page.evaluate(() => {
+        document.querySelector('#thumbnail-loading-fixtures')?.remove();
+        document.querySelector('#thumbnail-loading-long-text-test-style')?.remove();
+      });
+
       await page.evaluate(async () => {
         const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-05');
         const fixture = document.createElement('section');
@@ -10383,7 +10587,8 @@ try {
             dx:Math.abs(t.left+t.width/2-(l.left+l.width/2)),
             dy:Math.abs(t.top+t.height/2-(l.top+l.height/2)),
             bg:root.backgroundColor,bgImage:root.backgroundImage,radius:root.borderRadius,
-            shadow:root.boxShadow,blend:root.mixBlendMode,
+            shadow:root.boxShadow,blend:root.mixBlendMode,zIndex:root.zIndex,
+            labelBlend:text.mixBlendMode,
             labelBg:text.backgroundColor,labelRadius:text.borderRadius,labelPadding:text.padding,
             labelShadow:text.boxShadow,width:t.width,height:t.height,labelWidth:l.width
           };
@@ -10391,7 +10596,8 @@ try {
       });
       const verify = (viewportName, rows) => {
         for(const r of rows) if(r.dx>1||r.dy>1||r.bg!=='rgba(0, 0, 0, 0)'||
-          r.bgImage!=='none'||r.radius!=='0px'||r.shadow!=='none'||r.blend!=='difference'||
+          r.bgImage!=='none'||r.radius!=='0px'||r.shadow!=='none'||r.blend!=='normal'||
+          r.zIndex!=='auto'||r.labelBlend!=='difference'||
           r.labelBg!=='rgba(0, 0, 0, 0)'||r.labelRadius!=='0px'||r.labelPadding!=='0px'||
           r.labelShadow!=='none'||r.width<=0||r.height<=0||r.labelWidth<=0) {
           throw new Error('Thumbnail placeholder presentation failed ('+viewportName+'): '+JSON.stringify(r));
