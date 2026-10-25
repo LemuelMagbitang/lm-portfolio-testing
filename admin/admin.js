@@ -41,11 +41,17 @@ function validateCmsMediaSource(type, source, label = 'Media') {
   const value = String(source || '').trim();
   const context = String(label || 'Media');
 
-  if (!['image', 'video', 'lottie'].includes(type)) {
-    throw new Error(`${context}: choose Image, Video, or Lottie as the media type.`);
-  }
   if (!value) {
     throw new Error(`${context}: choose a media source before saving.`);
+  }
+  if (type === 'mux') {
+    let parsed;
+    try { parsed = new URL(value, document.baseURI); } catch (_) { throw new Error(`${context}: choose a published video from the Mux library first.`); }
+    if (parsed.protocol !== 'https:' || parsed.hostname !== 'image.mux.com') throw new Error(`${context}: Mux media must use the HTTPS poster URL supplied by the Mux library.`);
+    return value;
+  }
+  if (!['image', 'video', 'lottie'].includes(type)) {
+    throw new Error(`${context}: choose Image, Video, Lottie, or Mux Video as the media type.`);
   }
   if (/^(?:blob|data):/i.test(value)) {
     throw new Error(`${context}: temporary blob/data URLs cannot be saved. Upload the file to the Media Library and select its repository path.`);
@@ -468,6 +474,47 @@ function ghRawUrl(path, version){
   return cacheKey ? `${raw}?v=${encodeURIComponent(String(cacheKey).slice(0, 12))}` : raw;
 }
 
+
+function openMuxMediaPicker(onPick, options = {}) {
+  if (typeof onPick !== 'function') return;
+  let assets=[], selected=null, query='', aspectFilter='all', closed=false;
+  const overlay=document.createElement('div');overlay.className='media-picker-overlay mux-picker-overlay';
+  const dialog=document.createElement('div');dialog.className='media-picker-dialog mux-media-picker-dialog';dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label',options.title||'Choose a Mux video');
+  const head=document.createElement('div');head.className='media-picker-head mux-picker-head';
+  const title=document.createElement('div');title.innerHTML='<strong>'+esc(options.title||'Choose a Mux video')+'</strong><p>Browse published videos, preview playback and select one for this CMS field.</p>';
+  const close=document.createElement('button');close.type='button';close.className='ghost';close.textContent='Close';head.append(title,close);
+  const toolbar=document.createElement('div');toolbar.className='media-picker-toolbar mux-picker-toolbar';
+  const searchWrap=document.createElement('label');searchWrap.className='mux-picker-search';searchWrap.innerHTML='<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>';
+  const search=document.createElement('input');search.type='search';search.className='picker-search';search.placeholder='Search title…';search.setAttribute('aria-label','Search published Mux videos');searchWrap.append(search);
+  const aspect=document.createElement('select');aspect.className='picker-kind';aspect.setAttribute('aria-label','Filter by orientation');
+  [['all','All formats'],['landscape','Landscape'],['portrait','Portrait'],['square','Square']].forEach(pair=>{const o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];aspect.append(o);});
+  const refresh=document.createElement('button');refresh.type='button';refresh.className='ghost';refresh.innerHTML='<i class="fa-solid fa-rotate"></i> Refresh';toolbar.append(searchWrap,aspect,refresh);
+  const split=document.createElement('div');split.className='mux-picker-split';const browse=document.createElement('div');browse.className='mux-picker-browse';
+  const summary=document.createElement('div');summary.className='mux-picker-summary';summary.setAttribute('role','status');summary.setAttribute('aria-live','polite');summary.textContent='Loading published videos…';
+  const grid=document.createElement('div');grid.className='mux-picker-grid';browse.append(summary,grid);
+  const detail=document.createElement('aside');detail.className='mux-picker-details';detail.innerHTML='<div class="mux-picker-placeholder"><i class="fa-regular fa-circle-play"></i><strong>Select a video</strong><p>Preview and inspect the selected asset.</p></div>';split.append(browse,detail);
+  const foot=document.createElement('div');foot.className='mux-picker-foot';const note=document.createElement('span');note.className='hint';note.textContent='No IDs to copy. The CMS saves the selected video reference.';
+  const actions=document.createElement('div');actions.className='mux-picker-actions';const cancel=document.createElement('button');cancel.type='button';cancel.className='ghost';cancel.textContent='Cancel';const use=document.createElement('button');use.type='button';use.className='primary';use.textContent='Use selected video';use.disabled=true;actions.append(cancel,use);foot.append(note,actions);dialog.append(head,toolbar,split,foot);overlay.append(dialog);document.body.append(overlay);
+  const priorFocus=document.activeElement;
+  function closeDialog(){if(closed)return;closed=true;document.removeEventListener('keydown',onKey);overlay.remove();if(priorFocus?.isConnected)priorFocus.focus({preventScroll:true});}
+  function onKey(e){if(e.key==='Escape'){e.preventDefault();closeDialog();}}
+  close.addEventListener('click',closeDialog);cancel.addEventListener('click',closeDialog);overlay.addEventListener('click',e=>{if(e.target===overlay)closeDialog();});document.addEventListener('keydown',onKey);
+  search.addEventListener('input',()=>{query=search.value.trim().toLowerCase();paintGrid();});aspect.addEventListener('change',()=>{aspectFilter=aspect.value;paintGrid();});refresh.addEventListener('click',()=>void loadAssets(true));use.addEventListener('click',()=>{if(selected){const value=selected;closeDialog();onPick(value);}});
+  function duration(v){const n=Number(v.durationSeconds);return Number.isFinite(n)&&n>=0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'Duration unavailable';}
+  function orientation(v){const r=Number(v.aspectRatio);return r>1.08?'landscape':r>0&&r<.92?'portrait':'square';}
+  function visible(){return assets.filter(v=>(!query||[v.title,v.slug,v.description].filter(Boolean).join(' ').toLowerCase().includes(query))&&(aspectFilter==='all'||orientation(v)===aspectFilter));}
+  function showDetails(v){selected=v||null;use.disabled=!selected;if(!selected){detail.innerHTML='<div class="mux-picker-placeholder"><i class="fa-regular fa-circle-play"></i><strong>Select a video</strong><p>Preview and inspect the selected asset.</p></div>';paintGrid();return;}
+    const poster=selected.posterUrl||muxPosterUrl(selected.playbackId);
+    detail.innerHTML='<div class="mux-picker-preview">'+(poster?'<img src="'+attr(poster)+'" alt="">':'<i class="fa-solid fa-film"></i>')+'</div><h3 class="mux-picker-detail-title">'+esc(selected.title||selected.slug||'Untitled video')+'</h3><div class="mux-picker-detail-meta"><span><small>Duration</small><strong>'+esc(duration(selected))+'</strong></span><span><small>Resolution</small><strong>'+esc(selected.resolutionTier||'—')+'</strong></span><span><small>Aspect ratio</small><strong>'+esc(selected.aspectRatio||'—')+'</strong></span></div><p class="mux-picker-detail-copy">Published and ready to stream. The source file is not copied to the project repository.</p><button class="ghost mux-picker-preview-button" type="button"><i class="fa-solid fa-play"></i> Play preview</button>';
+    detail.querySelector('.mux-picker-preview-button').addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;b.textContent='Loading player…';let ok=false;try{await import('https://cdn.jsdelivr.net/npm/@mux/mux-player@3/+esm');ok=Boolean(customElements.get('mux-player'));}catch(_){}if(!ok||closed||selected?.playbackId!==v.playbackId){b.disabled=false;b.textContent='Preview unavailable';return;}const target=detail.querySelector('.mux-picker-preview');if(!target)return;target.replaceChildren();const player=document.createElement('mux-player');player.setAttribute('playback-id',v.playbackId);player.setAttribute('stream-type','on-demand');player.setAttribute('controls','');player.setAttribute('playsinline','');player.setAttribute('preload','metadata');if(poster)player.setAttribute('poster',poster);player.style.cssText='width:100%;height:100%';target.append(player);});paintGrid();
+  }
+  function paintGrid(){const rows=visible();grid.replaceChildren();summary.textContent=rows.length+' video'+(rows.length===1?'':'s')+' available';if(!rows.length){const empty=document.createElement('div');empty.className='mux-picker-empty';empty.innerHTML='<i class="fa-solid fa-film"></i><strong>'+(assets.length?'No matching videos':'No published Mux videos yet')+'</strong><p>'+(assets.length?'Try another title or orientation filter.':'Publish a ready video in the library, then refresh the picker.')+'</p>';grid.append(empty);return;}
+    rows.forEach(v=>{const card=document.createElement('button');card.type='button';card.className='mux-picker-item'+(selected?.playbackId===v.playbackId?' selected':'');card.setAttribute('aria-pressed',String(selected?.playbackId===v.playbackId));const poster=v.posterUrl||muxPosterUrl(v.playbackId);card.innerHTML='<span class="mux-picker-item-thumb">'+(poster?'<img loading="lazy" src="'+attr(poster)+'" alt="">':'<i class="fa-solid fa-film"></i>')+'<span><i class="fa-solid fa-play"></i></span></span><span class="mux-picker-item-copy"><strong>'+esc(v.title||v.slug||'Untitled video')+'</strong><small>'+esc(duration(v))+' · '+esc(v.resolutionTier||'Mux video')+'</small></span>';card.addEventListener('click',()=>showDetails(v));grid.append(card);});
+  }
+  async function loadAssets(force=false){refresh.disabled=true;summary.textContent='Loading published videos…';try{assets=await loadPublishedMuxVideoCatalog({force});selected=assets.find(v=>String(v.playbackId)===String(options.currentPlaybackId||''))||null;paintGrid();showDetails(selected);}catch(error){assets=[];grid.replaceChildren();summary.textContent='Could not load the published catalog';const empty=document.createElement('div');empty.className='mux-picker-empty';empty.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i><strong>Library unavailable</strong><p>'+esc(error?.message||'Check the public video API and retry.')+'</p>';grid.append(empty);detail.innerHTML='<div class="mux-picker-placeholder"><i class="fa-solid fa-triangle-exclamation"></i><strong>Preview unavailable</strong><p>Check the video platform configuration.</p></div>';}finally{refresh.disabled=false;}}
+  void loadAssets(false);window.setTimeout(()=>search.focus({preventScroll:true}),0);
+}
+
 const SECTIONS = {
   hero:     { file: 'data/hero.json',     label: 'Hero Messages' },
   heroLoop: { file: 'data/hero-loop.json', label: 'Hero Loop Animation' },
@@ -479,6 +526,8 @@ const SECTIONS = {
   curatedViews: { file: 'data/curated-views.json', label: 'Curated Views' },
   settings: { file: 'data/settings.json', label: 'Settings & Toggles' }
 };
+const requestedSection = new URLSearchParams(location.search).get('section') || String(location.hash || '').replace(/^#/, '');
+if (SECTIONS[requestedSection] || ['media','guide'].includes(requestedSection)) currentSection = requestedSection;
 
 function isSafeRepoName(value){
   return /^[A-Za-z0-9_.-]{1,100}$/.test(String(value || ''));
@@ -3672,15 +3721,11 @@ function buildProjectBody(el, p, options = {}){
             </div>
             <div class="field" data-media-source-wrap style="${m.type==='mux'?'display:none':''}"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
           </div>
-          <div class="field" data-mux-picker-wrap style="${m.type==='mux'?'':'display:none'}">
-            <label class="field-label" for="mux-media-select-${attr(m._uid)}">Published Mux video</label>
-            <div class="row">
-              <select data-mux-selection id="mux-media-select-${attr(m._uid)}" aria-label="Choose a published Mux video" style="min-width:0;flex:1">
-                <option value="">Loading published videos…</option>
-              </select>
-              <button class="ghost" type="button" data-mux-refresh>Refresh list</button>
-            </div>
-            <p class="hint" data-mux-picker-status role="status" aria-live="polite">Only ready, published videos with public playback are listed. Manage uploads in Video Library.</p>
+          <div class="field" data-mux-picker-wrap style="display:none">
+            <label class="field-label">Video source</label>
+            <div class="mux-editor-picker-row"><span data-mux-selected>Choose a published Mux video</span><button class="ghost" type="button" data-mux-browse>Browse Mux library</button><button class="ghost" type="button" data-mux-refresh>Refresh</button></div>
+            <select data-mux-selection aria-label="Selected published Mux video" tabindex="-1" aria-hidden="true" style="display:none"></select>
+            <p class="hint" data-mux-picker-status role="status" aria-live="polite">Choose a ready, published video in the shared Mux picker.</p>
           </div>
           <div class="row media-editor-row media-editor-meta">
             <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
@@ -3767,6 +3812,12 @@ function buildProjectBody(el, p, options = {}){
       const muxPickerStatus = row.querySelector('[data-mux-picker-status]');
       let muxCatalog = [];
       let muxCatalogLoaded = false;
+      const muxSelectedLabel = row.querySelector('[data-mux-selected]');
+      function syncMuxSelectedLabel() {
+        if (!muxSelectedLabel) return;
+        const selectedVideo = muxCatalog.find(video => String(video.playbackId) === String(muxSelect?.value || ''));
+        muxSelectedLabel.textContent = selectedVideo ? String(selectedVideo.title || selectedVideo.slug || 'Published Mux video') : (m?.playbackId ? 'Saved Mux video (catalog unavailable)' : 'No video selected');
+      }
 
       function syncMuxPickerVisibility() {
         const isMux = m.type === 'mux';
@@ -3805,7 +3856,6 @@ function buildProjectBody(el, p, options = {}){
               : '';
             option.textContent = [
               String(video.title || video.slug || 'Untitled Mux video'),
-              String(video.placement || 'other').replace(/\b\w/g, value => value.toUpperCase()),
               durationLabel
             ].filter(Boolean).join(' · ');
             muxSelect.appendChild(option);
@@ -3817,6 +3867,7 @@ function buildProjectBody(el, p, options = {}){
             muxSelect.appendChild(savedOption);
           }
           muxSelect.value = savedPlaybackId;
+          syncMuxSelectedLabel();
           if (muxPickerStatus) {
             muxPickerStatus.textContent = muxCatalog.length
               ? muxCatalog.length + ' ready published Mux video' + (muxCatalog.length === 1 ? '' : 's') + ' available. The card uses a poster; streaming starts when the lightbox opens.'
@@ -3864,6 +3915,7 @@ function buildProjectBody(el, p, options = {}){
         }
         const sourceInput = row.querySelector('[data-mf="src"]');
         if (sourceInput) sourceInput.value = m.src || '';
+        syncMuxSelectedLabel();
         row.querySelector('.item-title').textContent = m.caption || (selected ? String(selected.title || 'Mux video') : '(mux)');
         refreshPreview();
         if (typeof refreshThumbPreview === 'function') refreshThumbPreview();
@@ -3872,6 +3924,18 @@ function buildProjectBody(el, p, options = {}){
       row.querySelector('[data-mux-refresh]')?.addEventListener('click', () => {
         muxCatalogLoaded = true;
         void populateMuxPicker(true);
+      });
+      row.querySelector('[data-mux-browse]')?.addEventListener('click', () => {
+        openMuxMediaPicker(video => {
+          muxCatalog = muxCatalog.filter(item => String(item.playbackId) !== String(video.playbackId));
+          muxCatalog.push(video);
+          muxCatalogLoaded = true;
+          muxSelect.value = String(video.playbackId || '');
+          if (!Array.from(muxSelect.options).some(option => option.value === muxSelect.value)) {
+            const option = document.createElement('option'); option.value = muxSelect.value; option.textContent = String(video.title || 'Mux video'); muxSelect.append(option);
+          }
+          muxSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }, { currentPlaybackId: m.playbackId, title: 'Choose project video' });
       });
       syncMuxPickerVisibility();
 
