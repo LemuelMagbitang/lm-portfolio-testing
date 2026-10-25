@@ -1589,8 +1589,10 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
   const raw = data?.json && typeof data.json === 'object' && !Array.isArray(data.json) ? data.json : {};
   let mode = raw.mode === 'manual' ? 'manual' : 'hero';
   let manual = {
-    type: ['image','video','lottie'].includes(raw.manual?.type) ? raw.manual.type : 'image',
+    type: ['image','video','lottie','mux'].includes(raw.manual?.type) ? raw.manual.type : 'image',
     src: String(raw.manual?.src || ''),
+    playbackId: String(raw.manual?.playbackId || ''),
+    poster: String(raw.manual?.poster || ''),
     alt: String(raw.manual?.alt || 'Footer animation'),
     focus: String(raw.manual?.focus || '50% 50%'),
     zoom: Number.isFinite(Number(raw.manual?.zoom)) ? Number(raw.manual.zoom) : 1,
@@ -1599,7 +1601,7 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
 
   content.innerHTML = sectionHead(
     'Footer Animation',
-    'Give the footer its own visual breathing room. By default it inherits the Hero Loop source and timing; switch to Manual to use one selected image, video, or Lottie animation.'
+    'Give the footer its own visual breathing room. By default it inherits the Hero Loop source and timing; switch to Manual to use an image, video, Lottie, or streamed Mux video.'
   ) + `
     <div class="panel">
       <div class="row">
@@ -1623,11 +1625,16 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
             <option value="image" ${manual.type==='image'?'selected':''}>Image</option>
             <option value="video" ${manual.type==='video'?'selected':''}>Video</option>
             <option value="lottie" ${manual.type==='lottie'?'selected':''}>Lottie</option>
+            <option value="mux" ${manual.type==='mux'?'selected':''}>Mux video (streamed)</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" data-footer-source-field style="${manual.type==='mux'?'display:none':''}">
           <label class="field-label">Source path or URL</label>
           <input id="fl_src" value="${attr(manual.src)}" placeholder="assets/projects/your-folder/footer.jpg / .mp4 / .json">
+        </div>
+        <div class="field" data-footer-mux-picker style="${manual.type==='mux'?'':'display:none'}">
+          <label class="field-label">Video source</label>
+          <div class="mux-editor-picker-row"><span data-footer-mux-title>${attr(manual.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" id="fl_mux_browse">Browse Mux library</button></div>
         </div>
       </div>
       <div class="row">
@@ -1648,6 +1655,14 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
   const zoomEl = content.querySelector('#fl_zoom');
   const rotateEl = content.querySelector('#fl_rotate');
   const preview = content.querySelector('#fl_preview');
+  const sourceField = content.querySelector('[data-footer-source-field]');
+  const muxPicker = content.querySelector('[data-footer-mux-picker]');
+  const muxTitle = content.querySelector('[data-footer-mux-title]');
+  function syncFooterSourcePicker(){
+    if (sourceField) sourceField.style.display = manual.type === 'mux' ? 'none' : '';
+    if (muxPicker) muxPicker.style.display = manual.type === 'mux' ? '' : 'none';
+    if (muxTitle) muxTitle.textContent = manual.playbackId ? (manual.alt || 'Selected Mux video') : 'Choose a published Mux video';
+  }
 
   function paintHelp(){
     help.innerHTML = mode === 'hero'
@@ -1680,8 +1695,11 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
     paintHelp(); refreshPreview(); flagUnsaved();
   });
   typeEl.addEventListener('change', ()=>{
-    manual.type = typeEl.value;
-    refreshPreview(); flagUnsaved();
+    const nextType = typeEl.value;
+    if (nextType !== 'mux') { delete manual.playbackId; delete manual.poster; }
+    if (nextType === 'mux' && manual.type !== 'mux') { manual.src = ''; manual.playbackId = ''; manual.poster = ''; }
+    manual.type = nextType;
+    syncFooterSourcePicker(); refreshPreview(); flagUnsaved();
   });
   srcEl.addEventListener('input', ()=>{
     manual.src = srcEl.value; refreshPreview(); flagUnsaved();
@@ -1694,12 +1712,24 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
     kind: manual.type === 'lottie' ? 'lottie' : manual.type === 'video' ? 'video' : 'image',
     title: manual.type === 'lottie' ? 'Choose a Lottie JSON file' : manual.type === 'video' ? 'Choose a footer video' : 'Choose a footer image'
   }));
+  content.querySelector('#fl_mux_browse')?.addEventListener('click', () => openMuxMediaPicker(video => {
+    manual.type = 'mux'; manual.playbackId = String(video.playbackId || '');
+    manual.poster = String(video.posterUrl || muxPosterUrl(video.playbackId)); manual.src = manual.poster;
+    manual.alt = String(video.title || manual.alt || 'Footer animation'); typeEl.value = 'mux'; srcEl.value = manual.src;
+    syncFooterSourcePicker(); refreshPreview(); flagUnsaved();
+  }, { currentPlaybackId: manual.playbackId, title: 'Choose footer video' }));
 
+  syncFooterSourcePicker();
   paintHelp();
   refreshPreview();
   wireSave(()=>{
     if(mode === 'manual'){
-      manual.src = validateCmsMediaSource(manual.type, manual.src, 'Manual footer media');
+      if (manual.type === 'mux') {
+        if (!manual.playbackId) throw new Error('Manual footer media: choose a published Mux video from the library.');
+        manual.src = validateCmsMediaSource('mux', manual.poster || manual.src, 'Manual footer media');
+      } else {
+        manual.src = validateCmsMediaSource(manual.type, manual.src, 'Manual footer media');
+      }
       if(!Number.isFinite(Number(manual.zoom)) || Number(manual.zoom) < 0.5){
         throw new Error('Manual footer media: Zoom must be a finite number of at least 0.5.');
       }
@@ -1720,11 +1750,11 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
   let interval=Number(timing.crossfadeMs)||3500;
   let intervalUnit='s';
   const fadeUnits=new Map();
-  let items=withUids((Array.isArray(data.json)?data.json:[]).map(x=>({type:x.type||'image',src:x.src||'',alt:x.alt||'',focus:x.focus||'50% 50%',zoom:x.zoom||1,rotate:x.rotate||0,fadeInMs:Number.isFinite(Number(x.fadeInMs))?Math.max(0,Number(x.fadeInMs)):1500,fadeOutMs:Number.isFinite(Number(x.fadeOutMs))?Math.max(0,Number(x.fadeOutMs)):1500,zoomTransition:typeof x.zoomTransition==='boolean'?x.zoomTransition:transition==='kenburns',fadeTransition:typeof x.fadeTransition==='boolean'?x.fadeTransition:transition!=='none'})));
+  let items=withUids((Array.isArray(data.json)?data.json:[]).map(x=>({type:x.type||'image',src:x.src||'',playbackId:x.playbackId||'',poster:x.poster||'',alt:x.alt||'',focus:x.focus||'50% 50%',zoom:x.zoom||1,rotate:x.rotate||0,fadeInMs:Number.isFinite(Number(x.fadeInMs))?Math.max(0,Number(x.fadeInMs)):1500,fadeOutMs:Number.isFinite(Number(x.fadeOutMs))?Math.max(0,Number(x.fadeOutMs)):1500,zoomTransition:typeof x.zoomTransition==='boolean'?x.zoomTransition:transition==='kenburns',fadeTransition:typeof x.fadeTransition==='boolean'?x.fadeTransition:transition!=='none'})));
   let openUid=items[0]?items[0]._uid:null;
   function paint(){
     content.innerHTML=sectionHead('Hero Loop Animation','Choose automatic latest-project looping or a manual list. Manual entries support image, video, Lottie JSON, zoom, focus and rotation.')+
-      '<div class="banner info"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><div><strong>No IDs needed:</strong> manage uploads in <a href="videos.html">Video Library</a>. Set a published, ready video to placement <strong>Hero</strong>; it is automatically used when the hero loop mode is <strong>Only what I add</strong> or <strong>My additions + latest fill</strong>. The local MP4 stays as fallback.</div></div>'+
+      '<div class="banner info"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><div><strong>Choose videos directly from the library.</strong> Set a slide type to Mux video (streamed), then browse published videos. The existing automatic Hero feed remains available as a compatibility fallback.</div></div>'+
       `<div class="panel"><div class="row"><div class="field"><label class="field-label">Loop source</label><select id="hl_mode"><option value="latest" ${mode==='latest'?'selected':''}>Latest projects (up to 5)</option><option value="manual" ${mode==='manual'?'selected':''}>Only what I add</option><option value="mixed" ${mode==='mixed'?'selected':''}>My additions + latest fill (up to 5)</option></select></div><div class="field"><label class="field-label">Transition</label><select id="hl_transition"><option value="kenburns" ${transition==='kenburns'?'selected':''}>Zoom + fade</option><option value="fade" ${transition==='fade'?'selected':''}>Fade only</option><option value="none" ${transition==='none'?'selected':''}>None</option></select></div><div class="field"><label class="field-label">Slide interval</label><div class="time-field"><input id="hl_interval" type="number" min="${intervalUnit==='s'?0.5:500}" step="${intervalUnit==='s'?0.1:100}" value="${formatTimedValue(interval,intervalUnit)}"><select id="hl_interval_unit" aria-label="Slide interval unit"><option value="s" ${intervalUnit==='s'?'selected':''}>seconds</option><option value="ms" ${intervalUnit==='ms'?'selected':''}>milliseconds</option></select></div></div></div><div class="banner info"><i class="fa-solid fa-circle-info"></i><div><strong>Loop source</strong> controls what supplies the hero: <strong>Latest projects</strong> uses the newest project order (up to 5); <strong>Only what I add</strong> uses only this list; <strong>My additions + latest fill</strong> puts your manual entries first, then fills the remaining slots with newest projects until there are 5.</div></div></div><div id="heroLoopItems"></div><button class="add-btn" id="hl_add"><i class="fa-solid fa-plus"></i> Add hero artwork</button>`;
     const list=document.getElementById('heroLoopItems');
     if(mode==='latest') list.innerHTML='<div class="banner muted">Manual entries are stored but ignored while Latest projects is selected.</div>';
@@ -1733,7 +1763,7 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
       row.innerHTML=`<div class="card-item-head collapsible-head" data-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(item.alt||item.src||'(empty)')}</span><div class="card-item-actions"><button class="icon-btn" data-a="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-a="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-a="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-a="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px" data-body></div>`;
       if(open){
         const body=row.querySelector('[data-body]');
-        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-f="type"><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option></select></div><div class="field"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Fade in</label><div class="time-field"><input data-time-f="fadeInMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.in||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeInMs,fadeUnits.get(item._uid)?.in||'s')}"><select data-time-unit="fadeInMs" aria-label="Fade in unit"><option value="s" ${(fadeUnits.get(item._uid)?.in||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.in||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div><div class="field"><label class="field-label">Fade out</label><div class="time-field"><input data-time-f="fadeOutMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.out||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeOutMs,fadeUnits.get(item._uid)?.out||'s')}"><select data-time-unit="fadeOutMs" aria-label="Fade out unit"><option value="s" ${(fadeUnits.get(item._uid)?.out||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.out||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="row"><div class="field"><label class="field-label">Artwork transitions</label><label class="check-row"><input type="checkbox" data-toggle="zoomTransition" ${item.zoomTransition?'checked':''}> Enable zoom motion</label><label class="check-row"><input type="checkbox" data-toggle="fadeTransition" ${item.fadeTransition?'checked':''}> Enable fade in/out</label></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div>`;
+        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-media-kind><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option><option value="mux" ${item.type==='mux'?'selected':''}>Mux video (streamed)</option></select></div><div class="field" data-hero-source-field style="${item.type==='mux'?'display:none':''}"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div><div class="field" data-hero-mux-wrap style="${item.type==='mux'?'':'display:none'}"><label class="field-label">Video source</label><div class="mux-editor-picker-row"><span data-hero-mux-title>${attr(item.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" data-hero-mux-browse>Browse Mux library</button></div></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Fade in</label><div class="time-field"><input data-time-f="fadeInMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.in||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeInMs,fadeUnits.get(item._uid)?.in||'s')}"><select data-time-unit="fadeInMs" aria-label="Fade in unit"><option value="s" ${(fadeUnits.get(item._uid)?.in||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.in||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div><div class="field"><label class="field-label">Fade out</label><div class="time-field"><input data-time-f="fadeOutMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.out||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeOutMs,fadeUnits.get(item._uid)?.out||'s')}"><select data-time-unit="fadeOutMs" aria-label="Fade out unit"><option value="s" ${(fadeUnits.get(item._uid)?.out||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.out||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="row"><div class="field"><label class="field-label">Artwork transitions</label><label class="check-row"><input type="checkbox" data-toggle="zoomTransition" ${item.zoomTransition?'checked':''}> Enable zoom motion</label><label class="check-row"><input type="checkbox" data-toggle="fadeTransition" ${item.fadeTransition?'checked':''}> Enable fade in/out</label></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div>`;
         const picker=body.querySelector('[data-picker]'),cross=body.querySelector('[data-crosshair]'),preview=body.querySelector('[data-preview]');
         const setCross=()=>{const q=(item.focus||'50% 50%').split(' ').map(v=>parseFloat(v)||50);cross.style.left=q[0]+'%';cross.style.top=q[1]+'%';};
         function refreshHeroPreview(){
@@ -1746,10 +1776,19 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
           const focus=item.focus||'50% 50%';media.style.objectPosition=focus;media.style.transformOrigin=focus;media.style.transform=`scale(${item.zoom||1}) rotate(${item.rotate||0}deg)`;preview.appendChild(media);
         }
         setCross();refreshHeroPreview();
+        body.querySelector('[data-media-kind]')?.addEventListener('change',e=>{
+          const nextType=e.target.value;
+          if(nextType==='mux'&&item.type!=='mux'){item.src='';item.playbackId='';item.poster='';}
+          if(nextType!=='mux'){delete item.playbackId;delete item.poster;}
+          item.type=nextType;openUid=item._uid;flagUnsaved();paint();
+        });
         attachMediaBrowseButton(body.querySelector('[data-f="src"]'), () => refreshHeroPreview(), () => ({
           kind: item.type === 'lottie' ? 'lottie' : item.type === 'video' ? 'video' : 'image',
           title: item.type === 'lottie' ? 'Choose a Lottie JSON file' : item.type === 'video' ? 'Choose a video file' : 'Choose an image file'
         }));
+        body.querySelector('[data-hero-mux-browse]')?.addEventListener('click',()=>openMuxMediaPicker(video=>{
+          item.type='mux';item.playbackId=String(video.playbackId||'');item.poster=String(video.posterUrl||muxPosterUrl(video.playbackId));item.src=item.poster;item.alt=item.alt||String(video.title||'Hero video');openUid=item._uid;flagUnsaved();paint();
+        },{currentPlaybackId:item.playbackId,title:'Choose hero video'}));
         let dragging=false;
         const pointer=e=>{
           const r=picker.getBoundingClientRect();
@@ -1805,7 +1844,12 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
           throw new Error('Manual Hero Loop mode needs at least one media item.');
         }
         items.forEach((item,index)=>{
-          item.src = validateCmsMediaSource(item.type, item.src, `Hero artwork ${index + 1}`);
+          if (item.type === 'mux') {
+            if (!item.playbackId) throw new Error(`Hero artwork ${index + 1}: choose a published Mux video from the library.`);
+            item.src = validateCmsMediaSource('mux', item.poster || item.src, `Hero artwork ${index + 1}`);
+          } else {
+            item.src = validateCmsMediaSource(item.type, item.src, `Hero artwork ${index + 1}`);
+          }
           if(!Number.isFinite(Number(item.zoom)) || Number(item.zoom) < 0.5){
             throw new Error(`Hero artwork ${index + 1}: Zoom must be a finite number of at least 0.5.`);
           }
@@ -1825,6 +1869,8 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
       return {
         items: items.map(x=>({
           type:x.type,src:x.src,alt:x.alt,focus:x.focus,zoom:x.zoom,rotate:x.rotate,
+          ...(x.playbackId ? {playbackId:x.playbackId} : {}),
+          ...(x.poster ? {poster:x.poster} : {}),
           fadeInMs:x.fadeInMs,fadeOutMs:x.fadeOutMs,
           zoomTransition:x.zoomTransition,fadeTransition:x.fadeTransition
         })),
