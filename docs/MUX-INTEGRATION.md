@@ -8,7 +8,7 @@ This repository remains a static site with its existing GitHub-backed JSON CMS. 
 - New uploads create a video row and asset-version row before requesting a Mux Direct Upload.
 - The internal asset-version UUID is sent to Mux as external_id for new CMS uploads.
 - Existing Mux Dashboard uploads can be browsed by title and imported without manually copying Asset IDs or Playback IDs. Import normalizes Mux's Unix-second `created_at` value to an ISO timestamp before storing `uploaded_at` in Postgres.
-- The Video Library lets you change an existing video's website placement without SQL or re-importing the asset.
+- The Video Library is a Mux-powered media workspace for browsing, previewing, renaming, publishing/unpublishing, and managing video versions. Website placement is configured in the relevant CMS content/settings workflow, not on a library asset card.
 - Existing hosted static MP4 paths can be registered; old project media is not migrated automatically.
 
 ## Provision Supabase
@@ -73,7 +73,7 @@ Store its signing secret as MUX_WEBHOOK_SECRET. Subscribe to video.upload.asset_
 ## Use the Video Library
 1. Open admin/videos.html from a local HTTP server or active branch preview.
 2. Enter Supabase URL/public key and sign in with the allowlisted Auth account.
-3. Create a record and upload an MP4, or import an existing Mux asset by asset ID.
+3. Upload a video to Mux or choose an existing, unlinked Mux upload by title in the **Import from Mux** tab. Do not copy Asset IDs or Playback IDs manually.
 4. For an already-hosted MP4, register its stable site-relative path or HTTPS URL.
 5. Wait for processing webhook to mark ready, then publish the version.
 
@@ -84,16 +84,19 @@ Store its signing secret as MUX_WEBHOOK_SECRET. Subscribe to video.upload.asset_
 - Mux playback ID: playback and thumbnails.
 Changing the title or slug does not require a new Mux asset. Replacing media creates a new asset version; publish it only after ready. Never use a filename as a permanent identifier.
 
-## Use Mux videos in the main Projects CMS
+## Use Mux media from the CMS
 
-No Asset ID or Playback ID needs to be copied into project JSON by hand.
+The Mux library uses the same browsing pattern as the CMS media picker. Published, ready videos can be selected by title; IDs remain behind the scenes.
 
-1. Open **Video Library** from the main CMS. To link an upload already in Mux Dashboard, choose it by title in **Available Mux uploads**; the CMS hides the IDs and only shows compatible, unlinked assets. For a new file, enter a title and slug, choose a destination, then upload the MP4.
-2. Wait until its asset status is **Ready**, then click **Publish**. On each video record, you can change its website placement without re-importing or using SQL.
-3. To use it as the homepage hero, set placement to **Homepage hero loop**. In the main CMS, open **Hero Loop Animation**, select **Only what I add** or **My additions + latest fill**, and click **Save to GitHub**. The published Hero feed is added automatically; the local MP4 stays as a fallback if the feed/player is unavailable.
-4. To use it inside a project's lightbox, open **Projects**, expand the project, scroll to **Media (lightbox gallery)**, click **Add media item**, choose **Mux video (streamed)**, select the video by title, and click **Save to GitHub**. The CMS stores the playback reference and poster automatically; do not paste IDs by hand.
-4. Project cards use a still poster. The Mux stream player is initialized only when someone opens the project lightbox, so the full video is not mounted on every card/grid render and the MP4 is not committed to GitHub.
-5. If you publish a video while the CMS is already open, use **Refresh list** in the Mux selector. Only ready videos with public playback that are published appear.
+1. Open **Mux Media Library** from the CMS navigation. Use **Upload video** to send a file directly to Mux, or **Import from Mux** to register an existing Mux upload. The library provides search, status/source filters, grid/list views, poster previews, playback inspection, metadata editing, publish/unpublish, and version history.
+2. Wait until a new asset is **Ready**, then select **Publish ready version** in its details panel. You can change its title/slug/description and publish state without copying any Mux identifiers. Unpublishing removes it from public feeds but retains stored asset versions.
+3. In **Projects → Media (lightbox gallery)**, add or edit a media item, choose **Mux video (streamed)**, then click **Browse Mux library**. Search by title, preview the video, and choose **Use selected video**. The CMS stores the playback reference and poster; the actual player is created only when the project lightbox opens.
+4. For the project **Thumbnail type**, choose **Mux video (streamed)** and click **Browse Mux library**. Project cards use the poster only—never a full Mux stream—so the gallery does not mount video players for every card.
+5. In **Hero Loop Animation**, set a slide's type to **Mux video (streamed)**, then choose **Browse Mux library**. Save to GitHub as usual. Explicitly selected slides take priority; the older placement-based public feed is retained only as a backward-compatible fallback for existing content.
+6. In **Footer Animation**, switch the source to **Manual**, select **Mux video (streamed)**, and browse the shared library. The renderer plays only the active Mux slide; if the Mux Player script is unavailable, it falls back to the selected poster.
+7. When a video is published while the CMS is already open, refresh the picker to reload the published catalog. Only ready assets with public playback are shown.
+
+The CMS media library continues to handle files stored in the repository. Use Mux when the source should remain hosted and streamed remotely; this does not upload a second copy of the video into GitHub.
 
 Mux is a hosted service, not a lifetime archive. Availability depends on account standing, billing/plan limits, the asset not being deleted, and the applicable service terms. Mux's current Free plan lists up to 10 stored videos and 100,000 monthly delivery minutes; its Pay-as-you-go plan lists no storage limit, but storage is billed per video minute per month and delivery beyond included allowances is usage-based. See [current Mux pricing](https://www.mux.com/pricing). Mux also states that it does not keep the original upload in its exact form, so keep an independent backup of original master video files: [Mux streaming guide](https://www.mux.com/docs/core/stream-video-files).
 
