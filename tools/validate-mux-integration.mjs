@@ -64,7 +64,28 @@ check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") &
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
 check(Array.isArray(heroLoop) && heroLoop.some((item) => item.type === "video" && item.src), "Legacy MP4 fallback must remain.");
-check(config.supabaseUrl === "" && config.supabaseAnonKey === "", "Public config must remain blank until provisioned.");
+const supabaseUrl = String(config.supabaseUrl || "").trim();
+const supabaseKey = String(config.supabaseAnonKey || "").trim();
+function isPublicSupabaseKey(value) {
+  if (/^sb_publishable_[A-Za-z0-9_-]+$/.test(value)) return true;
+  const parts = value.split(".");
+  if (parts.length !== 3 || !/^eyJ[A-Za-z0-9_-]+$/.test(parts[0])) return false;
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    return claims.role === "anon";
+  } catch (_) { return false; }
+}
+let validPublicConfig = !supabaseUrl && !supabaseKey;
+if (supabaseUrl && supabaseKey) {
+  try {
+    const parsed = new URL(supabaseUrl);
+    validPublicConfig = parsed.protocol === "https:" &&
+      /^[a-z0-9-]+\\.supabase\\.co$/i.test(parsed.hostname) &&
+      !parsed.port && parsed.pathname === "/" && !parsed.search && !parsed.hash &&
+      isPublicSupabaseKey(supabaseKey);
+  } catch (_) { validPublicConfig = false; }
+}
+check(validPublicConfig, "Public config must be blank or contain an HTTPS Supabase project URL and a publishable/anon key (never a secret/service-role key).");
 check(workflow.includes("validate-mux-integration.mjs"), "CI validator is not configured.");
 check(!/MUX_TOKEN_SECRET\s*[:=]\s*["'][^"']+["']/.test(admin + webhook + publicApi), "Literal Mux secret appears in code.");
 if (errors.length) { console.error("Mux integration contract: FAIL"); errors.forEach((e) => console.error(" - " + e)); process.exit(1); }
