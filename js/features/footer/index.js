@@ -135,11 +135,13 @@ function buildMedia(documentRef, source, autoplayAllowed = true) {
     media.setAttribute('metadata-video-title', source.alt || 'Footer video');
   } else if (source.type === 'video') {
     media = documentRef.createElement('video');
-    media.autoplay = true;
+    media.autoplay = Boolean(autoplayAllowed);
     media.muted = true;
+    media.defaultMuted = true;
+    media.setAttribute('muted', '');
     media.loop = true;
     media.playsInline = true;
-    media.preload = 'metadata';
+    media.preload = autoplayAllowed ? 'auto' : 'none';
     media.src = source.src;
   } else if (source.type === 'lottie') {
     media = documentRef.createElement('lottie-player');
@@ -303,10 +305,14 @@ export async function initFooterAnimation(options = {}) {
       previous?.classList.remove('active');
       const previousMux = previous?.querySelector('mux-player');
       if (previousMux) { try { previousMux.pause?.(); } catch (_) {} }
+      const previousVideo = previous?.querySelector('video');
+      if (previousVideo) { try { previousVideo.pause?.(); } catch (_) {} }
       index = (index + 1) % slides.length;
       slides[index]?.classList.add('active');
       const currentMux = slides[index]?.querySelector('mux-player');
       if (currentMux) { try { const playback = currentMux.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
+      const currentVideo = slides[index]?.querySelector('video');
+      if (currentVideo) { try { const playback = currentVideo.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
       applyForeground(index);
     }, crossfadeMs);
     lifecycle.add(() => windowRef.clearInterval(intervalId));
