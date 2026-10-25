@@ -1562,7 +1562,17 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
       });
       page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
       page.on('console', message => {
-        if (message.type() === 'error') errors.push(`console.error: ${message.text()}`);
+        if (message.type() !== 'error') return;
+        const messageText = message.text();
+        const sourceUrl = String(message.location()?.url || '');
+        // Chromium may surface this policy diagnostic from an embedded YouTube
+        // player. It is not a site exception; only suppress it when the source
+        // is explicitly a YouTube embed. All other console errors remain fatal.
+        const embeddedComputePressurePolicyWarning =
+          messageText === 'Permissions policy violation: compute-pressure is not allowed in this document.' &&
+          /^https?:\\/\\/(?:www\\.|m\\.)?(?:youtube\\.com|youtube-nocookie\\.com)(?:\\/|$)/i.test(sourceUrl);
+        if (embeddedComputePressurePolicyWarning) return;
+        errors.push(`console.error: ${messageText}${sourceUrl ? ` (source: ${sourceUrl})` : ''}`);
       });
 
       if (typeof prepare === 'function') await prepare(page);
