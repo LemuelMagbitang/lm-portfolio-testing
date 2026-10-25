@@ -6,7 +6,7 @@ let inFlight = false;
 let muxImportAssets = [];
 function status(id, message, kind = "") { const node = $(id); if (node) { node.textContent = message || ""; node.className = "status" + (kind ? " " + kind : ""); } }
 function slugify(value) {
-  return String(value || "").normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "")
+  return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100) || "mux-video";
 }
 function placementLabel(value) {
