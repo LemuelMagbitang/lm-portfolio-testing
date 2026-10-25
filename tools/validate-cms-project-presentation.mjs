@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261025-07';
+import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261026-01';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261025-02';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261016-01';
 
