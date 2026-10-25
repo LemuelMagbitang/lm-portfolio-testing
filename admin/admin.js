@@ -3199,6 +3199,9 @@ function serializeProjectEditorModel(project){
     thumbnail:{
       type:project.thumbnail?.type || 'image',
       src:project.thumbnail?.src || '',
+      ...(project.thumbnail?.playbackId ? {playbackId:String(project.thumbnail.playbackId)} : {}),
+      ...(project.thumbnail?.poster ? {poster:String(project.thumbnail.poster)} : {}),
+      ...(project.thumbnail?.alt ? {alt:String(project.thumbnail.alt)} : {}),
       focus:project.thumbnail?.focus,
       zoom:project.thumbnail?.zoom,
       ...(project.thumbnail?.background && typeof project.thumbnail.background === 'object'
@@ -3291,8 +3294,9 @@ function buildProjectBody(el, p, options = {}){
       <div class="two-col">
         <div>
           <div class="row">
-            <div class="field" style="max-width:180px"><label class="field-label">Thumbnail type</label><select data-f="thumb-type"><option value="image" ${p.thumbnail.type==='image'?'selected':''}>Image</option><option value="video" ${p.thumbnail.type==='video'?'selected':''}>Video</option><option value="lottie" ${p.thumbnail.type==='lottie'?'selected':''}>Lottie (JSON animation)</option><option value="model" ${p.thumbnail.type==='model'?'selected':''}>3D model</option></select></div>
-            <div class="field"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
+            <div class="field" style="max-width:180px"><label class="field-label">Thumbnail type</label><select data-f="thumb-type"><option value="image" ${p.thumbnail.type==='image'?'selected':''}>Image</option><option value="video" ${p.thumbnail.type==='video'?'selected':''}>Video</option><option value="lottie" ${p.thumbnail.type==='lottie'?'selected':''}>Lottie (JSON animation)</option><option value="model" ${p.thumbnail.type==='model'?'selected':''}>3D model</option><option value="mux" ${p.thumbnail.type==='mux'?'selected':''}>Mux video (streamed)</option></select></div>
+            <div class="field" data-thumbnail-source-field style="${p.thumbnail.type==='mux'?'display:none':''}"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
+            <div class="field" data-thumb-mux-picker-wrap style="${p.thumbnail.type==='mux'?'':'display:none'}"><label class="field-label">Video source</label><div class="mux-editor-picker-row"><span data-thumb-mux-label>${attr(p.thumbnail.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" data-thumb-mux-browse>Browse Mux library</button></div></div>
           </div>
           <div class="row">
             <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
@@ -3366,7 +3370,9 @@ function buildProjectBody(el, p, options = {}){
     const fallback = explicit ? null : computeFallbackThumb(p.media, p.thumbnail);
     const src = explicit ? {type:p.thumbnail.type||'image',src:explicit,background:p.thumbnail.background||null} : fallback;
     if(!src || !src.src){ if(note) note.style.display='none'; return; }
-    const sourceError = validateMediaSource(src.type, src.src);
+    const sourceError = src.type === 'mux'
+      ? (p.thumbnail.playbackId ? '' : 'Choose a published Mux video from the library.')
+      : validateMediaSource(src.type, src.src);
     if (sourceError) {
       const error = document.createElement('div');
       error.className = 'source-type-error source-type-error-inline';
@@ -3410,6 +3416,18 @@ function buildProjectBody(el, p, options = {}){
     kind: p.thumbnail.type === 'lottie' ? 'lottie' : p.thumbnail.type === 'video' ? 'video' : p.thumbnail.type === 'model' ? 'model' : 'image',
     title: p.thumbnail.type === 'lottie' ? 'Choose a Lottie JSON file' : p.thumbnail.type === 'video' ? 'Choose a video file' : p.thumbnail.type === 'model' ? 'Choose a 3D model' : 'Choose an image file'
   }));
+  el.querySelector('[data-thumb-mux-browse]')?.addEventListener('click', () => openMuxMediaPicker(video => {
+    p.thumbnail.type = 'mux';
+    p.thumbnail.playbackId = String(video.playbackId || '');
+    p.thumbnail.poster = String(video.posterUrl || muxPosterUrl(video.playbackId));
+    p.thumbnail.src = p.thumbnail.poster;
+    p.thumbnail.alt = String(video.title || 'Project thumbnail');
+    const type = el.querySelector('[data-f="thumb-type]'); if (type) type.value = 'mux';
+    const source = el.querySelector('[data-thumbnail-source-field]'); if (source) source.style.display = 'none';
+    const muxWrap = el.querySelector('[data-thumb-mux-picker-wrap]'); if (muxWrap) muxWrap.style.display = '';
+    const label = el.querySelector('[data-thumb-mux-label]'); if (label) label.textContent = p.thumbnail.alt;
+    refreshThumbPreview(); markChanged();
+  }, { currentPlaybackId: p.thumbnail.playbackId, title: 'Choose project thumbnail video' }));
 
   // simple fields
   el.querySelectorAll('[data-f]').forEach(inp=>{
@@ -3419,7 +3437,16 @@ function buildProjectBody(el, p, options = {}){
         p.thumbnail.src = inp.value;
         refreshThumbPreview();
       } else if(f==='thumb-type'){
-        p.thumbnail.type = inp.value;
+        const nextType = inp.value;
+        if (nextType === 'mux' && p.thumbnail.type !== 'mux') {
+          p.thumbnail.src = ''; p.thumbnail.playbackId = ''; p.thumbnail.poster = '';
+        } else if (nextType !== 'mux') {
+          delete p.thumbnail.playbackId; delete p.thumbnail.poster;
+        }
+        p.thumbnail.type = nextType;
+        const source = el.querySelector('[data-thumbnail-source-field]'); if (source) source.style.display = nextType === 'mux' ? 'none' : '';
+        const muxWrap = el.querySelector('[data-thumb-mux-picker-wrap]'); if (muxWrap) muxWrap.style.display = nextType === 'mux' ? '' : 'none';
+        const label = el.querySelector('[data-thumb-mux-label]'); if (label) label.textContent = p.thumbnail.playbackId ? (p.thumbnail.alt || 'Selected Mux video') : 'Choose a published Mux video';
         refreshThumbPreview();
       }
       // THE FIX: typing a new zoom or focus value used to update
