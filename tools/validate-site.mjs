@@ -1999,7 +1999,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261025-07") ||
-      !composition.includes("footer/index.js?v=20261023-02") ||
+      !composition.includes("footer/index.js?v=20261025-07") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||

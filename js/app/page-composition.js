@@ -12,7 +12,7 @@ import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261025-07';
-import { initFooterAnimation } from '../features/footer/index.js?v=20261023-02';
+import { initFooterAnimation } from '../features/footer/index.js?v=20261025-07';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261023-01';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 

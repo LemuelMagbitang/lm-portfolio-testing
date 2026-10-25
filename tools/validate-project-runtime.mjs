@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-06';
-import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-06';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-07';
+import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261025-07';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-07';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-06';
-import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-02';
+import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-07';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
   orientationFromAspectRatio,
   observeProjectCardOrientation
 } from '../js/features/projects/card-presentation.js';
-import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261024-04';
+import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261025-07';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
 import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js?v=20261004-01';
 
