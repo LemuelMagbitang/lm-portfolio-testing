@@ -231,6 +231,12 @@ export function normalizeProject(project = {}) {
   if (SUPPORTED_MEDIA_TYPES.has(thumbnailType)) {
     normalized.thumbnail.type = thumbnailType;
   }
+  if (thumbnailType === 'mux') {
+    const playbackId = normalizeString(thumbnailSource.playbackId);
+    if (playbackId) normalized.thumbnail.playbackId = playbackId;
+    const poster = normalizeString(thumbnailSource.poster);
+    if (poster) normalized.thumbnail.poster = poster;
+  }
 
   const focus = normalizeString(thumbnailSource.focus);
   if (focus) normalized.thumbnail.focus = focus;
