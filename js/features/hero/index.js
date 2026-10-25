@@ -517,9 +517,11 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
         media.defaultMuted = true;
         media.setAttribute('muted', '');
         media.loop = false;
-        media.playsInline = true;
-        media.setAttribute('playsinline', '');
         media.controls = false;
+        media.style.setProperty('--controls', 'none');
+        media.style.setProperty('--center-controls', 'none');
+        media.style.setProperty('--top-controls', 'none');
+        media.style.setProperty('--bottom-controls', 'none');
         media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
         if (!reducedMotion) media.setAttribute('autoplay', 'muted');
         else media.removeAttribute('autoplay');
@@ -725,7 +727,8 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       if (slide.dataset.heroType === 'video') {
         media.muted = true;
         media.defaultMuted = true;
-        media.playsInline = true;
+        // Mux Player is inline by default and its playsInline setter is unsupported.
+        if (media.localName !== 'mux-player') media.playsInline = true;
         // A single CMS-selected video is a continuous hero reel, not a
         // one-slide slideshow that waits for an ended event to restart.
         media.loop = slides.length === 1;

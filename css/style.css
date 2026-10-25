@@ -363,7 +363,18 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .hero-banner .slide:not(.slide--zoom) video,
 .hero-banner .slide:not(.slide--zoom) lottie-player,
 .hero-banner .slide:not(.slide--zoom) mux-player { transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate)); }
-.hero-banner .slide mux-player { --media-object-fit: cover; --controls: none; }
+.hero-banner .slide mux-player {
+  --media-object-fit: cover;
+  --controls: none;
+  --center-controls: none;
+  --top-controls: none;
+  --bottom-controls: none;
+}
+.hero-banner .slide mux-player::part(top),
+.hero-banner .slide mux-player::part(center),
+.hero-banner .slide mux-player::part(bottom) {
+  display: none !important;
+}
 .hero-banner .slide:not(.slide--fade) { transition: none; }
 .hero-banner .slide.slide--fade { transition-property: opacity; transition-timing-function: ease-in-out; }
 
@@ -3282,6 +3293,14 @@ footer{
 .footer-animation-slide mux-player{
   --media-object-fit:cover;
   --controls:none;
+  --center-controls:none;
+  --top-controls:none;
+  --bottom-controls:none;
+}
+.footer-animation-slide mux-player::part(top),
+.footer-animation-slide mux-player::part(center),
+.footer-animation-slide mux-player::part(bottom){
+  display:none!important;
 }
 .footer-animation.transition-kenburns .footer-animation-slide.active img,
 .footer-animation.transition-kenburns .footer-animation-slide.active video,

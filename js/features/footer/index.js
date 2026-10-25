@@ -123,11 +123,13 @@ function buildMedia(documentRef, source, autoplayAllowed = true) {
     media.controls = false;
     media.setAttribute('muted', '');
     media.setAttribute('loop', '');
-    media.setAttribute('playsinline', '');
     media.setAttribute('preload', autoplayAllowed ? 'auto' : 'none');
     if (autoplayAllowed) media.setAttribute('autoplay', 'muted');
     else media.removeAttribute('autoplay');
     media.style.setProperty('--controls', 'none');
+    media.style.setProperty('--center-controls', 'none');
+    media.style.setProperty('--top-controls', 'none');
+    media.style.setProperty('--bottom-controls', 'none');
     media.style.setProperty('--media-object-fit', 'cover');
     if (source.poster) media.setAttribute('poster', source.poster);
     media.setAttribute('metadata-video-title', source.alt || 'Footer video');
@@ -251,7 +253,7 @@ export async function initFooterAnimation(options = {}) {
     const slide = documentRef.createElement('div');
     slide.className = 'footer-animation-slide' + (index === 0 ? ' active' : '');
     slide.dataset.index = String(index);
-    const media = buildMedia(documentRef, source, !reducedMotion());
+    const media = buildMedia(documentRef, source, !reducedMotion() && index === 0);
     slide.appendChild(media);
     container.appendChild(slide);
   });

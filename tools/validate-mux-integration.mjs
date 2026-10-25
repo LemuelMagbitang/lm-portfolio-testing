@@ -69,17 +69,30 @@ check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.p
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
+const heroMuxSetup = hero.split("if (source.type === 'mux') {")[1]?.split("} else if (source.type === 'video') {")[0] || "";
 check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("fallbackMuxToNativeVideo") &&
-  hero.includes("setAttribute('autoplay', 'muted')"),
-  "Hero Mux playback must autoplay muted, hide player UI, and retain the native MP4 fallback.");
+  hero.includes("setAttribute('autoplay', 'muted')") &&
+  !heroMuxSetup.includes("playsInline") &&
+  !heroMuxSetup.includes("playsinline") &&
+  hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&
+  styles.includes(".hero-banner .slide mux-player::part(center)"),
+  "Hero Mux playback must autoplay muted, hide its UI, avoid the unsupported playsInline setter, and retain the native MP4 fallback.");
 check(footer.includes("media.controls = false") &&
   footer.includes("media.setAttribute('autoplay', 'muted')") &&
   footer.includes("media.style.setProperty('--controls', 'none')") &&
-  styles.includes(".footer-animation-slide mux-player") &&
+  !footer.includes("media.setAttribute('playsinline'") &&
+  footer.includes("!reducedMotion() && index === 0") &&
+  styles.includes(".footer-animation-slide mux-player::part(center)") &&
   styles.includes("--controls:none"),
-  "Footer Mux playback must autoplay muted without visible controls and fill the background surface.");
+  "Footer Mux playback must autoplay only the active muted slide without visible controls or unsupported playsInline handling.");
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
+check(page.includes('rel="icon" type="image/png" href="../assets/projects/site/favicon.png"'),
+  "Mux Media Library must declare its project-relative favicon instead of requesting /favicon.ico.");
+check(script.includes('badge.id="inspectorBadge"') &&
+  !script.includes('$("inspectorBadge").textContent') &&
+  script.includes('if(!host)return;host.replaceChildren();'),
+  "Mux Media Library inspector must keep its recreated status badge attached after replacing inspector content.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
 check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] === "placement"') &&
   admin.includes('"/assets?limit=100"') && admin.includes('request.method === "PATCH"') &&
