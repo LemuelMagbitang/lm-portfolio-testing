@@ -101,13 +101,37 @@ Deno.serve(async (request: Request) => {
         if (result.error) throw result.error;
         affectedAssets = result.data || [];
       }
+      if (!affectedAssets.length) {
+        // A prior delivery may have changed the asset successfully but failed
+        // during unpublishing. Recover that exact event's state on retry.
+        let current = await db.from("video_assets").select("id")
+          .eq("mux_asset_id", d.id).eq("asset_status", "errored")
+          .eq("last_mux_event_created_at", eventCreatedAt).limit(2);
+        if (current.error) throw current.error;
+        affectedAssets = current.data || [];
+        if (!affectedAssets.length && d.meta?.external_id) {
+          current = await db.from("video_assets").select("id")
+            .eq("external_id", String(d.meta.external_id)).eq("asset_status", "errored")
+            .eq("last_mux_event_created_at", eventCreatedAt).limit(2);
+          if (current.error) throw current.error;
+          affectedAssets = current.data || [];
+        }
+      }
       await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id));
     } else if (event.type === "video.asset.deleted") {
       const result = await db.from("video_assets").update({
         asset_status: "deleted", mux_playback_id: null, last_mux_event_created_at: eventCreatedAt
       }).eq("mux_asset_id", d.id).or(newerEventFilter).select("id");
       if (result.error) throw result.error;
-      await unpublishActiveAssets(db, (result.data || []).map((item: any) => item.id));
+      let affectedAssets = result.data || [];
+      if (!affectedAssets.length) {
+        const current = await db.from("video_assets").select("id")
+          .eq("mux_asset_id", d.id).eq("asset_status", "deleted")
+          .eq("last_mux_event_created_at", eventCreatedAt).limit(2);
+        if (current.error) throw current.error;
+        affectedAssets = current.data || [];
+      }
+      await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id));
     } else if (["video.upload.errored","video.upload.timed_out","video.upload.cancelled"].includes(event.type)) {
       const state = event.type.endsWith("timed_out") ? "timed_out" : event.type.endsWith("cancelled") ? "cancelled" : "failed";
       const result = await db.from("video_assets").update({
