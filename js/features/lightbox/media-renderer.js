@@ -6,6 +6,7 @@
  */
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';
+import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 
@@ -1317,7 +1318,7 @@ export function createLightboxMediaRenderer({
 
   function pauseOtherPlayback(container, activeElement = null) {
     if (container) {
-      container.querySelectorAll("video").forEach(video => {
+      container.querySelectorAll("video, mux-player").forEach(video => {
         if (video === activeElement) return;
         /* pause() is idempotent; calling it even on an already-paused element
            makes playback handoff deterministic when media state is changing
@@ -1403,7 +1404,7 @@ export function createLightboxMediaRenderer({
 
   function bindPlaybackHandoff(container, mediaElement, type) {
     if (!container || !mediaElement) return;
-    if (type === "video") {
+    if (type === "video" || type === "mux") {
       mediaElement.addEventListener("play", () => pauseOtherPlayback(container, mediaElement));
       mediaElement.addEventListener("pointerdown", () => pauseOtherPlayback(container, mediaElement), { capture: true });
       return;
@@ -1448,8 +1449,8 @@ export function createLightboxMediaRenderer({
   function cleanupLightboxMediaIn(container) {
     if (!container) return;
     const nodes = [];
-    if (container.matches?.('img,video,lottie-player')) nodes.push(container);
-    container.querySelectorAll?.('img,video,lottie-player').forEach(node => nodes.push(node));
+    if (container.matches?.('img,video,mux-player,lottie-player')) nodes.push(container);
+    container.querySelectorAll?.('img,video,mux-player,lottie-player').forEach(node => nodes.push(node));
     nodes.forEach(node => lightboxMediaCleanups.get(node)?.run());
   }
 
@@ -1793,6 +1794,98 @@ export function createLightboxMediaRenderer({
       video.removeEventListener('loadeddata', onVideoReady);
       video.removeEventListener('canplay', onVideoReady);
       video.removeEventListener('error', onVideoError);
+      clearLightboxMediaFallback(artwork);
+    });
+    return entry;
+  }
+
+  function renderMuxVideo(item, index = 0, project = {}) {
+    const playbackId = String(item?.playbackId || '').trim();
+    if (!playbackId) return renderUnsupported(item, project);
+    const player = documentRef.createElement('mux-player');
+    player.classList.add('lightbox-mux-player');
+    player.setAttribute('stream-type', 'on-demand');
+    player.setAttribute('metadata-video-title', String(item.caption || item.description || project.title || 'Portfolio video'));
+    player.setAttribute('playsinline', '');
+    player.setAttribute('preload', index === 0 ? 'auto' : 'metadata');
+    player.controls = true;
+    player.playsInline = true;
+    const poster = String(item.poster || item.src || '').trim();
+    if (poster) player.setAttribute('poster', resolveAssetUrl(poster));
+    if (protectionEnabled()) {
+      player.classList.add('no-save');
+      player.addEventListener('contextmenu', event => event.preventDefault());
+    }
+
+    const entry = buildMediaEntry(player, item.caption || item.description, item.background);
+    const artwork = entry.querySelector('.lightbox-artwork');
+    artwork?.classList.add('is-mux-video-artwork');
+    const ratio = String(item.aspectRatio || '').match(/^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/);
+    if (ratio && Number(ratio[1]) > 0 && Number(ratio[2]) > 0) {
+      setAspectRatio(artwork, Number(ratio[1]), Number(ratio[2]));
+    } else {
+      const orientation = String(item.orientation || '').toLowerCase();
+      if (orientation === 'portrait') setAspectRatio(artwork, 9, 16);
+      else if (orientation === 'square') setAspectRatio(artwork, 1, 1);
+      else setAspectRatio(artwork, 16, 9);
+    }
+
+    let disposed = false;
+    let loadTimer = null;
+    const onReady = () => {
+      if (disposed || destroyed || !player.isConnected) return;
+      if (loadTimer !== null) {
+        windowRef?.clearTimeout?.(loadTimer);
+        loadTimer = null;
+      }
+      clearLightboxMediaFallback(artwork);
+    };
+    const onError = () => {
+      if (disposed || destroyed) return;
+      if (loadTimer !== null) {
+        windowRef?.clearTimeout?.(loadTimer);
+        loadTimer = null;
+      }
+      showLightboxMediaFallback(artwork, project, poster || item.src || '', 'video', 'error', poster);
+    };
+    player.addEventListener('loadeddata', onReady);
+    player.addEventListener('canplay', onReady);
+    player.addEventListener('playing', onReady);
+    player.addEventListener('error', onError);
+    if (poster) showLightboxMediaFallback(artwork, project, poster, 'video', 'loading', poster);
+
+    const activatePlayer = async () => {
+      try {
+        const ready = await ensureMuxPlayer();
+        if (disposed || destroyed || !player.isConnected) return;
+        if (!ready || !windowRef?.customElements?.get?.('mux-player')) {
+          onError();
+          return;
+        }
+        player.setAttribute('playback-id', playbackId);
+        loadTimer = windowRef?.setTimeout?.(() => {
+          loadTimer = null;
+          if (!disposed && !destroyed && player.isConnected) onError();
+        }, 15000) ?? null;
+      } catch (_) {
+        onError();
+      }
+    };
+    // The grid only carries a poster. The Mux player is initialized after an
+    // explicit project-card activation mounts the lightbox media.
+    void activatePlayer();
+    registerLightboxMediaCleanup(player, () => {
+      disposed = true;
+      if (loadTimer !== null) {
+        windowRef?.clearTimeout?.(loadTimer);
+        loadTimer = null;
+      }
+      player.removeEventListener('loadeddata', onReady);
+      player.removeEventListener('canplay', onReady);
+      player.removeEventListener('playing', onReady);
+      player.removeEventListener('error', onError);
+      try { player.pause?.(); } catch (_) {}
+      player.removeAttribute('playback-id');
       clearLightboxMediaFallback(artwork);
     });
     return entry;
@@ -2147,6 +2240,7 @@ export function createLightboxMediaRenderer({
     if (!item || typeof item !== 'object') return null;
 
     const type = String(item.type || 'image').trim().toLowerCase();
+    if (type === 'mux') return renderMuxVideo(item, index, project);
     if (!String(item.src || '').trim()) return renderUnsupported(item, project);
     if (type === 'image') return renderImage(item, project, index);
     if (type === 'youtube') return renderYouTube(item, project, index);
