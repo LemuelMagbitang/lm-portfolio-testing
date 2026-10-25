@@ -39,6 +39,7 @@ create table if not exists public.video_assets (
   captions_url text,
   uploaded_at timestamptz,
   last_error text,
+  last_mux_event_created_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint video_assets_provider_reference_check check (

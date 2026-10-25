@@ -44,7 +44,7 @@ The deployed website at https://lemuelmagbitang.github.io and the legacy main br
 ## Mux webhook
 In Mux Dashboard create a webhook at:
 https://YOUR_PROJECT_REF.supabase.co/functions/v1/mux-webhook
-Store its signing secret as MUX_WEBHOOK_SECRET. Subscribe to video.upload.asset_created, video.upload.errored, video.upload.timed_out, video.upload.cancelled, video.asset.ready, video.asset.errored, and video.asset.deleted. Handler checks mux-signature against the raw body with HMAC-SHA256 and five-minute timestamp tolerance, then deduplicates using the event ID.
+Store its signing secret as MUX_WEBHOOK_SECRET. Subscribe to video.upload.asset_created, video.upload.errored, video.upload.timed_out, video.upload.cancelled, video.asset.ready, video.asset.errored, and video.asset.deleted. Handler checks mux-signature against the raw body with HMAC-SHA256 and five-minute timestamp tolerance, then deduplicates using the event ID. Lifecycle updates also store the Mux event creation timestamp per asset and ignore older state events, preventing delayed delivery from regressing ready, errored, or deleted state.
 
 ## Use the Video Library
 1. Open admin/videos.html from a local HTTP server or active branch preview.

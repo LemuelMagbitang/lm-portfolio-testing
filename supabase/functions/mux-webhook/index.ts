@@ -38,8 +38,12 @@ Deno.serve(async (request: Request) => {
   let event: any;
   try { event = JSON.parse(raw); } catch (_) { return new Response("Invalid JSON", { status: 400 }); }
   if (!event?.id || !event?.type) return new Response("Invalid event", { status: 400 });
+  const eventTimeMs = Date.parse(String(event.created_at || ""));
+  if (!Number.isFinite(eventTimeMs)) return new Response("Invalid event timestamp", { status: 400 });
+  const eventCreatedAt = new Date(eventTimeMs).toISOString();
   try {
     const db = serviceDb();
+    const newerEventFilter = "last_mux_event_created_at.is.null,last_mux_event_created_at.lt." + eventCreatedAt;
     const { data: old } = await db.from("mux_webhook_events").select("processed_at").eq("event_id", event.id).maybeSingle();
     if (old?.processed_at) return new Response("ok", { status: 200 });
     const { error: logError } = await db.from("mux_webhook_events").upsert({ event_id: event.id, event_type: event.type, payload: event, processing_error: null }, { onConflict: "event_id", ignoreDuplicates: true });
@@ -47,25 +51,14 @@ Deno.serve(async (request: Request) => {
     const d = event.data || {};
     let updateError: any = null;
     if (event.type === "video.upload.asset_created") {
-      // Mux does not guarantee webhook ordering. Record the asset identity first,
-      // then update upload/processing state with database-side guards so a late
-      // asset_created event cannot regress a ready, errored, or deleted asset.
-      const identityResult = await db.from("video_assets")
-        .update({ mux_asset_id: d.asset_id, uploaded_at: new Date().toISOString() })
-        .eq("mux_upload_id", d.id);
-      if (identityResult.error) throw identityResult.error;
-
-      const uploadResult = await db.from("video_assets")
-        .update({ upload_state: "uploaded", last_error: null })
-        .eq("mux_upload_id", d.id)
-        .or("asset_status.is.null,asset_status.eq.preparing,asset_status.eq.ready");
-      if (uploadResult.error) throw uploadResult.error;
-
-      const processingResult = await db.from("video_assets")
-        .update({ asset_status: "preparing", processing_state: "ingesting" })
-        .eq("mux_upload_id", d.id)
-        .or("asset_status.is.null,asset_status.eq.preparing");
-      updateError = processingResult.error;
+      // Webhooks may arrive out of order. One conditional update makes asset
+      // identity and state advance atomically only when this event is newer.
+      const result = await db.from("video_assets").update({
+        mux_asset_id: d.asset_id, uploaded_at: new Date().toISOString(),
+        upload_state: "uploaded", asset_status: "preparing", processing_state: "ingesting",
+        last_error: null, last_mux_event_created_at: eventCreatedAt
+      }).eq("mux_upload_id", d.id).or(newerEventFilter);
+      updateError = result.error;
     } else if (event.type === "video.asset.ready") {
       let matches: any[] | null = null;
       for (const [field, value] of [["mux_asset_id", d.id], ["mux_upload_id", d.upload_id], ["external_id", d.meta?.external_id]] as any[]) {
@@ -80,32 +73,39 @@ Deno.serve(async (request: Request) => {
         const result = await db.from("video_assets").update({
           mux_asset_id: d.id, mux_playback_id: playback?.id || null, playback_policy: playback?.policy || null,
           asset_status: "ready", processing_state: "completed", duration_seconds: d.duration ?? null,
-          aspect_ratio: d.aspect_ratio || null, resolution_tier: d.resolution_tier || null, last_error: null
-        }).eq("id", matches[0].id);
+          aspect_ratio: d.aspect_ratio || null, resolution_tier: d.resolution_tier || null, last_error: null,
+          last_mux_event_created_at: eventCreatedAt
+        }).eq("id", matches[0].id).or(newerEventFilter);
         updateError = result.error;
       } else if (matches && matches.length > 1) throw new Error("Mux event matched multiple asset versions.");
     } else if (event.type === "video.asset.errored") {
-      const changes = { mux_asset_id: d.id, asset_status: "errored", processing_state: "errored", upload_state: "failed", last_error: details(d) };
-      let result = await db.from("video_assets").update(changes).eq("mux_asset_id", d.id).select("id");
+      const changes = {
+        mux_asset_id: d.id, asset_status: "errored", processing_state: "errored", upload_state: "failed",
+        last_error: details(d), last_mux_event_created_at: eventCreatedAt
+      };
+      let result = await db.from("video_assets").update(changes).eq("mux_asset_id", d.id)
+        .or(newerEventFilter).select("id");
       if (result.error) throw result.error;
       let affectedAssets = result.data || [];
       if (!affectedAssets.length && d.meta?.external_id) {
-        result = await db.from("video_assets").update(changes).eq("external_id", String(d.meta.external_id)).select("id");
+        result = await db.from("video_assets").update(changes).eq("external_id", String(d.meta.external_id))
+          .or(newerEventFilter).select("id");
         if (result.error) throw result.error;
         affectedAssets = result.data || [];
       }
       await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id));
     } else if (event.type === "video.asset.deleted") {
-      const { data: asset, error } = await db.from("video_assets").select("id").eq("mux_asset_id", d.id).maybeSingle();
-      if (error) throw error;
-      if (asset) {
-        await unpublishActiveAssets(db, [asset.id]);
-        const result = await db.from("video_assets").update({ asset_status: "deleted", mux_playback_id: null }).eq("id", asset.id);
-        updateError = result.error;
-      }
+      const result = await db.from("video_assets").update({
+        asset_status: "deleted", mux_playback_id: null, last_mux_event_created_at: eventCreatedAt
+      }).eq("mux_asset_id", d.id).or(newerEventFilter).select("id");
+      if (result.error) throw result.error;
+      await unpublishActiveAssets(db, (result.data || []).map((item: any) => item.id));
     } else if (["video.upload.errored","video.upload.timed_out","video.upload.cancelled"].includes(event.type)) {
       const state = event.type.endsWith("timed_out") ? "timed_out" : event.type.endsWith("cancelled") ? "cancelled" : "failed";
-      const result = await db.from("video_assets").update({ upload_state: state, asset_status: "errored", last_error: details(d) }).eq("mux_upload_id", d.id);
+      const result = await db.from("video_assets").update({
+        upload_state: state, asset_status: "errored", last_error: details(d),
+        last_mux_event_created_at: eventCreatedAt
+      }).eq("mux_upload_id", d.id).or(newerEventFilter).select("id");
       updateError = result.error;
     }
     if (updateError) throw updateError;
