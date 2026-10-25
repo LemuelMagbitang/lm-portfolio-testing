@@ -292,6 +292,79 @@ imageThumbnail.naturalWidth = 100;
 imageThumbnail.dispatch('load');
 assert.equal(imageThumbnail.classList.values.has('is-media-ready'), true);
 
+// A slow request must not swap the selected image for secondary artwork just
+// because the first-paint safety timer elapsed. The error state lets readiness
+// settle, while the visual loading surface remains until load or a real error.
+const slowLoadTimers = [];
+let slowLoadTimerId = 0;
+const slowLoadWindow = {
+  matchMedia: () => ({ matches: false }),
+  IntersectionObserver: TestThumbnailIntersectionObserver,
+  setTimeout(callback, delay) {
+    const timer = { id: ++slowLoadTimerId, callback, delay, cleared: false };
+    slowLoadTimers.push(timer);
+    return timer.id;
+  },
+  clearTimeout(id) {
+    const timer = slowLoadTimers.find(item => item.id === id);
+    if (timer) timer.cleared = true;
+  }
+};
+const slowLoadDocument = {
+  defaultView: slowLoadWindow,
+  createElement(tagName) {
+    const element = thumbnailDocument.createElement(tagName);
+    element.ownerDocument = slowLoadDocument;
+    return element;
+  }
+};
+const slowLoadHost = {
+  children: [],
+  appendChild(node) {
+    node.parentNode = this;
+    node.parentElement = this;
+    this.children.push(node);
+    return node;
+  },
+  removeChild(node) {
+    this.children = this.children.filter(child => child !== node);
+    node.parentNode = null;
+    node.parentElement = null;
+    return node;
+  }
+};
+const slowImageThumbnail = buildProjectThumbnailMedia(
+  { type:'image', src:'media/slow-selected.webp', fallbackSrc:'media/secondary-poster.webp' },
+  'Slow selected image',
+  { documentRef:slowLoadDocument, resolveAssetUrl:value=>'/assets/'+value, priority:true }
+);
+slowLoadHost.appendChild(slowImageThumbnail);
+const slowPreloadObserver = thumbnailObservers.find(observer =>
+  observer.options.rootMargin === '640px 0px' && observer.targets.has(slowImageThumbnail)
+);
+assert.ok(slowPreloadObserver, 'Slow image should register with the shared preload observer.');
+slowPreloadObserver.trigger(slowImageThumbnail, true);
+assert.equal(slowImageThumbnail.src, '/assets/media/slow-selected.webp');
+const slowTimer = slowLoadTimers.find(timer => timer.delay === 12000 && !timer.cleared);
+assert.ok(slowTimer, 'Slow image should arm the existing first-paint safety timer.');
+slowTimer.callback();
+const slowImageFallback = slowLoadHost.children.find(node => node.className === 'project-thumb-media-fallback');
+assert.equal(slowImageThumbnail.dataset.mediaState, 'error',
+  'The safety timer should release lifecycle readiness if the image stalls.');
+assert.equal(slowImageThumbnail.classList.values.has('is-media-error'), true);
+assert.equal(slowImageFallback?.dataset.state, 'loading',
+  'A slow but unresolved image should retain the loading overlay rather than switch to error presentation.');
+assert.equal(slowImageFallback?.children.some(node => node.className === 'project-thumb-media-fallback-image'), false,
+  'A secondary poster must not replace the selected source until a real media error.');
+assert.equal(slowImageThumbnail.src, '/assets/media/slow-selected.webp',
+  'The original selected thumbnail source must remain attached after the slow-load safety timeout.');
+slowImageThumbnail.dispatch('load');
+assert.equal(slowImageThumbnail.dataset.mediaState, 'ready',
+  'A slow image that eventually loads should recover into the normal ready state.');
+assert.equal(slowLoadHost.children.some(node => node.className === 'project-thumb-media-fallback'), false,
+  'The loading overlay should be removed after the selected image finally loads.');
+disposeProjectThumbnailMedia(slowImageThumbnail);
+
 // If a cached/broken image settles synchronously before its card is attached,
 // the fallback must wait for the DOM parent and still render once the card mounts.
 const immediateFailureDocument = {
