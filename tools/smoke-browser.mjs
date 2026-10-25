@@ -6717,8 +6717,8 @@ try {
           height: rect.height
         };
       });
-      if (lottieLoadingSurface.state === 'loading' && lottieLoadingSurface.fallbackPresent) {
-        throw new Error('Lottie thumbnail displayed a loading/poster overlay before rendering.');
+      if (lottieLoadingSurface.state === 'loading' && !lottieLoadingSurface.fallbackPresent) {
+        throw new Error('Lottie thumbnail is missing its loading overlay before rendering.');
       }
       try {
         await page.waitForFunction(() => {
@@ -6830,8 +6830,8 @@ try {
            mobileLottieSurface.mediaWidth <= 0 || mobileLottieSurface.mediaHeight <= 0)) {
         throw new Error('Rendered mobile Lottie artwork is hidden or still covered by a placeholder: ' + JSON.stringify(mobileLottieSurface));
       }
-      if (mobileLottieSurface.state === 'loading' && mobileLottieSurface.fallbackPresent) {
-        throw new Error('Mobile Lottie thumbnail displayed a loading/poster overlay before rendering.');
+      if (mobileLottieSurface.state === 'loading' && !mobileLottieSurface.fallbackPresent) {
+        throw new Error('Mobile Lottie thumbnail is missing its loading overlay before rendering.');
       }
       if (mobileLottieSurface.cardWidth <= 0 || mobileLottieSurface.cardHeight <= 0 ||
           (mobileLottieSurface.state === 'ready' &&
