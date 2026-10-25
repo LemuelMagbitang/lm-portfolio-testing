@@ -26,6 +26,15 @@ check(admin.includes("external_id: asset.external_id || asset.id") && read("supa
 check(admin.includes("MUX_UPLOAD_CORS_ORIGIN") && admin.includes("import-mux") && admin.includes("import-static"), "CORS settings or existing asset import route missing.");
 check(webhook.includes("mux-signature") && webhook.includes("crypto.subtle.sign") && webhook.includes("video.asset.ready"), "Webhook signature or lifecycle processing missing.");
 check(webhook.includes("video.upload.asset_created") && webhook.includes("video.asset.errored") && webhook.includes("video.asset.deleted") && webhook.includes("processed_at"), "Webhook lifecycle/idempotency incomplete.");
+const assetCreatedHandler = webhook.split('if (event.type === "video.upload.asset_created") {')[1]?.split('} else if (event.type === "video.asset.ready") {')[0] || "";
+check(assetCreatedHandler.includes("d.new_asset_settings?.meta?.external_id") &&
+  assetCreatedHandler.includes('eq("external_id", externalId)') &&
+  assetCreatedHandler.includes('eq("mux_upload_id", d.id)') &&
+  assetCreatedHandler.includes('mux_upload_id: d.id') &&
+  true,
+  "Upload-created webhooks must recover an early-arrival race using the stable external ID.");
+check(webhook.includes('const { data: old, error: oldError }') && webhook.includes("if (oldError) throw oldError;"),
+  "Webhook deduplication reads must fail on database errors.");
 
 // Verify both terminal lifecycle handlers call the shared cleanup helper, and
 // verify that the helper fails loudly when the unpublish database update fails.

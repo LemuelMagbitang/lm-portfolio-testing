@@ -52,21 +52,35 @@ Deno.serve(async (request: Request) => {
       "and(asset_status.eq.preparing,last_mux_event_created_at.is.null)",
       "and(asset_status.eq.preparing,last_mux_event_created_at.lt." + eventCreatedAt + ")"
     ].join(",");
-    const { data: old } = await db.from("mux_webhook_events").select("processed_at").eq("event_id", event.id).maybeSingle();
+    const { data: old, error: oldError } = await db.from("mux_webhook_events").select("processed_at").eq("event_id", event.id).maybeSingle();
+    if (oldError) throw oldError;
     if (old?.processed_at) return new Response("ok", { status: 200 });
     const { error: logError } = await db.from("mux_webhook_events").upsert({ event_id: event.id, event_type: event.type, payload: event, processing_error: null }, { onConflict: "event_id", ignoreDuplicates: true });
     if (logError) throw logError;
     const d = event.data || {};
     let updateError: any = null;
     if (event.type === "video.upload.asset_created") {
-      // Webhooks may arrive out of order. One conditional update makes asset
-      // identity and state advance atomically only when this event is newer.
-      const result = await db.from("video_assets").update({
-        mux_asset_id: d.asset_id, uploaded_at: new Date().toISOString(),
+      // The upload-created webhook can beat the admin route's final database
+      // write. Match by upload ID first, then by our stable external ID from
+      // new_asset_settings so the event still lands on the correct asset row.
+      const changes = {
+        mux_upload_id: d.id, mux_asset_id: d.asset_id, uploaded_at: new Date().toISOString(),
         upload_state: "uploaded", asset_status: "preparing", processing_state: "ingesting",
         last_error: null, last_mux_event_created_at: eventCreatedAt
-      }).eq("mux_upload_id", d.id).or(assetCreatedFilter);
-      updateError = result.error;
+      };
+      let result = await db.from("video_assets").update(changes)
+        .eq("mux_upload_id", d.id).or(assetCreatedFilter).select("id");
+      if (result.error) throw result.error;
+      let affectedAssets = result.data || [];
+      const externalId = String(d.new_asset_settings?.meta?.external_id || "").trim();
+      if (!affectedAssets.length && externalId) {
+        result = await db.from("video_assets").update(changes)
+          .eq("external_id", externalId).or(assetCreatedFilter).select("id");
+        if (result.error) throw result.error;
+        affectedAssets = result.data || [];
+      }
+      // Unmatched events from other assets in the same Mux environment are
+      // intentionally ignored; only this app's stable external ID is a fallback.
     } else if (event.type === "video.asset.ready") {
       let matches: any[] | null = null;
       for (const [field, value] of [["mux_asset_id", d.id], ["mux_upload_id", d.upload_id], ["external_id", d.meta?.external_id]] as any[]) {
