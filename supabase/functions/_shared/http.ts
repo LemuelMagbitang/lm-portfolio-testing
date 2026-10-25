@@ -26,7 +26,7 @@ export function corsHeaders(request: Request, publicRead = false): Record<string
     .split(",").map(normalizeOrigin).filter(Boolean);
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
     "Vary": "Origin"
   };
   if (publicRead) headers["Access-Control-Allow-Origin"] = "*";
