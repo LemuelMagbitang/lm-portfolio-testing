@@ -44,6 +44,14 @@ Deno.serve(async (request: Request) => {
   try {
     const db = serviceDb();
     const newerEventFilter = "last_mux_event_created_at.is.null,last_mux_event_created_at.lt." + eventCreatedAt;
+    // Imported assets may not have seen a webhook yet. Never let an old
+    // upload-created event replace a known ready, errored, or deleted state.
+    const assetCreatedFilter = [
+      "and(asset_status.is.null,last_mux_event_created_at.is.null)",
+      "and(asset_status.is.null,last_mux_event_created_at.lt." + eventCreatedAt + ")",
+      "and(asset_status.eq.preparing,last_mux_event_created_at.is.null)",
+      "and(asset_status.eq.preparing,last_mux_event_created_at.lt." + eventCreatedAt + ")"
+    ].join(",");
     const { data: old } = await db.from("mux_webhook_events").select("processed_at").eq("event_id", event.id).maybeSingle();
     if (old?.processed_at) return new Response("ok", { status: 200 });
     const { error: logError } = await db.from("mux_webhook_events").upsert({ event_id: event.id, event_type: event.type, payload: event, processing_error: null }, { onConflict: "event_id", ignoreDuplicates: true });
@@ -57,7 +65,7 @@ Deno.serve(async (request: Request) => {
         mux_asset_id: d.asset_id, uploaded_at: new Date().toISOString(),
         upload_state: "uploaded", asset_status: "preparing", processing_state: "ingesting",
         last_error: null, last_mux_event_created_at: eventCreatedAt
-      }).eq("mux_upload_id", d.id).or(newerEventFilter);
+      }).eq("mux_upload_id", d.id).or(assetCreatedFilter);
       updateError = result.error;
     } else if (event.type === "video.asset.ready") {
       let matches: any[] | null = null;

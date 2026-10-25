@@ -29,8 +29,10 @@ check(webhook.includes("async function unpublishActiveAssets") &&
 check(migration.includes("last_mux_event_created_at timestamptz") &&
   webhook.includes('Date.parse(String(event.created_at || ""))') &&
   webhook.includes("const newerEventFilter =") &&
-  (webhook.match(/\.or\(newerEventFilter\)/g) || []).length >= 5,
-  "Mux lifecycle updates must enforce per-asset event timestamp ordering.");
+  (webhook.match(/\.or\(newerEventFilter\)/g) || []).length >= 5 &&
+  webhook.includes("const assetCreatedFilter = [") &&
+  webhook.includes("and(asset_status.eq.preparing,last_mux_event_created_at.lt."),
+  "Mux lifecycle updates must enforce event ordering and preserve known terminal states.");
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
