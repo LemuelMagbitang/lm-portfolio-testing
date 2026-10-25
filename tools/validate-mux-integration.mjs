@@ -15,6 +15,7 @@ const player = read("js/infrastructure/mux/player.js");
 const hero = read("js/features/hero/index.js");
 const page = read("admin/videos.html"), script = read("admin/videos.js"), cms = read("admin/index.html");
 const workflow = read(".github/workflows/site-validation.yml");
+const smoke = read("tools/smoke-browser.mjs");
 const supabaseConfig = read("supabase/config.toml");
 check(migration.includes("create table if not exists public.videos") && migration.includes("create table if not exists public.video_assets"), "Video tables missing.");
 check(["mux-admin", "mux-webhook", "mux-public"].every((name) =>
@@ -87,6 +88,7 @@ if (supabaseUrl && supabaseKey) {
 }
 check(validPublicConfig, "Public config must be blank or contain an HTTPS Supabase project URL and a publishable/anon key (never a secret/service-role key).");
 check(workflow.includes("validate-mux-integration.mjs"), "CI validator is not configured.");
+check(smoke.includes("**/data/video-platform.json") && smoke.includes("local MP4 fallback"), "Browser smoke test must stub the hosted video backend and remain deterministic.");
 check(!/MUX_TOKEN_SECRET\s*[:=]\s*["'][^"']+["']/.test(admin + webhook + publicApi), "Literal Mux secret appears in code.");
 if (errors.length) { console.error("Mux integration contract: FAIL"); errors.forEach((e) => console.error(" - " + e)); process.exit(1); }
 console.log("Mux integration contract: PASS");

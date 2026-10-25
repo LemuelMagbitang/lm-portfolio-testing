@@ -84,6 +84,20 @@ async function waitForServer(url, timeoutMs = 5000) {
 }
 
 async function configureLogoRoutes(page) {
+  // Keep CI deterministic and offline: the live Supabase project is provisioned
+  // separately from the static-site smoke tests. Exercise the local MP4 fallback
+  // here rather than making browser tests depend on personal backend state.
+  await page.route('**/data/video-platform.json', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        supabaseUrl: '',
+        supabaseAnonKey: '',
+        creatorId: 'lemuel-magbitang'
+      })
+    });
+  });
   await page.route('https://cdn.simpleicons.org/**', async route => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h22v22H1z"/></svg>';
     await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
