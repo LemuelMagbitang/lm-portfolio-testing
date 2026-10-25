@@ -1,6 +1,17 @@
 import { authorizeAdmin, corsHeaders, isSafePublicMp4Reference, jsonResponse, MuxApiError, muxRequest, safeSlug, safeText } from "../_shared/http.ts";
 
-function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Unexpected video CMS error."; }
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string" && error.trim()) return error.trim();
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const fields = ["message", "details", "hint", "code"];
+    const parts = fields.map((key) => record[key])
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    if (parts.length) return parts.join(" | ");
+  }
+  return "Unexpected video CMS error.";
+}
 function placement(value: unknown): string | null {
   const item = String(value || "project").trim().toLowerCase();
   return ["hero", "project", "background", "footer", "other"].includes(item) ? item : null;
@@ -38,11 +49,15 @@ Deno.serve(async (request: Request) => {
       const { data: video, error: ve } = await db.from("videos").insert({
         id: videoId, title, slug, placement: place, description: safeText(body.description, 2000), published: false, created_by: auth.user.id
       }).select("*").single();
-      if (ve) throw ve;
+      if (ve) throw new Error("Mux returned the asset, but inserting the CMS video row failed: " + errorMessage(ve));
       const { data: asset, error: ae } = await db.from("video_assets").insert({
         id: assetId, video_id: videoId, provider: "mux", external_id: assetId, upload_state: "not_started"
       }).select("*").single();
-      if (ae) { await db.from("videos").delete().eq("id", videoId); throw ae; }
+      if (ae) {
+        const cleanup = await db.from("videos").delete().eq("id", videoId);
+        throw new Error("The CMS video row was created, but inserting the Mux asset row failed: " + errorMessage(ae) +
+          (cleanup.error ? " | Video-row cleanup also failed: " + errorMessage(cleanup.error) : ""));
+      }
       return jsonResponse(request, { video, asset }, 201);
     }
 
@@ -52,7 +67,7 @@ Deno.serve(async (request: Request) => {
       const place = placement(body.placement);
       if (!muxAssetId || !slug || !place) return jsonResponse(request, { error: "Provide Mux asset ID, lowercase slug and placement." }, 400);
       const { data: existing, error: existingError } = await db.from("video_assets").select("id,video_id").eq("mux_asset_id", muxAssetId).maybeSingle();
-      if (existingError) throw existingError;
+      if (existingError) throw new Error("Import failed while checking for an existing asset in video_assets: " + errorMessage(existingError));
       if (existing) return jsonResponse(request, { error: "This asset is already linked to a CMS video.", videoId: existing.video_id }, 409);
       const remote = await muxRequest("/assets/" + encodeURIComponent(muxAssetId));
       const videoId = crypto.randomUUID();
