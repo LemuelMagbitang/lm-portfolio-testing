@@ -53,6 +53,18 @@ function getFallbackThumbnailSource(project = {}, thumbnail = {}) {
     const src = String(item?.src || '').trim();
     if (!src || isYouTubeMedia(item)) continue;
     const type = String(item.type || mediaTypeFromSrc(src)).toLowerCase();
+    if (type === 'mux') {
+      const poster = String(item.poster || item.src || '').trim();
+      if (!poster) continue;
+      return {
+        ...presentation,
+        type: 'image',
+        src: poster,
+        background: item.background && typeof item.background === 'object'
+          ? item.background
+          : presentation.background
+      };
+    }
     if (['image', 'video', 'lottie', 'model'].includes(type)) {
       return {
         ...presentation,

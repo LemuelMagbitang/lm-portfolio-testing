@@ -2530,7 +2530,7 @@ export function createLightboxMediaRenderer({
       // stays available there. In the group, one tap/click opens Inspect.
       if(activeInspector?.entry===entry)return;
       const target=event.target;
-      if(target.closest?.('button,a,input,select,textarea,video,iframe,.model-viewer-shell,.lightbox-inspect-back'))return;
+      if(target.closest?.('button,a,input,select,textarea,video,mux-player,iframe,.model-viewer-shell,.lightbox-inspect-back'))return;
       event.preventDefault?.();
       event.stopPropagation?.();
       openArtworkInspect(container,entry,project,entry);
@@ -2601,6 +2601,8 @@ export function createLightboxMediaRenderer({
       destination.appendChild(entry);
       const video = entry.querySelector('video');
       if (video) bindPlaybackHandoff(container, video, 'video');
+      const muxPlayer = entry.querySelector('mux-player');
+      if (muxPlayer) bindPlaybackHandoff(container, muxPlayer, 'mux');
       const youtube = entry.querySelector('iframe[data-lm-youtube]');
       if (youtube) bindPlaybackHandoff(container, youtube, 'youtube');
       rendered += 1;
