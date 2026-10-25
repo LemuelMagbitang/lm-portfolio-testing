@@ -16,6 +16,19 @@ function placement(value: unknown): string | null {
   const item = String(value || "project").trim().toLowerCase();
   return ["hero", "project", "background", "footer", "other"].includes(item) ? item : null;
 }
+
+// Mux returns created_at as Unix seconds (often a numeric string), whereas
+// Postgres timestamptz expects an ISO timestamp or another parseable date.
+function muxTimestampToIso(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return new Date().toISOString();
+  const numeric = Number(raw);
+  const millis = Number.isFinite(numeric)
+    ? (Math.abs(numeric) < 100_000_000_000 ? numeric * 1000 : numeric)
+    : Date.parse(raw);
+  const date = new Date(millis);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : new Date().toISOString();
+}
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
   try {
@@ -87,7 +100,7 @@ Deno.serve(async (request: Request) => {
         upload_state: "uploaded", asset_status: remote?.status || "preparing",
         processing_state: remote?.progress?.state || null, duration_seconds: remote?.duration ?? null,
         aspect_ratio: remote?.aspect_ratio || null, resolution_tier: remote?.resolution_tier || null,
-        uploaded_at: remote?.created_at || new Date().toISOString(),
+        uploaded_at: muxTimestampToIso(remote?.created_at),
         last_error: remote?.errors ? JSON.stringify(remote.errors) : null
       }).select("*").single();
       if (ae) { await db.from("videos").delete().eq("id", videoId); throw ae; }

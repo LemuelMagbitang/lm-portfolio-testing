@@ -7,7 +7,7 @@ This repository remains a static site with its existing GitHub-backed JSON CMS. 
 - admin/videos.html is a Video Library page linked from the current CMS; it does not replace the GitHub JSON editor.
 - New uploads create a video row and asset-version row before requesting a Mux Direct Upload.
 - The internal asset-version UUID is sent to Mux as external_id for new CMS uploads.
-- Existing Mux Dashboard uploads can be imported by Mux asset ID without uploading the file twice.
+- Existing Mux Dashboard uploads can be imported by Mux asset ID without uploading the file twice. Import normalizes Mux's Unix-second `created_at` value to an ISO timestamp before storing `uploaded_at` in Postgres.
 - Existing hosted static MP4 paths can be registered; old project media is not migrated automatically.
 
 ## Provision Supabase
