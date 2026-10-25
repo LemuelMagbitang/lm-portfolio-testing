@@ -375,9 +375,11 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
             timeoutMs: 1400
           });
           if (remoteVideos.length && await ensureMuxPlayer()) {
+            // Explicit CMS-selected slides take priority; the placement feed
+            // remains a compatibility fallback for older content only.
             manualSources = config.loopMode === 'mixed'
-              ? remoteVideos.concat(manualSources)
-              : remoteVideos;
+              ? manualSources.concat(remoteVideos)
+              : (manualSources.length ? manualSources : remoteVideos);
           }
         } catch (_) {
           // The video backend must never block the normal portfolio startup.
