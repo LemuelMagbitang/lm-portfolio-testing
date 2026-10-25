@@ -94,7 +94,9 @@ jobs:
           find js -type f -name '*.js' -print0 | sort -z | xargs -0 -r -n1 node --check
 
       - name: Syntax-check CMS
-        run: node --check admin/admin.js
+        run: |
+          node --check admin/admin.js
+          node --check admin/videos.js
 
       - name: Syntax-check smoke test
         run: node --check tools/smoke-browser.mjs

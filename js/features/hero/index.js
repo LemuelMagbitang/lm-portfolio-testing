@@ -535,11 +535,17 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
       wrap.dataset.heroType = source.type === 'mux' ? 'video' : (source.type || 'image');
-      if (isVideoSource && !hasVideoPoster) {
+      if (source.type === 'video' && !hasVideoPoster) {
         wrap.classList.add('is-video-pending');
         const clearVideoPending = () => wrap.classList.remove('is-video-pending');
         media.addEventListener('loadeddata', clearVideoPending, { once: true });
         media.addEventListener('playing', clearVideoPending, { once: true });
+      }
+      if (source.type === 'mux' && !hasVideoPoster) {
+        wrap.classList.add('is-video-pending');
+        const clearMuxPending = () => wrap.classList.remove('is-video-pending');
+        media.addEventListener('loadeddata', clearMuxPending, { once: true });
+        media.addEventListener('playing', clearMuxPending, { once: true });
       }
       wrap.classList.toggle('slide--zoom', zoomTransition);
       wrap.classList.toggle('slide--fade', fadeTransition);
@@ -567,7 +573,7 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
     // video block page composition until its first frame arrives; start playback
     // and recovery immediately, leaving the neutral loading surface in place.
     const firstSlide = heroContainer.querySelector('.slide');
-    if (firstSlide && !['video', 'mux'].includes(sources[0]?.type)) {
+    if (firstSlide && sources[0]?.type !== 'video' && sources[0]?.type !== 'mux') {
       try { await waitForHeroMedia(firstSlide.firstElementChild, sources[0]?.type, windowRef); }
       catch (_) { /* An unavailable visual must never trap startup. */ }
     }
