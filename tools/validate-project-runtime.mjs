@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-05';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-06';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-05';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-05';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-06';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-06';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-02';
 import {
   applyProjectCardOrientation,
@@ -412,8 +412,18 @@ assert.equal(lottieThumbnail.attributes.get('src'), '/assets/media/lazy.json');
 assert.equal(lottieExplicitLoadCount, 1,
   'A late-assigned Lottie source must initialize an already-upgraded player.');
 assert.equal(lottieThumbnail.loadedSource, '/assets/media/lazy.json');
-assert.equal(hasLottieLoadingFallback(), false,
-  'A Lottie thumbnail must not show a loading label or poster while its source initializes.');
+const lottiePendingSurface = lottieLoadingContainer.children.find(
+  child => child.className === 'project-thumb-media-fallback'
+);
+assert.ok(lottiePendingSurface,
+  'A selected Lottie thumbnail must show its loading surface while the player initializes.');
+assert.equal(lottiePendingSurface.dataset.state, 'loading');
+assert.equal(lottiePendingSurface.children.some(child =>
+  child.className === 'project-thumb-media-fallback-image'), false,
+  'A secondary poster must not replace the selected Lottie while it is still loading.');
+assert.equal(lottiePendingSurface.children.find(child =>
+  child.className === 'project-thumb-media-fallback-label')?.textContent, 'LOADING ANIMATION',
+  'The selected Lottie loading status must be visible before render readiness.');
 visibilityObserver.trigger(lottieThumbnail, true);
 assert.equal(lottieThumbnail.playCount, 0,
   'Visibility alone must not play a Lottie source that is still loading.');
@@ -422,8 +432,8 @@ lottieThumbnail.dispatch('load');
 assert.equal(lottieThumbnail.dataset.mediaState, 'loading',
   'The Lottie thumbnail must remain hidden until its SVG render is ready.');
 assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), false);
-assert.equal(hasLottieLoadingFallback(), false,
-  'The Lottie data-load event must not display a placeholder before SVG rendering is ready.');
+assert.equal(hasLottieLoadingFallback(), true,
+  'The Lottie loading overlay must remain until SVG rendering is ready.');
 assert.equal(lottieThumbnail.playCount, 0);
 lottieThumbnail.dispatch('ready');
 assert.equal(lottieThumbnail.classList.values.has('is-media-ready'), true);
@@ -494,6 +504,11 @@ const fallbackLottie = buildProjectThumbnailMedia(
 );
 fallbackLottie.parentElement = fallbackContainer;
 preloadObserver.trigger(fallbackLottie, true);
+const fallbackLoadingSurface = fallbackContainer.children.find(node => node.className === 'project-thumb-media-fallback');
+assert.ok(fallbackLoadingSurface, 'The failed default Lottie selection must first show its loading surface.');
+assert.equal(fallbackLoadingSurface.dataset.state, 'loading');
+assert.equal(fallbackLoadingSurface.children.some(node => node.className === 'project-thumb-media-fallback-image'), false,
+  'The fallback poster must not hide the selected source during loading.');
 await new Promise(resolve => setTimeout(resolve, 0));
 const fallbackSurface = fallbackContainer.children.find(node => node.className === 'project-thumb-media-fallback');
 assert.ok(fallbackSurface, 'Failed Lottie should retain a visible fallback surface.');

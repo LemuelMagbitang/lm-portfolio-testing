@@ -10162,7 +10162,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-05');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-06');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10203,7 +10203,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-05');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-06');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10244,7 +10244,7 @@ try {
     await smokePage(browser, '/?media-cache-disabled=1', async page => {
       const result = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
-          await import('/js/features/projects/project-thumbnail.js?v=20261025-05');
+          await import('/js/features/projects/project-thumbnail.js?v=20261025-06');
         const makeHost = () => {
           const host = document.createElement('div');
           host.className = 'card-thumbnail';
@@ -10357,7 +10357,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-05');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-06');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-loading-fixtures';
         Object.assign(fixture.style, {
@@ -10483,9 +10483,8 @@ try {
               !r.textMaxWidth || r.textWrap !== 'anywhere') {
             throw new Error('Thumbnail loading layer/source contract failed ('+viewportName+'): '+JSON.stringify(r));
           }
-          if (r.id === 'thumbnail-loading-default-square' &&
-              !r.posterSource.endsWith('/default-secondary.svg')) {
-            throw new Error('Default thumbnail did not retain the card renderer’s existing static fallback: '+JSON.stringify(r));
+          if (r.id === 'thumbnail-loading-default-square' && r.posterSource) {
+            throw new Error('The selected default thumbnail must remain visible while loading; secondary artwork is reserved for actual load failure: '+JSON.stringify(r));
           }
           if (r.id !== 'thumbnail-loading-default-square' && r.posterSource) {
             throw new Error('Custom thumbnail unexpectedly substituted another poster: '+JSON.stringify(r));
@@ -10551,7 +10550,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-05');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-06');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-placeholder-fixtures';
         Object.assign(fixture.style, {
