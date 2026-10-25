@@ -24,7 +24,7 @@ check(webhook.includes("mux-signature") && webhook.includes("crypto.subtle.sign"
 check(webhook.includes("video.upload.asset_created") && webhook.includes("video.asset.errored") && webhook.includes("video.asset.deleted") && webhook.includes("processed_at"), "Webhook lifecycle/idempotency incomplete.");
 check(webhook.includes("async function unpublishActiveAssets") &&
   webhook.includes("await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id))") &&
-  webhook.includes("await unpublishActiveAssets(db, [asset.id])"),
+  webhook.includes("await unpublishActiveAssets(db, (result.data || []).map((item: any) => item.id))"),
   "Errored and deleted active assets must be unpublished with checked database updates.");
 check(migration.includes("last_mux_event_created_at timestamptz") &&
   webhook.includes('Date.parse(String(event.created_at || ""))') &&
