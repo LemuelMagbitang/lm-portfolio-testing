@@ -6,16 +6,31 @@ export function serviceDb() {
   if (!url || !key) throw new Error("Supabase service credentials are not configured.");
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
+function normalizeOrigin(value: string): string {
+  try {
+    const parsed = new URL(String(value || "").trim());
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) return "";
+    if (parsed.protocol !== "https:" &&
+        !(parsed.protocol === "http:" && ["localhost", "127.0.0.1"].includes(parsed.hostname))) return "";
+    return parsed.origin;
+  } catch (_) {
+    return "";
+  }
+}
+
 export function corsHeaders(request: Request, publicRead = false): Record<string, string> {
-  const origin = request.headers.get("origin") || "";
-  const allowed = (Deno.env.get("CMS_ALLOWED_ORIGINS") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const requestOrigin = normalizeOrigin(request.headers.get("origin") || "");
+  // Normalize configured values so accidental trailing slashes do not break
+  // exact origin matching. Origins never include path segments.
+  const allowed = (Deno.env.get("CMS_ALLOWED_ORIGINS") || "")
+    .split(",").map(normalizeOrigin).filter(Boolean);
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Vary": "Origin"
   };
   if (publicRead) headers["Access-Control-Allow-Origin"] = "*";
-  else if (origin && allowed.includes(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  else if (requestOrigin && allowed.includes(requestOrigin)) headers["Access-Control-Allow-Origin"] = requestOrigin;
   return headers;
 }
 export function jsonResponse(request: Request, body: unknown, status = 200, publicRead = false): Response {

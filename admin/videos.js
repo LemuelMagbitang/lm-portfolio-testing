@@ -37,13 +37,43 @@ async function token() {
   if (!session.expires_at || Number(session.expires_at) * 1000 > Date.now() + 30000) return session.access_token;
   const updated = await refreshToken(); if (!updated) throw new Error("Your session expired. Sign in again."); return updated;
 }
+function describeApiError(statusCode, payload) {
+  const detail = String(payload?.error || payload?.message || payload?.msg || "").trim();
+  if (statusCode === 401) {
+    return "Unauthorized (401). Sign in again. If sign-in succeeds but the request still fails, verify mux-admin is deployed with verify_jwt = false and that the CMS session is valid." +
+      (detail ? " Server detail: " + detail : "");
+  }
+  if (statusCode === 403) {
+    return "Forbidden (403). The signed-in Supabase Auth user's UID must be included in the server-side CMS_ADMIN_USER_IDS secret." +
+      (detail ? " Server detail: " + detail : "");
+  }
+  if (statusCode === 404) {
+    return "Not found (404). Check that mux-admin is deployed to the Supabase project configured above." +
+      (detail ? " Server detail: " + detail : "");
+  }
+  if (statusCode >= 500) {
+    return "Backend error (" + statusCode + "). Check Supabase Edge Function logs, database access, and the required Mux/Supabase secrets." +
+      (detail ? " Server detail: " + detail : "");
+  }
+  return detail || "Request failed with HTTP " + statusCode;
+}
 async function api(route, options = {}) {
   const base = normalizeBase(config.supabaseUrl); let auth = await token();
   const call = (value) => fetch(base + "/functions/v1/mux-admin/" + route.replace(/^\/+/, ""), { method: options.method || "GET",
     headers: { apikey: config.supabaseAnonKey, Authorization: "Bearer " + value, ...(options.body === undefined ? {} : { "Content-Type": "application/json" }) },
     body: options.body === undefined ? undefined : JSON.stringify(options.body), credentials: "omit" });
-  let response = await call(auth); if (response.status === 401) { auth = await refreshToken(); if (auth) response = await call(auth); }
-  const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error || "Request failed with HTTP " + response.status); return payload;
+  let response;
+  try {
+    response = await call(auth);
+    if (response.status === 401) { auth = await refreshToken(); if (auth) response = await call(auth); }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error || "");
+    throw new Error("Could not reach the Supabase admin API. Check the browser origin against CMS_ALLOWED_ORIGINS and inspect CORS/network errors." +
+      (detail ? " " + detail : ""));
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(describeApiError(response.status, payload));
+  return payload;
 }
 function button(label, action, primary = false) { const el = document.createElement("button"); el.type = "button"; el.className = "button" + (primary ? " primary" : ""); el.textContent = label; el.addEventListener("click", action); return el; }
 function assetStatus(asset) {

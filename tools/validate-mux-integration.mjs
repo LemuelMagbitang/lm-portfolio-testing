@@ -25,6 +25,7 @@ check(migration.includes("mux_webhook_events") && migration.includes("enable row
 check(migration.includes("mux_asset_id text unique") && migration.includes("mux_upload_id text unique"), "Mux asset and upload IDs must be unique.");
 check(admin.includes("external_id: asset.external_id || asset.id") && read("supabase/functions/_shared/http.ts").includes("CMS_ADMIN_USER_IDS"), "Admin auth or external_id assignment missing.");
 check(admin.includes("MUX_UPLOAD_CORS_ORIGIN") && admin.includes("import-mux") && admin.includes("import-static"), "CORS settings or existing asset import route missing.");
+check(read("supabase/functions/_shared/http.ts").includes("function normalizeOrigin") && read("supabase/functions/_shared/http.ts").includes("allowed.includes(requestOrigin)"), "CORS origin matching must normalize configured origins before comparison.");
 check(webhook.includes("mux-signature") && webhook.includes("crypto.subtle.sign") && webhook.includes("video.asset.ready"), "Webhook signature or lifecycle processing missing.");
 check(webhook.includes("video.upload.asset_created") && webhook.includes("video.asset.errored") && webhook.includes("video.asset.deleted") && webhook.includes("processed_at"), "Webhook lifecycle/idempotency incomplete.");
 const assetCreatedHandler = webhook.split('if (event.type === "video.upload.asset_created") {')[1]?.split('} else if (event.type === "video.asset.ready") {')[0] || "";
@@ -64,6 +65,7 @@ check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElemen
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
+check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
 check(Array.isArray(heroLoop) && heroLoop.some((item) => item.type === "video" && item.src), "Legacy MP4 fallback must remain.");
 const supabaseUrl = String(config.supabaseUrl || "").trim();
 const supabaseKey = String(config.supabaseAnonKey || "").trim();

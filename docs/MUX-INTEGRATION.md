@@ -24,10 +24,10 @@ This repository remains a static site with its existing GitHub-backed JSON CMS. 
    - npx supabase secrets set CMS_ALLOWED_ORIGINS=https://YOUR_APPROVED_SITE_ORIGIN
    - npx supabase secrets set MUX_UPLOAD_CORS_ORIGIN=https://YOUR_APPROVED_CMS_ORIGIN
    - npx supabase secrets set MUX_CREATOR_ID=lemuel-magbitang
-7. Deploy functions with:
-   npx supabase functions deploy mux-admin
-   npx supabase functions deploy mux-webhook
-   npx supabase functions deploy mux-public
+7. Deploy functions (if local npm registry DNS/bundling fails, try Supabase's API bundler):
+   npx supabase functions deploy mux-admin --project-ref YOUR_PROJECT_REF --use-api
+   npx supabase functions deploy mux-webhook --project-ref YOUR_PROJECT_REF --use-api
+   npx supabase functions deploy mux-public --project-ref YOUR_PROJECT_REF --use-api
 
 Use exact origins: scheme and hostname only. Never commit Mux tokens, webhook secret, or Supabase service-role key into public files, this document, GitHub issues, screenshots or chat.
 
@@ -37,9 +37,30 @@ After the Supabase project exists, set data/video-platform.json on the active br
 - supabaseAnonKey: the public anon/publishable key
 - creatorId: lemuel-magbitang
 
-These values are blank intentionally until the project is provisioned. Public browser access to database tables is revoked; the public Edge Function returns only published metadata. The public key can be visible, but server secrets cannot.
+The active testing branch may contain the configured project URL and publishable key. These are browser-visible values. Public browser access to database tables is revoked; the public Edge Function returns only published metadata. Never put Mux token secrets, webhook signing secrets, or the Supabase service-role key in this file.
 
 The deployed website at https://lemuelmagbitang.github.io and the legacy main branch remain reference-only. Once the active branch is intentionally promoted, configure the approved production origin and public config on the deployment source.
+
+
+## CORS and administrator authorization for the current GitHub Pages test
+
+The current Video Library test page is served from:
+https://lemuelmagbitang.github.io/lm-portfolio-testing/admin/videos.html
+
+Its browser **origin** is only **https://lemuelmagbitang.github.io**. The repository path /lm-portfolio-testing is not part of the origin. Set these Supabase secrets for the current test origin:
+- CMS_ALLOWED_ORIGINS=https://lemuelmagbitang.github.io
+- MUX_UPLOAD_CORS_ORIGIN=https://lemuelmagbitang.github.io
+- CMS_ADMIN_USER_IDS=YOUR_SUPABASE_AUTH_USER_UUID
+
+Use the actual Auth user UID from Supabase Authentication -> Users, not the email. For multiple approved browser origins, CMS_ALLOWED_ORIGINS accepts comma-separated origins. Avoid a trailing slash; the function normalizes it, but the canonical format is scheme + hostname + optional port only. MUX_UPLOAD_CORS_ORIGIN is a single origin and must match the page from which Mux Direct Upload is initiated.
+
+The current GitHub Pages test and the intended root portfolio will both use the https://lemuelmagbitang.github.io origin; only the page path changes. Do not add the Codespaces host unless you will actually open the CMS there. When testing from a forwarded Codespaces port, copy the exact forwarded origin from the browser address bar and use it in CMS_ALLOWED_ORIGINS; set MUX_UPLOAD_CORS_ORIGIN to that origin only while uploading from that page.
+
+Admin authorization is separate from CORS:
+- HTTP 401 means no valid CMS bearer session (or the function gateway is still verifying JWTs).
+- HTTP 403 means the signed-in Supabase Auth UID is not in CMS_ADMIN_USER_IDS.
+- HTTP 404 usually means the function or route is not deployed to the configured project.
+- HTTP 500 means inspect Edge Function logs and verify server secrets/database access.
 
 ## Mux webhook
 In Mux Dashboard create a webhook at:
@@ -73,4 +94,4 @@ The hero calls the public Mux feed only if configured. A ready published Mux vid
 - Blank config and API/player failures preserve legacy MP4 hero.
 - Test mobile autoplay, reduced motion, media errors, captions/lightbox cleanup and offline behavior.
 
-This is a code/schema scaffold. Supabase project creation, secrets, and webhook registration remain account-level setup steps.
+The code/schema has been deployed to the configured Supabase project, but live upload/import success still depends on correct server secrets, the exact CMS origin, the administrator UID allowlist, and the registered Mux webhook.
