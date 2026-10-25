@@ -170,6 +170,10 @@ export async function initFooterAnimation(options = {}) {
   const windowRef = documentRef?.defaultView || globalThis.window;
   if (!documentRef || !windowRef) return null;
 
+  const reducedMotion = typeof options.prefersReducedMotion === 'function'
+    ? options.prefersReducedMotion
+    : () => prefersReducedMotion(windowRef);
+
   const container = documentRef.getElementById('footerAnimation');
   if (!container) return null;
 
@@ -203,6 +207,15 @@ export async function initFooterAnimation(options = {}) {
     });
   }
 
+  const reduceMotionNow = Boolean(reducedMotion());
+  if (reduceMotionNow) {
+    sources = sources.flatMap(source => {
+      if (source.type !== 'mux') return [source];
+      const poster = String(source.poster || source.src || '').trim();
+      return poster ? [{ ...source, type: 'image', src: poster }] : [];
+    });
+  }
+
   if (!sources.length) {
     container.replaceChildren();
     container.hidden = true;
@@ -223,9 +236,6 @@ export async function initFooterAnimation(options = {}) {
   }
 
   const lifecycle = createLifecycle();
-  const reducedMotion = typeof options.prefersReducedMotion === 'function'
-    ? options.prefersReducedMotion
-    : () => prefersReducedMotion(windowRef);
 
   const transitionStyle = ['kenburns', 'fade', 'none'].includes(heroTiming.transitionStyle)
     ? heroTiming.transitionStyle

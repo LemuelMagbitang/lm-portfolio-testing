@@ -273,6 +273,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
     const parseYouTube = typeof options.parseYouTubeUrl === 'function' ? options.parseYouTubeUrl : parseYouTubeUrl;
     const getProjects = typeof options.getProjects === 'function' ? options.getProjects : null;
     const isReducedMotion = typeof options.prefersReducedMotion === 'function' ? options.prefersReducedMotion : prefersReducedMotion;
+    const reducedMotion = Boolean(isReducedMotion());
 
     const heroLoopUrl = options.heroLoopUrl || 'data/hero-loop.json';
     const heroMessagesUrl = options.heroMessagesUrl || 'data/hero.json';
@@ -381,21 +382,25 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
         // Mux is optional: use it only when configuration, feed, and player
         // are available. The checked-in MP4 list remains the fallback.
-        try {
-          const remoteVideos = await loadPublicMuxVideos('hero', {
-            resolveUrl: resolveAssetUrl,
-            fetchImpl: windowRef.fetch.bind(windowRef),
-            timeoutMs: 1400
-          });
-          if (remoteVideos.length && await ensureMuxPlayer()) {
-            // Explicit CMS-selected slides take priority; the placement feed
-            // remains a compatibility fallback for older content only.
-            manualSources = config.loopMode === 'mixed'
-              ? manualSources.concat(remoteVideos)
-              : (manualSources.length ? manualSources : remoteVideos);
+        // Reduced-motion visitors use checked-in/static artwork and do not need
+        // to discover or initialize hosted video streams during startup.
+        if (!reducedMotion) {
+          try {
+            const remoteVideos = await loadPublicMuxVideos('hero', {
+              resolveUrl: resolveAssetUrl,
+              fetchImpl: windowRef.fetch.bind(windowRef),
+              timeoutMs: 1400
+            });
+            if (remoteVideos.length && await ensureMuxPlayer()) {
+              // Explicit CMS-selected slides take priority; the placement feed
+              // remains a compatibility fallback for older content only.
+              manualSources = config.loopMode === 'mixed'
+                ? manualSources.concat(remoteVideos)
+                : (manualSources.length ? manualSources : remoteVideos);
+            }
+          } catch (_) {
+            // The video backend must never block the normal portfolio startup.
           }
-        } catch (_) {
-          // The video backend must never block the normal portfolio startup.
         }
       } catch (err) {
         console.warn('Hero banner: could not load manual hero loop data.', err);
@@ -477,7 +482,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
     if (!sources.length) return;
 
-    if (sources.some(source => source.type === 'mux')) {
+    if (!reducedMotion && sources.some(source => source.type === 'mux')) {
       let muxReady = false;
       try { muxReady = await ensureMuxPlayer(); } catch (_) {}
       if (!muxReady) {
@@ -493,8 +498,6 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
     }
     if (!sources.length) return;
 
-    const reducedMotion = Boolean(isReducedMotion());
-
     if (sources.some(source => source.type === 'lottie')) await ensureLottie();
     if (sources.some(source => source.background)) await ensureMediaBackground();
 
@@ -509,26 +512,42 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       let hasVideoPoster = false;
       const isVideoSource = source.type === 'video' || source.type === 'mux';
       if (source.type === 'mux') {
-        media = documentRef.createElement('mux-player');
-        media.setAttribute('playback-id', source.playbackId);
-        media.setAttribute('metadata-video-title', source.alt || 'Portfolio hero reel');
-        media.setAttribute('stream-type', 'on-demand');
-        media.muted = true;
-        media.defaultMuted = true;
-        media.setAttribute('muted', '');
-        media.loop = false;
-        media.controls = false;
-        media.style.setProperty('--controls', 'none');
-        media.style.setProperty('--center-controls', 'none');
-        media.style.setProperty('--top-controls', 'none');
-        media.style.setProperty('--bottom-controls', 'none');
-        media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
-        if (!reducedMotion) media.setAttribute('autoplay', 'muted');
-        else media.removeAttribute('autoplay');
-        const posterSource = source.poster || config.defaultVideoPoster;
-        if (posterSource) {
-          media.setAttribute('poster', posterSource);
-          hasVideoPoster = true;
+        const posterSource = source.poster || config.defaultVideoPoster || source.src;
+        if (reducedMotion) {
+          // Preserve the visual poster without creating a streaming source.
+          // A source-less native video keeps its poster while avoiding Mux's
+          // player/module/network work for visitors who request reduced motion.
+          media = documentRef.createElement('video');
+          media.muted = true;
+          media.defaultMuted = true;
+          media.setAttribute('muted', '');
+          media.controls = false;
+          media.loop = false;
+          media.preload = 'none';
+          if (posterSource) {
+            media.poster = resolveAssetUrl(posterSource);
+            hasVideoPoster = true;
+          }
+        } else {
+          media = documentRef.createElement('mux-player');
+          media.setAttribute('playback-id', source.playbackId);
+          media.setAttribute('metadata-video-title', source.alt || 'Portfolio hero reel');
+          media.setAttribute('stream-type', 'on-demand');
+          media.muted = true;
+          media.defaultMuted = true;
+          media.setAttribute('muted', '');
+          media.loop = false;
+          media.controls = false;
+          media.style.setProperty('--controls', 'none');
+          media.style.setProperty('--center-controls', 'none');
+          media.style.setProperty('--top-controls', 'none');
+          media.style.setProperty('--bottom-controls', 'none');
+          media.preload = i === 0 ? 'auto' : 'metadata';
+          media.setAttribute('autoplay', 'muted');
+          if (posterSource) {
+            media.setAttribute('poster', posterSource);
+            hasVideoPoster = true;
+          }
         }
       } else if (source.type === 'video') {
         media = documentRef.createElement('video');
@@ -576,7 +595,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
         media.addEventListener('loadeddata', clearVideoPending, { once: true });
         media.addEventListener('playing', clearVideoPending, { once: true });
       }
-      if (source.type === 'mux' && !hasVideoPoster) {
+      if (source.type === 'mux' && !hasVideoPoster && !reducedMotion) {
         wrap.classList.add('is-video-pending');
         const clearMuxPending = () => wrap.classList.remove('is-video-pending');
         media.addEventListener('loadeddata', clearMuxPending, { once: true });

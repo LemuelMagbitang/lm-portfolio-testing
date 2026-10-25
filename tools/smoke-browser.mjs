@@ -10228,13 +10228,15 @@ try {
           poster: media?.poster || '',
           posterAttribute: media?.getAttribute('poster') || '',
           sourceAttribute: media?.getAttribute('src') || '',
+          playbackIdAttribute: media?.getAttribute('playback-id') || '',
           currentSrc: media?.currentSrc || '',
           paused: media?.paused ?? false,
           loading: transition?.dataset.loading || ''
         };
       });
-      if (!reducedHeroState.preference || reducedHeroState.preload !== 'none' ||
-          reducedHeroState.sourceAttribute || reducedHeroState.currentSrc ||
+      if (!reducedHeroState.preference || reducedHeroState.playerType !== 'video' ||
+          reducedHeroState.preload !== 'none' || reducedHeroState.sourceAttribute ||
+          reducedHeroState.playbackIdAttribute || reducedHeroState.currentSrc ||
           /og-image\.jpg/i.test(reducedHeroState.poster) || /og-image\.jpg/i.test(reducedHeroState.posterAttribute) ||
           !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
         throw new Error(

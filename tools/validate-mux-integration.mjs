@@ -71,22 +71,29 @@ check(bridge.includes("data/video-platform.json") && bridge.includes("/functions
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
 const heroMuxSetup = hero.split("if (source.type === 'mux') {")[1]?.split("} else if (source.type === 'video') {")[0] || "";
+const heroReducedMotionBranch = heroMuxSetup.split("if (reducedMotion) {")[1]?.split("} else {")[0] || "";
 check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("fallbackMuxToNativeVideo") &&
   hero.includes("setAttribute('autoplay', 'muted')") &&
   !heroMuxSetup.includes("playsInline") &&
   !heroMuxSetup.includes("playsinline") &&
   hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&
+  hero.includes("if (!reducedMotion && sources.some(source => source.type === 'mux'))") &&
+  heroReducedMotionBranch.includes("documentRef.createElement('video')") &&
+  !heroReducedMotionBranch.includes("playback-id") &&
   styles.includes(".hero-banner .slide mux-player::part(center)"),
-  "Hero Mux playback must autoplay muted, hide its UI, avoid the unsupported playsInline setter, and retain the native MP4 fallback.");
+  "Hero Mux playback must autoplay muted in normal mode, render poster-only native media for reduced motion, avoid unsupported playsInline handling, hide UI and retain fallback.");
 check(footer.includes("media.controls = false") &&
   footer.includes("media.setAttribute('autoplay', 'muted')") &&
   footer.includes("media.style.setProperty('--controls', 'none')") &&
   !footer.includes("media.setAttribute('playsinline'") &&
   footer.includes("!reducedMotion() && index === 0") &&
+  footer.includes("const reduceMotionNow = Boolean(reducedMotion())") &&
+  footer.includes("source.type !== 'mux'") &&
+  footer.includes("type: 'image', src: poster") &&
   styles.includes(".footer-animation-slide mux-player::part(center)") &&
   styles.includes("--controls:none"),
-  "Footer Mux playback must autoplay only the active muted slide without visible controls or unsupported playsInline handling.");
+  "Footer Mux playback must autoplay only the active muted slide without visible controls; reduced-motion mode must use poster-only images.");
 const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie') {")[0] || "";
 check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footerNativeVideo.includes("media.preload = autoplayAllowed ? 'auto' : 'none'") &&
