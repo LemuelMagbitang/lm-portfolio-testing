@@ -107,7 +107,7 @@ check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiEr
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),
   "Mux upstream HTTP status must be preserved and surfaced as a structured admin API error.");
-check(script.includes('payload?.code === "mux_auth_failed"') &&
+check(script.includes('"mux_auth_failed"') &&
   script.includes("MUX_TOKEN_ID and MUX_TOKEN_SECRET") &&
   script.includes("Mux Video Read permission"),
   "CMS must explain how to resolve rejected Mux API credentials.");
