@@ -38,7 +38,20 @@ async function token() {
   const updated = await refreshToken(); if (!updated) throw new Error("Your session expired. Sign in again."); return updated;
 }
 function describeApiError(statusCode, payload) {
-  const detail = String(payload?.error || payload?.message || payload?.msg || "").trim();
+  const detail = String(payload?.detail || payload?.error || payload?.message || payload?.msg || "").trim();
+  if (payload?.code === "mux_auth_failed") {
+    return "Mux rejected the server API credentials (upstream HTTP " + Number(payload?.upstreamStatus || statusCode) +
+      "). Verify MUX_TOKEN_ID and MUX_TOKEN_SECRET are a matching pair from the same Mux environment, and that the token has Mux Video Read permission." +
+      (detail ? " Mux detail: " + detail : "");
+  }
+  if (payload?.code === "mux_asset_not_found") {
+    return "Mux could not find this asset in the environment selected by the server token. Confirm the asset ID and that it belongs to the same Mux environment as MUX_TOKEN_ID/MUX_TOKEN_SECRET." +
+      (detail ? " Mux detail: " + detail : "");
+  }
+  if (payload?.code === "mux_api_error") {
+    return "Mux API request failed (upstream HTTP " + Number(payload?.upstreamStatus || statusCode) + ")." +
+      (detail ? " Mux detail: " + detail : "");
+  }
   if (statusCode === 401) {
     return "Unauthorized (401). Sign in again. If sign-in succeeds but the request still fails, verify mux-admin is deployed with verify_jwt = false and that the CMS session is valid." +
       (detail ? " Server detail: " + detail : "");

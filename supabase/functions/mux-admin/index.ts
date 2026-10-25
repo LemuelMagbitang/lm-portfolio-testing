@@ -1,4 +1,4 @@
-import { authorizeAdmin, corsHeaders, isSafePublicMp4Reference, jsonResponse, muxRequest, safeSlug, safeText } from "../_shared/http.ts";
+import { authorizeAdmin, corsHeaders, isSafePublicMp4Reference, jsonResponse, MuxApiError, muxRequest, safeSlug, safeText } from "../_shared/http.ts";
 
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Unexpected video CMS error."; }
 function placement(value: unknown): string | null {
@@ -153,6 +153,16 @@ Deno.serve(async (request: Request) => {
     }
     return jsonResponse(request, { error: "Video CMS route not found." }, 404);
   } catch (error) {
+    if (error instanceof MuxApiError) {
+      const authFailure = error.status === 401 || error.status === 403;
+      const assetNotFound = error.status === 404;
+      return jsonResponse(request, {
+        error: authFailure ? "Mux rejected the server API credentials." : assetNotFound ? "Mux could not find the requested asset." : "Mux API request failed.",
+        code: authFailure ? "mux_auth_failed" : assetNotFound ? "mux_asset_not_found" : "mux_api_error",
+        upstreamStatus: error.status,
+        detail: error.message
+      }, 502);
+    }
     return jsonResponse(request, { error: errorMessage(error) }, 500);
   }
 });

@@ -56,6 +56,13 @@ export async function authorizeAdmin(request: Request) {
   if (!allowlist.size || !allowlist.has(data.user.id)) return { ok: false as const, status: 403, error: "This account is not allowlisted as a CMS administrator." };
   return { ok: true as const, user: data.user, db: serviceDb() };
 }
+export class MuxApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "MuxApiError";
+  }
+}
+
 export async function muxRequest(path: string, method = "GET", body?: unknown) {
   const id = Deno.env.get("MUX_TOKEN_ID");
   const secret = Deno.env.get("MUX_TOKEN_SECRET");
@@ -64,7 +71,7 @@ export async function muxRequest(path: string, method = "GET", body?: unknown) {
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const response = await fetch("https://api.mux.com/video/v1" + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error?.messages?.join("; ") || payload?.error?.message || payload?.message || "Mux API returned HTTP " + response.status);
+  if (!response.ok) throw new MuxApiError(response.status, payload?.error?.messages?.join("; ") || payload?.error?.message || payload?.message || "Mux API returned HTTP " + response.status);
   return payload?.data;
 }
 export function safeSlug(value: unknown): string | null {

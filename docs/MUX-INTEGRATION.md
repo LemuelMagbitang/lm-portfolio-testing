@@ -61,6 +61,8 @@ Admin authorization is separate from CORS:
 - HTTP 403 means the signed-in Supabase Auth UID is not in CMS_ADMIN_USER_IDS.
 - HTTP 404 usually means the function or route is not deployed to the configured project.
 - HTTP 500 means inspect Edge Function logs and verify server secrets/database access.
+- HTTP 502 with code mux_auth_failed means Mux rejected the server-side MUX_TOKEN_ID/MUX_TOKEN_SECRET pair. Set both from the same Mux Access Token in the same environment, ensure it has Mux Video Read permission, and replace both Supabase secrets if either value may be wrong or lost. Never share the secret in chat.
+- HTTP 502 with code mux_asset_not_found means the asset ID may be mistyped or belongs to a different Mux environment than the server token.
 
 ## Mux webhook
 In Mux Dashboard create a webhook at:

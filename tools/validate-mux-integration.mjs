@@ -66,6 +66,13 @@ check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") &
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
+check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
+  admin.includes("new MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),
+  "Mux upstream HTTP status must be preserved and surfaced as a structured admin API error.");
+check(script.includes('payload?.code === "mux_auth_failed"') &&
+  script.includes("MUX_TOKEN_ID and MUX_TOKEN_SECRET") &&
+  script.includes("Mux Video Read permission"),
+  "CMS must explain how to resolve rejected Mux API credentials.");
 check(Array.isArray(heroLoop) && heroLoop.some((item) => item.type === "video" && item.src), "Legacy MP4 fallback must remain.");
 const supabaseUrl = String(config.supabaseUrl || "").trim();
 const supabaseKey = String(config.supabaseAnonKey || "").trim();
