@@ -18,7 +18,7 @@ const workflow = read(".github/workflows/site-validation.yml");
 const supabaseConfig = read("supabase/config.toml");
 check(migration.includes("create table if not exists public.videos") && migration.includes("create table if not exists public.video_assets"), "Video tables missing.");
 check(["mux-admin", "mux-webhook", "mux-public"].every((name) =>
-  new RegExp("\\[functions\\." + name + "\\]\\s*\\nverify_jwt\\s*=\\s*false").test(supabaseConfig)
+  new RegExp("\\[functions\." + name + "\\]\\s*\\nverify_jwt\\s*=\\s*false").test(supabaseConfig)
 ), "Supabase Edge Function JWT overrides must match each function's own auth model.");
 check(migration.includes("mux_webhook_events") && migration.includes("enable row level security") && migration.includes("revoke all on public.video_assets from anon, authenticated"), "Webhook store or RLS boundary missing.");
 check(migration.includes("mux_asset_id text unique") && migration.includes("mux_upload_id text unique"), "Mux asset and upload IDs must be unique.");
@@ -80,7 +80,7 @@ if (supabaseUrl && supabaseKey) {
   try {
     const parsed = new URL(supabaseUrl);
     validPublicConfig = parsed.protocol === "https:" &&
-      /^[a-z0-9-]+\\.supabase\\.co$/i.test(parsed.hostname) &&
+      /^[a-z0-9-]+\.supabase\.co$/i.test(parsed.hostname) &&
       !parsed.port && parsed.pathname === "/" && !parsed.search && !parsed.hash &&
       isPublicSupabaseKey(supabaseKey);
   } catch (_) { validPublicConfig = false; }
