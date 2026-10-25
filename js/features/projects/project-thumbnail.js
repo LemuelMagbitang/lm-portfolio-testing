@@ -143,15 +143,16 @@ function registerThumbnailMediaState(media, {
     };
     if (fallbackAttachTimer === null) fallbackAttachTimer = setTimer(checkAttachment, 0);
   };
-  // A slow resource should reveal its static fallback without cancelling the
-  // browser request. Mark the visual as settled-but-recoverable so lifecycle
-  // consumers do not wait forever if the player library never resolves.
+  // A slow image/video is still the selected thumbnail, not a confirmed
+  // media failure. Mark it settled for first-paint lifecycle consumers, but
+  // keep its loading veil and never substitute the secondary poster unless a
+  // real error event arrives. Model previews retain the static fail-safe.
   const showSlowLoadFallback = (isCurrent = () => true) => {
     if (disposed || !isCurrent()) return;
     media.dataset.mediaState = 'error';
     media.classList.remove('is-media-loading', 'is-media-ready');
     media.classList.add('is-media-error');
-    showMediaFallback('error');
+    showMediaFallback(type === 'image' || type === 'video' ? 'loading' : 'error');
   };
   const armSlowLoadFallback = (isCurrent = () => true) => {
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
