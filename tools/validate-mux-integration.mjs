@@ -86,6 +86,12 @@ check(!/Website Placements|Website placement/i.test(page + script) &&
   "The Mux media library must not expose website placement controls and must support editing/unpublishing.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
 const mainCmsScript = read("admin/admin.js");
+check(mainCmsScript.includes('data-picker-source="cms"') &&
+  mainCmsScript.includes('data-picker-source="mux"') &&
+  mainCmsScript.includes('data-picker-panel="mux"') &&
+  mainCmsScript.includes('returnSelectionObject') &&
+  mainCmsScript.includes("function openMuxMediaPicker"),
+  "CMS media selection must offer CMS and Mux sources in one accessible picker.");
 check(mainCmsScript.includes("loadPublishedMuxVideoCatalog") &&
   mainCmsScript.includes("function openMuxMediaPicker") &&
   mainCmsScript.includes("data-mux-selection") &&
