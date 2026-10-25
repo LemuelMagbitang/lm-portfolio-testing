@@ -35,6 +35,9 @@ jobs:
       - name: Validate site data, paths, and JavaScript
         run: node tools/validate-site.mjs
 
+      - name: Validate Mux video integration contracts
+        run: node tools/validate-mux-integration.mjs
+
       - name: Audit asset formats and file sizes
         run: node tools/audit-media-assets.mjs
 

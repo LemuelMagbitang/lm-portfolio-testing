@@ -7,6 +7,8 @@ import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261024-04';
 import { createLifecycle } from '../../core/lifecycle.js';
+import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
+import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 
   /* =========================================
      4. HERO BANNER — AUTO-FILLED WITH THE
@@ -219,11 +221,17 @@ import { createLifecycle } from '../../core/lifecycle.js';
   // already exists on the entry itself; this just resolves its path
   // against the site root, same as every other data-driven path here.
   function heroSourceFromManualEntry(item, baseUrl) {
-    if (!item || !item.src) return null;
-    let src = item.src;
-    try { src = new URL(item.src, baseUrl).href; } catch (e) { /* keep raw */ }
+    if (!item) return null;
+    const playbackId = String(item.playbackId || '').trim();
+    const declaredMux = item.type === 'mux' || item.provider === 'mux' || Boolean(playbackId);
+    if (!item.src && !(declaredMux && playbackId)) return null;
+    let src = item.src || '';
+    if (src) {
+      try { src = new URL(src, baseUrl).href; } catch (e) { /* keep raw */ }
+    }
     return {
-      type: item.type || heroMediaTypeFromSrc(item.src),
+      type: declaredMux ? 'mux' : (item.type || heroMediaTypeFromSrc(item.src)),
+      playbackId: playbackId || null,
       src,
       alt: item.alt || 'Featured artwork',
       focus: item.focus || null,
@@ -357,6 +365,23 @@ import { createLifecycle } from '../../core/lifecycle.js';
         manualSources = (Array.isArray(list) ? list : [])
           .map(item => heroSourceFromManualEntry(item, siteRootUrl))
           .filter(Boolean);
+
+        // Mux is optional: use it only when configuration, feed, and player
+        // are available. The checked-in MP4 list remains the fallback.
+        try {
+          const remoteVideos = await loadPublicMuxVideos('hero', {
+            resolveUrl: resolveAssetUrl,
+            fetchImpl: windowRef.fetch.bind(windowRef),
+            timeoutMs: 1400
+          });
+          if (remoteVideos.length && await ensureMuxPlayer()) {
+            manualSources = config.loopMode === 'mixed'
+              ? remoteVideos.concat(manualSources)
+              : remoteVideos;
+          }
+        } catch (_) {
+          // The video backend must never block the normal portfolio startup.
+        }
       } catch (err) {
         console.warn('Hero banner: could not load manual hero loop data.', err);
       }
@@ -384,7 +409,9 @@ import { createLifecycle } from '../../core/lifecycle.js';
     }
 
     function sourceKey(source) {
-      return `${source.type}|${source.src}`;
+      return source.type === 'mux'
+        ? 'mux|' + String(source.playbackId || '')
+        : String(source.type) + '|' + String(source.src || '');
     }
 
     if (config.loopMode === 'manual') {
@@ -449,7 +476,27 @@ import { createLifecycle } from '../../core/lifecycle.js';
 
       let media;
       let hasVideoPoster = false;
-      if (source.type === 'video') {
+      const isVideoSource = source.type === 'video' || source.type === 'mux';
+      if (source.type === 'mux') {
+        media = documentRef.createElement('mux-player');
+        media.setAttribute('playback-id', source.playbackId);
+        media.setAttribute('metadata-video-title', source.alt || 'Portfolio hero reel');
+        media.setAttribute('stream-type', 'on-demand');
+        media.muted = true;
+        media.defaultMuted = true;
+        media.setAttribute('muted', '');
+        media.loop = false;
+        media.playsInline = true;
+        media.setAttribute('playsinline', '');
+        media.controls = false;
+        media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
+        media.autoplay = false;
+        const posterSource = source.poster || config.defaultVideoPoster;
+        if (posterSource) {
+          media.setAttribute('poster', posterSource);
+          hasVideoPoster = true;
+        }
+      } else if (source.type === 'video') {
         media = documentRef.createElement('video');
         media.muted = true;
         media.defaultMuted = true;
@@ -487,8 +534,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
       const fadeOutMs = Number.isFinite(Number(source.fadeOutMs)) ? Math.max(0, Number(source.fadeOutMs)) : 1500;
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
-      wrap.dataset.heroType = source.type || 'image';
-      if (source.type === 'video' && !hasVideoPoster) {
+      wrap.dataset.heroType = source.type === 'mux' ? 'video' : (source.type || 'image');
+      if (isVideoSource && !hasVideoPoster) {
         wrap.classList.add('is-video-pending');
         const clearVideoPending = () => wrap.classList.remove('is-video-pending');
         media.addEventListener('loadeddata', clearVideoPending, { once: true });
@@ -520,7 +567,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
     // video block page composition until its first frame arrives; start playback
     // and recovery immediately, leaving the neutral loading surface in place.
     const firstSlide = heroContainer.querySelector('.slide');
-    if (firstSlide && sources[0]?.type !== 'video') {
+    if (firstSlide && !['video', 'mux'].includes(sources[0]?.type)) {
       try { await waitForHeroMedia(firstSlide.firstElementChild, sources[0]?.type, windowRef); }
       catch (_) { /* An unavailable visual must never trap startup. */ }
     }
@@ -531,7 +578,7 @@ import { createLifecycle } from '../../core/lifecycle.js';
       destroy() {
         lifecycle.cleanup();
         heroContainer.querySelectorAll('.slide').forEach(slide => {
-          slide.querySelectorAll('video').forEach(video => video.pause?.());
+          slide.querySelectorAll('video, mux-player').forEach(video => video.pause?.());
         });
         heroContainer.replaceChildren();
         heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');

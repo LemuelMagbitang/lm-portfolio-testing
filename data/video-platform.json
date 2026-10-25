@@ -1,0 +1,6 @@
+{
+  "supabaseUrl": "",
+  "supabaseAnonKey": "",
+  "creatorId": "lemuel-magbitang",
+  "note": "Public config only. Never place MUX_TOKEN_SECRET, MUX_WEBHOOK_SECRET or SUPABASE_SERVICE_ROLE_KEY in this file."
+}
