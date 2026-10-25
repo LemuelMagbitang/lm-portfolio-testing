@@ -85,8 +85,55 @@ async function waitForServer(url, timeoutMs = 5000) {
 
 async function configureLogoRoutes(page) {
   // Keep CI deterministic and offline: the live Supabase project is provisioned
-  // separately from the static-site smoke tests. Exercise the local MP4 fallback
-  // here rather than making browser tests depend on personal backend state.
+  // separately from the static-site smoke tests. The CMS-selected Mux slide is
+  // exercised with a small standards-shaped player mock, never personal backend state.
+  await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-player@3/+esm', async route => {
+    const source = `
+      if (!customElements.get('mux-player')) {
+        class MockMuxPlayer extends HTMLElement {
+          constructor() {
+            super();
+            this._paused = true;
+            this._currentTime = 0;
+            this._readyState = 4;
+            this._error = null;
+            this._muted = true;
+            this._playsInline = true;
+            this._loop = false;
+          }
+          get muted() { return this._muted || this.hasAttribute('muted'); }
+          set muted(value) { this._muted = Boolean(value); if (value) this.setAttribute('muted', ''); else this.removeAttribute('muted'); }
+          get defaultMuted() { return this.hasAttribute('muted'); }
+          set defaultMuted(value) { if (value) this.setAttribute('muted', ''); }
+          get playsInline() { return this._playsInline || this.hasAttribute('playsinline'); }
+          set playsInline(value) { this._playsInline = Boolean(value); if (value) this.setAttribute('playsinline', ''); }
+          get loop() { return this._loop || this.hasAttribute('loop'); }
+          set loop(value) { this._loop = Boolean(value); if (value) this.setAttribute('loop', ''); else this.removeAttribute('loop'); }
+          get paused() { return this._paused; }
+          set paused(value) { this._paused = Boolean(value); }
+          get currentTime() { return this._currentTime; }
+          set currentTime(value) { this._currentTime = Number(value) || 0; }
+          get readyState() { return this._readyState; }
+          set readyState(value) { this._readyState = Number(value) || 0; }
+          get error() { return this._error; }
+          set error(value) { this._error = value; }
+          get poster() { return this.getAttribute('poster') || ''; }
+          set poster(value) { if (value) this.setAttribute('poster', value); else this.removeAttribute('poster'); }
+          play() {
+            this._paused = false;
+            this._currentTime += 0.1;
+            this.dispatchEvent(new Event('playing'));
+            return Promise.resolve();
+          }
+          pause() { this._paused = true; this.dispatchEvent(new Event('pause')); }
+          load() { this._readyState = 4; }
+        }
+        customElements.define('mux-player', MockMuxPlayer);
+      }
+      export {};
+    `;
+    await route.fulfill({ status: 200, contentType: 'text/javascript', body: source });
+  });
   await page.route('**/data/video-platform.json', async route => {
     await route.fulfill({
       status: 200,
@@ -1376,20 +1423,23 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
       {
         const videoContract = await page.evaluate(() => {
           const active = document.querySelector('#heroBanner .slide.active');
-          const video = active?.querySelector('video');
-          return video ? {
+          const media = active?.querySelector('video, mux-player');
+          return media ? {
             present: true,
-            muted: video.muted,
-            playsInline: video.playsInline,
-            loop: video.loop,
-            paused: video.paused,
-            currentTime: video.currentTime,
-            playbackState: video.dataset.playbackState || '',
-            poster: video.poster || '',
-            posterAttribute: video.getAttribute('poster') || '',
-            readyState: video.readyState,
-            error: video.error ? { code: video.error.code, message: video.error.message || '' } : null,
-            source: video.currentSrc || video.src
+            playerType: media.localName,
+            muted: Boolean(media.muted),
+            playsInline: Boolean(media.playsInline),
+            loop: Boolean(media.loop),
+            paused: Boolean(media.paused),
+            currentTime: Number(media.currentTime) || 0,
+            playbackState: media.dataset.playbackState || '',
+            poster: media.poster || '',
+            posterAttribute: media.getAttribute('poster') || '',
+            readyState: Number(media.readyState) || 0,
+            error: media.error ? { code: Number(media.error.code) || 0, message: String(media.error.message || '') } : null,
+            source: media.currentSrc || media.src || '',
+            playbackId: media.getAttribute('playback-id') || '',
+            controlsToken: getComputedStyle(media).getPropertyValue('--controls').trim()
           } : {
             present: false,
             activeType: active?.dataset?.heroType || active?.firstElementChild?.localName || ''
@@ -1403,17 +1453,21 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
               (await page.locator('#heroBanner .slide').count()) === 1 && !videoContract.loop) {
             throw new Error(label + ': hero video must be muted, inline, and loop when it is the only manual slide: ' + JSON.stringify(videoContract));
           }
+          if (videoContract.playerType === 'mux-player' &&
+              (!videoContract.playbackId || videoContract.controlsToken !== 'none')) {
+            throw new Error(label + ': Mux hero must have a playback ID and hidden controls: ' + JSON.stringify(videoContract));
+          }
+          const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player';
           await page.waitForFunction(() => {
-            const video = document.querySelector('#heroBanner .slide.active video');
-            return !video || video.error ||
-              video.dataset.playbackState === 'blocked' ||
-              (!video.paused && video.currentTime > 0.05);
+            const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+            return !media || media.error || media.dataset.playbackState === 'blocked' ||
+              (!media.paused && Number(media.currentTime) > 0.05);
           }, null, { timeout: 5000 });
-          let playback = await page.locator('#heroBanner .slide.active video').evaluate(video => ({
-            paused: video.paused,
-            currentTime: video.currentTime,
-            playbackState: video.dataset.playbackState || '',
-            error: video.error ? video.error.code : 0
+          let playback = await page.locator(mediaSelector).evaluate(media => ({
+            paused: Boolean(media.paused),
+            currentTime: Number(media.currentTime) || 0,
+            playbackState: media.dataset.playbackState || '',
+            error: media.error ? Number(media.error.code) || 1 : 0
           }));
           if (playback.error) {
             throw new Error(label + ': hero video failed to decode or load (MediaError ' + playback.error + ').');
@@ -1422,34 +1476,35 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';
             await page.locator(retryTarget).click({ position: { x: 12, y: 12 } });
             await page.waitForFunction(() => {
-              const video = document.querySelector('#heroBanner .slide.active video');
-              return video && (video.error || (!video.paused && video.currentTime > 0.05));
+              const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+              return media && (media.error || (!media.paused && Number(media.currentTime) > 0.05));
             }, null, { timeout: 3000 });
-            playback = await page.locator('#heroBanner .slide.active video').evaluate(video => ({
-              paused: video.paused,
-              currentTime: video.currentTime,
-              error: video.error ? video.error.code : 0
+            playback = await page.locator(mediaSelector).evaluate(media => ({
+              paused: Boolean(media.paused),
+              currentTime: Number(media.currentTime) || 0,
+              error: media.error ? Number(media.error.code) || 1 : 0
             }));
             if (playback.error || playback.paused || playback.currentTime <= 0.05) {
               throw new Error(label + ': hero video did not resume after a real interaction: ' + JSON.stringify(playback));
             }
           }
         } else if (videoContract.activeType === 'video') {
-          throw new Error(label + ': video hero media was not rendered as a video element.');
+          throw new Error(label + ': video hero media was not rendered as a media element.');
         }
 
-        // Force the fallback path once with Hero Message enabled: the real
-        // pointer gesture lands on the overlay sibling, not the banner.
+        // Force the playback-recovery path with the hero quote enabled: the
+        // gesture lands on the overlay sibling, not the media itself.
         if (videoContract.present && expectedMessage && viewport.name === 'desktop') {
-          const priorTime = await page.locator('#heroBanner .slide.active video').evaluate(video => {
-            video.pause();
-            video.dataset.playbackState = 'blocked';
-            return video.currentTime;
+          const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player';
+          const priorTime = await page.locator(mediaSelector).evaluate(media => {
+            media.pause();
+            media.dataset.playbackState = 'blocked';
+            return Number(media.currentTime) || 0;
           });
           await page.locator('.hero-overlay').click({ position: { x: 12, y: 12 } });
           await page.waitForFunction(baseline => {
-            const video = document.querySelector('#heroBanner .slide.active video');
-            return video && !video.paused && video.currentTime > baseline + 0.05;
+            const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+            return media && !media.paused && Number(media.currentTime) > baseline + 0.05;
           }, priorTime, { timeout: 3000 });
         }
       }
@@ -10160,18 +10215,20 @@ try {
     });
 
     await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
-      await page.locator('#heroBanner .slide.active video').waitFor({ state: 'attached', timeout: 6000 });
+      await page.locator('#heroBanner .slide.active video, #heroBanner .slide.active mux-player')
+        .waitFor({ state: 'attached', timeout: 6000 });
       const reducedHeroState = await page.evaluate(() => {
-        const video = document.querySelector('#heroBanner .slide.active video');
+        const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
         const transition = document.querySelector('#pageTransition');
         return {
           preference: matchMedia('(prefers-reduced-motion: reduce)').matches,
-          preload: video?.preload || '',
-          poster: video?.poster || '',
-          posterAttribute: video?.getAttribute('poster') || '',
-          sourceAttribute: video?.getAttribute('src') || '',
-          currentSrc: video?.currentSrc || '',
-          paused: video?.paused ?? false,
+          playerType: media?.localName || '',
+          preload: media?.preload || media?.getAttribute('preload') || '',
+          poster: media?.poster || '',
+          posterAttribute: media?.getAttribute('poster') || '',
+          sourceAttribute: media?.getAttribute('src') || '',
+          currentSrc: media?.currentSrc || '',
+          paused: media?.paused ?? false,
           loading: transition?.dataset.loading || ''
         };
       });
@@ -10180,7 +10237,7 @@ try {
           /og-image\.jpg/i.test(reducedHeroState.poster) || /og-image\.jpg/i.test(reducedHeroState.posterAttribute) ||
           !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
         throw new Error(
-          'Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image: ' +
+          'Reduced-motion hero must keep its stream source detached and avoid reusing the Open Graph image: ' +
           JSON.stringify(reducedHeroState)
         );
       }

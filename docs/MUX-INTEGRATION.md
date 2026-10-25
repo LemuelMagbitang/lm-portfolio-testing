@@ -101,7 +101,7 @@ The CMS media library continues to handle files stored in the repository. Use Mu
 Mux is a hosted service, not a lifetime archive. Availability depends on account standing, billing/plan limits, the asset not being deleted, and the applicable service terms. Mux's current Free plan lists up to 10 stored videos and 100,000 monthly delivery minutes; its Pay-as-you-go plan lists no storage limit, but storage is billed per video minute per month and delivery beyond included allowances is usage-based. See [current Mux pricing](https://www.mux.com/pricing). Mux also states that it does not keep the original upload in its exact form, so keep an independent backup of original master video files: [Mux streaming guide](https://www.mux.com/docs/core/stream-video-files).
 
 ## Public hero integration
-The hero calls the public Mux feed only if configured. A ready published Mux video uses the lazily loaded Mux Player; if config/feed/player fails, data/hero-loop.json remains the fallback. The hero stays muted/inline and preserves existing reduced-motion and lifecycle behavior.
+The hero loads the public Mux feed only when configured. An explicitly selected Mux hero slide uses the lazily loaded Mux Player and plays muted without exposing player controls. If the player module or stream errors, the hero falls back to the checked-in `assets/projects/site/banner/hero-reel.mp4` file (unless a slide provides its own `fallbackSrc`); the Mux thumbnail remains available as a poster during startup. The public placement feed remains a compatibility fallback for older content. Reduced-motion handling and lifecycle cleanup remain in force.
 
 ## Validation checklist
 - Non-allowlisted users receive 401/403 from admin API.

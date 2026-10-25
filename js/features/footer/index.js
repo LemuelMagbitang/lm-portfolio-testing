@@ -112,16 +112,23 @@ async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJs
   return latest.slice(0, 5);
 }
 
-function buildMedia(documentRef, source) {
+function buildMedia(documentRef, source, autoplayAllowed = true) {
   let media;
   if (source.type === 'mux') {
     media = documentRef.createElement('mux-player');
     media.setAttribute('playback-id', source.playbackId);
     media.setAttribute('stream-type', 'on-demand');
+    media.muted = true;
+    media.defaultMuted = true;
+    media.controls = false;
     media.setAttribute('muted', '');
     media.setAttribute('loop', '');
     media.setAttribute('playsinline', '');
-    media.setAttribute('preload', 'none');
+    media.setAttribute('preload', autoplayAllowed ? 'auto' : 'none');
+    if (autoplayAllowed) media.setAttribute('autoplay', 'muted');
+    else media.removeAttribute('autoplay');
+    media.style.setProperty('--controls', 'none');
+    media.style.setProperty('--media-object-fit', 'cover');
     if (source.poster) media.setAttribute('poster', source.poster);
     media.setAttribute('metadata-video-title', source.alt || 'Footer video');
   } else if (source.type === 'video') {
@@ -244,7 +251,7 @@ export async function initFooterAnimation(options = {}) {
     const slide = documentRef.createElement('div');
     slide.className = 'footer-animation-slide' + (index === 0 ? ' active' : '');
     slide.dataset.index = String(index);
-    const media = buildMedia(documentRef, source);
+    const media = buildMedia(documentRef, source, !reducedMotion());
     slide.appendChild(media);
     container.appendChild(slide);
   });
@@ -271,7 +278,7 @@ export async function initFooterAnimation(options = {}) {
 
   applyForeground(0);
   const firstMuxPlayer = container.querySelector('.footer-animation-slide.active mux-player');
-  if (firstMuxPlayer) {
+  if (firstMuxPlayer && !reducedMotion()) {
     try { const playback = firstMuxPlayer.play?.(); playback?.catch?.(() => {}); } catch (_) {}
   }
 

@@ -10,6 +10,8 @@ import { createLifecycle } from '../../core/lifecycle.js';
 import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
 import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 
+const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
+
   /* =========================================
      4. HERO BANNER — AUTO-FILLED WITH THE
         5 LATEST ARTWORKS + FACE-AWARE FOCUS
@@ -233,10 +235,17 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
     if (src) {
       try { src = new URL(src, baseUrl).href; } catch (e) { /* keep raw */ }
     }
+    // CMS schema versions may omit fallbackSrc, so retain the known local MP4
+    // as a runtime fallback rather than relying on an editable JSON field.
+    let fallbackSrc = String(item.fallbackSrc || (declaredMux ? LEGACY_HERO_MP4_FALLBACK : '')).trim();
+    if (fallbackSrc) {
+      try { fallbackSrc = new URL(fallbackSrc, baseUrl).href; } catch (e) { /* keep raw */ }
+    }
     return {
       type: declaredMux ? 'mux' : (item.type || heroMediaTypeFromSrc(item.src)),
       playbackId: playbackId || null,
       src,
+      ...(fallbackSrc ? { fallbackSrc } : {}),
       alt: item.alt || 'Featured artwork',
       focus: item.focus || null,
       zoom: item.zoom || null,
@@ -476,7 +485,9 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
         // chosen poster as an image and do not attempt a stream without the
         // Mux custom element being registered.
         sources = sources.map(source => source.type === 'mux'
-          ? { ...source, type: 'image', src: source.poster || source.src }
+          ? (source.fallbackSrc
+            ? { ...source, type: 'video', src: source.fallbackSrc }
+            : { ...source, type: 'image', src: source.poster || source.src })
           : source).filter(source => source.src);
       }
     }
@@ -510,7 +521,8 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
         media.setAttribute('playsinline', '');
         media.controls = false;
         media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');
-        media.autoplay = false;
+        if (!reducedMotion) media.setAttribute('autoplay', 'muted');
+        else media.removeAttribute('autoplay');
         const posterSource = source.poster || config.defaultVideoPoster;
         if (posterSource) {
           media.setAttribute('poster', posterSource);
@@ -555,6 +567,7 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
       wrap.dataset.heroType = source.type === 'mux' ? 'video' : (source.type || 'image');
+      if (source.fallbackSrc) wrap.dataset.fallbackSrc = source.fallbackSrc;
       if (source.type === 'video' && !hasVideoPoster) {
         wrap.classList.add('is-video-pending');
         const clearVideoPending = () => wrap.classList.remove('is-video-pending');
@@ -677,6 +690,32 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
         try { media.load?.(); } catch (_) {}
         activateMedia(slide);
       }, 500);
+    }
+
+    function fallbackMuxToNativeVideo(slide, media) {
+      const fallbackSrc = String(slide?.dataset?.fallbackSrc || '').trim();
+      if (!fallbackSrc || media?.localName !== 'mux-player' || !media.isConnected || slide.dataset.muxFallback === 'true') {
+        return false;
+      }
+      const video = heroContainer.ownerDocument.createElement('video');
+      video.muted = true;
+      video.defaultMuted = true;
+      video.setAttribute('muted', '');
+      video.playsInline = true;
+      video.setAttribute('playsinline', '');
+      video.loop = slides.length === 1;
+      video.preload = 'auto';
+      const poster = media.getAttribute('poster');
+      if (poster) video.poster = poster;
+      video.style.cssText = media.style.cssText;
+      video.dataset.playbackState = 'fallback';
+      video.src = fallbackSrc;
+      media.replaceWith(video);
+      slide.dataset.heroType = 'video';
+      slide.dataset.muxFallback = 'true';
+      scheduleAdvanceForCurrent();
+      activateMedia(slide);
+      return true;
     }
 
     function activateMedia(slide) {
@@ -840,6 +879,7 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
       });
       bind(media, 'error', () => {
         if (disposed || slides[currentIndex] !== slide) return;
+        if (media.localName === 'mux-player' && fallbackMuxToNativeVideo(slide, media)) return;
         media.dataset.playbackState = 'error';
         scheduleNetworkRetry(slide, media);
       });

@@ -13,6 +13,8 @@ const publicApi = read("supabase/functions/mux-public/index.ts");
 const bridge = read("js/infrastructure/mux/public-videos.js");
 const player = read("js/infrastructure/mux/player.js");
 const hero = read("js/features/hero/index.js");
+const footer = read("js/features/footer/index.js");
+const styles = read("css/style.css");
 const page = read("admin/videos.html"), script = read("admin/videos.js"), cms = read("admin/index.html");
 const workflow = read(".github/workflows/site-validation.yml");
 const smoke = read("tools/smoke-browser.mjs");
@@ -67,6 +69,16 @@ check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.p
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
+check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
+  hero.includes("fallbackMuxToNativeVideo") &&
+  hero.includes("setAttribute('autoplay', 'muted')"),
+  "Hero Mux playback must autoplay muted, hide player UI, and retain the native MP4 fallback.");
+check(footer.includes("media.controls = false") &&
+  footer.includes("media.setAttribute('autoplay', 'muted')") &&
+  footer.includes("media.style.setProperty('--controls', 'none')") &&
+  styles.includes(".footer-animation-slide mux-player") &&
+  styles.includes("--controls:none"),
+  "Footer Mux playback must autoplay muted without visible controls and fill the background surface.");
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
 check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] === "placement"') &&
@@ -117,7 +129,13 @@ check(script.includes('"mux_auth_failed"') &&
   script.includes("MUX_TOKEN_ID and MUX_TOKEN_SECRET") &&
   script.includes("Mux Video Read permission"),
   "CMS must explain how to resolve rejected Mux API credentials.");
-check(Array.isArray(heroLoop) && heroLoop.some((item) => item.type === "video" && item.src), "Legacy MP4 fallback must remain.");
+check(
+  (Array.isArray(heroLoop) && heroLoop.some((item) => item.type === "video" && item.src)) ||
+  (hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
+   fs.existsSync("assets/projects/site/banner/hero-reel.mp4") &&
+   hero.includes("fallbackMuxToNativeVideo")),
+  "Legacy MP4 fallback must remain as a checked-in hero slide or a runtime fallback for the selected Mux slide."
+);
 const supabaseUrl = String(config.supabaseUrl || "").trim();
 const supabaseKey = String(config.supabaseAnonKey || "").trim();
 function isPublicSupabaseKey(value) {
