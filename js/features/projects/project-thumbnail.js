@@ -255,7 +255,9 @@ function registerThumbnailMediaState(media, {
       ? 'Loading ' + (type === 'lottie' ? 'animation' : type === 'model' ? '3D' : type) + ' preview'
       : String(altText || 'Project artwork') + ' preview');
 
-    if (fallbackSrc && fallbackSrc !== src) {
+    // The selected card source stays visible under the loading veil. Static
+    // secondary artwork is reserved for an actual load failure, not a loading state.
+    if (status === 'error' && fallbackSrc && fallbackSrc !== src) {
       const image = doc.createElement('img');
       image.className = 'project-thumb-media-fallback-image';
       image.alt = '';
@@ -431,9 +433,9 @@ function registerThumbnailMediaState(media, {
       }
       if (type === 'lottie') {
         const generation = ++lottieGeneration;
-        // Clear a previous error surface on retry. Keep the thumbnail itself
-        // free of loader/poster overlays while the Lottie player initializes.
-        removeMediaFallback();
+        // Keep the selected animated thumbnail's loading state visible until
+        // the player has rendered. The shared fallback uses no poster until error.
+        showMediaFallback('loading');
         media.dataset.mediaState = 'loading';
         media.classList.remove('is-media-ready', 'is-media-error');
         media.classList.add('is-media-loading');
