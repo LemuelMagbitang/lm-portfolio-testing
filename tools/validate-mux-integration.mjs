@@ -32,6 +32,7 @@ check(admin.includes("function muxTimestampToIso(value: unknown)") &&
   "Mux import must convert Unix-second created_at values to ISO timestamps before inserting timestamptz.");
 check(admin.includes("MUX_UPLOAD_CORS_ORIGIN") && admin.includes("import-mux") && admin.includes("import-static"), "CORS settings or existing asset import route missing.");
 check(read("supabase/functions/_shared/http.ts").includes("function normalizeOrigin") && read("supabase/functions/_shared/http.ts").includes("allowed.includes(requestOrigin)"), "CORS origin matching must normalize configured origins before comparison.");
+check(read("supabase/functions/_shared/http.ts").includes('"Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS"'), "Admin CORS preflight must allow PATCH for video detail updates.");
 check(webhook.includes("mux-signature") && webhook.includes("crypto.subtle.sign") && webhook.includes("video.asset.ready"), "Webhook signature or lifecycle processing missing.");
 check(webhook.includes("video.upload.asset_created") && webhook.includes("video.asset.errored") && webhook.includes("video.asset.deleted") && webhook.includes("processed_at"), "Webhook lifecycle/idempotency incomplete.");
 const assetCreatedHandler = webhook.split('if (event.type === "video.upload.asset_created") {')[1]?.split('} else if (event.type === "video.asset.ready") {')[0] || "";
