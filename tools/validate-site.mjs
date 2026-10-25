@@ -2004,7 +2004,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261026-01") ||
-      !composition.includes("lightbox/index.js?v=20261026-01") ||
+      !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261026-01') ||
       !works.includes('js/app/page-composition.js?v=20261026-01') ||
