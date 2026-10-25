@@ -31,8 +31,8 @@ check(assetCreatedHandler.includes("d.new_asset_settings?.meta?.external_id") &&
   assetCreatedHandler.includes('eq("external_id", externalId)') &&
   assetCreatedHandler.includes('eq("mux_upload_id", d.id)') &&
   assetCreatedHandler.includes('mux_upload_id: d.id') &&
-  true,
-  "Upload-created webhooks must recover an early-arrival race using the stable external ID.");
+  (assetCreatedHandler.match(/if (\\\\.result\\\\.error) throw result\\\\.error;/g) || []).length >= 2,
+  "Upload-created webhooks must recover an early-arrival race using the stable external ID and check both database updates.");
 check(webhook.includes('const { data: old, error: oldError }') && webhook.includes("if (oldError) throw oldError;"),
   "Webhook deduplication reads must fail on database errors.");
 
