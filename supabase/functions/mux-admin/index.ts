@@ -51,7 +51,8 @@ Deno.serve(async (request: Request) => {
       const slug = safeSlug(body.slug);
       const place = placement(body.placement);
       if (!muxAssetId || !slug || !place) return jsonResponse(request, { error: "Provide Mux asset ID, lowercase slug and placement." }, 400);
-      const { data: existing } = await db.from("video_assets").select("id,video_id").eq("mux_asset_id", muxAssetId).maybeSingle();
+      const { data: existing, error: existingError } = await db.from("video_assets").select("id,video_id").eq("mux_asset_id", muxAssetId).maybeSingle();
+      if (existingError) throw existingError;
       if (existing) return jsonResponse(request, { error: "This asset is already linked to a CMS video.", videoId: existing.video_id }, 409);
       const remote = await muxRequest("/assets/" + encodeURIComponent(muxAssetId));
       const videoId = crypto.randomUUID();

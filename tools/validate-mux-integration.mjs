@@ -15,7 +15,11 @@ const player = read("js/infrastructure/mux/player.js");
 const hero = read("js/features/hero/index.js");
 const page = read("admin/videos.html"), script = read("admin/videos.js"), cms = read("admin/index.html");
 const workflow = read(".github/workflows/site-validation.yml");
+const supabaseConfig = read("supabase/config.toml");
 check(migration.includes("create table if not exists public.videos") && migration.includes("create table if not exists public.video_assets"), "Video tables missing.");
+check(["mux-admin", "mux-webhook", "mux-public"].every((name) =>
+  new RegExp("\\[functions\\." + name + "\\]\\s*\\nverify_jwt\\s*=\\s*false").test(supabaseConfig)
+), "Supabase Edge Function JWT overrides must match each function's own auth model.");
 check(migration.includes("mux_webhook_events") && migration.includes("enable row level security") && migration.includes("revoke all on public.video_assets from anon, authenticated"), "Webhook store or RLS boundary missing.");
 check(migration.includes("mux_asset_id text unique") && migration.includes("mux_upload_id text unique"), "Mux asset and upload IDs must be unique.");
 check(admin.includes("external_id: asset.external_id || asset.id") && read("supabase/functions/_shared/http.ts").includes("CMS_ADMIN_USER_IDS"), "Admin auth or external_id assignment missing.");
