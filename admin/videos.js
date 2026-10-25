@@ -1,250 +1,55 @@
-const CONFIG_KEY = "lm_mux_video_config_v1";
-const SESSION_KEY = "lm_mux_video_session_v1";
-const $ = (id) => document.getElementById(id);
-let config = { supabaseUrl: "", supabaseAnonKey: "" };
-let inFlight = false;
-let muxImportAssets = [];
-function status(id, message, kind = "") { const node = $(id); if (node) { node.textContent = message || ""; node.className = "status" + (kind ? " " + kind : ""); } }
-function slugify(value) {
-  return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100) || "mux-video";
+const CONFIG_KEY="lm_mux_video_config_v1",SESSION_KEY="lm_mux_video_session_v1", $=id=>document.getElementById(id);
+let config={supabaseUrl:"",supabaseAnonKey:""},videos=[],importAssets=[],selectedVideoId="",viewMode="grid",inFlight=false,configOpen=false,modalPreviousFocus=null,muxPlayerPromise=null;
+function setStatus(id,message,kind=""){const node=$(id);if(!node)return;node.className="status"+(kind?" "+kind:"");node.textContent=message||"";}
+function slugify(value){return String(value||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,100)||"mux-video";}
+function escapeHtml(value){return String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function normalizeBase(value){const url=new URL(String(value||"").trim());if(url.protocol!=="https:"&&!(url.protocol==="http:"&&["localhost","127.0.0.1"].includes(url.hostname)))throw new Error("Use an HTTPS Supabase project URL.");return url.origin;}
+function getSession(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||"null");}catch(_){return null;}}
+function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));}
+function logout(){sessionStorage.removeItem(SESSION_KEY);videos=[];selectedVideoId="";updatePanels();renderLibrary();renderInspector(null);setStatus("listStatus","Signed out. Sign in again to manage hosted video assets.");$("loginPassword").value="";}
+async function loadConfig(){let file={};try{const r=await fetch("../data/video-platform.json",{cache:"no-cache",credentials:"omit"});if(r.ok)file=await r.json();}catch(_){}let saved={};try{saved=JSON.parse(localStorage.getItem(CONFIG_KEY)||"{}");}catch(_){}config={supabaseUrl:saved.supabaseUrl||file.supabaseUrl||"",supabaseAnonKey:saved.supabaseAnonKey||file.supabaseAnonKey||""};$("supabaseUrl").value=config.supabaseUrl;$("supabaseAnonKey").value=config.supabaseAnonKey;}
+function updatePanels(){const configured=Boolean(config.supabaseUrl&&config.supabaseAnonKey),signed=Boolean(getSession()?.access_token);$("loginPanel").classList.toggle("hidden",!configured||signed);$("workspace").classList.toggle("hidden",!configured||!signed);$("configPanel").classList.toggle("hidden",!configOpen);$("signOutButton").classList.toggle("hidden",!signed);$("signOutTopButton").classList.toggle("hidden",!signed);$("connectionMeta").textContent=signed?"Administrator session active":configured?"Sign in to access your media":"Connection not configured";}
+async function refreshToken(){const s=getSession();if(!s?.refresh_token)return null;const r=await fetch(normalizeBase(config.supabaseUrl)+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:config.supabaseAnonKey,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token}),credentials:"omit"});if(!r.ok){sessionStorage.removeItem(SESSION_KEY);return null;}const updated=await r.json();saveSession(updated);return updated.access_token;}
+async function token(){const s=getSession();if(!s?.access_token)throw new Error("Sign in to the video CMS first.");if(!s.expires_at||Number(s.expires_at)*1000>Date.now()+30000)return s.access_token;const updated=await refreshToken();if(!updated)throw new Error("Your session expired. Sign in again.");return updated;}
+function describeApiError(code,payload){const detail=String(payload?.detail||payload?.error||payload?.message||payload?.msg||"").trim();if(payload?.code==="mux_auth_failed")return "Mux rejected the server API credentials (upstream HTTP "+Number(payload.upstreamStatus||code)+"). Verify MUX_TOKEN_ID and MUX_TOKEN_SECRET are a matching pair with Mux Video Read permission."+(detail?" Mux detail: "+detail:"");if(payload?.code==="mux_asset_not_found")return "Mux could not find this asset in the environment selected by the server token."+(detail?" "+detail:"");if(payload?.code==="mux_api_error")return "Mux API request failed (upstream HTTP "+Number(payload.upstreamStatus||code)+")."+(detail?" "+detail:"");if(code===401)return "Unauthorized. Sign in again. "+detail;if(code===403)return "Forbidden. Confirm this account is included in CMS_ADMIN_USER_IDS. "+detail;if(code===404)return "This library operation was not found. Confirm the admin API deployment is current. "+detail;if(code>=500)return "Backend error ("+code+"). Check Edge Function logs, database access and Mux/Supabase server secrets. "+detail;return detail||"Request failed with HTTP "+code+".";}
+async function api(route,options={}){const base=normalizeBase(config.supabaseUrl);let auth=await token();const call=access=>fetch(base+"/functions/v1/mux-admin/"+route.replace(/^\/+/,""),{method:options.method||"GET",headers:{apikey:config.supabaseAnonKey,Authorization:"Bearer "+access,...(options.body===undefined?{}:{"Content-Type":"application/json"})},body:options.body===undefined?undefined:JSON.stringify(options.body),credentials:"omit"});let response;try{response=await call(auth);if(response.status===401){auth=await refreshToken();if(auth)response=await call(auth);}}catch(error){throw new Error("Could not reach the Supabase admin API. Check CMS_ALLOWED_ORIGINS and browser CORS/network errors. "+(error?.message||""));}const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(describeApiError(response.status,payload));return payload;}
+function latestAsset(v){return Array.isArray(v?.assets)?v.assets[0]||v?.activeAsset||null:v?.activeAsset||null;}
+function displayAsset(v){const a=Array.isArray(v?.assets)?v.assets:[];return v?.activeAsset||a.find(x=>x?.id===v?.active_asset_id)||a[0]||null;}
+function assetStatus(a){if(!a)return"No asset";if(a.provider==="static_mp4")return a.asset_status==="ready"?"Ready":String(a.asset_status||"External MP4");if(a.asset_status==="ready")return"Ready";if(a.asset_status==="errored"||a.upload_state==="failed")return"Failed";if(a.asset_status==="preparing"||a.processing_state==="processing")return"Processing";if(a.upload_state==="awaiting_upload")return"Awaiting upload";if(a.upload_state==="uploaded")return"Uploaded · processing";return String(a.asset_status||a.upload_state||"Not started").replace(/_/g," ");}
+function statusKind(v,a){if(v?.published)return"published";const s=String(a?.asset_status||"").toLowerCase(),u=String(a?.upload_state||"").toLowerCase();if(s==="errored"||u==="failed")return"failed";if(s==="preparing"||u==="awaiting_upload"||u==="uploaded")return s==="preparing"?"processing":"awaiting";if(s==="ready")return"ready";return"draft";}
+function durationText(value){const n=Number(value);if(!Number.isFinite(n)||n<0)return"—";return Math.floor(n/60)+":"+String(Math.floor(n%60)).padStart(2,"0");}
+function bytesDate(value){if(!value)return"—";const d=new Date(value);return Number.isNaN(d.getTime())?"—":new Intl.DateTimeFormat(undefined,{year:"numeric",month:"short",day:"numeric"}).format(d);}
+function muxPosterUrl(id,width=720){if(!id)return"";const url=new URL("https://image.mux.com/"+encodeURIComponent(String(id))+"/thumbnail.jpg");url.searchParams.set("time","1.5");url.searchParams.set("width",String(width));return url.toString();}
+function siteMediaUrl(value){const src=String(value||"").trim();if(!src)return"";if(/^https?:\/\//i.test(src))return src;return new URL("../"+src.replace(/^\/+/,""),location.href).href;}
+function videoPoster(v,a){if(a?.mux_playback_id)return muxPosterUrl(a.mux_playback_id);if(a?.provider==="static_mp4"&&a.source_url&&/\.(?:apng|avif|gif|jpe?g|png|webp)(?:[?#]|$)/i.test(a.source_url))return siteMediaUrl(a.source_url);return"";}
+function makeStatusChip(text,kind=""){const n=document.createElement("span");n.className="status-chip "+kind;n.textContent=text;return n;}
+function matchesStatus(v,f){const a=latestAsset(v),kind=statusKind(v,a);if(f==="all")return true;if(f==="published")return Boolean(v.published);if(f==="draft")return!v.published;if(f==="ready")return!v.published&&a?.asset_status==="ready";if(f==="processing")return kind==="processing"||kind==="awaiting";if(f==="failed")return kind==="failed";return true;}
+function filteredVideos(){const q=$("searchInput").value.trim().toLowerCase(),status=$("statusFilter").value,provider=$("providerFilter").value;return videos.filter(v=>[v.title,v.slug,v.description,latestAsset(v)?.original_filename].filter(Boolean).join(" ").toLowerCase().includes(q)&&(provider==="all"||String(latestAsset(v)?.provider||"mux")===provider)&&matchesStatus(v,status));}
+function makeEmpty(title,copy,actionText,action){const n=document.createElement("div");n.className="empty-state";const i=document.createElement("i");i.className="fa-solid fa-photo-film";const h=document.createElement("strong");h.textContent=title;const p=document.createElement("p");p.textContent=copy;n.append(i,h,p);if(actionText){const b=document.createElement("button");b.type="button";b.className="button primary";b.textContent=actionText;b.addEventListener("click",action);n.append(b);}return n;}
+function renderLibrary(){const grid=$("videoGrid");if(!grid)return;const results=filteredVideos();$("resultCount").textContent=results.length+" of "+videos.length+" "+(videos.length===1?"asset":"assets");grid.className=viewMode==="grid"?"media-grid":"library-list";grid.replaceChildren();if(!videos.length){grid.append(makeEmpty("Your video library is empty","Upload a video or import an existing Mux asset to start your hosted media collection.","Add your first video",()=>openDialog("upload")));return;}if(!results.length){grid.append(makeEmpty("No matching videos","Try another search phrase or change the source/status filters.","Clear filters",()=>{$("searchInput").value="";$("statusFilter").value="all";$("providerFilter").value="all";renderLibrary();}));return;}results.forEach(v=>{const a=latestAsset(v),selected=String(v.id)===String(selectedVideoId),card=document.createElement("article");card.className="media-tile"+(selected?" selected":"");card.tabIndex=0;card.setAttribute("role","button");card.setAttribute("aria-pressed",String(selected));card.setAttribute("aria-label","Select "+(v.title||v.slug||"video"));const thumb=document.createElement("div");thumb.className="tile-thumb";const poster=videoPoster(v,a);if(poster){const img=document.createElement("img");img.src=poster;img.alt="";img.loading="lazy";img.decoding="async";img.onerror=()=>{const fallback=document.createElement("div");fallback.className="tile-placeholder";fallback.innerHTML='<i class="fa-solid fa-film"></i><span>Video preview</span>';thumb.replaceChildren(fallback);};thumb.append(img);}else{const fallback=document.createElement("div");fallback.className="tile-placeholder";fallback.innerHTML=a?.provider==="static_mp4"?'<i class="fa-solid fa-file-video"></i><span>Hosted MP4</span>':'<i class="fa-solid fa-film"></i><span>Video preview</span>';thumb.append(fallback);}const play=document.createElement("span");play.className="tile-play";play.innerHTML='<i class="fa-solid fa-play"></i>';thumb.append(play);if(a?.duration_seconds!=null){const d=document.createElement("span");d.className="duration";d.textContent=durationText(a.duration_seconds);thumb.append(d);}const mark=document.createElement("span");mark.className="tile-select";mark.innerHTML=selected?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-plus"></i>';thumb.append(mark);const info=document.createElement("div");info.className="tile-info";const title=document.createElement("span");title.className="tile-title";title.textContent=v.title||v.slug||"Untitled video";title.title=title.textContent;const sub=document.createElement("div");sub.className="tile-sub";sub.append(makeStatusChip(v.published?"Published":assetStatus(a),statusKind(v,a)));const source=document.createElement("span");source.textContent=a?.provider==="static_mp4"?"External MP4":"Mux";sub.append(source);info.append(title,sub);card.append(thumb,info);const choose=()=>{selectedVideoId=String(v.id);renderLibrary();renderInspector(v);};card.addEventListener("click",choose);card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();choose();}});grid.append(card);});}
+async function ensureMuxPlayer(){if(customElements.get("mux-player"))return true;if(!muxPlayerPromise)muxPlayerPromise=import("https://cdn.jsdelivr.net/npm/@mux/mux-player@3/+esm").then(()=>Boolean(customElements.get("mux-player"))).catch(()=>false);return muxPlayerPromise;}
+function buildInspectorPreview(v,a){const host=document.createElement("div");host.className="asset-player";if(!a){const t=document.createElement("span");t.className="hint";t.textContent="No upload version exists yet.";host.append(t);return host;}if(a.provider==="mux"&&a.mux_playback_id&&a.asset_status==="ready"){const poster=videoPoster(v,a);if(poster){const img=document.createElement("img");img.src=poster;img.alt="";host.append(img);}const b=document.createElement("button");b.type="button";b.className="button primary";b.style.cssText="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)";b.innerHTML='<i class="fa-solid fa-play"></i> Preview video';b.addEventListener("click",async()=>{b.disabled=true;b.textContent="Loading player…";const ok=await ensureMuxPlayer();if(!ok||!host.isConnected){b.disabled=false;b.textContent="Preview unavailable";return;}host.replaceChildren();const player=document.createElement("mux-player");player.setAttribute("playback-id",a.mux_playback_id);player.setAttribute("stream-type","on-demand");player.setAttribute("metadata-video-title",v.title||v.slug||"Portfolio video");player.setAttribute("controls","");player.setAttribute("playsinline","");player.setAttribute("preload","metadata");if(poster)player.setAttribute("poster",poster);player.style.width="100%";player.style.height="100%";host.append(player);});host.append(b);return host;}if(a.provider==="static_mp4"&&a.source_url){const player=document.createElement("video");player.src=siteMediaUrl(a.source_url);player.controls=true;player.playsInline=true;player.preload="metadata";host.append(player);return host;}const poster=videoPoster(v,a);if(poster){const img=document.createElement("img");img.src=poster;img.alt="";host.append(img);}else{const i=document.createElement("i");i.className="fa-solid fa-film";i.style.color="#777";host.append(i);}return host;}
+function addMeta(grid,label,value){const node=document.createElement("div");node.className="meta-item";const l=document.createElement("span");l.textContent=label;const v=document.createElement("strong");v.textContent=value==null||value===""?"—":String(value);node.append(l,v);grid.append(node);}
+function renderInspector(v){const host=$("assetInspector");host.replaceChildren();const header=document.createElement("div");header.className="inspector-head";const h=document.createElement("h2");h.textContent="Asset details";header.append(h,makeStatusChip(v?(v.published?"Published":"Draft"):"No selection",v?statusKind(v,latestAsset(v)):""));host.append(header);$("inspectorBadge").textContent=v?"Selected":"No selection";if(!v){const empty=document.createElement("div");empty.className="inspector-empty";empty.innerHTML='<i class="fa-regular fa-circle-play"></i><strong>Select a video</strong><p>Choose a thumbnail to preview playback, inspect its status and edit its library details.</p>';host.append(empty);return;}const latest=latestAsset(v),shown=displayAsset(v),body=document.createElement("div");body.className="inspector-content";body.append(buildInspectorPreview(v,shown));const title=document.createElement("div");title.className="asset-title";title.textContent=v.title||v.slug||"Untitled video";const desc=document.createElement("div");desc.className="asset-caption";desc.textContent=v.description||"No description yet.";body.append(title,desc);if(latest&&latest.asset_status!=="ready"&&latest.provider==="mux"){const note=document.createElement("div");note.className=latest.asset_status==="errored"?"asset-error":"asset-warning";note.textContent=latest.asset_status==="errored"||latest.upload_state==="failed"?"Mux reported an upload or processing error. The current published version is unchanged. Upload a new version after reviewing the failure.":latest.upload_state==="awaiting_upload"?"Waiting for the file upload to finish.":"Mux is preparing this version. Publishing becomes available when its status reaches Ready.";body.append(note);}const meta=document.createElement("div");meta.className="meta-grid";addMeta(meta,"Library status",v.published?"Published":assetStatus(latest));addMeta(meta,"Media source",latest?.provider==="static_mp4"?"Hosted MP4":"Mux streaming");addMeta(meta,"Duration",durationText(shown?.duration_seconds));addMeta(meta,"Resolution",shown?.resolution_tier||"—");addMeta(meta,"Aspect ratio",shown?.aspect_ratio||"—");addMeta(meta,"Added",bytesDate(v.created_at));body.append(meta);
+const form=document.createElement("form");form.className="inspector-form";form.innerHTML='<div class="field"><label for="detailTitle">Title</label><input id="detailTitle" required maxlength="512"></div><div class="field"><label for="detailSlug">Library slug</label><input id="detailSlug" required maxlength="100" pattern="[a-z0-9]+(?:-[a-z0-9]+)*"></div><div class="field"><label for="detailDescription">Description</label><textarea id="detailDescription" maxlength="2000" rows="3"></textarea></div><button class="button primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save details</button><div class="status" id="detailStatus" role="status" aria-live="polite"></div>';form.querySelector("#detailTitle").value=v.title||"";form.querySelector("#detailSlug").value=v.slug||"";form.querySelector("#detailDescription").value=v.description||"";form.addEventListener("submit",async e=>{e.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;setStatus("detailStatus","Saving library details…");try{await api("videos/"+encodeURIComponent(v.id),{method:"PATCH",body:{title:form.querySelector("#detailTitle").value.trim(),slug:form.querySelector("#detailSlug").value.trim(),description:form.querySelector("#detailDescription").value.trim()}});setStatus("detailStatus","Details saved.","good");await refreshList({keepSelection:true});}catch(error){setStatus("detailStatus",error.message,"bad");}finally{submit.disabled=false;}});body.append(form);
+const actions=document.createElement("div");actions.className="inspector-actions";if(latest?.asset_status==="ready"&&(!v.published||v.active_asset_id!==latest.id)){const pub=document.createElement("button");pub.type="button";pub.className="button primary";pub.innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> Publish ready version';pub.addEventListener("click",async()=>{pub.disabled=true;setStatus("listStatus","Publishing selected ready version…");try{await api("videos/"+encodeURIComponent(v.id)+"/publish",{method:"POST",body:{assetId:latest.id}});setStatus("listStatus","Published "+(v.title||v.slug)+".","good");await refreshList({keepSelection:true});}catch(error){setStatus("listStatus",error.message,"bad");pub.disabled=false;}});actions.append(pub);}if(v.published){const unpub=document.createElement("button");unpub.type="button";unpub.className="button quiet";unpub.innerHTML='<i class="fa-solid fa-eye-slash"></i> Unpublish';unpub.addEventListener("click",async()=>{if(!confirm('Unpublish "'+(v.title||v.slug)+'"? Public feeds will stop including it, but the video and all versions remain stored.'))return;unpub.disabled=true;try{await api("videos/"+encodeURIComponent(v.id)+"/unpublish",{method:"POST",body:{}});setStatus("listStatus","Video unpublished. Stored versions were retained.","good");await refreshList({keepSelection:true});}catch(error){setStatus("listStatus",error.message,"bad");unpub.disabled=false;}});actions.append(unpub);}if(latest?.provider==="mux"){const upload=document.createElement("button");upload.type="button";upload.className="button";upload.innerHTML='<i class="fa-solid fa-arrow-up-from-bracket"></i> Upload new version';upload.addEventListener("click",()=>{closeDialog();openDialog("upload",v);});actions.append(upload);}body.append(actions);
+if(Array.isArray(v.assets)&&v.assets.length>1){const heading=document.createElement("div");heading.className="section-label";heading.style.marginTop="20px";heading.textContent="Version history";const list=document.createElement("div");list.className="version-list";v.assets.forEach((a,index)=>{const row=document.createElement("div");row.className="version-row";const left=document.createElement("div"),name=document.createElement("strong"),detail=document.createElement("span"),right=document.createElement("span");name.textContent=index===0?"Latest version":"Version "+(v.assets.length-index);detail.textContent=assetStatus(a)+" · "+bytesDate(a.created_at);left.append(name,detail);right.textContent=a.id===v.active_asset_id?"Live version":a.provider==="mux"?durationText(a.duration_seconds):"Version";row.append(left,right);list.append(row);});body.append(heading,list);}host.append(body);}
+async function refreshList(options={}){if(!getSession()?.access_token)return;setStatus("listStatus","Loading library records…");$("refreshLibraryButton").disabled=true;try{const result=await api("videos");videos=Array.isArray(result.videos)?result.videos:[];const selected=selectedVideoId?videos.find(v=>String(v.id)===String(selectedVideoId)):null;if(options.keepSelection&&selectedVideoId){if(!selected)selectedVideoId="";renderInspector(selected||null);}else if(selectedVideoId&&!selected){selectedVideoId="";renderInspector(null);}renderLibrary();setStatus("listStatus",videos.length?"Library refreshed · "+videos.length+" video record(s).":"No video records yet. Add a video to start your library.","good");}catch(error){setStatus("listStatus",error.message,"bad");if(!videos.length)$("videoGrid").replaceChildren(makeEmpty("We couldn't load the library","Check your connection, administrator access and backend status, then retry.","Retry",()=>refreshList()));}finally{$("refreshLibraryButton").disabled=false;}}
+function switchActionTab(tab){document.querySelectorAll("[data-action-tab]").forEach(b=>{const active=b.dataset.actionTab===tab;b.classList.toggle("active",active);b.setAttribute("aria-selected",String(active));});document.querySelectorAll("[data-action-panel]").forEach(p=>p.classList.toggle("active",p.dataset.actionPanel===tab));const labels={upload:["Upload a video to Mux","Create a library record and upload the video directly to Mux."],import:["Import an existing Mux asset","Register a video already stored in your Mux account."],static:["Register an externally hosted MP4","Add a URL or site path without uploading or duplicating the file."]};$("dialogTitle").textContent=labels[tab][0];$("dialogSubtitle").textContent=labels[tab][1];}
+function openDialog(tab="upload",existing=null){if(!getSession()?.access_token){setStatus("loginStatus","Sign in to manage media first.","warn");return;}modalPreviousFocus=document.activeElement;$("actionDialog").classList.remove("hidden");$("actionDialog").setAttribute("aria-hidden","false");switchActionTab(tab);if(tab==="upload"){$("videoTitle").value=existing?.title?existing.title+" — new version":"";$("videoSlug").value=existing?.slug||"";$("videoDescription").value=existing?.description||"";$("prepareUploadButton").textContent=existing?"Prepare new version upload":"Prepare upload";$("uploadFlow").classList.add("hidden");$("uploadFlow").replaceChildren();setStatus("uploadStatus","");$("prepareUploadButton").dataset.videoId=existing?String(existing.id):"";$("prepareUploadButton").disabled=false;}if(tab==="import")void loadMuxImportAssets();window.requestAnimationFrame(()=>$(tab==="upload"?"videoTitle":tab==="import"?"muxAssetSelect":"staticTitle")?.focus({preventScroll:true}));}
+function closeDialog(){if($("actionDialog").classList.contains("hidden"))return;$("actionDialog").classList.add("hidden");$("actionDialog").setAttribute("aria-hidden","true");const flow=$("uploadFlow");if(flow)flow.querySelectorAll("mux-uploader").forEach(u=>{if(u.dataset.active!=="true")u.remove();});if(modalPreviousFocus?.isConnected)modalPreviousFocus.focus({preventScroll:true});}
+async function startUpload(video,asset){const flow=$("uploadFlow");flow.classList.remove("hidden");flow.replaceChildren();const heading=document.createElement("strong");heading.textContent="Upload ready · "+(video.title||video.slug);const message=document.createElement("p");message.className="status";message.style.marginTop="6px";flow.append(heading,message);message.textContent="Creating secure upload URL…";$("prepareUploadButton").disabled=true;try{const result=await api("videos/"+encodeURIComponent(video.id)+"/assets/"+encodeURIComponent(asset.id)+"/upload",{method:"POST",body:{}});const uploader=document.createElement("mux-uploader");uploader.setAttribute("endpoint",result.uploadUrl);uploader.setAttribute("pausable","");uploader.style.marginTop="12px";uploader.dataset.active="true";uploader.addEventListener("progress",event=>{const value=event.detail,p=typeof value==="number"?value:Number(value?.progress);message.textContent=Number.isFinite(p)?"Uploading video… "+Math.round(p)+"%":"Uploading video…";});uploader.addEventListener("success",async()=>{uploader.dataset.active="false";message.textContent="Upload received. Mux is processing the video; its state updates after webhook confirmation.";message.className="status good";setStatus("uploadStatus","Upload transferred. Wait until processing changes to Ready before publishing.","good");await refreshList({keepSelection:true});});uploader.addEventListener("uploaderror",async()=>{uploader.dataset.active="false";message.textContent="Upload failed. Check the file and connection, then create a fresh version to retry.";message.className="status bad";setStatus("uploadStatus","The upload failed; the existing published version was not changed.","bad");await refreshList({keepSelection:true});});flow.append(uploader);message.textContent="Select a video file below. It uploads directly from this browser to Mux; keep this tab open until transfer completes.";}catch(error){message.textContent=error.message;message.className="status bad";setStatus("uploadStatus",error.message,"bad");$("prepareUploadButton").disabled=false;}}
+async function loadMuxImportAssets(){const select=$("muxAssetSelect");if(!select||!getSession()?.access_token)return;const refresh=$("refreshMuxAssetsButton"),previous=select.value;select.replaceChildren();const loading=document.createElement("option");loading.value="";loading.textContent="Loading Mux uploads…";select.append(loading);select.disabled=true;if(refresh)refresh.disabled=true;$("muxAssetsHint").textContent="Searching recent Mux uploads…";try{const result=await api("mux-assets");importAssets=Array.isArray(result.assets)?result.assets:[];select.replaceChildren();const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent=importAssets.length?"Choose an unlinked Mux asset…":"No unlinked assets found";select.append(placeholder);importAssets.forEach(asset=>{const option=document.createElement("option");option.value=String(asset.id||"");option.textContent=[asset.title||"Untitled video",asset.status||"unknown",Number.isFinite(Number(asset.durationSeconds))?durationText(asset.durationSeconds):""].filter(Boolean).join(" · ");select.append(option);});select.value=importAssets.some(a=>String(a.id)===previous)?previous:"";$("muxAssetsHint").textContent=importAssets.length?importAssets.length+" unlinked asset(s) in the latest "+Number(result.checked||100)+" checked uploads.":"No unlinked public-playback assets found in recent uploads. Assets already registered appear in the library.";updateImportPreview();}catch(error){importAssets=[];select.replaceChildren();const opt=document.createElement("option");opt.value="";opt.textContent="Could not load Mux uploads";select.append(opt);$("muxAssetsHint").textContent=error.message;$("importPreview").innerHTML='<i class="fa-solid fa-triangle-exclamation"></i>';$("importMetadata").textContent="Refresh to retry loading the Mux account.";}finally{select.disabled=false;if(refresh)refresh.disabled=false;}}
+function updateImportPreview(){const a=importAssets.find(item=>String(item.id)===String($("muxAssetSelect").value||""));$("importPreview").replaceChildren();if(!a){const i=document.createElement("i");i.className="fa-solid fa-film";$("importPreview").append(i);$("importMetadata").textContent="Choose an asset to see its duration, processing state and resolution.";return;}const poster=a.playbackId?muxPosterUrl(a.playbackId,480):"";if(poster){const img=document.createElement("img");img.src=poster;img.alt="Selected video poster";img.onerror=()=>img.remove();$("importPreview").append(img);}else{const i=document.createElement("i");i.className="fa-solid fa-film";$("importPreview").append(i);}$("importMetadata").textContent=["Status: "+(a.status||"Unknown"),"Duration: "+(Number.isFinite(Number(a.durationSeconds))?durationText(a.durationSeconds):"—"),"Resolution: "+(a.resolutionTier||"—"),"Added: "+bytesDate(a.createdAt)].join("\n");$("importTitle").value=String(a.title||"Imported Mux video");$("importSlug").value=slugify(a.title||"mux-video");}
+async function beginUpload(){if(inFlight)return;inFlight=true;const button=$("prepareUploadButton");button.disabled=true;try{const existing=String(button.dataset.videoId||"");let video,asset;if(existing){video=videos.find(v=>String(v.id)===existing);if(!video)throw new Error("The selected library record is missing. Refresh, then retry.");const created=await api("videos/"+encodeURIComponent(existing)+"/assets",{method:"POST",body:{}});asset=created.asset;}else{const title=$("videoTitle").value.trim(),slug=$("videoSlug").value.trim();if(!title||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("Enter a title and a lowercase hyphenated slug.");const created=await api("videos",{method:"POST",body:{title,slug,description:$("videoDescription").value.trim(),placement:"project"}});video=created.video;asset=created.asset;}selectedVideoId=String(video.id);await refreshList({keepSelection:true});await startUpload(video,asset);setStatus("uploadStatus","Record created. Upload the file, then wait for processing and publish when Ready.","good");}catch(error){setStatus("uploadStatus",error.message,"bad");button.disabled=false;}finally{inFlight=false;}}
+function setupEventListeners(){
+$("configureConnectionButton").addEventListener("click",()=>{configOpen=!configOpen;updatePanels();if(configOpen)$("supabaseUrl").focus({preventScroll:true});});$("closeConfigButton").addEventListener("click",()=>{configOpen=false;updatePanels();});
+$("configForm").addEventListener("submit",async e=>{e.preventDefault();try{config={supabaseUrl:normalizeBase($("supabaseUrl").value),supabaseAnonKey:$("supabaseAnonKey").value.trim()};if(!config.supabaseAnonKey)throw new Error("Enter the public publishable/anon key.");localStorage.setItem(CONFIG_KEY,JSON.stringify(config));configOpen=false;setStatus("configStatus","Public connection settings saved on this device.","good");updatePanels();if(getSession()?.access_token)await refreshList({keepSelection:true});}catch(error){setStatus("configStatus",error.message,"bad");}});
+$("loginForm").addEventListener("submit",async e=>{e.preventDefault();setStatus("loginStatus","Signing in…");const submit=$("loginForm").querySelector('button[type="submit"]');submit.disabled=true;try{const response=await fetch(normalizeBase(config.supabaseUrl)+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:config.supabaseAnonKey,"Content-Type":"application/json"},body:JSON.stringify({email:$("loginEmail").value.trim(),password:$("loginPassword").value}),credentials:"omit"});const result=await response.json().catch(()=>({}));if(!response.ok||!result.access_token)throw new Error(result.msg||result.message||"Sign-in failed.");saveSession(result);$("loginPassword").value="";updatePanels();await refreshList();await loadMuxImportAssets();}catch(error){sessionStorage.removeItem(SESSION_KEY);updatePanels();setStatus("loginStatus",error.message,"bad");}finally{submit.disabled=false;}});
+$("signOutButton").addEventListener("click",logout);$("signOutTopButton").addEventListener("click",logout);$("topUploadButton").addEventListener("click",()=>openDialog("upload"));$("newUploadButton").addEventListener("click",()=>openDialog("upload"));$("importMuxButton").addEventListener("click",()=>openDialog("import"));$("closeDialogButton").addEventListener("click",closeDialog);$("actionDialog").addEventListener("click",e=>{if(e.target===$("actionDialog"))closeDialog();});document.querySelectorAll("[data-action-tab]").forEach(b=>b.addEventListener("click",()=>switchActionTab(b.dataset.actionTab)));document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDialog();});$("prepareUploadButton").addEventListener("click",beginUpload);
+$("muxAssetSelect").addEventListener("change",updateImportPreview);$("refreshMuxAssetsButton").addEventListener("click",loadMuxImportAssets);$("importMuxForm").addEventListener("submit",async e=>{e.preventDefault();const submit=$("importMuxForm").querySelector('button[type="submit"]');submit.disabled=true;setStatus("importStatus","Adding this asset to your library…");try{const id=String($("muxAssetSelect").value||"").trim(),a=importAssets.find(x=>String(x.id)===id);if(!a)throw new Error("Choose an available Mux asset first.");await api("videos/import-mux",{method:"POST",body:{muxAssetId:id,title:$("importTitle").value.trim(),slug:$("importSlug").value.trim(),placement:"project"}});setStatus("importStatus","Added to the library as a draft. Publish it once processing is Ready.","good");await refreshList();closeDialog();}catch(error){setStatus("importStatus",error.message,"bad");}finally{submit.disabled=false;}});
+$("staticVideoForm").addEventListener("submit",async e=>{e.preventDefault();const submit=$("staticVideoForm").querySelector('button[type="submit"]');submit.disabled=true;setStatus("staticStatus","Registering external video…");try{await api("videos/import-static",{method:"POST",body:{title:$("staticTitle").value.trim(),slug:$("staticSlug").value.trim(),placement:"project",sourceUrl:$("staticSourceUrl").value.trim()}});setStatus("staticStatus","MP4 registered as a draft. Select it in the library to inspect or publish.","good");await refreshList();closeDialog();}catch(error){setStatus("staticStatus",error.message,"bad");}finally{submit.disabled=false;}});
+$("refreshLibraryButton").addEventListener("click",()=>refreshList({keepSelection:true}));$("searchInput").addEventListener("input",renderLibrary);$("statusFilter").addEventListener("change",renderLibrary);$("providerFilter").addEventListener("change",renderLibrary);$("gridViewButton").addEventListener("click",()=>setViewMode("grid"));$("listViewButton").addEventListener("click",()=>setViewMode("list"));
 }
-function placementLabel(value) {
-  return ({ hero: "Homepage hero loop", project: "Project media / lightbox", background: "Background (not connected yet)", footer: "Footer (not connected yet)", other: "Other (not connected yet)" })[value] || String(value || "Unknown");
-}
-function normalizeBase(value) {
-  const url = new URL(String(value || "").trim());
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) throw new Error("Use an HTTPS Supabase project URL.");
-  return url.origin;
-}
-function getSession() { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); } catch (_) { return null; } }
-function saveSession(value) { sessionStorage.setItem(SESSION_KEY, JSON.stringify(value)); }
-async function loadConfig() {
-  let file = {};
-  try { const response = await fetch("../data/video-platform.json", { cache: "no-cache", credentials: "omit" }); if (response.ok) file = await response.json(); } catch (_) {}
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}"); } catch (_) {}
-  config = { supabaseUrl: saved.supabaseUrl || file.supabaseUrl || "", supabaseAnonKey: saved.supabaseAnonKey || file.supabaseAnonKey || "" };
-  $("supabaseUrl").value = config.supabaseUrl; $("supabaseAnonKey").value = config.supabaseAnonKey;
-}
-function updatePanels() {
-  const configured = Boolean(config.supabaseUrl && config.supabaseAnonKey), signed = Boolean(getSession()?.access_token);
-  $("loginPanel").classList.toggle("hidden", !configured || signed);
-  $("workspace").classList.toggle("hidden", !configured || !signed);
-  $("signOutButton").classList.toggle("hidden", !signed);
-}
-async function refreshToken() {
-  const session = getSession(); if (!session?.refresh_token) return null;
-  const response = await fetch(config.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", { method: "POST",
-    headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: session.refresh_token }), credentials: "omit" });
-  if (!response.ok) { sessionStorage.removeItem(SESSION_KEY); return null; }
-  const updated = await response.json(); saveSession(updated); return updated.access_token;
-}
-async function token() {
-  const session = getSession(); if (!session?.access_token) throw new Error("Sign in to the video CMS first.");
-  if (!session.expires_at || Number(session.expires_at) * 1000 > Date.now() + 30000) return session.access_token;
-  const updated = await refreshToken(); if (!updated) throw new Error("Your session expired. Sign in again."); return updated;
-}
-function describeApiError(statusCode, payload) {
-  const detail = String(payload?.detail || payload?.error || payload?.message || payload?.msg || "").trim();
-  if (payload?.code === "mux_auth_failed") {
-    return "Mux rejected the server API credentials (upstream HTTP " + Number(payload?.upstreamStatus || statusCode) +
-      "). Verify MUX_TOKEN_ID and MUX_TOKEN_SECRET are a matching pair from the same Mux environment, and that the token has Mux Video Read permission." +
-      (detail ? " Mux detail: " + detail : "");
-  }
-  if (payload?.code === "mux_asset_not_found") {
-    return "Mux could not find this asset in the environment selected by the server token. Confirm the asset ID and that it belongs to the same Mux environment as MUX_TOKEN_ID/MUX_TOKEN_SECRET." +
-      (detail ? " Mux detail: " + detail : "");
-  }
-  if (payload?.code === "mux_api_error") {
-    return "Mux API request failed (upstream HTTP " + Number(payload?.upstreamStatus || statusCode) + ")." +
-      (detail ? " Mux detail: " + detail : "");
-  }
-  if (statusCode === 401) {
-    return "Unauthorized (401). Sign in again. If sign-in succeeds but the request still fails, verify mux-admin is deployed with verify_jwt = false and that the CMS session is valid." +
-      (detail ? " Server detail: " + detail : "");
-  }
-  if (statusCode === 403) {
-    return "Forbidden (403). The signed-in Supabase Auth user's UID must be included in the server-side CMS_ADMIN_USER_IDS secret." +
-      (detail ? " Server detail: " + detail : "");
-  }
-  if (statusCode === 404) {
-    return "Not found (404). Check that mux-admin is deployed to the Supabase project configured above." +
-      (detail ? " Server detail: " + detail : "");
-  }
-  if (statusCode >= 500) {
-    return "Backend error (" + statusCode + "). Check Supabase Edge Function logs, database access, and the required Mux/Supabase secrets." +
-      (detail ? " Server detail: " + detail : "");
-  }
-  return detail || "Request failed with HTTP " + statusCode;
-}
-async function api(route, options = {}) {
-  const base = normalizeBase(config.supabaseUrl); let auth = await token();
-  const call = (value) => fetch(base + "/functions/v1/mux-admin/" + route.replace(/^\/+/, ""), { method: options.method || "GET",
-    headers: { apikey: config.supabaseAnonKey, Authorization: "Bearer " + value, ...(options.body === undefined ? {} : { "Content-Type": "application/json" }) },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body), credentials: "omit" });
-  let response;
-  try {
-    response = await call(auth);
-    if (response.status === 401) { auth = await refreshToken(); if (auth) response = await call(auth); }
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error || "");
-    throw new Error("Could not reach the Supabase admin API. Check the browser origin against CMS_ALLOWED_ORIGINS and inspect CORS/network errors." +
-      (detail ? " " + detail : ""));
-  }
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(describeApiError(response.status, payload));
-  return payload;
-}
-function button(label, action, primary = false) { const el = document.createElement("button"); el.type = "button"; el.className = "button" + (primary ? " primary" : ""); el.textContent = label; el.addEventListener("click", action); return el; }
-function assetStatus(asset) {
-  if (!asset) return "No asset"; if (asset.provider === "static_mp4") return "Static MP4 ready";
-  if (asset.asset_status === "ready") return "Ready"; if (asset.asset_status === "errored" || asset.upload_state === "failed") return "Failed";
-  if (asset.asset_status === "preparing") return "Processing"; if (asset.upload_state === "awaiting_upload") return "Awaiting upload";
-  return String(asset.asset_status || asset.upload_state || "Not started");
-}
-async function loadMuxImportAssets() {
-  const select = $("muxAssetSelect");
-  if (!select) return;
-  const hint = $("muxAssetsHint"), refresh = $("refreshMuxAssetsButton"), previous = select.value;
-  select.replaceChildren();
-  const loading = document.createElement("option"); loading.value = ""; loading.textContent = "Loading Mux uploads…"; select.append(loading);
-  select.disabled = true; if (refresh) refresh.disabled = true;
-  try {
-    const result = await api("mux-assets");
-    muxImportAssets = Array.isArray(result.assets) ? result.assets : [];
-    select.replaceChildren();
-    const placeholder = document.createElement("option"); placeholder.value = "";
-    placeholder.textContent = muxImportAssets.length ? "Choose a Mux video…" : "No unlinked videos found in recent Mux assets";
-    select.append(placeholder);
-    for (const asset of muxImportAssets) {
-      const option = document.createElement("option"); option.value = String(asset.id || "");
-      const duration = Number.isFinite(Number(asset.durationSeconds)) ? " · " + Math.round(Number(asset.durationSeconds)) + " sec" : "";
-      const date = asset.createdAt ? " · " + new Date(asset.createdAt).toLocaleDateString() : "";
-      option.textContent = String(asset.title || "Untitled Mux video") + " · " + String(asset.status || "unknown") + duration + date;
-      select.append(option);
-    }
-    select.value = muxImportAssets.some(asset => String(asset.id) === previous) ? previous : "";
-    if (hint) hint.textContent = muxImportAssets.length
-      ? muxImportAssets.length + " unlinked, public-playback video(s) found in the most recent " + Number(result.checked || 100) + " Mux assets. Select one; IDs stay behind the scenes."
-      : "No unlinked, public-playback videos found in recent Mux assets. Videos already linked to this CMS appear under Video records below.";
-  } catch (error) {
-    muxImportAssets = []; select.replaceChildren();
-    const failed = document.createElement("option"); failed.value = ""; failed.textContent = "Could not load Mux uploads"; select.append(failed);
-    if (hint) hint.textContent = "Could not load Mux uploads. Try Refresh uploads. " + (error?.message || "");
-  } finally {
-    select.disabled = false; if (refresh) refresh.disabled = false;
-  }
-}
-function suggestImportDetails() {
-  const id = String($("muxAssetSelect")?.value || "");
-  $("muxAssetId").value = id;
-  const asset = muxImportAssets.find(item => String(item.id) === id);
-  if (!asset) return;
-  $("importTitle").value = String(asset.title || "Imported Mux video");
-  $("importSlug").value = slugify(asset.title || "mux-video");
-}
-async function refreshList() {
-  status("listStatus", "Loading video records…");
-  try { const result = await api("videos"); renderVideos(Array.isArray(result.videos) ? result.videos : []); status("listStatus", result.videos?.length ? "Loaded " + result.videos.length + " record(s)." : "No video records yet.", "good"); }
-  catch (error) { status("listStatus", error.message, "bad"); }
-}
-function renderVideos(videos) {
-  const list = $("videoList"); list.replaceChildren();
-  for (const video of videos) {
-    const card = document.createElement("article"); card.className = "video-card";
-    const header = document.createElement("div"); header.className = "video-head";
-    const title = document.createElement("strong"); title.textContent = video.title || video.slug;
-    const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = video.published ? "Published" : "Draft"; header.append(title, chip);
-    const assets = Array.isArray(video.assets) ? video.assets : [], latest = assets[0] || null;
-    const meta = document.createElement("div"); meta.className = "video-meta";
-    meta.textContent = "slug: " + video.slug + " · placement: " + video.placement + " · latest: " + assetStatus(latest) +
-      (latest?.mux_asset_id ? " · Mux asset ID: " + latest.mux_asset_id : "") +
-      (latest?.mux_playback_id ? " · playback ID: " + latest.mux_playback_id : "") +
-      (video.active_asset_id ? " · active version: " + video.active_asset_id : "");
-    const actions = document.createElement("div"); actions.className = "row";
-    if (latest?.asset_status === "ready" && (!video.published || video.active_asset_id !== latest.id)) actions.append(button("Publish latest ready version", async () => {
-      try { await api("videos/" + encodeURIComponent(video.id) + "/publish", { method: "POST", body: { assetId: latest.id } }); status("listStatus", "Published " + video.title + ".", "good"); await refreshList(); }
-      catch (error) { status("listStatus", error.message, "bad"); }
-    }, true));
-    actions.append(button("Upload new Mux version", async () => {
-      try { const created = await api("videos/" + encodeURIComponent(video.id) + "/assets", { method: "POST", body: {} }); await startUpload(video, created.asset); }
-      catch (error) { status("listStatus", error.message, "bad"); }
-    }));
-    const placementRow = document.createElement("div"); placementRow.className = "row"; placementRow.style.margin = "0 0 12px";
-    const placementLabelEl = document.createElement("label"); placementLabelEl.className = "hint"; placementLabelEl.textContent = "Website placement";
-    const placementSelect = document.createElement("select"); placementSelect.className = "placement-select";
-    placementSelect.setAttribute("aria-label", "Website placement for " + (video.title || video.slug));
-    const placementOptions = [["hero", "Homepage hero loop"], ["project", "Project media / lightbox"], ["background", "Background (not connected yet)"], ["footer", "Footer (not connected yet)"], ["other", "Other (not connected yet)"]];
-    if (!placementOptions.some(([value]) => value === video.placement)) placementOptions.push([String(video.placement || "other"), placementLabel(video.placement)]);
-    for (const [value, labelText] of placementOptions) {
-      const option = document.createElement("option"); option.value = value; option.textContent = labelText;
-      option.selected = value === video.placement; placementSelect.append(option);
-    }
-    placementLabelEl.append(placementSelect);
-    placementRow.append(placementLabelEl, button("Save placement", async () => {
-      try {
-        await api("videos/" + encodeURIComponent(video.id) + "/placement", { method: "POST", body: { placement: placementSelect.value } });
-        status("listStatus", "Placement saved. " + (placementSelect.value === "hero" ? "The published video is now available to the homepage hero feed." : placementSelect.value === "project" ? "The published video is available in the Projects CMS Mux selector." : "This placement is saved, but its page integration is not wired yet."), "good");
-        await refreshList();
-      } catch (error) { status("listStatus", error.message, "bad"); }
-    }));
-    card.append(header, meta, placementRow, actions); list.append(card);
-  }
-}
-async function startUpload(video, asset) {
-  const flow = $("uploadFlow"); flow.classList.remove("hidden"); flow.replaceChildren();
-  const heading = document.createElement("strong"); heading.textContent = "Upload: " + video.title;
-  const message = document.createElement("p"); message.className = "status"; flow.append(heading, message); message.textContent = "Creating upload URL…";
-  try {
-    const result = await api("videos/" + encodeURIComponent(video.id) + "/assets/" + encodeURIComponent(asset.id) + "/upload", { method: "POST", body: {} });
-    const uploader = document.createElement("mux-uploader"); uploader.setAttribute("endpoint", result.uploadUrl); uploader.setAttribute("pausable", ""); uploader.style.marginTop = "12px";
-    uploader.addEventListener("progress", (event) => { const v = event.detail; const p = typeof v === "number" ? v : Number(v?.progress); message.textContent = Number.isFinite(p) ? "Uploading… " + Math.round(p) + "%" : "Uploading…"; });
-    uploader.addEventListener("success", async () => { message.textContent = "Upload transferred; waiting for Mux processing and webhook confirmation…"; await refreshList(); });
-    uploader.addEventListener("uploaderror", async () => { message.textContent = "Upload failed. Check file/network, then create a fresh asset version before retrying."; message.className = "status bad"; await refreshList(); });
-    flow.append(uploader); message.textContent = "Choose an MP4. It uploads directly from this browser to Mux.";
-  } catch (error) { message.textContent = error.message; message.className = "status bad"; }
-}
-$("configForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try { config = { supabaseUrl: normalizeBase($("supabaseUrl").value), supabaseAnonKey: $("supabaseAnonKey").value.trim() }; if (!config.supabaseAnonKey) throw new Error("Enter the public key.");
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); status("configStatus", "Saved public connection settings on this device.", "good"); updatePanels(); if (getSession()?.access_token) await refreshList();
-  } catch (error) { status("configStatus", error.message, "bad"); }
-});
-$("loginForm").addEventListener("submit", async (event) => {
-  event.preventDefault(); status("loginStatus", "Signing in…");
-  try { const response = await fetch(normalizeBase(config.supabaseUrl) + "/auth/v1/token?grant_type=password", { method: "POST",
-    headers: { apikey: config.supabaseAnonKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: $("loginEmail").value.trim(), password: $("loginPassword").value }), credentials: "omit" });
-    const result = await response.json().catch(() => ({})); if (!response.ok || !result.access_token) throw new Error(result.msg || result.message || "Sign-in failed.");
-    saveSession(result); $("loginPassword").value = ""; updatePanels(); await refreshList(); await loadMuxImportAssets();
-  } catch (error) { sessionStorage.removeItem(SESSION_KEY); updatePanels(); status("loginStatus", error.message, "bad"); }
-});
-$("signOutButton").addEventListener("click", () => { sessionStorage.removeItem(SESSION_KEY); updatePanels(); $("videoList").replaceChildren(); status("listStatus", "Signed out."); });
-$("newVideoForm").addEventListener("submit", async (event) => {
-  event.preventDefault(); if (inFlight) return; inFlight = true; const submitter = event.submitter; if (submitter) submitter.disabled = true; status("uploadStatus", "Creating video and asset records…");
-  try { const result = await api("videos", { method: "POST", body: { title: $("videoTitle").value.trim(), slug: $("videoSlug").value.trim(), placement: $("videoPlacement").value, description: $("videoDescription").value.trim() } });
-    await refreshList(); await startUpload(result.video, result.asset); status("uploadStatus", "Record created. Upload your file, then wait for webhook processing.", "good");
-  } catch (error) { status("uploadStatus", error.message, "bad"); } finally { inFlight = false; if (submitter) submitter.disabled = false; }
-});
-$("muxAssetSelect").addEventListener("change", suggestImportDetails);
-$("refreshMuxAssetsButton").addEventListener("click", loadMuxImportAssets);
-$("importMuxForm").addEventListener("submit", async (event) => {
-  event.preventDefault(); status("importStatus", "Adding selected Mux video…");
-  try {
-    const muxAssetId = String($("muxAssetSelect").value || "").trim();
-    if (!muxAssetId) throw new Error("Choose a Mux upload first.");
-    await api("videos/import-mux", { method: "POST", body: { muxAssetId, title: $("importTitle").value.trim(), slug: $("importSlug").value.trim(), placement: $("importPlacement").value } });
-    status("importStatus", "Video added. Wait until its record says Ready, then publish it.", "good");
-    await refreshList(); await loadMuxImportAssets();
-  } catch (error) { status("importStatus", error.message, "bad"); }
-});
-$("staticVideoForm").addEventListener("submit", async (event) => {
-  event.preventDefault(); status("staticStatus", "Registering existing MP4…");
-  try { await api("videos/import-static", { method: "POST", body: { title: $("staticTitle").value.trim(), slug: $("staticSlug").value.trim(), placement: $("staticPlacement").value, sourceUrl: $("staticSourceUrl").value.trim() } });
-    status("staticStatus", "Registered as a draft. Publish when ready.", "good"); await refreshList();
-  } catch (error) { status("staticStatus", error.message, "bad"); }
-});
-$("refreshButton").addEventListener("click", async () => { await refreshList(); await loadMuxImportAssets(); });
-await loadConfig(); updatePanels();
-if (getSession()?.access_token && config.supabaseUrl && config.supabaseAnonKey) { await refreshList(); await loadMuxImportAssets(); }
+function setViewMode(mode){viewMode=mode==="list"?"list":"grid";$("gridViewButton").classList.toggle("active",viewMode==="grid");$("listViewButton").classList.toggle("active",viewMode==="list");$("gridViewButton").setAttribute("aria-pressed",String(viewMode==="grid"));$("listViewButton").setAttribute("aria-pressed",String(viewMode==="list"));renderLibrary();}
+setupEventListeners();await loadConfig();updatePanels();if(getSession()?.access_token&&config.supabaseUrl&&config.supabaseAnonKey){await refreshList();await loadMuxImportAssets();}
