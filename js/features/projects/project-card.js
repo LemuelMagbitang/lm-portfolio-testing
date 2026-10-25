@@ -168,7 +168,9 @@ export function buildProjectCardElement(
   if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
   if (t.orientation) thumbnail.dataset.thumbnailOrientation = String(t.orientation);
   if (t.src && typeof resolveAssetUrl === 'function') {
-    const thumbnailMediaType = String(t.type || mediaTypeFromSrc(t.src)).toLowerCase();
+    const declaredThumbnailType = String(t.type || mediaTypeFromSrc(t.src)).toLowerCase();
+    // Mux cards are poster-only: never mount a streamed player in the gallery grid.
+    const thumbnailMediaType = declaredThumbnailType === 'mux' ? 'image' : declaredThumbnailType;
     const thumbnailHolographic = thumbnailMediaType === 'image' && t.holographic &&
       typeof t.holographic === 'object' && !Array.isArray(t.holographic) ? t.holographic : null;
     const media = buildProjectThumbnailMedia(
@@ -211,7 +213,7 @@ export function buildProjectCardElement(
         }
       }
       observeProjectCardOrientation(card, project, media, {
-        mediaType: t.type || mediaTypeFromSrc(t.src)
+        mediaType: thumbnailMediaType
       });
       if (background && typeof applyMediaBackground === 'function') {
         Promise.resolve(applyMediaBackground(thumbnail, background, resolveAssetUrl))
