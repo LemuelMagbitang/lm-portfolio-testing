@@ -69,23 +69,40 @@ check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElemen
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
-check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] === "placement"') && admin.includes('"/assets?limit=100"'),
-  "Video Library must browse unlinked Mux assets and allow placement changes without SQL.");
+check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] === "placement"') &&
+  admin.includes('"/assets?limit=100"') && admin.includes('request.method === "PATCH"') &&
+  admin.includes('route[2] === "unpublish"'),
+  "The Mux admin API must support asset discovery, safe metadata editing, publish state and legacy placement compatibility.");
 check(page.includes('id="muxAssetSelect"') && page.includes('id="refreshMuxAssetsButton"') &&
-  script.includes('api("mux-assets")') && script.includes('"/placement"') &&
-  script.includes("No unlinked, public-playback videos found"),
-  "Video Library must allow title-based Mux importing without manual IDs and explain empty states.");
+  script.includes('api("mux-assets")') && script.includes('No unlinked public-playback assets found') &&
+  page.includes('id="sidebar"') && page.includes('id="signOutButton"') &&
+  page.includes('id="searchInput"') && page.includes('id="statusFilter"') &&
+  page.includes('id="providerFilter"') && page.includes('id="gridViewButton"') &&
+  page.includes('id="listViewButton"') && page.includes('id="assetInspector"'),
+  "Mux Media Library must include persistent navigation, logout, search/filter, grid/list, title-based import and a details inspector.");
+check(!/Website Placements|Website placement/i.test(page + script) &&
+  !script.includes('"/placement"') &&
+  script.includes('method:"PATCH"') && script.includes('"/unpublish"'),
+  "The Mux media library must not expose website placement controls and must support editing/unpublishing.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
 const mainCmsScript = read("admin/admin.js");
 check(mainCmsScript.includes("loadPublishedMuxVideoCatalog") &&
+  mainCmsScript.includes("function openMuxMediaPicker") &&
   mainCmsScript.includes("data-mux-selection") &&
+  mainCmsScript.includes("data-mux-browse") &&
+  mainCmsScript.includes("data-thumb-mux-browse") &&
+  mainCmsScript.includes("data-hero-mux-browse") &&
+  mainCmsScript.includes("fl_mux_browse") &&
   mainCmsScript.includes("Mux video (streamed)") &&
-  mainCmsScript.includes("muxPosterUrl"),
-  "Main Projects CMS must offer a published Mux video selector without manual ID entry.");
-check(read("js/data/project-normalizer.js").includes("normalized.playbackId = playbackId") &&
+  mainCmsScript.includes("muxPosterUrl") &&
+  read("admin/admin.css").includes("Unified Mux video picker"),
+  "CMS Projects, thumbnails, hero/footer sources and the shared picker must support title-based Mux selection with responsive UI.");
+check(read("js/data/project-normalizer.js").includes("normalized.thumbnail.playbackId = playbackId") &&
   read("js/features/lightbox/media-renderer.js").includes("function renderMuxVideo") &&
-  read("js/features/projects/project-card.js").includes("type: 'image'"),
-  "Mux project media must normalize playback IDs, stream in the lightbox, and use poster-only project cards.");
+  read("js/features/projects/project-card.js").includes("declaredThumbnailType === 'mux' ? 'image'") &&
+  read("js/features/footer/index.js").includes("ensureMuxPlayer") &&
+  hero.includes("manualSources.length ? manualSources : remoteVideos"),
+  "Mux thumbnails must remain poster-only, project lightboxes must stream Mux, and explicit hero/footer picks must be preserved.");
 check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),
