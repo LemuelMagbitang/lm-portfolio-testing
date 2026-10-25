@@ -28,7 +28,8 @@ Deno.serve(async (request: Request) => {
         if (!asset.mux_playback_id || asset.playback_policy !== "public") return null;
         return { id: video.id, slug: video.slug, title: video.title, description: video.description, placement: video.placement,
           provider: "mux", type: "mux", playbackId: asset.mux_playback_id, playbackPolicy: asset.playback_policy,
-          posterUrl: posterFor(asset), posterTimeSeconds: asset.poster_time_seconds, durationSeconds: asset.duration_seconds, aspectRatio: asset.aspect_ratio };
+          posterUrl: posterFor(asset), posterTimeSeconds: asset.poster_time_seconds, durationSeconds: asset.duration_seconds, aspectRatio: asset.aspect_ratio,
+          resolutionTier: asset.resolution_tier || null };
       }
       if (asset.provider === "static_mp4" && asset.source_url) return {
         id: video.id, slug: video.slug, title: video.title, description: video.description, placement: video.placement,
