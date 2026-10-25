@@ -10345,6 +10345,69 @@ try {
       }));
     });
 
+    await smokePage(browser, '/?project-thumbnail-presentation=1', async page => {
+      await page.evaluate(async () => {
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-05');
+        const fixture = document.createElement('section');
+        fixture.id = 'thumbnail-placeholder-fixtures';
+        Object.assign(fixture.style, {
+          width:'calc(100% - 32px)', maxWidth:'960px', margin:'24px auto',
+          display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:'12px'
+        });
+        document.body.appendChild(fixture);
+        ['16 / 9','1 / 1','3 / 5'].forEach((ratio,index) => {
+          const card=buildProjectCardElement({
+            id:'thumbnail-placeholder-'+index,
+            title:'Placeholder '+ratio,
+            thumbnail:{src:''},
+            media:[]
+          },{documentRef:document,resolveAssetUrl:value=>value});
+          Object.assign(card.style,{
+            position:'relative',display:'block',width:'100%',height:'auto',
+            aspectRatio:ratio,overflow:'hidden'
+          });
+          fixture.appendChild(card);
+        });
+      });
+      const inspect = async () => page.evaluate(() => {
+        const fixture=document.querySelector('#thumbnail-placeholder-fixtures');
+        return Array.from(fixture?.querySelectorAll('.project-card')||[]).map(card => {
+          const thumb=card.querySelector('.card-thumbnail');
+          const fallback=thumb?.querySelector('.project-thumb-media-fallback');
+          const label=fallback?.querySelector('.project-thumb-media-fallback-label');
+          if(!thumb||!fallback||!label)throw new Error('Thumbnail placeholder fixture did not render.');
+          const t=thumb.getBoundingClientRect(), l=label.getBoundingClientRect();
+          const root=getComputedStyle(fallback), text=getComputedStyle(label);
+          return {
+            ratio:card.style.aspectRatio,
+            dx:Math.abs(t.left+t.width/2-(l.left+l.width/2)),
+            dy:Math.abs(t.top+t.height/2-(l.top+l.height/2)),
+            bg:root.backgroundColor,bgImage:root.backgroundImage,radius:root.borderRadius,
+            shadow:root.boxShadow,blend:root.mixBlendMode,
+            labelBg:text.backgroundColor,labelRadius:text.borderRadius,labelPadding:text.padding,
+            labelShadow:text.boxShadow,width:t.width,height:t.height,labelWidth:l.width
+          };
+        });
+      });
+      const verify = (viewportName, rows) => {
+        for(const r of rows) if(r.dx>1||r.dy>1||r.bg!=='rgba(0, 0, 0, 0)'||
+          r.bgImage!=='none'||r.radius!=='0px'||r.shadow!=='none'||r.blend!=='difference'||
+          r.labelBg!=='rgba(0, 0, 0, 0)'||r.labelRadius!=='0px'||r.labelPadding!=='0px'||
+          r.labelShadow!=='none'||r.width<=0||r.height<=0||r.labelWidth<=0) {
+          throw new Error('Thumbnail placeholder presentation failed ('+viewportName+'): '+JSON.stringify(r));
+        }
+      };
+      verify('desktop',await inspect());
+      await page.setViewportSize({width:390,height:844});
+      await page.evaluate(() => {
+        const fixture=document.querySelector('#thumbnail-placeholder-fixtures');
+        if(fixture)fixture.style.gridTemplateColumns='minmax(0,1fr)';
+      });
+      await page.waitForTimeout(50);
+      verify('mobile resize',await inspect());
+      await page.evaluate(()=>document.querySelector('#thumbnail-placeholder-fixtures')?.remove());
+    }, {width:1280,height:900});
+
     console.log('LM. browser smoke test passed — Works and About booted without uncaught browser errors.');
   } finally {
     await browser.close();

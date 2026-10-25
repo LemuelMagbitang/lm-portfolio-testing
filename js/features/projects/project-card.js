@@ -151,7 +151,7 @@ export function buildProjectCardElement(
     : (fallbackThumbnail || { ...explicitThumbnail, src: '' });
   const inheritedBackground = t.src ? findProjectMediaBackground(project, t.src) : null;
   const background = t.background && typeof t.background === 'object' ? t.background : inheritedBackground;
-  const staticFallbackSrc = String(t.fallbackSrc || getStaticThumbnailFallback(project, t.src)).trim();
+  const staticFallbackSrc = String(t.fallbackSrc || (explicitThumbnailHasSource ? '' : getStaticThumbnailFallback(project, t.src))).trim();
 
   if (t.type) thumbnail.dataset.thumbnailType = String(t.type);
   if (t.orientation) thumbnail.dataset.thumbnailOrientation = String(t.orientation);

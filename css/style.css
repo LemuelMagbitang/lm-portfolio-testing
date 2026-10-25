@@ -3370,19 +3370,28 @@ footer{
 .card-thumbnail lottie-player.project-thumb-media{position:absolute;inset:0;display:block;min-width:0;min-height:0;object-fit:cover;overflow:hidden;}
 .card-thumbnail lottie-player.project-thumb-media.is-media-error{opacity:0!important;transform:none!important;}
 .card-thumbnail .project-thumb-media-fallback{
-  position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
-  overflow:hidden;padding:14px;background:linear-gradient(145deg,rgba(15,19,23,.96),rgba(25,31,32,.9));
-  color:rgba(255,255,255,.76);font-size:9px;font-weight:700;letter-spacing:.12em;text-align:center;pointer-events:none;
+  position:absolute;inset:0;z-index:4;display:grid;place-items:center;
+  overflow:hidden;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;
+  color:#fff;font-size:9px;font-weight:700;letter-spacing:.12em;text-align:center;pointer-events:none;
+}
+/* Blend text-only fallbacks against the thumbnail for adaptive contrast, but
+   leave an explicitly configured static poster image unmodified. */
+.card-thumbnail .project-thumb-media-fallback:has(> .project-thumb-media-fallback-label){
+  mix-blend-mode:difference;
 }
 .card-thumbnail .project-thumb-media-fallback-image{
   position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;object-fit:cover;object-position:center;
   opacity:1!important;transform:none!important;transition:none!important;
 }
 .card-thumbnail .project-thumb-media-fallback>i{
-  position:relative;z-index:1;font-size:23px;color:rgba(255,255,255,.68);
+  display:none;
 }
 .card-thumbnail .project-thumb-media-fallback-label{
-  position:relative;z-index:1;max-width:100%;font-size:9px;font-weight:700;letter-spacing:.12em;
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  display:block;width:max-content;max-width:calc(100% - 24px);
+  font-size:clamp(8px,.75vw,10px);font-weight:750;line-height:1.45;
+  letter-spacing:clamp(.06em,.15vw,.12em);color:#fff;text-align:center;
+  white-space:normal;overflow-wrap:anywhere;background:transparent;border:0;border-radius:0;padding:0;box-shadow:none;
 }
 .card-thumbnail .project-thumb-model{overflow:hidden;}
 .card-thumbnail .project-thumb-model.is-media-loading::after{

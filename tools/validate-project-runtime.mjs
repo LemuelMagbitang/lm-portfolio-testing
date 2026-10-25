@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-04';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261025-05';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261024-02';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-04';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261025-05';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-05';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261025-02';
 import {
@@ -931,6 +931,52 @@ assert.equal(firstArtworkFallbackCard.children[0]?.dataset?.thumbnailType, 'vide
 assert.equal(firstArtworkMedia?.dataset?.mediaType, 'video');
 assert.equal(firstArtworkMedia?.src, '/assets/media/first-artwork.mp4',
   'The card must render the first non-YouTube artwork rather than a synthesized YouTube poster.');
+
+const defaultImageFallbackCard = buildProjectCardElement({
+  id: 'default-image-fallback',
+  title: 'Default Image Fallback',
+  thumbnail: { type: 'image', src: '' },
+  media: [
+    { type: 'image', src: 'media/default-thumbnail.webp' },
+    { type: 'image', src: 'media/second-default-thumbnail.webp' }
+  ]
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value
+});
+const defaultImageMedia = defaultImageFallbackCard.children[0]?.children[0];
+assert.equal(defaultImageMedia?.src, '/assets/media/default-thumbnail.webp',
+  'Without a custom thumbnail, the first eligible project artwork remains the default.');
+assert.equal(defaultImageFallbackCard.children[0]?.dataset?.thumbnailType, 'image');
+
+const customThumbnailCard = buildProjectCardElement({
+  id: 'custom-thumbnail-priority',
+  title: 'Custom Thumbnail Priority',
+  thumbnail: { type: 'image', src: 'media/custom-thumbnail.webp' },
+  media: [{ type: 'image', src: 'media/alternate-thumbnail.webp' }]
+}, {
+  documentRef: cardDocument,
+  resolveAssetUrl: value => '/assets/' + value
+});
+const customThumbnailSurface = customThumbnailCard.children[0];
+const customThumbnailMedia = customThumbnailSurface.children[0];
+assert.equal(customThumbnailMedia?.src, '/assets/media/custom-thumbnail.webp',
+  'A configured custom thumbnail must be the exact source displayed in its card.');
+customThumbnailSurface.appendChild = function(node) {
+  node.parentNode = this;
+  node.parentElement = this;
+  this.children.push(node);
+  return node;
+};
+customThumbnailMedia.parentNode = customThumbnailSurface;
+customThumbnailMedia.parentElement = customThumbnailSurface;
+customThumbnailMedia.dispatch('error');
+const customThumbnailErrorSurface = customThumbnailSurface.children.find(node =>
+  String(node.className || '').includes('project-thumb-media-fallback'));
+assert.ok(customThumbnailErrorSurface, 'A failed custom thumbnail must retain its readable fallback surface.');
+assert.equal(customThumbnailErrorSurface.children.some(node =>
+  node.className === 'project-thumb-media-fallback-image'), false,
+  'A failed custom thumbnail must not silently switch to another project image.');
 
 const youtubeFallbackCard = buildProjectCardElement({
   id: 'youtube-fallback-regression',
