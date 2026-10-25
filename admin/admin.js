@@ -1608,7 +1608,7 @@ RENDERERS.footerLoop=async function(data, isCurrent=()=>true){
         </div>
         <div class="field" data-footer-mux-picker style="${manual.type==='mux'?'':'display:none'}">
           <label class="field-label">Video source</label>
-          <div class="mux-editor-picker-row"><span data-footer-mux-title>${attr(manual.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" id="fl_mux_browse">Browse Mux library</button></div>
+          <div class="mux-editor-picker-row"><span data-footer-mux-title>${attr(manual.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" id="fl_mux_browse">Browse media library</button></div>
         </div>
       </div>
       <div class="row">
@@ -1746,7 +1746,7 @@ RENDERERS.heroLoop=async function(data, isCurrent=()=>true){
       row.innerHTML=`<div class="card-item-head collapsible-head" data-open><span class="drag-handle"><i class="fa-solid fa-grip-vertical"></i></span><span class="preview-line">${esc(item.alt||item.src||'(empty)')}</span><div class="card-item-actions"><button class="icon-btn" data-a="up"><i class="fa-solid fa-arrow-up"></i></button><button class="icon-btn" data-a="down"><i class="fa-solid fa-arrow-down"></i></button><button class="icon-btn" data-a="del" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button><button class="icon-btn" data-a="toggle"><i class="fa-solid fa-chevron-${open?'up':'down'}"></i></button></div></div><div class="collapsible-body" style="display:${open?'block':'none'};margin-top:16px" data-body></div>`;
       if(open){
         const body=row.querySelector('[data-body]');
-        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-media-kind><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option><option value="mux" ${item.type==='mux'?'selected':''}>Mux video (streamed)</option></select></div><div class="field" data-hero-source-field style="${item.type==='mux'?'display:none':''}"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div><div class="field" data-hero-mux-wrap style="${item.type==='mux'?'':'display:none'}"><label class="field-label">Video source</label><div class="mux-editor-picker-row"><span data-hero-mux-title>${attr(item.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" data-hero-mux-browse>Browse Mux library</button></div></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Fade in</label><div class="time-field"><input data-time-f="fadeInMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.in||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeInMs,fadeUnits.get(item._uid)?.in||'s')}"><select data-time-unit="fadeInMs" aria-label="Fade in unit"><option value="s" ${(fadeUnits.get(item._uid)?.in||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.in||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div><div class="field"><label class="field-label">Fade out</label><div class="time-field"><input data-time-f="fadeOutMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.out||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeOutMs,fadeUnits.get(item._uid)?.out||'s')}"><select data-time-unit="fadeOutMs" aria-label="Fade out unit"><option value="s" ${(fadeUnits.get(item._uid)?.out||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.out||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="row"><div class="field"><label class="field-label">Artwork transitions</label><label class="check-row"><input type="checkbox" data-toggle="zoomTransition" ${item.zoomTransition?'checked':''}> Enable zoom motion</label><label class="check-row"><input type="checkbox" data-toggle="fadeTransition" ${item.fadeTransition?'checked':''}> Enable fade in/out</label></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div>`;
+        body.innerHTML=`<div class="row"><div class="field" style="max-width:180px"><label class="field-label">Type</label><select data-media-kind><option value="image" ${item.type==='image'?'selected':''}>Image</option><option value="video" ${item.type==='video'?'selected':''}>Video</option><option value="lottie" ${item.type==='lottie'?'selected':''}>Lottie (JSON)</option><option value="mux" ${item.type==='mux'?'selected':''}>Mux video (streamed)</option></select></div><div class="field" data-hero-source-field style="${item.type==='mux'?'display:none':''}"><label class="field-label">Source path or URL</label><input data-f="src" value="${attr(item.src)}"></div><div class="field" data-hero-mux-wrap style="${item.type==='mux'?'':'display:none'}"><label class="field-label">Video source</label><div class="mux-editor-picker-row"><span data-hero-mux-title>${attr(item.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" data-hero-mux-browse>Browse media library</button></div></div></div><div class="row"><div class="field"><label class="field-label">Alt / label</label><input data-f="alt" value="${attr(item.alt)}"></div><div class="field"><label class="field-label">Zoom</label><input data-f="zoom" type="number" min="0.5" step="0.05" value="${item.zoom}"></div></div><div class="row"><div class="field"><label class="field-label">Fade in</label><div class="time-field"><input data-time-f="fadeInMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.in||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeInMs,fadeUnits.get(item._uid)?.in||'s')}"><select data-time-unit="fadeInMs" aria-label="Fade in unit"><option value="s" ${(fadeUnits.get(item._uid)?.in||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.in||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div><div class="field"><label class="field-label">Fade out</label><div class="time-field"><input data-time-f="fadeOutMs" type="number" min="0" step="${(fadeUnits.get(item._uid)?.out||'s')==='s'?0.1:100}" value="${formatTimedValue(item.fadeOutMs,fadeUnits.get(item._uid)?.out||'s')}"><select data-time-unit="fadeOutMs" aria-label="Fade out unit"><option value="s" ${(fadeUnits.get(item._uid)?.out||'s')==='s'?'selected':''}>seconds</option><option value="ms" ${(fadeUnits.get(item._uid)?.out||'s')==='ms'?'selected':''}>milliseconds</option></select></div></div></div><div class="row"><div class="field"><label class="field-label">Focus (x% y%)</label><input data-f="focus" value="${attr(item.focus)}"></div><div class="field"><label class="field-label">Rotate (deg)</label><input data-f="rotate" type="number" step="1" value="${item.rotate}"></div></div><div class="row"><div class="field"><label class="field-label">Artwork transitions</label><label class="check-row"><input type="checkbox" data-toggle="zoomTransition" ${item.zoomTransition?'checked':''}> Enable zoom motion</label><label class="check-row"><input type="checkbox" data-toggle="fadeTransition" ${item.fadeTransition?'checked':''}> Enable fade in/out</label></div></div><div class="field"><label class="field-label">Focus picker</label><div class="focus-picker" data-picker><div data-preview style="position:absolute;inset:0"></div><div class="focus-crosshair" data-crosshair></div></div></div>`;
         const picker=body.querySelector('[data-picker]'),cross=body.querySelector('[data-crosshair]'),preview=body.querySelector('[data-preview]');
         const setCross=()=>{const q=(item.focus||'50% 50%').split(' ').map(v=>parseFloat(v)||50);cross.style.left=q[0]+'%';cross.style.top=q[1]+'%';};
         function refreshHeroPreview(){
@@ -3286,7 +3286,7 @@ function buildProjectBody(el, p, options = {}){
           <div class="row">
             <div class="field" style="max-width:180px"><label class="field-label">Thumbnail type</label><select data-f="thumb-type"><option value="image" ${p.thumbnail.type==='image'?'selected':''}>Image</option><option value="video" ${p.thumbnail.type==='video'?'selected':''}>Video</option><option value="lottie" ${p.thumbnail.type==='lottie'?'selected':''}>Lottie (JSON animation)</option><option value="model" ${p.thumbnail.type==='model'?'selected':''}>3D model</option><option value="mux" ${p.thumbnail.type==='mux'?'selected':''}>Mux video (streamed)</option></select></div>
             <div class="field" data-thumbnail-source-field style="${p.thumbnail.type==='mux'?'display:none':''}"><label class="field-label">Source path or URL</label><input data-f="thumb-src" value="${attr(p.thumbnail.src)}" placeholder="assets/projects/your-folder/thumb.jpg / .mp4 / .json"></div>
-            <div class="field" data-thumb-mux-picker-wrap style="${p.thumbnail.type==='mux'?'':'display:none'}"><label class="field-label">Video source</label><div class="mux-editor-picker-row"><span data-thumb-mux-label>${attr(p.thumbnail.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" data-thumb-mux-browse>Browse Mux library</button></div></div>
+            <div class="field" data-thumb-mux-picker-wrap style="${p.thumbnail.type==='mux'?'':'display:none'}"><label class="field-label">Video source</label><div class="mux-editor-picker-row"><span data-thumb-mux-label>${attr(p.thumbnail.alt || 'Choose a published Mux video')}</span><button class="ghost" type="button" data-thumb-mux-browse>Browse media library</button></div></div>
           </div>
           <div class="row">
             <div class="field"><label class="field-label">Zoom</label><input data-f="thumb-zoom" type="number" step="0.05" value="${p.thumbnail.zoom}"></div>
@@ -3802,7 +3802,7 @@ function buildProjectBody(el, p, options = {}){
           </div>
           <div class="field" data-mux-picker-wrap style="display:none">
             <label class="field-label">Video source</label>
-            <div class="mux-editor-picker-row"><span data-mux-selected>Choose a published Mux video</span><button class="ghost" type="button" data-mux-browse>Browse Mux library</button><button class="ghost" type="button" data-mux-refresh>Refresh</button></div>
+            <div class="mux-editor-picker-row"><span data-mux-selected>Choose a published Mux video</span><button class="ghost" type="button" data-mux-browse>Browse media library</button><button class="ghost" type="button" data-mux-refresh>Refresh</button></div>
             <select data-mux-selection aria-label="Selected published Mux video" tabindex="-1" aria-hidden="true" style="display:none"></select>
             <p class="hint" data-mux-picker-status role="status" aria-live="polite">Choose a ready, published video in the shared Mux picker.</p>
           </div>
@@ -3950,7 +3950,7 @@ function buildProjectBody(el, p, options = {}){
           if (muxPickerStatus) {
             muxPickerStatus.textContent = muxCatalog.length
               ? muxCatalog.length + ' ready published Mux video' + (muxCatalog.length === 1 ? '' : 's') + ' available. The card uses a poster; streaming starts when the lightbox opens.'
-              : 'No videos are available yet. Open Video Library, wait for the asset to become Ready, then Publish it.';
+              : 'No videos are available yet. Open Mux Media Library, wait for the asset to become Ready, then Publish it.';
           }
         } catch (error) {
           if (previewDisposed) return;
@@ -5867,10 +5867,10 @@ function openMediaPicker(onPick, options={}) {
         <button class="icon-btn" data-close-picker type="button" title="Close" aria-label="Close media picker"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="media-picker-source-tabs${allowMux?'':' hidden'}" data-picker-source-tabs role="tablist" aria-label="Media source">
-        <button type="button" class="media-picker-source-tab active" role="tab" aria-selected="true" data-picker-source="cms"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> CMS Media</button>
-        <button type="button" class="media-picker-source-tab" role="tab" aria-selected="false" data-picker-source="mux"><i class="fa-solid fa-film" aria-hidden="true"></i> Mux Videos</button>
+        <button type="button" class="media-picker-source-tab active" role="tab" aria-selected="true" aria-controls="pickerSourceCms" data-picker-source="cms"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> CMS Media</button>
+        <button type="button" class="media-picker-source-tab" role="tab" aria-selected="false" aria-controls="pickerSourceMux" data-picker-source="mux"><i class="fa-solid fa-film" aria-hidden="true"></i> Mux Videos</button>
       </div>
-      <section class="picker-source-panel" data-picker-panel="cms">
+      <section id="pickerSourceCms" class="picker-source-panel" data-picker-panel="cms" role="tabpanel" aria-label="CMS Media files">
         <div class="media-picker-toolbar">
           <div class="media-picker-pathbar"><div class="media-folder-crumb" id="pickerCrumbs"></div></div>
           <div class="media-picker-control-row">
@@ -5889,7 +5889,7 @@ function openMediaPicker(onPick, options={}) {
         <div class="dropzone dropzone-compact" id="pickerDropzone"><i class="fa-solid fa-cloud-arrow-up"></i>Drag a file here, or click to upload into this folder<input type="file" id="pickerFileInput" multiple style="display:none"></div>
         <div class="media-picker-scroll"><div class="media-grid" id="pickerGrid" aria-live="polite"></div></div>
       </section>
-      <section class="picker-source-panel mux-source-panel" data-picker-panel="mux" hidden>
+      <section id="pickerSourceMux" class="picker-source-panel mux-source-panel" data-picker-panel="mux" role="tabpanel" aria-label="Mux videos" hidden>
         <div class="mux-picker-toolbar">
           <label class="mux-picker-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input class="picker-search" data-mux-picker-search type="search" placeholder="Search published videos…" autocomplete="off" aria-label="Search Mux videos"></label>
           <select class="picker-kind" data-mux-picker-aspect aria-label="Filter Mux videos by orientation"><option value="all">All orientations</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option><option value="square">Square</option></select>
@@ -6133,22 +6133,15 @@ function openMediaPicker(onPick, options={}) {
     }catch(error){
       if(closed||requestId!==muxLoadId)return;
       muxLoaded=false;muxAssets=[];muxSelected=null;
+      paintMuxDetails(null);
       if(muxSummary)muxSummary.textContent='The Mux catalog could not be loaded.';
       if(muxGrid){muxGrid.replaceChildren();const empty=document.createElement('div');empty.className='mux-picker-empty';empty.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i><strong>Library unavailable</strong><p>'+esc(error?.message||'Check the public video API and try again.')+'</p>';muxGrid.append(empty);}
-      paintMuxDetails(null);
       if(muxNote)muxNote.textContent='Check the public video connection, then use Refresh to retry.';
     }finally{
       if(requestId===muxLoadId&&muxRefresh)muxRefresh.disabled=false;
     }
   }
 
-  overlay.querySelector('#pickerDropzone').addEventListener('click',()=>overlay.querySelector('#pickerFileInput').click());
-  // The event listeners above are scoped to the visible CMS tab; don't bind them to Mux-only controls.
-  if (allowMux && pickerSource==='mux') {
-    // Initialise the chosen source below after all handlers are attached.
-  }
-  kindSelect?.addEventListener('change',()=>{pickerKind=kindSelect.value;paintPicker();});
-  searchInput?.addEventListener('input',()=>{pickerSearch=searchInput.value.trim().toLowerCase();paintPicker();});
   if (pickerSource==='mux') {
     setPickerSource('mux');
   } else {
