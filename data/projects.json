@@ -439,6 +439,7 @@
           "texture": "assets/projects/gog-render-challenge/foil-tile.webp",
           "back": "assets/projects/gog-render-challenge/card-back-layout.webp",
           "backFoilEnabled": true,
+          "backIntensity": 0.1,
           "mask": "assets/projects/gog-render-challenge/foil-mask.webp",
           "backMask": "assets/projects/gog-render-challenge/foil-mask-card-back.webp"
         }
@@ -504,7 +505,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/miles-morales-back-1.webp",
-          "backFoilEnabled": true
+          "backFoilEnabled": true,
+          "backIntensity": 0.1
         }
       },
       {
@@ -521,7 +523,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/miles-morales-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -538,7 +541,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/gwen-stacy-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -555,7 +559,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/peter-b-parker-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -572,7 +577,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/Miguel-ohara-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -589,7 +595,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/pavitr-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -606,7 +613,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/jessica-drew-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -623,7 +631,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/hobie-brown-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -640,7 +649,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/ben-railey-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -657,7 +667,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/spider-cat-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -674,7 +685,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/spider-punk-logo-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -691,7 +703,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/the-spot-back-1.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       },
       {
@@ -708,7 +721,8 @@
           "grainLayer": true,
           "backTextureMode": "fill",
           "back": "assets/projects/funko-pop-sticker/the-spot-back.webp",
-          "backFoilEnabled": false
+          "backFoilEnabled": false,
+          "backIntensity": 0.1
         }
       }
     ]
@@ -909,6 +923,16 @@
         "type": "model",
         "src": "assets/projects/test/Female base.obj",
         "caption": "lorem ipsum dolor sit amet consectetur adipiscing elit id dolor consequat excepteur dolore nulla sit enim et et omnis possimus in officia ut fuga excepteur mollitia et eligendi non sunt temporibus voluptas excepturi vero est in voluptas occaecat occaecat quos est cum adipiscing rerum mollit cumque lorem in praesentium dolor",
+        "orientation": ""
+      },
+      {
+        "type": "mux",
+        "src": "https://image.mux.com/iPz8AatW27Pq61sVP02QImByquyvJy8svjFSWk4ynIkc/thumbnail.jpg?time=1.5&width=1600",
+        "caption": "hero-reel",
+        "playbackId": "iPz8AatW27Pq61sVP02QImByquyvJy8svjFSWk4ynIkc",
+        "poster": "https://image.mux.com/iPz8AatW27Pq61sVP02QImByquyvJy8svjFSWk4ynIkc/thumbnail.jpg?time=1.5&width=1600",
+        "durationSeconds": 39.166667,
+        "aspectRatio": "1:1",
         "orientation": ""
       }
     ]
