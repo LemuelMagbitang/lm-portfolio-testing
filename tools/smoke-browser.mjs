@@ -10237,7 +10237,7 @@ try {
           /og-image\.jpg/i.test(reducedHeroState.poster) || /og-image\.jpg/i.test(reducedHeroState.posterAttribute) ||
           !reducedHeroState.paused || reducedHeroState.loading !== 'ready') {
         throw new Error(
-          'Reduced-motion hero must keep its stream source detached and avoid reusing the Open Graph image: ' +
+          'Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image (including Mux streams): ' +
           JSON.stringify(reducedHeroState)
         );
       }
