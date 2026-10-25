@@ -60,7 +60,8 @@ Deno.serve(async (request: Request) => {
           createdAt: muxTimestampToIso(item.created_at),
           durationSeconds: Number.isFinite(Number(item.duration)) ? Number(item.duration) : null,
           aspectRatio: safeText(item.aspect_ratio, 32),
-          resolutionTier: safeText(item.resolution_tier, 32)
+          resolutionTier: safeText(item.resolution_tier, 32),
+          playbackId: safeText((Array.isArray(item?.playback_ids) ? item.playback_ids : []).find((playback: any) => playback?.policy === "public")?.id, 255)
         }));
       return jsonResponse(request, { assets, checked: Array.isArray(remote) ? remote.length : 0 });
     }
@@ -71,6 +72,22 @@ Deno.serve(async (request: Request) => {
       const { data: video, error } = await db.from("videos").update({ placement: place })
         .eq("id", route[1]).select("*").maybeSingle();
       if (error) throw new Error("Could not update this video's website placement: " + errorMessage(error));
+      if (!video) return jsonResponse(request, { error: "Video record not found." }, 404);
+      return jsonResponse(request, { video });
+    }
+
+    if (request.method === "PATCH" && route.length === 2 && route[0] === "videos") {
+      const title = safeText(body.title, 512);
+      const slug = safeSlug(body.slug);
+      if (!title || !slug) return jsonResponse(request, { error: "Provide a title and lowercase slug." }, 400);
+      const { data: duplicate, error: duplicateError } = await db.from("videos").select("id")
+        .eq("slug", slug).neq("id", route[1]).maybeSingle();
+      if (duplicateError) throw new Error("Could not check whether this slug is already used: " + errorMessage(duplicateError));
+      if (duplicate) return jsonResponse(request, { error: "That slug is already used by another video. Choose a different slug." }, 409);
+      const { data: video, error } = await db.from("videos").update({
+        title, slug, description: safeText(body.description, 2000)
+      }).eq("id", route[1]).select("*").maybeSingle();
+      if (error) throw new Error("Could not save video details: " + errorMessage(error));
       if (!video) return jsonResponse(request, { error: "Video record not found." }, 404);
       return jsonResponse(request, { video });
     }
@@ -201,6 +218,14 @@ Deno.serve(async (request: Request) => {
       }).eq("id", assetId);
       if (ue) throw ue;
       return jsonResponse(request, { uploadId: upload.id, uploadUrl: upload.url, timeout: upload.timeout }, 201);
+    }
+
+    if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "unpublish") {
+      const { data: video, error } = await db.from("videos").update({ published: false })
+        .eq("id", route[1]).select("*").maybeSingle();
+      if (error) throw new Error("Could not unpublish this video: " + errorMessage(error));
+      if (!video) return jsonResponse(request, { error: "Video record not found." }, 404);
+      return jsonResponse(request, { video, retainedAssets: true });
     }
 
     if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "publish") {
