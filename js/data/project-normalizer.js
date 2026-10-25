@@ -6,7 +6,7 @@
  * shape before project features render anything.
  */
 
-const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
+const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'mux', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 const HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
 const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards']);
@@ -123,9 +123,10 @@ export function normalizeProjectMedia(media = {}) {
   if (!media || typeof media !== 'object' || Array.isArray(media)) return null;
 
   const src = normalizeString(media.src);
-  if (!src) return null;
-
   const explicitType = normalizeString(media.type).toLowerCase();
+  const playbackId = normalizeString(media.playbackId);
+  if (!src && !(explicitType === 'mux' && playbackId)) return null;
+
   const sourcePath = src.split('?')[0].split('#')[0].toLowerCase();
   const inferredType = /\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(sourcePath)
     ? 'video'
@@ -147,6 +148,14 @@ export function normalizeProjectMedia(media = {}) {
 
   const caption = normalizeString(media.caption);
   if (caption) normalized.caption = caption;
+
+  if (type === 'mux' && playbackId) normalized.playbackId = playbackId;
+  const poster = normalizeString(media.poster);
+  if (poster) normalized.poster = poster;
+  const durationSeconds = Number(media.durationSeconds);
+  if (media.durationSeconds !== undefined && Number.isFinite(durationSeconds) && durationSeconds >= 0) normalized.durationSeconds = durationSeconds;
+  const aspectRatio = normalizeString(media.aspectRatio);
+  if (aspectRatio) normalized.aspectRatio = aspectRatio;
 
   const groupId = normalizeString(media.groupId);
   if (groupId) normalized.groupId = groupId;
@@ -182,7 +191,7 @@ export function normalizeProject(project = {}) {
 
   const capabilities = {
     hasImage: media.some(item => item.type === 'image'),
-    hasVideo: media.some(item => item.type === 'video'),
+    hasVideo: media.some(item => item.type === 'video' || item.type === 'mux'),
     hasYouTube: media.some(item => item.type === 'youtube'),
     hasLottie: media.some(item => item.type === 'lottie'),
     hasModel: media.some(item => item.type === 'model')

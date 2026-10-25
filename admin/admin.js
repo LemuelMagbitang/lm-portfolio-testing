@@ -416,6 +416,47 @@ async function uploadFilesToFolder(fileList,folder,gridEl,currentTree){
   }
 }
 
+let muxVideoCatalogPromise = null;
+
+function muxPosterUrl(playbackId, timeSeconds = 1.5) {
+  const id = String(playbackId || '').trim();
+  if (!id) return '';
+  const url = new URL('https://image.mux.com/' + encodeURIComponent(id) + '/thumbnail.jpg');
+  url.searchParams.set('time', String(Math.max(0, Number(timeSeconds) || 1.5)));
+  url.searchParams.set('width', '1600');
+  return url.toString();
+}
+
+async function loadPublishedMuxVideoCatalog({ force = false } = {}) {
+  if (force) muxVideoCatalogPromise = null;
+  if (!muxVideoCatalogPromise) {
+    muxVideoCatalogPromise = (async () => {
+      const configUrl = new URL('../data/video-platform.json', document.baseURI).href;
+      const configResponse = await fetch(configUrl, { cache: 'no-cache', credentials: 'omit' });
+      if (!configResponse.ok) throw new Error('Could not read the public video-platform configuration.');
+      const config = await configResponse.json();
+      const base = String(config?.supabaseUrl || '').trim().replace(/\/+$/, '');
+      const key = String(config?.supabaseAnonKey || '').trim();
+      if (!base || !key) throw new Error('The public Supabase video connection is not configured.');
+      const response = await fetch(base + '/functions/v1/mux-public', {
+        headers: { apikey: key }, cache: 'no-store', credentials: 'omit'
+      });
+      if (!response.ok) throw new Error('The published video catalog returned HTTP ' + response.status + '.');
+      const payload = await response.json();
+      if (!Array.isArray(payload?.videos)) throw new Error('The published video catalog response is invalid.');
+      return payload.videos.filter(video =>
+        video?.provider === 'mux' &&
+        String(video.playbackId || '').trim() &&
+        video.playbackPolicy === 'public'
+      );
+    })().catch(error => {
+      muxVideoCatalogPromise = null;
+      throw error;
+    });
+  }
+  return muxVideoCatalogPromise;
+}
+
 function ghRawUrl(path, version){
   if (!path) return '';
   // Keep external and transient local previews untouched. Internal media
@@ -2990,6 +3031,16 @@ function releasePreviewMedia(root) {
 }
 
 function buildMediaPreviewHtml(m){
+  if (m.type === 'mux') {
+    const poster = String(m.poster || m.src || muxPosterUrl(m.playbackId)).trim();
+    if (!String(m.playbackId || '').trim()) {
+      return '<div class="media-preview"><span class="empty-note">Choose a published Mux video from the selector above.</span></div>';
+    }
+    return '<div class="media-preview" style="position:relative"><img src="' + attr(poster) +
+      '" alt="' + attr(m.caption || 'Mux video poster') +
+      '" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.opacity=.35">' +
+      '<span class="yt-badge" style="position:absolute;left:10px;top:10px">MUX STREAM</span></div>';
+  }
   const sourceError = validateMediaSource(m.type, m.src);
   if (sourceError) return `<div class="media-preview media-preview-error">${sourceTypeErrorHtml(sourceError)}</div>`;
   if (!m.src) {
@@ -3069,6 +3120,10 @@ function serializeProjectEditorModel(project){
       type:media.type,
       src:media.src,
       caption:media.caption,
+      ...(media.playbackId ? {playbackId:String(media.playbackId)} : {}),
+      ...(media.poster ? {poster:String(media.poster)} : {}),
+      ...(Number.isFinite(Number(media.durationSeconds)) ? {durationSeconds:Number(media.durationSeconds)} : {}),
+      ...(media.aspectRatio ? {aspectRatio:String(media.aspectRatio)} : {}),
       ...(media.groupId ? {groupId:String(media.groupId)} : {}),
       orientation:media.orientation,
       ...(media.background && typeof media.background === 'object'
@@ -3609,9 +3664,20 @@ function buildProjectBody(el, p, options = {}){
                 <option value="youtube" ${m.type==='youtube'?'selected':''}>YouTube</option>
                 <option value="lottie" ${m.type==='lottie'?'selected':''}>Lottie (JSON animation)</option>
                 <option value="model" ${m.type==='model'?'selected':''}>3D model</option>
+                <option value="mux" ${m.type==='mux'?'selected':''}>Mux video (streamed)</option>
               </select>
             </div>
-            <div class="field"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
+            <div class="field" data-media-source-wrap style="${m.type==='mux'?'display:none':''}"><label class="field-label">Source (file path or URL)</label><input data-mf="src" value="${attr(m.src)}" placeholder="assets/projects/your-folder/artwork.jpg"></div>
+          </div>
+          <div class="field" data-mux-picker-wrap style="${m.type==='mux'?'':'display:none'}">
+            <label class="field-label" for="mux-media-select-${attr(m._uid)}">Published Mux video</label>
+            <div class="row">
+              <select data-mux-selection id="mux-media-select-${attr(m._uid)}" aria-label="Choose a published Mux video" style="min-width:0;flex:1">
+                <option value="">Loading published videos…</option>
+              </select>
+              <button class="ghost" type="button" data-mux-refresh>Refresh list</button>
+            </div>
+            <p class="hint" data-mux-picker-status role="status" aria-live="polite">Only ready, published videos with public playback are listed. Manage uploads in Video Library.</p>
           </div>
           <div class="row media-editor-row media-editor-meta">
             <div class="field"><label class="field-label">Caption <span style="opacity:.5">(optional)</span></label><input data-mf="caption" value="${attr(m.caption)}"></div>
@@ -5755,6 +5821,13 @@ function computeFallbackThumb(media, thumbnail = {}){
   const thumbnailBackground = thumbnail?.background && typeof thumbnail.background === 'object'
     ? thumbnail.background
     : null;
+  const firstMux=(media||[]).find(m=>m&&m.type==='mux'&&(m.poster||m.src||m.playbackId));
+  if(firstMux) return {
+    type:'image',
+    src:String(firstMux.poster||firstMux.src||muxPosterUrl(firstMux.playbackId)).trim(),
+    background:firstMux.background || thumbnailBackground,
+    orientation:firstMux.orientation||''
+  };
   const firstUsable=(media||[]).find(m=>m&&m.src&&['image','video','lottie','model'].includes(m.type));
   if(firstUsable) return {
     type:firstUsable.type,
