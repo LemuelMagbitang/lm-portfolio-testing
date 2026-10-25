@@ -10478,7 +10478,11 @@ try {
               r.overlayContent === 'none' || r.overlayTop !== '0px' || r.overlayRight !== '0px' ||
               r.overlayBottom !== '0px' || r.overlayLeft !== '0px' ||
               r.overlayZ !== '2' || r.overlayBackground !== 'rgba(0, 0, 0, 0.5)' ||
-              r.textTop !== '50%' || r.textLeft !== '50%' || r.textTransform === 'none' ||
+              !Number.isFinite(Number.parseFloat(r.textTop)) ||
+              !Number.isFinite(Number.parseFloat(r.textLeft)) ||
+              Math.abs(Number.parseFloat(r.textTop) - r.thumbnailHeight / 2) > 1 ||
+              Math.abs(Number.parseFloat(r.textLeft) - r.thumbnailWidth / 2) > 1 ||
+              r.textTransform === 'none' ||
               r.textZ !== '3' || r.textBlend !== 'difference' ||
               !r.textMaxWidth || r.textWrap !== 'anywhere') {
             throw new Error('Thumbnail loading layer/source contract failed ('+viewportName+'): '+JSON.stringify(r));
