@@ -135,6 +135,7 @@ const makeElement = () => ({
     remove(...names) { names.forEach(name => this.values.delete(name)); }
   },
   append(...nodes) { this.children.push(...nodes); },
+  replaceChildren(...nodes) { this.children.length = 0; this.append(...nodes); },
   appendChild(node) { this.children.push(node); return node; },
   setAttribute(name, value) { this.attributes.set(name, String(value)); },
   addEventListener(name, handler) {
