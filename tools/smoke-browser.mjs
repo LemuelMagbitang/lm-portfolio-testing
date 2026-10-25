@@ -10347,7 +10347,7 @@ try {
 
     await smokePage(browser, '/?project-thumbnail-presentation=1', async page => {
       // Keep project-card image requests pending long enough to inspect the live loader.
-      await page.route('**/__smoke/loading-thumbnails/**', async route => {
+      await page.route(/\/__smoke\/loading-thumbnails\//, async route => {
         await new Promise(resolve => setTimeout(resolve, 1800));
         await route.fulfill({
           status:200,
