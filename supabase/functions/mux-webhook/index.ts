@@ -47,8 +47,25 @@ Deno.serve(async (request: Request) => {
     const d = event.data || {};
     let updateError: any = null;
     if (event.type === "video.upload.asset_created") {
-      const result = await db.from("video_assets").update({ mux_asset_id: d.asset_id, upload_state: "uploaded", asset_status: "preparing", processing_state: "ingesting", uploaded_at: new Date().toISOString(), last_error: null }).eq("mux_upload_id", d.id);
-      updateError = result.error;
+      // Mux does not guarantee webhook ordering. Record the asset identity first,
+      // then update upload/processing state with database-side guards so a late
+      // asset_created event cannot regress a ready, errored, or deleted asset.
+      const identityResult = await db.from("video_assets")
+        .update({ mux_asset_id: d.asset_id, uploaded_at: new Date().toISOString() })
+        .eq("mux_upload_id", d.id);
+      if (identityResult.error) throw identityResult.error;
+
+      const uploadResult = await db.from("video_assets")
+        .update({ upload_state: "uploaded", last_error: null })
+        .eq("mux_upload_id", d.id)
+        .or("asset_status.is.null,asset_status.eq.preparing,asset_status.eq.ready");
+      if (uploadResult.error) throw uploadResult.error;
+
+      const processingResult = await db.from("video_assets")
+        .update({ asset_status: "preparing", processing_state: "ingesting" })
+        .eq("mux_upload_id", d.id)
+        .or("asset_status.is.null,asset_status.eq.preparing");
+      updateError = processingResult.error;
     } else if (event.type === "video.asset.ready") {
       let matches: any[] | null = null;
       for (const [field, value] of [["mux_asset_id", d.id], ["mux_upload_id", d.upload_id], ["external_id", d.meta?.external_id]] as any[]) {

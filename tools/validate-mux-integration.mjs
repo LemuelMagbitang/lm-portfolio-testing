@@ -26,6 +26,9 @@ check(webhook.includes("async function unpublishActiveAssets") &&
   webhook.includes("await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id))") &&
   webhook.includes("await unpublishActiveAssets(db, [asset.id])"),
   "Errored and deleted active assets must be unpublished with checked database updates.");
+check(webhook.includes('.or("asset_status.is.null,asset_status.eq.preparing,asset_status.eq.ready")') &&
+  webhook.includes('.or("asset_status.is.null,asset_status.eq.preparing")'),
+  "Upload-created webhook must preserve ready/failed/deleted states when events arrive out of order.");
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
