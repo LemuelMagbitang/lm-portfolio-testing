@@ -22,10 +22,20 @@ check(admin.includes("external_id: asset.external_id || asset.id") && read("supa
 check(admin.includes("MUX_UPLOAD_CORS_ORIGIN") && admin.includes("import-mux") && admin.includes("import-static"), "CORS settings or existing asset import route missing.");
 check(webhook.includes("mux-signature") && webhook.includes("crypto.subtle.sign") && webhook.includes("video.asset.ready"), "Webhook signature or lifecycle processing missing.");
 check(webhook.includes("video.upload.asset_created") && webhook.includes("video.asset.errored") && webhook.includes("video.asset.deleted") && webhook.includes("processed_at"), "Webhook lifecycle/idempotency incomplete.");
-check(webhook.includes("async function unpublishActiveAssets") &&
-  webhook.includes("await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id))") &&
-  webhook.includes("await unpublishActiveAssets(db, (result.data || []).map((item: any) => item.id))"),
+
+// Verify both terminal lifecycle handlers call the shared cleanup helper, and
+// verify that the helper fails loudly when the unpublish database update fails.
+// Keep this behavioral contract independent of how each handler collects IDs.
+const unpublishHelper = webhook.match(/async function unpublishActiveAssets\(db: any, assetIds: string\[\]\) \{([\s\S]*?)\n\}/)?.[1] || "";
+const erroredHandler = webhook.split('} else if (event.type === "video.asset.errored") {')[1]?.split('} else if (event.type === "video.asset.deleted") {')[0] || "";
+const deletedHandler = webhook.split('} else if (event.type === "video.asset.deleted") {')[1]?.split('} else if (["video.upload.errored"')[0] || "";
+const cleanupCall = "await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id))";
+check(unpublishHelper.includes('.update({ published: false, active_asset_id: null })') &&
+  unpublishHelper.includes("if (error) throw error;") &&
+  erroredHandler.includes(cleanupCall) &&
+  deletedHandler.includes(cleanupCall),
   "Errored and deleted active assets must be unpublished with checked database updates.");
+
 check(migration.includes("last_mux_event_created_at timestamptz") &&
   webhook.includes('Date.parse(String(event.created_at || ""))') &&
   webhook.includes("const newerEventFilter =") &&
