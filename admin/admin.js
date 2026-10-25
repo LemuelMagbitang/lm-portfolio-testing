@@ -3422,7 +3422,7 @@ function buildProjectBody(el, p, options = {}){
     p.thumbnail.poster = String(video.posterUrl || muxPosterUrl(video.playbackId));
     p.thumbnail.src = p.thumbnail.poster;
     p.thumbnail.alt = String(video.title || 'Project thumbnail');
-    const type = el.querySelector('[data-f="thumb-type]'); if (type) type.value = 'mux';
+    const type = el.querySelector('[data-f="thumb-type"]'); if (type) type.value = 'mux';
     const source = el.querySelector('[data-thumbnail-source-field]'); if (source) source.style.display = 'none';
     const muxWrap = el.querySelector('[data-thumb-mux-picker-wrap]'); if (muxWrap) muxWrap.style.display = '';
     const label = el.querySelector('[data-thumb-mux-label]'); if (label) label.textContent = p.thumbnail.alt;
