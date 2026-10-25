@@ -2396,7 +2396,7 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('const armSlowLoadFallback =') ||
       !thumbnail.includes('const showSlowLoadFallback =') ||
       thumbnail.includes("armSlowLoadFallback(() => generation === lottieGeneration)") ||
-      !thumbnail.includes("removeMediaFallback();\n        media.dataset.mediaState = 'loading';") ||
+      !thumbnail.includes("showMediaFallback('loading');\n        media.dataset.mediaState = 'loading';") ||
       !thumbnail.includes("media.dataset.mediaState !== 'loading'") ||
       !thumbnail.includes('}, MEDIA_SLOW_LOAD_TIMEOUT_MS);') ||
       thumbnail.includes('playerLoadTimeout') ||
