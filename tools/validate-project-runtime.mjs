@@ -336,7 +336,7 @@ const slowLoadHost = {
 const slowImageThumbnail = buildProjectThumbnailMedia(
   { type:'image', src:'media/slow-selected.webp', fallbackSrc:'media/secondary-poster.webp' },
   'Slow selected image',
-  { documentRef:slowLoadDocument, resolveAssetUrl:value=>'/assets/'+value, priority:true }
+  { documentRef:slowLoadDocument, resolveAssetUrl:value=>'/assets/'+value }
 );
 slowLoadHost.appendChild(slowImageThumbnail);
 const slowPreloadObserver = thumbnailObservers.find(observer =>
