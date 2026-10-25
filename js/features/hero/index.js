@@ -468,6 +468,20 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 
     if (!sources.length) return;
 
+    if (sources.some(source => source.type === 'mux')) {
+      let muxReady = false;
+      try { muxReady = await ensureMuxPlayer(); } catch (_) {}
+      if (!muxReady) {
+        // A missing player module must not leave the hero blank. Keep the
+        // chosen poster as an image and do not attempt a stream without the
+        // Mux custom element being registered.
+        sources = sources.map(source => source.type === 'mux'
+          ? { ...source, type: 'image', src: source.poster || source.src }
+          : source).filter(source => source.src);
+      }
+    }
+    if (!sources.length) return;
+
     const reducedMotion = Boolean(isReducedMotion());
 
     if (sources.some(source => source.type === 'lottie')) await ensureLottie();
