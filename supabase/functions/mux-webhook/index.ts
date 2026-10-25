@@ -20,6 +20,15 @@ function details(data: any): string {
   if (data?.error) return String(data.error.message || data.error).slice(0, 4000);
   return "Mux reported an asset lifecycle error.";
 }
+
+async function unpublishActiveAssets(db: any, assetIds: string[]) {
+  const ids = [...new Set(assetIds.filter(Boolean))];
+  if (!ids.length) return;
+  const { error } = await db.from("videos")
+    .update({ published: false, active_asset_id: null })
+    .in("active_asset_id", ids);
+  if (error) throw error;
+}
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const secret = Deno.env.get("MUX_WEBHOOK_SECRET");
@@ -60,17 +69,20 @@ Deno.serve(async (request: Request) => {
       } else if (matches && matches.length > 1) throw new Error("Mux event matched multiple asset versions.");
     } else if (event.type === "video.asset.errored") {
       const changes = { mux_asset_id: d.id, asset_status: "errored", processing_state: "errored", upload_state: "failed", last_error: details(d) };
-      let result = await db.from("video_assets").update(changes).eq("mux_asset_id", d.id);
-      if (!result.error) {
-        const existing = await db.from("video_assets").select("id").eq("mux_asset_id", d.id).limit(1);
-        if (!existing.data?.length && d.meta?.external_id) result = await db.from("video_assets").update(changes).eq("external_id", String(d.meta.external_id));
+      let result = await db.from("video_assets").update(changes).eq("mux_asset_id", d.id).select("id");
+      if (result.error) throw result.error;
+      let affectedAssets = result.data || [];
+      if (!affectedAssets.length && d.meta?.external_id) {
+        result = await db.from("video_assets").update(changes).eq("external_id", String(d.meta.external_id)).select("id");
+        if (result.error) throw result.error;
+        affectedAssets = result.data || [];
       }
-      updateError = result.error;
+      await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id));
     } else if (event.type === "video.asset.deleted") {
       const { data: asset, error } = await db.from("video_assets").select("id").eq("mux_asset_id", d.id).maybeSingle();
       if (error) throw error;
       if (asset) {
-        await db.from("videos").update({ published: false, active_asset_id: null }).eq("active_asset_id", asset.id);
+        await unpublishActiveAssets(db, [asset.id]);
         const result = await db.from("video_assets").update({ asset_status: "deleted", mux_playback_id: null }).eq("id", asset.id);
         updateError = result.error;
       }

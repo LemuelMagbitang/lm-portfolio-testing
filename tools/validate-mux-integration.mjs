@@ -22,6 +22,10 @@ check(admin.includes("external_id: asset.external_id || asset.id") && read("supa
 check(admin.includes("MUX_UPLOAD_CORS_ORIGIN") && admin.includes("import-mux") && admin.includes("import-static"), "CORS settings or existing asset import route missing.");
 check(webhook.includes("mux-signature") && webhook.includes("crypto.subtle.sign") && webhook.includes("video.asset.ready"), "Webhook signature or lifecycle processing missing.");
 check(webhook.includes("video.upload.asset_created") && webhook.includes("video.asset.errored") && webhook.includes("video.asset.deleted") && webhook.includes("processed_at"), "Webhook lifecycle/idempotency incomplete.");
+check(webhook.includes("async function unpublishActiveAssets") &&
+  webhook.includes("await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id))") &&
+  webhook.includes("await unpublishActiveAssets(db, [asset.id])"),
+  "Errored and deleted active assets must be unpublished with checked database updates.");
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
