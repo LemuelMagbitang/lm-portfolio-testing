@@ -101,13 +101,17 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
     const thumb = p.thumbnail || {};
     let rawSrc = thumb.src || null;
     let type = rawSrc ? (thumb.type || heroMediaTypeFromSrc(rawSrc)) : null;
+    let playbackId = String(thumb.playbackId || '').trim();
+    let poster = String(thumb.poster || '').trim();
     let background = thumb.background || null;
 
     if (!rawSrc && Array.isArray(p.media)) {
-      const firstUsable = p.media.find(m => m && m.src && (m.type === 'image' || m.type === 'video' || m.type === 'lottie'));
+      const firstUsable = p.media.find(m => m && (m.src || (m.type === 'mux' && m.playbackId)) && (m.type === 'image' || m.type === 'video' || m.type === 'lottie' || m.type === 'mux'));
       if (firstUsable) {
-        rawSrc = firstUsable.src;
+        rawSrc = firstUsable.src || '';
         type = firstUsable.type;
+        playbackId = String(firstUsable.playbackId || '').trim();
+        poster = String(firstUsable.poster || firstUsable.src || '').trim();
         background = firstUsable.background || null;
       } else {
         const firstYouTube = p.media.find(m => m && m.type === 'youtube' && m.src);
@@ -118,14 +122,14 @@ import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
       }
     }
 
-    if (!rawSrc) return null;
+    if (!rawSrc && !(type === 'mux' && playbackId)) return null;
 
     let src = rawSrc;
-    if (baseUrl) {
-      try { src = new URL(rawSrc, baseUrl).href; } catch (e) { /* keep raw */ }
+    if (src && baseUrl) {
+      try { src = new URL(src, baseUrl).href; } catch (e) { /* keep raw */ }
     }
-
-    return { type: type || 'image', src, alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background, zoomTransition: typeof thumb.zoomTransition === 'boolean' ? thumb.zoomTransition : null, fadeTransition: typeof thumb.fadeTransition === 'boolean' ? thumb.fadeTransition : null };
+    if (!poster) poster = type === 'mux' ? src : '';
+    return { type: type || 'image', src, ...(playbackId ? { playbackId } : {}), ...(poster ? { poster } : {}), alt: p.title || 'Featured artwork', focus: thumb.focus || null, zoom: thumb.zoom || null, rotate: thumb.rotate || null, background, zoomTransition: typeof thumb.zoomTransition === 'boolean' ? thumb.zoomTransition : null, fadeTransition: typeof thumb.fadeTransition === 'boolean' ? thumb.fadeTransition : null };
   }
 
   function normalizeHeroMessages(raw) {
