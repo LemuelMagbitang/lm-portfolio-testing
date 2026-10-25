@@ -13,7 +13,7 @@ const LOCAL_EXTENSIONS = new Set([
   '.mp4', '.webm', '.mov', '.m4v', '.json',
   '.obj', '.mtl', '.gltf', '.glb', '.fbx'
 ]);
-const SUPPORTED_MEDIA = new Set(['image', 'video', 'youtube', 'lottie', 'model']);
+const SUPPORTED_MEDIA = new Set(['image', 'video', 'mux', 'youtube', 'lottie', 'model']);
 const SUPPORTED_MODEL_EXT = new Set(['obj', 'gltf', 'glb', 'fbx']);
 const ORIENTATIONS = new Set(['', 'auto', 'landscape', 'portrait', 'square']);
 const SUPPORTED_HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
@@ -133,6 +133,14 @@ function validateMedia(media, where) {
     const ext = extension(media.src);
     if (!isExternal(media.src) && !SUPPORTED_MODEL_EXT.has(ext)) err(`${where}: unsupported 3D extension .${ext || 'none'}.`);
     checkLocalRef(media.src, `${where} src`);
+  } else if (type === 'mux') {
+    if (!String(media.playbackId || '').trim()) err(`${where}: Mux media needs a public playbackId from the Video Library selector.`);
+    const poster = String(media.poster || media.src || '').trim();
+    try {
+      if (!poster || new URL(poster).protocol !== 'https:') err(`${where}: Mux media must include an HTTPS poster URL.`);
+    } catch (_) {
+      err(`${where}: Mux media poster must be a valid HTTPS URL.`);
+    }
   } else if (type === 'video') {
     checkLocalRef(media.src, `${where} src`);
   } else if (type === 'image') {

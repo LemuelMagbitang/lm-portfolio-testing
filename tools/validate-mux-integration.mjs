@@ -70,6 +70,16 @@ check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") &
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(script.includes("videos/import-mux") && script.includes("videos/import-static"), "CMS import flows missing.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
+const mainCmsScript = read("admin/admin.js");
+check(mainCmsScript.includes("loadPublishedMuxVideoCatalog") &&
+  mainCmsScript.includes("data-mux-selection") &&
+  mainCmsScript.includes("Mux video (streamed)") &&
+  mainCmsScript.includes("muxPosterUrl"),
+  "Main Projects CMS must offer a published Mux video selector without manual ID entry.");
+check(read("js/data/project-normalizer.js").includes("normalized.playbackId = playbackId") &&
+  read("js/features/lightbox/media-renderer.js").includes("function renderMuxVideo") &&
+  read("js/features/projects/project-card.js").includes("type: 'image'"),
+  "Mux project media must normalize playback IDs, stream in the lightbox, and use poster-only project cards.");
 check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),

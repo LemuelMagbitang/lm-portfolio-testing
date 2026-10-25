@@ -83,6 +83,18 @@ Store its signing secret as MUX_WEBHOOK_SECRET. Subscribe to video.upload.asset_
 - Mux playback ID: playback and thumbnails.
 Changing the title or slug does not require a new Mux asset. Replacing media creates a new asset version; publish it only after ready. Never use a filename as a permanent identifier.
 
+## Use Mux videos in the main Projects CMS
+
+No Asset ID or Playback ID needs to be copied into project JSON by hand.
+
+1. Open **Video Library** from the main CMS. Import an existing Mux asset or upload a new video. Wait until its status is **Ready**, then select **Publish**.
+2. To use it as the homepage hero, set its Video Library placement to **Hero**. In the main CMS, open **Hero Loop Animation** and select **Only what I add** or **My additions + latest fill**. The published Hero feed is added automatically; the local MP4 stays as a fallback if the feed/player is unavailable.
+3. To use it inside a project's lightbox, open **Projects**, expand the project, scroll to **Media (lightbox gallery)**, click **Add media item**, choose **Mux video (streamed)**, then choose the published video from the dropdown. Optionally add a caption and click **Save to GitHub**. The CMS stores the public playback reference and poster automatically.
+4. Project cards use a still poster. The Mux stream player is initialized only when someone opens the project lightbox, so the full video is not mounted on every card/grid render and the MP4 is not committed to GitHub.
+5. If you publish a video while the CMS is already open, use **Refresh list** in the Mux selector. Only ready videos with public playback that are published appear.
+
+Mux is a hosted service, not a lifetime archive. Availability depends on account standing, billing/plan limits, the asset not being deleted, and the applicable service terms. Mux's current Free plan lists up to 10 stored videos and 100,000 monthly delivery minutes; its Pay-as-you-go plan lists no storage limit, but storage is billed per video minute per month and delivery beyond included allowances is usage-based. See [current Mux pricing](https://www.mux.com/pricing). Mux also states that it does not keep the original upload in its exact form, so keep an independent backup of original master video files: [Mux streaming guide](https://www.mux.com/docs/core/stream-video-files).
+
 ## Public hero integration
 The hero calls the public Mux feed only if configured. A ready published Mux video uses the lazily loaded Mux Player; if config/feed/player fails, data/hero-loop.json remains the fallback. The hero stays muted/inline and preserves existing reduced-motion and lifecycle behavior.
 
