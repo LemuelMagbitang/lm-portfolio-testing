@@ -31,15 +31,15 @@ const canonicalModuleQueries = new Map([
   ['infrastructure/media-background/loader.js', '?v=20261023-01'],
   ['infrastructure/software-logo/lookup.js', '?v=20261008-01'],
   ['features/projects/index.js', '?v=20261025-07'],
-  ['features/projects/browser-runtime.js', '?v=20261025-07'],
-  ['features/projects/project-loader.js', '?v=20261025-07'],
-  ['features/projects/project-card.js', '?v=20261025-07'],
+  ['features/projects/browser-runtime.js', '?v=20261026-01'],
+  ['features/projects/project-loader.js', '?v=20261026-01'],
+  ['features/projects/project-card.js', '?v=20261026-01'],
   ['features/projects/project-thumbnail.js', '?v=20261025-06'],
   ['features/gallery/index.js', '?v=20261024-02'],
   ['features/lightbox/index.js', '?v=20261025-07'],
   ['features/lightbox/media-renderer.js', '?v=20261025-07'],
   ['features/lightbox/foil-normal-renderer.js', '?v=20261016-01'],
-  ['data/project-normalizer.js', '?v=20261025-07']
+  ['data/project-normalizer.js', '?v=20261026-01']
 ]);
 
 for (const legacy of legacyRootModules) {
