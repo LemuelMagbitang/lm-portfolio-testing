@@ -1998,8 +1998,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !bootstrap.includes("cacheVersion = '20261026-01'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
-      !composition.includes("hero/index.js?v=20261026-01") ||
-      !composition.includes("footer/index.js?v=20261026-01") ||
+      !composition.includes("hero/index.js?v=20261026-02") ||
+      !composition.includes("footer/index.js?v=20261026-02") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
@@ -2008,9 +2008,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261026-01') ||
       !works.includes('js/app/page-composition.js?v=20261026-01') ||
-      !works.includes('css/style.css?v=20261025-02') ||
+      !works.includes('css/style.css?v=20261026-01') ||
       !works.includes('js/script.js?v=20261026-01') ||
-      !about.includes('style.css?v=20261025-02') ||
+      !about.includes('style.css?v=20261026-01') ||
       !about.includes('js/app/bootstrap.js?v=20261026-01') ||
       !about.includes('script.js?v=20261026-01') ||
       !about.includes('page-composition.js?v=20261026-01')) {
