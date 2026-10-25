@@ -2010,7 +2010,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !works.includes('js/app/page-composition.js?v=20261026-03') ||
       !works.includes('css/style.css?v=20261026-02') ||
       !works.includes('js/script.js?v=20261026-03') ||
-      !about.includes('style.css?v=20261026-01') ||
+      !about.includes('style.css?v=20261026-02') ||
       !about.includes('js/app/bootstrap.js?v=20261026-03') ||
       !about.includes('script.js?v=20261026-03') ||
       !about.includes('page-composition.js?v=20261026-03')) {
