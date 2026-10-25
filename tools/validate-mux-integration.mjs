@@ -87,6 +87,13 @@ check(footer.includes("media.controls = false") &&
   styles.includes(".footer-animation-slide mux-player::part(center)") &&
   styles.includes("--controls:none"),
   "Footer Mux playback must autoplay only the active muted slide without visible controls or unsupported playsInline handling.");
+const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie') {")[0] || "";
+check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
+  footerNativeVideo.includes("media.preload = autoplayAllowed ? 'auto' : 'none'") &&
+  footer.includes("const previousVideo = previous?.querySelector('video')") &&
+  footer.includes("const currentVideo = slides[index]?.querySelector('video')") &&
+  footer.includes("currentVideo.play?.()"),
+  "Footer native video slides must not autoplay while inactive and must pause/resume only the active slide.");
 check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
 check(page.includes('rel="icon" type="image/png" href="../assets/projects/site/favicon.png"'),
   "Mux Media Library must declare its project-relative favicon instead of requesting /favicon.ico.");
