@@ -1197,45 +1197,76 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         throw new Error(label + ' ' + viewport.name + ': backdrop-driven logo foreground, transitions, or stacking regressed: ' + JSON.stringify(layout));
       }
 
-      // Give the same fixed logo deterministic light and dark backdrops. This
-      // verifies the runtime contrast controller, not only its CSS declaration.
+      // Give the logo and hamburger deliberately opposite backgrounds.
+      // Each fixed control must sample its own pixel region instead of sharing
+      // whichever foreground happens to be selected for the logo.
       await page.evaluate(() => {
         const logo = document.querySelector('.site-logo');
-        const rect = logo?.getBoundingClientRect();
-        if (!logo || !rect) return;
-        document.getElementById('__smoke-logo-backdrop')?.remove();
-        const backdrop = document.createElement('div');
-        backdrop.id = '__smoke-logo-backdrop';
-        Object.assign(backdrop.style, {
-          position: 'fixed',
-          left: (rect.left - 3) + 'px',
-          top: (rect.top - 3) + 'px',
-          width: (rect.width + 6) + 'px',
-          height: (rect.height + 6) + 'px',
-          zIndex: '999',
-          pointerEvents: 'auto',
-          background: '#fff'
-        });
-        document.body.appendChild(backdrop);
+        const hamburger = document.querySelector('.hamburger');
+        const rectFor = element => element?.getBoundingClientRect();
+        const logoRect = rectFor(logo);
+        const hamburgerRect = rectFor(hamburger);
+        if (!logoRect || !hamburgerRect) throw new Error('Independent chrome contrast fixtures could not locate both controls.');
+        const addBackdrop = (id, rect, color) => {
+          document.getElementById(id)?.remove();
+          const backdrop = document.createElement('div');
+          backdrop.id = id;
+          Object.assign(backdrop.style, {
+            position: 'fixed',
+            left: (rect.left - 3) + 'px',
+            top: (rect.top - 3) + 'px',
+            width: (rect.width + 6) + 'px',
+            height: (rect.height + 6) + 'px',
+            zIndex: '999',
+            pointerEvents: 'auto',
+            background: color
+          });
+          document.body.appendChild(backdrop);
+          return backdrop;
+        };
+        addBackdrop('__smoke-logo-backdrop', logoRect, '#fff');
+        addBackdrop('__smoke-hamburger-backdrop', hamburgerRect, '#000');
         window.dispatchEvent(new Event('resize'));
       });
-      await page.waitForFunction(
-        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+      await page.waitForFunction(() =>
+        document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark' &&
+        document.querySelector('.hamburger')?.dataset?.foreground === 'light',
         null,
         { timeout: 2500 }
       );
       await page.evaluate(() => {
-        const backdrop = document.getElementById('__smoke-logo-backdrop');
-        if (backdrop) backdrop.style.background = '#000';
+        const logoBackdrop = document.getElementById('__smoke-logo-backdrop');
+        const hamburgerBackdrop = document.getElementById('__smoke-hamburger-backdrop');
+        if (!logoBackdrop || !hamburgerBackdrop) throw new Error('Independent chrome contrast fixtures disappeared.');
+        logoBackdrop.style.background = '#000';
+        hamburgerBackdrop.style.background = '#fff';
         window.dispatchEvent(new Event('scroll'));
       });
-      await page.waitForFunction(
-        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+      await page.waitForFunction(() =>
+        document.querySelector('.site-logo')?.dataset?.logoForeground === 'light' &&
+        document.querySelector('.hamburger')?.dataset?.foreground === 'dark',
         null,
         { timeout: 2500 }
       );
+      const independentChromeContrast = await page.evaluate(() => ({
+        logoForeground: document.querySelector('.site-logo')?.dataset?.logoForeground || '',
+        hamburgerForeground: document.querySelector('.hamburger')?.dataset?.foreground || '',
+        logoFilter: getComputedStyle(document.querySelector('.site-logo')).filter,
+        logoTransition: getComputedStyle(document.querySelector('.site-logo')).transitionProperty,
+        hamburgerTransition: getComputedStyle(document.querySelector('.hamburger-icon span')).transitionProperty
+      }));
+      if (
+        independentChromeContrast.logoForeground !== 'light' ||
+        independentChromeContrast.hamburgerForeground !== 'dark' ||
+        independentChromeContrast.logoFilter.includes('brightness(0) invert(1)') ||
+        !independentChromeContrast.logoTransition.includes('filter') ||
+        !independentChromeContrast.hamburgerTransition.includes('background-color')
+      ) {
+        throw new Error(label + ' ' + viewport.name + ': logo and hamburger must independently follow their local backdrop and transition colors smoothly: ' + JSON.stringify(independentChromeContrast));
+      }
       await page.evaluate(() => {
         document.getElementById('__smoke-logo-backdrop')?.remove();
+        document.getElementById('__smoke-hamburger-backdrop')?.remove();
         window.dispatchEvent(new Event('scroll'));
       });
 
