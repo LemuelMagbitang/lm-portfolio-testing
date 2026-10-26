@@ -10,27 +10,34 @@ export async function ensureMuxPlayer(importer) {
 }
 
 let muxVideoLoaderPromise = null;
-export async function ensureMuxVideo(importer, timeoutMs = 6000) {
+export async function ensureMuxVideo(importer, timeoutMs = 15000) {
   if (typeof globalThis.customElements === "undefined") return false;
   if (globalThis.customElements.get("mux-video")) return true;
   if (!muxVideoLoaderPromise) {
     const load = typeof importer === "function"
       ? importer
       : () => import("https://cdn.jsdelivr.net/npm/@mux/mux-video@0.31.5/dist/mux-video.mjs");
-    muxVideoLoaderPromise = new Promise(resolve => {
-      let settled = false;
-      let timer = null;
-      const finish = value => {
-        if (settled) return;
-        settled = true;
-        if (timer !== null) globalThis.clearTimeout(timer);
-        resolve(Boolean(value));
-      };
-      timer = globalThis.setTimeout(() => finish(false), Math.max(500, Number(timeoutMs) || 6000));
-      Promise.resolve().then(load)
-        .then(() => finish(Boolean(globalThis.customElements.get("mux-video"))))
-        .catch(() => finish(false));
-    }).catch(() => false);
+    // Keep the import promise alive if a caller's bounded wait expires. A slow
+    // module graph may still register mux-video later, and subsequent callers
+    // should be able to observe that registration instead of inheriting a
+    // permanently cached timeout=false result.
+    muxVideoLoaderPromise = Promise.resolve()
+      .then(load)
+      .then(() => Boolean(globalThis.customElements.get("mux-video")))
+      .catch(() => false);
   }
-  return muxVideoLoaderPromise;
+
+  let timer = null;
+  const waitForModule = new Promise(resolve => {
+    timer = globalThis.setTimeout(
+      () => resolve(false),
+      Math.max(1000, Number(timeoutMs) || 15000)
+    );
+  });
+  try {
+    const ready = await Promise.race([muxVideoLoaderPromise, waitForModule]);
+    return Boolean(ready || globalThis.customElements.get("mux-video"));
+  } finally {
+    if (timer !== null) globalThis.clearTimeout(timer);
+  }
 }
