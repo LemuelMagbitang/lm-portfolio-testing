@@ -3448,7 +3448,7 @@ footer{
 
 .card-thumbnail .project-thumb-media-fallback-image{
   position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;object-fit:cover;object-position:center;
-  opacity:1!important;transform:none!important;transition:none!important;
+  opacity:1!important;transform:none!important;filter:none!important;transition:none!important;
 }
 .card-thumbnail .project-thumb-media-fallback>i{display:none;}
 .card-thumbnail .project-thumb-media-fallback-label{
@@ -4103,6 +4103,11 @@ body.lm-3d-focus-open{overscroll-behavior:none;}
   .project-card:hover .card-thumbnail video,
   .project-card:hover .card-thumbnail .project-thumb-media.lottie-player {
     transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  }
+
+  .card-thumbnail img.project-thumb-media.is-media-loading,
+  .card-thumbnail video.project-thumb-media.is-media-loading {
+    filter:none!important;
   }
 
   .project-card:hover .glass-info {
@@ -5917,6 +5922,17 @@ footer > .footer-content p{
 @keyframes lightbox-artwork-arrive{
   from{opacity:.12;transform:scale(.985);filter:blur(8px);}
   to{opacity:1;transform:scale(1);filter:blur(0);}
+}
+/* Full-bleed YouTube artwork must stay exactly viewport-wide throughout its
+   reveal; omit scale on compact viewports while retaining the same focus fade. */
+@keyframes lightbox-artwork-arrive-fullbleed{
+  from{opacity:.12;filter:blur(8px);}
+  to{opacity:1;filter:blur(0);}
+}
+@media(max-width:767px){
+  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork.is-media-reveal-ready{
+    animation-name:lightbox-artwork-arrive-fullbleed;
+  }
 }
 #lightboxMediaContainer>.lightbox-media-item[data-media-reveal="ready"],
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item[data-media-reveal="ready"]{
