@@ -928,7 +928,7 @@ assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
 assert.equal(capabilityCard.children[0]?.children[0]?.dataset?.modelThumb, 'models/test.glb');
-assert.equal(capabilityCard.children[0]?.children[0]?.getAttribute('data-model-thumb'), 'models/test.glb',
+assert.equal(capabilityCard.children[0]?.children[0]?.attributes?.get('data-model-thumb'), 'models/test.glb',
   'The model thumbnail must preserve its selected source in the DOM contract so multi-model projects open the correct artwork.');
 assert.equal(capabilityCard.children[0]?.children?.length, 1);
 assert.equal(capabilityCard.children[0]?.children[0]?.children[0]?.children[1]?.textContent, '3D ARTWORK');
