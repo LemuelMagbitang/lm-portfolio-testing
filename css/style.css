@@ -261,6 +261,8 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .hero-banner {
+  --lm-contrast-scrim-top-alpha: .4;
+  --lm-contrast-scrim-bottom-alpha: 1;
   position: absolute;
   top: 0;
   left: 0;
@@ -275,12 +277,16 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   content: ''; 
   position: absolute; 
   inset: 0;
-  background: linear-gradient(to bottom, rgba(18,18,18,0.4) 0%, #121212 100%);
+  background: linear-gradient(to bottom, rgba(18,18,18,var(--lm-contrast-scrim-top-alpha, .4)) 0%, rgba(18,18,18,var(--lm-contrast-scrim-bottom-alpha, 1)) 100%);
   z-index: 2;
 }
 
 /* Full-color Works artwork when the hero quote is disabled.
    About retains its intentional portrait/bio readability overlay. */
+.hero-section:not(.about-hero):not(.hero-section--message) .hero-banner {
+  --lm-contrast-scrim-top-alpha: 0;
+  --lm-contrast-scrim-bottom-alpha: 0;
+}
 .hero-section:not(.about-hero):not(.hero-section--message) .hero-banner::after {
   background: transparent;
 }
@@ -6424,6 +6430,8 @@ body.menu-open .hamburger-icon span {
 .about-hero .hero-banner {
   --about-hero-scrim-top-alpha: .32;
   --about-hero-scrim-bottom-alpha: .72;
+  --lm-contrast-scrim-top-alpha: var(--about-hero-scrim-top-alpha);
+  --lm-contrast-scrim-bottom-alpha: var(--about-hero-scrim-bottom-alpha);
 }
 .about-hero .hero-banner::after {
   background: linear-gradient(
