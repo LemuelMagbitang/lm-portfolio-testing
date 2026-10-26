@@ -163,6 +163,21 @@ check(read("js/data/project-normalizer.js").includes("normalized.thumbnail.playb
   hero.includes("manualSources = config.loopMode === 'mixed'") &&
   hero.includes(": publishedSources;"),
   "Mux thumbnails must remain poster-only, project lightboxes must retain interactive Mux Player, and live published Hero placements must be selected for background playback.");
+check(bridge.includes("CONFIG_TIMEOUT_MS = 3000") &&
+  bridge.includes("FEED_TIMEOUT_MS = 8000") &&
+  bridge.includes("fetchJsonWithTimeout") &&
+  bridge.includes("Published video feed request failed"),
+  "Public config and cross-origin published-feed requests must have separate bounded timeouts and observable failures.");
+check(player.includes("timeoutMs = 15000") &&
+  player.includes("Promise.race") &&
+  player.includes("Keep the import promise alive"),
+  "Mux Video loader must allow a realistic startup window without caching a timed-out wait as a permanent failure.");
+check(hero.includes("configTimeoutMs: 3000") &&
+  hero.includes("timeoutMs: 8000") &&
+  hero.includes("startup-timeout") &&
+  hero.includes("muxFallbackReason") &&
+  hero.includes("Switching to the local MP4 fallback"),
+  "Hero must expose selected Mux source/fallback diagnostics and avoid the previous short silent startup fallback.");
 check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),
