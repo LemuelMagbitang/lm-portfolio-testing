@@ -1,10 +1,51 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.118.0";
+import type { Database } from "./database.types.ts";
+
+let warnedLegacySecretKey = false;
+let warnedLegacyPublishableKey = false;
+
+function readDefaultKey(environmentName: string): string {
+  const raw = Deno.env.get(environmentName);
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed?.default === "string" ? parsed.default.trim() : "";
+  } catch (_) {
+    // Never log values from environment variables; they may contain credentials.
+    console.warn("[Supabase] Could not parse the platform-managed " + environmentName + " key map.");
+    return "";
+  }
+}
+
+function readSecretApiKey(): string {
+  const modern = readDefaultKey("SUPABASE_SECRET_KEYS");
+  if (modern) return modern;
+
+  const legacy = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  if (legacy && !warnedLegacySecretKey) {
+    warnedLegacySecretKey = true;
+    console.warn("[Supabase] Legacy service_role key fallback is active. Confirm SUPABASE_SECRET_KEYS is available before disabling legacy API keys.");
+  }
+  return legacy;
+}
+
+function readPublishableApiKey(): string {
+  const modern = readDefaultKey("SUPABASE_PUBLISHABLE_KEYS");
+  if (modern) return modern;
+
+  const legacy = String(Deno.env.get("SUPABASE_ANON_KEY") || "").trim();
+  if (legacy && !warnedLegacyPublishableKey) {
+    warnedLegacyPublishableKey = true;
+    console.warn("[Supabase] Legacy anon key fallback is active. Confirm SUPABASE_PUBLISHABLE_KEYS is available before disabling legacy API keys.");
+  }
+  return legacy;
+}
 
 export function serviceDb() {
   const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Supabase service credentials are not configured.");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const key = readSecretApiKey();
+  if (!url || !key) throw new Error("Supabase URL or server-side secret API key is not configured.");
+  return createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 function normalizeOrigin(value: string): string {
   try {
@@ -20,8 +61,7 @@ function normalizeOrigin(value: string): string {
 
 export function corsHeaders(request: Request, publicRead = false): Record<string, string> {
   const requestOrigin = normalizeOrigin(request.headers.get("origin") || "");
-  // Normalize configured values so accidental trailing slashes do not break
-  // exact origin matching. Origins never include path segments.
+  // Normalize configured values so accidental trailing slashes do not break exact matching.
   const allowed = (Deno.env.get("CMS_ALLOWED_ORIGINS") || "")
     .split(",").map(normalizeOrigin).filter(Boolean);
   const headers: Record<string, string> = {
@@ -44,9 +84,9 @@ export async function authorizeAdmin(request: Request) {
   const token = (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return { ok: false as const, status: 401, error: "Sign in to the video CMS first." };
   const url = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!url || !anonKey) return { ok: false as const, status: 500, error: "Supabase authentication is not configured." };
-  const authClient = createClient(url, anonKey, {
+  const publishableKey = readPublishableApiKey();
+  if (!url || !publishableKey) return { ok: false as const, status: 500, error: "Supabase authentication is not configured." };
+  const authClient = createClient<Database>(url, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: "Bearer " + token } }
   });
