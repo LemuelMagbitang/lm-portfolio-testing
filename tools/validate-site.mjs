@@ -2013,8 +2013,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !works.includes('js/script.js?v=20261026-07') ||
       !about.includes('style.css?v=20261026-04') ||
       !about.includes('js/app/bootstrap.js?v=20261026-07') ||
-      !about.includes('script.js?v=20261026-06') ||
-      !about.includes('page-composition.js?v=20261026-06')) {
+      !about.includes('script.js?v=20261026-07') ||
+      !about.includes('page-composition.js?v=20261026-07')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
