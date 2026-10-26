@@ -984,7 +984,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   --thumb-zoom: 1;
   --thumb-rotate: 0deg;
   opacity: 0;
-  transform: scale(calc(var(--thumb-zoom) * 1.035)) rotate(var(--thumb-rotate));
+  /* Start slightly under natural size so successful media eases forward into
+     place instead of arriving oversized and shrinking away. */
+  transform: scale(calc(var(--thumb-zoom) * .985)) rotate(var(--thumb-rotate));
   transform-origin: center center;
   filter: blur(8px);
   transition:
@@ -1019,7 +1021,10 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 @media (prefers-reduced-motion: reduce) {
   .card-thumbnail .project-thumb-media { transition: none; }
-  .card-thumbnail .project-thumb-media.is-media-loading { filter: none !important; }
+  .card-thumbnail .project-thumb-media.is-media-loading {
+    filter: none !important;
+    transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)) !important;
+  }
   .project-card:hover .card-thumbnail .project-thumb-media {
     transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg));
   }

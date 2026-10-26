@@ -3955,6 +3955,56 @@ try {
       // not trigger anchor reconciliation when the foil card is moved to body.
       const lightboxScrollHost = page.locator('#lightbox').first();
       const artworkGroupItems = page.locator('#lightboxMediaContainer .lightbox-artwork-group-items').first();
+      const groupedRevealEntries = artworkGroupItems.locator('.lightbox-media-item');
+      const groupedRevealCount = await groupedRevealEntries.count();
+      if (groupedRevealCount < 3) {
+        throw new Error('Grouped artwork reveal regression needs at least three media items.');
+      }
+      const groupedRevealStates = [];
+      for (let index = 0; index < 3; index += 1) {
+        const entry = groupedRevealEntries.nth(index);
+        await entry.scrollIntoViewIfNeeded();
+        await page.waitForFunction(index => {
+          const group = document.querySelector('#lightboxMediaContainer .lightbox-artwork-group-items');
+          const entry = group?.children?.[index];
+          const artwork = entry?.querySelector('.lightbox-artwork');
+          return artwork && ['ready', 'error'].includes(artwork.dataset.mediaState) &&
+            entry.dataset.mediaReveal === artwork.dataset.mediaState;
+        }, index, { timeout: 7000 });
+        const state = await entry.evaluate(entry => {
+          const artwork = entry.querySelector('.lightbox-artwork');
+          const style = getComputedStyle(artwork);
+          return {
+            mediaState:artwork?.dataset.mediaState || '',
+            entryState:entry.dataset.mediaReveal || '',
+            revealClass:artwork?.classList.contains('is-media-reveal-ready') || false,
+            entryAnimation:getComputedStyle(entry).animationName,
+            artworkAnimation:style.animationName,
+            artworkDelayMs:(Number.parseFloat(style.animationDelay) || 0) * 1000,
+            reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches
+          };
+        });
+        if (state.mediaState === 'ready') {
+          if (!state.revealClass || state.entryState !== 'ready' ||
+              (state.reducedMotion
+                ? (state.entryAnimation !== 'none' || state.artworkAnimation !== 'none')
+                : (!state.entryAnimation.includes('lightbox-media-arrive') ||
+                   !state.artworkAnimation.includes('lightbox-artwork-arrive')))) {
+            throw new Error('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group: ' + JSON.stringify({index,state}));
+          }
+          const expectedDelay = index === 0 ? 0 : index * 35;
+          if (!state.reducedMotion && Math.abs(state.artworkDelayMs - expectedDelay) > 3) {
+            throw new Error('Grouped Lightbox artwork reveal lost its restrained coordinated delay: ' + JSON.stringify({index,state,expectedDelay}));
+          }
+        } else if (state.revealClass || state.entryState !== 'error' ||
+                   state.entryAnimation !== 'none' || state.artworkAnimation !== 'none') {
+          throw new Error('Failed grouped artwork must keep its fallback without running the success reveal: ' + JSON.stringify({index,state}));
+        }
+        groupedRevealStates.push(state);
+      }
+      if (groupedRevealStates.filter(state => state.mediaState === 'ready').length < 2) {
+        throw new Error('Grouped Lightbox artwork reveal did not exercise multiple successful ready states: ' + JSON.stringify(groupedRevealStates));
+      }
       await funkoHolo.scrollIntoViewIfNeeded();
       await funkoHolo.hover();
       await page.waitForTimeout(650); // let staggered card and hover transforms settle
@@ -10672,13 +10722,36 @@ try {
           videoPreload: video.preload,
           videoFetchPriority: video.fetchPriority,
           imageLoading: image.loading,
-          imageFetchPriority: image.fetchPriority
+          imageFetchPriority: image.fetchPriority,
+          loadingReveal: (() => {
+            const host = document.createElement('div');
+            host.className = 'card-thumbnail';
+            Object.assign(host.style, { position:'relative', width:'140px', height:'140px' });
+            const media = document.createElement('img');
+            media.className = 'project-thumb-media is-media-loading';
+            host.appendChild(media);
+            document.body.appendChild(host);
+            const style = getComputedStyle(media);
+            const matrix = new DOMMatrixReadOnly(style.transform);
+            const state = {
+              scaleX:Math.hypot(matrix.a,matrix.b),
+              scaleY:Math.hypot(matrix.c,matrix.d),
+              blur:style.filter,
+              transitionDuration:style.transitionDuration
+            };
+            host.remove();
+            return state;
+          })()
         };
       });
       if (!reduced.preference || reduced.lottieAutoplay || reduced.lottieLoop ||
           reduced.videoAutoplay || reduced.videoLoop || reduced.videoPreload !== 'metadata' ||
           reduced.videoFetchPriority === 'high' || reduced.imageLoading !== 'eager' ||
-          reduced.imageFetchPriority !== 'high') {
+          reduced.imageFetchPriority !== 'high' ||
+          Math.abs(reduced.loadingReveal.scaleX - 1) > 0.002 ||
+          Math.abs(reduced.loadingReveal.scaleY - 1) > 0.002 ||
+          reduced.loadingReveal.blur !== 'none' ||
+          reduced.loadingReveal.transitionDuration.split(',').some(value => Number.parseFloat(value) > 0)) {
         throw new Error(
           'Project thumbnail media must respect prefers-reduced-motion while keeping still-image priority hints: ' +
           JSON.stringify(reduced)
@@ -10943,6 +11016,9 @@ try {
           const t = thumb.getBoundingClientRect();
           const f = fallback.getBoundingClientRect();
           const imageStyle = getComputedStyle(media);
+          const loadingMatrix = new DOMMatrixReadOnly(imageStyle.transform);
+          const loadingScaleX = Math.hypot(loadingMatrix.a, loadingMatrix.b);
+          const loadingScaleY = Math.hypot(loadingMatrix.c, loadingMatrix.d);
           const root = getComputedStyle(fallback);
           const overlay = getComputedStyle(fallback,'::before');
           const status = getComputedStyle(fallback,'::after');
@@ -10960,6 +11036,8 @@ try {
             mediaOpacity:imageStyle.opacity,
             mediaFilter:imageStyle.filter,
             mediaTransform:imageStyle.transform,
+            mediaScaleX:loadingScaleX,
+            mediaScaleY:loadingScaleY,
             mediaTransition:imageStyle.transitionProperty,
             rootZ:root.zIndex, rootBlend:root.mixBlendMode,
             overlayContent:overlay.content, overlayTop:overlay.top, overlayRight:overlay.right,
@@ -10981,6 +11059,8 @@ try {
                 : Math.abs(Number.parseFloat(r.mediaOpacity) - 0.22) > 0.01) ||
               !r.mediaFilter.includes('blur(8px)') ||
               r.mediaTransform === 'none' ||
+              !(r.mediaScaleX >= 0.975 && r.mediaScaleX < 1) ||
+              !(r.mediaScaleY >= 0.975 && r.mediaScaleY < 1) ||
               !r.mediaTransition.includes('opacity') ||
               !r.mediaTransition.includes('transform') ||
               !r.mediaTransition.includes('filter') ||

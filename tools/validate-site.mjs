@@ -2079,9 +2079,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261026-15') ||
       !works.includes('js/app/page-composition.js?v=20261026-15') ||
-      !works.includes('css/style.css?v=20261026-10') ||
+      !works.includes('css/style.css?v=20261026-11') ||
       !works.includes('js/script.js?v=20261026-15') ||
-      !about.includes('style.css?v=20261026-10') ||
+      !about.includes('style.css?v=20261026-11') ||
       !about.includes('js/app/bootstrap.js?v=20261026-15') ||
       !about.includes('script.js?v=20261026-15') ||
       !about.includes('page-composition.js?v=20261026-15')) {
@@ -2488,6 +2488,8 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
       !mediaRenderer.includes('if (!embedSrc) return renderUnsupported(item, project);') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
+      !styles.includes('transform: scale(calc(var(--thumb-zoom) * .985)) rotate(var(--thumb-rotate));') ||
+      !styles.includes('transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)) !important;') ||
       !styles.includes('.card-thumbnail .project-thumb-model,') ||
       !styles.includes('opacity:.22!important;') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-error') ||
@@ -2506,11 +2508,13 @@ function validateReducedMotionThumbnailContract() {
       !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
       !lightboxIndex.includes("media-renderer.js?v=20261026-01") ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
+      !smoke.includes('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group') ||
       smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||
       !smoke.includes("blurPx:Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0')") ||
       !smoke.includes('item.blurPx > 0.01') ||
       !smoke.includes('Project-card thumbnail reveal must fade, scale, and sharpen on ready') ||
       !smoke.includes('Failed thumbnail media must not run the successful reveal transition') ||
+      !smoke.includes('Project thumbnail media must respect prefers-reduced-motion while keeping still-image priority hints') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
       !smoke.includes('project-thumbnail.js?v=20261025-06') ||
