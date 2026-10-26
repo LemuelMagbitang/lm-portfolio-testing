@@ -1258,6 +1258,14 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         null,
         { timeout: 2500 }
       );
+      // The foreground data attribute updates before the CSS filter transition
+      // finishes. Wait for the final computed filter so the smoke test verifies
+      // the settled appearance rather than an arbitrary mid-transition frame.
+      await page.waitForFunction(() => {
+        const logo = document.querySelector('.site-logo');
+        return logo?.dataset?.logoForeground === 'light' &&
+          getComputedStyle(logo).filter.includes('brightness(0) invert(1)');
+      }, null, { timeout: 2500 });
       if (hasVisibleHamburger) {
         await page.waitForFunction(() =>
           document.querySelector('.hamburger')?.dataset?.foreground === 'dark',
