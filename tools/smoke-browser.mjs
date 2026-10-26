@@ -7762,6 +7762,39 @@ try {
           );
         }
       });
+
+      const contactAccessibleNames = await page.evaluate(() => {
+        const project = document.querySelector('#projectForm');
+        const review = document.querySelector('#reviewForm');
+        const projectLabel = selector => project?.querySelector(selector)?.getAttribute('aria-label') || '';
+        const reviewLabel = selector => review?.querySelector(selector)?.getAttribute('aria-label') || '';
+        const ratingGroup = review?.querySelector('.star-rating');
+        return {
+          projectName: projectLabel('input[name="name"]'),
+          projectEmail: projectLabel('input[name="email"]'),
+          projectDetails: projectLabel('textarea[name="message"]'),
+          reviewName: reviewLabel('input[name="name"]'),
+          reviewText: reviewLabel('textarea[name="review"]'),
+          ratingRole: ratingGroup?.getAttribute('role') || '',
+          ratingLabel: ratingGroup?.getAttribute('aria-label') || '',
+          starNames: Array.from(ratingGroup?.querySelectorAll('input[name="rating"]') || [])
+            .sort((a, b) => Number(a.value) - Number(b.value))
+            .map(input => input.getAttribute('aria-label') || '')
+        };
+      });
+      const expectedStarNames = ['1 star', '2 stars', '3 stars', '4 stars', '5 stars'];
+      if (
+        contactAccessibleNames.projectName !== 'Your name' ||
+        contactAccessibleNames.projectEmail !== 'Your email' ||
+        contactAccessibleNames.projectDetails !== 'Project details' ||
+        contactAccessibleNames.reviewName !== 'Your name or handle' ||
+        contactAccessibleNames.reviewText !== 'Your review' ||
+        contactAccessibleNames.ratingRole !== 'radiogroup' ||
+        contactAccessibleNames.ratingLabel !== 'Portfolio rating' ||
+        JSON.stringify(contactAccessibleNames.starNames) !== JSON.stringify(expectedStarNames)
+      ) {
+        throw new Error('Contact form controls must expose explicit accessible names without changing their visible layout: ' + JSON.stringify(contactAccessibleNames));
+      }
     }, { width: 1280, height: 900 });
 
     await smokePage(browser, '/', async page => {
