@@ -11036,6 +11036,12 @@ try {
       if (!readyState.ready || readyState.fallbacks !== 0) {
         throw new Error('Loading overlay did not clear after the selected thumbnail became ready: '+JSON.stringify(readyState));
       }
+      await page.waitForFunction(() => Array.from(
+        document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media')
+      ).every(media =>
+        media.dataset.mediaState === 'ready' &&
+        !getComputedStyle(media).filter.includes('blur(8px)')
+      ), null, { timeout: 1800 });
       const readyThumbStyles = await page.locator('#thumbnail-loading-fixtures .project-thumb-media').evaluateAll(media => media.map(el => ({
         state: el.dataset.mediaState,
         filter: getComputedStyle(el).filter,
