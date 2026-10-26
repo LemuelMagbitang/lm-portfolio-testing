@@ -12,7 +12,7 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-08
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
-import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261026-01';
+import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261026-02';
 
 function mediaTypeFromSrc(src) {
   const clean = String(src || '').split('?')[0].split('#')[0].toLowerCase();
