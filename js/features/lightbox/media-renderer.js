@@ -11,6 +11,18 @@ import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } f
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 
+function mediaSourceIdentity(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^(?:data|blob):/i.test(raw)) return raw;
+  try {
+    const url = new URL(raw, globalThis.document?.baseURI || globalThis.location?.href);
+    return url.origin + url.pathname;
+  } catch (_) {
+    return raw.split(/[?#]/, 1)[0];
+  }
+}
+
 export function createLightboxMediaRenderer({
   documentRef = globalThis.document,
   windowRef = globalThis.window,
@@ -1989,10 +2001,10 @@ export function createLightboxMediaRenderer({
       (typeof thumbnailValue === 'string' ? thumbnailValue : thumbnailValue?.src) || ''
     ).trim();
     const projectThumbnailIdentity = thumbnailRaw
-      ? sourceIdentity(resolveAssetUrl(thumbnailRaw))
+      ? mediaSourceIdentity(resolveAssetUrl(thumbnailRaw))
       : '';
     const resolvedPoster = poster ? resolveAssetUrl(poster) : '';
-    const safePoster = resolvedPoster && sourceIdentity(resolvedPoster) !== projectThumbnailIdentity
+    const safePoster = resolvedPoster && mediaSourceIdentity(resolvedPoster) !== projectThumbnailIdentity
       ? poster
       : '';
     if (safePoster) player.setAttribute('poster', resolveAssetUrl(safePoster));
