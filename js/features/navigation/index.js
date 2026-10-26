@@ -580,10 +580,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     bind(root, 'loadeddata', scheduleLogoContrast, true);
     bind(root, 'playing', scheduleLogoContrast, true);
     bind(root, 'pointerup', scheduleLogoContrast, true);
-    // Card hover and foil interactions can change the surface under the fixed
-    // navbar without scrolling. Coalesce these signals through the existing
-    // requestAnimationFrame scheduler so updates remain bounded to one per frame.
-    bind(root, 'pointermove', scheduleLogoContrast, { passive: true });
+    // A new hovered surface may change the sampled pixels; scroll, media events,
+    // and the bounded dynamic-media timer cover continuous changes. Avoid a
+    // document-wide pointermove listener: it repeats hit-testing while the pointer
+    // crosses unrelated content without improving contrast at the fixed controls.
     bind(root, 'pointerover', scheduleLogoContrast, { passive: true });
 
     const MutationObserverRef = windowRef?.MutationObserver;

@@ -1936,7 +1936,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
       !navigation.includes("const dynamic = Boolean(media.closest?.('.hero-banner')) ||") ||
       !navigation.includes("media.closest?.('.card-thumbnail')?.querySelector?.('.project-thumb-foil')") ||
-      !navigation.includes("bind(root, 'pointermove', scheduleLogoContrast") ||
+      navigation.includes("bind(root, 'pointermove', scheduleLogoContrast") ||
       !navigation.includes("bind(root, 'pointerover', scheduleLogoContrast") ||
       !navigation.includes("if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack)") ||
       navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
@@ -2060,9 +2060,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-12") ||
-      !bootstrap.includes("cacheVersion = '20261026-12'") ||
-      !composition.includes("navigation/index.js?v=20261026-03") ||
+  if (!entry.includes("bootstrap.js?v=20261026-13") ||
+      !bootstrap.includes("cacheVersion = '20261026-13'") ||
+      !composition.includes("navigation/index.js?v=20261026-04") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-09") ||
       !composition.includes("footer/index.js?v=20261026-09") ||
@@ -2072,14 +2072,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-12') ||
-      !works.includes('js/app/page-composition.js?v=20261026-12') ||
+      !works.includes('js/app/bootstrap.js?v=20261026-13') ||
+      !works.includes('js/app/page-composition.js?v=20261026-13') ||
       !works.includes('css/style.css?v=20261026-05') ||
-      !works.includes('js/script.js?v=20261026-12') ||
+      !works.includes('js/script.js?v=20261026-13') ||
       !about.includes('style.css?v=20261026-05') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-12') ||
-      !about.includes('script.js?v=20261026-12') ||
-      !about.includes('page-composition.js?v=20261026-12')) {
+      !about.includes('js/app/bootstrap.js?v=20261026-13') ||
+      !about.includes('script.js?v=20261026-13') ||
+      !about.includes('page-composition.js?v=20261026-13')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
