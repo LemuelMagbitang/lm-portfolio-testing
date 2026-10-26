@@ -2037,7 +2037,12 @@ function validateResponsiveHeroGalleryAndLogoContract() {
        !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
       hero.includes('og-image.jpg') ||
       !hero.includes("sources[0]?.type !== 'video'") ||
-      !hero.includes('function scheduleNetworkRetry(slide, media)') ||
+      !hero.includes('function getPlaybackErrorDetails(media, event = null)') ||
+      !hero.includes('function scheduleNetworkRetry(slide, media, event = null)') ||
+      !hero.includes("details.networkState === 3") ||
+      !hero.includes("media.dataset.networkRetryReason = details.mediaErrorCode === 2 ? 'network-error' : 'mux-no-source'") ||
+      !smoke.includes('Mux hero no-source errors must trigger one bounded recovery attempt') ||
+      !hero.includes("recovery: recoveryScheduled ? 'retry-scheduled' : 'awaiting-reconnect-or-gesture'") ||
       !smoke.includes('Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image') ||
       !smoke.includes("for (const viewport of viewports)") ||
       /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
@@ -2060,11 +2065,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-13") ||
-      !bootstrap.includes("cacheVersion = '20261026-13'") ||
+  if (!entry.includes("bootstrap.js?v=20261026-14") ||
+      !bootstrap.includes("cacheVersion = '20261026-14'") ||
       !composition.includes("navigation/index.js?v=20261026-04") ||
       !composition.includes("about/index.js?v=20261024-01") ||
-      !composition.includes("hero/index.js?v=20261026-09") ||
+      !composition.includes("hero/index.js?v=20261026-10") ||
       !composition.includes("footer/index.js?v=20261026-09") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
@@ -2072,14 +2077,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-13') ||
-      !works.includes('js/app/page-composition.js?v=20261026-13') ||
+      !works.includes('js/app/bootstrap.js?v=20261026-14') ||
+      !works.includes('js/app/page-composition.js?v=20261026-14') ||
       !works.includes('css/style.css?v=20261026-05') ||
-      !works.includes('js/script.js?v=20261026-13') ||
+      !works.includes('js/script.js?v=20261026-14') ||
       !about.includes('style.css?v=20261026-05') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-13') ||
-      !about.includes('script.js?v=20261026-13') ||
-      !about.includes('page-composition.js?v=20261026-13')) {
+      !about.includes('js/app/bootstrap.js?v=20261026-14') ||
+      !about.includes('script.js?v=20261026-14') ||
+      !about.includes('page-composition.js?v=20261026-14')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }

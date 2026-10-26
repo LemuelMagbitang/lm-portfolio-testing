@@ -144,6 +144,8 @@ async function configureLogoRoutes(page) {
             this._paused = true;
             this._currentTime = 0;
             this._readyState = 4;
+            this._networkState = 1;
+            this._loadCount = 0;
             this._error = null;
             this._muted = true;
             this._loop = false;
@@ -164,13 +166,15 @@ async function configureLogoRoutes(page) {
           set currentTime(value) { this._currentTime = Number(value) || 0; }
           get readyState() { return this._readyState; }
           set readyState(value) { this._readyState = Number(value) || 0; }
+          get networkState() { return this._networkState; }
+          set networkState(value) { this._networkState = Number(value) || 0; }
           get error() { return this._error; }
           set error(value) { this._error = value; }
           get poster() { return this.getAttribute('poster') || ''; }
           set poster(value) { if (value) this.setAttribute('poster', value); else this.removeAttribute('poster'); }
           play() { this._paused = false; this._currentTime += 0.1; this.dispatchEvent(new Event('playing')); return Promise.resolve(); }
           pause() { this._paused = true; this.dispatchEvent(new Event('pause')); }
-          load() { this._readyState = 4; }
+          load() { this._loadCount += 1; this._readyState = 4; this._networkState = 1; }
         }
         customElements.define('mux-video', MockMuxVideo);
       }
@@ -1788,6 +1792,27 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             }));
             if (playback.error || playback.paused || playback.currentTime <= 0.05) {
               throw new Error(label + ': hero video did not resume after a real interaction: ' + JSON.stringify(playback));
+            }
+          }
+          if (videoContract.playerType === 'mux-video') {
+            await page.evaluate(() => {
+              const media = document.querySelector('#heroBanner .slide.active mux-video');
+              if (!media) throw new Error('Mux no-source recovery fixture could not find the active Mux Video.');
+              media.networkState = 3;
+              media.error = null;
+              media.paused = true;
+              media.dispatchEvent(new Event('error'));
+            });
+            const recovered = await page.waitForFunction(() => {
+              const media = document.querySelector('#heroBanner .slide.active mux-video');
+              return media &&
+                Number(media._loadCount) >= 1 &&
+                media.dataset.networkRetryCount === '1' &&
+                media.dataset.playbackState === 'playing' &&
+                Number(media.currentTime) > 0.05;
+            }, null, { timeout: 3500 }).then(() => true).catch(() => false);
+            if (!recovered) {
+              throw new Error(label + ': Mux hero no-source errors must trigger one bounded recovery attempt.');
             }
           }
         } else if (videoContract.activeType === 'video') {

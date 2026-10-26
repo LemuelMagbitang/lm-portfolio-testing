@@ -713,14 +713,52 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
       timer = windowRef.setTimeout(advance, Math.max(0, delay));
     }
 
-    function scheduleNetworkRetry(slide, media) {
-      // Retry one transient network failure automatically; reconnects and user
-      // gestures can retry later if connectivity recovers after that attempt.
-      if (disposed || slides[currentIndex] !== slide ||
-          Number(media?.error?.code) !== 2 ||
-          Number(media?.dataset?.networkRetryCount || 0) >= 1 ||
-          networkRetryTimer !== null) return;
+    function getPlaybackErrorDetails(media, event = null) {
+      // Mux custom elements can surface an error on the host while the useful
+      // HTMLMediaElement.error details live on the inner video or event.detail.
+      const innerMedia = media?.shadowRoot?.querySelector?.('video') || media;
+      const nativeError = innerMedia?.error || media?.error || null;
+      const eventDetail = event?.detail && typeof event.detail === 'object' ? event.detail : null;
+      const eventError = eventDetail?.error && typeof eventDetail.error === 'object' ? eventDetail.error : eventDetail;
+      let mediaErrorCode = null;
+      for (const candidate of [nativeError, eventError]) {
+        const code = Number(candidate?.code);
+        if (Number.isFinite(code) && code > 0) {
+          mediaErrorCode = code;
+          break;
+        }
+      }
+      const networkState = Number(innerMedia?.networkState) || Number(media?.networkState) || 0;
+      const readyState = Number(innerMedia?.readyState) || Number(media?.readyState) || 0;
+      const errorMessage = [nativeError?.message, eventError?.message]
+        .find(message => typeof message === 'string' && message.trim()) || '';
+      const eventErrorName = eventError?.name ||
+        (eventError && eventError.constructor?.name !== 'Object' ? eventError.constructor?.name : null) ||
+        null;
+      return {
+        mediaElement: innerMedia?.localName || media?.localName || null,
+        readyState,
+        networkState,
+        mediaErrorCode,
+        mediaErrorMessage: String(errorMessage).slice(0, 180),
+        eventErrorName
+      };
+    }
+
+    function scheduleNetworkRetry(slide, media, event = null) {
+      // Retry one transient network failure automatically. Mux's host element
+      // can report NETWORK_NO_SOURCE (3) without exposing media.error.code;
+      // treat that specific no-code state as recoverable once as well.
+      if (disposed || slides[currentIndex] !== slide) return false;
+      if (networkRetryTimer !== null) return media?.dataset?.playbackState === 'retrying';
+      if (Number(media?.dataset?.networkRetryCount || 0) >= 1) return false;
+      const isMuxMedia = ['mux-player', 'mux-video'].includes(media?.localName);
+      const details = getPlaybackErrorDetails(media, event);
+      const recoverableNetworkError = details.mediaErrorCode === 2 ||
+        (isMuxMedia && details.mediaErrorCode === null && details.networkState === 3);
+      if (!recoverableNetworkError) return false;
       media.dataset.networkRetryCount = '1';
+      media.dataset.networkRetryReason = details.mediaErrorCode === 2 ? 'network-error' : 'mux-no-source';
       media.dataset.playbackState = 'retrying';
       networkRetryTimer = windowRef.setTimeout(() => {
         networkRetryTimer = null;
@@ -728,6 +766,7 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
         try { media.load?.(); } catch (_) {}
         activateMedia(slide);
       }, 500);
+      return true;
     }
 
     function fallbackMuxToNativeVideo(slide, media, reason = 'media-error') {
@@ -798,9 +837,7 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
               media.dataset.playbackState = 'error';
               console.warn('[Hero Mux] Playback did not start; keeping the published Mux source instead of substituting the legacy reel.', {
                 playbackId: slide.dataset.muxPlaybackId || null,
-                readyState: Number(media.readyState) || 0,
-                networkState: Number(media.networkState) || 0,
-                mediaErrorCode: Number(media.error?.code) || null
+                ...getPlaybackErrorDetails(media)
               });
             }
           }, 15000);
@@ -934,9 +971,12 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
         windowRef.clearTimeout(networkRetryTimer);
         networkRetryTimer = null;
       }
-      // Network errors may leave a failed media element; reload the existing
-      // source before requesting playback again.
-      if (Number(media.error?.code) === 2) {
+      // Network errors can leave a failed native media element; Mux's host can
+      // instead expose NETWORK_NO_SOURCE without a native MediaError code.
+      const details = getPlaybackErrorDetails(media);
+      const isMuxMedia = ['mux-player', 'mux-video'].includes(media.localName);
+      if (details.mediaErrorCode === 2 ||
+          (isMuxMedia && details.mediaErrorCode === null && details.networkState === 3)) {
         try { media.load?.(); } catch (_) {}
       }
       activateMedia(slide);
@@ -956,23 +996,25 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
       bind(media, 'playing', () => {
         if (!disposed && slides[currentIndex] === slide) media.dataset.playbackState = 'playing';
       });
-      bind(media, 'error', () => {
+      bind(media, 'error', event => {
         if (disposed || slides[currentIndex] !== slide) return;
-        if (['mux-player', 'mux-video'].includes(media.localName)) {
+        const isMuxMedia = ['mux-player', 'mux-video'].includes(media.localName);
+        if (isMuxMedia) {
           if (fallbackMuxToNativeVideo(slide, media, 'media-error')) return;
           slide.dataset.muxPlaybackError = 'media-error';
+          const recoveryScheduled = scheduleNetworkRetry(slide, media, event);
           if (slide.dataset.muxPlaybackErrorLogged !== 'true') {
             slide.dataset.muxPlaybackErrorLogged = 'true';
-            console.warn('[Hero Mux] Mux playback reported a media error; retaining the Mux source.', {
+            console.warn('[Hero Mux] Mux playback reported a media error.', {
               playbackId: slide.dataset.muxPlaybackId || null,
-              readyState: Number(media.readyState) || 0,
-              networkState: Number(media.networkState) || 0,
-              mediaErrorCode: Number(media.error?.code) || null
+              ...getPlaybackErrorDetails(media, event),
+              recovery: recoveryScheduled ? 'retry-scheduled' : 'awaiting-reconnect-or-gesture'
             });
           }
+          if (recoveryScheduled) return;
         }
         media.dataset.playbackState = 'error';
-        scheduleNetworkRetry(slide, media);
+        if (!isMuxMedia) scheduleNetworkRetry(slide, media, event);
       });
     });
 
