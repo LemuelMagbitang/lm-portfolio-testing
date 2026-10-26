@@ -2504,6 +2504,7 @@ function validateReducedMotionThumbnailContract() {
       !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
       !lightboxIndex.includes("media-renderer.js?v=20261026-01") ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
+      !smoke.includes("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()") ||
       !smoke.includes('Project-card thumbnail reveal must fade, scale, and sharpen on ready') ||
       !smoke.includes('Failed thumbnail media must not run the successful reveal transition') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||

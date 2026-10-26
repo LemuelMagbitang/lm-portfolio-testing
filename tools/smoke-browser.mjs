@@ -10923,6 +10923,11 @@ try {
         document.head.appendChild(statusStyle);
       });
 
+      // The model preview is intentionally visibility-lazy. Bring its fixture
+      // into view before asserting its loading veil; image fixtures remain eager
+      // so their delayed responses stay loading together with the model.
+      await page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded();
+
       await page.waitForFunction(() =>
         document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media-fallback[data-state="loading"]').length === 5,
         null, {timeout:2500}
