@@ -10802,7 +10802,9 @@ try {
             failedState,
             fallbackPresent: Boolean(fallback),
             fallbackPosterWidth: Number(poster?.naturalWidth) || 0,
-            fallbackVisible: Boolean(fallback && posterRect?.width > 0 && posterRect?.height > 0)
+            fallbackVisible: Boolean(fallback && posterRect?.width > 0 && posterRect?.height > 0),
+            failedMediaOpacity: getComputedStyle(failed).opacity,
+            failedMediaTransition: getComputedStyle(failed).transitionProperty
           };
         } finally {
           disposeProjectThumbnailMedia(goodHost);
@@ -10813,8 +10815,9 @@ try {
       });
       if (result.goodState !== 'ready' || result.goodNaturalWidth < 1 ||
           result.failedState !== 'error' || !result.fallbackPresent ||
-          result.fallbackPosterWidth < 1 || !result.fallbackVisible) {
-        throw new Error('Cache-disabled image loading/fallback contract failed: ' + JSON.stringify(result));
+          result.fallbackPosterWidth < 1 || !result.fallbackVisible ||
+          result.failedMediaOpacity !== '0' || result.failedMediaTransition !== 'none') {
+        throw new Error('Failed thumbnail media must not run the successful reveal transition: ' + JSON.stringify(result));
       }
     }, {width:1280,height:900}, async page => {
       const session = await page.context().newCDPSession(page);
@@ -10886,12 +10889,22 @@ try {
               thumbnail:{type:'image',src:'/__smoke/loading-thumbnails/custom-tiny.svg'},
               media:[]
             }
+          },
+          {
+            id:'thumbnail-loading-model', ratio:'1 / 1',
+            project:{
+              id:'thumbnail-loading-model', title:'3D model thumbnail',
+              thumbnail:{type:'model',src:'/__smoke/loading-thumbnails/model-preview.obj'},
+              media:[]
+            },
+            mountModelViewer: () => new Promise(resolve => setTimeout(() => resolve(() => {}), 2400))
           }
         ];
 
         for (const fixtureData of fixtures) {
           const card = buildProjectCardElement(fixtureData.project, {
-            documentRef:document, resolveAssetUrl:value=>value, priority:true
+            documentRef:document, resolveAssetUrl:value=>value, priority:true,
+            mountModelViewer: fixtureData.mountModelViewer
           });
           card.id = fixtureData.id;
           Object.assign(card.style, {
@@ -10911,7 +10924,7 @@ try {
       });
 
       await page.waitForFunction(() =>
-        document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media-fallback[data-state="loading"]').length === 4,
+        document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media-fallback[data-state="loading"]').length === 5,
         null, {timeout:2500}
       );
 
@@ -10931,15 +10944,17 @@ try {
           const poster = fallback.querySelector('.project-thumb-media-fallback-image');
           return {
             id:card.id,
-            selectedSource:media.getAttribute('src') || media.getAttribute('data-lazy-src') || '',
+            selectedSource:media.getAttribute('src') || media.getAttribute('data-lazy-src') || media.dataset.modelThumb || '',
             expectedSourceSuffix:card.id === 'thumbnail-loading-default-square' ? 'default-primary.svg' :
               card.id === 'thumbnail-loading-custom-wide' ? 'custom-wide.svg' :
-              card.id === 'thumbnail-loading-custom-portrait' ? 'custom-portrait.svg' : 'custom-tiny.svg',
+              card.id === 'thumbnail-loading-custom-portrait' ? 'custom-portrait.svg' :
+              card.id === 'thumbnail-loading-model' ? 'model-preview.obj' : 'custom-tiny.svg',
             posterSource:poster?.getAttribute('src') || '',
             thumbnailWidth:t.width, thumbnailHeight:t.height,
             fallbackWidth:f.width, fallbackHeight:f.height,
             mediaOpacity:imageStyle.opacity,
             mediaFilter:imageStyle.filter,
+            mediaTransform:imageStyle.transform,
             mediaTransition:imageStyle.transitionProperty,
             rootZ:root.zIndex, rootBlend:root.mixBlendMode,
             overlayContent:overlay.content, overlayTop:overlay.top, overlayRight:overlay.right,
@@ -10956,8 +10971,13 @@ try {
         for (const r of rows) {
           const text = String(r.textContent || '').replace(/^["']|["']$/g,'');
           if (!r.selectedSource.endsWith('/'+r.expectedSourceSuffix) ||
-              r.mediaOpacity !== '1' ||
+              (r.id === 'thumbnail-loading-model'
+                ? r.mediaOpacity !== '0'
+                : Math.abs(Number.parseFloat(r.mediaOpacity) - 0.22) > 0.01) ||
               !r.mediaFilter.includes('blur(8px)') ||
+              r.mediaTransform === 'none' ||
+              !r.mediaTransition.includes('opacity') ||
+              !r.mediaTransition.includes('transform') ||
               !r.mediaTransition.includes('filter') ||
               r.rootZ !== 'auto' || r.rootBlend !== 'normal' ||
               r.fallbackWidth <= 0 || r.fallbackHeight <= 0 ||
@@ -11042,13 +11062,45 @@ try {
         media.dataset.mediaState === 'ready' &&
         !getComputedStyle(media).filter.includes('blur(8px)')
       ), null, { timeout: 1800 });
-      const readyThumbStyles = await page.locator('#thumbnail-loading-fixtures .project-thumb-media').evaluateAll(media => media.map(el => ({
-        state: el.dataset.mediaState,
-        filter: getComputedStyle(el).filter,
-        transition: getComputedStyle(el).transitionProperty
-      })));
-      if (readyThumbStyles.some(item => item.state !== 'ready' || item.filter.includes('blur(8px)') || !item.transition.includes('filter'))) {
-        throw new Error('Project-card thumbnail reveal must blur while loading and sharpen on ready: ' + JSON.stringify(readyThumbStyles));
+      const loadingTransformById = Object.fromEntries(sourceCheck.map(item => [item.id, item.mediaTransform]));
+      await page.waitForFunction(() => Array.from(
+        document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media')
+      ).every(media => {
+        const style = getComputedStyle(media);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        const scaleX = Math.hypot(matrix.a, matrix.b);
+        const scaleY = Math.hypot(matrix.c, matrix.d);
+        return media.dataset.mediaState === 'ready' &&
+          Number.parseFloat(style.opacity) >= 0.999 &&
+          Math.abs(scaleX - 1) < 0.002 &&
+          Math.abs(scaleY - 1) < 0.002 &&
+          !style.filter.includes('blur(8px)');
+      }), null, { timeout: 3500 });
+      const readyThumbStyles = await page.locator('#thumbnail-loading-fixtures .project-thumb-media').evaluateAll(media => media.map(el => {
+        const style = getComputedStyle(el);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        return {
+          id:el.closest('.project-card')?.id || '',
+          state:el.dataset.mediaState,
+          opacity:style.opacity,
+          filter:style.filter,
+          transform:style.transform,
+          scaleX:Math.hypot(matrix.a,matrix.b),
+          scaleY:Math.hypot(matrix.c,matrix.d),
+          transition:style.transitionProperty
+        };
+      }));
+      if (readyThumbStyles.some(item =>
+        item.state !== 'ready' ||
+        item.opacity !== '1' ||
+        item.filter.includes('blur(8px)') ||
+        Math.abs(item.scaleX - 1) >= 0.002 ||
+        Math.abs(item.scaleY - 1) >= 0.002 ||
+        item.transform === loadingTransformById[item.id] ||
+        !item.transition.includes('opacity') ||
+        !item.transition.includes('transform') ||
+        !item.transition.includes('filter'))) {
+        throw new Error('Project-card thumbnail reveal must fade, scale, and sharpen on ready: ' + JSON.stringify(readyThumbStyles));
       }
       await page.evaluate(() => {
         document.querySelector('#thumbnail-loading-fixtures')?.remove();

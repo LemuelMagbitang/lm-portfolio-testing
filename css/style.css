@@ -972,6 +972,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 .card-thumbnail img,
 .card-thumbnail video,
+.card-thumbnail .project-thumb-model,
 .card-thumbnail .project-thumb-media.lottie-player,
 .card-thumbnail lottie-player.project-thumb-media {
   width: 100%;
@@ -992,11 +993,19 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     filter 360ms cubic-bezier(.22, 1, .36, 1);
 }
 
-.card-thumbnail .project-thumb-media.is-media-ready,
-.card-thumbnail .project-thumb-media.is-media-error {
+.card-thumbnail .project-thumb-media.is-media-ready {
   opacity: 1;
   transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
   filter: blur(0);
+}
+
+/* Failed media stays on its explicit fallback instead of running the success
+   reveal. This also keeps a late/slow-load timeout from exposing broken pixels. */
+.card-thumbnail .project-thumb-media.is-media-error {
+  opacity: 0 !important;
+  transform: none !important;
+  filter: none !important;
+  transition: none !important;
 }
 
 .project-card:hover .card-thumbnail img,
@@ -3418,10 +3427,14 @@ footer{
 .card-thumbnail .project-thumb-media.lottie-player,
 .card-thumbnail lottie-player.project-thumb-media{position:absolute;inset:0;display:block;min-width:0;min-height:0;object-fit:cover;overflow:hidden;}
 .card-thumbnail lottie-player.project-thumb-media.is-media-error{opacity:0!important;transform:none!important;}
-/* Keep selected image/video pixels visible while loading; the shared card
-   * builder remains the source of truth for custom/default thumbnail selection. */
+/* Let a subdued, blurred preview sit beneath the loading veil. When readiness
+   is confirmed, the shared transition raises opacity, scale and sharpness as
+   one surface rather than switching abruptly from fully visible to finished. */
 .card-thumbnail img.project-thumb-media.is-media-loading,
-.card-thumbnail video.project-thumb-media.is-media-loading{opacity:1!important;filter:blur(8px)!important;}
+.card-thumbnail video.project-thumb-media.is-media-loading{
+  opacity:.22!important;
+  filter:blur(8px)!important;
+}
 
 .card-thumbnail .project-thumb-media-fallback{
   position:absolute;inset:0;z-index:auto;display:grid;place-items:center;
