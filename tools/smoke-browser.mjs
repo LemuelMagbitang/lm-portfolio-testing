@@ -10919,7 +10919,7 @@ try {
         const preview=captureAssetPreview('/__smoke/asset-preview.webp',source,{documentRef:document,type:'image'});
         const cached=getAssetPreview('/__smoke/asset-preview.webp');
         const unsupported=captureAssetPreview('/__smoke/unsupported.webp',document.createElement('div'),{documentRef:document,type:'model'});
-        if(!/^data:image\\/(?:webp|jpeg);base64,/i.test(preview)||preview!==cached||unsupported!==''||preview.length>18000){
+        if(!/^data:image\/(?:webp|jpeg);base64,/i.test(preview)||preview!==cached||unsupported!==''||preview.length>18000){
           throw new Error('asset-preview-cache must store only small, already-rendered previews: '+
             JSON.stringify({previewLength:preview.length,same:preview===cached,unsupported}));
         }
