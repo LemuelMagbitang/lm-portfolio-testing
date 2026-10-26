@@ -277,7 +277,7 @@ function registerThumbnailMediaState(media, {
     if (typeof mediaFallback.replaceChildren === 'function') mediaFallback.replaceChildren();
     else mediaFallback.textContent = '';
     mediaFallback.dataset.state = status === 'error' ? 'error' : 'loading';
-    mediaFallback.removeAttribute('data-preview');
+    mediaFallback.removeAttribute?.('data-preview');
     mediaFallback.setAttribute('role', 'img');
     mediaFallback.setAttribute('aria-label', status === 'loading'
       ? 'Loading ' + (type === 'lottie' ? 'animation' : type === 'model' ? '3D' : type) + ' preview'
