@@ -2006,7 +2006,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('filterTouchAction') || !smoke.includes('async function assertNoLogoBackingPlate') ||
       !smoke.includes('Loading gate') || !smoke.includes('Footer') ||
       !smoke.includes('logo-slide-stack') ||
-       !smoke.includes('Independent chrome contrast fixtures') ||
+       !smoke.includes("const hasVisibleHamburger = await page.evaluate(() => {") ||
+       smoke.split('if (hasVisibleHamburger)').length - 1 < 3 ||
        !smoke.includes("hamburgerBackdrop.style.background = '#fff'") ||
        !smoke.includes("addBackdrop('__smoke-hamburger-backdrop', hamburgerRect, '#000')") ||
       !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
