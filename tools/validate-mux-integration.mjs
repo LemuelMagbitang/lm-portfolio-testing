@@ -71,8 +71,8 @@ check(bridge.includes("data/video-platform.json") && bridge.includes("/functions
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
 check(player.includes("@mux/mux-video@0.31.5/dist/mux-video.mjs") &&
   player.includes('customElements.get("mux-video")') &&
-  player.includes("timeoutMs = 6000") &&
-  player.includes("globalThis.setTimeout(() => finish(false)"),
+  player.includes("timeoutMs = 15000") &&
+  player.includes("Promise.race([muxVideoLoaderPromise, waitForModule])"),
   "Mux Video must use its documented module entrypoint and bound loader time so CDN failures cannot keep the hero blank.");
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxVideo") && hero.includes("mux-video") &&
   hero.includes("if (remoteVideos.length)") &&
@@ -90,7 +90,7 @@ check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&
   hero.includes("if (!reducedMotion && sources.some(source => source.type === 'mux'))") &&
   hero.includes("const shouldLoop = slides.length === 1") &&
-  hero.includes("}, 8000);") &&
+  hero.includes("}, 15000);") &&
   hero.includes("!['mux-player', 'mux-video'].includes(media?.localName)") &&
   heroReducedMotionBranch.includes("documentRef.createElement('video')") &&
   !heroReducedMotionBranch.includes("playback-id") &&
