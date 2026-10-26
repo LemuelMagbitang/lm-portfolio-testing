@@ -2511,7 +2511,7 @@ function validateReducedMotionThumbnailContract() {
       !mediaRenderer.includes("const previewSource = `https://stream.mux.com/${playbackId}.m3u8`;") ||
       !mediaRenderer.includes("showLightboxMediaFallback(artwork, project, previewSource, 'video', 'loading', safePoster)") ||
       !mediaRenderer.includes("captureAssetPreview(previewSource, player, { documentRef, type: 'video' })") ||
-      !mediaRenderer.includes("sourceIdentity(resolvedPoster) !== projectThumbnailIdentity") ||
+      !mediaRenderer.includes("mediaSourceIdentity(resolvedPoster) !== projectThumbnailIdentity") ||
       !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
       !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
       !smoke.includes('asset-preview-cache') ||
