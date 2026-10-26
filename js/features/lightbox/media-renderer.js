@@ -26,6 +26,8 @@ export function createLightboxMediaRenderer({
   const holographicCleanups = new Set();
   const holographicNormalControllers = new WeakMap();
   const holographicMotionStates = new WeakMap();
+  const artworkVisibilityStates = new WeakMap();
+  let artworkVisibilityObserver = null;
   const youtubeFrameCache = new Map();
   const MAX_CACHED_YOUTUBE_FRAMES = 2;
   const imageDimensionCache = new Map();
@@ -1513,11 +1515,32 @@ export function createLightboxMediaRenderer({
     const explicitSrc = explicitRaw
       ? (/^(?:data:|blob:|https?:\/\/|\/\/)/i.test(explicitRaw) ? explicitRaw : resolveAssetUrl(explicitRaw))
       : '';
-    const explicitCandidate = explicitSrc && explicitSrc !== resolvedFailedSrc ? explicitSrc : '';
-    // Loading differs from error recovery: never borrow another media item or
-    // the CMS thumbnail while this selected asset is still loading.
+    const thumbnailValue = project?.thumbnail;
+    const thumbnailRaw = String(
+      (typeof thumbnailValue === 'string' ? thumbnailValue : thumbnailValue?.src) || ''
+    ).trim();
+    const projectThumbnailSrc = thumbnailRaw ? resolveAssetUrl(thumbnailRaw) : '';
+    const sourceIdentity = value => {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      if (/^(?:data|blob):/i.test(raw)) return raw;
+      try {
+        const url = new URL(raw, documentRef?.baseURI || windowRef?.location?.href);
+        return url.origin + url.pathname;
+      } catch (_) {
+        return raw.split(/[?#]/, 1)[0];
+      }
+    };
+    const projectThumbnailIdentity = sourceIdentity(projectThumbnailSrc);
+    const explicitCandidate = explicitSrc &&
+      sourceIdentity(explicitSrc) !== sourceIdentity(resolvedFailedSrc) &&
+      (!projectThumbnailIdentity || sourceIdentity(explicitSrc) !== projectThumbnailIdentity)
+      ? explicitSrc : '';
+    // Loading prefers this exact asset's cached low-quality frame. Never use
+    // the project's CMS thumbnail or another artwork as the loading preview.
+    const cachedAssetPreview = isLoading ? getAssetPreview(resolvedFailedSrc || failedRaw) : '';
     const imageSrc = isLoading
-      ? (explicitCandidate || getAssetPreview(resolvedFailedSrc || failedRaw))
+      ? (cachedAssetPreview || explicitCandidate)
       : (explicitCandidate || getStaticImageFallback(project, failedRaw));
     const appendLabel = () => {
       if (!fallback?.isConnected && !artwork.contains?.(fallback)) return;
@@ -1539,7 +1562,8 @@ export function createLightboxMediaRenderer({
       image.alt = '';
       image.setAttribute('aria-hidden', 'true');
       image.decoding = 'async';
-      image.loading = isLoading ? 'eager' : 'lazy';
+      // Inlined, size-bounded snapshots are already available locally; real preview/poster URLs stay deferred.
+      image.loading = isLoading && /^data:image\/(?:webp|jpeg);base64,/i.test(imageSrc) ? 'eager' : 'lazy';
       image.addEventListener('error', () => appendLabel(), { once: true });
       image.src = imageSrc;
       fallback.appendChild(image);
@@ -1571,19 +1595,66 @@ export function createLightboxMediaRenderer({
     fallback.remove();
   }
 
+  function ensureArtworkVisibilityObserver() {
+    if (artworkVisibilityObserver) return artworkVisibilityObserver;
+    if (windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return null;
+    const Observer = windowRef?.IntersectionObserver || globalThis.IntersectionObserver;
+    if (typeof Observer !== 'function') return null;
+    artworkVisibilityObserver = new Observer(entries => {
+      entries.forEach(entry => {
+        const state = artworkVisibilityStates.get(entry.target);
+        if (!state) {
+          artworkVisibilityObserver?.unobserve(entry.target);
+          return;
+        }
+        state.isVisible = Boolean(entry.isIntersecting && entry.intersectionRatio > 0);
+        if (state.isVisible && state.ready && !state.revealed) revealArtworkWhenVisible(entry.target);
+      });
+    }, { root: null, rootMargin: '0px', threshold: 0.01 });
+    return artworkVisibilityObserver;
+  }
+
+  function observeArtworkVisibility(artwork) {
+    const observer = ensureArtworkVisibilityObserver();
+    const state = { isVisible: !observer, ready: false, revealed: false };
+    artworkVisibilityStates.set(artwork, state);
+    observer?.observe(artwork);
+  }
+
+  function revealArtworkWhenVisible(artwork) {
+    if (!artwork || artwork.dataset.mediaState !== 'ready') return;
+    const state = artworkVisibilityStates.get(artwork);
+    if (state?.revealed || artwork.dataset.mediaRevealStarted === 'true') return;
+    const entry = artwork.closest?.('.lightbox-media-item');
+    if (state && !state.isVisible) {
+      artwork.classList.add('is-media-awaiting-viewport');
+      if (entry) entry.dataset.mediaReveal = 'pending';
+      return;
+    }
+    artwork.classList.remove('is-media-awaiting-viewport');
+    artwork.dataset.mediaRevealStarted = 'true';
+    artwork.classList.add('is-media-reveal-ready');
+    if (entry) entry.dataset.mediaReveal = 'ready';
+    if (state) state.revealed = true;
+  }
+
   function markArtworkReady(artwork) {
     if (!artwork) return;
     artwork.dataset.mediaState = 'ready';
-    if (artwork.dataset.mediaRevealStarted === 'true') return;
-    artwork.dataset.mediaRevealStarted = 'true';
-    artwork.classList.add('is-media-reveal-ready');
-    const entry = artwork.closest?.('.lightbox-media-item');
-    if (entry) entry.dataset.mediaReveal = 'ready';
+    const state = artworkVisibilityStates.get(artwork);
+    if (state) state.ready = true;
+    revealArtworkWhenVisible(artwork);
   }
 
   function markArtworkError(artwork) {
     if (!artwork || artwork.dataset.mediaState === 'ready') return;
     artwork.dataset.mediaState = 'error';
+    artwork.classList.remove('is-media-awaiting-viewport', 'is-media-reveal-ready');
+    const state = artworkVisibilityStates.get(artwork);
+    if (state) {
+      state.ready = false;
+      state.revealed = true;
+    }
     const entry = artwork.closest?.('.lightbox-media-item');
     if (entry) entry.dataset.mediaReveal = 'error';
   }
@@ -1608,6 +1679,7 @@ export function createLightboxMediaRenderer({
 
     artwork.appendChild(mediaEl);
     wrap.appendChild(artwork);
+    observeArtworkVisibility(artwork);
 
     if (background && applyMediaBackground) {
       Promise.resolve(applyMediaBackground(artwork, background, resolveAssetUrl))
@@ -2752,6 +2824,8 @@ export function createLightboxMediaRenderer({
     }
     mediaPreloadRoot = null;
 
+    artworkVisibilityObserver?.disconnect();
+    artworkVisibilityObserver = null;
     youtubeFrameCache.clear();
     imageDimensionCache.clear();
     videoDimensionCache.clear();
@@ -2765,6 +2839,10 @@ export function createLightboxMediaRenderer({
 
   function dispose(container) {
     if (!container) return;
+    container.querySelectorAll?.('.lightbox-artwork').forEach(artwork => {
+      artworkVisibilityObserver?.unobserve(artwork);
+      artworkVisibilityStates.delete(artwork);
+    });
     cleanupLightboxMediaIn(container);
     if (activeInspector?.container === container) closeArtworkInspect({immediate:true});
     disposeArtworkGroupLayouts(container);

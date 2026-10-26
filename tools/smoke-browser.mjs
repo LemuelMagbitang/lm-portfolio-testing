@@ -6707,12 +6707,13 @@ try {
           artworkState: artwork?.dataset.mediaState || '',
           revealClass: Boolean(artwork?.classList.contains('is-media-reveal-ready')),
           entryState: entry?.dataset.mediaReveal || '',
+          awaitingViewport: Boolean(artwork?.classList.contains('is-media-awaiting-viewport')),
           artworkAnimation: getComputedStyle(artwork).animationName,
           entryAnimation: getComputedStyle(entry).animationName,
           reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
         };
       });
-      if (reveal.artworkState !== 'ready' || !reveal.revealClass || reveal.entryState !== 'ready' ||
+      if (reveal.artworkState !== 'ready' || !reveal.revealClass || reveal.entryState !== 'ready' || reveal.awaitingViewport ||
           (!reveal.reducedMotion && (!reveal.artworkAnimation.includes('lightbox-artwork-arrive') ||
             !reveal.entryAnimation.includes('lightbox-media-arrive'))) ||
           (reveal.reducedMotion && (reveal.artworkAnimation !== 'none' || reveal.entryAnimation !== 'none'))) {
@@ -6721,7 +6722,7 @@ try {
       if (await firstArtwork.getAttribute('loading') !== 'eager') {
         throw new Error('First Lightbox artwork should load eagerly to avoid a blank opening state.');
       }
-      const imageLoadingModes = await page.locator('#lightboxMediaContainer img').evaluateAll(images => images.map(image => image.loading));
+      const imageLoadingModes = await page.locator('#lightboxMediaContainer .lightbox-media-item .lightbox-artwork img:not(.lightbox-media-fallback-image)').evaluateAll(images => images.map(image => image.loading));
       if (imageLoadingModes[0] !== 'eager') {
         throw new Error('First Lightbox artwork must load eagerly to avoid a blank opening state.');
       }

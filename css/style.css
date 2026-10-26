@@ -5988,6 +5988,8 @@ footer > .footer-content p{
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item[data-media-reveal="ready"]{
   animation:lightbox-media-arrive .36s cubic-bezier(.22,1,.36,1) both;
 }
+#lightboxMediaContainer .lightbox-artwork.is-media-awaiting-viewport{opacity:.12;filter:blur(8px);}
+@media(min-width:768px){#lightboxMediaContainer .lightbox-artwork.is-media-awaiting-viewport{transform:scale(.985);}}
 #lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready{
   animation:lightbox-artwork-arrive .44s cubic-bezier(.22,1,.36,1) both;
 }
@@ -6550,4 +6552,5 @@ body.menu-open .hamburger-icon span {
   #lightboxMediaContainer .lightbox-media-fallback[data-preview="true"],
   #lightboxMediaContainer .lightbox-media-fallback[data-preview="true"] .lightbox-media-fallback-image,
   #lightboxMediaContainer .lightbox-media-fallback.is-preview-exiting{transition:none!important;transform:none!important;}
+  #lightboxMediaContainer .lightbox-artwork.is-media-awaiting-viewport{opacity:1!important;transform:none!important;filter:none!important;}
 }

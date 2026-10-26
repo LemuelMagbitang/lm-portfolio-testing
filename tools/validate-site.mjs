@@ -2065,8 +2065,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-16") ||
-      !bootstrap.includes("cacheVersion = '20261026-16'") ||
+  if (!entry.includes("bootstrap.js?v=20261027-01") ||
+      !bootstrap.includes("cacheVersion = '20261027-01'") ||
       !composition.includes("navigation/index.js?v=20261026-04") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-10") ||
@@ -2075,16 +2075,16 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261026-03") ||
-      !composition.includes("lightbox/index.js?v=20261026-02") ||
+      !composition.includes("lightbox/index.js?v=20261027-01") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-16') ||
-      !works.includes('js/app/page-composition.js?v=20261026-16') ||
-      !works.includes('css/style.css?v=20261026-12') ||
-      !works.includes('js/script.js?v=20261026-16') ||
-      !about.includes('style.css?v=20261026-12') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-16') ||
-      !about.includes('script.js?v=20261026-16') ||
-      !about.includes('page-composition.js?v=20261026-16')) {
+      !works.includes('js/app/bootstrap.js?v=20261027-01') ||
+      !works.includes('js/app/page-composition.js?v=20261027-01') ||
+      !works.includes('css/style.css?v=20261027-01') ||
+      !works.includes('js/script.js?v=20261027-01') ||
+      !about.includes('style.css?v=20261027-01') ||
+      !about.includes('js/app/bootstrap.js?v=20261027-01') ||
+      !about.includes('script.js?v=20261027-01') ||
+      !about.includes('page-composition.js?v=20261027-01')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2496,6 +2496,12 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('getAssetPreview(src)') ||
       !thumbnail.includes('captureAssetPreview(src, media') ||
       !mediaRenderer.includes('getAssetPreview(resolvedFailedSrc || failedRaw)') ||
+      !mediaRenderer.includes('sourceIdentity(explicitSrc) !== projectThumbnailIdentity') ||
+      !mediaRenderer.includes('cachedAssetPreview || explicitCandidate') ||
+      !mediaRenderer.includes("image.loading = isLoading && /^data:image\\/(?:webp|jpeg);base64,/i.test(imageSrc) ? 'eager' : 'lazy';") ||
+      !mediaRenderer.includes('observeArtworkVisibility(artwork)') ||
+      !mediaRenderer.includes("artwork.classList.add('is-media-awaiting-viewport')") ||
+      !smoke.includes("img:not(.lightbox-media-fallback-image)") ||
       !mediaRenderer.includes('captureAssetPreview(sourceUrl, image') ||
       !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
       !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
@@ -2517,13 +2523,14 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('@keyframes lightbox-artwork-arrive-compact') ||
       !styles.includes('@media(max-width:767px)') ||
       !styles.includes('#lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready') ||
+      !styles.includes('#lightboxMediaContainer .lightbox-artwork.is-media-awaiting-viewport') ||
       !styles.includes('filter:none!important;transition:none!important;') ||
       !styles.includes('video.project-thumb-media.is-media-loading {\n    filter:none!important;') ||
       !styles.includes('.lightbox-artwork.is-media-reveal-ready') ||
       !styles.includes('[data-media-reveal="ready"]') ||
       !mediaRenderer.includes('function markArtworkReady(artwork)') ||
       !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
-      !lightboxIndex.includes("media-renderer.js?v=20261026-02") ||
+      !lightboxIndex.includes("media-renderer.js?v=20261027-01") ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
       !smoke.includes('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group') ||
       smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||
