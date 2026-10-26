@@ -6,7 +6,7 @@
  * explicit dependencies between them.
  */
 
-import { initNavigation } from '../features/navigation/index.js?v=20261026-01';
+import { initNavigation } from '../features/navigation/index.js?v=20261026-02';
 import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261024-01';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
