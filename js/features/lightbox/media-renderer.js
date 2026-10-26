@@ -1747,9 +1747,9 @@ export function createLightboxMediaRenderer({
   function renderYouTube(item, project, index = 0) {
     const parsed = parseYouTube(item.src);
     const isShort = Boolean(parsed?.isShort);
-    const youtubePreview = String(item.preview || (parsed?.id
-      ? 'https://img.youtube.com/vi/' + encodeURIComponent(parsed.id) + '/hqdefault.jpg'
-      : '')).trim();
+    // Use only a CMS-provided preview for embedded videos. Do not introduce
+    // a new external thumbnail request during Lightbox loading.
+    const youtubePreview = String(item.preview || '').trim();
     const embedSrc = buildYouTubeEmbedUrl(item.src);
     if (!embedSrc) return renderUnsupported(item, project);
 
