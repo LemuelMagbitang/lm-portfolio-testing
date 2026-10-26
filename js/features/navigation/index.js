@@ -8,7 +8,7 @@
  * scoped to the portfolio pages only.
  */
 
-import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js?v=20261026-01';
+import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js?v=20261026-02';
 
 export function initNavigation({ root = globalThis.document, getCuratedViewSlug = () => '' } = {}) {
   const menuButton = root?.querySelector('.hamburger, .menu-button');
@@ -465,10 +465,6 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       ? (root.elementsFromPoint(point.x, point.y) || [])
       : [root.elementFromPoint(point.x, point.y)].filter(Boolean);
 
-    // Keep the established white brand treatment over the deliberately dark Contact surface.
-    const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'));
-    if (contactAreaUnderTarget) return { luminance: 0.02, dynamic: false, fallback: false };
-
     let backdrop = stack.find(element => {
       if (!element || element === subjectElement || element.closest?.('.navbar')) return false;
       if (element.classList?.contains('nav-menu-backdrop')) return true;
@@ -497,17 +493,27 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       media = Array.from(active).find(candidate => isVisibleMediaAtPoint(candidate, point.x, point.y)) || null;
     }
 
-    // The opaque fill of a hero container is behind the artwork; other opaque overlays are not.
+    // Search the paint stack and media that geometrically cover this exact point
+    // before accepting an ancestor's opaque background. Gallery thumbnails and
+    // other composed surfaces often have a solid card canvas *behind* their
+    // rendered image; the canvas color must not mask that visible media sample.
+    if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
+
+    // The opaque fill of a container is a fallback only when no visible media
+    // can be sampled at the control's actual viewport point.
     if (!media && !isHeroMediaContainer && backdropColor && backdropColor.a >= 0.98) {
       return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: false };
     }
     if (!media && backdropColor && backdropColor.a > 0.02 && backdropColor.a < 0.98) {
       return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: true };
     }
-    if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
     if (media) {
+      const hasDynamicCardSurface = Boolean(
+        media.closest?.('.card-thumbnail')?.querySelector?.('.project-thumb-foil')
+      );
       const dynamic = Boolean(media.closest?.('.hero-banner')) ||
-        ['video', 'canvas', 'lottie-player'].includes(media.localName);
+        hasDynamicCardSurface ||
+        ['video', 'canvas', 'lottie-player', 'mux-video', 'mux-player'].includes(media.localName);
       const sampledLuminance = sampleMediaLuminance(root, media, point);
       const luminance = effectiveHeroMediaLuminance(media, sampledLuminance, point);
       if (Number.isFinite(luminance)) return { luminance, dynamic, fallback: false };
@@ -574,6 +580,11 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     bind(root, 'loadeddata', scheduleLogoContrast, true);
     bind(root, 'playing', scheduleLogoContrast, true);
     bind(root, 'pointerup', scheduleLogoContrast, true);
+    // Card hover and foil interactions can change the surface under the fixed
+    // navbar without scrolling. Coalesce these signals through the existing
+    // requestAnimationFrame scheduler so updates remain bounded to one per frame.
+    bind(root, 'pointermove', scheduleLogoContrast, { passive: true });
+    bind(root, 'pointerover', scheduleLogoContrast, { passive: true });
 
     const MutationObserverRef = windowRef?.MutationObserver;
     if (typeof MutationObserverRef === 'function') {
