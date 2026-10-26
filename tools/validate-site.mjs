@@ -2007,7 +2007,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('Loading gate') || !smoke.includes('Footer') ||
       !smoke.includes('logo-slide-stack') ||
        !smoke.includes("const hasVisibleHamburger = await page.evaluate(() => {") ||
-       smoke.split('if (hasVisibleHamburger)').length - 1 < 3 ||
+       smoke.split('if (hasVisibleHamburger)').length - 1 < 2 ||
+       !smoke.includes('(hasVisibleHamburger && independentChromeContrast.hamburgerForeground !== \'dark\')') ||
        !smoke.includes("hamburgerBackdrop.style.background = '#fff'") ||
        !smoke.includes("addBackdrop('__smoke-hamburger-backdrop', hamburgerRect, '#000')") ||
       !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
