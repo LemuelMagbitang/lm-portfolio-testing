@@ -2502,6 +2502,7 @@ function validateReducedMotionThumbnailContract() {
       !mediaRenderer.includes('observeArtworkVisibility(artwork)') ||
       !mediaRenderer.includes("artwork.classList.add('is-media-awaiting-viewport')") ||
       !smoke.includes("img:not(.lightbox-media-fallback-image)") ||
+      !smoke.includes(".lightbox-artwork img:not(.lightbox-media-fallback-image)") ||
       !mediaRenderer.includes('captureAssetPreview(sourceUrl, image') ||
       !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
       !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
