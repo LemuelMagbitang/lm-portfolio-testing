@@ -1396,7 +1396,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           element,
           visibility: element.style.visibility
         }));
-        mutedMedia.forEach(({ element }) => { element.style.visibility = 'hidden'; });
+        mutedMedia.forEach(element => { element.style.visibility = 'hidden'; });
 
         const card = document.createElement('div');
         card.id = '__lm-gallery-chrome-contrast-fixture';
