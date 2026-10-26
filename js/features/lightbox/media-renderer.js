@@ -1532,14 +1532,33 @@ export function createLightboxMediaRenderer({
     artwork?.querySelector?.('.lightbox-media-fallback')?.remove();
   }
 
+  function markArtworkReady(artwork) {
+    if (!artwork) return;
+    artwork.dataset.mediaState = 'ready';
+    if (artwork.dataset.mediaRevealStarted === 'true') return;
+    artwork.dataset.mediaRevealStarted = 'true';
+    artwork.classList.add('is-media-reveal-ready');
+    const entry = artwork.closest?.('.lightbox-media-item');
+    if (entry) entry.dataset.mediaReveal = 'ready';
+  }
+
+  function markArtworkError(artwork) {
+    if (!artwork || artwork.dataset.mediaState === 'ready') return;
+    artwork.dataset.mediaState = 'error';
+    const entry = artwork.closest?.('.lightbox-media-item');
+    if (entry) entry.dataset.mediaReveal = 'error';
+  }
+
   function buildMediaEntry(mediaEl, captionText, background) {
     const wrap = documentRef.createElement('div');
     wrap.className = 'lightbox-media-item';
+    wrap.dataset.mediaReveal = 'pending';
 
     // Keep media backgrounds scoped to the artwork surface. The caption is a
     // sibling of this surface, so fills never paint behind or tint captions.
     const artwork = documentRef.createElement('div');
     artwork.className = 'lightbox-artwork';
+    artwork.dataset.mediaState = 'loading';
 
     // Carry the viewer's known orientation onto the artwork surface itself.
     // This is especially important for Lottie because its custom element
@@ -1635,12 +1654,25 @@ export function createLightboxMediaRenderer({
       );
     };
     const onImageLoad = () => {
+      if (artwork.dataset.mediaState === 'ready') return;
       imageSettled = true;
-      clearLightboxMediaFallback(artwork);
       applyIntrinsicRatio();
+      // load can precede the browser's decode/paint work. Keep the loading
+      // treatment until decode settles so cached and network images share the
+      // same successful-ready handoff.
+      Promise.resolve()
+        .then(() => typeof image.decode === 'function' ? image.decode() : undefined)
+        .catch(() => {})
+        .then(() => {
+          if (destroyed || artwork.dataset.mediaState === 'error') return;
+          applyIntrinsicRatio();
+          clearLightboxMediaFallback(artwork);
+          markArtworkReady(artwork);
+        });
     };
     const onImageError = () => {
       imageSettled = true;
+      markArtworkError(artwork);
       showLightboxMediaFallback(artwork, project, item.src, 'image', 'error');
     };
     image.addEventListener('load', onImageLoad);
@@ -1674,8 +1706,9 @@ export function createLightboxMediaRenderer({
     if (imageSettled && !(Number(image.naturalWidth) > 0)) {
       // Applying the holographic wrapper can replace artwork children. Reassert
       // the error fallback afterward for an already-failed cached image.
+      markArtworkError(artwork);
       showLightboxMediaFallback(artwork, project, item.src, 'image', 'error');
-    } else if (!imageSettled) {
+    } else if (artwork.dataset.mediaState !== 'ready') {
       showLightboxMediaFallback(artwork, project, item.src, 'image', 'loading');
     }
 
@@ -1713,7 +1746,10 @@ export function createLightboxMediaRenderer({
       iframe.addEventListener('load', () => {
         iframe.dataset.lmYoutubeLoaded = 'true';
         const artwork = iframe.closest?.('.lightbox-artwork');
-        if (artwork) clearLightboxMediaFallback(artwork);
+        if (artwork) {
+          clearLightboxMediaFallback(artwork);
+          markArtworkReady(artwork);
+        }
         primeYouTubeFrame(iframe);
         // A newly created frame is cached only after a successful load. This
         // prevents a failed player from becoming a poisoned cache entry.
@@ -1751,7 +1787,10 @@ export function createLightboxMediaRenderer({
       showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'loading');
     }
     if (iframe.dataset.lmYoutubeLoadError === 'true') {
+      markArtworkError(artwork);
       showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'error');
+    } else if (iframe.dataset.lmYoutubeLoaded === 'true') {
+      markArtworkReady(artwork);
     }
     if (resolvedOrientation === 'portrait') setAspectRatio(artwork, 9, 16);
     else if (resolvedOrientation === 'square') setAspectRatio(artwork, 1, 1);
@@ -1782,8 +1821,14 @@ export function createLightboxMediaRenderer({
       String(item.orientation || '').toLowerCase(),
       artwork
     );
-    const onVideoReady = () => clearLightboxMediaFallback(artwork);
-    const onVideoError = () => showLightboxMediaFallback(artwork, project, item.src, 'video', 'error');
+    const onVideoReady = () => {
+      clearLightboxMediaFallback(artwork);
+      markArtworkReady(artwork);
+    };
+    const onVideoError = () => {
+      markArtworkError(artwork);
+      showLightboxMediaFallback(artwork, project, item.src, 'video', 'error');
+    };
     video.addEventListener('loadeddata', onVideoReady);
     video.addEventListener('canplay', onVideoReady);
     video.addEventListener('error', onVideoError);
@@ -1839,9 +1884,11 @@ export function createLightboxMediaRenderer({
         loadTimer = null;
       }
       clearLightboxMediaFallback(artwork);
+      markArtworkReady(artwork);
     };
     const onError = () => {
       if (disposed || destroyed) return;
+      markArtworkError(artwork);
       if (loadTimer !== null) {
         windowRef?.clearTimeout?.(loadTimer);
         loadTimer = null;
@@ -1940,6 +1987,7 @@ export function createLightboxMediaRenderer({
 
     if (typeof mountModelViewer !== 'function') {
       modelWrap.innerHTML = '<div class="model-viewer-error model-viewer-fallback" role="img" aria-label="3D artwork"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D ARTWORK</span></div>';
+      markArtworkError(modelEntry.querySelector('.lightbox-artwork'));
       return modelEntry;
     }
 
@@ -2030,17 +2078,23 @@ export function createLightboxMediaRenderer({
         });
       })
       .then(cleanup => {
-        if (!cleanup) return;
+        if (!cleanup) {
+          if (modelWrap.isConnected) markArtworkError(modelEntry.querySelector('.lightbox-artwork'));
+          return;
+        }
         // mountModelViewer is async. The Lightbox may have navigated or closed
         // while the model loader was waiting on the asset. Never keep a WebGL
         // viewer alive for a detached media item.
         if (!modelWrap.isConnected || !lightbox?.classList.contains('active')) {
           try { cleanup?.(); } catch (_) {}
+          return;
         }
+        markArtworkReady(modelEntry.querySelector('.lightbox-artwork'));
       })
       .catch(error => {
         if (!modelWrap.isConnected) return;
         modelWrap.innerHTML = '<div class="model-viewer-error model-viewer-fallback" role="img" aria-label="3D artwork"><i class="fa-solid fa-cube" aria-hidden="true"></i><span>3D ARTWORK</span></div>';
+        markArtworkError(modelEntry.querySelector('.lightbox-artwork'));
         console.warn('3D model viewer:', error);
       });
 
@@ -2115,13 +2169,14 @@ export function createLightboxMediaRenderer({
       }
       clearLoadTimer();
       clearLightboxMediaFallback(artwork);
-      artwork.dataset.mediaState = 'ready';
+      markArtworkReady(artwork);
       const loadedDimensions = lottieDimensionCache.get(resolvedSrc);
       if (loadedDimensions) setAspectRatio(artwork, loadedDimensions.width, loadedDimensions.height);
     };
     const onError = () => {
       if (disposed || destroyed) return;
       clearLoadTimer();
+      markArtworkError(artwork);
       showLightboxMediaFallback(artwork, project, item.src, 'lottie', 'error');
     };
     let readyAttempts = 0;
@@ -2170,6 +2225,7 @@ export function createLightboxMediaRenderer({
             playerTimer = (windowRef?.setTimeout || globalThis.setTimeout).call(windowRef || globalThis, () => {
               playerTimer = null;
               if (disposed || destroyed || !player.isConnected || !artwork?.isConnected) return;
+              markArtworkError(artwork);
               showLightboxMediaFallback(artwork, project, item.src, 'lottie', 'error');
               artwork.dataset.mediaState = 'error';
             }, 6000);
@@ -2233,6 +2289,7 @@ export function createLightboxMediaRenderer({
     // record is malformed. Reuse project artwork when available; otherwise
     // the shared helper renders a stable local artwork placeholder.
     showLightboxMediaFallback(artwork, project, item?.src || '', 'unsupported', 'error');
+    markArtworkError(artwork);
     return entry;
   }
 

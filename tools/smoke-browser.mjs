@@ -6638,6 +6638,32 @@ try {
 
       const firstArtwork = page.locator('#lightboxMediaContainer .lightbox-media-item img').first();
       if (await firstArtwork.count() !== 1) throw new Error('Mobile Lightbox did not render the first artwork as an image.');
+      await page.waitForFunction(() => {
+        const image = document.querySelector('#lightboxMediaContainer .lightbox-media-item img:not(.lightbox-media-fallback-image)');
+        const artwork = image?.closest('.lightbox-artwork');
+        const entry = image?.closest('.lightbox-media-item');
+        return image && artwork?.dataset.mediaState === 'ready' &&
+          artwork.classList.contains('is-media-reveal-ready') &&
+          entry?.dataset.mediaReveal === 'ready';
+      }, null, { timeout: 7000 });
+      const reveal = await firstArtwork.evaluate(image => {
+        const artwork = image.closest('.lightbox-artwork');
+        const entry = image.closest('.lightbox-media-item');
+        return {
+          artworkState: artwork?.dataset.mediaState || '',
+          revealClass: Boolean(artwork?.classList.contains('is-media-reveal-ready')),
+          entryState: entry?.dataset.mediaReveal || '',
+          artworkAnimation: getComputedStyle(artwork).animationName,
+          entryAnimation: getComputedStyle(entry).animationName,
+          reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
+        };
+      });
+      if (reveal.artworkState !== 'ready' || !reveal.revealClass || reveal.entryState !== 'ready' ||
+          (!reveal.reducedMotion && (!reveal.artworkAnimation.includes('lightbox-artwork-arrive') ||
+            !reveal.entryAnimation.includes('lightbox-media-arrive'))) ||
+          (reveal.reducedMotion && (reveal.artworkAnimation !== 'none' || reveal.entryAnimation !== 'none'))) {
+        throw new Error('Lightbox artwork reveal did not wait for successful media readiness or honor reduced motion: ' + JSON.stringify(reveal));
+      }
       if (await firstArtwork.getAttribute('loading') !== 'eager') {
         throw new Error('First Lightbox artwork should load eagerly to avoid a blank opening state.');
       }
@@ -10913,6 +10939,8 @@ try {
             thumbnailWidth:t.width, thumbnailHeight:t.height,
             fallbackWidth:f.width, fallbackHeight:f.height,
             mediaOpacity:imageStyle.opacity,
+            mediaFilter:imageStyle.filter,
+            mediaTransition:imageStyle.transitionProperty,
             rootZ:root.zIndex, rootBlend:root.mixBlendMode,
             overlayContent:overlay.content, overlayTop:overlay.top, overlayRight:overlay.right,
             overlayBottom:overlay.bottom, overlayLeft:overlay.left,
@@ -10929,6 +10957,8 @@ try {
           const text = String(r.textContent || '').replace(/^["']|["']$/g,'');
           if (!r.selectedSource.endsWith('/'+r.expectedSourceSuffix) ||
               r.mediaOpacity !== '1' ||
+              !r.mediaFilter.includes('blur(8px)') ||
+              !r.mediaTransition.includes('filter') ||
               r.rootZ !== 'auto' || r.rootBlend !== 'normal' ||
               r.fallbackWidth <= 0 || r.fallbackHeight <= 0 ||
               Math.abs(r.thumbnailWidth-r.fallbackWidth)>1 ||
@@ -11005,6 +11035,14 @@ try {
       }));
       if (!readyState.ready || readyState.fallbacks !== 0) {
         throw new Error('Loading overlay did not clear after the selected thumbnail became ready: '+JSON.stringify(readyState));
+      }
+      const readyThumbStyles = await page.locator('#thumbnail-loading-fixtures .project-thumb-media').evaluateAll(media => media.map(el => ({
+        state: el.dataset.mediaState,
+        filter: getComputedStyle(el).filter,
+        transition: getComputedStyle(el).transitionProperty
+      })));
+      if (readyThumbStyles.some(item => item.state !== 'ready' || item.filter.includes('blur(8px)') || !item.transition.includes('filter'))) {
+        throw new Error('Project-card thumbnail reveal must blur while loading and sharpen on ready: ' + JSON.stringify(readyThumbStyles));
       }
       await page.evaluate(() => {
         document.querySelector('#thumbnail-loading-fixtures')?.remove();

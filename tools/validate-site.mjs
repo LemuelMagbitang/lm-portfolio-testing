@@ -2079,9 +2079,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261026-14') ||
       !works.includes('js/app/page-composition.js?v=20261026-14') ||
-      !works.includes('css/style.css?v=20261026-05') ||
+      !works.includes('css/style.css?v=20261026-06') ||
       !works.includes('js/script.js?v=20261026-14') ||
-      !about.includes('style.css?v=20261026-05') ||
+      !about.includes('style.css?v=20261026-06') ||
       !about.includes('js/app/bootstrap.js?v=20261026-14') ||
       !about.includes('script.js?v=20261026-14') ||
       !about.includes('page-composition.js?v=20261026-14')) {
@@ -2446,6 +2446,9 @@ function validateReducedMotionThumbnailContract() {
   const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
     ? readText('js/features/lightbox/media-renderer.js')
     : '';
+  const lightboxIndex = exists('js/features/lightbox/index.js')
+    ? readText('js/features/lightbox/index.js')
+    : '';
   const smoke = exists('tools/smoke-browser.mjs')
     ? readText('tools/smoke-browser.mjs')
     : '';
@@ -2483,7 +2486,16 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
       !mediaRenderer.includes('if (!embedSrc) return renderUnsupported(item, project);') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
-      !styles.includes('opacity: 0;') ||
+      !styles.includes('filter: blur(8px);') ||
+      !styles.includes('filter: blur(0);') ||
+      !styles.includes('@keyframes lightbox-artwork-arrive') ||
+      !styles.includes('.lightbox-artwork.is-media-reveal-ready') ||
+      !styles.includes('[data-media-reveal="ready"]') ||
+      !mediaRenderer.includes('function markArtworkReady(artwork)') ||
+      !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
+      !lightboxIndex.includes("media-renderer.js?v=20261026-01") ||
+      !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
+      !smoke.includes('Project-card thumbnail reveal must blur while loading and sharpen on ready') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
       !smoke.includes('project-thumbnail.js?v=20261025-06') ||

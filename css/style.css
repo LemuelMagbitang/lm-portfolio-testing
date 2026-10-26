@@ -985,15 +985,18 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   opacity: 0;
   transform: scale(calc(var(--thumb-zoom) * 1.035)) rotate(var(--thumb-rotate));
   transform-origin: center center;
+  filter: blur(8px);
   transition:
-    opacity var(--lm-motion-standard) var(--lm-motion-ease),
-    transform var(--lm-motion-image) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity 360ms var(--lm-motion-ease),
+    transform 360ms cubic-bezier(.22, 1, .36, 1),
+    filter 360ms cubic-bezier(.22, 1, .36, 1);
 }
 
 .card-thumbnail .project-thumb-media.is-media-ready,
 .card-thumbnail .project-thumb-media.is-media-error {
   opacity: 1;
   transform: scale(var(--thumb-zoom)) rotate(var(--thumb-rotate));
+  filter: blur(0);
 }
 
 .project-card:hover .card-thumbnail img,
@@ -1007,6 +1010,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 
 @media (prefers-reduced-motion: reduce) {
   .card-thumbnail .project-thumb-media { transition: none; }
+  .card-thumbnail .project-thumb-media.is-media-loading { filter: none !important; }
   .project-card:hover .card-thumbnail .project-thumb-media {
     transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg));
   }
@@ -3417,7 +3421,7 @@ footer{
 /* Keep selected image/video pixels visible while loading; the shared card
    * builder remains the source of truth for custom/default thumbnail selection. */
 .card-thumbnail img.project-thumb-media.is-media-loading,
-.card-thumbnail video.project-thumb-media.is-media-loading{opacity:1!important;}
+.card-thumbnail video.project-thumb-media.is-media-loading{opacity:1!important;filter:blur(8px)!important;}
 
 .card-thumbnail .project-thumb-media-fallback{
   position:absolute;inset:0;z-index:auto;display:grid;place-items:center;
@@ -5903,19 +5907,32 @@ footer > .footer-content p{
 }
 
 
-/* Staggered fade-in; opacity-only keeps pointer hit targets fixed during foil reflection. */
+/* Media arrival waits for a successful load/paint signal. The entry fades as a
+   group while the reserved artwork surface sharpens and settles without
+   changing its intrinsic aspect ratio or the group's layout geometry. */
 @keyframes lightbox-media-arrive{
-  from{opacity:0;}
+  from{opacity:.55;}
   to{opacity:1;}
 }
-#lightboxMediaContainer>.lightbox-media-item,
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item{
-  animation:lightbox-media-arrive .46s cubic-bezier(.2,.8,.2,1) both;
+@keyframes lightbox-artwork-arrive{
+  from{opacity:.12;transform:scale(.985);filter:blur(8px);}
+  to{opacity:1;transform:scale(1);filter:blur(0);}
 }
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(2){animation-delay:35ms;}
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(3){animation-delay:70ms;}
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(4){animation-delay:105ms;}
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(n+5){animation-delay:135ms;}
+#lightboxMediaContainer>.lightbox-media-item[data-media-reveal="ready"],
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item[data-media-reveal="ready"]{
+  animation:lightbox-media-arrive .36s cubic-bezier(.22,1,.36,1) both;
+}
+#lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready{
+  animation:lightbox-artwork-arrive .44s cubic-bezier(.22,1,.36,1) both;
+}
+#lightboxMediaContainer>.lightbox-media-item:nth-child(2)[data-media-reveal="ready"] .lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(2)[data-media-reveal="ready"] .lightbox-artwork{animation-delay:35ms;}
+#lightboxMediaContainer>.lightbox-media-item:nth-child(3)[data-media-reveal="ready"] .lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(3)[data-media-reveal="ready"] .lightbox-artwork{animation-delay:70ms;}
+#lightboxMediaContainer>.lightbox-media-item:nth-child(4)[data-media-reveal="ready"] .lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(4)[data-media-reveal="ready"] .lightbox-artwork{animation-delay:105ms;}
+#lightboxMediaContainer>.lightbox-media-item:nth-child(n+5)[data-media-reveal="ready"] .lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(n+5)[data-media-reveal="ready"] .lightbox-artwork{animation-delay:135ms;}
 
 /* Calm, clean artwork groups with one responsive behavior: ungrouped assets
    keep the legacy vertical flow; grouped assets use a clean grid unless every
@@ -6084,7 +6101,8 @@ body.lm-artwork-inspect-open{
 @media(prefers-reduced-motion:reduce){
   .model-viewer-shell[aria-busy="true"]::after{animation:none!important;}
   #lightboxMediaContainer>.lightbox-media-item,
-  #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item{transition:none!important;animation:none!important;}
+  #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item,
+  #lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready{transition:none!important;animation:none!important;}
   .lightbox-inspect-back{transition:none!important;}
 }
 
