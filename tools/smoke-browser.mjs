@@ -11094,6 +11094,7 @@ try {
           state:el.dataset.mediaState,
           opacity:style.opacity,
           filter:style.filter,
+          blurPx:Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0'),
           transform:style.transform,
           scaleX:Math.hypot(matrix.a,matrix.b),
           scaleY:Math.hypot(matrix.c,matrix.d),
@@ -11102,7 +11103,8 @@ try {
       }));
       if (readyThumbStyles.some(item =>
         item.state !== 'ready' ||
-        item.opacity !== '1' ||
+        !(Number.parseFloat(item.opacity) >= 0.999) ||
+        item.blurPx > 0.01 ||
         item.filter.includes('blur(8px)') ||
         Math.abs(item.scaleX - 1) >= 0.002 ||
         Math.abs(item.scaleY - 1) >= 0.002 ||
