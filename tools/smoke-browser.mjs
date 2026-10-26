@@ -511,6 +511,14 @@ async function assertNoLogoBackingPlate(page, label) {
 }
 
 async function assertPublicNavigation(page, { href, label }) {
+  const hamburger = page.locator('.hamburger').first();
+  const menu = page.locator('.nav-links').first();
+  const controlledMenuId = await menu.getAttribute('id');
+  const controlsId = await hamburger.getAttribute('aria-controls');
+  if (!controlledMenuId || controlsId !== controlledMenuId) {
+    throw new Error(label + ' hamburger aria-controls must reference the navigation menu id.');
+  }
+
   const feedbackControlCount = await page.locator('.interaction-feedback-toggle').count();
   if (feedbackControlCount !== 0) {
     throw new Error(label + ' must never render a public interaction-feedback control.');
