@@ -1942,8 +1942,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !css.includes('--lm-contrast-scrim-bottom-alpha') ||
       !navigation.includes("function effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
-      !navigation.includes("--about-hero-scrim-top-alpha") ||
-      !navigation.includes("--about-hero-scrim-bottom-alpha") ||
+      !css.includes("--about-hero-scrim-top-alpha") ||
+      !css.includes("--about-hero-scrim-bottom-alpha") ||
       !navigation.includes('instantLogoReset') ||
       
       !navigation.includes('MutationObserver') ||
