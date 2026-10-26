@@ -160,8 +160,9 @@ check(read("js/data/project-normalizer.js").includes("normalized.thumbnail.playb
   read("js/features/lightbox/media-renderer.js").includes("ensureMuxPlayer") &&
   read("js/features/projects/project-card.js").includes("declaredThumbnailType === 'mux' ? 'image'") &&
   read("js/features/footer/index.js").includes("ensureMuxVideo") &&
-  hero.includes("manualSources.length ? manualSources : remoteVideos"),
-  "Mux thumbnails must remain poster-only, project lightboxes must retain interactive Mux Player, and hero/footer backgrounds must use Mux Video.");
+  hero.includes("manualSources = config.loopMode === 'mixed'") &&
+  hero.includes(": publishedSources;"),
+  "Mux thumbnails must remain poster-only, project lightboxes must retain interactive Mux Player, and live published Hero placements must be selected for background playback.");
 check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),
