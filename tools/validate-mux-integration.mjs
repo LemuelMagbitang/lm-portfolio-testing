@@ -67,6 +67,13 @@ check(migration.includes("last_mux_event_created_at timestamptz") &&
   (webhook.match(/eq\("last_mux_event_created_at", eventCreatedAt\)/g) || []).length >= 3,
   "Mux lifecycle updates must enforce ordering, preserve terminal states, and retry cleanup idempotently.");
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
+check(
+  publicApi.includes('"Access-Control-Allow-Origin": "*"') &&
+  publicApi.includes('"Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, cache-control, pragma"') &&
+  publicApi.includes('"Access-Control-Allow-Methods": "GET, OPTIONS"') &&
+  publicApi.includes('"Access-Control-Max-Age": "86400"'),
+  "Public Mux feed CORS preflight must allow expected fetch/Supabase headers and cache successful preflight results."
+);
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
 check(player.includes("@mux/mux-video@0.31.5/dist/mux-video.mjs") &&
