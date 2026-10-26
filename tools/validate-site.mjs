@@ -2507,6 +2507,8 @@ function validateReducedMotionThumbnailContract() {
       !lightboxIndex.includes("media-renderer.js?v=20261026-01") ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
       smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||
+      !smoke.includes("blurPx:Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0')") ||
+      !smoke.includes('item.blurPx > 0.01') ||
       !smoke.includes('Project-card thumbnail reveal must fade, scale, and sharpen on ready') ||
       !smoke.includes('Failed thumbnail media must not run the successful reveal transition') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||

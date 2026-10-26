@@ -11094,7 +11094,7 @@ try {
           state:el.dataset.mediaState,
           opacity:style.opacity,
           filter:style.filter,
-          blurPx:Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0'),
+          blurPx:Number.parseFloat(style.filter.match(/blur\(([^)]+)\)/)?.[1] || '0'),
           transform:style.transform,
           scaleX:Math.hypot(matrix.a,matrix.b),
           scaleY:Math.hypot(matrix.c,matrix.d),
