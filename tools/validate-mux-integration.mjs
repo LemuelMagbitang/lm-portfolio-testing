@@ -85,7 +85,7 @@ check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("!['mux-player', 'mux-video'].includes(media?.localName)") &&
   heroReducedMotionBranch.includes("documentRef.createElement('video')") &&
   !heroReducedMotionBranch.includes("playback-id") &&
-  styles.includes(".hero-banner .slide mux-video")),
+  styles.includes(".hero-banner .slide mux-video"),
   "Hero background video must use UI-free Mux Video, muted autoplay, explicit looping, bounded MP4 fallback, and poster-only reduced-motion mode.");
 check(footer.includes("documentRef.createElement('mux-video')") &&
   footer.includes("media.setAttribute('autoplay', '')") &&
