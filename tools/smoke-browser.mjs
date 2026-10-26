@@ -11296,7 +11296,7 @@ try {
         const style = getComputedStyle(media);
         const matrix = new DOMMatrixReadOnly(style.transform);
         const sx = Math.hypot(matrix.a,matrix.b), sy = Math.hypot(matrix.c,matrix.d);
-        const blur = Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0');
+        const blur = Number.parseFloat(style.filter.match(/blur\(([^)]+)\)/)?.[1] || '0');
         return Number.parseFloat(style.opacity) >= 0.999 && Math.abs(sx-1) < 0.002 &&
           Math.abs(sy-1) < 0.002 && blur < 0.01;
       }, null, {timeout:2500});
