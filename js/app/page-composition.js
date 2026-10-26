@@ -114,7 +114,7 @@ export async function createPortfolioApp({
   // Load their public APIs in parallel on Works; About keeps the shared app
   // shell but skips the project card/media implementation entirely.
   const projectsModulePromise = hasProjectGallery
-    ? import('../features/projects/index.js?v=20261026-03')
+    ? import('../features/projects/index.js?v=20261027-01')
     : Promise.resolve(null);
   const projectNormalizerModulePromise = shouldLoadProjectModels
     ? import('../data/project-normalizer.js?v=20261026-01')
@@ -126,7 +126,7 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(null);
   const lightboxModulePromise = hasProjectGallery
-    ? import('../features/lightbox/index.js?v=20261027-04').catch(error => {
+    ? import('../features/lightbox/index.js?v=20261027-05').catch(error => {
         console.warn('Lightbox module failed to load:', error);
         return null;
       })
