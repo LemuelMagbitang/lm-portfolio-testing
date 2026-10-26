@@ -2521,7 +2521,7 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('[data-media-reveal="ready"]') ||
       !mediaRenderer.includes('function markArtworkReady(artwork)') ||
       !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
-      !lightboxIndex.includes("media-renderer.js?v=20261026-01") ||
+      !lightboxIndex.includes("media-renderer.js?v=20261026-02") ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
       !smoke.includes('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group') ||
       smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||
@@ -2533,7 +2533,7 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
       !smoke.includes('project-thumbnail.js?v=20261026-01') ||
-      /project-thumbnail[.]js[?]v=(?!20261025-06)[^'"]+/.test(smoke)) {
+      /project-thumbnail[.]js[?]v=(?!20261026-01)[^'"]+/.test(smoke)) {
     err('Project thumbnails: retain reduced-motion behavior, selected-source loading overlays, 50% veil/text layering, adaptive status contrast, responsive smoke coverage, and consistent module caching.');
   }
 }
