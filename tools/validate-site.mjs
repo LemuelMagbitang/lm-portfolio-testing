@@ -908,6 +908,38 @@ function validateFormAutocomplete() {
       err('Forms: ' + label + ' input must expose autocomplete="' + token + '".');
     }
   });
+
+  const projectForm = getForm('projectForm');
+  const reviewForm = getForm('reviewForm');
+  const hasAriaLabel = (form, tag, name, label) => {
+    const control = form.match(new RegExp('<' + tag + '\\b(?=[^>]*\\bname="' + name + '")[^>]*>', 'i'))?.[0] || '';
+    return control.includes('aria-label="' + label + '"');
+  };
+  const namedControls = [
+    ['project inquiry name', projectForm, 'input', 'name', 'Your name'],
+    ['project inquiry email', projectForm, 'input', 'email', 'Your email'],
+    ['project details', projectForm, 'textarea', 'message', 'Project details'],
+    ['review name/handle', reviewForm, 'input', 'name', 'Your name or handle'],
+    ['review text', reviewForm, 'textarea', 'review', 'Your review']
+  ];
+  namedControls.forEach(([label, form, tag, name, accessibleName]) => {
+    if (!form || !hasAriaLabel(form, tag, name, accessibleName)) {
+      err('Forms: ' + label + ' control must expose the explicit accessible name "' + accessibleName + '".');
+    }
+  });
+
+  const ratingGroup = reviewForm.match(/<div\\b(?=[^>]*\\bclass="star-rating")[^>]*>/i)?.[0] || '';
+  if (!/\\brole="radiogroup"/.test(ratingGroup) || !/\\baria-label="Portfolio rating"/.test(ratingGroup)) {
+    err('Forms: the star rating must expose a named radiogroup.');
+  }
+  const starInputs = [...reviewForm.matchAll(/<input\\b[^>]*\\bname="rating"[^>]*>/gi)].map(match => match[0]);
+  if (starInputs.length !== 5 || starInputs.some(input => {
+    const value = input.match(/\\bvalue="([1-5])"/)?.[1] || '';
+    const expectedName = value === '1' ? '1 star' : value + ' stars';
+    return !input.includes('aria-label="' + expectedName + '"');
+  })) {
+    err('Forms: each of the five rating controls must expose its star count as an accessible name.');
+  }
 }
 function validateTargetBlankRel(file) {
   if (!exists(file)) return;
