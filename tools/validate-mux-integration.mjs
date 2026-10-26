@@ -7,11 +7,15 @@ let config = {}, heroLoop = [];
 try { config = JSON.parse(read("data/video-platform.json")); } catch (e) { errors.push("Invalid video-platform JSON: " + e.message); }
 try { heroLoop = JSON.parse(read("data/hero-loop.json")); } catch (e) { errors.push("Invalid hero-loop JSON: " + e.message); }
 const migration = read("supabase/migrations/20261025000100_video_library.sql");
+const hardeningMigration = read("supabase/migrations/20261026065337_harden_video_library_search_path_and_fk_indexes.sql");
 const admin = read("supabase/functions/mux-admin/index.ts");
 const webhook = read("supabase/functions/mux-webhook/index.ts");
 const publicApi = read("supabase/functions/mux-public/index.ts");
 const bridge = read("js/infrastructure/mux/public-videos.js");
 const player = read("js/infrastructure/mux/player.js");
+const databaseTypes = read("supabase/functions/_shared/database.types.ts");
+const envExample = read("supabase/functions/.env.example");
+const ignore = read(".gitignore");
 const hero = read("js/features/hero/index.js");
 const footer = read("js/features/footer/index.js");
 const styles = read("css/style.css");
@@ -20,12 +24,17 @@ const workflow = read(".github/workflows/site-validation.yml");
 const smoke = read("tools/smoke-browser.mjs");
 const supabaseConfig = read("supabase/config.toml");
 check(migration.includes("create table if not exists public.videos") && migration.includes("create table if not exists public.video_assets"), "Video tables missing.");
+check(hardeningMigration.includes("set search_path = pg_catalog") && hardeningMigration.includes("videos_active_asset_id_idx") && hardeningMigration.includes("videos_created_by_idx"), "Video Library hardening migration must fix trigger search_path and index both referencing columns.");
+check(databaseTypes.includes("export type Database") && databaseTypes.includes("mux_webhook_events") && databaseTypes.includes("video_assets") && databaseTypes.includes("videos"), "Generated Supabase Database types must cover the Video Library schema.");
+check(ignore.includes(".env") && ignore.includes("!.env.example") && envExample.includes("MUX_TOKEN_SECRET=") && envExample.includes("MUX_WEBHOOK_SECRET=") && envExample.includes("CMS_ADMIN_USER_IDS="), "Local secrets must be ignored by Git and documented using a credential-free environment template.");
 check(["mux-admin", "mux-webhook", "mux-public"].every((name) =>
   new RegExp("\\[functions\." + name + "\\]\\s*\\nverify_jwt\\s*=\\s*false").test(supabaseConfig)
 ), "Supabase Edge Function JWT overrides must match each function's own auth model.");
 check(migration.includes("mux_webhook_events") && migration.includes("enable row level security") && migration.includes("revoke all on public.video_assets from anon, authenticated"), "Webhook store or RLS boundary missing.");
 check(migration.includes("mux_asset_id text unique") && migration.includes("mux_upload_id text unique"), "Mux asset and upload IDs must be unique.");
 check(admin.includes("external_id: asset.external_id || asset.id") && read("supabase/functions/_shared/http.ts").includes("CMS_ADMIN_USER_IDS"), "Admin auth or external_id assignment missing.");
+const sharedHttp = read("supabase/functions/_shared/http.ts");
+check(sharedHttp.includes("SUPABASE_SECRET_KEYS") && sharedHttp.includes("SUPABASE_PUBLISHABLE_KEYS") && sharedHttp.includes("SUPABASE_SERVICE_ROLE_KEY") && sharedHttp.includes("SUPABASE_ANON_KEY") && sharedHttp.includes("@supabase/supabase-js@2.118.0"), "Edge Functions must prefer platform-managed modern API keys, retain a logged legacy fallback, and pin supabase-js.");
 check(admin.includes("function muxTimestampToIso(value: unknown)") &&
   admin.includes("uploaded_at: muxTimestampToIso(remote?.created_at)") &&
   admin.includes("numeric * 1000"),
@@ -74,8 +83,8 @@ check(
   publicApi.includes('"Access-Control-Max-Age": "86400"'),
   "Public Mux feed CORS preflight must allow expected fetch/Supabase headers and cache successful preflight results."
 );
-check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
-check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
+check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public") && bridge.includes("supabasePublishableKey") && bridge.includes("supabaseAnonKey"), "Public client bridge must prefer the correctly named publishable key and retain legacy config compatibility.");
+check(player.includes("@mux/mux-player@3.14.1/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player must use an exact, validated CDN release.");
 check(player.includes("@mux/mux-video@0.31.5/dist/mux-video.mjs") &&
   player.includes('customElements.get("mux-video")') &&
   player.includes("timeoutMs = 15000") &&
@@ -205,7 +214,7 @@ check(
   "The legacy MP4 asset must remain available but must not be automatically substituted for the published Mux Hero source."
 );
 const supabaseUrl = String(config.supabaseUrl || "").trim();
-const supabaseKey = String(config.supabaseAnonKey || "").trim();
+const supabaseKey = String(config.supabasePublishableKey || config.supabaseAnonKey || "").trim();
 function isPublicSupabaseKey(value) {
   if (/^sb_publishable_[A-Za-z0-9_-]+$/.test(value)) return true;
   const parts = value.split(".");

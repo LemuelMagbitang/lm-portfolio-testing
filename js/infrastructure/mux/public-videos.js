@@ -55,7 +55,7 @@ export async function loadPublicMuxVideos(placement = "hero", options = {}) {
 
   const config = configResult.data;
   const base = String(config?.supabaseUrl || "").trim().replace(/\/+$/, "");
-  const key = String(config?.supabaseAnonKey || "").trim();
+  const key = String(config?.supabasePublishableKey || config?.supabaseAnonKey || "").trim();
   if (!base || !key) return [];
 
   const feedResult = await fetchJsonWithTimeout(

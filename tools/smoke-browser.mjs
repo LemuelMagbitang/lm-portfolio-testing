@@ -88,7 +88,7 @@ async function configureLogoRoutes(page) {
   // separately from the static-site smoke tests. Explicitly configured fallback
   // sources can recover from player failures; CMS-published Mux is exercised with a
   // standards-shaped mock and must not silently become the legacy reel.
-  await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-player@3/+esm', async route => {
+  await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-player@3.14.1/+esm', async route => {
     const source = `
       if (!customElements.get('mux-player')) {
         class MockMuxPlayer extends HTMLElement {
