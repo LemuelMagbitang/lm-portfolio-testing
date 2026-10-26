@@ -153,9 +153,9 @@ assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, 
 assert.match(mediaRendererSource, /video\.addEventListener\('loadeddata', onVideoReady\)/);
 assert.match(mediaRendererSource, /video\.addEventListener\('error', onVideoError\)/);
 assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'image', 'error'\)/);
-assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'image', 'loading'\)/,
+assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'image', 'loading'(?:,\s*item\.preview \|\| '')?\)/,
   'Lightbox images should show a visual fallback while they are being fetched.');
-assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'video', 'loading'\)/);
+assert.match(mediaRendererSource, /showLightboxMediaFallback\(artwork, project, item\.src, 'video', 'loading'(?:,\s*item\.preview \|\| item\.poster \|\| '')?\)/);
 assert.match(mediaRendererSource, /showLightboxMediaFallback\(\s*artwork,\s*project,\s*item\.src,\s*'youtube'/);
 assert.match(mediaRendererSource, /cleanupLightboxMediaIn\(container\)/);
 assert.match(mediaRendererSource, /const withPreloadTimeout = \(promise, timeoutMs = MEDIA_PRELOAD_TIMEOUT_MS, onTimeout = null\)/);
