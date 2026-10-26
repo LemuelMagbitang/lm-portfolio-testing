@@ -21,6 +21,46 @@ export function getAssetPreview(source = '') {
   return value;
 }
 
+
+/**
+ * Replace a loading surface with a tiny frame captured from that exact asset.
+ * It never fetches a thumbnail or mounts a renderer. With no matching cached
+ * frame, callers retain their existing loader/fallback unchanged.
+ */
+export function installAssetPreviewOnFallback(fallback = null, source = '', {
+  documentRef = fallback?.ownerDocument || globalThis.document,
+  imageClass = ''
+} = {}) {
+  if (!fallback || !documentRef?.createElement) return false;
+  const preview = getAssetPreview(source);
+  if (!preview) return false;
+  const currentImage = fallback.querySelector?.('img');
+  if (fallback.dataset?.preview === 'true' && currentImage?.getAttribute('src') === preview) return true;
+  // Preserve the existing status if a browser rejects the inlined preview.
+  const previousChildren = Array.from(fallback.childNodes || []).map(node => node.cloneNode?.(true)).filter(Boolean);
+  const image = documentRef.createElement('img');
+  if (imageClass) image.className = imageClass;
+  image.alt = '';
+  image.setAttribute('aria-hidden', 'true');
+  image.loading = 'eager';
+  image.decoding = 'async';
+  const restoreFallback = () => {
+    if (image.parentNode !== fallback) return;
+    fallback.removeAttribute?.('data-preview');
+    if (typeof fallback.replaceChildren === 'function') fallback.replaceChildren(...previousChildren);
+    else {
+      fallback.textContent = '';
+      previousChildren.forEach(node => fallback.appendChild(node));
+    }
+  };
+  image.addEventListener?.('error', restoreFallback, { once: true });
+  fallback.dataset.preview = 'true';
+  if (typeof fallback.replaceChildren === 'function') fallback.replaceChildren(image);
+  else { fallback.textContent = ''; fallback.appendChild(image); }
+  image.src = preview;
+  return true;
+}
+
 function drawableFor(source, type = '') {
   if (!source) return null;
   const tag = String(source.tagName || '').toLowerCase();

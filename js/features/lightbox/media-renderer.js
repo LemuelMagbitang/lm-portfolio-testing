@@ -7,7 +7,7 @@
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';
 import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
-import { captureAssetPreview, getAssetPreview } from '../../infrastructure/media/asset-preview.js?v=20261026-01';
+import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 
@@ -1778,6 +1778,11 @@ export function createLightboxMediaRenderer({
           if (destroyed || artwork.dataset.mediaState === 'error') return;
           applyIntrinsicRatio();
           captureAssetPreview(sourceUrl, image, { documentRef, type: 'image' });
+          installAssetPreviewOnFallback(
+            artwork.querySelector?.('.lightbox-media-fallback'),
+            sourceUrl,
+            { documentRef, imageClass: 'lightbox-media-fallback-image' }
+          );
           markArtworkReady(artwork);
           clearLightboxMediaFallback(artwork);
         });
@@ -1937,7 +1942,13 @@ export function createLightboxMediaRenderer({
       artwork
     );
     const onVideoReady = () => {
-      captureAssetPreview(resolveAssetUrl(item.src), video, { documentRef, type: 'video' });
+      const sourceUrl = resolveAssetUrl(item.src);
+      captureAssetPreview(sourceUrl, video, { documentRef, type: 'video' });
+      installAssetPreviewOnFallback(
+        artwork.querySelector?.('.lightbox-media-fallback'),
+        sourceUrl,
+        { documentRef, imageClass: 'lightbox-media-fallback-image' }
+      );
       markArtworkReady(artwork);
       clearLightboxMediaFallback(artwork);
     };
@@ -2210,6 +2221,13 @@ export function createLightboxMediaRenderer({
           return;
         }
         captureAssetPreview(modelSourceUrl, modelWrap, { documentRef, type: 'model' });
+        // The initial heavy 3D load keeps its normal viewer loader; use a
+        // same-source raster only when a safely drawable frame exists.
+        installAssetPreviewOnFallback(
+          modelArtwork.querySelector?.('.lightbox-media-fallback'),
+          modelSourceUrl,
+          { documentRef, imageClass: 'lightbox-media-fallback-image' }
+        );
         markArtworkReady(modelArtwork);
         clearLightboxMediaFallback(modelArtwork);
       })
@@ -2290,6 +2308,14 @@ export function createLightboxMediaRenderer({
         return;
       }
       clearLoadTimer();
+      // Some renderers expose a drawable canvas; SVG-only or tainted paths
+      // simply keep the existing lightweight loading surface.
+      captureAssetPreview(resolvedSrc, player, { documentRef, type: 'lottie' });
+      installAssetPreviewOnFallback(
+        artwork.querySelector?.('.lightbox-media-fallback'),
+        resolvedSrc,
+        { documentRef, imageClass: 'lightbox-media-fallback-image' }
+      );
       markArtworkReady(artwork);
       clearLightboxMediaFallback(artwork);
       const loadedDimensions = lottieDimensionCache.get(resolvedSrc);

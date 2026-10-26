@@ -6,7 +6,7 @@
  * resolves repository-relative paths.
  */
 
-import { captureAssetPreview, getAssetPreview } from '../../infrastructure/media/asset-preview.js?v=20261026-01';
+import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
 export function mediaTypeFromSrc(src = '') {
   const raw = String(src || '').trim();
@@ -344,6 +344,15 @@ function registerThumbnailMediaState(media, {
       // Capture only a tiny snapshot of the ready media; this never fetches or
       // mounts anything and quietly fails for tainted/unsupported surfaces.
       captureAssetPreview(src, media, { documentRef: mediaDocument(), type });
+      // A cold-load frame becomes available only after the browser has
+      // rendered this asset. Use that exact frame for the outgoing handoff,
+      // never unrelated project CMS artwork.
+      if (mediaFallback?.dataset?.state === 'loading') {
+        installAssetPreviewOnFallback(mediaFallback, src, {
+          documentRef: mediaDocument(),
+          imageClass: 'project-thumb-media-fallback-image'
+        });
+      }
       media.dataset.mediaState = 'ready';
       media.classList.remove('is-media-loading', 'is-media-error');
       media.classList.add('is-media-ready');

@@ -10701,7 +10701,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261026-01');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-01');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10765,7 +10765,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261026-01');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-01');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10806,7 +10806,7 @@ try {
     await smokePage(browser, '/?media-cache-disabled=1', async page => {
       const result = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
-          await import('/js/features/projects/project-thumbnail.js?v=20261026-01');
+          await import('/js/features/projects/project-thumbnail.js?v=20261027-01');
         const makeHost = () => {
           const host = document.createElement('div');
           host.className = 'card-thumbnail';
@@ -10912,14 +10912,30 @@ try {
 
     await smokePage(browser, '/?project-thumbnail-presentation=1', async page => {
       await page.evaluate(async () => {
-        const { captureAssetPreview, getAssetPreview, clearAssetPreviewCache } =
-          await import('/js/infrastructure/media/asset-preview.js?v=20261026-01');
+        const { captureAssetPreview, getAssetPreview, clearAssetPreviewCache, installAssetPreviewOnFallback } =
+          await import('/js/infrastructure/media/asset-preview.js?v=20261027-01');
         clearAssetPreviewCache();
         const source=document.createElement('canvas');source.width=480;source.height=240;
         const context=source.getContext('2d');context.fillStyle='#c8c8c8';context.fillRect(0,0,480,240);
         const preview=captureAssetPreview('/__smoke/asset-preview.webp',source,{documentRef:document,type:'image'});
         const cached=getAssetPreview('/__smoke/asset-preview.webp');
         const unsupported=captureAssetPreview('/__smoke/unsupported.webp',document.createElement('div'),{documentRef:document,type:'model'});
+        const previewFallback=document.createElement('span');
+        previewFallback.textContent='LOADING ARTWORK';
+        const installed=installAssetPreviewOnFallback(previewFallback,'/__smoke/asset-preview.webp',{
+          documentRef:document,imageClass:'asset-preview-test-image'
+        });
+        const installedImage=previewFallback.querySelector('img');
+        const missingFallback=document.createElement('span');
+        missingFallback.textContent='LOADING ARTWORK';
+        const missingInstall=installAssetPreviewOnFallback(missingFallback,'/__smoke/no-cached-frame.webp',{documentRef:document});
+        if(!installed||previewFallback.dataset.preview!=='true'||installedImage?.getAttribute('src')!==preview||
+           !installedImage?.classList.contains('asset-preview-test-image')||missingInstall!==false||
+           missingFallback.hasAttribute('data-preview')||missingFallback.textContent!=='LOADING ARTWORK'){
+          throw new Error('asset-preview handoff must only install the cached frame and preserve the loader on a cache miss: '+
+            JSON.stringify({installed,previewState:previewFallback.dataset.preview||'',
+              installedSource:installedImage?.getAttribute('src')||'',missingInstall,missingText:missingFallback.textContent}));
+        }
         if(!/^data:image\/(?:webp|jpeg);base64,/i.test(preview)||preview!==cached||unsupported!==''||preview.length>18000){
           throw new Error('asset-preview-cache must store only small, already-rendered previews: '+
             JSON.stringify({previewLength:preview.length,same:preview===cached,unsupported}));
