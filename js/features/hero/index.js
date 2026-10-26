@@ -8,7 +8,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { createLifecycle } from '../../core/lifecycle.js';
 import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
-import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-07';
+import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-08';
 
 const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
@@ -389,7 +389,8 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
             const remoteVideos = await loadPublicMuxVideos('hero', {
               resolveUrl: resolveAssetUrl,
               fetchImpl: windowRef.fetch.bind(windowRef),
-              timeoutMs: 1400
+              configTimeoutMs: 3000,
+              timeoutMs: 8000
             });
             if (remoteVideos.length) {
               // Published Video Library assets placed for Hero are the live
@@ -489,15 +490,15 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
     if (!reducedMotion && sources.some(source => source.type === 'mux')) {
       let muxReady = false;
-      try { muxReady = await ensureMuxVideo(); } catch (_) {}
+      try { muxReady = await ensureMuxVideo(undefined, 15000); } catch (error) {
+        console.warn('[Hero Mux] Mux Video loader threw before registration.', error);
+      }
       if (!muxReady) {
-        // A missing player module must not leave the hero blank. Keep the
-        // chosen poster as an image and do not attempt a stream without the
-        // Mux custom element being registered.
+        console.warn('[Hero Mux] Mux Video did not register within 15 seconds; using the configured fallback for this page load.');
         sources = sources.map(source => source.type === 'mux'
           ? (source.fallbackSrc
-            ? { ...source, type: 'video', src: source.fallbackSrc }
-            : { ...source, type: 'image', src: source.poster || source.src })
+            ? { ...source, type: 'video', src: source.fallbackSrc, muxFallbackReason: 'module-load-failed' }
+            : { ...source, type: 'image', src: source.poster || source.src, muxFallbackReason: 'module-load-failed' })
           : source).filter(source => source.src);
       }
     }
@@ -592,6 +593,9 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
       wrap.dataset.heroType = source.type === 'mux' ? 'video' : (source.type || 'image');
+      wrap.dataset.heroSourceType = source.type || 'image';
+      if (source.playbackId) wrap.dataset.muxPlaybackId = String(source.playbackId);
+      if (source.muxFallbackReason) wrap.dataset.muxFallbackReason = source.muxFallbackReason;
       if (source.fallbackSrc) wrap.dataset.fallbackSrc = source.fallbackSrc;
       if (source.type === 'video' && !hasVideoPoster) {
         wrap.classList.add('is-video-pending');
@@ -724,11 +728,17 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       }, 500);
     }
 
-    function fallbackMuxToNativeVideo(slide, media) {
+    function fallbackMuxToNativeVideo(slide, media, reason = 'media-error') {
       const fallbackSrc = String(slide?.dataset?.fallbackSrc || '').trim();
       if (!fallbackSrc || !['mux-player', 'mux-video'].includes(media?.localName) || !media.isConnected || slide.dataset.muxFallback === 'true') {
         return false;
       }
+      slide.dataset.muxFallbackReason = reason;
+      slide.dataset.heroSourceType = 'video';
+      console.warn('[Hero Mux] Switching to the local MP4 fallback.', {
+        reason,
+        mediaErrorCode: Number(media?.error?.code) || null
+      });
       const video = heroContainer.ownerDocument.createElement('video');
       video.muted = true;
       video.defaultMuted = true;
@@ -744,6 +754,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       video.src = fallbackSrc;
       media.replaceWith(video);
       slide.dataset.heroType = 'video';
+      slide.dataset.heroSourceType = 'video';
       slide.dataset.muxFallback = 'true';
       scheduleAdvanceForCurrent();
       activateMedia(slide);
@@ -766,6 +777,27 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
         if (shouldLoop) media.setAttribute('loop', '');
         else media.removeAttribute('loop');
         media.dataset.playbackState = 'starting';
+
+        // Start the watchdog before play() so an early 'playing' event can
+        // cancel it. The previous short timer silently swapped to the local
+        // MP4 while a slow HLS stream was still starting.
+        if (media.localName === 'mux-video' && slide.dataset.fallbackSrc) {
+          clearMuxStartupFallback(media);
+          const startTime = Number(media.currentTime) || 0;
+          const clearOnPlaying = () => clearMuxStartupFallback(media);
+          media.addEventListener('playing', clearOnPlaying, { once: true });
+          activeMediaCleanups.push(() => media.removeEventListener('playing', clearOnPlaying));
+          const timer = windowRef.setTimeout(() => {
+            muxStartupTimers.delete(media);
+            if (disposed || !media.isConnected || slides[currentIndex] !== slide) return;
+            if (Number(media.currentTime) <= startTime + 0.05) {
+              fallbackMuxToNativeVideo(slide, media, 'startup-timeout');
+            }
+          }, 15000);
+          muxStartupTimers.set(media, timer);
+          activeMediaCleanups.push(() => clearMuxStartupFallback(media));
+        }
+
         const playback = media.play?.();
         if (playback && typeof playback.then === 'function') {
           Promise.resolve(playback).then(() => {
@@ -802,20 +834,6 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
           media.dataset.playbackState = 'playing';
         }
 
-        // A Mux stream can fail before the player emits a useful media error.
-        // After a bounded start window, use the checked-in MP4 fallback if the
-        // playhead never advances; a valid Mux stream remains the primary source.
-        if (media.localName === 'mux-video' && slide.dataset.fallbackSrc) {
-          clearMuxStartupFallback(media);
-          const startTime = Number(media.currentTime) || 0;
-          const timer = windowRef.setTimeout(() => {
-            muxStartupTimers.delete(media);
-            if (disposed || !media.isConnected || slides[currentIndex] !== slide) return;
-            if (Number(media.currentTime) <= startTime + 0.05) fallbackMuxToNativeVideo(slide, media);
-          }, 8000);
-          muxStartupTimers.set(media, timer);
-          activeMediaCleanups.push(() => clearMuxStartupFallback(media));
-        }
         return;
       }
 
@@ -930,7 +948,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       });
       bind(media, 'error', () => {
         if (disposed || slides[currentIndex] !== slide) return;
-        if (['mux-player', 'mux-video'].includes(media.localName) && fallbackMuxToNativeVideo(slide, media)) return;
+        if (['mux-player', 'mux-video'].includes(media.localName) && fallbackMuxToNativeVideo(slide, media, 'media-error')) return;
         media.dataset.playbackState = 'error';
         scheduleNetworkRetry(slide, media);
       });
