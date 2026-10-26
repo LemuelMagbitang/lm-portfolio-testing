@@ -7,6 +7,7 @@
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';
 import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
+import { captureAssetPreview, getAssetPreview } from '../../infrastructure/media/asset-preview.js?v=20261026-01';
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 
@@ -1484,18 +1485,32 @@ export function createLightboxMediaRenderer({
       fallback.className = 'lightbox-media-fallback';
       artwork.appendChild(fallback);
     }
+    fallback.classList.remove('is-preview-exiting');
     if (typeof fallback.replaceChildren === 'function') fallback.replaceChildren();
     else fallback.textContent = '';
     const type = String(mediaType || 'image').toLowerCase();
+    const isLoading = status === 'loading';
     const labels = { image: 'PROJECT ARTWORK', video: 'VIDEO ARTWORK', lottie: 'ANIMATED ARTWORK', youtube: 'PROJECT VIDEO' };
     const labelText = labels[type] || (type === 'model' ? '3D ARTWORK' : 'PROJECT ARTWORK');
-    fallback.dataset.state = status === 'loading' ? 'loading' : 'error';
+    fallback.dataset.state = isLoading ? 'loading' : 'error';
+    fallback.removeAttribute('data-preview');
     fallback.setAttribute('role', 'img');
     fallback.setAttribute('aria-label', labelText);
-
-    const imageSrc = String(explicitFallback || getStaticImageFallback(project, failedSrc) || '').trim();
+    const failedRaw = String(failedSrc || '').trim();
+    const resolvedFailedSrc = failedRaw ? resolveAssetUrl(failedRaw) : '';
+    const explicitRaw = String(explicitFallback || '').trim();
+    const explicitSrc = explicitRaw
+      ? (/^(?:data:|blob:|https?:\/\/|\/\/)/i.test(explicitRaw) ? explicitRaw : resolveAssetUrl(explicitRaw))
+      : '';
+    const explicitCandidate = explicitSrc && explicitSrc !== resolvedFailedSrc ? explicitSrc : '';
+    // Loading differs from error recovery: never borrow another media item or
+    // the CMS thumbnail while this selected asset is still loading.
+    const imageSrc = isLoading
+      ? (explicitCandidate || getAssetPreview(resolvedFailedSrc || failedRaw))
+      : (explicitCandidate || getStaticImageFallback(project, failedRaw));
     const appendLabel = () => {
       if (!fallback?.isConnected && !artwork.contains?.(fallback)) return;
+      fallback.removeAttribute('data-preview');
       fallback.replaceChildren?.();
       const icon = documentRef.createElement('i');
       icon.className = type === 'video' || type === 'youtube' ? 'fa-solid fa-film' :
@@ -1503,33 +1518,46 @@ export function createLightboxMediaRenderer({
         type === 'model' ? 'fa-solid fa-cube' : 'fa-regular fa-image';
       icon.setAttribute('aria-hidden', 'true');
       const label = documentRef.createElement('span');
-      label.textContent = status === 'loading' ? 'LOADING ' + labelText : labelText;
+      label.textContent = isLoading ? 'LOADING ' + labelText : labelText;
       fallback.append(icon, label);
     };
-    if (imageSrc && imageSrc !== failedSrc) {
+    if (imageSrc && imageSrc !== resolvedFailedSrc) {
+      if (isLoading) fallback.dataset.preview = 'true';
       const image = documentRef.createElement('img');
       image.className = 'lightbox-media-fallback-image';
       image.alt = '';
       image.setAttribute('aria-hidden', 'true');
       image.decoding = 'async';
-      // Do not make fallback posters eager: secondary Lightbox items retain
-      // progressive loading and will fetch artwork when it approaches view.
-      image.loading = 'lazy';
+      image.loading = isLoading ? 'eager' : 'lazy';
       image.addEventListener('error', () => appendLabel(), { once: true });
       image.src = imageSrc;
       fallback.appendChild(image);
-      const badge = documentRef.createElement('span');
-      badge.className = 'lightbox-media-fallback-label';
-      badge.textContent = status === 'loading' ? 'LOADING ' + labelText : labelText;
-      fallback.appendChild(badge);
-    } else {
-      appendLabel();
-    }
+      if (!isLoading) {
+        const badge = documentRef.createElement('span');
+        badge.className = 'lightbox-media-fallback-label';
+        badge.textContent = labelText;
+        fallback.appendChild(badge);
+      }
+    } else appendLabel();
     return fallback;
   }
 
   function clearLightboxMediaFallback(artwork) {
-    artwork?.querySelector?.('.lightbox-media-fallback')?.remove();
+    const fallback = artwork?.querySelector?.('.lightbox-media-fallback');
+    if (!fallback) return;
+    if (artwork.dataset.mediaState === 'ready' && artwork.isConnected &&
+        !fallback.classList.contains('is-preview-exiting')) {
+      fallback.classList.add('is-preview-exiting');
+      const finish = event => {
+        if (event && event.target !== fallback) return;
+        fallback.remove();
+      };
+      fallback.addEventListener('transitionend', finish, { once: true });
+      const timer = windowRef?.setTimeout || globalThis.setTimeout;
+      timer?.call(windowRef || globalThis, () => finish(), 420);
+      return;
+    }
+    fallback.remove();
   }
 
   function markArtworkReady(artwork) {
@@ -1666,8 +1694,9 @@ export function createLightboxMediaRenderer({
         .then(() => {
           if (destroyed || artwork.dataset.mediaState === 'error') return;
           applyIntrinsicRatio();
-          clearLightboxMediaFallback(artwork);
+          captureAssetPreview(sourceUrl, image, { documentRef, type: 'image' });
           markArtworkReady(artwork);
+          clearLightboxMediaFallback(artwork);
         });
     };
     const onImageError = () => {
@@ -1709,7 +1738,7 @@ export function createLightboxMediaRenderer({
       markArtworkError(artwork);
       showLightboxMediaFallback(artwork, project, item.src, 'image', 'error');
     } else if (artwork.dataset.mediaState !== 'ready') {
-      showLightboxMediaFallback(artwork, project, item.src, 'image', 'loading');
+      showLightboxMediaFallback(artwork, project, item.src, 'image', 'loading', item.preview || '');
     }
 
     return entry;
@@ -1718,6 +1747,9 @@ export function createLightboxMediaRenderer({
   function renderYouTube(item, project, index = 0) {
     const parsed = parseYouTube(item.src);
     const isShort = Boolean(parsed?.isShort);
+    const youtubePreview = String(item.preview || (parsed?.id
+      ? 'https://img.youtube.com/vi/' + encodeURIComponent(parsed.id) + '/hqdefault.jpg'
+      : '')).trim();
     const embedSrc = buildYouTubeEmbedUrl(item.src);
     if (!embedSrc) return renderUnsupported(item, project);
 
@@ -1747,8 +1779,8 @@ export function createLightboxMediaRenderer({
         iframe.dataset.lmYoutubeLoaded = 'true';
         const artwork = iframe.closest?.('.lightbox-artwork');
         if (artwork) {
-          clearLightboxMediaFallback(artwork);
           markArtworkReady(artwork);
+          clearLightboxMediaFallback(artwork);
         }
         primeYouTubeFrame(iframe);
         // A newly created frame is cached only after a successful load. This
@@ -1759,7 +1791,7 @@ export function createLightboxMediaRenderer({
         if (youtubeFrameCache.get(embedSrc) === iframe) youtubeFrameCache.delete(embedSrc);
         iframe.dataset.lmYoutubeLoadError = 'true';
         const artwork = iframe.closest?.('.lightbox-artwork');
-        if (artwork) showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'error');
+        if (artwork) showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'error', youtubePreview);
       }, { once: true });
       iframe.src = embedSrc;
     } else {
@@ -1784,7 +1816,7 @@ export function createLightboxMediaRenderer({
     artwork?.classList.add('is-youtube-artwork');
     artwork?.setAttribute('data-youtube-orientation', resolvedOrientation);
     if (iframe.dataset.lmYoutubeLoaded !== 'true' && iframe.dataset.lmYoutubeLoadError !== 'true') {
-      showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'loading');
+      showLightboxMediaFallback(artwork, project, item.src, 'youtube', 'loading', youtubePreview);
     }
     if (iframe.dataset.lmYoutubeLoadError === 'true') {
       markArtworkError(artwork);
@@ -1822,8 +1854,9 @@ export function createLightboxMediaRenderer({
       artwork
     );
     const onVideoReady = () => {
-      clearLightboxMediaFallback(artwork);
+      captureAssetPreview(resolveAssetUrl(item.src), video, { documentRef, type: 'video' });
       markArtworkReady(artwork);
+      clearLightboxMediaFallback(artwork);
     };
     const onVideoError = () => {
       markArtworkError(artwork);
@@ -1832,7 +1865,7 @@ export function createLightboxMediaRenderer({
     video.addEventListener('loadeddata', onVideoReady);
     video.addEventListener('canplay', onVideoReady);
     video.addEventListener('error', onVideoError);
-    showLightboxMediaFallback(artwork, project, item.src, 'video', 'loading');
+    showLightboxMediaFallback(artwork, project, item.src, 'video', 'loading', item.preview || item.poster || '');
     if (video.error) onVideoError();
     else if (video.readyState >= 2) onVideoReady();
     registerLightboxMediaCleanup(video, () => {
@@ -1883,8 +1916,8 @@ export function createLightboxMediaRenderer({
         windowRef?.clearTimeout?.(loadTimer);
         loadTimer = null;
       }
-      clearLightboxMediaFallback(artwork);
       markArtworkReady(artwork);
+      clearLightboxMediaFallback(artwork);
     };
     const onError = () => {
       if (disposed || destroyed) return;
@@ -1949,6 +1982,10 @@ export function createLightboxMediaRenderer({
     // during focus. The caption remains outside the full-screen model shell.
     const modelEntry = buildMediaEntry(modelWrap, item.caption || item.description, null);
     modelEntry.classList.add('is-3d-media-item');
+    const modelArtwork = modelEntry.querySelector('.lightbox-artwork');
+    const modelSourceUrl = resolveAssetUrl(item.src);
+    // Cached previews are optional; first loads retain the current 3D loader.
+    if (getAssetPreview(modelSourceUrl)) showLightboxMediaFallback(modelArtwork, project, item.src, 'model', 'loading');
     let modelFocusPlaceholder = null;
     let modelFocusOverlay = null;
     let modelFocusScrollTop = 0;
@@ -2089,7 +2126,9 @@ export function createLightboxMediaRenderer({
           try { cleanup?.(); } catch (_) {}
           return;
         }
-        markArtworkReady(modelEntry.querySelector('.lightbox-artwork'));
+        captureAssetPreview(modelSourceUrl, modelWrap, { documentRef, type: 'model' });
+        markArtworkReady(modelArtwork);
+        clearLightboxMediaFallback(modelArtwork);
       })
       .catch(error => {
         if (!modelWrap.isConnected) return;
@@ -2168,8 +2207,8 @@ export function createLightboxMediaRenderer({
         return;
       }
       clearLoadTimer();
-      clearLightboxMediaFallback(artwork);
       markArtworkReady(artwork);
+      clearLightboxMediaFallback(artwork);
       const loadedDimensions = lottieDimensionCache.get(resolvedSrc);
       if (loadedDimensions) setAspectRatio(artwork, loadedDimensions.width, loadedDimensions.height);
     };

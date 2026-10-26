@@ -2065,8 +2065,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-15") ||
-      !bootstrap.includes("cacheVersion = '20261026-15'") ||
+  if (!entry.includes("bootstrap.js?v=20261026-16") ||
+      !bootstrap.includes("cacheVersion = '20261026-16'") ||
       !composition.includes("navigation/index.js?v=20261026-04") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-10") ||
@@ -2074,17 +2074,17 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
-      !composition.includes("projects/index.js?v=20261026-02") ||
-      !composition.includes("lightbox/index.js?v=20261026-01") ||
+      !composition.includes("projects/index.js?v=20261026-03") ||
+      !composition.includes("lightbox/index.js?v=20261026-02") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-15') ||
-      !works.includes('js/app/page-composition.js?v=20261026-15') ||
-      !works.includes('css/style.css?v=20261026-11') ||
-      !works.includes('js/script.js?v=20261026-15') ||
-      !about.includes('style.css?v=20261026-11') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-15') ||
-      !about.includes('script.js?v=20261026-15') ||
-      !about.includes('page-composition.js?v=20261026-15')) {
+      !works.includes('js/app/bootstrap.js?v=20261026-16') ||
+      !works.includes('js/app/page-composition.js?v=20261026-16') ||
+      !works.includes('css/style.css?v=20261026-12') ||
+      !works.includes('js/script.js?v=20261026-16') ||
+      !about.includes('style.css?v=20261026-12') ||
+      !about.includes('js/app/bootstrap.js?v=20261026-16') ||
+      !about.includes('script.js?v=20261026-16') ||
+      !about.includes('page-composition.js?v=20261026-16')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2448,6 +2448,9 @@ function validateReducedMotionThumbnailContract() {
   const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
     ? readText('js/features/lightbox/media-renderer.js')
     : '';
+  const assetPreview = exists('js/infrastructure/media/asset-preview.js')
+    ? readText('js/infrastructure/media/asset-preview.js')
+    : '';
   const lightboxIndex = exists('js/features/lightbox/index.js')
     ? readText('js/features/lightbox/index.js')
     : '';
@@ -2487,6 +2490,18 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('clearLoadTimers();') ||
       !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
       !mediaRenderer.includes('if (!embedSrc) return renderUnsupported(item, project);') ||
+      !assetPreview.includes('MAX_PREVIEW_CACHE_ENTRIES') ||
+      !assetPreview.includes('MAX_PREVIEW_DATA_URL_LENGTH') ||
+      !assetPreview.includes('canvas.toDataURL') ||
+      !thumbnail.includes('getAssetPreview(src)') ||
+      !thumbnail.includes('captureAssetPreview(src, media') ||
+      !mediaRenderer.includes('getAssetPreview(resolvedFailedSrc || failedRaw)') ||
+      !mediaRenderer.includes('captureAssetPreview(sourceUrl, image') ||
+      !smoke.includes('asset-preview-cache') ||
+      !smoke.includes('asset-preview.js?v=20261026-01') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-preview="true"]') ||
+      !styles.includes('#lightboxMediaContainer .lightbox-media-fallback[data-preview="true"]') ||
+      !styles.includes('.lightbox-modal.active .modal-interior') ||
       !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
       !styles.includes('transform: scale(calc(var(--thumb-zoom) * .985)) rotate(var(--thumb-rotate));') ||
       !styles.includes('transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)) !important;') ||
@@ -2517,7 +2532,7 @@ function validateReducedMotionThumbnailContract() {
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion while keeping still-image priority hints') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261025-06') ||
+      !smoke.includes('project-thumbnail.js?v=20261026-01') ||
       /project-thumbnail[.]js[?]v=(?!20261025-06)[^'"]+/.test(smoke)) {
     err('Project thumbnails: retain reduced-motion behavior, selected-source loading overlays, 50% veil/text layering, adaptive status contrast, responsive smoke coverage, and consistent module caching.');
   }

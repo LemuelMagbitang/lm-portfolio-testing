@@ -10700,7 +10700,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-06');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261026-01');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10764,7 +10764,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261025-06');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261026-01');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10805,7 +10805,7 @@ try {
     await smokePage(browser, '/?media-cache-disabled=1', async page => {
       const result = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
-          await import('/js/features/projects/project-thumbnail.js?v=20261025-06');
+          await import('/js/features/projects/project-thumbnail.js?v=20261026-01');
         const makeHost = () => {
           const host = document.createElement('div');
           host.className = 'card-thumbnail';
@@ -10910,6 +10910,23 @@ try {
     });
 
     await smokePage(browser, '/?project-thumbnail-presentation=1', async page => {
+      await page.evaluate(async () => {
+        const { captureAssetPreview, getAssetPreview, clearAssetPreviewCache } =
+          await import('/js/infrastructure/media/asset-preview.js?v=20261026-01');
+        clearAssetPreviewCache();
+        const source=document.createElement('canvas');source.width=480;source.height=240;
+        const context=source.getContext('2d');context.fillStyle='#c8c8c8';context.fillRect(0,0,480,240);
+        const preview=captureAssetPreview('/__smoke/asset-preview.webp',source,{documentRef:document,type:'image'});
+        const cached=getAssetPreview('/__smoke/asset-preview.webp');
+        const unsupported=captureAssetPreview('/__smoke/unsupported.webp',document.createElement('div'),{documentRef:document,type:'model'});
+        if(!/^data:image\\/(?:webp|jpeg);base64,/i.test(preview)||preview!==cached||unsupported!==''||preview.length>18000){
+          throw new Error('asset-preview-cache must store only small, already-rendered previews: '+
+            JSON.stringify({previewLength:preview.length,same:preview===cached,unsupported}));
+        }
+        clearAssetPreviewCache();
+        if(getAssetPreview('/__smoke/asset-preview.webp')!=='')throw new Error('asset-preview-cache must clear safely.');
+      });
+
       // Keep project-card image requests pending long enough to inspect the live loader.
       await page.route(/\/__smoke\/loading-thumbnails\//, async route => {
         await new Promise(resolve => setTimeout(resolve, 1800));
@@ -10921,7 +10938,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-02');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-03');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-loading-fixtures';
         Object.assign(fixture.style, {
@@ -11206,7 +11223,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-02');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-03');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-placeholder-fixtures';
         Object.assign(fixture.style, {

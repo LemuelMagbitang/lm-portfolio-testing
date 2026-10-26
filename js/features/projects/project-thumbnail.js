@@ -6,6 +6,8 @@
  * resolves repository-relative paths.
  */
 
+import { captureAssetPreview, getAssetPreview } from '../../infrastructure/media/asset-preview.js?v=20261026-01';
+
 export function mediaTypeFromSrc(src = '') {
   const raw = String(src || '').trim();
   if (!raw) return 'image';
@@ -85,6 +87,8 @@ function registerThumbnailMediaState(media, {
   let modelGeneration = 0;
   let modelCleanup = null;
   let mediaFallback = null;
+  let mediaFallbackExitTimer = null;
+  let mediaFallbackExitElement = null;
   const modelFallbackMarkup = type === 'model' ? String(media.innerHTML || '') : '';
   const timerOwner = windowRef || globalThis;
   const setTimer = typeof timerOwner.setTimeout === 'function' ? timerOwner.setTimeout.bind(timerOwner) : globalThis.setTimeout;
@@ -203,10 +207,31 @@ function registerThumbnailMediaState(media, {
     media.addEventListener?.(eventName, handler);
     listeners.push([eventName, handler]);
   };
+  const clearFallbackExit = () => {
+    if (mediaFallbackExitTimer !== null) { clearTimer?.(mediaFallbackExitTimer); mediaFallbackExitTimer = null; }
+    mediaFallbackExitElement?.remove?.();
+    mediaFallbackExitElement = null;
+  };
   const removeMediaFallback = () => {
+    clearFallbackExit();
     clearFallbackAttachmentWatch();
     if (mediaFallback?.parentNode) mediaFallback.parentNode.removeChild(mediaFallback);
     mediaFallback = null;
+  };
+  const dismissMediaFallback = () => {
+    clearFallbackAttachmentWatch();
+    if (!mediaFallback) return;
+    const exiting = mediaFallback;
+    if (exiting.dataset.preview !== 'true' || reducedMotion) { removeMediaFallback(); return; }
+    mediaFallback = null;
+    exiting.classList.add('is-preview-exiting');
+    mediaFallbackExitElement = exiting;
+    mediaFallbackExitTimer = setTimer(() => {
+      if (mediaFallbackExitElement !== exiting) return;
+      exiting.remove?.();
+      mediaFallbackExitElement = null;
+      mediaFallbackExitTimer = null;
+    }, 380);
   };
   const fallbackLabel = () => ({
     image: 'PROJECT ARTWORK',
@@ -233,6 +258,7 @@ function registerThumbnailMediaState(media, {
   };
   const showMediaFallback = status => {
     if (!['image', 'video', 'lottie', 'model'].includes(type)) return;
+    clearFallbackExit();
     // 3D renderers clear their container while mounting, so a loading/error
     // surface is required even when no raster poster was supplied.
     const parent = media.parentElement || media.parentNode;
@@ -251,14 +277,18 @@ function registerThumbnailMediaState(media, {
     if (typeof mediaFallback.replaceChildren === 'function') mediaFallback.replaceChildren();
     else mediaFallback.textContent = '';
     mediaFallback.dataset.state = status === 'error' ? 'error' : 'loading';
+    mediaFallback.removeAttribute('data-preview');
     mediaFallback.setAttribute('role', 'img');
     mediaFallback.setAttribute('aria-label', status === 'loading'
       ? 'Loading ' + (type === 'lottie' ? 'animation' : type === 'model' ? '3D' : type) + ' preview'
       : String(altText || 'Project artwork') + ' preview');
 
-    // The selected card source stays visible under the loading veil. Static
-    // secondary artwork is reserved for an actual load failure, not a loading state.
-    if (status === 'error' && fallbackSrc && fallbackSrc !== src) {
+    // A loading preview may only be a cached low-quality frame of this exact
+    // source. Other artwork/CMS thumbnails remain error-only fallbacks.
+    const assetPreview = status === 'loading' ? getAssetPreview(src) : '';
+    const imageSrc = assetPreview || (status === 'error' && fallbackSrc && fallbackSrc !== src ? fallbackSrc : '');
+    if (imageSrc) {
+      if (assetPreview) mediaFallback.dataset.preview = 'true';
       const image = doc.createElement('img');
       image.className = 'project-thumb-media-fallback-image';
       image.alt = '';
@@ -267,13 +297,12 @@ function registerThumbnailMediaState(media, {
       image.decoding = 'async';
       image.addEventListener('error', () => {
         image.remove?.();
+        mediaFallback?.removeAttribute?.('data-preview');
         if (mediaFallback?.parentNode) appendFallbackLabel(mediaFallback.dataset.state || status);
       }, { once: true });
-      image.src = fallbackSrc;
+      image.src = imageSrc;
       mediaFallback.appendChild(image);
-    } else {
-      appendFallbackLabel(status);
-    }
+    } else appendFallbackLabel(status);
   };
   const mediaDocument = () => media.ownerDocument || documentRef || globalThis.document;
   const dispatchLifecycleEvent = eventName => {
@@ -312,10 +341,13 @@ function registerThumbnailMediaState(media, {
     clearLoadTimers();
     const reveal = () => {
       if (disposed) return;
+      // Capture only a tiny snapshot of the ready media; this never fetches or
+      // mounts anything and quietly fails for tainted/unsupported surfaces.
+      captureAssetPreview(src, media, { documentRef: mediaDocument(), type });
       media.dataset.mediaState = 'ready';
       media.classList.remove('is-media-loading', 'is-media-error');
       media.classList.add('is-media-ready');
-      removeMediaFallback();
+      dismissMediaFallback();
       dispatchLifecycleEvent('project-thumbnail-ready');
       if (type === 'video' && media.dataset.mediaVisible === 'true' && !reducedMotion) {
         Promise.resolve(media.play?.()).catch(() => {});
