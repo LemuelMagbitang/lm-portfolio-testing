@@ -1468,6 +1468,9 @@ function validateBootstrapHardening() {
     err('Navigation: runtime must bind the public hamburger to the public nav-links menu and toggle its active state.');
   }
 
+  if (!publicWorks.includes('aria-controls="navLinks"') || !publicAbout.includes('aria-controls="navLinks"')) {
+    err('Navigation: hamburger buttons must explicitly control the public navLinks menu for assistive technology.');
+  }
   const navigationCss = exists('css/style.css') ? readText('css/style.css') : '';
   const navbarRule = (navigationCss.match(/\.navbar\s*\{[^}]*\}/) || [])[0] || '';
   const logoRule = (navigationCss.match(/\.site-logo\s*\{[^}]*\}/) || [])[0] || '';
