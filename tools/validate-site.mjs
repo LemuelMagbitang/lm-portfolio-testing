@@ -2008,7 +2008,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('logo-slide-stack') ||
        !smoke.includes('Independent chrome contrast fixtures') ||
        !smoke.includes("hamburgerBackdrop.style.background = '#fff'") ||
-       !smoke.includes("hamburgerBackdrop.style.background = '#000'") ||
+       !smoke.includes("addBackdrop('__smoke-hamburger-backdrop', hamburgerRect, '#000')") ||
       !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
