@@ -1295,6 +1295,95 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         window.dispatchEvent(new Event('scroll'));
       });
 
+      // The Works message hero used to force white controls regardless of the
+      // artwork beneath them. Exercise that exact route with real sampleable
+      // media so the test verifies the message-state bypass no longer exists.
+      if (expectedMessage) {
+        await page.evaluate(async () => {
+          const hero = document.querySelector('.hero-section:not(.about-hero)');
+          const banner = hero?.querySelector('.hero-banner');
+          if (!hero || !banner) throw new Error('Message hero contrast fixture could not locate its artwork surface.');
+          const originalSlides = Array.from(banner.querySelectorAll('.slide')).map(element => ({
+            element, active: element.classList.contains('active')
+          }));
+          originalSlides.forEach(({ element }) => element.classList.remove('active'));
+
+          const slide = document.createElement('div');
+          slide.id = '__smoke-message-hero-contrast-slide';
+          slide.className = 'slide active';
+          Object.assign(slide.style, {
+            position: 'absolute', inset: '0', opacity: '1',
+            transition: 'none', pointerEvents: 'none'
+          });
+          const image = document.createElement('img');
+          image.id = '__smoke-message-hero-contrast-image';
+          image.alt = '';
+          Object.assign(image.style, {
+            display: 'block', width: '100%', height: '100%',
+            objectFit: 'cover', objectPosition: '50% 50%', pointerEvents: 'none'
+          });
+          const svg = color => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="' + color + '"/></svg>'
+          );
+          image.src = svg('#ffffff');
+          slide.appendChild(image);
+          banner.appendChild(slide);
+          window.__lmMessageHeroContrastFixture = { originalSlides, slide, image, svg };
+          try { await image.decode(); } catch (_) {}
+          window.dispatchEvent(new Event('resize'));
+        });
+
+        await page.waitForFunction(
+          () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+          null,
+          { timeout: 2500 }
+        );
+        if (hasVisibleHamburger) {
+          await page.waitForFunction(
+            () => document.querySelector('.hamburger')?.dataset?.foreground === 'dark',
+            null,
+            { timeout: 2500 }
+          );
+        }
+
+        await page.evaluate(async () => {
+          const fixture = window.__lmMessageHeroContrastFixture;
+          if (!fixture?.image) throw new Error('Message hero contrast fixture was lost before the reverse-state check.');
+          fixture.image.src = fixture.svg('#000000');
+          try { await fixture.image.decode(); } catch (_) {}
+          window.dispatchEvent(new Event('scroll'));
+        });
+        await page.waitForFunction(
+          () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+          null,
+          { timeout: 2500 }
+        );
+        if (hasVisibleHamburger) {
+          await page.waitForFunction(
+            () => document.querySelector('.hamburger')?.dataset?.foreground === 'light',
+            null,
+            { timeout: 2500 }
+          );
+        }
+        const messageHeroContrast = await page.evaluate(() => ({
+          logo: document.querySelector('.site-logo')?.dataset?.logoForeground || '',
+          hamburger: document.querySelector('.hamburger')?.dataset?.foreground || ''
+        }));
+        if (messageHeroContrast.logo !== 'light' ||
+            (hasVisibleHamburger && messageHeroContrast.hamburger !== 'light')) {
+          throw new Error(label + ' ' + viewport.name + ': message hero media must dynamically switch both logo and hamburger contrast: ' + JSON.stringify(messageHeroContrast));
+        }
+        await page.evaluate(() => {
+          const fixture = window.__lmMessageHeroContrastFixture;
+          fixture?.slide?.remove();
+          (fixture?.originalSlides || []).forEach(({ element, active }) => {
+            element.classList.toggle('active', active);
+          });
+          delete window.__lmMessageHeroContrastFixture;
+          window.dispatchEvent(new Event('resize'));
+        });
+      }
+
       if (!expectedMessage) {
         await page.evaluate(async () => {
           const hero = document.querySelector('.hero-section:not(.about-hero):not(.hero-section--message)');
