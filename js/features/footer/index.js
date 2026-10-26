@@ -8,7 +8,7 @@
  */
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
-import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
+import { ensureMuxVideo } from '../../infrastructure/mux/player.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
@@ -115,7 +115,7 @@ async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJs
 function buildMedia(documentRef, source, autoplayAllowed = true) {
   let media;
   if (source.type === 'mux') {
-    media = documentRef.createElement('mux-player');
+    media = documentRef.createElement('mux-video');
     media.setAttribute('playback-id', source.playbackId);
     media.setAttribute('stream-type', 'on-demand');
     media.muted = true;
@@ -123,13 +123,11 @@ function buildMedia(documentRef, source, autoplayAllowed = true) {
     media.controls = false;
     media.setAttribute('muted', '');
     media.setAttribute('loop', '');
+    media.setAttribute('playsinline', '');
+    media.setAttribute('disable-tracking', '');
     media.setAttribute('preload', autoplayAllowed ? 'auto' : 'none');
-    if (autoplayAllowed) media.setAttribute('autoplay', 'muted');
+    if (autoplayAllowed) media.setAttribute('autoplay', '');
     else media.removeAttribute('autoplay');
-    media.style.setProperty('--controls', 'none');
-    media.style.setProperty('--center-controls', 'none');
-    media.style.setProperty('--top-controls', 'none');
-    media.style.setProperty('--bottom-controls', 'none');
     media.style.setProperty('--media-object-fit', 'cover');
     if (source.poster) media.setAttribute('poster', source.poster);
     media.setAttribute('metadata-video-title', source.alt || 'Footer video');
@@ -227,7 +225,7 @@ export async function initFooterAnimation(options = {}) {
   }
   if (sources.some(source => source.type === 'mux')) {
     let muxReady = false;
-    try { muxReady = await (options.ensureMuxPlayer || ensureMuxPlayer)(); } catch (_) {}
+    try { muxReady = await (options.ensureMuxVideo || ensureMuxVideo)(); } catch (_) {}
     if (!muxReady) {
       sources = sources.map(source => source.type === 'mux'
         ? { ...source, type: 'image', src: source.poster || source.src }
@@ -291,9 +289,9 @@ export async function initFooterAnimation(options = {}) {
   });
 
   applyForeground(0);
-  const firstMuxPlayer = container.querySelector('.footer-animation-slide.active mux-player');
-  if (firstMuxPlayer && !reducedMotion()) {
-    try { const playback = firstMuxPlayer.play?.(); playback?.catch?.(() => {}); } catch (_) {}
+  const firstMuxVideo = container.querySelector('.footer-animation-slide.active mux-video, .footer-animation-slide.active mux-player');
+  if (firstMuxVideo && !reducedMotion()) {
+    try { const playback = firstMuxVideo.play?.(); playback?.catch?.(() => {}); } catch (_) {}
   }
 
   let contrastIntervalId = null;
@@ -313,13 +311,13 @@ export async function initFooterAnimation(options = {}) {
       if (!slides.length) return;
       const previous = slides[index];
       previous?.classList.remove('active');
-      const previousMux = previous?.querySelector('mux-player');
+      const previousMux = previous?.querySelector('mux-video, mux-player');
       if (previousMux) { try { previousMux.pause?.(); } catch (_) {} }
       const previousVideo = previous?.querySelector('video');
       if (previousVideo) { try { previousVideo.pause?.(); } catch (_) {} }
       index = (index + 1) % slides.length;
       slides[index]?.classList.add('active');
-      const currentMux = slides[index]?.querySelector('mux-player');
+      const currentMux = slides[index]?.querySelector('mux-video, mux-player');
       if (currentMux) { try { const playback = currentMux.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
       const currentVideo = slides[index]?.querySelector('video');
       if (currentVideo) { try { const playback = currentVideo.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
@@ -329,9 +327,9 @@ export async function initFooterAnimation(options = {}) {
   }
 
   lifecycle.add(() => {
-    container.querySelectorAll('video,mux-player').forEach(video => {
+    container.querySelectorAll('video,mux-player,mux-video').forEach(video => {
       try { video.pause?.(); } catch (_) {}
-      if (video.matches('mux-player')) video.removeAttribute('playback-id');
+      if (video.matches('mux-player,mux-video')) video.removeAttribute('playback-id');
     });
     container.replaceChildren();
     container.hidden = true;

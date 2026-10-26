@@ -135,6 +135,49 @@ async function configureLogoRoutes(page) {
     `;
     await route.fulfill({ status: 200, contentType: 'text/javascript', body: source });
   });
+  await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-video@0.31.5/+esm', async route => {
+    const source = `
+      if (!customElements.get('mux-video')) {
+        class MockMuxVideo extends HTMLElement {
+          constructor() {
+            super();
+            this._paused = true;
+            this._currentTime = 0;
+            this._readyState = 4;
+            this._error = null;
+            this._muted = true;
+            this._loop = false;
+          }
+          get muted() { return this._muted || this.hasAttribute('muted'); }
+          set muted(value) { this._muted = Boolean(value); if (value) this.setAttribute('muted', ''); else this.removeAttribute('muted'); }
+          get defaultMuted() { return this.hasAttribute('muted'); }
+          set defaultMuted(value) { if (value) this.setAttribute('muted', ''); }
+          get playsInline() { return this.hasAttribute('playsinline'); }
+          set playsInline(value) { if (value) this.setAttribute('playsinline', ''); else this.removeAttribute('playsinline'); }
+          get loop() { return this._loop || this.hasAttribute('loop'); }
+          set loop(value) { this._loop = Boolean(value); if (value) this.setAttribute('loop', ''); else this.removeAttribute('loop'); }
+          get autoplay() { return this.hasAttribute('autoplay'); }
+          set autoplay(value) { if (value) this.setAttribute('autoplay', ''); else this.removeAttribute('autoplay'); }
+          get paused() { return this._paused; }
+          set paused(value) { this._paused = Boolean(value); }
+          get currentTime() { return this._currentTime; }
+          set currentTime(value) { this._currentTime = Number(value) || 0; }
+          get readyState() { return this._readyState; }
+          set readyState(value) { this._readyState = Number(value) || 0; }
+          get error() { return this._error; }
+          set error(value) { this._error = value; }
+          get poster() { return this.getAttribute('poster') || ''; }
+          set poster(value) { if (value) this.setAttribute('poster', value); else this.removeAttribute('poster'); }
+          play() { this._paused = false; this._currentTime += 0.1; this.dispatchEvent(new Event('playing')); return Promise.resolve(); }
+          pause() { this._paused = true; this.dispatchEvent(new Event('pause')); }
+          load() { this._readyState = 4; }
+        }
+        customElements.define('mux-video', MockMuxVideo);
+      }
+      export {};
+    `;
+    await route.fulfill({ status: 200, contentType: 'text/javascript', body: source });
+  });
   await page.route('**/data/video-platform.json', async route => {
     await route.fulfill({
       status: 200,
@@ -1424,7 +1467,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
       {
         const videoContract = await page.evaluate(() => {
           const active = document.querySelector('#heroBanner .slide.active');
-          const media = active?.querySelector('video, mux-player');
+          const media = active?.querySelector('video, mux-player, mux-video');
           return media ? {
             present: true,
             playerType: media.localName,
@@ -1440,7 +1483,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             error: media.error ? { code: Number(media.error.code) || 0, message: String(media.error.message || '') } : null,
             source: media.currentSrc || media.src || '',
             playbackId: media.getAttribute('playback-id') || '',
-            controlsToken: getComputedStyle(media).getPropertyValue('--controls').trim()
+            controlsToken: getComputedStyle(media).getPropertyValue('--controls').trim(),
+            trackingDisabled: media.hasAttribute('disable-tracking')
           } : {
             present: false,
             activeType: active?.dataset?.heroType || active?.firstElementChild?.localName || ''
@@ -1456,11 +1500,15 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           }
           if (videoContract.playerType === 'mux-player' &&
               (!videoContract.playbackId || videoContract.controlsToken !== 'none')) {
-            throw new Error(label + ': Mux hero must have a playback ID and hidden controls: ' + JSON.stringify(videoContract));
+            throw new Error(label + ': interactive Mux Player hero must have a playback ID and hidden controls: ' + JSON.stringify(videoContract));
           }
-          const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player';
+          if (videoContract.playerType === 'mux-video' &&
+              (!videoContract.playbackId || !videoContract.trackingDisabled)) {
+            throw new Error(label + ': background Mux Video must have a playback ID and disable background analytics requests: ' + JSON.stringify(videoContract));
+          }
+          const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video';
           await page.waitForFunction(() => {
-            const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+            const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video');
             return !media || media.error || media.dataset.playbackState === 'blocked' ||
               (!media.paused && Number(media.currentTime) > 0.05);
           }, null, { timeout: 5000 });
@@ -1477,7 +1525,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';
             await page.locator(retryTarget).click({ position: { x: 12, y: 12 } });
             await page.waitForFunction(() => {
-              const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+              const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video');
               return media && (media.error || (!media.paused && Number(media.currentTime) > 0.05));
             }, null, { timeout: 3000 });
             playback = await page.locator(mediaSelector).evaluate(media => ({
@@ -1496,7 +1544,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         // Force the playback-recovery path with the hero quote enabled: the
         // gesture lands on the overlay sibling, not the media itself.
         if (videoContract.present && expectedMessage && viewport.name === 'desktop') {
-          const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player';
+          const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video';
           const priorTime = await page.locator(mediaSelector).evaluate(media => {
             media.pause();
             media.dataset.playbackState = 'blocked';
@@ -1504,7 +1552,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           });
           await page.locator('.hero-overlay').click({ position: { x: 12, y: 12 } });
           await page.waitForFunction(baseline => {
-            const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+            const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video');
             return media && !media.paused && Number(media.currentTime) > baseline + 0.05;
           }, priorTime, { timeout: 3000 });
         }
@@ -10216,10 +10264,10 @@ try {
     });
 
     await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
-      await page.locator('#heroBanner .slide.active video, #heroBanner .slide.active mux-player')
+      await page.locator('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video')
         .waitFor({ state: 'attached', timeout: 6000 });
       const reducedHeroState = await page.evaluate(() => {
-        const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player');
+        const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video');
         const transition = document.querySelector('#pageTransition');
         return {
           preference: matchMedia('(prefers-reduced-motion: reduce)').matches,

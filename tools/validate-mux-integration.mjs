@@ -69,31 +69,34 @@ check(migration.includes("last_mux_event_created_at timestamptz") &&
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
-check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxPlayer") && hero.includes("mux-player"), "Hero source adapter missing.");
+check(player.includes("@mux/mux-video@0.31.5/+esm") && player.includes('customElements.get("mux-video")'), "Mux Video background loader missing.");
+check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxVideo") && hero.includes("mux-video"), "Hero source adapter missing.");
 const heroMuxSetup = hero.split("if (source.type === 'mux') {")[1]?.split("} else if (source.type === 'video') {")[0] || "";
 const heroReducedMotionBranch = heroMuxSetup.split("if (reducedMotion) {")[1]?.split("} else {")[0] || "";
 check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("fallbackMuxToNativeVideo") &&
-  hero.includes("setAttribute('autoplay', 'muted')") &&
-  !heroMuxSetup.includes("playsInline") &&
-  !heroMuxSetup.includes("playsinline") &&
+  heroMuxSetup.includes("documentRef.createElement('mux-video')") &&
+  heroMuxSetup.includes("setAttribute('autoplay', '')") &&
+  heroMuxSetup.includes("setAttribute('disable-tracking', '')") &&
   hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&
   hero.includes("if (!reducedMotion && sources.some(source => source.type === 'mux'))") &&
+  hero.includes("const shouldLoop = slides.length === 1") &&
+  hero.includes("}, 8000);") &&
+  hero.includes("!['mux-player', 'mux-video'].includes(media?.localName)") &&
   heroReducedMotionBranch.includes("documentRef.createElement('video')") &&
   !heroReducedMotionBranch.includes("playback-id") &&
-  styles.includes(".hero-banner .slide mux-player::part(center)"),
-  "Hero Mux playback must autoplay muted in normal mode, render poster-only native media for reduced motion, avoid unsupported playsInline handling, hide UI and retain fallback.");
-check(footer.includes("media.controls = false") &&
-  footer.includes("media.setAttribute('autoplay', 'muted')") &&
-  footer.includes("media.style.setProperty('--controls', 'none')") &&
-  !footer.includes("media.setAttribute('playsinline'") &&
+  styles.includes(".hero-banner .slide mux-video")),
+  "Hero background video must use UI-free Mux Video, muted autoplay, explicit looping, bounded MP4 fallback, and poster-only reduced-motion mode.");
+check(footer.includes("documentRef.createElement('mux-video')") &&
+  footer.includes("media.setAttribute('autoplay', '')") &&
+  footer.includes("media.setAttribute('disable-tracking', '')") &&
   footer.includes("!reducedMotion() && index === 0") &&
   footer.includes("const reduceMotionNow = Boolean(reducedMotion())") &&
   footer.includes("source.type !== 'mux'") &&
   footer.includes("type: 'image', src: poster") &&
-  styles.includes(".footer-animation-slide mux-player::part(center)") &&
-  styles.includes("--controls:none"),
-  "Footer Mux playback must autoplay only the active muted slide without visible controls; reduced-motion mode must use poster-only images.");
+  footer.includes("mux-video, mux-player") &&
+  styles.includes(".footer-animation-slide mux-video"),
+  "Footer background must use UI-free Mux Video with tracking disabled; reduced-motion mode must use poster-only images.");
 const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie') {")[0] || "";
 check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footerNativeVideo.includes("media.preload = autoplayAllowed ? 'auto' : 'none'") &&

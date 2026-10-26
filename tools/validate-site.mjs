@@ -1994,26 +1994,26 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-04") ||
-      !bootstrap.includes("cacheVersion = '20261026-04'") ||
+  if (!entry.includes("bootstrap.js?v=20261026-05") ||
+      !bootstrap.includes("cacheVersion = '20261026-05'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
-      !composition.includes("hero/index.js?v=20261026-04") ||
-      !composition.includes("footer/index.js?v=20261026-04") ||
+      !composition.includes("hero/index.js?v=20261026-05") ||
+      !composition.includes("footer/index.js?v=20261026-05") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-04') ||
-      !works.includes('js/app/page-composition.js?v=20261026-04') ||
-      !works.includes('css/style.css?v=20261026-02') ||
-      !works.includes('js/script.js?v=20261026-04') ||
-      !about.includes('style.css?v=20261026-02') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-04') ||
-      !about.includes('script.js?v=20261026-04') ||
-      !about.includes('page-composition.js?v=20261026-04')) {
+      !works.includes('js/app/bootstrap.js?v=20261026-05') ||
+      !works.includes('js/app/page-composition.js?v=20261026-05') ||
+      !works.includes('css/style.css?v=20261026-03') ||
+      !works.includes('js/script.js?v=20261026-05') ||
+      !about.includes('style.css?v=20261026-03') ||
+      !about.includes('js/app/bootstrap.js?v=20261026-05') ||
+      !about.includes('script.js?v=20261026-05') ||
+      !about.includes('page-composition.js?v=20261026-05')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }

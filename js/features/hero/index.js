@@ -8,7 +8,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { createLifecycle } from '../../core/lifecycle.js';
 import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
-import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
+import { ensureMuxVideo } from '../../infrastructure/mux/player.js';
 
 const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
@@ -484,7 +484,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
     if (!reducedMotion && sources.some(source => source.type === 'mux')) {
       let muxReady = false;
-      try { muxReady = await ensureMuxPlayer(); } catch (_) {}
+      try { muxReady = await ensureMuxVideo(); } catch (_) {}
       if (!muxReady) {
         // A missing player module must not leave the hero blank. Keep the
         // chosen poster as an image and do not attempt a stream without the
@@ -529,7 +529,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
             hasVideoPoster = true;
           }
         } else {
-          media = documentRef.createElement('mux-player');
+          media = documentRef.createElement('mux-video');
           media.setAttribute('playback-id', source.playbackId);
           media.setAttribute('metadata-video-title', source.alt || 'Portfolio hero reel');
           media.setAttribute('stream-type', 'on-demand');
@@ -538,12 +538,11 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
           media.setAttribute('muted', '');
           media.loop = false;
           media.controls = false;
-          media.style.setProperty('--controls', 'none');
-          media.style.setProperty('--center-controls', 'none');
-          media.style.setProperty('--top-controls', 'none');
-          media.style.setProperty('--bottom-controls', 'none');
+          media.setAttribute('playsinline', '');
+          media.setAttribute('disable-tracking', '');
+          media.style.setProperty('--media-object-fit', 'cover');
           media.preload = i === 0 ? 'auto' : 'metadata';
-          media.setAttribute('autoplay', 'muted');
+          media.setAttribute('autoplay', '');
           if (posterSource) {
             media.setAttribute('poster', posterSource);
             hasVideoPoster = true;
@@ -638,7 +637,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       destroy() {
         lifecycle.cleanup();
         heroContainer.querySelectorAll('.slide').forEach(slide => {
-          slide.querySelectorAll('video, mux-player').forEach(video => video.pause?.());
+          slide.querySelectorAll('video, mux-player, mux-video').forEach(video => video.pause?.());
         });
         heroContainer.replaceChildren();
         heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
@@ -672,6 +671,13 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
     let disposed = false;
     const cleanups = [];
     const activeMediaCleanups = [];
+    const muxStartupTimers = new WeakMap();
+
+    function clearMuxStartupFallback(media) {
+      const timer = muxStartupTimers.get(media);
+      if (timer !== undefined) windowRef.clearTimeout(timer);
+      muxStartupTimers.delete(media);
+    }
 
     function clearActiveMediaListeners() {
       activeMediaCleanups.splice(0).forEach(cleanup => {
@@ -715,7 +721,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
     function fallbackMuxToNativeVideo(slide, media) {
       const fallbackSrc = String(slide?.dataset?.fallbackSrc || '').trim();
-      if (!fallbackSrc || media?.localName !== 'mux-player' || !media.isConnected || slide.dataset.muxFallback === 'true') {
+      if (!fallbackSrc || !['mux-player', 'mux-video'].includes(media?.localName) || !media.isConnected || slide.dataset.muxFallback === 'true') {
         return false;
       }
       const video = heroContainer.ownerDocument.createElement('video');
@@ -750,7 +756,10 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
         if (media.localName !== 'mux-player') media.playsInline = true;
         // A single CMS-selected video is a continuous hero reel, not a
         // one-slide slideshow that waits for an ended event to restart.
-        media.loop = slides.length === 1;
+        const shouldLoop = slides.length === 1;
+        media.loop = shouldLoop;
+        if (shouldLoop) media.setAttribute('loop', '');
+        else media.removeAttribute('loop');
         media.dataset.playbackState = 'starting';
         const playback = media.play?.();
         if (playback && typeof playback.then === 'function') {
@@ -786,6 +795,21 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
           });
         } else if (!media.paused) {
           media.dataset.playbackState = 'playing';
+        }
+
+        // A Mux stream can fail before the player emits a useful media error.
+        // After a bounded start window, use the checked-in MP4 fallback if the
+        // playhead never advances; a valid Mux stream remains the primary source.
+        if (media.localName === 'mux-video' && slide.dataset.fallbackSrc) {
+          clearMuxStartupFallback(media);
+          const startTime = Number(media.currentTime) || 0;
+          const timer = windowRef.setTimeout(() => {
+            muxStartupTimers.delete(media);
+            if (disposed || !media.isConnected || slides[currentIndex] !== slide) return;
+            if (Number(media.currentTime) <= startTime + 0.05) fallbackMuxToNativeVideo(slide, media);
+          }, 8000);
+          muxStartupTimers.set(media, timer);
+          activeMediaCleanups.push(() => clearMuxStartupFallback(media));
         }
         return;
       }
@@ -901,7 +925,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
       });
       bind(media, 'error', () => {
         if (disposed || slides[currentIndex] !== slide) return;
-        if (media.localName === 'mux-player' && fallbackMuxToNativeVideo(slide, media)) return;
+        if (['mux-player', 'mux-video'].includes(media.localName) && fallbackMuxToNativeVideo(slide, media)) return;
         media.dataset.playbackState = 'error';
         scheduleNetworkRetry(slide, media);
       });
