@@ -1922,11 +1922,11 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('function setLogoFallbackForeground(') ||
       !navigation.includes("heroSection?.classList.contains('about-hero')") ||
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
-      !navigation.includes("setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName))") ||
+      !navigation.includes("const dynamic = Boolean(media.closest?.('.hero-banner')) ||") ||
       !navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
-      !navigation.includes("const contactAreaUnderLogo = stack.some(element => element?.closest?.('#contact-section'))") ||
+      !navigation.includes("const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'))") ||
       
-      !navigation.includes("setLogoForeground(0.02)") ||
+      !navigation.includes("return { luminance: 0.02, dynamic: false, fallback: false }") ||
        navigation.includes('contact-area-logo') ||
        navigation.includes('logo-contrast-fallback') ||
        css.includes('.nav-logo::before') ||
@@ -1939,7 +1939,12 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('instantLogoReset') ||
       
       !navigation.includes('MutationObserver') ||
-      !navigation.includes('function setDynamicBackdropState(isDynamic)') ||
+      (!navigation.includes("function setDynamicBackdropState(isDynamic, surface = 'logo')") ||
+       !navigation.includes('function sampleBackdropAtElement(subjectElement)') ||
+       !navigation.includes('function updateHamburgerContrast()') ||
+       !navigation.includes('function foregroundStateForLuminance(luminance, current)') ||
+       !navigation.includes("setDynamicBackdropState(sample.dynamic, 'hamburger')") ||
+       !navigation.includes('setHamburgerForeground(sample.luminance)')) ||
       !navigation.includes('logoBackdropIsDynamic') ||
       !navigation.includes("root.visibilityState !== 'hidden'") ||
       !navigation.includes('const backdropColor = parseColor(') ||
@@ -2030,9 +2035,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-09") ||
-      !bootstrap.includes("cacheVersion = '20261026-09'") ||
-      !composition.includes("navigation/index.js?v=20261019-02") ||
+  if (!entry.includes("bootstrap.js?v=20261026-10") ||
+      !bootstrap.includes("cacheVersion = '20261026-10'") ||
+      !composition.includes("navigation/index.js?v=20261026-01") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-09") ||
       !composition.includes("footer/index.js?v=20261026-08") ||
@@ -2042,14 +2047,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-09') ||
-      !works.includes('js/app/page-composition.js?v=20261026-09') ||
+      !works.includes('js/app/bootstrap.js?v=20261026-10') ||
+      !works.includes('js/app/page-composition.js?v=20261026-10') ||
       !works.includes('css/style.css?v=20261026-04') ||
-      !works.includes('js/script.js?v=20261026-09') ||
+      !works.includes('js/script.js?v=20261026-10') ||
       !about.includes('style.css?v=20261026-04') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-09') ||
-      !about.includes('script.js?v=20261026-09') ||
-      !about.includes('page-composition.js?v=20261026-09')) {
+      !about.includes('js/app/bootstrap.js?v=20261026-10') ||
+      !about.includes('script.js?v=20261026-10') ||
+      !about.includes('page-composition.js?v=20261026-10')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
