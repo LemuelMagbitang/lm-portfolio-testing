@@ -38,11 +38,11 @@ export function foregroundForLuminance(luminance) {
 }
 
 export function sampleMediaLuminance(documentRef, media, viewportPoint = null) {
-  // Lottie can expose its current canvas through an open shadow root. Sampling
-  // that actual painted surface is more useful than guessing from the host's
-  // transparent background; other custom renderers safely fall back to CSS.
-  const shadowMedia = media?.localName === 'lottie-player'
-    ? media.shadowRoot?.querySelector('canvas, video, img')
+  // Lottie and Mux custom elements may expose the actual rendered media in an
+  // open shadow root. Sampling their visible video/canvas/image is preferable
+  // to treating a transparent custom-element host as the backdrop.
+  const shadowMedia = ['lottie-player', 'mux-video', 'mux-player'].includes(media?.localName)
+    ? media.shadowRoot?.querySelector('video, canvas, img')
     : null;
   const sampleTarget = shadowMedia || media;
   const width = Number(sampleTarget?.naturalWidth || sampleTarget?.videoWidth || sampleTarget?.width || 0);
