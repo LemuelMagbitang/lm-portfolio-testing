@@ -11239,6 +11239,77 @@ try {
         document.querySelector('#thumbnail-loading-long-text-test-style')?.remove();
       });
 
+      // A fast image may be ready before its card reaches the viewport.
+      // It keeps its reserved frame and resolves through the existing reveal
+      // after entering the inset top/bottom visibility band.
+      await page.evaluate(async () => {
+        const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+        const previousScrollTop = window.scrollY;
+        document.documentElement.style.scrollBehavior = 'auto';
+        window.scrollTo(0, 0);
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-03');
+        const spacer = document.createElement('div');
+        spacer.id = 'thumbnail-viewport-reveal-spacer';
+        spacer.setAttribute('aria-hidden', 'true');
+        spacer.style.height = Math.max(320, window.innerHeight * 1.25) + 'px';
+        spacer.style.pointerEvents = 'none';
+        const fixture = document.createElement('section');
+        fixture.id = 'thumbnail-viewport-reveal-fixture';
+        fixture.style.margin = '24px auto';
+        fixture.style.width = 'min(320px, calc(100% - 32px))';
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360"><defs><linearGradient id="g"><stop stop-color="#252c35"/><stop offset="1" stop-color="#a9c4ce"/></linearGradient></defs><rect width="480" height="360" fill="url(#g)"/><circle cx="240" cy="180" r="90" fill="#f4d8a8"/></svg>';
+        const source = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        const card = buildProjectCardElement({id:'thumbnail-viewport-reveal',title:'Viewport reveal fixture',thumbnail:{type:'image',src:source},media:[]},
+          {documentRef:document,resolveAssetUrl:value=>value,priority:true});
+        card.id = 'thumbnail-viewport-reveal-card';
+        Object.assign(card.style,{position:'relative',display:'block',width:'100%',aspectRatio:'4 / 3',overflow:'hidden',pointerEvents:'none'});
+        fixture.appendChild(card);
+        document.body.append(spacer,fixture);
+        fixture.dataset.previousScrollBehavior = previousScrollBehavior;
+        fixture.dataset.previousScrollTop = String(previousScrollTop);
+      });
+      await page.waitForFunction(() => {
+        const media = document.querySelector('#thumbnail-viewport-reveal-card .project-thumb-media');
+        return media?.dataset.mediaState === 'ready' && media.hasAttribute('data-viewport-reveal') &&
+          media.getBoundingClientRect().top > window.innerHeight;
+      }, null, {timeout:3500});
+      const preRevealState = await page.locator('#thumbnail-viewport-reveal-card .project-thumb-media').evaluate(media => {
+        const style = getComputedStyle(media);
+        return {state:media.dataset.mediaState,reveal:media.dataset.viewportReveal || '',
+          top:media.getBoundingClientRect().top,viewportHeight:window.innerHeight,
+          opacity:style.opacity,filter:style.filter,transform:style.transform};
+      });
+      if (preRevealState.state !== 'ready' || preRevealState.reveal !== 'pending' ||
+          preRevealState.top <= preRevealState.viewportHeight || preRevealState.opacity !== '0' ||
+          !preRevealState.filter.includes('blur(8px)') || preRevealState.transform === 'none') {
+        throw new Error('Project thumbnail reveal must wait until it enters the viewport from the top/bottom: ' +
+          JSON.stringify(preRevealState));
+      }
+      await page.locator('#thumbnail-viewport-reveal-card').scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => {
+        const media = document.querySelector('#thumbnail-viewport-reveal-card .project-thumb-media');
+        return media && !media.hasAttribute('data-viewport-reveal');
+      }, null, {timeout:2500});
+      await page.waitForFunction(() => {
+        const media = document.querySelector('#thumbnail-viewport-reveal-card .project-thumb-media');
+        if (!media || media.dataset.mediaState !== 'ready') return false;
+        const style = getComputedStyle(media);
+        const matrix = new DOMMatrixReadOnly(style.transform);
+        const sx = Math.hypot(matrix.a,matrix.b), sy = Math.hypot(matrix.c,matrix.d);
+        const blur = Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0');
+        return Number.parseFloat(style.opacity) >= 0.999 && Math.abs(sx-1) < 0.002 &&
+          Math.abs(sy-1) < 0.002 && blur < 0.01;
+      }, null, {timeout:2500});
+      await page.evaluate(() => {
+        document.querySelector('#thumbnail-viewport-reveal-spacer')?.remove();
+        const fixture = document.querySelector('#thumbnail-viewport-reveal-fixture');
+        const behavior = fixture?.dataset.previousScrollBehavior || '';
+        const scrollTop = Number(fixture?.dataset.previousScrollTop) || 0;
+        fixture?.remove();
+        document.documentElement.style.scrollBehavior = behavior;
+        window.scrollTo(0,scrollTop);
+      });
+
       await page.evaluate(async () => {
         const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-03');
         const fixture = document.createElement('section');

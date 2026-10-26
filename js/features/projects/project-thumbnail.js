@@ -68,7 +68,7 @@ function getThumbnailViewportObservers(windowRef) {
       }
       state.setVisible(entry.isIntersecting && entry.intersectionRatio > 0);
     });
-  }, { rootMargin: '0px', threshold: 0.01 });
+  }, { rootMargin: '-24px 0px -24px 0px', threshold: 0.01 });
 
   thumbnailViewportObserversByWindow.set(windowRef, observers);
   return observers;
@@ -81,6 +81,7 @@ function registerThumbnailMediaState(media, {
 } = {}) {
   const usesViewportLifecycle = type === 'video' || type === 'lottie' || type === 'model';
   const observers = type === 'image' || usesViewportLifecycle ? getThumbnailViewportObservers(windowRef) : null;
+  if (observers?.visibility && !reducedMotion) media.dataset.viewportReveal = 'pending';
   const listeners = [];
   let activated = false;
   let disposed = false;
@@ -527,10 +528,14 @@ function registerThumbnailMediaState(media, {
       }
     },
     setVisible(visible) {
-      if (disposed || !usesViewportLifecycle) return;
+      if (disposed) return;
       const isVisible = Boolean(visible);
       media.dataset.mediaVisible = isVisible ? 'true' : 'false';
       if (isVisible) {
+        // A ready image may finish decoding before it enters the viewport.
+        // Clear this one-time gate to let the existing reveal transition run.
+        delete media.dataset.viewportReveal;
+        if (!usesViewportLifecycle) return;
         state.activate();
         if (reducedMotion) {
           try { media.pause?.(); } catch (_) {}
@@ -545,6 +550,7 @@ function registerThumbnailMediaState(media, {
         }
         return;
       }
+      if (!usesViewportLifecycle) return;
       try { media.pause?.(); } catch (_) {}
       if (type === 'lottie') try { media.removeAttribute?.('autoplay'); } catch (_) {}
       if (type === 'model') {
@@ -680,6 +686,8 @@ export function buildProjectThumbnailMedia(
   const observers = state.observers;
   const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);
   if (shouldDeferStillImage) {
+    // Images may preload early, while the visibility observer owns first reveal.
+    if (!reducedMotion && observers?.visibility) observers.visibility.observe(media);
     if (priority || !observers?.preload) state.activate();
     else {
       media.dataset.lazySrc = src;

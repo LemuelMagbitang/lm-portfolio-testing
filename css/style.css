@@ -1001,6 +1001,14 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   filter: blur(0);
 }
 
+/* A ready image may decode before its card reaches the viewport. Keep its
+   frame reserved but softly hidden until the first reveal band is entered. */
+.card-thumbnail .project-thumb-media[data-viewport-reveal="pending"].is-media-ready {
+  opacity: 0;
+  transform: scale(calc(var(--thumb-zoom) * .985)) rotate(var(--thumb-rotate));
+  filter: blur(8px);
+}
+
 /* Failed media stays on its explicit fallback instead of running the success
    reveal. This also keeps a late/slow-load timeout from exposing broken pixels. */
 .card-thumbnail .project-thumb-media.is-media-error {

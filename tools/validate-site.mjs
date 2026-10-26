@@ -2459,7 +2459,14 @@ function validateReducedMotionThumbnailContract() {
     : '';
   const styles = exists('css/style.css') ? readText('css/style.css') : '';
 
-  if (!thumbnail.includes("matchMedia?.('(prefers-reduced-motion: reduce)')") ||
+  if (!thumbnail.includes("if (observers?.visibility && !reducedMotion) media.dataset.viewportReveal = 'pending';") ||
+      !thumbnail.includes('delete media.dataset.viewportReveal;') ||
+      !thumbnail.includes("if (!reducedMotion && observers?.visibility) observers.visibility.observe(media);") ||
+      !thumbnail.includes("rootMargin: '-24px 0px -24px 0px'") ||
+      !styles.includes('.card-thumbnail .project-thumb-media[data-viewport-reveal="pending"].is-media-ready') ||
+      !mediaRenderer.includes("rootMargin: '-24px 0px -24px 0px'") ||
+      !smoke.includes('Project thumbnail reveal must wait until it enters the viewport from the top/bottom') ||
+      !thumbnail.includes("matchMedia?.('(prefers-reduced-motion: reduce)')") ||
       !thumbnail.includes('media.autoplay = false;') ||
       !thumbnail.includes('media.loop = !reducedMotion;') ||
       !thumbnail.includes("if (!reducedMotion) media.setAttribute('loop', '');") ||

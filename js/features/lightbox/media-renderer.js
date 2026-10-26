@@ -1622,7 +1622,7 @@ export function createLightboxMediaRenderer({
         state.isVisible = Boolean(entry.isIntersecting && entry.intersectionRatio > 0);
         if (state.isVisible && state.ready && !state.revealed) revealArtworkWhenVisible(entry.target);
       });
-    }, { root: null, rootMargin: '0px', threshold: 0.01 });
+    }, { root: null, rootMargin: '-24px 0px -24px 0px', threshold: 0.01 });
     return artworkVisibilityObserver;
   }
 
