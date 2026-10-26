@@ -196,9 +196,10 @@ export function buildProjectCardElement(
       if (background && typeof background === 'object') thumbnail.dataset.background = JSON.stringify(background);
       if (fallbackThumbnail?.type === 'video') media.setAttribute('data-video-thumb', '');
       if (fallbackThumbnail?.type === 'lottie') media.setAttribute('data-lottie-thumb', '');
-      if (fallbackThumbnail?.type === 'model' || String(t.type || '').toLowerCase() === 'model') {
-        media.setAttribute('data-model-thumb', '');
-      }
+      const modelThumbnailSource = fallbackThumbnail?.type === 'model'
+        ? String(fallbackThumbnail.src || '').trim()
+        : (String(t.type || '').toLowerCase() === 'model' ? String(t.src || '').trim() : '');
+      if (modelThumbnailSource) media.setAttribute('data-model-thumb', modelThumbnailSource);
       thumbnail.appendChild(media);
       if (thumbnailHolographic) {
         const foilOverlay = buildProjectThumbnailFoil(thumbnailHolographic, t.src, {resolveAssetUrl, documentRef});

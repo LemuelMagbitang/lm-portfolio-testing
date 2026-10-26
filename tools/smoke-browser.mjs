@@ -10844,7 +10844,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-06');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-02');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-loading-fixtures';
         Object.assign(fixture.style, {
@@ -11118,7 +11118,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261025-06');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261026-02');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-placeholder-fixtures';
         Object.assign(fixture.style, {

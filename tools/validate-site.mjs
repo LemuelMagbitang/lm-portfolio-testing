@@ -2065,8 +2065,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-14") ||
-      !bootstrap.includes("cacheVersion = '20261026-14'") ||
+  if (!entry.includes("bootstrap.js?v=20261026-15") ||
+      !bootstrap.includes("cacheVersion = '20261026-15'") ||
       !composition.includes("navigation/index.js?v=20261026-04") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-10") ||
@@ -2074,17 +2074,17 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
-      !composition.includes("projects/index.js?v=20261026-01") ||
+      !composition.includes("projects/index.js?v=20261026-02") ||
       !composition.includes("lightbox/index.js?v=20261026-01") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-14') ||
-      !works.includes('js/app/page-composition.js?v=20261026-14') ||
+      !works.includes('js/app/bootstrap.js?v=20261026-15') ||
+      !works.includes('js/app/page-composition.js?v=20261026-15') ||
       !works.includes('css/style.css?v=20261026-10') ||
-      !works.includes('js/script.js?v=20261026-14') ||
+      !works.includes('js/script.js?v=20261026-15') ||
       !about.includes('style.css?v=20261026-10') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-14') ||
-      !about.includes('script.js?v=20261026-14') ||
-      !about.includes('page-composition.js?v=20261026-14')) {
+      !about.includes('js/app/bootstrap.js?v=20261026-15') ||
+      !about.includes('script.js?v=20261026-15') ||
+      !about.includes('page-composition.js?v=20261026-15')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2430,7 +2430,9 @@ function validateCmsRegressionContracts() {
   if (!projectCard.includes("card.className = 'project-card'") ||
       /className = \['project-card', \.\.\.filters\]/.test(projectCard) ||
       projectCard.includes('project-media-list') ||
-      projectCard.includes('buildMediaItemElement')) {
+      projectCard.includes('buildMediaItemElement') ||
+      !projectCard.includes("const modelThumbnailSource = fallbackThumbnail?.type === 'model'") ||
+      !projectCard.includes("media.setAttribute('data-model-thumb', modelThumbnailSource)")) {
     err('Project cards: taxonomy must remain data-driven and presentation markup must not act as an inter-feature project-data bus.');
   }
 

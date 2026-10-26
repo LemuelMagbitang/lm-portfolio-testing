@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261026-01';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261026-02';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261026-01';
-import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261026-01';
+import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261026-02';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261025-06';
 import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261026-01';
 import {
@@ -928,6 +928,8 @@ assert.equal(capabilityCard.classList.values.has('has-media-image'), true);
 assert.equal(capabilityCard.classList.values.has('has-media-model'), true);
 assert.equal(capabilityCard.classList.values.has('has-multiple-media'), true);
 assert.equal(capabilityCard.children[0]?.children[0]?.dataset?.modelThumb, 'models/test.glb');
+assert.equal(capabilityCard.children[0]?.children[0]?.getAttribute('data-model-thumb'), 'models/test.glb',
+  'The model thumbnail must preserve its selected source in the DOM contract so multi-model projects open the correct artwork.');
 assert.equal(capabilityCard.children[0]?.children?.length, 1);
 assert.equal(capabilityCard.children[0]?.children[0]?.children[0]?.children[1]?.textContent, '3D ARTWORK');
 assert.equal(capabilityCard.children[0]?.children[0]?.children[0]?.children[2]?.textContent, 'View project');
