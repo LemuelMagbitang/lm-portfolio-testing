@@ -85,9 +85,9 @@ async function waitForServer(url, timeoutMs = 5000) {
 
 async function configureLogoRoutes(page) {
   // Keep CI deterministic and offline: the live Supabase project is provisioned
-  // separately from the static-site smoke tests. The local MP4 fallback remains the
-  // recovery path for real player failures; CMS-selected Mux is exercised with a small
-  // standards-shaped player mock, never personal backend state.
+  // separately from the static-site smoke tests. Explicitly configured fallback
+  // sources can recover from player failures; CMS-published Mux is exercised with a
+  // standards-shaped mock and must not silently become the legacy reel.
   await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-player@3/+esm', async route => {
     const source = `
       if (!customElements.get('mux-player')) {
