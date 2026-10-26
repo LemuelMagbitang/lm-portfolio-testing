@@ -1384,6 +1384,106 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         });
       }
 
+      // Gallery regression: sample the media that paints underneath an opaque
+      // thumbnail canvas. The card background stays white while its image flips
+      // white -> black; the fixed logo/hamburger must follow the image, not the
+      // fallback color of the card surface.
+      await page.evaluate(async () => {
+        document.getElementById('__lm-gallery-chrome-contrast-fixture')?.remove();
+        const mutedMedia = Array.from(document.querySelectorAll('img, video, canvas, lottie-player, mux-video, mux-player'))
+          .filter(element => !element.closest('.navbar, #pageTransition'));
+        const mediaVisibility = mutedMedia.map(element => ({
+          element,
+          visibility: element.style.visibility
+        }));
+        mutedMedia.forEach(({ element }) => { element.style.visibility = 'hidden'; });
+
+        const card = document.createElement('div');
+        card.id = '__lm-gallery-chrome-contrast-fixture';
+        card.className = 'project-card';
+        Object.assign(card.style, {
+          position: 'fixed', inset: '0', width: '100vw', height: '100vh',
+          maxWidth: 'none', aspectRatio: 'auto', zIndex: '999',
+          overflow: 'hidden', backgroundColor: '#fff', pointerEvents: 'auto'
+        });
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'card-thumbnail';
+        Object.assign(thumbnail.style, {
+          position: 'absolute', inset: '0', width: '100%', height: '100%',
+          backgroundColor: '#fff', backgroundImage: 'none', pointerEvents: 'auto'
+        });
+        const image = document.createElement('img');
+        image.className = 'project-thumb-media is-media-ready';
+        image.alt = '';
+        Object.assign(image.style, {
+          position: 'absolute', inset: '0', display: 'block',
+          width: '100%', height: '100%', opacity: '1',
+          objectFit: 'cover', pointerEvents: 'none'
+        });
+        const svg = color => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="' + color + '"/></svg>'
+        );
+        image.src = svg('#ffffff');
+        thumbnail.appendChild(image);
+        card.appendChild(thumbnail);
+        document.body.appendChild(card);
+
+        const logo = document.querySelector('.site-logo');
+        const hamburger = document.querySelector('.hamburger');
+        if (!logo) throw new Error('Gallery contrast fixture could not locate the site logo.');
+        logo.dataset.logoForeground = 'light';
+        logo.style.filter = 'brightness(0) invert(1)';
+        if (hamburger) {
+          hamburger.dataset.foreground = 'light';
+          hamburger.style.setProperty('--hamburger-foreground', '#fff');
+        }
+        window.__lmGalleryChromeContrastFixture = { card, image, svg, mediaVisibility };
+        try { await image.decode(); } catch (_) {}
+        window.dispatchEvent(new Event('scroll'));
+      });
+
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark',
+        null,
+        { timeout: 2500 }
+      );
+      if (await page.locator('.hamburger').isVisible()) {
+        await page.waitForFunction(
+          () => document.querySelector('.hamburger')?.dataset?.foreground === 'dark',
+          null,
+          { timeout: 2500 }
+        );
+      }
+
+      await page.evaluate(async () => {
+        const fixture = window.__lmGalleryChromeContrastFixture;
+        if (!fixture?.image) throw new Error('Gallery contrast fixture disappeared before the reverse-state check.');
+        fixture.image.src = fixture.svg('#000000');
+        try { await fixture.image.decode(); } catch (_) {}
+        window.dispatchEvent(new Event('scroll'));
+      });
+      await page.waitForFunction(
+        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light',
+        null,
+        { timeout: 2500 }
+      );
+      if (await page.locator('.hamburger').isVisible()) {
+        await page.waitForFunction(
+          () => document.querySelector('.hamburger')?.dataset?.foreground === 'light',
+          null,
+          { timeout: 2500 }
+        );
+      }
+      await page.evaluate(() => {
+        const fixture = window.__lmGalleryChromeContrastFixture;
+        fixture?.card?.remove();
+        (fixture?.mediaVisibility || []).forEach(({ element, visibility }) => {
+          element.style.visibility = visibility;
+        });
+        delete window.__lmGalleryChromeContrastFixture;
+        window.dispatchEvent(new Event('scroll'));
+      });
+
       if (!expectedMessage) {
         await page.evaluate(async () => {
           const hero = document.querySelector('.hero-section:not(.about-hero):not(.hero-section--message)');
