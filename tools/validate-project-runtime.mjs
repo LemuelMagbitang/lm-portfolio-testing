@@ -422,7 +422,7 @@ const videoThumbnail = buildProjectThumbnailMedia(
   'Lazy video',
   { documentRef: thumbnailDocument, resolveAssetUrl: value => '/assets/' + value }
 );
-const visibilityObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '0px');
+const visibilityObserver = thumbnailObservers.find(observer => observer.options.rootMargin === '-24px 0px -24px 0px');
 assert.equal(videoThumbnail.src, '');
 assert.equal(videoThumbnail.dataset.lazySrc, '/assets/media/lazy.mp4');
 assert.equal(videoThumbnail.preload, 'none');
