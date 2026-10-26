@@ -8,7 +8,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { createLifecycle } from '../../core/lifecycle.js';
 import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
-import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-06';
+import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-07';
 
 const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
@@ -391,12 +391,17 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
               fetchImpl: windowRef.fetch.bind(windowRef),
               timeoutMs: 1400
             });
-            if (remoteVideos.length && await ensureMuxVideo()) {
-              // Explicit CMS-selected slides take priority; the placement feed
-              // remains a compatibility fallback for older content only.
+            if (remoteVideos.length) {
+              // Published Video Library assets placed for Hero are the live
+              // source of truth. Manual JSON remains a fallback when no live
+              // Hero assets are published and supplements mixed mode.
+              const fallbackSrc = resolveAssetUrl(LEGACY_HERO_MP4_FALLBACK);
+              const publishedSources = remoteVideos.map(source => source.type === 'mux'
+                ? { ...source, fallbackSrc: source.fallbackSrc || fallbackSrc }
+                : source);
               manualSources = config.loopMode === 'mixed'
-                ? manualSources.concat(remoteVideos)
-                : (manualSources.length ? manualSources : remoteVideos);
+                ? manualSources.concat(publishedSources)
+                : publishedSources;
             }
           } catch (_) {
             // The video backend must never block the normal portfolio startup.

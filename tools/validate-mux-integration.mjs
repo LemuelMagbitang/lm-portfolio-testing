@@ -69,9 +69,17 @@ check(migration.includes("last_mux_event_created_at timestamptz") &&
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
-check(player.includes("@mux/mux-video@0.31.5/+esm") && player.includes('customElements.get("mux-video")'), "Mux Video background loader missing.");
+check(player.includes("@mux/mux-video@0.31.5/dist/mux-video.mjs") &&
+  player.includes('customElements.get("mux-video")') &&
+  player.includes("timeoutMs = 6000") &&
+  player.includes("globalThis.setTimeout(() => finish(false)"),
+  "Mux Video must use its documented module entrypoint and bound loader time so CDN failures cannot keep the hero blank.");
 check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxVideo") && hero.includes("mux-video") &&
-  hero.includes("remoteVideos.length && await ensureMuxVideo()"), "Hero source adapter must use the lightweight Mux Video loader for both configured and public-feed sources.");
+  hero.includes("if (remoteVideos.length)") &&
+  hero.includes("manualSources = config.loopMode === 'mixed'") &&
+  hero.includes(": publishedSources;") &&
+  hero.includes("source.fallbackSrc || fallbackSrc"),
+  "Published CMS Hero placements must take precedence over stale manual JSON entries and retain the local MP4 fallback.");
 const heroMuxSetup = hero.split("if (source.type === 'mux') {")[1]?.split("} else if (source.type === 'video') {")[0] || "";
 const heroReducedMotionBranch = heroMuxSetup.split("if (reducedMotion) {")[1]?.split("} else {")[0] || "";
 check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&

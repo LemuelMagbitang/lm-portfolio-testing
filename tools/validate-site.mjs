@@ -1995,24 +1995,24 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-06") ||
-      !bootstrap.includes("cacheVersion = '20261026-06'") ||
+  if (!entry.includes("bootstrap.js?v=20261026-07") ||
+      !bootstrap.includes("cacheVersion = '20261026-07'") ||
       !composition.includes("navigation/index.js?v=20261019-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
-      !composition.includes("hero/index.js?v=20261026-06") ||
-      !composition.includes("footer/index.js?v=20261026-06") ||
+      !composition.includes("hero/index.js?v=20261026-07") ||
+      !composition.includes("footer/index.js?v=20261026-07") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-06') ||
-      !works.includes('js/app/page-composition.js?v=20261026-06') ||
+      !works.includes('js/app/bootstrap.js?v=20261026-07') ||
+      !works.includes('js/app/page-composition.js?v=20261026-07') ||
       !works.includes('css/style.css?v=20261026-04') ||
-      !works.includes('js/script.js?v=20261026-06') ||
+      !works.includes('js/script.js?v=20261026-07') ||
       !about.includes('style.css?v=20261026-04') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-06') ||
+      !about.includes('js/app/bootstrap.js?v=20261026-07') ||
       !about.includes('script.js?v=20261026-06') ||
       !about.includes('page-composition.js?v=20261026-06')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');

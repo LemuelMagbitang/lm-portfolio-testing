@@ -135,7 +135,7 @@ async function configureLogoRoutes(page) {
     `;
     await route.fulfill({ status: 200, contentType: 'text/javascript', body: source });
   });
-  await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-video@0.31.5/+esm', async route => {
+  await page.route('https://cdn.jsdelivr.net/npm/@mux/mux-video@0.31.5/dist/mux-video.mjs', async route => {
     const source = `
       if (!customElements.get('mux-video')) {
         class MockMuxVideo extends HTMLElement {
