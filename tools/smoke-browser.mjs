@@ -1798,6 +1798,10 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             await page.evaluate(() => {
               const media = document.querySelector('#heroBanner .slide.active mux-video');
               if (!media) throw new Error('Mux no-source recovery fixture could not find the active Mux Video.');
+              // The startup path may already have consumed its one permitted
+              // retry before this isolated regression is injected.
+              media.dataset.networkRetryCount = '';
+              media.dataset.networkRetryReason = '';
               media.networkState = 3;
               media.error = null;
               media.paused = true;
@@ -1812,7 +1816,18 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
                 Number(media.currentTime) > 0.05;
             }, null, { timeout: 3500 }).then(() => true).catch(() => false);
             if (!recovered) {
-              throw new Error(label + ': Mux hero no-source errors must trigger one bounded recovery attempt.');
+              const state = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => ({
+                networkState: Number(media.networkState) || 0,
+                readyState: Number(media.readyState) || 0,
+                error: media.error ? { code: Number(media.error.code) || null, message: String(media.error.message || '') } : null,
+                loadCount: Number(media._loadCount) || 0,
+                currentTime: Number(media.currentTime) || 0,
+                paused: Boolean(media.paused),
+                playbackState: media.dataset.playbackState || '',
+                retryCount: media.dataset.networkRetryCount || '',
+                retryReason: media.dataset.networkRetryReason || ''
+              }));
+              throw new Error(label + ': Mux hero no-source errors must trigger one bounded recovery attempt: ' + JSON.stringify(state));
             }
           }
         } else if (videoContract.activeType === 'video') {
