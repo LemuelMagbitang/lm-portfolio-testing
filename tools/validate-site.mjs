@@ -1540,6 +1540,7 @@ function validateBootstrapHardening() {
       !/mix-blend-mode\s*:\s*normal/.test(hamburgerIconRule) ||
       !/background:\s*var\(--hamburger-foreground,\s*#fff\)/.test(hamburgerIconRule) ||
       !/height:\s*2\.5px/.test(hamburgerIconRule) ||
+       !navigationCss.includes('background-color .22s ease') ||
       !/background:\s*transparent/.test(hamburgerHoverRule) ||
       !/background:\s*transparent/.test(hamburgerPressRule) ||
       !/body\.menu-open \.hamburger-icon span\s*\{[^}]*background:\s*#fff/s.test(navigationCss) ||
@@ -1918,6 +1919,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes('logo.dataset.logoForeground = foreground') ||
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
+       !navigation.includes('function updateHamburgerContrast()') ||
+       !navigation.includes('function sampleBackdropAtElement(subjectElement)') ||
+       !navigation.includes("syncHamburgerForeground(menuButton.dataset.foreground || logo?.dataset?.logoForeground || 'light')") ||
       !navigation.includes("current.classList?.contains('slide') && !current.classList.contains('active')") ||
       !navigation.includes('function setLogoFallbackForeground(') ||
       !navigation.includes("heroSection?.classList.contains('about-hero')") ||
@@ -2002,6 +2006,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('filterTouchAction') || !smoke.includes('async function assertNoLogoBackingPlate') ||
       !smoke.includes('Loading gate') || !smoke.includes('Footer') ||
       !smoke.includes('logo-slide-stack') ||
+       !smoke.includes('Independent chrome contrast fixtures') ||
+       !smoke.includes("hamburgerBackdrop.style.background = '#fff'") ||
+       !smoke.includes("hamburgerBackdrop.style.background = '#000'") ||
       !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
