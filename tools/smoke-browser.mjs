@@ -3980,7 +3980,11 @@ try {
             revealClass:artwork?.classList.contains('is-media-reveal-ready') || false,
             entryAnimation:getComputedStyle(entry).animationName,
             artworkAnimation:style.animationName,
-            artworkDelayMs:(Number.parseFloat(style.animationDelay) || 0) * 1000,
+            artworkDelayMs:(() => {
+              const delay = String(style.animationDelay || '0s').trim();
+              const value = Number.parseFloat(delay) || 0;
+              return delay.endsWith('ms') ? value : value * 1000;
+            })(),
             reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches
           };
         });
