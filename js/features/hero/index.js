@@ -8,7 +8,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { createLifecycle } from '../../core/lifecycle.js';
 import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
-import { ensureMuxVideo } from '../../infrastructure/mux/player.js';
+import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-06';
 
 const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
 
@@ -391,7 +391,7 @@ const LEGACY_HERO_MP4_FALLBACK = 'assets/projects/site/banner/hero-reel.mp4';
               fetchImpl: windowRef.fetch.bind(windowRef),
               timeoutMs: 1400
             });
-            if (remoteVideos.length && await ensureMuxPlayer()) {
+            if (remoteVideos.length && await ensureMuxVideo()) {
               // Explicit CMS-selected slides take priority; the placement feed
               // remains a compatibility fallback for older content only.
               manualSources = config.loopMode === 'mixed'

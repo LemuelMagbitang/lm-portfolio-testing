@@ -70,7 +70,8 @@ check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.p
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public"), "Public client bridge missing.");
 check(player.includes("@mux/mux-player@3/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player loading check missing.");
 check(player.includes("@mux/mux-video@0.31.5/+esm") && player.includes('customElements.get("mux-video")'), "Mux Video background loader missing.");
-check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxVideo") && hero.includes("mux-video"), "Hero source adapter missing.");
+check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxVideo") && hero.includes("mux-video") &&
+  hero.includes("remoteVideos.length && await ensureMuxVideo()"), "Hero source adapter must use the lightweight Mux Video loader for both configured and public-feed sources.");
 const heroMuxSetup = hero.split("if (source.type === 'mux') {")[1]?.split("} else if (source.type === 'video') {")[0] || "";
 const heroReducedMotionBranch = heroMuxSetup.split("if (reducedMotion) {")[1]?.split("} else {")[0] || "";
 check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
