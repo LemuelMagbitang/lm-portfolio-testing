@@ -78,11 +78,15 @@ check(hero.includes("loadPublicMuxVideos") && hero.includes("ensureMuxVideo") &&
   hero.includes("if (remoteVideos.length)") &&
   hero.includes("manualSources = config.loopMode === 'mixed'") &&
   hero.includes(": publishedSources;") &&
-  hero.includes("source.fallbackSrc || fallbackSrc"),
-  "Published CMS Hero placements must take precedence over stale manual JSON entries and retain the local MP4 fallback.");
+  hero.includes("sourceOrigin: 'published-cms'") &&
+  !hero.includes("LEGACY_HERO_MP4_FALLBACK") &&
+  !hero.includes("source.fallbackSrc || fallbackSrc"),
+  "Published CMS Hero placements must take precedence over stale manual JSON entries without inheriting the legacy MP4 fallback.");
 const heroMuxSetup = hero.split("if (source.type === 'mux') {")[1]?.split("} else if (source.type === 'video') {")[0] || "";
 const heroReducedMotionBranch = heroMuxSetup.split("if (reducedMotion) {")[1]?.split("} else {")[0] || "";
-check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
+check(hero.includes("sourceOrigin: 'published-cms'") &&
+  hero.includes("muxPlaybackError") &&
+  !hero.includes("LEGACY_HERO_MP4_FALLBACK") &&
   hero.includes("fallbackMuxToNativeVideo") &&
   heroMuxSetup.includes("documentRef.createElement('mux-video')") &&
   heroMuxSetup.includes("setAttribute('autoplay', '')") &&
@@ -90,12 +94,13 @@ check(hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&
   hero.includes("if (!reducedMotion && sources.some(source => source.type === 'mux'))") &&
   hero.includes("const shouldLoop = slides.length === 1") &&
+  hero.includes("if (media.localName === 'mux-video') {") &&
   hero.includes("}, 15000);") &&
   hero.includes("!['mux-player', 'mux-video'].includes(media?.localName)") &&
   heroReducedMotionBranch.includes("documentRef.createElement('video')") &&
   !heroReducedMotionBranch.includes("playback-id") &&
   styles.includes(".hero-banner .slide mux-video"),
-  "Hero background video must use UI-free Mux Video, muted autoplay, explicit looping, bounded MP4 fallback, and poster-only reduced-motion mode.");
+  "Hero background video must use UI-free Mux Video, muted autoplay, explicit looping, observable startup diagnostics without implicit legacy-MP4 substitution, and poster-only reduced-motion mode.");
 check(footer.includes("documentRef.createElement('mux-video')") &&
   footer.includes("media.setAttribute('autoplay', '')") &&
   footer.includes("media.setAttribute('disable-tracking', '')") &&
@@ -187,11 +192,10 @@ check(script.includes('"mux_auth_failed"') &&
   script.includes("Mux Video Read permission"),
   "CMS must explain how to resolve rejected Mux API credentials.");
 check(
-  (Array.isArray(heroLoop) && heroLoop.some((item) => item.type === "video" && item.src)) ||
-  (hero.includes("assets/projects/site/banner/hero-reel.mp4") &&
-   fs.existsSync("assets/projects/site/banner/hero-reel.mp4") &&
-   hero.includes("fallbackMuxToNativeVideo")),
-  "Legacy MP4 fallback must remain as a checked-in hero slide or a runtime fallback for the selected Mux slide."
+  fs.existsSync("assets/projects/site/banner/hero-reel.mp4") &&
+  hero.includes("fallbackMuxToNativeVideo") &&
+  !hero.includes("LEGACY_HERO_MP4_FALLBACK"),
+  "The legacy MP4 asset must remain available but must not be automatically substituted for the published Mux Hero source."
 );
 const supabaseUrl = String(config.supabaseUrl || "").trim();
 const supabaseKey = String(config.supabaseAnonKey || "").trim();
@@ -216,7 +220,7 @@ if (supabaseUrl && supabaseKey) {
 }
 check(validPublicConfig, "Public config must be blank or contain an HTTPS Supabase project URL and a publishable/anon key (never a secret/service-role key).");
 check(workflow.includes("validate-mux-integration.mjs"), "CI validator is not configured.");
-check(smoke.includes("**/data/video-platform.json") && smoke.includes("local MP4 fallback"), "Browser smoke test must stub the hosted video backend and remain deterministic.");
+check(smoke.includes("**/data/video-platform.json") && smoke.includes("must not silently become the legacy reel"), "Browser smoke test must stub the hosted video backend and remain deterministic.");
 check(!/MUX_TOKEN_SECRET\s*[:=]\s*["'][^"']+["']/.test(admin + webhook + publicApi), "Literal Mux secret appears in code.");
 if (errors.length) { console.error("Mux integration contract: FAIL"); errors.forEach((e) => console.error(" - " + e)); process.exit(1); }
 console.log("Mux integration contract: PASS");
