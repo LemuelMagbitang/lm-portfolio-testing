@@ -11048,6 +11048,11 @@ try {
       await page.waitForTimeout(50);
       verifyLoading('mobile resize',await inspectLoading());
 
+      // The mobile reflow can move the 3D card outside the viewport, which is
+      // expected to pause/unmount the preview. Bring it back into view before
+      // asserting successful readiness and the settled reveal state.
+      await page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded();
+
       await page.waitForFunction(() =>
         Array.from(document.querySelectorAll('#thumbnail-loading-fixtures .project-card .project-thumb-media'))
           .every(media=>media.dataset.mediaState==='ready'),
