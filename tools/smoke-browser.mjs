@@ -11005,9 +11005,11 @@ try {
       // so their delayed responses stay loading together with the model.
       await page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded();
 
+      // The mocked model mount deliberately waits 2.4s; leave browser scheduling
+      // headroom so this measures the loading contract, not CI timer jitter.
       await page.waitForFunction(() =>
         document.querySelectorAll('#thumbnail-loading-fixtures .project-thumb-media-fallback[data-state="loading"]').length === 5,
-        null, {timeout:2500}
+        null, {timeout:4500}
       );
 
       const inspectLoading = () => page.evaluate(() => {
