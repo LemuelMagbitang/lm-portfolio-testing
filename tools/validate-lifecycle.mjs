@@ -192,7 +192,7 @@ assert.match(mediaRendererSource, /const secondaryPreloadPromise = constrainedNe
 assert.match(mediaRendererSource, /const secondaryWaitPromise = constrainedNetwork\s*\? Promise\.resolve\(null\)\s*:\s*withPreloadTimeout\(\s*secondaryPreloadPromise,\s*SECONDARY_MEDIA_STARTUP_WAIT_MS/);
 assert.match(mediaRendererSource, /scheduleJob\(\s*'viewer-module',\s*\(\) => withPreloadTimeout\(\s*Promise\.resolve\(\)\.then\(preloadModelModule\),\s*MODEL_MODULE_PRELOAD_TIMEOUT_MS/);
 assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
-assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) imageDimensionCache\.set\(url, \{ width, height \}\)/);
+assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) \{[\s\S]*?imageDimensionCache\.set\(url, \{ width, height \}\);[\s\S]*?captureAssetPreview\(url, image/);
 assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);
 assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;/);
 assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;/);
