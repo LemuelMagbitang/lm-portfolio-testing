@@ -35,12 +35,24 @@ Use exact origins: scheme and hostname only. Never commit Mux tokens, webhook se
 ## Public website config
 After the Supabase project exists, set data/video-platform.json on the active branch with:
 - supabaseUrl: the project URL
-- supabaseAnonKey: the public anon/publishable key
+- supabasePublishableKey: the browser-safe Supabase publishable key (sb_publishable_…)
 - creatorId: lemuel-magbitang
+
+The runtime still reads the old supabaseAnonKey field as a compatibility fallback, but new configuration should use supabasePublishableKey. Never put a secret key or service-role key in this file.
 
 The active testing branch may contain the configured project URL and publishable key. These are browser-visible values. Public browser access to database tables is revoked; the public Edge Function returns only published metadata. Never put Mux token secrets, webhook signing secrets, or the Supabase service-role key in this file.
 
 The deployed website at https://lemuelmagbitang.github.io and the legacy main branch remain reference-only. Once the active branch is intentionally promoted, configure the approved production origin and public config on the deployment source.
+
+## API-key compatibility and service boundaries
+
+Supabase provides platform-managed SUPABASE_PUBLISHABLE_KEYS and SUPABASE_SECRET_KEYS JSON maps to Edge Functions. The shared server boundary reads the default publishable key for Auth user validation and the default secret key for privileged database access. It temporarily falls back to SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY if the modern key maps are unavailable, and logs a warning without logging key material. Confirm the modern variables exist before disabling legacy keys; Supabase documents the legacy anon/service_role keys as supported through the end of 2026: https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys.
+
+The public browser config contains only a publishable key and the public function URL. Mux token credentials and the webhook signing secret remain server-side Edge Function secrets. The GitHub-backed JSON files remain the site's visual/content CMS; Supabase owns video metadata and asset lifecycle records; Mux owns upload processing, playback IDs, streaming, and video thumbnails. The site intentionally does not duplicate Mux videos in Supabase Storage.
+
+The Video Library tables have RLS enabled and direct anon/authenticated table privileges revoked intentionally. The public website reads only through mux-public, while mux-admin validates the user token and checks the CMS administrator allowlist, and mux-webhook verifies Mux's signed requests. Do not add broad table policies merely to silence the RLS-without-policy advisor. The hardening migration also pins the timestamp trigger search_path and indexes the video foreign-key references.
+
+For local development, copy supabase/functions/.env.example to supabase/functions/.env and fill in your own Mux values. The committed example is deliberately credential-free; the repository ignores local .env files.
 
 
 ## CORS and administrator authorization for the current GitHub Pages test

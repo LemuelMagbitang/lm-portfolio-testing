@@ -36,3 +36,12 @@ Do not treat the validation workflow as sufficient by itself: the repository's `
 ## Reporting
 
 For suspected credential exposure, revoke the affected token immediately in GitHub and rotate it before investigating further.
+
+
+## Supabase and Mux credentials
+
+The browser may contain the Supabase publishable key in `data/video-platform.json`; this key is designed for public clients and is not a database secret. Never commit Supabase secret/service-role keys, Mux API token secrets, Mux webhook signing secrets, GitHub personal access tokens, or local `.env` files.
+
+Mux upload creation, webhook validation, and privileged database queries run only in Supabase Edge Functions. The shared backend helper prefers Supabase's platform-managed `SUPABASE_SECRET_KEYS` and `SUPABASE_PUBLISHABLE_KEYS` maps. It keeps a warning-producing legacy-key fallback for compatibility; do not deactivate old keys until logs and deployment settings confirm that the modern key maps are available.
+
+Local function secrets belong in `supabase/functions/.env`, ignored by Git. Start from `supabase/functions/.env.example`, populate it locally, and never replace the example with real values.
