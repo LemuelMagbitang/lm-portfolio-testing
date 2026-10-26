@@ -1915,13 +1915,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   if (!hero.includes('if (!slides.length) return () => {};') ||
       hero.includes('if (slides.length <= 1 || isReducedMotionFn()) return () => {};') ||
-      !hero.includes('media.loop = slides.length === 1') ||
+      !hero.includes('const shouldLoop = slides.length === 1') ||
+      !hero.includes("if (shouldLoop) media.setAttribute('loop', '');") ||
       !hero.includes('activateMedia(slides[currentIndex])') ||
       !hero.includes("media.dataset.playbackState = 'blocked'") ||
-      !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
-       !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
-       !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
-       !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
+      !hero.includes("const posterSource = source.poster || config.defaultVideoPoster || source.src;") ||
+      !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
+      !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
+      !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
       hero.includes('og-image.jpg') ||
       !hero.includes('if (media.readyState < 2)') ||
       !hero.includes("media.addEventListener('canplay', retryAfterReady, { once: true });") ||
