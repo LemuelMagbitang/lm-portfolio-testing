@@ -46,7 +46,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   function syncAria() {
     menuButton.setAttribute('aria-expanded', String(isOpen));
     menuButton.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
-    syncHamburgerForeground();
+    syncHamburgerForeground(menuButton.dataset.foreground || logo?.dataset?.logoForeground || 'light');
+    scheduleLogoContrast();
   }
 
   function waitForMenuLinkSelection(link) {
@@ -354,9 +355,9 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     })[0] || null;
   }
 
-  function syncHamburgerForeground(preferredForeground = logo?.dataset?.logoForeground || 'light') {
-    // Keep the close mark white while the black full-screen menu is open or
-    // exiting. Only a fully closed menu follows the logo's sampled foreground.
+  function syncHamburgerForeground(preferredForeground = menuButton?.dataset?.foreground || logo?.dataset?.logoForeground || 'light') {
+    // The hamburger has its own sampled foreground while the menu is closed.
+    // On the black full-screen menu, keep the close mark white through exit.
     const menuIsVisible = mobileMenu.classList.contains('is-open') ||
       root.body?.classList.contains('menu-open');
     const resolvedForeground = menuIsVisible ? 'light' : preferredForeground;
@@ -364,18 +365,27 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     menuButton.dataset.foreground = resolvedForeground;
   }
 
+  function foregroundStateForLuminance(luminance, current) {
+    if (!Number.isFinite(luminance)) return current === 'dark' ? 'dark' : 'light';
+    // Hysteresis around the black/white crossover prevents flicker on moving artwork.
+    // Both choices remain above 3:1 for the non-text brand graphics in this band.
+    if (current === 'dark' && luminance >= 0.145) return 'dark';
+    if (current === 'light' && luminance <= 0.215) return 'light';
+    return foregroundForLuminance(luminance) === '#000' ? 'dark' : 'light';
+  }
+
   function setLogoForeground(luminance) {
     if (!logo || !Number.isFinite(luminance)) return;
-    // Hysteresis near the crossover prevents flicker over moving artwork.
-    const current = logo.dataset.logoForeground;
-    let foreground;
-    if (current === 'dark' && luminance >= 0.145) foreground = 'dark';
-    else if (current === 'light' && luminance <= 0.215) foreground = 'light';
-    else foreground = foregroundForLuminance(luminance) === '#000' ? 'dark' : 'light';
-    if (current !== foreground) {
+    const foreground = foregroundStateForLuminance(luminance, logo.dataset.logoForeground);
+    if (logo.dataset.logoForeground !== foreground) {
       logo.dataset.logoForeground = foreground;
       logo.style.filter = foreground === 'dark' ? 'brightness(0)' : 'brightness(0) invert(1)';
     }
+  }
+
+  function setHamburgerForeground(luminance) {
+    if (!menuButton || !Number.isFinite(luminance)) return;
+    const foreground = foregroundStateForLuminance(luminance, menuButton.dataset.foreground);
     syncHamburgerForeground(foreground);
   }
 
@@ -385,16 +395,20 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     setLogoForeground(Number.isFinite(luminance) ? luminance : 0.02);
   }
 
-  function setDynamicBackdropState(isDynamic) {
-    logoBackdropIsDynamic = Boolean(isDynamic);
-    // Hero stills can move and cross-fade just like video. Poll only while
-    // animated artwork is underneath the fixed logo; ordinary page images
-    // remain event-driven so this does not become a permanent background timer.
-    if (logoBackdropIsDynamic && logoBackdropTimer === null && typeof windowRef?.setInterval === 'function') {
+  function setDynamicBackdropState(isDynamic, surface = 'logo') {
+    if (surface === 'hamburger') hamburgerBackdropIsDynamic = Boolean(isDynamic);
+    else logoBackdropIsDynamic = Boolean(isDynamic);
+
+    // Animated artwork can sit behind either fixed control. Keep one shared
+    // timer, and only while at least one control needs frame-by-frame sampling.
+    const shouldPoll = logoBackdropIsDynamic || hamburgerBackdropIsDynamic;
+    if (shouldPoll && logoBackdropTimer === null && typeof windowRef?.setInterval === 'function') {
       logoBackdropTimer = windowRef.setInterval(() => {
-        if (logoBackdropIsDynamic && root.visibilityState !== 'hidden') scheduleLogoContrast();
+        if ((logoBackdropIsDynamic || hamburgerBackdropIsDynamic) && root.visibilityState !== 'hidden') {
+          scheduleLogoContrast();
+        }
       }, 500);
-    } else if (!logoBackdropIsDynamic && logoBackdropTimer !== null) {
+    } else if (!shouldPoll && logoBackdropTimer !== null) {
       windowRef?.clearInterval?.(logoBackdropTimer);
       logoBackdropTimer = null;
     }
@@ -431,53 +445,48 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     return sampledLuminance * artworkAlpha + darkBase * (1 - artworkAlpha);
   }
 
-  function updateLogoContrast() {
-    if (!logo || (!root.elementsFromPoint && !root.elementFromPoint)) return;
-    const rect = logo.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+  function sampleBackdropAtElement(subjectElement) {
+    if (!subjectElement || (!root.elementsFromPoint && !root.elementFromPoint)) return null;
+    const rect = subjectElement.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
     const point = { x: rect.left + rect.width * 0.5, y: rect.top + rect.height * 0.5 };
+
     if (pageTransition && pageTransition.dataset.loading !== 'ready' && !pageTransition.classList.contains('is-hidden')) {
-      setDynamicBackdropState(false);
-        setLogoForeground(luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006);
-      return;
+      return {
+        luminance: luminanceFromColor(parseColor(windowRef?.getComputedStyle?.(pageTransition)?.backgroundColor)) ?? 0.006,
+        dynamic: false,
+        fallback: false
+      };
     }
 
     const stack = typeof root.elementsFromPoint === 'function'
       ? (root.elementsFromPoint(point.x, point.y) || [])
       : [root.elementFromPoint(point.x, point.y)].filter(Boolean);
 
-    // Contact keeps the established white mark without a backing plate.
-    const contactAreaUnderLogo = stack.some(element => element?.closest?.('#contact-section'));
-    if (contactAreaUnderLogo) {
-      setDynamicBackdropState(false);
-      setLogoForeground(0.02);
-      return;
-    }
+    // Keep the established white brand treatment over the deliberately dark Contact surface.
+    const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'));
+    if (contactAreaUnderTarget) return { luminance: 0.02, dynamic: false, fallback: false };
 
     let backdrop = stack.find(element => {
-      if (!element || element === logo || element.closest?.('.navbar')) return false;
+      if (!element || element === subjectElement || element.closest?.('.navbar')) return false;
       if (element.classList?.contains('nav-menu-backdrop')) return true;
       return !element.closest?.('script, style');
     });
     if (!backdrop) {
-      setDynamicBackdropState(false);
-      setLogoForeground(computedBackdropLuminance(root.body));
-      return;
+      return { luminance: computedBackdropLuminance(root.body), dynamic: false, fallback: false };
     }
     if (backdrop.classList?.contains('nav-menu-backdrop')) {
-      setDynamicBackdropState(false);
-        setLogoForeground(0.006);
-      return;
+      return { luminance: 0.006, dynamic: false, fallback: false };
     }
+
     const heroSection = backdrop.closest?.('.hero-section');
     if (heroSection?.classList.contains('hero-section--message')) {
-      // The Works message hero keeps its established dark scrim and white mark.
-      setDynamicBackdropState(false);
-        setLogoForeground(0.02);
-      return;
+      // The Works message hero retains its established dark scrim and white brand controls.
+      return { luminance: 0.02, dynamic: false, fallback: false };
     }
-    // A message overlay or slide wrapper can be the elementFromPoint result.
-    // Normalize it to the Hero media surface before deciding the logo color.
+
+    // A message overlay or slide wrapper can be the hit-test result.
+    // Normalize it to the Hero media surface before deciding the foreground.
     const heroBanner = heroSection?.querySelector?.('.hero-banner');
     if (heroBanner) backdrop = heroBanner;
 
@@ -490,47 +499,70 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       const active = hero?.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player') || [];
       media = Array.from(active).find(candidate => isVisibleMediaAtPoint(candidate, point.x, point.y)) || null;
     }
+
     // The opaque fill of a hero container is behind the artwork; other opaque overlays are not.
     if (!media && !isHeroMediaContainer && backdropColor && backdropColor.a >= 0.98) {
-      setDynamicBackdropState(false);
-      setLogoForeground(computedBackdropLuminance(backdrop));
-      return;
+      return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: false };
     }
     if (!media && backdropColor && backdropColor.a > 0.02 && backdropColor.a < 0.98) {
-      setLogoFallbackForeground(computedBackdropLuminance(backdrop));
-      return;
+      return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: true };
     }
     if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack);
     if (media) {
-      setDynamicBackdropState(Boolean(media.closest?.('.hero-banner')) || ['video', 'canvas', 'lottie-player'].includes(media.localName));
+      const dynamic = Boolean(media.closest?.('.hero-banner')) ||
+        ['video', 'canvas', 'lottie-player'].includes(media.localName);
       const sampledLuminance = sampleMediaLuminance(root, media, point);
       const luminance = heroSection?.classList.contains('about-hero')
         ? effectiveAboutHeroLuminance(media, sampledLuminance, point)
         : sampledLuminance;
-      if (Number.isFinite(luminance)) {
-        setLogoForeground(luminance);
-        return;
-      }
-      setLogoFallbackForeground(computedBackdropLuminance(backdrop));
-      return;
+      if (Number.isFinite(luminance)) return { luminance, dynamic, fallback: false };
+      return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: true };
     }
-    setDynamicBackdropState(false);
     if (style?.backgroundImage && style.backgroundImage !== 'none') {
-      setLogoFallbackForeground(computedBackdropLuminance(backdrop));
+      return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: true };
+    }
+    return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: false };
+  }
+
+  function updateLogoContrast() {
+    const sample = sampleBackdropAtElement(logo);
+    if (!sample) return;
+    if (sample.fallback) setLogoFallbackForeground(sample.luminance);
+    else {
+      setDynamicBackdropState(sample.dynamic, 'logo');
+      setLogoForeground(sample.luminance);
+    }
+  }
+
+  function updateHamburgerContrast() {
+    if (!menuButton) return;
+    const menuIsVisible = mobileMenu.classList.contains('is-open') ||
+      root.body?.classList.contains('menu-open');
+    if (menuIsVisible) {
+      setDynamicBackdropState(false, 'hamburger');
+      syncHamburgerForeground('light');
       return;
     }
-    setLogoForeground(computedBackdropLuminance(backdrop));
+
+    const sample = sampleBackdropAtElement(menuButton);
+    if (!sample) return;
+    setDynamicBackdropState(sample.dynamic, 'hamburger');
+    setHamburgerForeground(sample.luminance);
   }
 
   function scheduleLogoContrast() {
-    if (!logo || logoFrame !== null) return;
-    if (typeof windowRef?.requestAnimationFrame !== 'function') {
+    if ((!logo && !menuButton) || logoFrame !== null) return;
+    const update = () => {
       updateLogoContrast();
+      updateHamburgerContrast();
+    };
+    if (typeof windowRef?.requestAnimationFrame !== 'function') {
+      update();
       return;
     }
     logoFrame = windowRef.requestAnimationFrame(() => {
       logoFrame = null;
-      updateLogoContrast();
+      update();
     });
   }
 
@@ -573,7 +605,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     cleanup.push(() => {
       if (logoFrame !== null) windowRef?.cancelAnimationFrame?.(logoFrame);
       logoFrame = null;
-      setDynamicBackdropState(false);
+      setDynamicBackdropState(false, 'logo');
+      setDynamicBackdropState(false, 'hamburger');
       logoMutationObservers.forEach(observer => observer.disconnect());
       logoMutationObservers = [];
     });
