@@ -187,7 +187,13 @@ export function createLightboxMediaRenderer({
         try { await image.decode?.(); } catch (_) {}
         const width = Number(image.naturalWidth);
         const height = Number(image.naturalHeight);
-        if (!destroyed && width > 0 && height > 0) imageDimensionCache.set(url, { width, height });
+        if (!destroyed && width > 0 && height > 0) {
+          imageDimensionCache.set(url, { width, height });
+          // This image is already downloaded and decoded by the preload queue.
+          // Capture its own tiny frame now so the first Lightbox open can use it
+          // instead of substituting the project's CMS thumbnail.
+          captureAssetPreview(url, image, { documentRef, type: 'image' });
+        }
         resolve(true);
       };
       image.onerror = () => resolve(false);
@@ -289,7 +295,12 @@ export function createLightboxMediaRenderer({
         resolve(ready);
       };
       finishPreload = finish;
-      const onReady = () => finish(true);
+      const onReady = () => {
+        // Use the decoded frame already acquired by this preload operation.
+        // If the browser cannot draw it safely, normal loading UI remains.
+        captureAssetPreview(url, video, { documentRef, type: 'video' });
+        finish(true);
+      };
       const onError = () => finish(false);
       video.addEventListener('loadeddata', onReady, { once: true });
       video.addEventListener('canplay', onReady, { once: true });

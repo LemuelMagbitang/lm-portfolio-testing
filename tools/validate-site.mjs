@@ -2497,6 +2497,8 @@ function validateReducedMotionThumbnailContract() {
       !thumbnail.includes('captureAssetPreview(src, media') ||
       !mediaRenderer.includes('getAssetPreview(resolvedFailedSrc || failedRaw)') ||
       !mediaRenderer.includes('captureAssetPreview(sourceUrl, image') ||
+      !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
+      !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
       !smoke.includes('asset-preview-cache') ||
       !smoke.includes('asset-preview.js?v=20261026-01') ||
       !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-preview="true"]') ||
