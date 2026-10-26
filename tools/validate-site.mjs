@@ -1913,10 +1913,16 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Adaptive logo: backdrop-state feedback, subtle pointer/press motion, and reduced-motion behavior must remain wired.');
   }
 
+  const generalMediaSampleIndex = navigation.indexOf('if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack)');
+  const opaqueBackdropFallbackIndex = navigation.indexOf('if (!media && !isHeroMediaContainer && backdropColor && backdropColor.a >= 0.98)');
+  if (generalMediaSampleIndex < 0 || opaqueBackdropFallbackIndex < 0 || generalMediaSampleIndex > opaqueBackdropFallbackIndex) {
+    err('Adaptive contrast: inspect visible gallery media before falling back to an opaque card canvas.');
+  }
+
   if (!contrast.includes('export function sampleMediaLuminance') ||
       !contrast.includes('export function foregroundForLuminance') ||
       !contrast.includes("['lottie-player', 'mux-video', 'mux-player'].includes(media?.localName)") ||
-      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-01'") ||
+      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-02'") ||
       !navigation.includes('logo.dataset.logoForeground = foreground') ||
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
@@ -1929,10 +1935,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes("function effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
       !navigation.includes("const dynamic = Boolean(media.closest?.('.hero-banner')) ||") ||
+      !navigation.includes("media.closest?.('.card-thumbnail')?.querySelector?.('.project-thumb-foil')") ||
+      !navigation.includes("bind(root, 'pointermove', scheduleLogoContrast") ||
+      !navigation.includes("bind(root, 'pointerover', scheduleLogoContrast") ||
+      !navigation.includes("if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack)") ||
       navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
-      !navigation.includes("const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'))") ||
+      navigation.includes("const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'))") ||
       
-      !navigation.includes("return { luminance: 0.02, dynamic: false, fallback: false }") ||
+      
        navigation.includes('contact-area-logo') ||
        navigation.includes('logo-contrast-fallback') ||
        css.includes('.nav-logo::before') ||
@@ -1992,7 +2002,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('CMS settings sync: normalized hero timing must preserve the stored Ken Burns scale and duration fields.');
   }
 
-  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-01'") ||
+  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-02'") ||
       !footer.includes('chooseForeground(documentRef, source, media)') ||
       !footer.includes('windowRef.setInterval') ||
       !footer.includes('lifecycle.cleanup()')) {
@@ -2042,6 +2052,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('About adaptive-logo fixture') ||
       !smoke.includes('Contact-area logo lost its white/filter transition') ||
       !smoke.includes('message hero media must dynamically switch both logo and hamburger contrast') ||
+      !smoke.includes('Gallery contrast fixture disappeared before the reverse-state check.') ||
       !smoke.includes('navigation label box or visible text is not centered') ||
       css.includes('.nav-logo::before') ||
       css.includes('.nav-logo.logo-contrast-fallback::before') ||
@@ -2049,26 +2060,26 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-11") ||
-      !bootstrap.includes("cacheVersion = '20261026-11'") ||
-      !composition.includes("navigation/index.js?v=20261026-02") ||
+  if (!entry.includes("bootstrap.js?v=20261026-12") ||
+      !bootstrap.includes("cacheVersion = '20261026-12'") ||
+      !composition.includes("navigation/index.js?v=20261026-03") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-09") ||
-      !composition.includes("footer/index.js?v=20261026-08") ||
+      !composition.includes("footer/index.js?v=20261026-09") ||
       !composition.includes("settings/index.js?v=20261021-02") ||
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-11') ||
-      !works.includes('js/app/page-composition.js?v=20261026-11') ||
+      !works.includes('js/app/bootstrap.js?v=20261026-12') ||
+      !works.includes('js/app/page-composition.js?v=20261026-12') ||
       !works.includes('css/style.css?v=20261026-05') ||
-      !works.includes('js/script.js?v=20261026-11') ||
+      !works.includes('js/script.js?v=20261026-12') ||
       !about.includes('style.css?v=20261026-05') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-11') ||
-      !about.includes('script.js?v=20261026-11') ||
-      !about.includes('page-composition.js?v=20261026-11')) {
+      !about.includes('js/app/bootstrap.js?v=20261026-12') ||
+      !about.includes('script.js?v=20261026-12') ||
+      !about.includes('page-composition.js?v=20261026-12')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
