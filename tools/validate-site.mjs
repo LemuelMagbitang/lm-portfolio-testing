@@ -2079,9 +2079,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261026-14') ||
       !works.includes('js/app/page-composition.js?v=20261026-14') ||
-      !works.includes('css/style.css?v=20261026-07') ||
+      !works.includes('css/style.css?v=20261026-08') ||
       !works.includes('js/script.js?v=20261026-14') ||
-      !about.includes('style.css?v=20261026-07') ||
+      !about.includes('style.css?v=20261026-08') ||
       !about.includes('js/app/bootstrap.js?v=20261026-14') ||
       !about.includes('script.js?v=20261026-14') ||
       !about.includes('page-composition.js?v=20261026-14')) {
@@ -2489,8 +2489,9 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('filter: blur(8px);') ||
       !styles.includes('filter: blur(0);') ||
       !styles.includes('@keyframes lightbox-artwork-arrive') ||
-      !styles.includes('@keyframes lightbox-artwork-arrive-fullbleed') ||
-      !styles.includes('.lightbox-artwork.is-youtube-artwork.is-media-reveal-ready') ||
+      !styles.includes('@keyframes lightbox-artwork-arrive-compact') ||
+      !styles.includes('@media(max-width:767px)') ||
+      !styles.includes('#lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready') ||
       !styles.includes('filter:none!important;transition:none!important;') ||
       !styles.includes('video.project-thumb-media.is-media-loading {\n    filter:none!important;') ||
       !styles.includes('.lightbox-artwork.is-media-reveal-ready') ||

@@ -5923,15 +5923,16 @@ footer > .footer-content p{
   from{opacity:.12;transform:scale(.985);filter:blur(8px);}
   to{opacity:1;transform:scale(1);filter:blur(0);}
 }
-/* Full-bleed YouTube artwork must stay exactly viewport-wide throughout its
-   reveal; omit scale on compact viewports while retaining the same focus fade. */
-@keyframes lightbox-artwork-arrive-fullbleed{
+/* Compact Lightbox layouts prioritize exact media bounds over scale. The same
+   fade-and-focus reveal runs without transforms so edge-to-edge artwork and
+   portrait video remain full-width during every animation frame. */
+@keyframes lightbox-artwork-arrive-compact{
   from{opacity:.12;filter:blur(8px);}
   to{opacity:1;filter:blur(0);}
 }
 @media(max-width:767px){
-  #lightboxMediaContainer .lightbox-artwork.is-youtube-artwork.is-media-reveal-ready{
-    animation-name:lightbox-artwork-arrive-fullbleed;
+  #lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready{
+    animation-name:lightbox-artwork-arrive-compact;
   }
 }
 #lightboxMediaContainer>.lightbox-media-item[data-media-reveal="ready"],
