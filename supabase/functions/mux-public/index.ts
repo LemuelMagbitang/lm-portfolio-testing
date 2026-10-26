@@ -8,7 +8,15 @@ function posterFor(asset: any): string | null {
   return url.toString();
 }
 Deno.serve(async (request: Request) => {
-  const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "apikey, content-type", "Access-Control-Allow-Methods": "GET, OPTIONS" };
+  // The browser sends an OPTIONS preflight before the public feed GET. Allow
+  // the common request headers used by fetch and Supabase clients so the
+  // browser can continue to the actual request instead of silently abandoning it.
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, cache-control, pragma",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Max-Age": "86400"
+  };
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (request.method !== "GET") return jsonResponse(request, { error: "Method not allowed." }, 405, true);
   try {
