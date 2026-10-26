@@ -1915,19 +1915,21 @@ function validateResponsiveHeroGalleryAndLogoContract() {
 
   if (!contrast.includes('export function sampleMediaLuminance') ||
       !contrast.includes('export function foregroundForLuminance') ||
-      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-08'") ||
+      !contrast.includes("['lottie-player', 'mux-video', 'mux-player'].includes(media?.localName)") ||
+      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-01'") ||
       !navigation.includes('logo.dataset.logoForeground = foreground') ||
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
+      !navigation.includes("const mediaSelector = 'video, img, canvas, lottie-player, mux-video, mux-player'") ||
        !navigation.includes('function updateHamburgerContrast()') ||
        !navigation.includes('function sampleBackdropAtElement(subjectElement)') ||
        !navigation.includes("syncHamburgerForeground(menuButton.dataset.foreground || logo?.dataset?.logoForeground || 'light')") ||
       !navigation.includes("current.classList?.contains('slide') && !current.classList.contains('active')") ||
       !navigation.includes('function setLogoFallbackForeground(') ||
-      !navigation.includes("heroSection?.classList.contains('about-hero')") ||
+      !navigation.includes("function effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
       !navigation.includes("const dynamic = Boolean(media.closest?.('.hero-banner')) ||") ||
-      !navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
+      navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
       !navigation.includes("const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'))") ||
       
       !navigation.includes("return { luminance: 0.02, dynamic: false, fallback: false }") ||
@@ -1936,8 +1938,10 @@ function validateResponsiveHeroGalleryAndLogoContract() {
        css.includes('.nav-logo::before') ||
        css.includes('.nav-logo.logo-contrast-fallback::before') ||
        css.includes('.nav-logo.contact-area-logo::before') ||
-      !navigation.includes("function effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
-      !navigation.includes("effectiveAboutHeroLuminance(media, sampledLuminance, point)") ||
+      !css.includes('--lm-contrast-scrim-top-alpha') ||
+      !css.includes('--lm-contrast-scrim-bottom-alpha') ||
+      !navigation.includes("function effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
+      !navigation.includes("effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
       !navigation.includes("--about-hero-scrim-top-alpha") ||
       !navigation.includes("--about-hero-scrim-bottom-alpha") ||
       !navigation.includes('instantLogoReset') ||
@@ -1988,7 +1992,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('CMS settings sync: normalized hero timing must preserve the stored Ken Burns scale and duration fields.');
   }
 
-  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261018-08'") ||
+  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-01'") ||
       !footer.includes('chooseForeground(documentRef, source, media)') ||
       !footer.includes('windowRef.setInterval') ||
       !footer.includes('lifecycle.cleanup()')) {
@@ -2037,6 +2041,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes('About page must not render Works category filter tabs') ||
       !smoke.includes('About adaptive-logo fixture') ||
       !smoke.includes('Contact-area logo lost its white/filter transition') ||
+      !smoke.includes('message hero media must dynamically switch both logo and hamburger contrast') ||
       !smoke.includes('navigation label box or visible text is not centered') ||
       css.includes('.nav-logo::before') ||
       css.includes('.nav-logo.logo-contrast-fallback::before') ||
@@ -2044,9 +2049,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261026-10") ||
-      !bootstrap.includes("cacheVersion = '20261026-10'") ||
-      !composition.includes("navigation/index.js?v=20261026-01") ||
+  if (!entry.includes("bootstrap.js?v=20261026-11") ||
+      !bootstrap.includes("cacheVersion = '20261026-11'") ||
+      !composition.includes("navigation/index.js?v=20261026-02") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-09") ||
       !composition.includes("footer/index.js?v=20261026-08") ||
@@ -2056,14 +2061,14 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("projects/index.js?v=20261026-01") ||
       !composition.includes("lightbox/index.js?v=20261025-07") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261026-10') ||
-      !works.includes('js/app/page-composition.js?v=20261026-10') ||
-      !works.includes('css/style.css?v=20261026-04') ||
-      !works.includes('js/script.js?v=20261026-10') ||
-      !about.includes('style.css?v=20261026-04') ||
-      !about.includes('js/app/bootstrap.js?v=20261026-10') ||
-      !about.includes('script.js?v=20261026-10') ||
-      !about.includes('page-composition.js?v=20261026-10')) {
+      !works.includes('js/app/bootstrap.js?v=20261026-11') ||
+      !works.includes('js/app/page-composition.js?v=20261026-11') ||
+      !works.includes('css/style.css?v=20261026-05') ||
+      !works.includes('js/script.js?v=20261026-11') ||
+      !about.includes('style.css?v=20261026-05') ||
+      !about.includes('js/app/bootstrap.js?v=20261026-11') ||
+      !about.includes('script.js?v=20261026-11') ||
+      !about.includes('page-composition.js?v=20261026-11')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
