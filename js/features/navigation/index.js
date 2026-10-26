@@ -8,7 +8,7 @@
  * scoped to the portfolio pages only.
  */
 
-import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js?v=20261018-08';
+import { foregroundForLuminance, sampleMediaLuminance } from '../../infrastructure/browser/media-contrast.js?v=20261026-01';
 
 export function initNavigation({ root = globalThis.document, getCuratedViewSlug = () => '' } = {}) {
   const menuButton = root?.querySelector('.hamburger, .menu-button');
@@ -313,7 +313,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
 
   function isVisibleMediaAtPoint(candidate, x, y) {
     if (!candidate || candidate === logo) return false;
-    if (!candidate.matches?.('video, img, canvas, lottie-player')) return false;
+    if (!candidate.matches?.('video, img, canvas, lottie-player, mux-video, mux-player')) return false;
     if (candidate.closest?.('.navbar, #pageTransition, .page-transition, .nav-menu-backdrop')) return false;
     if (!containsViewportPoint(candidate, x, y)) return false;
     for (let current = candidate; current && current !== root.documentElement; current = current.parentElement) {
@@ -327,7 +327,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   }
 
   function findMediaAtPoint(target, x, y, stack = []) {
-    const mediaSelector = 'video, img, canvas, lottie-player';
+    const mediaSelector = 'video, img, canvas, lottie-player, mux-video, mux-player';
     const candidates = new Set();
     const add = candidate => { if (isVisibleMediaAtPoint(candidate, x, y)) candidates.add(candidate); };
     stack.forEach(add);
@@ -336,7 +336,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
     const heroBanner = target?.matches?.('.hero-banner') ? target : target?.closest?.('.hero-banner');
     if (heroBanner) {
-      heroBanner.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player').forEach(add);
+      heroBanner.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player, .slide.active mux-video, .slide.active mux-player').forEach(add);
     }
     // Prefer the hit-test paint stack. Only do a document scan if uncommon
     // transparent wrappers hid every media element from the stack and active-slide lookup.
@@ -416,10 +416,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   }
 
 
-  function effectiveAboutHeroLuminance(media, sampledLuminance, point) {
+  function effectiveHeroMediaLuminance(media, sampledLuminance, point) {
     const banner = media?.closest?.('.hero-banner');
-    const aboutHero = banner?.closest?.('.about-hero');
-    if (!banner || !aboutHero || !Number.isFinite(sampledLuminance)) return sampledLuminance;
+    const heroSection = banner?.closest?.('.hero-section');
+    if (!banner || !heroSection || !Number.isFinite(sampledLuminance)) return sampledLuminance;
 
     const slide = media.closest?.('.slide');
     const bannerRect = banner.getBoundingClientRect();
@@ -430,8 +430,8 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       const parsed = Number.parseFloat(value);
       return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : fallback;
     };
-    const topScrim = alphaValue(bannerStyle?.getPropertyValue('--about-hero-scrim-top-alpha'), 0.32);
-    const bottomScrim = alphaValue(bannerStyle?.getPropertyValue('--about-hero-scrim-bottom-alpha'), 0.72);
+    const topScrim = alphaValue(bannerStyle?.getPropertyValue('--lm-contrast-scrim-top-alpha'), 0);
+    const bottomScrim = alphaValue(bannerStyle?.getPropertyValue('--lm-contrast-scrim-bottom-alpha'), 0);
     const position = bannerRect.height > 0
       ? Math.max(0, Math.min(1, (point.y - bannerRect.top) / bannerRect.height))
       : 0;
@@ -440,9 +440,10 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     const mediaOpacity = alphaValue(mediaStyle?.opacity, 1);
     const artworkAlpha = Math.max(0, Math.min(1, slideOpacity * mediaOpacity * (1 - scrimAlpha)));
     const darkBase = luminanceFromColor({ r: 18, g: 18, b: 18 }) ?? 0.006;
-    // The canvas sampler returns source media luminance. Composite it against
-    // the dark base using the active slide opacity and the About hero scrim,
-    // so the logo responds to the artwork as it is actually rendered.
+
+    // Sample the artwork at the control's actual viewport point, then composite
+    // its opacity and the configured top-to-bottom hero scrim. This prevents
+    // source-image luminance from being mistaken for the pixels the visitor sees.
     return sampledLuminance * artworkAlpha + darkBase * (1 - artworkAlpha);
   }
 
@@ -481,11 +482,6 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     }
 
     const heroSection = backdrop.closest?.('.hero-section');
-    if (heroSection?.classList.contains('hero-section--message')) {
-      // The Works message hero retains its established dark scrim and white brand controls.
-      return { luminance: 0.02, dynamic: false, fallback: false };
-    }
-
     // A message overlay or slide wrapper can be the hit-test result.
     // Normalize it to the Hero media surface before deciding the foreground.
     const heroBanner = heroSection?.querySelector?.('.hero-banner');
@@ -497,7 +493,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
     let media = isVisibleMediaAtPoint(backdrop, point.x, point.y) ? backdrop : null;
     if (!media && isHeroMediaContainer) {
       const hero = backdrop.matches?.('.hero-banner') ? backdrop : backdrop.closest?.('.hero-banner');
-      const active = hero?.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player') || [];
+      const active = hero?.querySelectorAll('.slide.active video, .slide.active img, .slide.active canvas, .slide.active lottie-player, .slide.active mux-video, .slide.active mux-player') || [];
       media = Array.from(active).find(candidate => isVisibleMediaAtPoint(candidate, point.x, point.y)) || null;
     }
 
@@ -513,11 +509,12 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
       const dynamic = Boolean(media.closest?.('.hero-banner')) ||
         ['video', 'canvas', 'lottie-player'].includes(media.localName);
       const sampledLuminance = sampleMediaLuminance(root, media, point);
-      const luminance = heroSection?.classList.contains('about-hero')
-        ? effectiveAboutHeroLuminance(media, sampledLuminance, point)
-        : sampledLuminance;
+      const luminance = effectiveHeroMediaLuminance(media, sampledLuminance, point);
       if (Number.isFinite(luminance)) return { luminance, dynamic, fallback: false };
-      return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: true };
+      // Keep retrying dynamic media (especially streamed Mux video) while its
+      // first readable frame becomes available; do not permanently pin the UI
+      // to the container's dark fallback just because an early sample was empty.
+      return { luminance: computedBackdropLuminance(backdrop), dynamic, fallback: false };
     }
     if (style?.backgroundImage && style.backgroundImage !== 'none') {
       return { luminance: computedBackdropLuminance(backdrop), dynamic: false, fallback: true };
