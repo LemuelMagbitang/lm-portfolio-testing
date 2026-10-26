@@ -260,6 +260,7 @@ export function initNavigation({ root = globalThis.document, getCuratedViewSlug 
   const pageTransition = root.getElementById('pageTransition');
   let logoFrame = null;
   let logoBackdropIsDynamic = false;
+  let hamburgerBackdropIsDynamic = false;
   let logoBackdropTimer = null;
   let logoMutationObservers = [];
 
