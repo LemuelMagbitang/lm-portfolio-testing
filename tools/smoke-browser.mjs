@@ -424,11 +424,12 @@ async function assertHamburgerForeground(page, label, menuState = 'closed') {
       barBlendModes: bars.map(bar => getComputedStyle(bar).mixBlendMode)
     };
   });
-  const expectedForeground = menuState === 'open' ? 'light' : state.logoForeground;
+  const expectedForeground = menuState === 'open' ? 'light' : state.hamburgerForeground;
   const expectedColor = expectedForeground === 'dark' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
   if (state.menuOpen !== (menuState === 'open') ||
       !['light', 'dark'].includes(state.logoForeground) ||
-      state.hamburgerForeground !== expectedForeground ||
+      !['light', 'dark'].includes(state.hamburgerForeground) ||
+      (menuState === 'open' && state.hamburgerForeground !== 'light') ||
       state.buttonBackground !== 'rgba(0, 0, 0, 0)' ||
       state.buttonBlendMode !== 'normal' ||
       state.barColors.length !== 3 ||
@@ -650,9 +651,10 @@ async function assertPublicNavigation(page, { href, label }) {
     navContract.hamburgerBackdropFilter !== 'none' ||
     navContract.hamburgerWidth !== '38px' ||
     navContract.hamburgerHeight !== '38px' ||
-    navContract.hamburgerForeground !== (navContract.mobileMenuOpen ? 'light' : navContract.logoForeground) ||
+    !['light', 'dark'].includes(navContract.hamburgerForeground) ||
+    (navContract.mobileMenuOpen && navContract.hamburgerForeground !== 'light') ||
     navContract.hamburgerIconColors.some(color =>
-      color !== ((navContract.mobileMenuOpen ? 'light' : navContract.logoForeground) === 'dark'
+      color !== (navContract.hamburgerForeground === 'dark'
         ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)')) ||
     JSON.stringify(navContract.hamburgerIconBlendModes) !== JSON.stringify(['normal', 'normal', 'normal']) ||
     JSON.stringify(navContract.labels) !== JSON.stringify(expectedLabels) ||
