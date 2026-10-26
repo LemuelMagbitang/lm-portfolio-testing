@@ -2065,8 +2065,8 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261027-02") ||
-      !bootstrap.includes("cacheVersion = '20261027-02'") ||
+  if (!entry.includes("bootstrap.js?v=20261027-03") ||
+      !bootstrap.includes("cacheVersion = '20261027-03'") ||
       !composition.includes("navigation/index.js?v=20261026-04") ||
       !composition.includes("about/index.js?v=20261024-01") ||
       !composition.includes("hero/index.js?v=20261026-10") ||
@@ -2075,16 +2075,16 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
       !composition.includes("gallery/index.js?v=20261024-02") ||
       !composition.includes("projects/index.js?v=20261026-03") ||
-      !composition.includes("lightbox/index.js?v=20261027-02") ||
+      !composition.includes("lightbox/index.js?v=20261027-03") ||
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261027-02') ||
-      !works.includes('js/app/page-composition.js?v=20261027-02') ||
+      !works.includes('js/app/bootstrap.js?v=20261027-03') ||
+      !works.includes('js/app/page-composition.js?v=20261027-03') ||
       !works.includes('css/style.css?v=20261027-01') ||
-      !works.includes('js/script.js?v=20261027-02') ||
+      !works.includes('js/script.js?v=20261027-03') ||
       !about.includes('style.css?v=20261027-01') ||
-      !about.includes('js/app/bootstrap.js?v=20261027-02') ||
-      !about.includes('script.js?v=20261027-02') ||
-      !about.includes('page-composition.js?v=20261027-02')) {
+      !about.includes('js/app/bootstrap.js?v=20261027-03') ||
+      !about.includes('script.js?v=20261027-03') ||
+      !about.includes('page-composition.js?v=20261027-03')) {
     err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
   }
 }
@@ -2508,6 +2508,10 @@ function validateReducedMotionThumbnailContract() {
       !smoke.includes("img:not(.lightbox-media-fallback-image)") ||
       !smoke.includes(".lightbox-artwork img:not(.lightbox-media-fallback-image)") ||
       !mediaRenderer.includes('captureAssetPreview(sourceUrl, image') ||
+      !mediaRenderer.includes("const previewSource = `https://stream.mux.com/${playbackId}.m3u8`;") ||
+      !mediaRenderer.includes("showLightboxMediaFallback(artwork, project, previewSource, 'video', 'loading', safePoster)") ||
+      !mediaRenderer.includes("captureAssetPreview(previewSource, player, { documentRef, type: 'video' })") ||
+      !mediaRenderer.includes("sourceIdentity(resolvedPoster) !== projectThumbnailIdentity") ||
       !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
       !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
       !smoke.includes('asset-preview-cache') ||
@@ -2535,7 +2539,7 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('[data-media-reveal="ready"]') ||
       !mediaRenderer.includes('function markArtworkReady(artwork)') ||
       !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
-      !lightboxIndex.includes("media-renderer.js?v=20261027-02") ||
+      !lightboxIndex.includes("media-renderer.js?v=20261027-03") ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
       !smoke.includes('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group') ||
       smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||

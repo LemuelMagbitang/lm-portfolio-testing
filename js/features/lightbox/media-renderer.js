@@ -1983,7 +1983,19 @@ export function createLightboxMediaRenderer({
     player.controls = true;
     player.playsInline = true;
     const poster = String(item.poster || item.src || '').trim();
-    if (poster) player.setAttribute('poster', resolveAssetUrl(poster));
+    const previewSource = `https://stream.mux.com/${playbackId}.m3u8`;
+    const thumbnailValue = project?.thumbnail;
+    const thumbnailRaw = String(
+      (typeof thumbnailValue === 'string' ? thumbnailValue : thumbnailValue?.src) || ''
+    ).trim();
+    const projectThumbnailIdentity = thumbnailRaw
+      ? sourceIdentity(resolveAssetUrl(thumbnailRaw))
+      : '';
+    const resolvedPoster = poster ? resolveAssetUrl(poster) : '';
+    const safePoster = resolvedPoster && sourceIdentity(resolvedPoster) !== projectThumbnailIdentity
+      ? poster
+      : '';
+    if (safePoster) player.setAttribute('poster', resolveAssetUrl(safePoster));
     if (protectionEnabled()) {
       player.classList.add('no-save');
       player.addEventListener('contextmenu', event => event.preventDefault());
@@ -2010,6 +2022,12 @@ export function createLightboxMediaRenderer({
         windowRef?.clearTimeout?.(loadTimer);
         loadTimer = null;
       }
+      captureAssetPreview(previewSource, player, { documentRef, type: 'video' });
+      installAssetPreviewOnFallback(
+        artwork.querySelector?.('.lightbox-media-fallback'),
+        previewSource,
+        { documentRef, imageClass: 'lightbox-media-fallback-image' }
+      );
       markArtworkReady(artwork);
       clearLightboxMediaFallback(artwork);
     };
@@ -2026,7 +2044,9 @@ export function createLightboxMediaRenderer({
     player.addEventListener('canplay', onReady);
     player.addEventListener('playing', onReady);
     player.addEventListener('error', onError);
-    if (poster) showLightboxMediaFallback(artwork, project, poster, 'video', 'loading', poster);
+    // Use a playback-specific key so a cached project thumbnail can never be
+    // mistaken for a preview frame of the Mux video itself.
+    showLightboxMediaFallback(artwork, project, previewSource, 'video', 'loading', safePoster);
 
     const activatePlayer = async () => {
       try {
