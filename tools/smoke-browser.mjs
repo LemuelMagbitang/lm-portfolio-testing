@@ -1258,7 +1258,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
       if (
         independentChromeContrast.logoForeground !== 'light' ||
         independentChromeContrast.hamburgerForeground !== 'dark' ||
-        independentChromeContrast.logoFilter.includes('brightness(0) invert(1)') ||
+        !independentChromeContrast.logoFilter.includes('brightness(0) invert(1)') ||
         !independentChromeContrast.logoTransition.includes('filter') ||
         !independentChromeContrast.hamburgerTransition.includes('background-color')
       ) {
