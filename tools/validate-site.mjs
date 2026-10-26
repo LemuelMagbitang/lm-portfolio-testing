@@ -2079,9 +2079,9 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !settingsFeature.includes("site-settings.js?v=20261021-02") ||
       !works.includes('js/app/bootstrap.js?v=20261026-14') ||
       !works.includes('js/app/page-composition.js?v=20261026-14') ||
-      !works.includes('css/style.css?v=20261026-08') ||
+      !works.includes('css/style.css?v=20261026-09') ||
       !works.includes('js/script.js?v=20261026-14') ||
-      !about.includes('style.css?v=20261026-08') ||
+      !about.includes('style.css?v=20261026-09') ||
       !about.includes('js/app/bootstrap.js?v=20261026-14') ||
       !about.includes('script.js?v=20261026-14') ||
       !about.includes('page-composition.js?v=20261026-14')) {

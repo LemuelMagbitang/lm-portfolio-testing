@@ -5930,11 +5930,6 @@ footer > .footer-content p{
   from{opacity:.12;filter:blur(8px);}
   to{opacity:1;filter:blur(0);}
 }
-@media(max-width:767px){
-  #lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready{
-    animation-name:lightbox-artwork-arrive-compact;
-  }
-}
 #lightboxMediaContainer>.lightbox-media-item[data-media-reveal="ready"],
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item[data-media-reveal="ready"]{
   animation:lightbox-media-arrive .36s cubic-bezier(.22,1,.36,1) both;
@@ -5950,6 +5945,14 @@ footer > .footer-content p{
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(4)[data-media-reveal="ready"] .lightbox-artwork{animation-delay:105ms;}
 #lightboxMediaContainer>.lightbox-media-item:nth-child(n+5)[data-media-reveal="ready"] .lightbox-artwork,
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item:nth-child(n+5)[data-media-reveal="ready"] .lightbox-artwork{animation-delay:135ms;}
+/* Keep this override after the base animation shorthand: on compact viewports
+   every Lightbox artwork frame stays dimension-stable while only opacity/blur
+   change. Full-bleed and portrait media therefore remain full-width. */
+@media(max-width:767px){
+  #lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready{
+    animation-name:lightbox-artwork-arrive-compact;
+  }
+}
 
 /* Calm, clean artwork groups with one responsive behavior: ungrouped assets
    keep the legacy vertical flow; grouped assets use a clean grid unless every
