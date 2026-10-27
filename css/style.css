@@ -6563,10 +6563,7 @@ body.menu-open .hamburger-icon span {
 @media (max-width:760px), (hover:none) and (pointer:coarse) {
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen,
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-layer,
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer,
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer {
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic * {
     animation:none!important;
   }
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before {
