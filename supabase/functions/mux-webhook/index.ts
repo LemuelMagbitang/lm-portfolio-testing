@@ -151,11 +151,25 @@ Deno.serve(async (request: Request) => {
       await unpublishActiveAssets(db, affectedAssets.map((item: any) => item.id));
     } else if (["video.upload.errored","video.upload.timed_out","video.upload.cancelled"].includes(event.type)) {
       const state = event.type.endsWith("timed_out") ? "timed_out" : event.type.endsWith("cancelled") ? "cancelled" : "failed";
-      const result = await db.from("video_assets").update({
+      const changes = {
         upload_state: state, asset_status: "errored", last_error: details(d),
         last_mux_event_created_at: eventCreatedAt
-      }).eq("mux_upload_id", d.id).or(newerEventFilter).select("id");
-      updateError = result.error;
+      };
+      let result = await db.from("video_assets").update(changes)
+        .eq("mux_upload_id", d.id).or(newerEventFilter).select("id");
+      if (result.error) throw result.error;
+      let affectedAssets = result.data || [];
+
+      // The terminal upload webhook can beat the admin route's final write,
+      // just like asset_created. Fall back only to our unique upload-attempt ID
+      // so unrelated uploads in the same Mux environment remain ignored.
+      const externalId = String(d.new_asset_settings?.meta?.external_id || d.meta?.external_id || "").trim();
+      if (!affectedAssets.length && externalId) {
+        result = await db.from("video_assets").update(changes)
+          .eq("external_id", externalId).or(newerEventFilter).select("id");
+        if (result.error) throw result.error;
+        affectedAssets = result.data || [];
+      }
     }
     if (updateError) throw updateError;
     const { error: doneError } = await db.from("mux_webhook_events").update({ processed_at: new Date().toISOString(), processing_error: null }).eq("event_id", event.id);
