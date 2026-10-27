@@ -38,6 +38,9 @@ jobs:
       - name: Validate Mux video integration contracts
         run: node tools/validate-mux-integration.mjs
 
+      - name: Test Mux player loader retry lifecycle
+        run: node tools/test-mux-player-loader.mjs
+
       - name: Test media reference audit
         run: node tools/test-media-reference-audit.mjs
 
