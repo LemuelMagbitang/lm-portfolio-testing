@@ -5208,6 +5208,42 @@ try {
         }
       }
 
+      // The shared test-project Lightbox also carries a Mux video. CI uses a
+      // standards-shaped custom-element mock, so assert the player/presentation
+      // contract here without pretending to certify the real HLS stream.
+      const muxLightboxPlayer = page.locator('#lightboxMediaContainer mux-player.lightbox-mux-player').first();
+      await muxLightboxPlayer.waitFor({ state: 'attached', timeout: 7000 });
+      await page.waitForFunction(() => {
+        const player = document.querySelector('#lightboxMediaContainer mux-player.lightbox-mux-player');
+        return Boolean(player?.getAttribute('playback-id'));
+      }, null, { timeout: 7000 });
+      const muxLightboxContract = await muxLightboxPlayer.evaluate(player => {
+        const artwork = player.closest('.lightbox-artwork');
+        const rect = artwork?.getBoundingClientRect();
+        return {
+          playbackId: player.getAttribute('playback-id') || '',
+          streamType: player.getAttribute('stream-type') || '',
+          preload: player.getAttribute('preload') || '',
+          playsInline: player.playsInline === true || player.hasAttribute('playsinline'),
+          controls: player.controls === true,
+          metadataTitle: player.getAttribute('metadata-video-title') || '',
+          artworkClass: artwork?.classList.contains('is-mux-video-artwork') || false,
+          artworkRatio: rect?.height ? rect.width / rect.height : 0,
+          fallbackPresent: Boolean(artwork?.querySelector('.lightbox-media-fallback'))
+        };
+      });
+      if (!muxLightboxContract.playbackId ||
+          muxLightboxContract.streamType !== 'on-demand' ||
+          muxLightboxContract.preload !== 'metadata' ||
+          !muxLightboxContract.playsInline ||
+          !muxLightboxContract.controls ||
+          !muxLightboxContract.metadataTitle ||
+          !muxLightboxContract.artworkClass ||
+          Math.abs(muxLightboxContract.artworkRatio - 1) > 0.025 ||
+          !muxLightboxContract.fallbackPresent) {
+        throw new Error('Test Project Mux Lightbox contract failed: ' + JSON.stringify(muxLightboxContract));
+      }
+
       const modelActivate = modelShell.locator('.model-viewer-activate-content').first();
       if (await modelActivate.count() !== 1 || !(await modelActivate.isVisible().catch(() => false))) {
         throw new Error('3D Lightbox did not expose its Click for 3D View activation affordance.');
