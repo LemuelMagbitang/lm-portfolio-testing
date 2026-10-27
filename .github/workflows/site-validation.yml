@@ -38,6 +38,9 @@ jobs:
       - name: Validate Mux video integration contracts
         run: node tools/validate-mux-integration.mjs
 
+      - name: Test media reference audit
+        run: node tools/test-media-reference-audit.mjs
+
       - name: Audit asset formats and file sizes
         run: node tools/audit-media-assets.mjs
 
