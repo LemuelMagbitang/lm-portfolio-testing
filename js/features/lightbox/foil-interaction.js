@@ -46,6 +46,7 @@ export function getFoilEdgeRotation(xPercent, yPercent, direction = 1, maxRotati
   const y = Math.max(0, Math.min(100, Number(yPercent) || 0));
   const radius = Math.min(1, Math.hypot((x - 50) / 50, (y - 50) / 50));
   const progress = Math.max(0, Math.min(1, (radius - EDGE_ROTATION_START) / (1 - EDGE_ROTATION_START)));
+  if (progress <= 0) return 0;
   const sign = Number(direction) < 0 ? -1 : 1;
   const limit = Math.max(0, Number(maxRotation) || 0);
   return Math.round(sign * limit * progress * 100) / 100;
