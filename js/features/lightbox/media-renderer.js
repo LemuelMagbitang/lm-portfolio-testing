@@ -943,7 +943,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-light-x', '34%');
     surface.style.setProperty('--holo-light-y', '26%');
     surface.style.setProperty('--holo-tilt-strength', '0');
-    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0, rotationDirection, compactTarget, frame: null, lastTime: 0 });
+    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0, rotationDirection, compactTarget, hoverActive: false, frame: null, lastTime: 0 });
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
     surface.style.setProperty('--holo-angle', '0deg');
@@ -1221,6 +1221,7 @@ export function createLightboxMediaRenderer({
         windowRef?.cancelAnimationFrame?.(motion.frame);
       }
       holographicMotionStates.delete(surface);
+      surface.style.removeProperty('animation-play-state');
       responsiveFoilCleanups.splice(0).forEach(dispose => { try { dispose(); } catch (_) {} });
       holographicNormalControllers.get(surface)?.forEach(controller => { try { controller.destroy(); } catch (_) {} });
       holographicNormalControllers.delete(surface);
@@ -1236,6 +1237,14 @@ export function createLightboxMediaRenderer({
       // Only fine hover pointers can drive the optical response. Touch never
       // enters a hold/drag mode, preserving native scrolling and tap-to-flip.
       if (!hoverAvailable || event.pointerType !== 'mouse') return;
+      const motion = holographicMotionStates.get(surface);
+      if (motion && !motion.hoverActive) {
+        // Stabilize the hit area while the inner foil rotates. Otherwise the
+        // idle-float transform moves the outer edge away from the pointer and
+        // can interrupt the path before the configured maximum angle is reached.
+        motion.hoverActive = true;
+        surface.style.animationPlayState = 'paused';
+      }
       pendingPointer = {
         clientX: Number(event.clientX) || 0,
         clientY: Number(event.clientY) || 0,
@@ -1260,6 +1269,9 @@ export function createLightboxMediaRenderer({
 
     const onPointerLeave = () => {
       cancelQueuedPointer();
+      const motion = holographicMotionStates.get(surface);
+      if (motion) motion.hoverActive = false;
+      surface.style.removeProperty('animation-play-state');
       setHolographicTarget(surface, 50, 50, 0);
     };
 
