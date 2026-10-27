@@ -26,7 +26,7 @@ const smoke = read("tools/smoke-browser.mjs");
 const supabaseConfig = read("supabase/config.toml");
 const muxFeatureSources = [hero, footer, read("js/features/lightbox/media-renderer.js")];
 check(hero.includes("await import('../../infrastructure/mux/public-videos.js?v=20261027-01')") &&
-  !/^\\s*import\\s+\\{\\s*loadPublicMuxVideos\\s*\\}\\s+from\\s+['\"][^'\"]*infrastructure\\/mux\\/public-videos\\.js/m.test(hero),
+  !hero.includes("import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';"),
   "Optional published Mux feed helper must load dynamically so a feed-helper fetch failure cannot reject page startup.");
 check(muxFeatureSources.every(source =>
   source.includes(muxPlayerModuleUrl) &&
