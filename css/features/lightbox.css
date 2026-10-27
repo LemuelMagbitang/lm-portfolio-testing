@@ -85,6 +85,62 @@
   );
 }
 
+/* Compact artwork: retain image flip and JS-driven 3D parallax, but remove
+   visible foil materials and suspend the WebGL normal-map renderer on mobile. */
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{display:none;}
+@media (max-width:760px), (hover:none) and (pointer:coarse) {
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-bottom,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-middle,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-top,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-layer,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-environment,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glare,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-ribbons,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-texture,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-normal-map {
+    display:none!important;
+    animation:none!important;
+    filter:none!important;
+    mix-blend-mode:normal!important;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner{
+    transform-style:preserve-3d;
+    will-change:transform;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
+    flex-wrap:wrap;
+    justify-content:center;
+    row-gap:4px;
+    min-height:0;
+    margin-top:2px;
+    margin-bottom:0;
+    line-height:1.3;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{
+    display:block;
+    flex:0 0 100%;
+    width:100%;
+    max-width:44ch;
+    margin:2px auto 0;
+    color:rgba(255,255,255,.66);
+    font-size:9px;
+    font-weight:500;
+    line-height:1.4;
+    letter-spacing:0;
+    text-align:center;
+    text-transform:none;
+    white-space:normal;
+  }
+}
+
 /* Desktop: the close control matches the shared 44px navbar pill height.
    Both arrows mirror the same left/right page edges. */
 @media (min-width:768px){

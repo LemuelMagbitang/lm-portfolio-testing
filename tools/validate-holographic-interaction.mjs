@@ -14,7 +14,7 @@ import {
   resolveFoilIntensity,
   shouldAutoRotateFoil,
   supportsFoilHover
-} from '../js/features/lightbox/foil-interaction.js?v=20261027-04';
+} from '../js/features/lightbox/foil-interaction.js?v=20261028-01';
 
 const mediaQueryView = (innerWidth, options = {}) => ({
   innerWidth,
@@ -72,15 +72,16 @@ assert.deepEqual(getFoilAutoPose(0), { x: 50, y: 50, rotation: 0 });
 assert.notDeepEqual(getFoilAutoPose(1.5), getFoilAutoPose(2.5), 'Auto pose should progress.');
 for (let step = 0; step <= 40; step++) {
   const pose = getFoilAutoPose(step * 0.25);
-  assert.ok(pose.x >= 41 && pose.x <= 59);
-  assert.ok(pose.y >= 44 && pose.y <= 56);
-  assert.ok(Math.abs(pose.rotation) <= 1.8);
+  assert.ok(pose.x >= 32 && pose.x <= 68);
+  assert.ok(pose.y >= 37 && pose.y <= 63);
+  assert.ok(Math.abs(pose.rotation) <= 2.2);
 }
 assert.ok(FOIL_AUTO_MOTION_FRAME_INTERVAL_MS >= 33 && FOIL_AUTO_MOTION_FRAME_INTERVAL_MS <= 34);
 
 const mediaRenderer = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 const normalRenderer = await readFile(new URL('../js/features/lightbox/foil-normal-renderer.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
+const lightboxStyles = await readFile(new URL('../css/features/lightbox.css', import.meta.url), 'utf8');
 assert.match(mediaRenderer, /getFoilPointerPose\(x, y\)/);
 assert.match(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000\)/);
 assert.match(mediaRenderer, /motion\.autoFrame = windowRef\.requestAnimationFrame\(animate\)/);
@@ -88,6 +89,9 @@ assert.match(mediaRenderer, /cancelAnimationFrame\?\.\(motion\.autoFrame\)/);
 assert.match(mediaRenderer, /prefersReducedFoilMotion\(windowRef\)/);
 assert.match(mediaRenderer, /syncFoilMotionMode = \(\) =>/);
 assert.match(mediaRenderer, /surface\.dataset\.holoMotion = autoRotationAvailable \? 'auto-rotate'/);
+assert.match(mediaRenderer, /surface\.dataset\.holoFoil = compactTarget \? 'disabled' : 'enabled'/);
+assert.match(mediaRenderer, /syncHolographicNormalRendering\(surface, !compactTarget\)/);
+assert.match(mediaRenderer, /record\.canvas\.dataset\.foilNormalState = enabled \? 'active' : 'suspended'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /Math\.random\(\)|rotationDirection|getFoilEdgeRotation/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
@@ -101,4 +105,7 @@ assert.match(styles, /translate3d\(var\(--holo-shift-x,0px\),var\(--holo-shift-y
 assert.match(styles, /@media\s*\(max-width:760px\),\s*\(hover:none\) and \(pointer:coarse\)/);
 assert.match(styles, /@media\s*\(prefers-reduced-motion:reduce\)/);
 assert.match(styles, /TAP TO FLIP/);
+assert.match(lightboxStyles, /lightbox-holographic-normal-map/);
+assert.match(lightboxStyles, /lightbox-holographic-desktop-recommendation/);
+assert.match(mediaRenderer, /For the full visual experience, we recommend viewing on a desktop\./);
 console.log('Responsive foil modes and bounded pointer/auto poses validated.');

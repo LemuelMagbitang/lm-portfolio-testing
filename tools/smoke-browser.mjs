@@ -3563,12 +3563,13 @@ try {
         const fixedLight = await holographic.evaluate(el => ({
           x: Number.parseFloat(el.style.getPropertyValue('--holo-light-x')),
           y: Number.parseFloat(el.style.getPropertyValue('--holo-light-y')),
-          motion: el.dataset.holoMotion || ''
+          motion: el.dataset.holoMotion || '',
+          foil: el.dataset.holoFoil || ''
         }));
         if (!Number.isFinite(fixedLight.x) || !Number.isFinite(fixedLight.y) ||
-            fixedLight.x < 27 || fixedLight.x > 41 ||
-            fixedLight.y < 21 || fixedLight.y > 31 ||
-            fixedLight.motion !== 'auto-rotate') {
+            fixedLight.x < 20 || fixedLight.x > 48 ||
+            fixedLight.y < 16 || fixedLight.y > 36 ||
+            fixedLight.motion !== 'auto-rotate' || fixedLight.foil !== 'disabled') {
           throw new Error('Mobile holographic key light must move within bounds around its off-axis auto-motion baseline: ' + JSON.stringify(fixedLight));
         }
         const box = await holographic.boundingBox();
@@ -3590,12 +3591,16 @@ try {
             outlineStyle: base.outlineStyle,
             artworkOverflow: artwork ? getComputedStyle(artwork).overflow : '',
             environmentBlend: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).mixBlendMode,
+            environmentDisplay: getComputedStyle(el.querySelector('.lightbox-holographic-environment')).display,
+            normalMapDisplay: getComputedStyle(el.querySelector('.lightbox-holographic-normal-map')).display,
             environmentOpacity: Number.parseFloat(getComputedStyle(el.querySelector('.lightbox-holographic-environment')).opacity),
             grainImage: getComputedStyle(face?.querySelector('.lightbox-holographic-grain-layer')).backgroundImage,
             faceRadius: face ? getComputedStyle(face).borderRadius : '',
             faceOverflow: face ? getComputedStyle(face).overflow : '',
             hintFace: hint?.querySelector('[data-holo-face-label]')?.textContent || '',
             hintAction: getComputedStyle(hint?.querySelector('.lightbox-holographic-touch-action')).display === 'none' ? 'desktop' : 'touch',
+            desktopRecommendation: hint?.querySelector('.lightbox-holographic-desktop-recommendation')?.textContent?.trim() || '',
+            desktopRecommendationDisplay: getComputedStyle(hint?.querySelector('.lightbox-holographic-desktop-recommendation')).display,
             backTextureMode: el.querySelector('.lightbox-holographic-back .lightbox-holographic-texture')?.dataset.holoTextureMode || '',
             backTextureRepeat: el.querySelector('.lightbox-holographic-back .lightbox-holographic-texture')
               ? getComputedStyle(el.querySelector('.lightbox-holographic-back .lightbox-holographic-texture')).backgroundRepeat : '',
@@ -3605,7 +3610,12 @@ try {
             flipTransition: getComputedStyle(el.querySelector('.lightbox-holographic-flip')).transitionDuration
           };
         });
-        if (affordance.animationName !== 'none' ||
+        if (affordance.foil !== 'disabled' || affordance.environmentDisplay !== 'none' ||
+            affordance.normalMapDisplay !== 'none' ||
+            !affordance.desktopRecommendation.toLowerCase().includes('full visual experience') ||
+            !affordance.desktopRecommendation.toLowerCase().includes('desktop') ||
+            affordance.desktopRecommendationDisplay === 'none' ||
+            affordance.animationName !== 'none' ||
             affordance.contain.includes('paint') ||
             affordance.borderRadius !== '0px' ||
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
@@ -3624,7 +3634,7 @@ try {
             affordance.prismAnimation !== 'none' ||
             affordance.ribbonsAnimation !== 'none' ||
             Number.parseFloat(affordance.flipTransition) <= 0) {
-          throw new Error('Mobile holographic surface must preserve its foil geometry while disabling idle layer animations: ' + JSON.stringify(affordance));
+          throw new Error('Mobile holographic surface must suppress foil layers while preserving parallax, tap-to-flip, and the desktop recommendation: ' + JSON.stringify(affordance));
         }
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
@@ -3637,9 +3647,8 @@ try {
           });
           return { frontLayers: visibleMasks(front), backLayers: visibleMasks(back) };
         });
-        if (maskState.frontLayers.some(value => !value.mask.includes('front-mask.svg')) ||
-            maskState.backLayers.some(value => !value.mask.includes('back-mask.svg'))) {
-          throw new Error(`Configured holographic faces must use their own mask: ${JSON.stringify(maskState)}`);
+        if (maskState.frontLayers.length || maskState.backLayers.length) {
+          throw new Error(`Compact artwork must not render masked foil layers: ${JSON.stringify(maskState)}`);
         }
         const textureState = await holographic.evaluate(el => {
           const texture = el.querySelector('.lightbox-holographic-front .lightbox-holographic-texture');
@@ -3655,18 +3664,16 @@ try {
         await customNormalCanvas.waitFor({ state: 'attached', timeout: 3000 });
         await page.waitForFunction(() => {
           const canvas = document.querySelector('#lightboxMediaContainer .lightbox-holographic-front .lightbox-holographic-normal-map');
-          return !!canvas && !!canvas.dataset.normalMapStatus && canvas.dataset.normalMapStatus !== 'loading';
-        }, null, { timeout: 6000 });
+          return canvas?.dataset.foilNormalState === 'suspended';
+        }, null, { timeout: 1500 });
         const customNormalState = await customNormalCanvas.evaluate(canvas => ({
-          status: canvas.dataset.normalMapStatus,
-          patterns: Number(canvas.dataset.normalMapPatternCount),
-          loaded: Number(canvas.dataset.normalMapLoadedCount),
-          width: canvas.width,
-          height: canvas.height
+          foilState: canvas.dataset.foilNormalState || '',
+          display: getComputedStyle(canvas).display,
+          rendererStatus: canvas.dataset.normalMapStatus || 'not-started'
         }));
-        if (customNormalState.status !== 'ready' || customNormalState.patterns !== 1 ||
-            customNormalState.loaded !== 1 || customNormalState.width < 1 || customNormalState.height < 1) {
-          throw new Error('Custom foil height map did not reach the WebGL normal renderer: ' + JSON.stringify(customNormalState));
+        if (customNormalState.foilState !== 'suspended' || customNormalState.display !== 'none' ||
+            customNormalState.rendererStatus === 'ready') {
+          throw new Error('Compact artwork must keep its WebGL normal renderer suspended: ' + JSON.stringify(customNormalState));
         }
 
         // Compact targets cap the configured front/back foil strength and
@@ -3684,9 +3691,9 @@ try {
         if (mobileFoilBaseline.input !== 'tap-only' || mobileFoilBaseline.motion !== 'auto-rotate' ||
             !Number.isFinite(mobileFoilBaseline.intensity) || mobileFoilBaseline.intensity > 0.1001 ||
             (Number.isFinite(mobileFoilBaseline.backIntensity) && mobileFoilBaseline.backIntensity > 0.1001) ||
-            mobileFoilBaseline.x < 41 || mobileFoilBaseline.x > 59 ||
-            mobileFoilBaseline.y < 44 || mobileFoilBaseline.y > 56 ||
-            Math.abs(mobileFoilBaseline.rotation) > 1.81) {
+            mobileFoilBaseline.x < 32 || mobileFoilBaseline.x > 68 ||
+            mobileFoilBaseline.y < 37 || mobileFoilBaseline.y > 63 ||
+            Math.abs(mobileFoilBaseline.rotation) > 2.21) {
           throw new Error('Compact foil configuration exceeded its touch-only auto-motion/intensity contract: ' + JSON.stringify(mobileFoilBaseline));
         }
 
@@ -3712,9 +3719,9 @@ try {
         }));
         if (mobileTouchMove.input !== 'tap-only' || mobileTouchMove.motion !== 'auto-rotate' ||
             mobileTouchMove.engaged ||
-            mobileTouchMove.x < 41 || mobileTouchMove.x > 59 ||
-            mobileTouchMove.y < 44 || mobileTouchMove.y > 56 ||
-            Math.abs(mobileTouchMove.rotation) > 1.81) {
+            mobileTouchMove.x < 32 || mobileTouchMove.x > 68 ||
+            mobileTouchMove.y < 37 || mobileTouchMove.y > 63 ||
+            Math.abs(mobileTouchMove.rotation) > 2.21) {
           throw new Error('Touch movement escaped the bounded auto-motion path: ' + JSON.stringify(mobileTouchMove));
         }
         const touchMovePrevented = await holographic.evaluate(el => {
@@ -3803,9 +3810,9 @@ try {
             nativeTouchState[1].input !== 'tap-only' ||
             nativeTouchState[1].motion !== 'auto-rotate' ||
             nativeTouchState[1].touchEngaged ||
-            nativeTouchState[1].x < 41 || nativeTouchState[1].x > 59 ||
-            nativeTouchState[1].y < 44 || nativeTouchState[1].y > 56 ||
-            Math.abs(nativeTouchState[1].rotation) > 1.81) {
+            nativeTouchState[1].x < 32 || nativeTouchState[1].x > 68 ||
+            nativeTouchState[1].y < 37 || nativeTouchState[1].y > 63 ||
+            Math.abs(nativeTouchState[1].rotation) > 2.21) {
           throw new Error('Native touch swipe did not scroll while preserving bounded, touch-only auto motion: ' +
             JSON.stringify({ scrollBefore, scrollAfter: nativeTouchState[0], foil: nativeTouchState[1] }));
         }
@@ -3872,18 +3879,16 @@ try {
         await cosmosNormalCanvas.waitFor({ state: 'attached', timeout: 3000 });
         await page.waitForFunction(() => {
           const canvas = document.querySelector('#lightboxMediaContainer .lightbox-holographic-front .lightbox-holographic-normal-map');
-          return canvas?.dataset.normalMapStatus === 'ready';
-        }, null, { timeout: 8000 });
+          return canvas?.dataset.foilNormalState === 'suspended';
+        }, null, { timeout: 1500 });
         const cosmosNormalState = await cosmosNormalCanvas.evaluate(canvas => ({
-          status: canvas.dataset.normalMapStatus,
-          patterns: Number(canvas.dataset.normalMapPatternCount),
-          loaded: Number(canvas.dataset.normalMapLoadedCount),
-          width: canvas.width,
-          height: canvas.height
+          foilState: canvas.dataset.foilNormalState || '',
+          status: canvas.dataset.normalMapStatus || 'not-started',
+          display: getComputedStyle(canvas).display
         }));
-        if (cosmosNormalState.status !== 'ready' || cosmosNormalState.patterns !== 3 ||
-            cosmosNormalState.loaded !== 3 || cosmosNormalState.width < 1 || cosmosNormalState.height < 1) {
-          throw new Error('All three Cosmos patterns must be blended by the WebGL normal renderer: ' + JSON.stringify(cosmosNormalState));
+        if (cosmosNormalState.foilState !== 'suspended' || cosmosNormalState.status === 'ready' ||
+            cosmosNormalState.display !== 'none') {
+          throw new Error('Compact Cosmos artwork must not initialize the WebGL foil renderer: ' + JSON.stringify(cosmosNormalState));
         }
         await page.locator('#lightboxClose').first().click();
         await page.waitForTimeout(100);
@@ -5844,9 +5849,9 @@ try {
         const mobileAutoAfter = await readFoilPose();
         if (Math.abs(mobileAutoAfter.x - mobileAutoBefore.x) +
             Math.abs(mobileAutoAfter.y - mobileAutoBefore.y) < 0.15 ||
-            Math.abs(mobileAutoAfter.rotation) > 1.81 ||
-            mobileAutoAfter.x < 41 || mobileAutoAfter.x > 59 ||
-            mobileAutoAfter.y < 44 || mobileAutoAfter.y > 56) {
+            Math.abs(mobileAutoAfter.rotation) > 2.21 ||
+            mobileAutoAfter.x < 32 || mobileAutoAfter.x > 68 ||
+            mobileAutoAfter.y < 37 || mobileAutoAfter.y > 63) {
           throw new Error('Touch-only auto motion did not progress within its bounds: ' +
             JSON.stringify({ mobileAutoBefore, mobileAutoAfter }));
         }
@@ -5856,9 +5861,9 @@ try {
         await page.waitForTimeout(120);
         const mobileAfterPointer = await readFoilPose();
         if (mobileAfterPointer.input !== 'tap-only' || mobileAfterPointer.motion !== 'auto-rotate' ||
-            mobileAfterPointer.x < 41 || mobileAfterPointer.x > 59 ||
-            mobileAfterPointer.y < 44 || mobileAfterPointer.y > 56 ||
-            Math.abs(mobileAfterPointer.rotation) > 1.81) {
+            mobileAfterPointer.x < 32 || mobileAfterPointer.x > 68 ||
+            mobileAfterPointer.y < 37 || mobileAfterPointer.y > 63 ||
+            Math.abs(mobileAfterPointer.rotation) > 2.21) {
           throw new Error('Pointer movement leaked into the touch-only auto-motion path: ' +
             JSON.stringify(mobileAfterPointer));
         }
@@ -5885,8 +5890,10 @@ try {
         await page.setViewportSize({ width: 1280, height: 900 });
         await page.waitForFunction(expected => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          return el && Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-intensity')) - expected) < 0.001;
-        }, pointerContract.intensity, { timeout: 1500 });
+          const canvas = el?.querySelector('.lightbox-holographic-normal-map');
+          return el && el.dataset.holoFoil === 'enabled' && canvas?.dataset.foilNormalState === 'active' &&
+            Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-intensity')) - expected) < 0.001;
+        }, pointerContract.intensity, { timeout: 2500 });
 
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');

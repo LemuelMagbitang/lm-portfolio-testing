@@ -6,7 +6,7 @@
  */
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-06';
-import { COMPACT_FOIL_MAX_INTENSITY, FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261027-04';
+import { COMPACT_FOIL_MAX_INTENSITY, FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261028-01';
 
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
@@ -73,6 +73,7 @@ export function createLightboxMediaRenderer({
   let youtubeMessageCleanup = null;
   const holographicCleanups = new Set();
   const holographicNormalControllers = new WeakMap();
+  const holographicNormalRecords = new WeakMap();
   const holographicMotionStates = new WeakMap();
   const artworkVisibilityStates = new WeakMap();
   let artworkVisibilityObserver = null;
@@ -596,31 +597,33 @@ export function createLightboxMediaRenderer({
             const backUrl = resolveAssetUrl(holo.back);
             scheduleJob('holographic-back:' + backUrl, () => preloadImage(backUrl, { fetchPriority: 'low' }), false);
           }
-          if (holo?.texture) {
-            const textureUrl = resolveAssetUrl(holo.texture);
-            scheduleJob('holographic-texture:' + textureUrl, () => preloadImage(textureUrl, { fetchPriority: 'low' }), false);
+          if (!isCompactFoilTarget(windowRef)) {
+            if (holo?.texture) {
+              const textureUrl = resolveAssetUrl(holo.texture);
+              scheduleJob('holographic-texture:' + textureUrl, () => preloadImage(textureUrl, { fetchPriority: 'low' }), false);
+            }
+            if (holo?.mask) {
+              const maskUrl = resolveAssetUrl(holo.mask);
+              scheduleJob('holographic-mask:' + maskUrl, () => preloadImage(maskUrl, { fetchPriority: 'low' }), false);
+            }
+            if (holo?.backTexture) {
+              const backTextureUrl = resolveAssetUrl(holo.backTexture);
+              scheduleJob('holographic-back-texture:' + backTextureUrl, () => preloadImage(backTextureUrl, { fetchPriority: 'low' }), false);
+            }
+            if (holo?.backMask) {
+              const backMaskUrl = resolveAssetUrl(holo.backMask);
+              scheduleJob('holographic-back-mask:' + backMaskUrl, () => preloadImage(backMaskUrl, { fetchPriority: 'low' }), false);
+            }
+            const sharedFoilAssets = [
+              ...(holo?.style === 'cosmos' ? ['assets/holographic/cosmos-bottom.webp','assets/holographic/cosmos-middle-trans.webp','assets/holographic/cosmos-top-trans.webp'] : []),
+              ...(holo?.grainLayer !== false ? ['assets/holographic/grain.webp'] : []),
+              ...(holo?.glitterLayer === true ? ['assets/holographic/glitter.webp'] : [])
+            ];
+            sharedFoilAssets.forEach(path => {
+              const layerUrl = resolveAssetUrl(path);
+              scheduleJob('holographic-layer:' + layerUrl, () => preloadImage(layerUrl, { fetchPriority: 'low' }), false);
+            });
           }
-          if (holo?.mask) {
-            const maskUrl = resolveAssetUrl(holo.mask);
-            scheduleJob('holographic-mask:' + maskUrl, () => preloadImage(maskUrl, { fetchPriority: 'low' }), false);
-          }
-          if (holo?.backTexture) {
-            const backTextureUrl = resolveAssetUrl(holo.backTexture);
-            scheduleJob('holographic-back-texture:' + backTextureUrl, () => preloadImage(backTextureUrl, { fetchPriority: 'low' }), false);
-          }
-          if (holo?.backMask) {
-            const backMaskUrl = resolveAssetUrl(holo.backMask);
-            scheduleJob('holographic-back-mask:' + backMaskUrl, () => preloadImage(backMaskUrl, { fetchPriority: 'low' }), false);
-          }
-          const sharedFoilAssets = [
-            ...(holo?.style === 'cosmos' ? ['assets/holographic/cosmos-bottom.webp','assets/holographic/cosmos-middle-trans.webp','assets/holographic/cosmos-top-trans.webp'] : []),
-            ...(holo?.grainLayer !== false ? ['assets/holographic/grain.webp'] : []),
-            ...(holo?.glitterLayer === true ? ['assets/holographic/glitter.webp'] : [])
-          ];
-          sharedFoilAssets.forEach(path => {
-            const layerUrl = resolveAssetUrl(path);
-            scheduleJob('holographic-layer:' + layerUrl, () => preloadImage(layerUrl, { fetchPriority: 'low' }), false);
-          });
         }
 
         if (type === 'model') {
@@ -805,6 +808,37 @@ export function createLightboxMediaRenderer({
     iridescent: ['prism', 'ribbons', 'sheen'],
     aurora: ['prism', 'ribbons', 'sheen']
   };
+
+  function syncHolographicNormalRendering(surface, enabled) {
+    const records = holographicNormalRecords.get(surface) || [];
+    if (!records.length) return;
+    const active = new Set(holographicNormalControllers.get(surface) || []);
+
+    records.forEach(record => {
+      if (enabled && !record.controller) {
+        if (record.canvas.width === 0 && record.canvas.height === 0) {
+          const replacement = documentRef.createElement('canvas');
+          replacement.className = 'lightbox-holographic-normal-map';
+          replacement.setAttribute('aria-hidden', 'true');
+          record.applyMask(replacement);
+          record.canvas.replaceWith(replacement);
+          record.canvas = replacement;
+        }
+        const controller = createFoilNormalRenderer(record.canvas, record.patternUrls, record.options);
+        record.controller = controller;
+        active.add(controller);
+        controller.setLight(0.34, 0.74);
+      } else if (!enabled && record.controller) {
+        try { record.controller.destroy(); } catch (_) {}
+        active.delete(record.controller);
+        record.controller = null;
+      }
+      record.canvas.dataset.foilNormalState = enabled ? 'active' : 'suspended';
+    });
+
+    if (active.size) holographicNormalControllers.set(surface, Array.from(active));
+    else holographicNormalControllers.delete(surface);
+  }
 
   function updateHolographicTilt(surface, x, y, rotation = 0) {
     if (!surface) return;
@@ -1021,6 +1055,7 @@ export function createLightboxMediaRenderer({
     surface.dataset.holoStyle = config.style;
     surface.dataset.holoTextureMode = config.textureMode;
     let compactTarget = isCompactFoilTarget(windowRef);
+    surface.dataset.holoFoil = compactTarget ? 'disabled' : 'enabled';
     let hoverAvailable = supportsFoilHover(windowRef) && !prefersReducedFoilMotion(windowRef);
     let autoRotationAvailable = shouldAutoRotateFoil(windowRef);
     let frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
@@ -1075,7 +1110,10 @@ export function createLightboxMediaRenderer({
     const touchAction = documentRef.createElement('span');
     touchAction.className = 'lightbox-holographic-touch-action';
     touchAction.textContent = 'TAP TO FLIP';
-    hint.append(faceLabel, separator, desktopAction, touchAction);
+    const desktopRecommendation = documentRef.createElement('span');
+    desktopRecommendation.className = 'lightbox-holographic-desktop-recommendation';
+    desktopRecommendation.textContent = 'For the full visual experience, we recommend viewing on a desktop.';
+    hint.append(faceLabel, separator, desktopAction, touchAction, desktopRecommendation);
     surface.__lightboxHoloHint = hint;
 
     const inner = documentRef.createElement('div');
@@ -1254,20 +1292,25 @@ export function createLightboxMediaRenderer({
         normalCanvas.setAttribute('aria-hidden', 'true');
         applyFaceHolographicMask(normalCanvas);
         face.appendChild(normalCanvas);
-        const controller = createFoilNormalRenderer(normalCanvas, normalPatternUrls, {
-          // Pass the configured value through; the renderer owns its own
-          // responsive cap so compact -> desktop resizing restores full strength.
-          intensity: isFront ? config.intensity : config.backIntensity,
-          phase: isFront ? 0.17 : 0.43,
-          uvScale: config.style === 'cosmos' ? 2 : (faceTextureMode === 'tile' ? 2 : 1)
+        const records = holographicNormalRecords.get(surface) || [];
+        normalCanvas.dataset.foilNormalState = 'suspended';
+        records.push({
+          face,
+          canvas: normalCanvas,
+          patternUrls: normalPatternUrls,
+          applyMask: layer => applyFaceHolographicMask(layer),
+          options: {
+            intensity: isFront ? config.intensity : config.backIntensity,
+            phase: isFront ? 0.17 : 0.43,
+            uvScale: config.style === 'cosmos' ? 2 : (faceTextureMode === 'tile' ? 2 : 1)
+          },
+          controller: null
         });
-        const controllers = holographicNormalControllers.get(surface) || [];
-        controllers.push(controller);
-        holographicNormalControllers.set(surface, controllers);
-        controller.setLight(0.34, 0.74);
+        holographicNormalRecords.set(surface, records);
       }
     });
 
+    syncHolographicNormalRendering(surface, !compactTarget);
     flip.append(front, back);
     inner.appendChild(flip);
     surface.appendChild(inner);
@@ -1284,6 +1327,8 @@ export function createLightboxMediaRenderer({
       backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
       surface.style.setProperty('--holo-intensity', String(frontStrength));
       if (backFoilEnabled) back.style.setProperty('--holo-intensity', String(backStrength));
+      surface.dataset.holoFoil = compactTarget ? 'disabled' : 'enabled';
+      syncHolographicNormalRendering(surface, !compactTarget);
       const motion = holographicMotionStates.get(surface);
       if (motion) {
         motion.compactTarget = compactTarget;
@@ -1325,8 +1370,9 @@ export function createLightboxMediaRenderer({
       }
       holographicMotionStates.delete(surface);
       responsiveFoilCleanups.splice(0).forEach(dispose => { try { dispose(); } catch (_) {} });
-      holographicNormalControllers.get(surface)?.forEach(controller => { try { controller.destroy(); } catch (_) {} });
+      syncHolographicNormalRendering(surface, false);
       holographicNormalControllers.delete(surface);
+      holographicNormalRecords.delete(surface);
       surface.removeEventListener('pointermove', onPointerMove);
       surface.removeEventListener('pointerleave', onPointerLeave);
       surface.removeEventListener('click', toggleFlip);
