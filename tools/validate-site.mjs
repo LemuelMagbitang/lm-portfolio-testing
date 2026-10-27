@@ -2046,9 +2046,12 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('function getPlaybackErrorDetails(media, event = null)') ||
       !hero.includes('function scheduleNetworkRetry(slide, media, event = null)') ||
       !hero.includes("details.networkState === 3") ||
-      !hero.includes("details.mediaErrorCode === 4 ? 'mux-unsupported-source' : 'mux-no-source'") ||
+      !hero.includes("function scheduleMuxUnsupportedSourceRecovery(slide, media, details)") ||
+      !hero.includes("details.mediaErrorCode === 4") ||
+      !hero.includes("media.dataset.networkRetryReason = 'mux-unsupported-source'") ||
       !smoke.includes('Mux hero no-source errors must trigger one bounded recovery attempt') ||
-      !hero.includes("recovery: recoveryScheduled ? 'retry-scheduled' : 'awaiting-reconnect-or-gesture'") ||
+      !hero.includes("recovery: recoveryScheduled ? 'retry-scheduled'") ||
+      !hero.includes("'mse-recovery-attempted'") ||
       !smoke.includes('Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image') ||
       !smoke.includes("for (const viewport of viewports)") ||
       /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
