@@ -66,6 +66,11 @@ assert.match(mediaRenderer, /getFoilEdgeRotation\(x, y, motion\.rotationDirectio
 assert.match(mediaRenderer, /event\.pointerType !== 'mouse'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.match(mediaRenderer, /syncResponsiveFoilIntensity = \(\) =>/);
+assert.match(mediaRenderer, /let hoverAvailable = supportsFoilHover\(windowRef\)/);
+assert.match(mediaRenderer, /const syncFoilHoverCapability = \(\) =>/);
+assert.match(mediaRenderer, /bindResponsiveFoilQuery\('\(any-hover: hover\) and \(any-pointer: fine\)', syncFoilHoverCapability\)/);
+assert.match(mediaRenderer, /surface\.dataset\.holoInput = hoverAvailable \? 'hover-edge' : 'tap-only'/);
+assert.match(mediaRenderer, /cancelQueuedPointer\(\);\s*setHolographicTarget\(surface, 50, 50, 0\)/);
 assert.match(mediaRenderer, /bindResponsiveFoilQuery\('\(max-width: 760px\)'\)/);
 assert.match(mediaRenderer, /if \(motion\?\.compactTarget\) tiltStrength = Math\.min\(tiltStrength, COMPACT_FOIL_MAX_INTENSITY\)/);
 assert.match(mediaRenderer, /intensity: isFront \? config\.intensity : config\.backIntensity/);
