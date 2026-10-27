@@ -884,8 +884,10 @@ assert.ok(admin.includes('project.thumbnail?.holographic') && admin.includes('p.
 
 
 assert.ok(renderer.includes('const faceStrength = isFront ? frontStrength : backStrength') &&
-  renderer.includes('intensity: faceStrength'),
-  'The interactive foil preview must apply front/back strengths independently per face.');
+  renderer.includes('intensity: isFront ? config.intensity : config.backIntensity') &&
+  renderer.includes('resolveFoilIntensity(config.intensity, compactTarget)') &&
+  renderer.includes('resolveFoilIntensity(config.backIntensity, compactTarget)'),
+  'The interactive foil preview must preserve independent front/back configuration while applying the responsive intensity cap.');
 assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
   renderer.includes("'cosmos-bottom': 'assets/holographic/cosmos-bottom.webp'") &&
   renderer.includes("'cosmos-middle': 'assets/holographic/cosmos-middle-trans.webp'") &&
