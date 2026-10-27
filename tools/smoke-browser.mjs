@@ -1906,7 +1906,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   // A narrow viewport alone does not emulate a phone. In Chromium the CSS
   // pointer media feature remains `pointer:fine`, which means touch-specific
-  // presentation (including the holographic HOLD + MOVE affordance) will not
+  // presentation (including the foil TAP TO FLIP hint and compact GPU policy) will not
   // activate. Use a touch/mobile context for narrow smoke cases so the test
   // exercises the same media-query branch as an actual handset.
   const isMobileSmoke = viewport.width < 768;
