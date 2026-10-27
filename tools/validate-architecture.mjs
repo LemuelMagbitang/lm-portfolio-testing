@@ -41,7 +41,7 @@ const canonicalModuleQueries = new Map([
   ['features/lightbox/index.js', '?v=20261027-08'],
   ['features/lightbox/media-renderer.js', '?v=20261027-08'],
   ['features/lightbox/foil-normal-renderer.js', '?v=20261027-03'],
-  ['features/lightbox/foil-interaction.js', '?v=20261027-01'],
+  ['features/lightbox/foil-interaction.js', '?v=20261027-02'],
   ['data/project-normalizer.js', '?v=20261026-01']
 ]);
 
