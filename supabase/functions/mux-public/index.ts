@@ -22,15 +22,24 @@ Deno.serve(async (request: Request) => {
   try {
     const place = new URL(request.url).searchParams.get("placement");
     const db = serviceDb();
-    let query = db.from("videos").select("*").eq("published", true).order("sort_order", { ascending: true });
+    let query = db.from("videos")
+      .select("id, slug, title, description, placement, active_asset_id, sort_order")
+      .eq("published", true)
+      .not("active_asset_id", "is", null)
+      .order("sort_order", { ascending: true });
     if (place) query = query.eq("placement", place);
     const { data: videos, error: ve } = await query;
     if (ve) throw ve;
-    const ids = (videos || []).map((v: any) => v.active_asset_id).filter(Boolean);
-    const { data: assets, error: ae } = ids.length ? await db.from("video_assets").select("*").in("id", ids) : { data: [], error: null };
+    const ids = (videos || []).map((video: any) => video.active_asset_id).filter(Boolean);
+    const { data: assets, error: ae } = ids.length
+      ? await db.from("video_assets")
+        .select("id, provider, source_url, asset_status, mux_playback_id, playback_policy, thumbnail_url, poster_time_seconds, duration_seconds, aspect_ratio, resolution_tier")
+        .in("id", ids)
+      : { data: [], error: null };
     if (ae) throw ae;
+    const assetsById = new Map((assets || []).map((asset: any) => [asset.id, asset]));
     const list = (videos || []).map((video: any) => {
-      const asset = (assets || []).find((a: any) => a.id === video.active_asset_id);
+      const asset = assetsById.get(video.active_asset_id);
       if (!asset || asset.asset_status !== "ready") return null;
       if (asset.provider === "mux") {
         if (!asset.mux_playback_id || asset.playback_policy !== "public") return null;

@@ -118,6 +118,15 @@ check(migration.includes("last_mux_event_created_at timestamptz") &&
   "Mux lifecycle updates must enforce ordering, preserve terminal states, and retry cleanup idempotently.");
 check(publicApi.includes('eq("published", true)') && publicApi.includes('asset.playback_policy !== "public"'), "Public feed must restrict published/public-playback assets.");
 check(
+  publicApi.includes('.select("id, slug, title, description, placement, active_asset_id, sort_order")') &&
+  publicApi.includes('.not("active_asset_id", "is", null)') &&
+  publicApi.includes('.select("id, provider, source_url, asset_status, mux_playback_id, playback_policy, thumbnail_url, poster_time_seconds, duration_seconds, aspect_ratio, resolution_tier")') &&
+  publicApi.includes("const assetsById = new Map((assets || []).map((asset: any) => [asset.id, asset]));") &&
+  publicApi.includes("assetsById.get(video.active_asset_id)") &&
+  !publicApi.includes("(assets || []).find((a: any) => a.id === video.active_asset_id)"),
+  "Public Mux feed must select only serialized columns, skip videos without an active asset, and map asset rows by ID without repeated array scans."
+);
+check(
   publicApi.includes('"Access-Control-Allow-Origin": "*"') &&
   publicApi.includes('"Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, cache-control, pragma"') &&
   publicApi.includes('"Access-Control-Allow-Methods": "GET, OPTIONS"') &&
@@ -192,6 +201,16 @@ check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] ==
   admin.includes('"/assets?limit=100"') && admin.includes('request.method === "PATCH"') &&
   admin.includes('route[2] === "unpublish"'),
   "The Mux admin API must support asset discovery, safe metadata editing, publish state and legacy placement compatibility.");
+const muxAssetDiscovery = admin.split('if (request.method === "GET" && route.length === 1 && route[0] === "mux-assets") {')[1]?.split('if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "placement")')[0] || "";
+check(
+  muxAssetDiscovery.indexOf('const remote = await muxRequest("/assets?limit=100")') >= 0 &&
+  muxAssetDiscovery.indexOf('const remote = await muxRequest("/assets?limit=100")') <
+    muxAssetDiscovery.indexOf('.select("mux_asset_id").in("mux_asset_id", remoteAssetIds)') &&
+  muxAssetDiscovery.includes("const remoteAssetIds = [...new Set(") &&
+  muxAssetDiscovery.includes("const linkedIds = new Set<string>()") &&
+  !muxAssetDiscovery.includes('.from("video_assets").select("mux_asset_id")'),
+  "Mux asset discovery must fetch its bounded remote page first and check only matching database IDs rather than reading every linked asset row."
+);
 check(page.includes('id="muxAssetSelect"') && page.includes('id="refreshMuxAssetsButton"') &&
   script.includes('api("mux-assets")') && script.includes('No unlinked public-playback assets found') &&
   page.includes('id="sidebar"') && page.includes('id="signOutButton"') &&

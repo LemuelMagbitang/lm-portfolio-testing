@@ -56,10 +56,20 @@ Deno.serve(async (request: Request) => {
     }
 
     if (request.method === "GET" && route.length === 1 && route[0] === "mux-assets") {
-      const { data: linkedRows, error: linkedError } = await db.from("video_assets").select("mux_asset_id");
-      if (linkedError) throw new Error("Could not check which Mux uploads are already linked: " + errorMessage(linkedError));
-      const linkedIds = new Set((linkedRows || []).map((item: any) => String(item.mux_asset_id || "")).filter(Boolean));
       const remote = await muxRequest("/assets?limit=100");
+      const remoteAssetIds = [...new Set((Array.isArray(remote) ? remote : [])
+        .map((item: any) => String(item?.id || "").trim())
+        .filter(Boolean))];
+      const linkedIds = new Set<string>();
+      if (remoteAssetIds.length) {
+        const { data: linkedRows, error: linkedError } = await db.from("video_assets")
+          .select("mux_asset_id").in("mux_asset_id", remoteAssetIds);
+        if (linkedError) throw new Error("Could not check which Mux uploads are already linked: " + errorMessage(linkedError));
+        for (const item of linkedRows || []) {
+          const id = String(item.mux_asset_id || "").trim();
+          if (id) linkedIds.add(id);
+        }
+      }
       const assets = (Array.isArray(remote) ? remote : [])
         .filter((item: any) => {
           const state = String(item?.status || "").toLowerCase();
