@@ -207,7 +207,7 @@ check(
   muxAssetDiscovery.includes('const remotePage = await muxRequest("/assets?limit=100" + cursorQuery, "GET", undefined, true)') &&
   muxAssetDiscovery.indexOf('const remotePage = await muxRequest("/assets?limit=100" + cursorQuery, "GET", undefined, true)') <
     muxAssetDiscovery.indexOf('.select("mux_asset_id").in("mux_asset_id", remoteAssetIds)') &&
-  muxAssetDiscovery.includes("const remoteAssetIds = [...new Set(remote") &&
+  muxAssetDiscovery.includes("const remoteAssetIds: string[] = [...new Set<string>(remote") &&
   muxAssetDiscovery.includes("const linkedIds = new Set<string>()") &&
   muxAssetDiscovery.includes("nextCursor: nextCursor || null") &&
   !muxAssetDiscovery.includes('.from("video_assets").select("mux_asset_id")'),
