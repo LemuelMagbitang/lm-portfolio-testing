@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   getSiteRootUrl,
   siteAssetUrl
-} from '../js/infrastructure/browser/site-paths.js?v=20261027-01';
+} from '../js/infrastructure/browser/site-paths.js?v=20261027-02';
 
 function makeScript(documentUrl, src) {
   return {
@@ -130,6 +130,8 @@ const unsafeLocalPaths = [
   'assets%2F%2e%2e%2Fdata/projects.json',
   'assets/%252e%252e/data/projects.json',
   'assets/%2e%2e%5cdata/projects.json',
+  'assets/%2525252e%2525252e/data/projects.json',
+  'assets%2525252F%2525252e%2525252e%2525252Fadmin/admin.js',
   'assets/%00/hidden.webp'
 ];
 for (const value of unsafeLocalPaths) {

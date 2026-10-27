@@ -99,11 +99,31 @@ export function siteAssetUrl(src, options = {}) {
   if (hasUnsafeAssetPathSegments(pathOnly)) return '';
 
   try {
-    const resolved = new URL(
-      value.replace(/^\/+/, ''),
-      getSiteRootUrl(options)
-    );
+    const siteRoot = new URL(getSiteRootUrl(options));
+    const rootPath = siteRoot.pathname.endsWith('/')
+      ? siteRoot.pathname
+      : siteRoot.pathname + '/';
+    const resolved = new URL(value.replace(/^\/+/, ''), siteRoot);
     if (!['http:', 'https:'].includes(resolved.protocol)) return '';
+    if (resolved.origin !== siteRoot.origin || !resolved.pathname.startsWith(rootPath)) return '';
+
+    // Defense in depth for paths with encoded separators/dot-segments that
+    // survive URL parsing. Normalize each decoding layer against the origin
+    // so traversal is never re-based beneath the project prefix by accident.
+    let decodedPath = resolved.pathname;
+    for (let decodeStep = 0; decodeStep < 8; decodeStep += 1) {
+      let decoded;
+      try {
+        decoded = decodeURIComponent(decodedPath).replace(/\\/g, '/');
+      } catch (_) {
+        return '';
+      }
+      if (decoded === decodedPath) break;
+      const normalizedDecoded = new URL(decoded, siteRoot.origin);
+      if (normalizedDecoded.origin !== siteRoot.origin ||
+          !normalizedDecoded.pathname.startsWith(rootPath)) return '';
+      decodedPath = decoded;
+    }
     return resolved.href;
   } catch (_) {
     return '';

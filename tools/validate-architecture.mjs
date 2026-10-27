@@ -27,7 +27,7 @@ const legacyRootModules = new Set([
 // reintroduce that class of runtime duplication.
 const canonicalModuleQueries = new Map([
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
-  ['infrastructure/browser/site-paths.js', '?v=20261027-01'],
+  ['infrastructure/browser/site-paths.js', '?v=20261027-02'],
   ['infrastructure/browser/media-contrast.js', '?v=20261026-02'],
   ['infrastructure/media-background/loader.js', '?v=20261023-01'],
   ['infrastructure/mux/player.js', '?v=20261027-02'],
