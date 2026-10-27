@@ -5,8 +5,8 @@
  * and project selection remain in the Lightbox controller.
  */
 
-import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-06';
-import { COMPACT_FOIL_MAX_INTENSITY, FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261028-01';
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-07';
+import { FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261028-02';
 
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
@@ -847,19 +847,28 @@ export function createLightboxMediaRenderer({
     const pointerPose = getFoilPointerPose(clampedX, clampedY);
     const rx = pointerPose.rx;
     const ry = pointerPose.ry;
+    const rotationValue = (Number(rotation) || 0).toFixed(2) + 'deg';
+    const motion = holographicMotionStates.get(surface);
+
+    // Compact targets keep only the transform values required for 3D parallax.
+    // Foil layers are hidden and the WebGL normal renderer is suspended there,
+    // so do not recalculate light/mask state or issue per-frame light updates.
+    surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
+    surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
+    surface.style.setProperty('--holo-shift-x', pointerPose.shiftX.toFixed(2) + 'px');
+    surface.style.setProperty('--holo-shift-y', pointerPose.shiftY.toFixed(2) + 'px');
+    surface.style.setProperty('--holo-rotation', rotationValue);
+    if (motion?.compactTarget) return;
+
     const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
     const foilX = 100 - clampedX;
     const foilY = 100 - clampedY;
-    const motion = holographicMotionStates.get(surface);
-    // Touch-only auto motion orbits the original off-axis key light. Fine-pointer
-    // mode keeps the existing inverse pointer mapping, so the motion systems do
-    // not share competing baselines.
+    // Fine-pointer desktop retains the full foil response and moving light.
     const lightBaseX = motion?.autoRotate ? 34 : 50;
     const lightBaseY = motion?.autoRotate ? 26 : 50;
     const lightX = clampHolographic(lightBaseX + ((50 - clampedX) * 0.68), 16, 84);
     const lightY = clampHolographic(lightBaseY + ((50 - clampedY) * 0.68), 16, 84);
-    let tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
-    if (motion?.compactTarget) tiltStrength = Math.min(tiltStrength, COMPACT_FOIL_MAX_INTENSITY);
+    const tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
 
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
@@ -868,12 +877,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-light-x', lightX.toFixed(2) + '%');
     surface.style.setProperty('--holo-light-y', lightY.toFixed(2) + '%');
     surface.style.setProperty('--holo-tilt-strength', tiltStrength.toFixed(3));
-    surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
-    surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
-    surface.style.setProperty('--holo-shift-x', pointerPose.shiftX.toFixed(2) + 'px');
-    surface.style.setProperty('--holo-shift-y', pointerPose.shiftY.toFixed(2) + 'px');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
-    surface.style.setProperty('--holo-rotation', (Number(rotation) || 0).toFixed(2) + 'deg');
     holographicNormalControllers.get(surface)?.forEach(controller => controller.setLight(lightX / 100, 1 - (lightY / 100)));
   }
 

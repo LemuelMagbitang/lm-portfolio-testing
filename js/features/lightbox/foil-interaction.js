@@ -65,8 +65,8 @@ export function getFoilAutoPose(elapsedSeconds = 0) {
   const time = Math.max(0, Number(elapsedSeconds) || 0);
   const round = value => { const rounded = Math.round(value * 1000) / 1000; return Object.is(rounded, -0) ? 0 : rounded; };
   return {
-    x: round(50 + 18 * Math.sin(time * 0.50)),
-    y: round(50 + 13 * Math.sin(time * 0.40)),
-    rotation: round(2.2 * Math.sin(time * 0.34))
+    x: round(50 + 23 * Math.sin(time * 0.58) + 3 * Math.sin(time * 0.23)),
+    y: round(50 + 17 * Math.sin(time * 0.46) + 2.5 * Math.sin(time * 0.29)),
+    rotation: round(2 * Math.sin(time * 0.39) + 0.35 * Math.sin(time * 0.24))
   };
 }

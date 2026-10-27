@@ -70,12 +70,20 @@ assert.equal(bottomLeftPose.shiftY, FOIL_MAX_HOVER_SHIFT_Y_PX);
 
 assert.deepEqual(getFoilAutoPose(0), { x: 50, y: 50, rotation: 0 });
 assert.notDeepEqual(getFoilAutoPose(1.5), getFoilAutoPose(2.5), 'Auto pose should progress.');
-for (let step = 0; step <= 40; step++) {
+const autoPoses = [];
+for (let step = 0; step <= 80; step++) {
   const pose = getFoilAutoPose(step * 0.25);
-  assert.ok(pose.x >= 32 && pose.x <= 68);
-  assert.ok(pose.y >= 37 && pose.y <= 63);
-  assert.ok(Math.abs(pose.rotation) <= 2.2);
+  autoPoses.push(pose);
+  assert.ok(pose.x >= 20 && pose.x <= 80);
+  assert.ok(pose.y >= 28 && pose.y <= 72);
+  assert.ok(Math.abs(pose.rotation) <= 2.5);
 }
+const autoRange = key => Math.max(...autoPoses.map(pose => pose[key])) -
+  Math.min(...autoPoses.map(pose => pose[key]));
+assert.ok(autoRange('x') > 45, 'Touch auto-parallax must travel a visibly wider horizontal range.');
+assert.ok(autoRange('y') > 32, 'Touch auto-parallax must travel a visibly wider vertical range.');
+assert.ok(autoPoses.some(pose => pose.rotation > 1.5), 'Auto roll should include a gentle clockwise phase.');
+assert.ok(autoPoses.some(pose => pose.rotation < -1.5), 'Auto roll should include a gentle counterclockwise phase.');
 assert.ok(FOIL_AUTO_MOTION_FRAME_INTERVAL_MS >= 33 && FOIL_AUTO_MOTION_FRAME_INTERVAL_MS <= 34);
 
 const mediaRenderer = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
@@ -91,6 +99,12 @@ assert.match(mediaRenderer, /syncFoilMotionMode = \(\) =>/);
 assert.match(mediaRenderer, /surface\.dataset\.holoMotion = autoRotationAvailable \? 'auto-rotate'/);
 assert.match(mediaRenderer, /surface\.dataset\.holoFoil = compactTarget \? 'disabled' : 'enabled'/);
 assert.match(mediaRenderer, /syncHolographicNormalRendering\(surface, !compactTarget\)/);
+assert.ok(mediaRenderer.includes('if (motion?.compactTarget) return;'),
+  'Compact motion updates must skip foil-lighting calculations and writes.');
+assert.ok(mediaRenderer.includes("surface.style.setProperty('--holo-rx'"),
+  'Compact parallax must continue to update the 3D transform.');
+assert.ok(mediaRenderer.includes("surface.style.setProperty('--holo-shift-x'"),
+  'Compact parallax must retain its translation component.');
 assert.match(mediaRenderer, /record\.canvas\.dataset\.foilNormalState = enabled \? 'active' : 'suspended'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /Math\.random\(\)|rotationDirection|getFoilEdgeRotation/);
@@ -106,6 +120,33 @@ assert.match(styles, /@media\s*\(max-width:760px\),\s*\(hover:none\) and \(point
 assert.match(styles, /@media\s*\(prefers-reduced-motion:reduce\)/);
 assert.match(styles, /TAP TO FLIP/);
 assert.match(lightboxStyles, /lightbox-holographic-normal-map/);
+const compactRuleStart = lightboxStyles.indexOf('@media (max-width:760px), (hover:none) and (pointer:coarse) {');
+const compactRuleEnd = lightboxStyles.indexOf('/* Desktop:', compactRuleStart);
+assert.ok(compactRuleStart >= 0 && compactRuleEnd > compactRuleStart,
+  'Compact foil rules must stay scoped to mobile/coarse-pointer targets.');
+const compactFoilCss = lightboxStyles.slice(compactRuleStart, compactRuleEnd);
+for (const layer of [
+  '.lightbox-holographic-spectrum',
+  '.lightbox-holographic-cosmos-layer',
+  '.lightbox-holographic-grain-layer',
+  '.lightbox-holographic-glitter-layer',
+  '.lightbox-holographic-environment',
+  '.lightbox-holographic-glare',
+  '.lightbox-holographic-prism',
+  '.lightbox-holographic-ribbons',
+  '.lightbox-holographic-diffraction',
+  '.lightbox-holographic-sparkles',
+  '.lightbox-holographic-sheen',
+  '.lightbox-holographic-texture',
+  '.lightbox-holographic-normal-map'
+]) assert.ok(compactFoilCss.includes(layer), `Compact presentation must suppress ${layer}.`);
+assert.ok(compactFoilCss.includes('display:none!important;'),
+  'Compact foil layers must not paint on mobile.');
+assert.ok(compactFoilCss.includes('transform-style:preserve-3d;') &&
+  compactFoilCss.includes('will-change:transform;'),
+  'Mobile must retain the transform-only 3D parallax surface.');
+assert.ok(styles.includes('.lightbox-holographic-spectrum{'),
+  'Desktop foil material rules must remain available.');
 assert.match(lightboxStyles, /lightbox-holographic-desktop-recommendation/);
 assert.match(mediaRenderer, /For the full visual experience, we recommend viewing on a desktop\./);
 console.log('Responsive foil modes and bounded pointer/auto poses validated.');

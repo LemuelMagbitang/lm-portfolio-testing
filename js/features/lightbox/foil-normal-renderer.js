@@ -1,4 +1,4 @@
-import { isCompactFoilTarget, resolveFoilIntensity } from './foil-interaction.js?v=20261028-01';
+import { isCompactFoilTarget, resolveFoilIntensity } from './foil-interaction.js?v=20261028-02';
 
 /**
  * Per-pixel holographic foil relief.
