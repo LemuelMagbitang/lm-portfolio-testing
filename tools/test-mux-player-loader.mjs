@@ -3,11 +3,15 @@ import { ensureMuxPlayer, ensureMuxVideo } from '../js/infrastructure/mux/player
 
 const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'customElements');
 const registered = new Set();
-globalThis.customElements = {
-  get(name) {
-    return registered.has(name) ? { name } : undefined;
+Object.defineProperty(globalThis, 'customElements', {
+  configurable: true,
+  writable: true,
+  value: {
+    get(name) {
+      return registered.has(name) ? { name } : undefined;
+    }
   }
-};
+});
 
 try {
   let playerAttempts = 0;
