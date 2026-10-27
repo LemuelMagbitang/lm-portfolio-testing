@@ -4,7 +4,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261026-01';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261025-02';
-import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261027-05';
+import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261027-06';
 
 const root = process.cwd();
 const admin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
