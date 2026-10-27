@@ -9458,6 +9458,46 @@ try {
           JSON.stringify(selectionSnapshot));
       }
       await page.locator('#aboutHeadline').waitFor({ state: 'visible', timeout: 5000 });
+
+      // Cover the reported real journey, not only a synthetic pageshow event:
+      // Works -> About -> browser Back -> restored Works hero playback.
+      const returnedToWorks = page.waitForURL(
+        url => url.pathname === '/' || url.pathname === '/index.html',
+        { timeout: 8000 }
+      );
+      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 8000 });
+      await returnedToWorks;
+
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        const media = document.querySelector(
+          '#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video'
+        );
+        return transition?.dataset.loading === 'ready' &&
+          media &&
+          !media.paused &&
+          Number(media.currentTime) > 0.05 &&
+          media.dataset.playbackState === 'playing';
+      }, null, { timeout: 7000 });
+
+      const returnedHero = await page.evaluate(() => {
+        const media = document.querySelector(
+          '#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video'
+        );
+        return {
+          pathname: location.pathname,
+          playerType: media?.localName || '',
+          playbackState: media?.dataset?.playbackState || '',
+          paused: media?.paused ?? true,
+          currentTime: Number(media?.currentTime) || 0,
+          networkState: Number(media?.networkState) || 0
+        };
+      });
+      if (returnedHero.paused || returnedHero.currentTime <= 0.05 ||
+          returnedHero.playbackState !== 'playing') {
+        throw new Error('Mux/HLS hero did not resume after Works -> About -> Back navigation: ' +
+          JSON.stringify(returnedHero));
+      }
     }, { width: 390, height: 844 });
 
     let cmsSmokePngMediaSha = 'smoke-png-existing';
