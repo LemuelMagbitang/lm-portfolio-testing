@@ -883,7 +883,7 @@ assert.ok(admin.includes('project.thumbnail?.holographic') && admin.includes('p.
   'Explicit thumbnail foil settings must survive CMS load and save.');
 
 
-assert.ok(renderer.includes('const faceStrength = isFront ? config.intensity : config.backIntensity') &&
+assert.ok(renderer.includes('const faceStrength = isFront ? frontStrength : backStrength') &&
   renderer.includes('intensity: faceStrength'),
   'The interactive foil preview must apply front/back strengths independently per face.');
 assert.ok(renderer.includes("const HOLOGRAPHIC_COSMOS_MAPS = {") &&
