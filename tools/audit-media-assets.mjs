@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { findAssetReferences } from './media-reference-audit.mjs';
 
 const ROOT = process.cwd();
 const ASSET_ROOT = path.join(ROOT, 'assets');
@@ -261,10 +262,7 @@ function auditLargeVideoReferences() {
   for (const file of collectFiles(ASSET_ROOT)) {
     if (!VIDEO_EXTENSIONS.has(extensionOf(file)) || fs.statSync(file).size < largeVideoThreshold) continue;
     const relative = path.relative(ROOT, file).split(path.sep).join('/');
-    const basename = path.basename(file);
-    const referencedBy = referenceFiles
-      .filter(source => source.content.includes(relative) || source.content.includes(basename))
-      .map(source => source.path);
+    const referencedBy = findAssetReferences(relative, referenceFiles);
     if (!referencedBy.length) {
       findings.unreferencedLargeVideos.push({
         path: relative,
