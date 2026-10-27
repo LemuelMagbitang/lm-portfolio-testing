@@ -194,12 +194,15 @@ assert.match(mediaRendererSource, /scheduleJob\(\s*'viewer-module',\s*\(\) => wi
 assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
 assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) \{[\s\S]*?imageDimensionCache\.set\(url, \{ width, height \}\);[\s\S]*?captureAssetPreview\(url, image/);
 assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);
-// Foil rotation is hover-only now: no touch hold/drag lifecycle should
-// remain in the renderer, while pointer updates are passive and frame-coalesced.
+// Fine-pointer parallax and touch-only auto motion use separate modes:
+// no touch hold/drag lifecycle should remain, and pointer updates stay coalesced.
 assert.doesNotMatch(mediaRendererSource, /HOLOGRAPHIC_TOUCH_HOLD_MS|HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX|onTouchMove|is-holo-touch-pending|touchGesture\.engaged|is-holo-touch-engaged|setPointerCapture/);
 assert.match(mediaRendererSource, /const onPointerMove = event =>/);
 assert.match(mediaRendererSource, /event\.pointerType !== 'mouse'/);
-assert.match(mediaRendererSource, /getFoilEdgeRotation\(x, y, motion\.rotationDirection\)/);
+assert.match(mediaRendererSource, /getFoilPointerPose\(x, y\)/);
+assert.match(mediaRendererSource, /startFoilAutoRotation\(surface\)/);
+assert.match(mediaRendererSource, /syncFoilMotionMode = \(\) =>/);
+assert.match(mediaRendererSource, /prefersReducedFoilMotion\(windowRef\)/);
 assert.match(mediaRendererSource, /surface\.addEventListener\('pointermove', onPointerMove, \{ passive: true \}\)/);
 assert.match(mediaRendererSource, /surface\.addEventListener\('pointerleave', onPointerLeave\)/);
 assert.match(mediaRendererSource, /surface\.addEventListener\('click', toggleFlip\)/);
