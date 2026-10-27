@@ -88,6 +88,9 @@ jobs:
       - name: Validate Gallery presentation boundary
         run: node tools/validate-gallery-presentation.mjs
 
+      - name: Validate holographic foil interaction
+        run: node tools/validate-holographic-interaction.mjs
+
       - name: Validate feature lifecycle boundary
         run: node tools/validate-lifecycle.mjs
 
