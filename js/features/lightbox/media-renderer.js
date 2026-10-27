@@ -10,7 +10,7 @@ import { COMPACT_FOIL_MAX_INTENSITY, FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoil
 
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
-const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';
+const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-02';
 let muxPlayerModulePromise = null;
 let muxPlayerModuleAttempt = 0;
 
