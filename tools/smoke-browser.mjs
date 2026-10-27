@@ -5748,11 +5748,21 @@ try {
           holoBox.x + holoBox.width * 0.82,
           holoBox.y + holoBox.height * 0.22
         );
+        // A previous resize check leaves the pointer at the right edge with Y near 50%.
+        // Wait for the new upper-right movement on both axes, not a stale X-only match.
         await page.waitForFunction(() => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          const x = Number.parseFloat(el?.style.getPropertyValue('--holo-x'));
-          return Number.isFinite(x) && x > 50;
-        }, null, { timeout: 1200 });
+          if (!el) return false;
+          const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
+          const y = Number.parseFloat(el.style.getPropertyValue('--holo-y'));
+          const foilX = Number.parseFloat(el.style.getPropertyValue('--holo-foil-x'));
+          const foilY = Number.parseFloat(el.style.getPropertyValue('--holo-foil-y'));
+          return Number.isFinite(x) && Number.isFinite(y) &&
+            Number.isFinite(foilX) && Number.isFinite(foilY) &&
+            x > 50 && y < 50 &&
+            Math.abs((x + foilX) - 100) <= 1.5 &&
+            Math.abs((y + foilY) - 100) <= 1.5;
+        }, null, { timeout: 1800 });
 
         const holoStateBeforeFlip = await holographic.evaluate(el => ({
           x: el.style.getPropertyValue('--holo-x'),
@@ -5776,7 +5786,7 @@ try {
             !Number.isFinite(foilX) || !Number.isFinite(foilY) ||
             Math.abs((pointerX + foilX) - 100) > 1.5 ||
             Math.abs((pointerY + foilY) - 100) > 1.5) {
-          throw new Error('Holographic Lightbox pointer/foil mapping did not preserve the inverse refraction contract.');
+          throw new Error('Holographic Lightbox pointer/foil mapping did not preserve the inverse refraction contract: ' + JSON.stringify(holoStateBeforeFlip));
         }
         const lightX = Number.parseFloat(holoStateBeforeFlip.lightX);
         const lightY = Number.parseFloat(holoStateBeforeFlip.lightY);
