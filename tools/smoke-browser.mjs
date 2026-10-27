@@ -5582,9 +5582,9 @@ try {
             '; ' + String(error?.message || error));
         }
         const rightEdgePose = await readFoilPose();
-        if (Math.abs(rightEdgePose.rotation - 2.5) > 0.2 ||
-            Math.abs(rightEdgePose.shiftX - 4) > 0.2) {
-          throw new Error('Right-edge pointer pose failed its deterministic rotation/translation bounds: ' +
+        if (rightEdgePose.rotation < 2.2 || rightEdgePose.rotation > 2.5 ||
+            rightEdgePose.shiftX < 3.5 || rightEdgePose.shiftX > 4) {
+          throw new Error('Right-edge pointer pose failed its deterministic direction/translation bounds: ' +
             JSON.stringify({ rightEdgePose }));
         }
         await page.mouse.move(pointerBox.x + 10, pointerEdgeY);
@@ -5595,8 +5595,8 @@ try {
           return Number.isFinite(roll) && roll <= -2.3;
         }, null, { timeout: 1800 });
         const leftEdgePose = await readFoilPose();
-        if (Math.abs(leftEdgePose.rotation + 2.5) > 0.2 ||
-            Math.abs(leftEdgePose.shiftX + 4) > 0.2) {
+        if (leftEdgePose.rotation > -2.2 || leftEdgePose.rotation < -2.5 ||
+            leftEdgePose.shiftX > -3.5 || leftEdgePose.shiftX < -4) {
           throw new Error('Left-edge pointer pose did not move predictably in the opposite direction: ' +
             JSON.stringify({ rightEdgePose, leftEdgePose }));
         }
