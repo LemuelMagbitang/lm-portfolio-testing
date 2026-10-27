@@ -1,4 +1,5 @@
 import { serviceDb } from "../_shared/http.ts";
+import { readRequestBodyLimited } from "../_shared/request-body.ts";
 
 function hex(bytes: Uint8Array): string { return Array.from(bytes).map((value) => value.toString(16).padStart(2, "0")).join(""); }
 async function verifySignature(rawBody: string, header: string | null, secret: string): Promise<boolean> {
@@ -33,7 +34,9 @@ Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const secret = Deno.env.get("MUX_WEBHOOK_SECRET");
   if (!secret) return new Response("Webhook is not configured", { status: 500 });
-  const raw = await request.text();
+  const bodyResult = await readRequestBodyLimited(request, 1_048_576);
+  if (!bodyResult.ok) return new Response("Webhook payload too large", { status: 413 });
+  const raw = bodyResult.body;
   if (!await verifySignature(raw, request.headers.get("mux-signature"), secret)) return new Response("Invalid Mux signature", { status: 401 });
   let event: any;
   try { event = JSON.parse(raw); } catch (_) { return new Response("Invalid JSON", { status: 400 }); }
