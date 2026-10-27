@@ -14,14 +14,6 @@ const publicApi = read("supabase/functions/mux-public/index.ts");
 const bridge = read("js/infrastructure/mux/public-videos.js");
 const player = read("js/infrastructure/mux/player.js");
 const muxPlayerModuleUrl = "const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';";
-const muxFeatureSources = [hero, footer, read("js/features/lightbox/media-renderer.js")];
-check(muxFeatureSources.every(source =>
-  source.includes(muxPlayerModuleUrl) &&
-  source.includes("async function loadMuxPlayerModule()") &&
-  source.includes("const pending = import(moduleUrl)") &&
-  source.includes("if (attempt === 1) return false") &&
-  !/import\s*\{\s*ensureMux(?:Video|Player)\s*\}\s*from\s*['"][^'"]*infrastructure\/mux\/player\.js/.test(source)
-), "Optional Mux helper must be lazily imported with a common cache key, one retry, and a poster-safe failure path; it cannot be a static page dependency.");
 const databaseTypes = read("supabase/functions/_shared/database.types.ts");
 const envExample = read("supabase/functions/.env.example");
 const ignore = read(".gitignore");
@@ -32,6 +24,14 @@ const page = read("admin/videos.html"), script = read("admin/videos.js"), cms = 
 const workflow = read(".github/workflows/site-validation.yml");
 const smoke = read("tools/smoke-browser.mjs");
 const supabaseConfig = read("supabase/config.toml");
+const muxFeatureSources = [hero, footer, read("js/features/lightbox/media-renderer.js")];
+check(muxFeatureSources.every(source =>
+  source.includes(muxPlayerModuleUrl) &&
+  source.includes("async function loadMuxPlayerModule()") &&
+  source.includes("const pending = import(moduleUrl)") &&
+  source.includes("if (attempt === 1) return false") &&
+  !/import\s*\{\s*ensureMux(?:Video|Player)\s*\}\s*from\s*['"][^'"]*infrastructure\/mux\/player\.js/.test(source)
+), "Optional Mux helper must be lazily imported with a common cache key, one retry, and a poster-safe failure path; it cannot be a static page dependency.");
 check(migration.includes("create table if not exists public.videos") && migration.includes("create table if not exists public.video_assets"), "Video tables missing.");
 check(hardeningMigration.includes("set search_path = pg_catalog") && hardeningMigration.includes("videos_active_asset_id_idx") && hardeningMigration.includes("videos_created_by_idx"), "Video Library hardening migration must fix trigger search_path and index both referencing columns.");
 check(databaseTypes.includes("export type Database") && databaseTypes.includes("mux_webhook_events") && databaseTypes.includes("video_assets") && databaseTypes.includes("videos"), "Generated Supabase Database types must cover the Video Library schema.");
