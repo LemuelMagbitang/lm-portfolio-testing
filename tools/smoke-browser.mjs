@@ -5516,10 +5516,10 @@ try {
             pointerContract.intensity < 0 || pointerContract.intensity > 1) {
           throw new Error('Desktop foil did not preserve its configured intensity or hover capability: ' + JSON.stringify(pointerContract));
         }
-        const pointerBox = await holographic.boundingBox();
-        if (!pointerBox) throw new Error('Desktop holographic surface lost its geometry before edge interaction.');
-        const pointerCenterX = pointerBox.x + pointerBox.width * 0.5;
-        const pointerCenterY = pointerBox.y + pointerBox.height * 0.5;
+        const initialPointerBox = await holographic.boundingBox();
+        if (!initialPointerBox) throw new Error('Desktop holographic surface lost its geometry before edge interaction.');
+        const pointerCenterX = initialPointerBox.x + initialPointerBox.width * 0.5;
+        const pointerCenterY = initialPointerBox.y + initialPointerBox.height * 0.5;
         const readFoilPose = () => holographic.evaluate(el => ({
           direction: el.dataset.holoRotationDirection || '',
           x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
@@ -5538,7 +5538,12 @@ try {
         });
         await page.mouse.move(pointerCenterX, pointerCenterY);
         await page.waitForTimeout(90);
-        await page.mouse.move(pointerBox.x + pointerBox.width - 0.1, pointerCenterY);
+        // The first hover pauses the card's idle float. Re-measure after that
+        // pose settles so the edge coordinate is based on the now-stable surface.
+        const pointerBox = await holographic.boundingBox();
+        if (!pointerBox) throw new Error('Desktop holographic surface lost its geometry after hover settled.');
+        const pointerEdgeY = pointerBox.y + pointerBox.height * 0.5;
+        await page.mouse.move(pointerBox.x + pointerBox.width - 0.1, pointerEdgeY);
         try {
           await page.waitForFunction(() => {
             const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
@@ -5572,7 +5577,7 @@ try {
           throw new Error('Pointer edge did not produce the artwork instance’s maximum signed rotation: ' +
             JSON.stringify({ pointerContract, rightEdgePose, expectedRotation }));
         }
-        await page.mouse.move(pointerBox.x + 0.1, pointerCenterY);
+        await page.mouse.move(pointerBox.x + 0.1, pointerEdgeY);
         await page.waitForFunction(expected => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
           if (!el) return false;
