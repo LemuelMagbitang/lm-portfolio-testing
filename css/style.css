@@ -2073,10 +2073,11 @@ body.center-page {
 }
 
 @keyframes holo-idle-float{
-  0%,100%{transform:translate3d(0,0,0) rotateZ(-.35deg) rotateX(.8deg) rotateY(-1.25deg);}
-  28%{transform:translate3d(0,-2px,0) rotateZ(.1deg) rotateX(-.45deg) rotateY(.8deg);}
-  52%{transform:translate3d(0,-3.5px,0) rotateZ(.38deg) rotateX(.75deg) rotateY(.55deg);}
-  78%{transform:translate3d(0,-1px,0) rotateZ(-.18deg) rotateX(-.65deg) rotateY(-1.05deg);}
+  /* Ambient float translates only; pointer and touch motion own rotation. */
+  0%,100%{transform:translate3d(0,0,0);}
+  28%{transform:translate3d(0,-1px,0);}
+  52%{transform:translate3d(0,-1.5px,0);}
+  78%{transform:translate3d(0,-.5px,0);}
 }
 
 @keyframes holo-idle-sheen{
@@ -5653,7 +5654,7 @@ footer > .footer-content p{
    Environmental shading follows the exact same alpha/custom mask as the art,
    so transparent artwork keeps its silhouette and no outer frame is introduced. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner{
-  transform:perspective(900px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) rotateZ(var(--holo-rotation,0deg)) translateZ(9px);
+  transform:perspective(900px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) rotateZ(var(--holo-rotation,0deg)) translate3d(var(--holo-shift-x,0px),var(--holo-shift-y,0px),9px);
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-environment{
   position:absolute; inset:0; z-index:27; margin:0; border:0; pointer-events:none;
@@ -6558,13 +6559,16 @@ body.menu-open .hamburger-icon span {
 }
 
 
-/* Compact foil presentation: retain the artwork/foil layers, but stop idle
-   animation and promoted layers that provide no benefit on touch-first screens. */
+/* Compact foil presentation: stop costly idle layer animations; a touch-only
+   controller supplies the separate, bounded auto-parallax pose. */
 @media (max-width:760px), (hover:none) and (pointer:coarse) {
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic * {
     animation:none!important;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-input="tap-only"]::before {
+    content:'TAP TO FLIP';
   }
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before {
     top:10px;

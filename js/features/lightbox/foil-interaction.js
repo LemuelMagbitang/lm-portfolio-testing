@@ -1,21 +1,18 @@
 export const COMPACT_FOIL_MAX_INTENSITY = 0.10;
-export const FOIL_MAX_EDGE_ROTATION_DEG = 13.5;
+export const FOIL_MAX_HOVER_TILT_DEG = 7;
+export const FOIL_MAX_HOVER_ROLL_DEG = 2.5;
+export const FOIL_MAX_HOVER_SHIFT_X_PX = 4;
+export const FOIL_MAX_HOVER_SHIFT_Y_PX = 3;
+export const FOIL_AUTO_MOTION_FRAME_INTERVAL_MS = 1000 / 30;
+
 const NARROW_FOIL_BREAKPOINT = 760;
-const EDGE_ROTATION_START = 0.62;
-const EDGE_ROTATION_MAX_RADIUS = 0.97;
 
 function mediaMatches(view, query) {
-  try {
-    return Boolean(view?.matchMedia?.(query)?.matches);
-  } catch (_) {
-    return false;
-  }
+  try { return Boolean(view?.matchMedia?.(query)?.matches); }
+  catch (_) { return false; }
 }
 
-/**
- * Keep foil treatment lightweight on narrow layouts and touch-first devices.
- * Uses responsive capabilities, never user-agent sniffing.
- */
+/** Responsive capability check; no user-agent sniffing. */
 export function isCompactFoilTarget(view = globalThis.window) {
   const width = Number(view?.innerWidth) || 0;
   const narrowViewport = mediaMatches(view, `(max-width: ${NARROW_FOIL_BREAKPOINT}px)`) ||
@@ -24,12 +21,20 @@ export function isCompactFoilTarget(view = globalThis.window) {
   return narrowViewport || touchFirst;
 }
 
-/**
- * Only enable hover interactions when the device has a real fine hover pointer.
- * any-pointer allows a mouse/trackpad attached to a touch-capable tablet.
- */
+/** Only enable pointer parallax where a real fine hover pointer is available. */
 export function supportsFoilHover(view = globalThis.window) {
   return mediaMatches(view, '(any-hover: hover) and (any-pointer: fine)');
+}
+
+export function prefersReducedFoilMotion(view = globalThis.window) {
+  return mediaMatches(view, '(prefers-reduced-motion: reduce)');
+}
+
+/** Mobile auto motion and desktop hover can never be enabled at the same time. */
+export function shouldAutoRotateFoil(view = globalThis.window) {
+  return isCompactFoilTarget(view) &&
+    !supportsFoilHover(view) &&
+    !prefersReducedFoilMotion(view);
 }
 
 export function resolveFoilIntensity(value, compactTarget = false) {
@@ -38,20 +43,30 @@ export function resolveFoilIntensity(value, compactTarget = false) {
   return compactTarget ? Math.min(intensity, COMPACT_FOIL_MAX_INTENSITY) : intensity;
 }
 
-/**
- * Map pointer distance from the artwork centre to a smooth edge roll.
- * Direction is selected once per artwork instance and only determines the sign.
- */
-export function getFoilEdgeRotation(xPercent, yPercent, direction = 1, maxRotation = FOIL_MAX_EDGE_ROTATION_DEG) {
+/** Deterministic bounded pointer pose: right/down is positive, left/up negative. */
+export function getFoilPointerPose(xPercent, yPercent) {
   const x = Math.max(0, Math.min(100, Number(xPercent) || 0));
   const y = Math.max(0, Math.min(100, Number(yPercent) || 0));
-  const radius = Math.min(1, Math.hypot((x - 50) / 50, (y - 50) / 50));
-  // The surface is projected in 3D and has a subtle idle pose, so a real
-  // pointer at its visual outer edge may map a few pixels inside the AABB.
-  // Saturate in that narrow edge band instead of requiring an impossible 100%.
-  const progress = Math.max(0, Math.min(1, (radius - EDGE_ROTATION_START) / (EDGE_ROTATION_MAX_RADIUS - EDGE_ROTATION_START)));
-  if (progress <= 0) return 0;
-  const sign = Number(direction) < 0 ? -1 : 1;
-  const limit = Math.max(0, Number(maxRotation) || 0);
-  return Math.round(sign * limit * progress * 100) / 100;
+  const nx = (x - 50) / 50;
+  const ny = (y - 50) / 50;
+  const round = value => Math.round(value * 1000) / 1000;
+  return {
+    x, y,
+    rx: round(-ny * FOIL_MAX_HOVER_TILT_DEG),
+    ry: round(nx * FOIL_MAX_HOVER_TILT_DEG),
+    rotation: round(nx * FOIL_MAX_HOVER_ROLL_DEG),
+    shiftX: round(nx * FOIL_MAX_HOVER_SHIFT_X_PX),
+    shiftY: round(ny * FOIL_MAX_HOVER_SHIFT_Y_PX)
+  };
+}
+
+/** Gentle deterministic touch-only parallax; caller throttles updates to ~30 FPS. */
+export function getFoilAutoPose(elapsedSeconds = 0) {
+  const time = Math.max(0, Number(elapsedSeconds) || 0);
+  const round = value => Math.round(value * 1000) / 1000;
+  return {
+    x: round(50 + 9 * Math.sin(time * 0.42)),
+    y: round(50 + 6 * Math.sin(time * 0.34)),
+    rotation: round(1.8 * Math.sin(time * 0.28))
+  };
 }

@@ -2,91 +2,103 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   COMPACT_FOIL_MAX_INTENSITY,
-  FOIL_MAX_EDGE_ROTATION_DEG,
-  getFoilEdgeRotation,
+  FOIL_AUTO_MOTION_FRAME_INTERVAL_MS,
+  FOIL_MAX_HOVER_ROLL_DEG,
+  FOIL_MAX_HOVER_SHIFT_X_PX,
+  FOIL_MAX_HOVER_SHIFT_Y_PX,
+  FOIL_MAX_HOVER_TILT_DEG,
+  getFoilAutoPose,
+  getFoilPointerPose,
   isCompactFoilTarget,
+  prefersReducedFoilMotion,
   resolveFoilIntensity,
+  shouldAutoRotateFoil,
   supportsFoilHover
-} from '../js/features/lightbox/foil-interaction.js?v=20261027-03';
+} from '../js/features/lightbox/foil-interaction.js?v=20261027-04';
 
-const mobileView = {
-  innerWidth: 390,
-  matchMedia: query => ({ matches: query.includes('max-width') })
-};
-const smallTouchTablet = {
-  innerWidth: 1024,
-  matchMedia: query => ({ matches: query.includes('hover: none') })
-};
-const narrowMouseView = {
-  innerWidth: 600,
-  matchMedia: query => ({
-    matches: query.includes('any-hover: hover') || query.includes('any-pointer: fine')
+const mediaQueryView = (innerWidth, options = {}) => ({
+  innerWidth,
+  matchMedia: query => ({ matches:
+    query === '(max-width: 760px)' ? innerWidth <= 760
+      : query === '(hover: none) and (pointer: coarse)' ? Boolean(options.touch)
+      : query === '(any-hover: hover) and (any-pointer: fine)' ? Boolean(options.hover)
+      : query === '(prefers-reduced-motion: reduce)' ? Boolean(options.reduced)
+      : false
   })
-};
-const desktopView = {
-  innerWidth: 1440,
-  matchMedia: query => ({ matches: query.includes('any-hover: hover') || query.includes('any-pointer: fine') })
-};
-const touchOnlyView = {
-  innerWidth: 1024,
-  matchMedia: query => ({ matches: query.includes('hover: none') || query.includes('pointer: coarse') })
-};
+});
+const mobileView = mediaQueryView(390, { touch: true });
+const touchTabletView = mediaQueryView(1024, { touch: true });
+const narrowMouseView = mediaQueryView(600, { hover: true });
+const laptopView = mediaQueryView(1366, { hover: true });
+const largeDesktopView = mediaQueryView(1920, { hover: true });
+const reducedMotionView = mediaQueryView(390, { touch: true, reduced: true });
 
 assert.equal(isCompactFoilTarget(mobileView), true);
-assert.equal(isCompactFoilTarget(smallTouchTablet), true);
-assert.equal(isCompactFoilTarget(narrowMouseView), true, 'Small viewport should remain compact even when a mouse is available.');
-assert.equal(supportsFoilHover(narrowMouseView), true, 'A fine hover pointer on a compact layout should retain hover rotation.');
-assert.equal(resolveFoilIntensity(0.95, isCompactFoilTarget(narrowMouseView)), COMPACT_FOIL_MAX_INTENSITY);
-assert.equal(isCompactFoilTarget(desktopView), false);
+assert.equal(isCompactFoilTarget(touchTabletView), true);
+assert.equal(isCompactFoilTarget(narrowMouseView), true);
+assert.equal(shouldAutoRotateFoil(mobileView), true);
+assert.equal(shouldAutoRotateFoil(touchTabletView), true);
+assert.equal(shouldAutoRotateFoil(narrowMouseView), false, 'Fine hover takes priority on compact hybrid devices.');
+assert.equal(shouldAutoRotateFoil(laptopView), false);
+assert.equal(shouldAutoRotateFoil(largeDesktopView), false);
+assert.equal(shouldAutoRotateFoil(reducedMotionView), false, 'Reduced motion must disable auto rotation.');
+assert.equal(prefersReducedFoilMotion(reducedMotionView), true);
+assert.equal(supportsFoilHover(laptopView), true);
+assert.equal(supportsFoilHover(largeDesktopView), true);
+assert.equal(supportsFoilHover(mobileView), false);
+
 assert.equal(resolveFoilIntensity(0.95, true), COMPACT_FOIL_MAX_INTENSITY);
 assert.equal(resolveFoilIntensity(0.10, true), 0.10);
-assert.equal(resolveFoilIntensity(0.95, false), 0.95, 'Desktop must preserve configured intensity.');
+assert.equal(resolveFoilIntensity(0.95, false), 0.95);
 assert.equal(resolveFoilIntensity(-1, false), 0);
 assert.equal(resolveFoilIntensity(4, false), 1);
-assert.equal(supportsFoilHover(desktopView), true);
-assert.equal(supportsFoilHover(touchOnlyView), false);
 
-assert.equal(getFoilEdgeRotation(50, 50, 1), 0, 'The centre should stay neutral.');
-assert.equal(getFoilEdgeRotation(100, 50, 1), FOIL_MAX_EDGE_ROTATION_DEG);
-assert.equal(getFoilEdgeRotation(98.6, 50, 1), FOIL_MAX_EDGE_ROTATION_DEG, 'The rotated visual edge should reach the full angle before the pointer leaves the transformed hit area.');
-assert.equal(getFoilEdgeRotation(99.2, 50, 1), FOIL_MAX_EDGE_ROTATION_DEG, 'The projected artwork edge should reach the full angle just inside the hit-test bounds.');
-assert.equal(getFoilEdgeRotation(0, 50, -1), -FOIL_MAX_EDGE_ROTATION_DEG);
-assert.equal(getFoilEdgeRotation(0.8, 50, -1), -FOIL_MAX_EDGE_ROTATION_DEG, 'The counterclockwise edge should use the same saturation band.');
-assert.ok(Math.abs(getFoilEdgeRotation(90, 50, 1)) > Math.abs(getFoilEdgeRotation(80, 50, 1)));
-assert.equal(getFoilEdgeRotation(50, 50, -1), 0);
+const centrePose = getFoilPointerPose(50, 50);
+assert.deepEqual(centrePose, { x: 50, y: 50, rx: 0, ry: 0, rotation: 0, shiftX: 0, shiftY: 0 });
+const topRightPose = getFoilPointerPose(100, 0);
+assert.equal(topRightPose.rx, FOIL_MAX_HOVER_TILT_DEG);
+assert.equal(topRightPose.ry, FOIL_MAX_HOVER_TILT_DEG);
+assert.equal(topRightPose.rotation, FOIL_MAX_HOVER_ROLL_DEG);
+assert.equal(topRightPose.shiftX, FOIL_MAX_HOVER_SHIFT_X_PX);
+assert.equal(topRightPose.shiftY, -FOIL_MAX_HOVER_SHIFT_Y_PX);
+const bottomLeftPose = getFoilPointerPose(0, 100);
+assert.equal(bottomLeftPose.rx, -FOIL_MAX_HOVER_TILT_DEG);
+assert.equal(bottomLeftPose.ry, -FOIL_MAX_HOVER_TILT_DEG);
+assert.equal(bottomLeftPose.rotation, -FOIL_MAX_HOVER_ROLL_DEG);
+assert.equal(bottomLeftPose.shiftX, -FOIL_MAX_HOVER_SHIFT_X_PX);
+assert.equal(bottomLeftPose.shiftY, FOIL_MAX_HOVER_SHIFT_Y_PX);
+
+assert.deepEqual(getFoilAutoPose(0), { x: 50, y: 50, rotation: 0 });
+assert.notDeepEqual(getFoilAutoPose(1.5), getFoilAutoPose(2.5), 'Auto pose should progress.');
+for (let step = 0; step <= 40; step++) {
+  const pose = getFoilAutoPose(step * 0.25);
+  assert.ok(pose.x >= 41 && pose.x <= 59);
+  assert.ok(pose.y >= 44 && pose.y <= 56);
+  assert.ok(Math.abs(pose.rotation) <= 1.8);
+}
+assert.ok(FOIL_AUTO_MOTION_FRAME_INTERVAL_MS >= 33 && FOIL_AUTO_MOTION_FRAME_INTERVAL_MS <= 34);
 
 const mediaRenderer = await readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 const normalRenderer = await readFile(new URL('../js/features/lightbox/foil-normal-renderer.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
-
-assert.match(mediaRenderer, /resolveFoilIntensity\(config\.intensity, compactTarget\)/);
-assert.match(mediaRenderer, /resolveFoilIntensity\(config\.backIntensity, compactTarget\)/);
-assert.match(mediaRenderer, /const rotationDirection = Math\.random\(\) < 0\.5 \? -1 : 1/);
-assert.match(mediaRenderer, /getFoilEdgeRotation\(x, y, motion\.rotationDirection/);
-assert.match(mediaRenderer, /event\.pointerType !== 'mouse'/);
+assert.match(mediaRenderer, /getFoilPointerPose\(x, y\)/);
+assert.match(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000\)/);
+assert.match(mediaRenderer, /motion\.autoFrame = windowRef\.requestAnimationFrame\(animate\)/);
+assert.match(mediaRenderer, /cancelAnimationFrame\?\.\(motion\.autoFrame\)/);
+assert.match(mediaRenderer, /prefersReducedFoilMotion\(windowRef\)/);
+assert.match(mediaRenderer, /syncFoilMotionMode = \(\) =>/);
+assert.match(mediaRenderer, /surface\.dataset\.holoMotion = autoRotationAvailable \? 'auto-rotate'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
-assert.match(mediaRenderer, /syncResponsiveFoilIntensity = \(\) =>/);
-assert.match(mediaRenderer, /let hoverAvailable = supportsFoilHover\(windowRef\)/);
-assert.match(mediaRenderer, /const syncFoilHoverCapability = \(\) =>/);
-assert.match(mediaRenderer, /bindResponsiveFoilQuery\('\(any-hover: hover\) and \(any-pointer: fine\)', syncFoilHoverCapability\)/);
-assert.match(mediaRenderer, /surface\.dataset\.holoInput = hoverAvailable \? 'hover-edge' : 'tap-only'/);
-assert.match(mediaRenderer, /cancelQueuedPointer\(\);\s*setHolographicTarget\(surface, 50, 50, 0\)/);
-assert.match(mediaRenderer, /bindResponsiveFoilQuery\('\(max-width: 760px\)'\)/);
-assert.match(mediaRenderer, /if \(motion\?\.compactTarget\) tiltStrength = Math\.min\(tiltStrength, COMPACT_FOIL_MAX_INTENSITY\)/);
-assert.match(mediaRenderer, /intensity: isFront \? config\.intensity : config\.backIntensity/);
-assert.match(mediaRenderer, /holographicMotionStates\.set\(surface, \{[^}]*rotationDirection, compactTarget/);
-assert.doesNotMatch(mediaRenderer, /hoverActive|animationPlayState|animation-play-state/,
-  'Foil hover must not interrupt the artwork’s existing idle animation or make click targets unstable.');
+assert.doesNotMatch(mediaRenderer, /Math\.random\(\)|rotationDirection|getFoilEdgeRotation/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
 assert.match(normalRenderer, /resolveFoilIntensity\(intensity,\s*compactTarget\)/);
 assert.match(normalRenderer, /let compactTarget = isCompactFoilTarget\(view\)/);
 assert.match(normalRenderer, /level=resolveFoilIntensity\(intensity,compactTarget\)/);
 assert.match(normalRenderer, /mediaQuery\.addEventListener\('change',handleResize\)/);
 assert.match(normalRenderer, /drawTimer/);
-assert.match(normalRenderer, /u_mapCount>1\.5/);
 assert.match(styles, /rotateZ\(var\(--holo-rotation,0deg\)\)/);
+assert.match(styles, /translate3d\(var\(--holo-shift-x,0px\),var\(--holo-shift-y,0px\),9px\)/);
 assert.match(styles, /@media\s*\(max-width:760px\),\s*\(hover:none\) and \(pointer:coarse\)/);
-assert.match(styles, /@media\s*\(any-hover:none\) and \(pointer:coarse\)/);
+assert.match(styles, /@media\s*\(prefers-reduced-motion:reduce\)/);
 assert.match(styles, /TAP TO FLIP/);
-
-console.log('Holographic foil responsive intensity and interaction contract validated.');
+console.log('Responsive foil modes and bounded pointer/auto poses validated.');
