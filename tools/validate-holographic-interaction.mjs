@@ -48,7 +48,9 @@ assert.equal(supportsFoilHover(touchOnlyView), false);
 
 assert.equal(getFoilEdgeRotation(50, 50, 1), 0, 'The centre should stay neutral.');
 assert.equal(getFoilEdgeRotation(100, 50, 1), FOIL_MAX_EDGE_ROTATION_DEG);
+assert.equal(getFoilEdgeRotation(99.2, 50, 1), FOIL_MAX_EDGE_ROTATION_DEG, 'The projected artwork edge should reach the full angle just inside the hit-test bounds.');
 assert.equal(getFoilEdgeRotation(0, 50, -1), -FOIL_MAX_EDGE_ROTATION_DEG);
+assert.equal(getFoilEdgeRotation(0.8, 50, -1), -FOIL_MAX_EDGE_ROTATION_DEG, 'The counterclockwise edge should use the same saturation band.');
 assert.ok(Math.abs(getFoilEdgeRotation(90, 50, 1)) > Math.abs(getFoilEdgeRotation(80, 50, 1)));
 assert.equal(getFoilEdgeRotation(50, 50, -1), 0);
 
