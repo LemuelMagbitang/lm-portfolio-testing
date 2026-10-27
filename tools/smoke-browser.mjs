@@ -5526,13 +5526,45 @@ try {
           y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
         }));
+        await holographic.evaluate(el => {
+          el.__foilPointerTrace = [];
+          el.addEventListener('pointermove', event => el.__foilPointerTrace.push({
+            type: 'move', pointerType: event.pointerType, x: event.clientX, y: event.clientY,
+            trusted: event.isTrusted, target: event.target?.className?.baseVal || event.target?.className || ''
+          }), { capture: true });
+          el.addEventListener('pointerleave', event => el.__foilPointerTrace.push({
+            type: 'leave', pointerType: event.pointerType, x: event.clientX, y: event.clientY
+          }), { capture: true });
+        });
         await page.mouse.move(pointerCenterX, pointerCenterY);
         await page.waitForTimeout(90);
         await page.mouse.move(pointerBox.x + pointerBox.width - 0.1, pointerCenterY);
-        await page.waitForFunction(() => {
-          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          return el && Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))) >= 13.2;
-        }, null, { timeout: 1800 });
+        try {
+          await page.waitForFunction(() => {
+            const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+            return el && Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))) >= 13.2;
+          }, null, { timeout: 1800 });
+        } catch (error) {
+          const diagnostic = await holographic.evaluate(el => {
+            const rect = el.getBoundingClientRect();
+            const trace = Array.isArray(el.__foilPointerTrace) ? el.__foilPointerTrace.slice(-12) : [];
+            return {
+              input: el.dataset.holoInput || '',
+              direction: el.dataset.holoRotationDirection || '',
+              rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+              pose: {
+                x: el.style.getPropertyValue('--holo-x'),
+                y: el.style.getPropertyValue('--holo-y'),
+                rotation: el.style.getPropertyValue('--holo-rotation'),
+                tiltStrength: el.style.getPropertyValue('--holo-tilt-strength')
+              },
+              computedTransform: getComputedStyle(el.querySelector('.lightbox-holographic-inner')).transform,
+              trace
+            };
+          });
+          throw new Error('Foil pointer-edge rotation did not reach the maximum: ' + JSON.stringify(diagnostic) +
+            '; ' + String(error?.message || error));
+        }
         const rightEdgePose = await readFoilPose();
         const expectedRotation = pointerContract.direction === 'clockwise' ? 13.5 : -13.5;
         if (rightEdgePose.direction !== pointerContract.direction ||
