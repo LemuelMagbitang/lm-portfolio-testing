@@ -31,6 +31,7 @@ const canonicalModuleQueries = new Map([
   ['infrastructure/browser/media-contrast.js', '?v=20261026-02'],
   ['infrastructure/media-background/loader.js', '?v=20261023-01'],
   ['infrastructure/mux/player.js', '?v=20261027-02'],
+  ['infrastructure/mux/public-videos.js', '?v=20261027-01'],
   ['infrastructure/media/asset-preview.js', '?v=20261027-01'],
   ['infrastructure/software-logo/lookup.js', '?v=20261008-01'],
   ['features/projects/index.js', '?v=20261027-05'],
