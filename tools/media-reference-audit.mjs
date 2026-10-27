@@ -9,8 +9,8 @@ export function searchableReferenceContent(sourcePath, content) {
   if (path.extname(String(sourcePath || '')).toLowerCase() !== '.html') return raw;
 
   return raw
-    .replace(/<!--[\\s\\S]*?-->/g, ' ')
-    .replace(/\\bplaceholder\\s*=\\s*(["'])[\\s\\S]*?\\1/gi, ' ');
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/\bplaceholder\s*=\s*(["'])[\s\S]*?\1/gi, ' ');
 }
 
 /**
