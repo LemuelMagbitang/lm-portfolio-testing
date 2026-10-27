@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   getSiteRootUrl,
   siteAssetUrl
-} from '../js/infrastructure/browser/site-paths.js?v=20261027-04';
+} from '../js/infrastructure/browser/site-paths.js?v=20261027-05';
 
 function makeScript(documentUrl, src) {
   return {
@@ -128,12 +128,14 @@ function encodePathToken(value, depth) {
     encoded = encoded
       .replaceAll('%', '%25')
       .replaceAll('.', '%2e')
-      .replaceAll('/', '%2f');
+      .replaceAll('/', '%2f')
+      .replaceAll(String.fromCharCode(92), '%5c');
   }
   return encoded;
 }
 const deeplyEncodedDot = encodePathToken('.', 12);
 const deeplyEncodedSlash = encodePathToken('/', 12);
+const deeplyEncodedBackslash = encodePathToken(String.fromCharCode(92), 12);
 const unsafeLocalPaths = [
   '../assets/projects/site/portfolio-logo.webp',
   'assets/../data/projects.json',
@@ -146,6 +148,7 @@ const unsafeLocalPaths = [
   'assets%2525252F%2525252e%2525252e%2525252Fadmin/admin.js',
   'assets/' + deeplyEncodedDot + deeplyEncodedDot + '/data/projects.json',
   'assets' + deeplyEncodedSlash + deeplyEncodedDot + deeplyEncodedSlash + deeplyEncodedDot + deeplyEncodedSlash + 'admin/admin.js',
+  'assets' + deeplyEncodedBackslash + deeplyEncodedDot + deeplyEncodedBackslash + deeplyEncodedDot + deeplyEncodedBackslash + 'admin/admin.js',
   'assets/%00/hidden.webp'
 ];
 for (const value of unsafeLocalPaths) {

@@ -116,7 +116,7 @@ export function siteAssetUrl(src, options = {}) {
         .replace(/%25/gi, '%')
         .replace(/%2e/gi, '.')
         .replace(/%2f/gi, '/')
-        .replace(/%5c/gi, '\\');
+        .replace(/%5c/gi, '/');
       if (decoded === decodedPath) break;
       if (/[\u0000-\u001f\u007f]/.test(decoded) ||
           /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(decoded) ||

@@ -5,7 +5,7 @@
  * application has no dependency on legacy root facades.
  */
 
-import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js?v=20261027-04';
+import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js?v=20261027-05';
 import { prefersReducedMotion } from '../infrastructure/browser/reduced-motion.js';
 import { loadScriptOnce } from '../infrastructure/browser/script-loader.js?v=20261008-01';
 import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261027-23'
+  cacheVersion = '20261027-24'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
