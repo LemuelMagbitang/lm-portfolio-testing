@@ -6,7 +6,7 @@
  */
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-02';
-import { getFoilEdgeRotation, isCompactFoilTarget, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261027-01';
+import { COMPACT_FOIL_MAX_INTENSITY, getFoilEdgeRotation, isCompactFoilTarget, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261027-01';
 import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
@@ -782,7 +782,9 @@ export function createLightboxMediaRenderer({
     const foilY = 100 - clampedY;
     const lightX = clampHolographic(50 + ((50 - clampedX) * 0.68), 16, 84);
     const lightY = clampHolographic(50 + ((50 - clampedY) * 0.68), 16, 84);
-    const tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
+    const motion = holographicMotionStates.get(surface);
+    let tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
+    if (motion?.compactTarget) tiltStrength = Math.min(tiltStrength, COMPACT_FOIL_MAX_INTENSITY);
 
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
@@ -922,10 +924,10 @@ export function createLightboxMediaRenderer({
     surface.className = 'lightbox-holographic';
     surface.dataset.holoStyle = config.style;
     surface.dataset.holoTextureMode = config.textureMode;
-    const compactTarget = isCompactFoilTarget(windowRef);
+    let compactTarget = isCompactFoilTarget(windowRef);
     const hoverAvailable = supportsFoilHover(windowRef);
-    const frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
-    const backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
+    let frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
+    let backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
     const rotationDirection = Math.random() < 0.5 ? -1 : 1;
     surface.dataset.holoInput = hoverAvailable ? 'hover-edge' : 'tap-only';
     surface.dataset.holoRotationDirection = rotationDirection < 0 ? 'counterclockwise' : 'clockwise';
@@ -941,7 +943,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-light-x', '34%');
     surface.style.setProperty('--holo-light-y', '26%');
     surface.style.setProperty('--holo-tilt-strength', '0');
-    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0, rotationDirection, frame: null, lastTime: 0 });
+    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0, rotationDirection, compactTarget, frame: null, lastTime: 0 });
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
     surface.style.setProperty('--holo-angle', '0deg');
@@ -1151,7 +1153,9 @@ export function createLightboxMediaRenderer({
         applyFaceHolographicMask(normalCanvas);
         face.appendChild(normalCanvas);
         const controller = createFoilNormalRenderer(normalCanvas, normalPatternUrls, {
-          intensity: faceStrength,
+          // Pass the configured value through; the renderer owns its own
+          // responsive cap so compact -> desktop resizing restores full strength.
+          intensity: isFront ? config.intensity : config.backIntensity,
           phase: isFront ? 0.17 : 0.43,
           uvScale: config.style === 'cosmos' ? 2 : (faceTextureMode === 'tile' ? 2 : 1)
         });
@@ -1168,6 +1172,31 @@ export function createLightboxMediaRenderer({
 
     let pointerFrame = null;
     let pendingPointer = null;
+    const responsiveFoilCleanups = [];
+    const syncResponsiveFoilIntensity = () => {
+      const nextCompactTarget = isCompactFoilTarget(windowRef);
+      if (nextCompactTarget === compactTarget) return;
+
+      compactTarget = nextCompactTarget;
+      frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
+      backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
+      surface.style.setProperty('--holo-intensity', String(frontStrength));
+      if (backFoilEnabled) back.style.setProperty('--holo-intensity', String(backStrength));
+      const motion = holographicMotionStates.get(surface);
+      if (motion) motion.compactTarget = compactTarget;
+    };
+    const bindResponsiveFoilQuery = query => {
+      let mediaQuery;
+      try { mediaQuery = windowRef?.matchMedia?.(query); } catch (_) {}
+      if (!mediaQuery) return;
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', syncResponsiveFoilIntensity);
+        responsiveFoilCleanups.push(() => mediaQuery.removeEventListener?.('change', syncResponsiveFoilIntensity));
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(syncResponsiveFoilIntensity);
+        responsiveFoilCleanups.push(() => mediaQuery.removeListener?.(syncResponsiveFoilIntensity));
+      }
+    };
     const cancelQueuedPointer = () => {
       if (pointerFrame !== null) {
         try { windowRef?.cancelAnimationFrame?.(pointerFrame); } catch (_) {}
@@ -1187,6 +1216,7 @@ export function createLightboxMediaRenderer({
         windowRef?.cancelAnimationFrame?.(motion.frame);
       }
       holographicMotionStates.delete(surface);
+      responsiveFoilCleanups.splice(0).forEach(dispose => { try { dispose(); } catch (_) {} });
       holographicNormalControllers.get(surface)?.forEach(controller => { try { controller.destroy(); } catch (_) {} });
       holographicNormalControllers.delete(surface);
       surface.removeEventListener('pointermove', onPointerMove);
@@ -1242,6 +1272,13 @@ export function createLightboxMediaRenderer({
 
     // Passive, frame-coalesced hover input avoids layout/GPU work for every
     // raw pointer event. Touch-only devices attach no hover listeners.
+    // Keep foil intensity in sync if orientation or viewport size crosses the
+    // compact breakpoint. Media-query listeners also catch capability changes.
+    windowRef?.addEventListener?.('resize', syncResponsiveFoilIntensity, { passive: true });
+    responsiveFoilCleanups.push(() => windowRef?.removeEventListener?.('resize', syncResponsiveFoilIntensity));
+    bindResponsiveFoilQuery('(max-width: 760px)');
+    bindResponsiveFoilQuery('(hover: none) and (pointer: coarse)');
+
     if (hoverAvailable) {
       surface.addEventListener('pointermove', onPointerMove, { passive: true });
       surface.addEventListener('pointerleave', onPointerLeave);
