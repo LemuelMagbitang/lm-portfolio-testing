@@ -200,23 +200,92 @@ Deno.serve(async (request: Request) => {
       if (ae) throw ae;
       if (!asset) return jsonResponse(request, { error: "Asset version not found." }, 404);
       if (asset.provider !== "mux") return jsonResponse(request, { error: "Only Mux assets can be uploaded through this route." }, 409);
+      const currentUploadState = String(asset.upload_state || "not_started");
+      const hasExistingUpload = Boolean(asset.mux_upload_id);
+      const updatedAtMs = Date.parse(String(asset.updated_at || ""));
+      const staleClaim = currentUploadState === "awaiting_upload" && !hasExistingUpload &&
+        Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs > 5 * 60 * 1000;
       if (asset.mux_asset_id && asset.asset_status === "ready") return jsonResponse(request, { error: "Already ready; create a new version to replace it." }, 409);
-      if (asset.mux_upload_id && ["awaiting_upload", "uploaded"].includes(asset.upload_state)) return jsonResponse(request, { error: "An upload has already been created for this version. Create a fresh version before retrying." }, 409);
+      if (currentUploadState === "uploaded" || (currentUploadState === "awaiting_upload" && hasExistingUpload) ||
+          (currentUploadState === "awaiting_upload" && !staleClaim)) {
+        return jsonResponse(request, { error: "An upload is already in progress or awaiting completion. Create a fresh version before retrying." }, 409);
+      }
+
       const origin = Deno.env.get("MUX_UPLOAD_CORS_ORIGIN");
       if (!origin) throw new Error("MUX_UPLOAD_CORS_ORIGIN is not configured.");
-      const upload = await muxRequest("/uploads", "POST", {
-        cors_origin: new URL(origin).origin,
-        timeout: 3600,
-        new_asset_settings: {
-          playback_policies: ["public"], video_quality: "basic",
-          meta: { title: video.title, creator_id: Deno.env.get("MUX_CREATOR_ID") || "lemuel-magbitang", external_id: asset.external_id || asset.id }
+
+      // Claim this version before calling Mux. Compare-and-swap on its current
+      // state/external ID prevents concurrent requests from creating multiple
+      // direct uploads for the same asset. Each attempt gets a fresh external
+      // ID so late webhooks from an older, failed attempt cannot bind to a retry.
+      const uploadAttemptId = crypto.randomUUID();
+      let claimQuery = db.from("video_assets").update({
+        external_id: uploadAttemptId,
+        upload_state: "awaiting_upload",
+        asset_status: null,
+        processing_state: null,
+        mux_upload_id: null,
+        mux_asset_id: null,
+        mux_playback_id: null,
+        playback_policy: null,
+        uploaded_at: null,
+        last_mux_event_created_at: null,
+        last_error: null
+      }).eq("id", assetId)
+        .eq("video_id", videoId)
+        .eq("upload_state", currentUploadState)
+        .eq("external_id", String(asset.external_id || asset.id));
+      if (asset.updated_at) claimQuery = claimQuery.eq("updated_at", asset.updated_at);
+      const { data: claim, error: claimError } = await claimQuery.select("id").maybeSingle();
+      if (claimError) throw new Error("Could not reserve this asset version for upload: " + errorMessage(claimError));
+      if (!claim) return jsonResponse(request, { error: "Another request changed this asset version. Refresh the library before retrying." }, 409);
+
+      let upload: any;
+      try {
+        upload = await muxRequest("/uploads", "POST", {
+          cors_origin: new URL(origin).origin,
+          timeout: 3600,
+          new_asset_settings: {
+            playback_policies: ["public"], video_quality: "basic",
+            meta: { title: video.title, creator_id: Deno.env.get("MUX_CREATOR_ID") || "lemuel-magbitang", external_id: uploadAttemptId }
+          }
+        });
+      } catch (error) {
+        const failure = safeText(errorMessage(error), 4000) || "Mux upload creation failed.";
+        const { error: releaseError } = await db.from("video_assets").update({
+          upload_state: "failed",
+          asset_status: null,
+          processing_state: null,
+          last_error: failure
+        }).eq("id", assetId).eq("external_id", uploadAttemptId).eq("upload_state", "awaiting_upload");
+        if (releaseError) {
+          throw new Error("Mux upload creation failed and the asset reservation could not be released: " + errorMessage(releaseError));
         }
-      });
-      const { error: ue } = await db.from("video_assets").update({
+        throw error;
+      }
+      if (!upload?.id || typeof upload.url !== "string" || !/^https:\/\//i.test(upload.url)) {
+        throw new Error("Mux returned an invalid direct-upload response. Refresh the asset before retrying.");
+      }
+
+      const { data: linked, error: ue } = await db.from("video_assets").update({
         mux_upload_id: upload.id, upload_state: "awaiting_upload", asset_status: null,
         processing_state: null, mux_asset_id: null, mux_playback_id: null, playback_policy: null, uploaded_at: null, last_error: null
-      }).eq("id", assetId);
-      if (ue) throw ue;
+      }).eq("id", assetId)
+        .eq("external_id", uploadAttemptId)
+        .eq("upload_state", "awaiting_upload")
+        .is("mux_upload_id", null)
+        .select("id").maybeSingle();
+      if (ue) throw new Error("Mux created the upload, but its ID could not be saved to the asset: " + errorMessage(ue));
+      if (!linked) {
+        // A fast webhook can attach this exact upload before the create call
+        // returns. Accept that only when it has linked the same upload ID.
+        const { data: current, error: currentError } = await db.from("video_assets")
+          .select("mux_upload_id, upload_state").eq("id", assetId).maybeSingle();
+        if (currentError) throw currentError;
+        if (current?.mux_upload_id !== upload.id) {
+          throw new Error("Mux created an upload, but the asset changed before the upload ID could be linked.");
+        }
+      }
       return jsonResponse(request, { uploadId: upload.id, uploadUrl: upload.url, timeout: upload.timeout }, 201);
     }
 
