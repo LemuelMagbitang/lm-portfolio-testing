@@ -8966,6 +8966,13 @@ try {
     }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
+      // This visual contract depends on asynchronous feature initialization. The smoke harness
+      // navigates at DOMContentLoaded, so wait for the app's own readiness gate before
+      // asserting that the footer media slides have mounted.
+      await page.waitForFunction(() =>
+        document.getElementById('pageTransition')?.dataset?.loading === 'ready',
+      null, { timeout: 20000 });
+
       const typography = await page.evaluate(() => {
         const pick = selector => {
           const el = document.querySelector(selector);
