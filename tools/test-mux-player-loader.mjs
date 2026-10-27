@@ -37,28 +37,20 @@ try {
 
   assert.equal(await ensureMuxVideo(async () => {
     videoAttempts += 1;
+    return {};
+  }, 1000), false, 'An import that does not register mux-video must fail safely.');
+  assert.equal(videoAttempts, 2);
+
+  assert.equal(await ensureMuxVideo(async () => {
+    videoAttempts += 1;
     registered.add('mux-video');
     return {};
-  }, 1000), true, 'Mux Video should recover on a later call after an import failure.');
-  assert.equal(videoAttempts, 2);
+  }, 1000), true, 'Mux Video should recover after rejected and unregistered imports.');
+  assert.equal(videoAttempts, 3);
   assert.equal(await ensureMuxVideo(async () => {
     throw new Error('a registered video element should not need another import');
   }, 1000), true);
-  assert.equal(videoAttempts, 2, 'a registered custom element should be reused.');
-
-  const isolated = await import('../js/infrastructure/mux/player.js?v=20261027-01&no-registration-contract');
-  let noRegistrationAttempts = 0;
-  assert.equal(await isolated.ensureMuxVideo(async () => {
-    noRegistrationAttempts += 1;
-    return {};
-  }, 1000), false, 'An import that does not register mux-video must fail safely.');
-
-  assert.equal(await isolated.ensureMuxVideo(async () => {
-    noRegistrationAttempts += 1;
-    registered.add('mux-video');
-    return {};
-  }, 1000), true, 'A later registration attempt must not inherit a cached false result.');
-  assert.equal(noRegistrationAttempts, 2);
+  assert.equal(videoAttempts, 3, 'a registered custom element should be reused.');
 
   console.log('Mux player loader retry lifecycle contract passed.');
 } finally {
