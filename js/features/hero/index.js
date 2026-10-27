@@ -958,25 +958,35 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
       scheduleAdvance(intervalMs);
     }
 
-    function retryBlockedVideo() {
+    function retryBlockedVideo({ forceRestore = false } = {}) {
       if (reducedMotion || disposed) return;
       const slide = slides[currentIndex];
       const media = slide?.firstElementChild;
       if (slide?.dataset?.heroType !== 'video' || !media) return;
+
       const state = media.dataset.playbackState || '';
+      const details = getPlaybackErrorDetails(media);
+      const isMuxMedia = ['mux-player', 'mux-video'].includes(media.localName);
+      const muxHasNoSource = isMuxMedia &&
+        details.mediaErrorCode === null &&
+        details.networkState === 3;
+      // A restored document can retain the previous "playing" label even
+      // though the browser has paused the element and reset readyState to 0.
+      // A Mux HLS element can also surface NETWORK_NO_SOURCE without a useful
+      // MediaError, so detect that before the usual retry gate.
       const shouldRetry = state === 'blocked' || state === 'error' ||
-        (media.paused && media.readyState >= 2);
+        (media.paused && media.readyState >= 2) ||
+        muxHasNoSource ||
+        (forceRestore && media.paused);
       if (!shouldRetry) return;
+
       if (networkRetryTimer !== null) {
         windowRef.clearTimeout(networkRetryTimer);
         networkRetryTimer = null;
       }
-      // Network errors can leave a failed native media element; Mux's host can
-      // instead expose NETWORK_NO_SOURCE without a native MediaError code.
-      const details = getPlaybackErrorDetails(media);
-      const isMuxMedia = ['mux-player', 'mux-video'].includes(media.localName);
-      if (details.mediaErrorCode === 2 ||
-          (isMuxMedia && details.mediaErrorCode === null && details.networkState === 3)) {
+      // Re-load only a stream known to be in a recoverable network/no-source
+      // state. Otherwise, simply request playback again after page restoration.
+      if (details.mediaErrorCode === 2 || muxHasNoSource) {
         try { media.load?.(); } catch (_) {}
       }
       activateMedia(slide);
@@ -1026,7 +1036,7 @@ import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09
     bind(documentRef, 'pointerdown', retryBlockedVideo, { capture: true, passive: true });
     bind(documentRef, 'keydown', retryBlockedVideo, { capture: true });
     bind(windowRef, 'online', retryBlockedVideo);
-    bind(windowRef, 'pageshow', retryBlockedVideo);
+    bind(windowRef, 'pageshow', () => retryBlockedVideo({ forceRestore: true }));
     bind(documentRef, 'visibilitychange', () => {
       if (!documentRef.hidden) retryBlockedVideo();
     });
