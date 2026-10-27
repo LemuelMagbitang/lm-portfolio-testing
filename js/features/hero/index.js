@@ -42,7 +42,6 @@ async function ensureMuxVideo(...args) {
   }
   return false;
 }
-import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
 
 
   /* =========================================
@@ -419,7 +418,8 @@ import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
         // to discover or initialize hosted video streams during startup.
         if (!reducedMotion) {
           try {
-            const remoteVideos = await loadPublicMuxVideos('hero', {
+            const muxPublicVideos = await import('../../infrastructure/mux/public-videos.js?v=20261027-01');
+            const remoteVideos = await muxPublicVideos.loadPublicMuxVideos('hero', {
               resolveUrl: resolveAssetUrl,
               fetchImpl: windowRef.fetch.bind(windowRef),
               configTimeoutMs: 3000,
