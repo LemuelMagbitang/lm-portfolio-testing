@@ -6,7 +6,7 @@
  */
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-03';
-import { COMPACT_FOIL_MAX_INTENSITY, getFoilEdgeRotation, isCompactFoilTarget, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261027-01';
+import { COMPACT_FOIL_MAX_INTENSITY, getFoilEdgeRotation, isCompactFoilTarget, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261027-02';
 import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
