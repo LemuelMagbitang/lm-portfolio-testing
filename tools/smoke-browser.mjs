@@ -9565,20 +9565,28 @@ try {
           height: card.offsetHeight,
           top: card.getBoundingClientRect().top
         }));
-        if (before.state !== 'pending' || before.complete === 'true' || before.top < window.innerHeight + 8) {
+        if (before.state !== 'pending' || before.complete === 'true' || before.top < viewport.height + 8) {
           throw new Error('Gallery reveal fixture was not pending below the viewport at ' + viewport.name + ': ' + JSON.stringify(before));
         }
 
         await target.scrollIntoViewIfNeeded();
         await page.waitForFunction(index => {
           const card = document.querySelectorAll('#portfolioGrid .project-card')[index];
-          return card?.dataset.galleryRevealComplete === 'true' && !card.dataset.galleryRevealState;
-        }, targetIndex, { timeout: 4000 });
+          const media = card?.querySelector('.project-thumb-media');
+          return card?.dataset.galleryRevealComplete === 'true' &&
+            !card.dataset.galleryRevealState &&
+            ['ready', 'error'].includes(media?.dataset?.mediaState || '');
+        }, targetIndex, { timeout: 8000 });
 
         const after = await target.evaluate(card => {
           const media = card.querySelector('.project-thumb-media');
-          const rect = card.getBoundingClientRect();
           const style = getComputedStyle(card);
+          const matrix = new DOMMatrixReadOnly(style.transform);
+          const scaleX = Math.hypot(matrix.a, matrix.b);
+          const scaleY = Math.hypot(matrix.c, matrix.d);
+          const transformIsIdentity = style.transform === 'none' ||
+            (Math.abs(scaleX - 1) < 0.002 && Math.abs(scaleY - 1) < 0.002 &&
+             Math.abs(matrix.e) <= 0.5 && Math.abs(matrix.f) <= 0.5);
           return {
             id: card.dataset.projectId || '',
             state: card.dataset.galleryRevealState || '',
@@ -9587,6 +9595,7 @@ try {
             height: card.offsetHeight,
             opacity: Number.parseFloat(style.opacity),
             transform: style.transform,
+            transformIsIdentity,
             mediaState: media?.dataset?.mediaState || '',
             imageReady: media?.localName === 'img' ? media.complete && media.naturalWidth > 0 : null
           };
@@ -9594,9 +9603,9 @@ try {
         if (after.state || after.complete !== 'true' ||
             Math.abs(after.width - before.width) > 1 ||
             Math.abs(after.height - before.height) > 1 ||
-            after.opacity < 0.99 || after.transform !== 'none' ||
-            after.mediaState === 'error' ||
-            after.imageReady === false) {
+            after.opacity < 0.99 || !after.transformIsIdentity ||
+            after.mediaState !== 'ready' ||
+            after.imageReady !== true) {
           throw new Error('Gallery reveal caused a layout/media regression at ' + viewport.name + ': ' + JSON.stringify({ before, after }));
         }
 
