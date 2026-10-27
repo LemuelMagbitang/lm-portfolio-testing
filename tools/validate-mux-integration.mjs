@@ -13,7 +13,7 @@ const webhook = read("supabase/functions/mux-webhook/index.ts");
 const publicApi = read("supabase/functions/mux-public/index.ts");
 const bridge = read("js/infrastructure/mux/public-videos.js");
 const player = read("js/infrastructure/mux/player.js");
-const muxPlayerModuleUrl = "const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';";
+const muxPlayerModuleUrl = "const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-02';";
 const databaseTypes = read("supabase/functions/_shared/database.types.ts");
 const envExample = read("supabase/functions/.env.example");
 const ignore = read(".gitignore");
