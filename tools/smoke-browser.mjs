@@ -3518,7 +3518,7 @@ try {
         // expose tap-to-flip without any touch-based hold/drag rotation path.
         const mobileFoilBaseline = await holographic.evaluate(el => ({
           input: el.dataset.holoInput || '',
-          direction: el.dataset.holoRotationDirection || '',
+          motion: el.dataset.holoMotion || '',
           intensity: Number.parseFloat(el.style.getPropertyValue('--holo-intensity')),
           backIntensity: Number.parseFloat(el.querySelector('.lightbox-holographic-back')?.style.getPropertyValue('--holo-intensity') || 'NaN'),
           x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
@@ -3526,11 +3526,13 @@ try {
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
           pressed: el.getAttribute('aria-pressed') || 'false'
         }));
-        if (mobileFoilBaseline.input !== 'tap-only' ||
-            !['clockwise', 'counterclockwise'].includes(mobileFoilBaseline.direction) ||
+        if (mobileFoilBaseline.input !== 'tap-only' || mobileFoilBaseline.motion !== 'auto-rotate' ||
             !Number.isFinite(mobileFoilBaseline.intensity) || mobileFoilBaseline.intensity > 0.1001 ||
-            (Number.isFinite(mobileFoilBaseline.backIntensity) && mobileFoilBaseline.backIntensity > 0.1001)) {
-          throw new Error('Compact foil configuration exceeded its input/intensity contract: ' + JSON.stringify(mobileFoilBaseline));
+            (Number.isFinite(mobileFoilBaseline.backIntensity) && mobileFoilBaseline.backIntensity > 0.1001) ||
+            mobileFoilBaseline.x < 41 || mobileFoilBaseline.x > 59 ||
+            mobileFoilBaseline.y < 44 || mobileFoilBaseline.y > 56 ||
+            Math.abs(mobileFoilBaseline.rotation) > 1.81) {
+          throw new Error('Compact foil configuration exceeded its touch-only auto-motion/intensity contract: ' + JSON.stringify(mobileFoilBaseline));
         }
 
         // Even after the removed hold timeout, synthetic touch movement must
@@ -3547,19 +3549,18 @@ try {
         });
         const mobileTouchMove = await holographic.evaluate(el => ({
           input: el.dataset.holoInput || '',
-          direction: el.dataset.holoRotationDirection || '',
+          motion: el.dataset.holoMotion || '',
           engaged: el.classList.contains('is-holo-touch-engaged'),
           x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
           y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
         }));
-        if (mobileTouchMove.input !== 'tap-only' ||
-            mobileTouchMove.direction !== mobileFoilBaseline.direction ||
+        if (mobileTouchMove.input !== 'tap-only' || mobileTouchMove.motion !== 'auto-rotate' ||
             mobileTouchMove.engaged ||
-            Math.abs(mobileTouchMove.x - 50) > 0.1 ||
-            Math.abs(mobileTouchMove.y - 50) > 0.1 ||
-            Math.abs(mobileTouchMove.rotation) > 0.1) {
-          throw new Error('Touch movement changed compact foil pose or direction: ' + JSON.stringify(mobileTouchMove));
+            mobileTouchMove.x < 41 || mobileTouchMove.x > 59 ||
+            mobileTouchMove.y < 44 || mobileTouchMove.y > 56 ||
+            Math.abs(mobileTouchMove.rotation) > 1.81) {
+          throw new Error('Touch movement escaped the bounded auto-motion path: ' + JSON.stringify(mobileTouchMove));
         }
         const touchMovePrevented = await holographic.evaluate(el => {
           const event = new Event('touchmove', { bubbles: true, cancelable: true });
