@@ -56,6 +56,12 @@ check(migration.includes("mux_asset_id text unique") && migration.includes("mux_
 check(admin.includes("external_id: uploadAttemptId") && read("supabase/functions/_shared/http.ts").includes("CMS_ADMIN_USER_IDS"), "Admin auth or per-attempt external_id assignment missing.");
 const sharedHttp = read("supabase/functions/_shared/http.ts");
 check(sharedHttp.includes("SUPABASE_SECRET_KEYS") && sharedHttp.includes("SUPABASE_PUBLISHABLE_KEYS") && sharedHttp.includes("SUPABASE_SERVICE_ROLE_KEY") && sharedHttp.includes("SUPABASE_ANON_KEY") && sharedHttp.includes("@supabase/supabase-js@2.118.0"), "Edge Functions must prefer platform-managed modern API keys, retain a logged legacy fallback, and pin supabase-js.");
+check(sharedHttp.includes('const timeoutMs = requestMethod === "GET" ? 12_000 : 30_000') &&
+  sharedHttp.includes("signal: controller.signal") &&
+  sharedHttp.includes('new MuxApiError(504, "Mux API request timed out after "') &&
+  sharedHttp.includes('new MuxApiError(503, "Could not confirm the Mux API response. Refresh the asset state before retrying.")') &&
+  sharedHttp.includes("clearTimeout(timer)"),
+  "Mux API requests must be time-bounded and distinguish known failures from ambiguous network outcomes.");
 check(admin.includes("function muxTimestampToIso(value: unknown)") &&
   admin.includes("uploaded_at: muxTimestampToIso(remote?.created_at)") &&
   admin.includes("numeric * 1000"),
@@ -191,6 +197,10 @@ check(uploadRoute.includes("const uploadAttemptId = crypto.randomUUID()") &&
   uploadRoute.includes('Date.now() - updatedAtMs > 5 * 60 * 1000') &&
   uploadRoute.includes('current?.mux_upload_id !== upload.id'),
   "Mux upload creation must reserve the asset with compare-and-swap, isolate webhook correlation per attempt, recover stale reservations, and account for fast-webhook races.");
+check(uploadRoute.includes("error instanceof MuxApiError && error.status >= 500") &&
+  uploadRoute.includes('upload_state: responseUnconfirmed ? "awaiting_upload" : "failed"') &&
+  uploadRoute.includes('error.status === 504 ? 504 : 502'),
+  "Ambiguous Mux failures must retain the upload reservation long enough for webhook recovery instead of immediately duplicating a potentially-created upload.");
 const mainCmsScript = read("admin/admin.js");
 check(mainCmsScript.includes('data-picker-source="cms"') &&
   mainCmsScript.includes('data-picker-source="mux"') &&
