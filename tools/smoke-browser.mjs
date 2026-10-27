@@ -9500,7 +9500,7 @@ try {
       });
       if (returnedHero.paused || returnedHero.currentTime <= 0.05 ||
           returnedHero.playbackState !== 'playing') {
-        throw new Error('Mux/HLS hero did not resume after Works -> About -> Back navigation: ' +
+        throw new Error('Mux/HLS hero did not resume after Works -> About -> Designs navigation: ' +
           JSON.stringify(returnedHero));
       }
     }, { width: 390, height: 844 });
