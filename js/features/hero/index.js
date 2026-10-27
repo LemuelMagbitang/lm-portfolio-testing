@@ -812,36 +812,70 @@ async function ensureMuxVideo(...args) {
         media.setAttribute('prefer-playback', 'mse');
         media.removeAttribute('playback-id');
         media.setAttribute('playback-id', playbackId);
+        media.dataset.muxMseRecoveryAttempted = 'true';
         return true;
       } catch (_) {
         return false;
       }
     }
 
-    function scheduleNetworkRetry(slide, media, event = null) {
-      // Retry one transient network failure automatically. Mux can report
-      // NETWORK_NO_SOURCE (3) with no MediaError, or code 4
-      // (MEDIA_ERR_SRC_NOT_SUPPORTED) while networkState is also NO_SOURCE.
-      // Reinitialize the playback ID once to recover transient HLS/CDN failures.
-      if (disposed || slides[currentIndex] !== slide) return false;
+    function scheduleMuxUnsupportedSourceRecovery(slide, media, details) {
+      const isMuxMedia = ['mux-player', 'mux-video'].includes(media?.localName);
+      const isUnsupportedSource = isMuxMedia &&
+        details.networkState === 3 &&
+        details.mediaErrorCode === 4;
+      // A code-4 error can arrive after the generic network retry was spent.
+      // Give the different MSE/HLS.js engine one separate, bounded attempt.
+      if (!isUnsupportedSource || media?.dataset?.muxMseRecoveryAttempted === 'true') return false;
       if (networkRetryTimer !== null) return media?.dataset?.playbackState === 'retrying';
-      if (Number(media?.dataset?.networkRetryCount || 0) >= 1) return false;
+
+      if (Number(media?.dataset?.networkRetryCount || 0) < 1) media.dataset.networkRetryCount = '1';
+      media.dataset.networkRetryReason = 'mux-unsupported-source';
+      media.dataset.playbackState = 'retrying';
+      media.dataset.muxMseRecoveryAttempted = 'scheduled';
+      networkRetryTimer = windowRef.setTimeout(() => {
+        networkRetryTimer = null;
+        if (disposed || slides[currentIndex] !== slide || !media.isConnected) {
+          if (media.dataset.muxMseRecoveryAttempted === 'scheduled') {
+            delete media.dataset.muxMseRecoveryAttempted;
+          }
+          return;
+        }
+        // Mark the single engine switch before resetting the custom element so
+        // an error emitted during reinitialization cannot enqueue another retry.
+        media.dataset.muxMseRecoveryAttempted = 'true';
+        if (!resetMuxPlaybackSource(slide, media)) {
+          media.dataset.playbackState = 'error';
+          return;
+        }
+        try { media.load?.(); } catch (_) {}
+        activateMedia(slide);
+      }, 500);
+      return true;
+    }
+
+    function scheduleNetworkRetry(slide, media, event = null) {
+      // Keep ordinary network recovery separate from Mux's bounded engine
+      // switch. The latter is still available if a generic retry was consumed.
+      if (disposed || slides[currentIndex] !== slide) return false;
       const isMuxMedia = ['mux-player', 'mux-video'].includes(media?.localName);
       const details = getPlaybackErrorDetails(media, event);
+      if (isMuxMedia && details.networkState === 3 && details.mediaErrorCode === 4) {
+        return scheduleMuxUnsupportedSourceRecovery(slide, media, details);
+      }
+      if (networkRetryTimer !== null) return media?.dataset?.playbackState === 'retrying';
+      if (Number(media?.dataset?.networkRetryCount || 0) >= 1) return false;
       const recoverableMuxNoSource = isMuxMedia &&
         details.networkState === 3 &&
-        (details.mediaErrorCode === null || details.mediaErrorCode === 4);
+        details.mediaErrorCode === null;
       const recoverableNetworkError = details.mediaErrorCode === 2 || recoverableMuxNoSource;
       if (!recoverableNetworkError) return false;
       media.dataset.networkRetryCount = '1';
-      media.dataset.networkRetryReason = details.mediaErrorCode === 2
-        ? 'network-error'
-        : (details.mediaErrorCode === 4 ? 'mux-unsupported-source' : 'mux-no-source');
+      media.dataset.networkRetryReason = details.mediaErrorCode === 2 ? 'network-error' : 'mux-no-source';
       media.dataset.playbackState = 'retrying';
       networkRetryTimer = windowRef.setTimeout(() => {
         networkRetryTimer = null;
         if (disposed || slides[currentIndex] !== slide || !media.isConnected) return;
-        if (details.mediaErrorCode === 4) resetMuxPlaybackSource(slide, media);
         try { media.load?.(); } catch (_) {}
         activateMedia(slide);
       }, 500);
@@ -1098,7 +1132,7 @@ async function ensureMuxVideo(...args) {
             console.warn('[Hero Mux] Mux playback reported a media error.', {
               playbackId: slide.dataset.muxPlaybackId || null,
               ...getPlaybackErrorDetails(media, event),
-              recovery: recoveryScheduled ? 'retry-scheduled' : 'awaiting-reconnect-or-gesture'
+              recovery: recoveryScheduled ? 'retry-scheduled' : (media.dataset.muxMseRecoveryAttempted === 'true' ? 'mse-recovery-attempted' : 'awaiting-reconnect-or-gesture')
             });
           }
           if (recoveryScheduled) return;

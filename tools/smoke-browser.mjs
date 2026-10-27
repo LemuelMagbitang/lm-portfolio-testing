@@ -1836,6 +1836,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
               const loadCount = Number(media._loadCount) || 0;
               media.dataset.networkRetryCount = '';
               media.dataset.networkRetryReason = '';
+              delete media.dataset.muxMseRecoveryAttempted;
               media.networkState = 3;
               media.readyState = 0;
               media.error = { code: 4, message: '' };
@@ -1849,6 +1850,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
                 Number(media._loadCount) > loadCount &&
                 media.getAttribute('playback-id') === playbackId &&
                 media.getAttribute('prefer-playback') === 'mse' &&
+                media.dataset.muxMseRecoveryAttempted === 'true' &&
                 media.dataset.networkRetryCount === '1' &&
                 media.dataset.networkRetryReason === 'mux-unsupported-source' &&
                 media.dataset.playbackState === 'playing' &&
@@ -1870,6 +1872,54 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
                 retryReason: media.dataset.networkRetryReason || ''
               }));
               throw new Error(label + ': Mux code-4/NO_SOURCE errors must reset the playback source and trigger one bounded recovery attempt: ' + JSON.stringify(state));
+            }
+
+            // A generic NO_SOURCE retry may already have consumed the shared
+            // retry budget. Code 4 must still get one distinct MSE-engine retry.
+            const exhaustedBudgetState = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => {
+              const playbackId = media.getAttribute('playback-id') || '';
+              if (!playbackId) throw new Error('Mux exhausted-budget fixture has no playback ID.');
+              const loadCount = Number(media._loadCount) || 0;
+              media.removeAttribute('prefer-playback');
+              delete media.dataset.muxMseRecoveryAttempted;
+              media.dataset.networkRetryCount = '1';
+              media.dataset.networkRetryReason = 'mux-no-source';
+              media.dataset.playbackState = 'error';
+              media.networkState = 3;
+              media.readyState = 0;
+              media.error = { code: 4, message: '' };
+              media.paused = true;
+              media.dispatchEvent(new Event('error'));
+              return { playbackId, loadCount };
+            });
+            const exhaustedBudgetRecovered = await page.waitForFunction(({ playbackId, loadCount }) => {
+              const media = document.querySelector('#heroBanner .slide.active mux-video');
+              return media &&
+                Number(media._loadCount) > loadCount &&
+                media.getAttribute('playback-id') === playbackId &&
+                media.getAttribute('prefer-playback') === 'mse' &&
+                media.dataset.muxMseRecoveryAttempted === 'true' &&
+                media.dataset.networkRetryCount === '1' &&
+                media.dataset.networkRetryReason === 'mux-unsupported-source' &&
+                media.dataset.playbackState === 'playing' &&
+                !media.paused &&
+                Number(media.currentTime) > 0.05;
+            }, exhaustedBudgetState, { timeout: 3500 }).then(() => true).catch(() => false);
+            if (!exhaustedBudgetRecovered) {
+              const state = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => ({
+                preferPlayback: media.getAttribute('prefer-playback') || '',
+                muxMseRecoveryAttempted: media.dataset.muxMseRecoveryAttempted || '',
+                networkState: Number(media.networkState) || 0,
+                readyState: Number(media.readyState) || 0,
+                error: media.error ? { code: Number(media.error.code) || null, message: String(media.error.message || '') } : null,
+                loadCount: Number(media._loadCount) || 0,
+                currentTime: Number(media.currentTime) || 0,
+                paused: Boolean(media.paused),
+                playbackState: media.dataset.playbackState || '',
+                retryCount: media.dataset.networkRetryCount || '',
+                retryReason: media.dataset.networkRetryReason || ''
+              }));
+              throw new Error(label + ': Mux code-4/NO_SOURCE must use one MSE recovery even after the generic retry budget is spent: ' + JSON.stringify(state));
             }
 
             const loadCountBeforeRestore = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => {

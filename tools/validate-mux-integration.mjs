@@ -169,13 +169,15 @@ check(hero.includes("sourceOrigin: 'published-cms'") &&
   "Hero background video must use UI-free Mux Video, muted autoplay, explicit looping, observable startup diagnostics without implicit legacy-MP4 substitution, and poster-only reduced-motion mode.");
 check(
   hero.includes("function resetMuxPlaybackSource(slide, media)") &&
-  hero.includes("(details.mediaErrorCode === null || details.mediaErrorCode === 4)") &&
-  hero.includes("details.mediaErrorCode === 4 ? 'mux-unsupported-source'") &&
+  hero.includes("function scheduleMuxUnsupportedSourceRecovery(slide, media, details)") &&
+  hero.includes("details.mediaErrorCode === 4") &&
+  hero.includes("media.dataset.muxMseRecoveryAttempted === 'true'") &&
+  hero.includes("media.dataset.networkRetryReason = 'mux-unsupported-source'") &&
   hero.includes("activeSource: describeMediaSource(activeSource)") &&
   hero.includes("media.setAttribute('prefer-playback', 'mse')") &&
   hero.includes("media.removeAttribute('playback-id')") &&
   hero.includes("media.setAttribute('playback-id', playbackId)"),
-  "Hero must reset Mux playback once for code-4/NETWORK_NO_SOURCE failures and log query-safe source details.");
+  "Hero must allow one bounded MSE-engine recovery for code-4/NO_SOURCE failures even after the generic retry budget is spent, and log query-safe source details.");
 check(footer.includes("documentRef.createElement('mux-video')") &&
   footer.includes("media.setAttribute('autoplay', '')") &&
   footer.includes("media.setAttribute('disable-tracking', '')") &&
