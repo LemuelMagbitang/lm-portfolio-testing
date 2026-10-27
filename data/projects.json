@@ -431,7 +431,7 @@
         "orientation": "",
         "holographic": {
           "style": "holographic",
-          "intensity": 0.1,
+          "intensity": 0.05,
           "textureMode": "tile",
           "glitterLayer": true,
           "grainLayer": true,
