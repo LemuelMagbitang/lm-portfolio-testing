@@ -5500,6 +5500,83 @@ try {
             Number.parseFloat(affordance.flipTransition) <= 0) {
           throw new Error('Desktop holographic surface is missing its intended affordance/geometry: ' + JSON.stringify(affordance));
         }
+        // A fine pointer uses automatic edge roll, with direction fixed for
+        // this artwork instance and a smooth return to neutral on pointerleave.
+        const pointerContract = await holographic.evaluate(el => ({
+          input: el.dataset.holoInput || '',
+          direction: el.dataset.holoRotationDirection || '',
+          intensity: Number.parseFloat(el.style.getPropertyValue('--holo-intensity')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
+        }));
+        if (pointerContract.input !== 'hover-edge' ||
+            !['clockwise', 'counterclockwise'].includes(pointerContract.direction) ||
+            !Number.isFinite(pointerContract.intensity) ||
+            pointerContract.intensity < 0 || pointerContract.intensity > 1) {
+          throw new Error('Desktop foil did not preserve its configured intensity or hover capability: ' + JSON.stringify(pointerContract));
+        }
+        const pointerBox = await holographic.boundingBox();
+        if (!pointerBox) throw new Error('Desktop holographic surface lost its geometry before edge interaction.');
+        const pointerCenterX = pointerBox.x + pointerBox.width * 0.5;
+        const pointerCenterY = pointerBox.y + pointerBox.height * 0.5;
+        const readFoilPose = () => holographic.evaluate(el => ({
+          direction: el.dataset.holoRotationDirection || '',
+          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
+          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
+        }));
+        await page.mouse.move(pointerCenterX, pointerCenterY);
+        await page.waitForTimeout(90);
+        await page.mouse.move(pointerBox.x + pointerBox.width - 1, pointerCenterY);
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          return el && Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))) >= 13.2;
+        }, null, { timeout: 1800 });
+        const rightEdgePose = await readFoilPose();
+        const expectedRotation = pointerContract.direction === 'clockwise' ? 13.5 : -13.5;
+        if (rightEdgePose.direction !== pointerContract.direction ||
+            Math.abs(rightEdgePose.rotation - expectedRotation) > 0.35) {
+          throw new Error('Pointer edge did not produce the artwork instance’s maximum signed rotation: ' +
+            JSON.stringify({ pointerContract, rightEdgePose, expectedRotation }));
+        }
+        await page.mouse.move(pointerBox.x + 1, pointerCenterY);
+        await page.waitForFunction(expected => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          if (!el) return false;
+          const roll = Number.parseFloat(el.style.getPropertyValue('--holo-rotation'));
+          return Number.isFinite(roll) && Math.abs(roll - expected) < 0.35;
+        }, expectedRotation, { timeout: 1800 });
+        const leftEdgePose = await readFoilPose();
+        if (leftEdgePose.direction !== pointerContract.direction ||
+            Math.abs(leftEdgePose.rotation - expectedRotation) > 0.35) {
+          throw new Error('Moving between edges unexpectedly changed the foil rotation direction: ' +
+            JSON.stringify({ rightEdgePose, leftEdgePose }));
+        }
+        await page.mouse.move(pointerBox.x - 30, pointerBox.y - 30);
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          if (!el) return false;
+          const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
+          const y = Number.parseFloat(el.style.getPropertyValue('--holo-y'));
+          const roll = Number.parseFloat(el.style.getPropertyValue('--holo-rotation'));
+          return Math.abs(x - 50) < 0.15 && Math.abs(y - 50) < 0.15 && Math.abs(roll) < 0.15;
+        }, null, { timeout: 1800 });
+        await holographic.click();
+        const desktopFlipped = await holographic.evaluate(el => ({
+          flipped: el.classList.contains('is-flipped'),
+          pressed: el.getAttribute('aria-pressed')
+        }));
+        if (!desktopFlipped.flipped || desktopFlipped.pressed !== 'true') {
+          throw new Error('Desktop foil edge interaction broke click-to-flip: ' + JSON.stringify(desktopFlipped));
+        }
+        await holographic.click();
+        const desktopFront = await holographic.evaluate(el => ({
+          flipped: el.classList.contains('is-flipped'),
+          pressed: el.getAttribute('aria-pressed')
+        }));
+        if (desktopFront.flipped || desktopFront.pressed !== 'false') {
+          throw new Error('Desktop foil second click did not restore the front face: ' + JSON.stringify(desktopFront));
+        }
+
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
