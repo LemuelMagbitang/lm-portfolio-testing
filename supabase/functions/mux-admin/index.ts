@@ -68,9 +68,9 @@ Deno.serve(async (request: Request) => {
       const nextCursor = remoteCursor.length <= 1024 && remoteCursor === remoteCursor.trim() &&
         !/[\u0000-\u001f\u007f]/.test(remoteCursor) ? remoteCursor : "";
       if (remotePage?.next_cursor && !nextCursor) throw new Error("Mux returned an invalid asset pagination cursor.");
-      const remoteAssetIds = [...new Set(remote
-        .map((item: any) => String(item?.id || "").trim())
-        .filter(Boolean))];
+      const remoteAssetIds: string[] = [...new Set<string>(remote
+        .map((item: any): string => String(item?.id || "").trim())
+        .filter((id: string) => Boolean(id)))];
       const linkedIds = new Set<string>();
       if (remoteAssetIds.length) {
         const { data: linkedRows, error: linkedError } = await db.from("video_assets")
