@@ -13,8 +13,8 @@
  */
 
 import { loadProjects } from './project-loader.js?v=20261026-01';
-import { buildProjectCardElement } from './project-card.js?v=20261027-01';
-import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261027-02';
+import { buildProjectCardElement } from './project-card.js?v=20261027-02';
+import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261027-03';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
 

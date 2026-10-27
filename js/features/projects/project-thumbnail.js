@@ -428,9 +428,11 @@ function registerThumbnailMediaState(media, {
         showMediaFallback('loading');
         armSlowLoadFallback();
         media.src = src;
-        if (media.complete) {
-          if (Number(media.naturalWidth) > 0) setReady(); else setFailed();
-        }
+        // A new source can briefly report complete before decoded dimensions
+        // are available (especially with data URLs). Only positive intrinsic
+        // dimensions prove readiness; load/error events and the bounded slow-load
+        // fallback settle the other cases without false-failing an in-flight image.
+        if (media.complete && Number(media.naturalWidth) > 0) setReady();
         return;
       }
       if (type === 'video') {

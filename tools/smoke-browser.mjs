@@ -10701,7 +10701,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-02');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-03');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10765,7 +10765,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-02');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-03');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10806,7 +10806,7 @@ try {
     await smokePage(browser, '/?media-cache-disabled=1', async page => {
       const result = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
-          await import('/js/features/projects/project-thumbnail.js?v=20261027-02');
+          await import('/js/features/projects/project-thumbnail.js?v=20261027-03');
         const makeHost = () => {
           const host = document.createElement('div');
           host.className = 'card-thumbnail';
@@ -10955,7 +10955,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-01');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-02');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-loading-fixtures';
         Object.assign(fixture.style, {
@@ -11247,7 +11247,7 @@ try {
         const previousScrollTop = window.scrollY;
         document.documentElement.style.scrollBehavior = 'auto';
         window.scrollTo(0, 0);
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-01');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-02');
         const spacer = document.createElement('div');
         spacer.id = 'thumbnail-viewport-reveal-spacer';
         spacer.setAttribute('aria-hidden', 'true');
@@ -11268,11 +11268,36 @@ try {
         fixture.dataset.previousScrollBehavior = previousScrollBehavior;
         fixture.dataset.previousScrollTop = String(previousScrollTop);
       });
-      await page.waitForFunction(() => {
-        const media = document.querySelector('#thumbnail-viewport-reveal-card .project-thumb-media');
-        return media?.dataset.mediaState === 'ready' && media.hasAttribute('data-viewport-reveal') &&
-          media.getBoundingClientRect().top > window.innerHeight;
-      }, null, {timeout:3500});
+      try {
+        await page.waitForFunction(() => {
+          const media = document.querySelector('#thumbnail-viewport-reveal-card .project-thumb-media');
+          return media?.dataset.mediaState === 'ready' && media.hasAttribute('data-viewport-reveal') &&
+            media.getBoundingClientRect().top > window.innerHeight;
+        }, null, {timeout:3500});
+      } catch (error) {
+        const diagnostic = await page.evaluate(() => {
+          const media = document.querySelector('#thumbnail-viewport-reveal-card .project-thumb-media');
+          if (!media) return {found:false};
+          const rect = media.getBoundingClientRect();
+          const style = getComputedStyle(media);
+          return {
+            found:true,
+            state:media.dataset.mediaState || '',
+            reveal:media.dataset.viewportReveal || '',
+            mediaType:media.dataset.mediaType || '',
+            complete:typeof media.complete === 'boolean' ? media.complete : null,
+            naturalWidth:Number(media.naturalWidth) || 0,
+            top:rect.top,
+            viewportHeight:window.innerHeight,
+            reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,
+            intersectionSupported:typeof IntersectionObserver === 'function',
+            opacity:style.opacity,
+            filter:style.filter
+          };
+        });
+        throw new Error('Project thumbnail viewport reveal did not reach its ready/offscreen checkpoint: ' +
+          JSON.stringify(diagnostic) + '; ' + String(error?.message || error));
+      }
       const preRevealState = await page.locator('#thumbnail-viewport-reveal-card .project-thumb-media').evaluate(media => {
         const style = getComputedStyle(media);
         return {state:media.dataset.mediaState,reveal:media.dataset.viewportReveal || '',
@@ -11311,7 +11336,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-01');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-02');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-placeholder-fixtures';
         Object.assign(fixture.style, {
