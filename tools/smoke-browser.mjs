@@ -3635,19 +3635,23 @@ try {
         const nativeTouchState = await Promise.all([
           nativeTouchScrollHost.evaluate(el => el.scrollTop),
           holographic.evaluate(el => ({
+            input: el.dataset.holoInput || '',
+            motion: el.dataset.holoMotion || '',
             x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
             y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
             rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
-            direction: el.dataset.holoRotationDirection || ''
+            touchEngaged: el.classList.contains('is-holo-touch-engaged')
           }))
         ]);
         await touchSession.detach();
         if (nativeTouchState[0] < scrollBefore + 4 ||
-            Math.abs(nativeTouchState[1].x - 50) > 1.5 ||
-            Math.abs(nativeTouchState[1].y - 50) > 1.5 ||
-            Math.abs(nativeTouchState[1].rotation) > 0.1 ||
-            nativeTouchState[1].direction !== mobileFoilBaseline.direction) {
-          throw new Error('Native touch swipe did not scroll normally without changing foil pose: ' +
+            nativeTouchState[1].input !== 'tap-only' ||
+            nativeTouchState[1].motion !== 'auto-rotate' ||
+            nativeTouchState[1].touchEngaged ||
+            nativeTouchState[1].x < 41 || nativeTouchState[1].x > 59 ||
+            nativeTouchState[1].y < 44 || nativeTouchState[1].y > 56 ||
+            Math.abs(nativeTouchState[1].rotation) > 1.81) {
+          throw new Error('Native touch swipe did not scroll while preserving bounded, touch-only auto motion: ' +
             JSON.stringify({ scrollBefore, scrollAfter: nativeTouchState[0], foil: nativeTouchState[1] }));
         }
         await page.evaluate(() => {
