@@ -28,10 +28,6 @@ function hasVersionedReference(source, assetPath) {
   return new RegExp(escapedPath + "\\?v=[^'\"\\s>]+").test(String(source || ''));
 }
 
-function exists(file) {');
-  return new RegExp(escapedPath + "\\?v=[^'\"\\s>]+").test(String(source || ''));
-}
-
 function exists(file) {
   return fs.existsSync(path.join(ROOT, file));
 }
