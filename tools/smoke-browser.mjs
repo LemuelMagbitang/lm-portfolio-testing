@@ -5579,6 +5579,31 @@ try {
           throw new Error('Desktop foil second click did not restore the front face: ' + JSON.stringify(desktopFront));
         }
 
+        // The same mounted artwork must switch into the compact intensity
+        // policy at a narrow viewport, keep its edge rotation, then restore its
+        // CMS-configured intensity when the viewport returns to desktop size.
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          return el && Number.parseFloat(el.style.getPropertyValue('--holo-intensity')) <= 0.1001;
+        }, null, { timeout: 1500 });
+        const compactResizeBox = await holographic.boundingBox();
+        if (!compactResizeBox) throw new Error('Compact-resize foil fixture lost its geometry.');
+        await page.mouse.move(compactResizeBox.x + compactResizeBox.width - 1, compactResizeBox.y + compactResizeBox.height / 2);
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          if (!el) return false;
+          const intensity = Number.parseFloat(el.style.getPropertyValue('--holo-intensity'));
+          const tiltStrength = Number.parseFloat(el.style.getPropertyValue('--holo-tilt-strength'));
+          const rotation = Number.parseFloat(el.style.getPropertyValue('--holo-rotation'));
+          return intensity <= 0.1001 && tiltStrength <= 0.1001 && Math.abs(rotation) >= 13.2;
+        }, null, { timeout: 1800 });
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.waitForFunction(expected => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          return el && Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-intensity')) - expected) < 0.001;
+        }, pointerContract.intensity, { timeout: 1500 });
+
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
