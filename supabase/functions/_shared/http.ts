@@ -107,10 +107,42 @@ export async function muxRequest(path: string, method = "GET", body?: unknown) {
   const id = Deno.env.get("MUX_TOKEN_ID");
   const secret = Deno.env.get("MUX_TOKEN_SECRET");
   if (!id || !secret) throw new Error("Mux API credentials are not configured on the server.");
+  const requestMethod = String(method || "GET").toUpperCase();
+  const timeoutMs = requestMethod === "GET" ? 12_000 : 30_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   const headers: Record<string, string> = { Authorization: "Basic " + btoa(id + ":" + secret), Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  const response = await fetch("https://api.mux.com/video/v1" + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-  const payload = await response.json().catch(() => ({}));
+
+  let response: Response;
+  let payload: any = {};
+  try {
+    response = await fetch("https://api.mux.com/video/v1" + path, {
+      method: requestMethod,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal
+    });
+    try {
+      payload = await response.json();
+    } catch (error) {
+      // Preserve aborts while still handling non-JSON error responses below.
+      if (controller.signal.aborted) throw error;
+      payload = {};
+    }
+  } catch (error) {
+    if (error instanceof MuxApiError) throw error;
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new MuxApiError(504, "Mux API request timed out after " + timeoutMs + " ms.");
+    }
+    // A failed POST may have reached Mux even when its response did not reach
+    // us. Keep that distinction so the caller does not immediately duplicate
+    // an upload that may still emit a webhook.
+    throw new MuxApiError(503, "Could not confirm the Mux API response. Refresh the asset state before retrying.");
+  } finally {
+    clearTimeout(timer);
+  }
+
   if (!response.ok) throw new MuxApiError(response.status, payload?.error?.messages?.join("; ") || payload?.error?.message || payload?.message || "Mux API returned HTTP " + response.status);
   return payload?.data;
 }
