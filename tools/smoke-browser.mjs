@@ -3576,7 +3576,9 @@ try {
 
         // The existing click/tap control must still flip the artwork and update
         // its pressed state; a second activation restores the front.
-        await holographic.click();
+        const flipBox = await holographic.boundingBox();
+        if (!flipBox) throw new Error('Touch-flip holographic fixture lost its geometry.');
+        await page.touchscreen.tap(flipBox.x + flipBox.width * 0.5, flipBox.y + flipBox.height * 0.5);
         const flippedState = await holographic.evaluate(el => ({
           flipped: el.classList.contains('is-flipped'),
           pressed: el.getAttribute('aria-pressed')
@@ -3584,7 +3586,7 @@ try {
         if (!flippedState.flipped || flippedState.pressed !== 'true') {
           throw new Error('Tap/click no longer reveals the reverse foil artwork: ' + JSON.stringify(flippedState));
         }
-        await holographic.click();
+        await page.touchscreen.tap(flipBox.x + flipBox.width * 0.5, flipBox.y + flipBox.height * 0.5);
         const frontState = await holographic.evaluate(el => ({
           flipped: el.classList.contains('is-flipped'),
           pressed: el.getAttribute('aria-pressed')
