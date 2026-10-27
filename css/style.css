@@ -2005,21 +2005,15 @@ body.center-page {
 /* Once the visitor is actively controlling the card, the idle motion yields
    completely to the live pointer/touch transform. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible{
   animation-play-state:paused;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover::before,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible::before,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged::before,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending::before{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible::before{
   opacity:.28;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover .lightbox-holographic-sheen,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible .lightbox-holographic-sheen,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged .lightbox-holographic-sheen,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending .lightbox-holographic-sheen{
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible .lightbox-holographic-sheen{
   animation-play-state:paused;
   opacity:.18;
 }
@@ -5107,26 +5101,6 @@ footer > .footer-content p{
 
 
 
-/* Touch holographic interaction remains inside the existing Lightbox. A short
-   hold engages the foil; quick movement stays available to the Lightbox's
-   normal vertical scroll/swipe gesture. */
-@media (pointer:coarse){
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{
-    content:'TAP TO FLIP';
-    top:10px;
-    right:10px;
-    font-size:8px;
-    letter-spacing:.11em;
-  }
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic{
-    touch-action:pan-y;
-  }
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged{
-    cursor:grabbing;
-  }
-}
-
-
 /* Holographic card: the artwork element remains the Lightbox sizing anchor,
    but it must not act as a clipping window for the rotating card. */
 #lightboxMediaContainer .lightbox-artwork.has-holographic{
@@ -5174,13 +5148,12 @@ footer > .footer-content p{
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • MOVE / CLICK';}
 @media (pointer:coarse){
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{content:'FRONT • HOLD + MOVE';}
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • HOLD + MOVE';}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{content:'FRONT • TAP TO FLIP';}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • TAP TO FLIP';}
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover::before,
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible::before,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-engaged::before,
-:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-holo-touch-pending::before{opacity:.82;}
+
 /* More legible spectrum, stronger controlled color separation, broad fixed reflections. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-spectrum{filter:saturate(1.18) contrast(1.035);}
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-prism{
