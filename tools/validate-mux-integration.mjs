@@ -48,7 +48,8 @@ check(webhook.includes("readRequestBodyLimited(request, 1_048_576)") &&
 check(admin.includes('readRequestBodyLimited(request, 65_536)') &&
   admin.includes('Request body too large. Keep Video Library requests under 64 KiB.') &&
   admin.includes('Request body must contain valid JSON.') &&
-  admin.includes('status: 413') === false,
+  admin.includes('}, 413);') &&
+  admin.includes('}, 400);'),
   "Video Library admin mutations must bound JSON bodies and return explicit 400/413 responses before parsing oversized input.");
 check(hardeningMigration.includes("set search_path = pg_catalog") && hardeningMigration.includes("videos_active_asset_id_idx") && hardeningMigration.includes("videos_created_by_idx"), "Video Library hardening migration must fix trigger search_path and index both referencing columns.");
 check(databaseTypes.includes("export type Database") && databaseTypes.includes("mux_webhook_events") && databaseTypes.includes("video_assets") && databaseTypes.includes("videos"), "Generated Supabase Database types must cover the Video Library schema.");
