@@ -1,4 +1,5 @@
 import { authorizeAdmin, corsHeaders, isSafePublicMp4Reference, jsonResponse, MuxApiError, muxRequest, safeSlug, safeText } from "../_shared/http.ts";
+import { readRequestBodyLimited } from "../_shared/request-body.ts";
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -38,7 +39,18 @@ Deno.serve(async (request: Request) => {
     const parts = new URL(request.url).pathname.split("/").filter(Boolean);
     const at = parts.indexOf("mux-admin");
     const route = parts.slice(at >= 0 ? at + 1 : 0);
-    const body = request.method === "GET" ? {} : await request.json().catch(() => ({}));
+    let body: any = {};
+    if (request.method !== "GET" && request.body) {
+      const bodyResult = await readRequestBodyLimited(request, 65_536);
+      if (!bodyResult.ok) return jsonResponse(request, { error: "Request body too large. Keep Video Library requests under 64 KiB." }, 413);
+      if (bodyResult.body.trim()) {
+        try {
+          body = JSON.parse(bodyResult.body);
+        } catch (_) {
+          return jsonResponse(request, { error: "Request body must contain valid JSON." }, 400);
+        }
+      }
+    }
 
     if (request.method === "GET" && route.length === 1 && route[0] === "mux-assets") {
       const { data: linkedRows, error: linkedError } = await db.from("video_assets").select("mux_asset_id");
