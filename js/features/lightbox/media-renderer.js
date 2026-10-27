@@ -1183,7 +1183,12 @@ export function createLightboxMediaRenderer({
       surface.style.setProperty('--holo-intensity', String(frontStrength));
       if (backFoilEnabled) back.style.setProperty('--holo-intensity', String(backStrength));
       const motion = holographicMotionStates.get(surface);
-      if (motion) motion.compactTarget = compactTarget;
+      if (motion) {
+        motion.compactTarget = compactTarget;
+        // Reapply the current pointer state immediately so an on-edge desktop
+        // tilt cannot remain above the compact visual-strength cap after resize.
+        updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
+      }
     };
     const bindResponsiveFoilQuery = query => {
       let mediaQuery;
