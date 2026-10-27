@@ -50,7 +50,7 @@ const styles = await readFile(new URL('../css/style.css', import.meta.url), 'utf
 assert.match(mediaRenderer, /resolveFoilIntensity\(config\.intensity, compactTarget\)/);
 assert.match(mediaRenderer, /resolveFoilIntensity\(config\.backIntensity, compactTarget\)/);
 assert.match(mediaRenderer, /const rotationDirection = Math\.random\(\) < 0\.5 \? -1 : 1/);
-assert.match(mediaRenderer, /getFoilEdgeRotation\(x, y, motion\?\.rotationDirection/);
+assert.match(mediaRenderer, /getFoilEdgeRotation\(x, y, motion\.rotationDirection/);
 assert.match(mediaRenderer, /event\.pointerType !== 'mouse'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
