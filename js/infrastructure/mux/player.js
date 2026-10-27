@@ -4,7 +4,18 @@ export async function ensureMuxPlayer(importer) {
   if (globalThis.customElements.get("mux-player")) return true;
   if (!loaderPromise) {
     const load = typeof importer === "function" ? importer : () => import("https://cdn.jsdelivr.net/npm/@mux/mux-player@3.14.1/+esm");
-    loaderPromise = Promise.resolve().then(load).then(() => Boolean(globalThis.customElements.get("mux-player"))).catch(() => false);
+    const pending = Promise.resolve().then(load).then(() => {
+      const ready = Boolean(globalThis.customElements.get("mux-player"));
+      if (!ready && loaderPromise === guarded) loaderPromise = null;
+      return ready;
+    });
+    const guarded = pending.catch(() => {
+      // A failed CDN import must not poison this page session; later callers
+      // can retry after connectivity or CDN availability recovers.
+      if (loaderPromise === guarded) loaderPromise = null;
+      return false;
+    });
+    loaderPromise = guarded;
   }
   return loaderPromise;
 }
@@ -21,10 +32,19 @@ export async function ensureMuxVideo(importer, timeoutMs = 15000) {
     // module graph may still register mux-video later, and subsequent callers
     // should be able to observe that registration instead of inheriting a
     // permanently cached timeout=false result.
-    muxVideoLoaderPromise = Promise.resolve()
-      .then(load)
-      .then(() => Boolean(globalThis.customElements.get("mux-video")))
-      .catch(() => false);
+    const pending = Promise.resolve().then(load).then(() => {
+      const ready = Boolean(globalThis.customElements.get("mux-video"));
+      if (!ready && muxVideoLoaderPromise === guarded) muxVideoLoaderPromise = null;
+      return ready;
+    });
+    const guarded = pending.catch(() => {
+      // Reset only when the import itself fails. A caller timeout below must
+      // leave the in-flight promise intact so late custom-element registration
+      // can still be observed by other callers.
+      if (muxVideoLoaderPromise === guarded) muxVideoLoaderPromise = null;
+      return false;
+    });
+    muxVideoLoaderPromise = guarded;
   }
 
   let timer = null;
