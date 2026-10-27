@@ -19,7 +19,7 @@ export function searchableReferenceContent(sourcePath, content) {
  * review and never deletes or changes an asset.
  */
 export function findAssetReferences(assetPath, sources = []) {
-  const relative = String(assetPath || '').replaceAll('\\\\', '/');
+  const relative = String(assetPath || '').split(String.fromCharCode(92)).join('/');
   if (!relative) return [];
 
   const basename = path.posix.basename(relative);
