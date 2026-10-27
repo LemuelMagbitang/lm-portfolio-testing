@@ -16,7 +16,7 @@ import { loadProjects } from './project-loader.js?v=20261026-01';
 import { buildProjectCardElement } from './project-card.js?v=20261027-05';
 import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261027-06';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
-import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261004-01';
+import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261027-01';
 
 async function mountThumbnailModelViewer(container, src, options = {}) {
   if (typeof options.isCurrent === 'function' && !options.isCurrent()) return null;
