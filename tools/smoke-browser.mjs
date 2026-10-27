@@ -3450,7 +3450,7 @@ try {
             flipTransition: getComputedStyle(el.querySelector('.lightbox-holographic-flip')).transitionDuration
           };
         });
-        if (!affordance.animationName.includes('holo-idle-float') ||
+        if (affordance.animationName !== 'none' ||
             affordance.contain.includes('paint') ||
             affordance.borderRadius !== '0px' ||
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
@@ -3465,11 +3465,11 @@ try {
             affordance.hintAction !== 'touch' ||
             affordance.backTextureMode !== 'tile' ||
             !affordance.backTextureRepeat.includes('repeat') ||
-            !affordance.sheenAnimation.includes('holo-idle-sheen') ||
-            !affordance.prismAnimation.includes('holo-prism-drift') ||
-            !affordance.ribbonsAnimation.includes('holo-light-ribbons') ||
+            affordance.sheenAnimation !== 'none' ||
+            affordance.prismAnimation !== 'none' ||
+            affordance.ribbonsAnimation !== 'none' ||
             Number.parseFloat(affordance.flipTransition) <= 0) {
-          throw new Error('Mobile holographic surface is missing its intended affordance/geometry: ' + JSON.stringify(affordance));
+          throw new Error('Mobile holographic surface must preserve its foil geometry while disabling idle layer animations: ' + JSON.stringify(affordance));
         }
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
@@ -3514,102 +3514,87 @@ try {
           throw new Error('Custom foil height map did not reach the WebGL normal renderer: ' + JSON.stringify(customNormalState));
         }
 
-        // Quick movement must remain a normal Lightbox gesture: no foil
-        // engagement before the hold threshold.
-        await holographic.dispatchEvent('pointerdown', {
-          pointerType: 'touch', isPrimary: true, pointerId: 81,
-          clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0
-        });
-        await page.waitForTimeout(70);
-        await holographic.dispatchEvent('pointermove', {
-          pointerType: 'touch', isPrimary: true, pointerId: 81,
-          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
-        });
-        const quickState = await holographic.evaluate(el => ({
-          engaged: el.classList.contains('is-holo-touch-engaged'),
-          x: el.style.getPropertyValue('--holo-x'),
-          y: el.style.getPropertyValue('--holo-y')
+        // Compact targets cap the configured front/back foil strength and
+        // expose tap-to-flip without any touch-based hold/drag rotation path.
+        const mobileFoilBaseline = await holographic.evaluate(el => ({
+          input: el.dataset.holoInput || '',
+          direction: el.dataset.holoRotationDirection || '',
+          intensity: Number.parseFloat(el.style.getPropertyValue('--holo-intensity')),
+          backIntensity: Number.parseFloat(el.querySelector('.lightbox-holographic-back')?.style.getPropertyValue('--holo-intensity') || 'NaN'),
+          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
+          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
+          pressed: el.getAttribute('aria-pressed') || 'false'
         }));
-        await holographic.dispatchEvent('pointerup', {
-          pointerType: 'touch', isPrimary: true, pointerId: 81,
-          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
-        });
-        if (quickState.engaged || quickState.x !== '50%' || quickState.y !== '50%') {
-          throw new Error('Mobile holographic touch engaged before the hold threshold.');
+        if (mobileFoilBaseline.input !== 'tap-only' ||
+            !['clockwise', 'counterclockwise'].includes(mobileFoilBaseline.direction) ||
+            !Number.isFinite(mobileFoilBaseline.intensity) || mobileFoilBaseline.intensity > 0.1001 ||
+            (Number.isFinite(mobileFoilBaseline.backIntensity) && mobileFoilBaseline.backIntensity > 0.1001)) {
+          throw new Error('Compact foil configuration exceeded its input/intensity contract: ' + JSON.stringify(mobileFoilBaseline));
         }
 
-        // A deliberate hold engages the holographic surface; subsequent movement
-        // is then allowed to prevent scrolling and drive the inverse foil.
+        // Even after the removed hold timeout, synthetic touch movement must
+        // leave foil position and rotation alone. It must not capture the
+        // pointer or suppress native scrolling.
         await holographic.dispatchEvent('pointerdown', {
-          pointerType: 'touch', isPrimary: true, pointerId: 82,
+          pointerType: 'touch', isPrimary: true, pointerId: 81,
           clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0
         });
         await page.waitForTimeout(260);
-        const heldState = await holographic.evaluate(el => ({
-          engaged: el.classList.contains('is-holo-touch-engaged'),
-          x: el.style.getPropertyValue('--holo-x'),
-          y: el.style.getPropertyValue('--holo-y')
-        }));
-        if (!heldState.engaged) {
-          throw new Error('Mobile holographic touch did not engage after the hold threshold.');
-        }
-
         await holographic.dispatchEvent('pointermove', {
-          pointerType: 'touch', isPrimary: true, pointerId: 82,
-          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
+          pointerType: 'touch', isPrimary: true, pointerId: 81,
+          clientX: box.x + box.width * .98, clientY: box.y + box.height / 2
         });
-
+        const mobileTouchMove = await holographic.evaluate(el => ({
+          input: el.dataset.holoInput || '',
+          direction: el.dataset.holoRotationDirection || '',
+          engaged: el.classList.contains('is-holo-touch-engaged'),
+          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
+          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
+        }));
+        if (mobileTouchMove.input !== 'tap-only' ||
+            mobileTouchMove.direction !== mobileFoilBaseline.direction ||
+            mobileTouchMove.engaged ||
+            Math.abs(mobileTouchMove.x - 50) > 0.1 ||
+            Math.abs(mobileTouchMove.y - 50) > 0.1 ||
+            Math.abs(mobileTouchMove.rotation) > 0.1) {
+          throw new Error('Touch movement changed compact foil pose or direction: ' + JSON.stringify(mobileTouchMove));
+        }
         const touchMovePrevented = await holographic.evaluate(el => {
           const event = new Event('touchmove', { bubbles: true, cancelable: true });
           const rect = el.getBoundingClientRect();
-          const touch = {
-            clientX: rect.left + rect.width * .74,
-            clientY: rect.top + rect.height * .24
-          };
+          const touch = { clientX: rect.left + rect.width * .98, clientY: rect.top + rect.height / 2 };
           Object.defineProperty(event, 'touches', { value: [touch] });
           Object.defineProperty(event, 'changedTouches', { value: [touch] });
           el.dispatchEvent(event);
           return event.defaultPrevented;
         });
-        if (!touchMovePrevented) {
-          throw new Error('Held mobile holographic touch did not cancel the native touch-scroll path.');
+        if (touchMovePrevented) {
+          throw new Error('The foil surface intercepted touchmove instead of leaving touch scrolling native.');
         }
 
-        await page.waitForTimeout(40);
-        const tiltState = await holographic.evaluate(el => ({
-          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
-          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
-          fx: Number.parseFloat(el.style.getPropertyValue('--holo-foil-x')),
-          fy: Number.parseFloat(el.style.getPropertyValue('--holo-foil-y')),
-          lightX: el.style.getPropertyValue('--holo-light-x'),
-          lightY: el.style.getPropertyValue('--holo-light-y'),
-          engaged: el.classList.contains('is-holo-touch-engaged')
+        // The existing click/tap control must still flip the artwork and update
+        // its pressed state; a second activation restores the front.
+        await holographic.click();
+        const flippedState = await holographic.evaluate(el => ({
+          flipped: el.classList.contains('is-flipped'),
+          pressed: el.getAttribute('aria-pressed')
         }));
-        await holographic.dispatchEvent('pointerup', {
-          pointerType: 'touch', isPrimary: true, pointerId: 82,
-          clientX: box.x + box.width * .74, clientY: box.y + box.height * .24
-        });
-        if (!tiltState.engaged ||
-            !Number.isFinite(tiltState.x) || !Number.isFinite(tiltState.y) ||
-            Math.abs((tiltState.x + tiltState.fx) - 100) > 1.5 ||
-            Math.abs((tiltState.y + tiltState.fy) - 100) > 1.5) {
-          throw new Error('Held mobile holographic gesture lost its inverse foil mapping.');
+        if (!flippedState.flipped || flippedState.pressed !== 'true') {
+          throw new Error('Tap/click no longer reveals the reverse foil artwork: ' + JSON.stringify(flippedState));
         }
-        const heldLightX = Number.parseFloat(tiltState.lightX);
-        const heldLightY = Number.parseFloat(tiltState.lightY);
-        const expectedHeldLightX = Math.max(16, Math.min(84, 50 + ((50 - tiltState.x) * 0.68)));
-        const expectedHeldLightY = Math.max(16, Math.min(84, 50 + ((50 - tiltState.y) * 0.68)));
-        if (!Number.isFinite(heldLightX) || !Number.isFinite(heldLightY) ||
-            Math.abs(heldLightX - expectedHeldLightX) > 1.5 ||
-            Math.abs(heldLightY - expectedHeldLightY) > 1.5) {
-          throw new Error('Held mobile gesture did not move the virtual studio light opposite the hand: ' +
-            JSON.stringify({lightX: heldLightX, lightY: heldLightY, expectedX: expectedHeldLightX, expectedY: expectedHeldLightY}));
+        await holographic.click();
+        const frontState = await holographic.evaluate(el => ({
+          flipped: el.classList.contains('is-flipped'),
+          pressed: el.getAttribute('aria-pressed')
+        }));
+        if (frontState.flipped || frontState.pressed !== 'false') {
+          throw new Error('Second tap/click did not restore the front foil artwork: ' + JSON.stringify(frontState));
         }
 
-        // Exercise real Chromium touch input (not just synthetic DOM events).
-        // A quick vertical swipe on the card must scroll the Lightbox normally;
-        // after an intentional hold, the same movement should drive foil instead
-        // of changing the Lightbox scroll position.
+        // A real Chromium touch swipe still scrolls the Lightbox. No foil
+        // hold/drag path should take over that native gesture.
         const nativeTouchScrollHost = page.locator('#lightbox').first();
         await page.evaluate(() => {
           const media = document.getElementById('lightboxMediaContainer');
@@ -3623,96 +3608,50 @@ try {
           if (lightbox) lightbox.scrollTop = 0;
         });
         const nativeScrollCapacity = await nativeTouchScrollHost.evaluate(el => ({
-          scrollHeight: el.scrollHeight,
-          clientHeight: el.clientHeight
+          scrollHeight: el.scrollHeight, clientHeight: el.clientHeight
         }));
         if (nativeScrollCapacity.scrollHeight <= nativeScrollCapacity.clientHeight + 80) {
-          throw new Error('Mobile holographic native-touch fixture did not create a scrollable Lightbox.');
+          throw new Error('Compact foil touch-scroll fixture did not create a scrollable Lightbox.');
         }
         const touchSession = await page.context().newCDPSession(page);
         const dispatchTouch = (type, id, x, y) => touchSession.send('Input.dispatchTouchEvent', {
           type,
-          touchPoints: type === 'touchEnd' ? [] : [{
-            id, x, y, radiusX: 2, radiusY: 2, force: 1
-          }]
+          touchPoints: type === 'touchEnd' ? [] : [{ id, x, y, radiusX: 2, radiusY: 2, force: 1 }]
         });
-
-        const nativeQuickBox = await holographic.boundingBox();
-        if (!nativeQuickBox) throw new Error('Native-touch holographic fixture lost its geometry.');
-        // Prior synthetic pointer tests can leave the foil easing toward center.
-        // Start the native-scroll probe from a settled baseline so an unrelated
-        // recovery animation cannot make the gesture assertion fail.
-        await holographic.dispatchEvent('pointerleave');
-        await page.waitForFunction(() => {
-          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          if (!el) return false;
-          const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
-          const y = Number.parseFloat(el.style.getPropertyValue('--holo-y'));
-          return Number.isFinite(x) && Number.isFinite(y) &&
-            Math.abs(x - 50) < 0.25 && Math.abs(y - 50) < 0.25;
-        }, null, { timeout: 1500 });
-        const quickStartX = nativeQuickBox.x + nativeQuickBox.width * 0.5;
-        const quickStartY = nativeQuickBox.y + nativeQuickBox.height * 0.5;
-        const quickScrollBefore = await nativeTouchScrollHost.evaluate(el => el.scrollTop);
-        await dispatchTouch('touchStart', 91, quickStartX, quickStartY);
+        const nativeTouchBox = await holographic.boundingBox();
+        if (!nativeTouchBox) throw new Error('Native-touch foil fixture lost its geometry.');
+        const touchStartX = nativeTouchBox.x + nativeTouchBox.width * 0.5;
+        const touchStartY = nativeTouchBox.y + nativeTouchBox.height * 0.5;
+        const scrollBefore = await nativeTouchScrollHost.evaluate(el => el.scrollTop);
+        await dispatchTouch('touchStart', 91, touchStartX, touchStartY);
         await page.waitForTimeout(55);
-        await dispatchTouch('touchMove', 91, quickStartX + 2, quickStartY - 42);
+        await dispatchTouch('touchMove', 91, touchStartX + 2, touchStartY - 42);
         await page.waitForTimeout(90);
-        await dispatchTouch('touchEnd', 91, quickStartX + 2, quickStartY - 42);
+        await dispatchTouch('touchEnd', 91, touchStartX + 2, touchStartY - 42);
         await page.waitForTimeout(100);
-        const quickNativeState = await Promise.all([
+        const nativeTouchState = await Promise.all([
           nativeTouchScrollHost.evaluate(el => el.scrollTop),
           holographic.evaluate(el => ({
-            engaged: el.classList.contains('is-holo-touch-engaged'),
-            x: el.style.getPropertyValue('--holo-x'),
-            y: el.style.getPropertyValue('--holo-y')
+            x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
+            y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+            rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
+            direction: el.dataset.holoRotationDirection || ''
           }))
         ]);
-        const quickFoilX = Number.parseFloat(quickNativeState[1].x);
-        const quickFoilY = Number.parseFloat(quickNativeState[1].y);
-        if (quickNativeState[0] < quickScrollBefore + 4 ||
-            quickNativeState[1].engaged ||
-            !Number.isFinite(quickFoilX) || !Number.isFinite(quickFoilY) ||
-            Math.abs(quickFoilX - 50) > 1.5 ||
-            Math.abs(quickFoilY - 50) > 1.5) {
-          throw new Error('A quick native mobile swipe was not preserved as normal Lightbox scrolling: ' +
-            JSON.stringify({ scrollBefore: quickScrollBefore, scrollAfter: quickNativeState[0], foil: quickNativeState[1] }));
-        }
-
-        const heldNativeBox = await holographic.boundingBox();
-        if (!heldNativeBox) throw new Error('Held native-touch holographic fixture lost its geometry.');
-        await nativeTouchScrollHost.evaluate(el => { el.scrollTop = 0; });
-        await page.waitForTimeout(60);
-        const heldStartX = heldNativeBox.x + heldNativeBox.width * 0.5;
-        const heldStartY = heldNativeBox.y + heldNativeBox.height * 0.5;
-        const heldScrollBefore = await nativeTouchScrollHost.evaluate(el => el.scrollTop);
-        const heldFoilBefore = await holographic.evaluate(el => el.style.getPropertyValue('--holo-x'));
-        await dispatchTouch('touchStart', 92, heldStartX, heldStartY);
-        await page.waitForTimeout(260);
-        const nativeHoldEngaged = await holographic.evaluate(el => el.classList.contains('is-holo-touch-engaged'));
-        if (!nativeHoldEngaged) {
-          await dispatchTouch('touchEnd', 92, heldStartX, heldStartY);
-          throw new Error('A native mobile hold did not engage holographic interaction.');
-        }
-        await dispatchTouch('touchMove', 92, heldStartX + 30, heldStartY - 38);
-        await page.waitForTimeout(100);
-        const heldNativeState = await Promise.all([
-          nativeTouchScrollHost.evaluate(el => el.scrollTop),
-          holographic.evaluate(el => ({
-            engaged: el.classList.contains('is-holo-touch-engaged'),
-            x: el.style.getPropertyValue('--holo-x'),
-            y: el.style.getPropertyValue('--holo-y')
-          }))
-        ]);
-        await dispatchTouch('touchEnd', 92, heldStartX + 30, heldStartY - 38);
         await touchSession.detach();
-        if (!heldNativeState[1].engaged ||
-            Math.abs(heldNativeState[0] - heldScrollBefore) > 1 ||
-            heldNativeState[1].x === heldFoilBefore) {
-          throw new Error('A held native mobile holographic gesture scrolled the Lightbox instead of driving foil: ' +
-            JSON.stringify({ scrollBefore: heldScrollBefore, scrollAfter: heldNativeState[0], foilBefore: heldFoilBefore, foilAfter: heldNativeState[1] }));
+        if (nativeTouchState[0] < scrollBefore + 4 ||
+            Math.abs(nativeTouchState[1].x - 50) > 1.5 ||
+            Math.abs(nativeTouchState[1].y - 50) > 1.5 ||
+            Math.abs(nativeTouchState[1].rotation) > 0.1 ||
+            nativeTouchState[1].direction !== mobileFoilBaseline.direction) {
+          throw new Error('Native touch swipe did not scroll normally without changing foil pose: ' +
+            JSON.stringify({ scrollBefore, scrollAfter: nativeTouchState[0], foil: nativeTouchState[1] }));
         }
-        await nativeTouchScrollHost.evaluate(el => { el.scrollTop = 0; });
+        await page.evaluate(() => {
+          document.querySelector('[data-holo-touch-scroll-fixture]')?.remove();
+          const lightbox = document.getElementById('lightbox');
+          if (lightbox) lightbox.scrollTop = 0;
+        });
         await page.waitForTimeout(60);
 
         await page.locator('#lightboxClose').first().click();
