@@ -14,7 +14,7 @@ import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motio
 import { createLifecycle } from '../../core/lifecycle.js';
 import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261026-02';
 
-const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';
+const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-02';
 let muxPlayerModulePromise = null;
 let muxPlayerModuleAttempt = 0;
 
