@@ -11244,9 +11244,22 @@ try {
       // after entering the inset top/bottom visibility band.
       await page.evaluate(async () => {
         const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+        const previousScrollPriority = document.documentElement.style.getPropertyPriority('scroll-behavior');
+        const previousBodyScrollBehavior = document.body.style.scrollBehavior;
+        const previousBodyScrollPriority = document.body.style.getPropertyPriority('scroll-behavior');
         const previousScrollTop = window.scrollY;
-        document.documentElement.style.scrollBehavior = 'auto';
+
+        // The preceding smoke scenarios can leave a smooth scroll in flight.
+        // Make the reset deterministic before observing a detached/offscreen
+        // fixture so a transient pass through the viewport cannot consume its
+        // one-time reveal gate.
+        document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important');
+        document.body.style.setProperty('scroll-behavior', 'auto', 'important');
         window.scrollTo(0, 0);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (Math.abs(window.scrollY) > 1) {
+          throw new Error('Viewport reveal smoke fixture requires a settled top-of-document scroll position: ' + window.scrollY);
+        }
         const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-05');
         const spacer = document.createElement('div');
         spacer.id = 'thumbnail-viewport-reveal-spacer';
@@ -11266,6 +11279,9 @@ try {
         fixture.appendChild(card);
         document.body.append(spacer,fixture);
         fixture.dataset.previousScrollBehavior = previousScrollBehavior;
+        fixture.dataset.previousScrollPriority = previousScrollPriority;
+        fixture.dataset.previousBodyScrollBehavior = previousBodyScrollBehavior;
+        fixture.dataset.previousBodyScrollPriority = previousBodyScrollPriority;
         fixture.dataset.previousScrollTop = String(previousScrollTop);
       });
       try {
@@ -11328,11 +11344,24 @@ try {
       await page.evaluate(() => {
         document.querySelector('#thumbnail-viewport-reveal-spacer')?.remove();
         const fixture = document.querySelector('#thumbnail-viewport-reveal-fixture');
-        const behavior = fixture?.dataset.previousScrollBehavior || '';
+        const rootStyle = fixture?.dataset.previousScrollBehavior || '';
+        const rootPriority = fixture?.dataset.previousScrollPriority || '';
+        const bodyStyle = fixture?.dataset.previousBodyScrollBehavior || '';
+        const bodyPriority = fixture?.dataset.previousBodyScrollPriority || '';
         const scrollTop = Number(fixture?.dataset.previousScrollTop) || 0;
         fixture?.remove();
-        document.documentElement.style.scrollBehavior = behavior;
-        window.scrollTo(0,scrollTop);
+
+        // Restore the original location instantly while smooth scrolling is
+        // still suppressed, then restore both inline declarations verbatim.
+        document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important');
+        document.body.style.setProperty('scroll-behavior', 'auto', 'important');
+        window.scrollTo(0, scrollTop);
+        const restoreScrollBehavior = (element, value, priority) => {
+          if (value) element.style.setProperty('scroll-behavior', value, priority);
+          else element.style.removeProperty('scroll-behavior');
+        };
+        restoreScrollBehavior(document.documentElement, rootStyle, rootPriority);
+        restoreScrollBehavior(document.body, bodyStyle, bodyPriority);
       });
 
       await page.evaluate(async () => {
