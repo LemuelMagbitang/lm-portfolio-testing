@@ -7,7 +7,7 @@ import {
   isCompactFoilTarget,
   resolveFoilIntensity,
   supportsFoilHover
-} from '../js/features/lightbox/foil-interaction.js?v=20261027-02';
+} from '../js/features/lightbox/foil-interaction.js?v=20261027-03';
 
 const mobileView = {
   innerWidth: 390,
