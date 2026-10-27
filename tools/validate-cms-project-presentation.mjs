@@ -295,12 +295,14 @@ assert.ok(
   'Foil redraws should be frame-coalesced and pending animation frames cancelled on teardown.'
 );
 assert.ok(
-  foilNormalRendererSource.includes("const compactTarget = Boolean(view?.matchMedia?.('(pointer: coarse)')?.matches)") &&
+  foilNormalRendererSource.includes('const compactTarget = isCompactFoilTarget(view)') &&
   foilNormalRendererSource.includes('compactTarget?0.58:0.85') &&
   foilNormalRendererSource.includes('const maxSide=compactTarget?640:1024') &&
   foilNormalRendererSource.includes('MOBILE_DRAW_INTERVAL_MS = 32') &&
+  foilNormalRendererSource.includes('scheduleDrawTimer') &&
+  foilNormalRendererSource.includes('drawTimer!==null') &&
   foilNormalRendererSource.includes('now-lastDrawTime<MOBILE_DRAW_INTERVAL_MS'),
-  'Touch-first foil relief must use a reduced backing resolution, a bounded canvas, and roughly 30 FPS GPU redraws.'
+  'Compact foil relief must use the responsive intensity policy, reduced backing resolution, a bounded canvas, and timer-throttled GPU redraws.'
 );
 assert.ok(
   foilNormalRendererSource.includes('pendingImageCancels=new Set()') &&
