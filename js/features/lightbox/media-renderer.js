@@ -925,7 +925,7 @@ export function createLightboxMediaRenderer({
     surface.dataset.holoStyle = config.style;
     surface.dataset.holoTextureMode = config.textureMode;
     let compactTarget = isCompactFoilTarget(windowRef);
-    const hoverAvailable = supportsFoilHover(windowRef);
+    let hoverAvailable = supportsFoilHover(windowRef);
     let frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
     let backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
     const rotationDirection = Math.random() < 0.5 ? -1 : 1;
@@ -1190,16 +1190,16 @@ export function createLightboxMediaRenderer({
         updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
       }
     };
-    const bindResponsiveFoilQuery = query => {
+    const bindResponsiveFoilQuery = (query, handler = syncResponsiveFoilIntensity) => {
       let mediaQuery;
       try { mediaQuery = windowRef?.matchMedia?.(query); } catch (_) {}
       if (!mediaQuery) return;
       if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncResponsiveFoilIntensity);
-        responsiveFoilCleanups.push(() => mediaQuery.removeEventListener?.('change', syncResponsiveFoilIntensity));
+        mediaQuery.addEventListener('change', handler);
+        responsiveFoilCleanups.push(() => mediaQuery.removeEventListener?.('change', handler));
       } else if (typeof mediaQuery.addListener === 'function') {
-        mediaQuery.addListener(syncResponsiveFoilIntensity);
-        responsiveFoilCleanups.push(() => mediaQuery.removeListener?.(syncResponsiveFoilIntensity));
+        mediaQuery.addListener(handler);
+        responsiveFoilCleanups.push(() => mediaQuery.removeListener?.(handler));
       }
     };
     const cancelQueuedPointer = () => {
@@ -1263,6 +1263,23 @@ export function createLightboxMediaRenderer({
       setHolographicTarget(surface, 50, 50, 0);
     };
 
+    const syncFoilHoverCapability = () => {
+      const nextHoverAvailable = supportsFoilHover(windowRef);
+      if (nextHoverAvailable === hoverAvailable) return;
+
+      hoverAvailable = nextHoverAvailable;
+      surface.dataset.holoInput = hoverAvailable ? 'hover-edge' : 'tap-only';
+      if (hoverAvailable) {
+        surface.addEventListener('pointermove', onPointerMove, { passive: true });
+        surface.addEventListener('pointerleave', onPointerLeave);
+      } else {
+        surface.removeEventListener('pointermove', onPointerMove);
+        surface.removeEventListener('pointerleave', onPointerLeave);
+        cancelQueuedPointer();
+        setHolographicTarget(surface, 50, 50, 0);
+      }
+    };
+
     const toggleFlip = event => {
       if (event?.type === 'keydown') {
         if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1281,8 +1298,11 @@ export function createLightboxMediaRenderer({
     // compact breakpoint. Media-query listeners also catch capability changes.
     windowRef?.addEventListener?.('resize', syncResponsiveFoilIntensity, { passive: true });
     responsiveFoilCleanups.push(() => windowRef?.removeEventListener?.('resize', syncResponsiveFoilIntensity));
+    windowRef?.addEventListener?.('resize', syncFoilHoverCapability, { passive: true });
+    responsiveFoilCleanups.push(() => windowRef?.removeEventListener?.('resize', syncFoilHoverCapability));
     bindResponsiveFoilQuery('(max-width: 760px)');
     bindResponsiveFoilQuery('(hover: none) and (pointer: coarse)');
+    bindResponsiveFoilQuery('(any-hover: hover) and (any-pointer: fine)', syncFoilHoverCapability);
 
     if (hoverAvailable) {
       surface.addEventListener('pointermove', onPointerMove, { passive: true });
