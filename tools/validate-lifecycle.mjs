@@ -194,13 +194,17 @@ assert.match(mediaRendererSource, /scheduleJob\(\s*'viewer-module',\s*\(\) => wi
 assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
 assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) \{[\s\S]*?imageDimensionCache\.set\(url, \{ width, height \}\);[\s\S]*?captureAssetPreview\(url, image/);
 assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);
-assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;/);
-assert.match(mediaRendererSource, /const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;/);
-assert.match(mediaRendererSource, /surface\.addEventListener\('touchmove', onTouchMove, \{ passive: false \}\)/);
-assert.match(mediaRendererSource, /const onTouchMove = event =>/);
-assert.match(mediaRendererSource, /is-holo-touch-pending/);
-assert.match(mediaRendererSource, /touchGesture\.engaged/);
-assert.match(mediaRendererSource, /is-holo-touch-engaged/);
+// Foil rotation is hover-only now: no touch hold/drag lifecycle should
+// remain in the renderer, while pointer updates are passive and frame-coalesced.
+assert.doesNotMatch(mediaRendererSource, /HOLOGRAPHIC_TOUCH_HOLD_MS|HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX|onTouchMove|is-holo-touch-pending|touchGesture\.engaged|is-holo-touch-engaged|setPointerCapture/);
+assert.match(mediaRendererSource, /const onPointerMove = event =>/);
+assert.match(mediaRendererSource, /event\.pointerType !== 'mouse'/);
+assert.match(mediaRendererSource, /getFoilEdgeRotation\(x, y, motion\.rotationDirection\)/);
+assert.match(mediaRendererSource, /surface\.addEventListener\('pointermove', onPointerMove, \{ passive: true \}\)/);
+assert.match(mediaRendererSource, /surface\.addEventListener\('pointerleave', onPointerLeave\)/);
+assert.match(mediaRendererSource, /surface\.addEventListener\('click', toggleFlip\)/);
+assert.match(mediaRendererSource, /surface\.addEventListener\('keydown', toggleFlip\)/);
+assert.match(mediaRendererSource, /responsiveFoilCleanups\.splice\(0\)\.forEach/);
 assert.doesNotMatch(mediaRendererSource, /DeviceOrientationEvent|deviceorientation|requestHolographicMotion/);
 assert.match(mediaRendererSource, /Array\.from\(holographicCleanups\)\.reverse\(\)/);
 assert.match(mediaRendererSource, /function buildHolographicImage\(frontImage, item, project\)/);
