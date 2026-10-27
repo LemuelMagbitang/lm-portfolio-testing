@@ -167,7 +167,11 @@ check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footer.includes("const currentVideo = slides[index]?.querySelector('video')") &&
   footer.includes("currentVideo.play?.()"),
   "Footer native video slides must not autoplay while inactive and must pause/resume only the active slide.");
-check(cms.includes('href="videos.html"') && page.includes("mux-uploader"), "CMS link or Mux Uploader UI missing.");
+check(cms.includes('href="videos.html"') &&
+  page.includes("mux-uploader") &&
+  page.includes("https://cdn.jsdelivr.net/npm/@mux/mux-uploader@1.6.0") &&
+  !page.includes("https://cdn.jsdelivr.net/npm/@mux/mux-uploader@1\""),
+  "CMS must retain its Mux uploader UI and pin the hosted custom element to an exact release.");
 check(script.includes("supabasePublishableKey") && script.includes("saved.supabaseAnonKey") && page.includes('id="supabasePublishableKey"'), "Video Library admin must prefer the modern publishable-key field and migrate per-device legacy settings.");
 check(page.includes('rel="icon" type="image/png" href="../assets/projects/site/favicon.png"'),
   "Mux Media Library must declare its project-relative favicon instead of requesting /favicon.ico.");
