@@ -43,6 +43,9 @@ jobs:
       - name: Validate site data, paths, and JavaScript
         run: node tools/validate-site.mjs
 
+      - name: Test repository-independent site path resolution
+        run: node tools/test-site-paths.mjs
+
       - name: Validate Mux video integration contracts
         run: node tools/validate-mux-integration.mjs
 
