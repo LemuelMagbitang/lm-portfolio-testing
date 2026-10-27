@@ -417,8 +417,8 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes('activeInspector?.entry===entry') &&
   renderer.includes("description.textContent=caption") &&
   renderer.includes('description.hidden=!caption') &&
-  renderer.includes("desktopAction.textContent = 'CLICK / MOVE'") &&
-  renderer.includes("touchAction.textContent = 'HOLD + MOVE'") &&
+  renderer.includes("desktopAction.textContent = 'HOVER EDGE / CLICK'") &&
+  renderer.includes("touchAction.textContent = 'TAP TO FLIP'") &&
   renderer.includes("faceLabel.textContent = isBack ? 'BACK' : 'FRONT'") &&
   renderer.includes("footer.append(description,back)") &&
   renderer.includes("if(foilHint)footer.appendChild(foilHint)") &&
@@ -426,7 +426,7 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes(`back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>'`) &&
   !renderer.includes('inspectTrigger') &&
   !renderer.includes('holdOpened = true'),
-  'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil flips remain available inside Inspect.');
+  'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil tap-to-flip remains available inside Inspect.');
 const focused3dActivation = renderer.match(/onActivate:\s*\(\)\s*=>\s*\{([\s\S]*?)\},\s*onDeactivate:/)?.[1] || '';
 assert.ok(focused3dActivation && !/lightbox\.scrollTop|pre3dScrollTop/.test(focused3dActivation),
   'Entering the 3D inspection layer must not rewrite the Lightbox scroll position.');
