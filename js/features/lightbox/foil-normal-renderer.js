@@ -50,30 +50,30 @@ void main(){
   float h0U=heightAt0(tileUV+vec2(0.0,step0.y)),h0D=heightAt0(tileUV-vec2(0.0,step0.y));
   vec2 s0=vec2(h0L-h0R,h0D-h0U)*3.2;
   vec2 s1=vec2(0.0),s2=vec2(0.0),s3=vec2(0.0);
+  float e1=0.0,e2=0.0,e3=0.0;
   if(u_mapCount>1.5){
     float h1L=heightAt1(tileUV-vec2(step1.x,0.0)),h1R=heightAt1(tileUV+vec2(step1.x,0.0));
     float h1U=heightAt1(tileUV+vec2(0.0,step1.y)),h1D=heightAt1(tileUV-vec2(0.0,step1.y));
     s1=vec2(h1L-h1R,h1D-h1U)*3.2;
+    e1=max(abs(h1L-h1R),abs(h1U-h1D))*w1;
   }
   if(u_mapCount>2.5){
     float h2L=heightAt2(tileUV-vec2(step2.x,0.0)),h2R=heightAt2(tileUV+vec2(step2.x,0.0));
     float h2U=heightAt2(tileUV+vec2(0.0,step2.y)),h2D=heightAt2(tileUV-vec2(0.0,step2.y));
     s2=vec2(h2L-h2R,h2D-h2U)*3.2;
+    e2=max(abs(h2L-h2R),abs(h2U-h2D))*w2;
   }
   if(u_mapCount>3.5){
     float h3L=heightAt3(tileUV-vec2(step3.x,0.0)),h3R=heightAt3(tileUV+vec2(step3.x,0.0));
     float h3U=heightAt3(tileUV+vec2(0.0,step3.y)),h3D=heightAt3(tileUV-vec2(0.0,step3.y));
     s3=vec2(h3L-h3R,h3D-h3U)*3.2;
+    e3=max(abs(h3L-h3R),abs(h3U-h3D))*w3;
   }
   vec3 normal=blendFoilNormals(s0,s1,s2,s3,w1,w2,w3);
   float cv0=luminance(c0),cv1=luminance(c1)*w1,cv2=luminance(c2)*w2,cv3=luminance(c3)*w3;
   float coverage=max(cv0,max(cv1,max(cv2,cv3)));
   if(coverage<0.008||u_intensity<=0.001){gl_FragColor=vec4(0.0);return;}
   float e0=max(abs(h0L-h0R),abs(h0U-h0D));
-  float e1=0.0,e2=0.0,e3=0.0;
-  if(u_mapCount>1.5){e1=max(abs(heightAt1(tileUV-vec2(step1.x,0.0))-heightAt1(tileUV+vec2(step1.x,0.0))),abs(heightAt1(tileUV+vec2(0.0,step1.y))-heightAt1(tileUV-vec2(0.0,step1.y))))*w1;}
-  if(u_mapCount>2.5){e2=max(abs(heightAt2(tileUV-vec2(step2.x,0.0))-heightAt2(tileUV+vec2(step2.x,0.0))),abs(heightAt2(tileUV+vec2(0.0,step2.y))-heightAt2(tileUV-vec2(0.0,step2.y))))*w2;}
-  if(u_mapCount>3.5){e3=max(abs(heightAt3(tileUV-vec2(step3.x,0.0))-heightAt3(tileUV+vec2(step3.x,0.0))),abs(heightAt3(tileUV+vec2(0.0,step3.y))-heightAt3(tileUV-vec2(0.0,step3.y))))*w3;}
   float edge=clamp(max(e0,max(e1,max(e2,e3)))*3.1,0.0,1.0);
   vec3 L=normalize(vec3((u_light.x-v_uv.x)*1.7,(u_light.y-v_uv.y)*1.7,0.82));
   vec3 V=vec3(0.0,0.0,1.0),H=normalize(L+V);
