@@ -56,8 +56,19 @@ Deno.serve(async (request: Request) => {
     }
 
     if (request.method === "GET" && route.length === 1 && route[0] === "mux-assets") {
-      const remote = await muxRequest("/assets?limit=100");
-      const remoteAssetIds = [...new Set((Array.isArray(remote) ? remote : [])
+      const requestUrl = new URL(request.url);
+      const cursor = requestUrl.searchParams.get("cursor") || "";
+      if (cursor.length > 1024 || cursor !== cursor.trim() || /[\u0000-\u001f\u007f]/.test(cursor)) {
+        return jsonResponse(request, { error: "Invalid Mux asset page cursor." }, 400);
+      }
+      const cursorQuery = cursor ? "&cursor=" + encodeURIComponent(cursor) : "";
+      const remotePage = await muxRequest("/assets?limit=100" + cursorQuery, "GET", undefined, true);
+      const remote = Array.isArray(remotePage?.data) ? remotePage.data : [];
+      const remoteCursor = typeof remotePage?.next_cursor === "string" ? remotePage.next_cursor : "";
+      const nextCursor = remoteCursor.length <= 1024 && remoteCursor === remoteCursor.trim() &&
+        !/[\u0000-\u001f\u007f]/.test(remoteCursor) ? remoteCursor : "";
+      if (remotePage?.next_cursor && !nextCursor) throw new Error("Mux returned an invalid asset pagination cursor.");
+      const remoteAssetIds = [...new Set(remote
         .map((item: any) => String(item?.id || "").trim())
         .filter(Boolean))];
       const linkedIds = new Set<string>();
@@ -70,7 +81,7 @@ Deno.serve(async (request: Request) => {
           if (id) linkedIds.add(id);
         }
       }
-      const assets = (Array.isArray(remote) ? remote : [])
+      const assets = remote
         .filter((item: any) => {
           const state = String(item?.status || "").toLowerCase();
           const playbacks = Array.isArray(item?.playback_ids) ? item.playback_ids : [];
@@ -88,7 +99,7 @@ Deno.serve(async (request: Request) => {
           resolutionTier: safeText(item.resolution_tier, 32),
           playbackId: safeText((Array.isArray(item?.playback_ids) ? item.playback_ids : []).find((playback: any) => playback?.policy === "public")?.id, 255)
         }));
-      return jsonResponse(request, { assets, checked: Array.isArray(remote) ? remote.length : 0 });
+      return jsonResponse(request, { assets, checked: remote.length, nextCursor: nextCursor || null });
     }
 
     if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "placement") {

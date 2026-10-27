@@ -203,16 +203,29 @@ check(admin.includes('route[0] === "mux-assets"') && admin.includes('route[2] ==
   "The Mux admin API must support asset discovery, safe metadata editing, publish state and legacy placement compatibility.");
 const muxAssetDiscovery = admin.split('if (request.method === "GET" && route.length === 1 && route[0] === "mux-assets") {')[1]?.split('if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "placement")')[0] || "";
 check(
-  muxAssetDiscovery.indexOf('const remote = await muxRequest("/assets?limit=100")') >= 0 &&
-  muxAssetDiscovery.indexOf('const remote = await muxRequest("/assets?limit=100")') <
+  muxAssetDiscovery.includes('requestUrl.searchParams.get("cursor")') &&
+  muxAssetDiscovery.includes('const remotePage = await muxRequest("/assets?limit=100" + cursorQuery, "GET", undefined, true)') &&
+  muxAssetDiscovery.indexOf('const remotePage = await muxRequest("/assets?limit=100" + cursorQuery, "GET", undefined, true)') <
     muxAssetDiscovery.indexOf('.select("mux_asset_id").in("mux_asset_id", remoteAssetIds)') &&
-  muxAssetDiscovery.includes("const remoteAssetIds = [...new Set(") &&
+  muxAssetDiscovery.includes("const remoteAssetIds = [...new Set(remote") &&
   muxAssetDiscovery.includes("const linkedIds = new Set<string>()") &&
+  muxAssetDiscovery.includes("nextCursor: nextCursor || null") &&
   !muxAssetDiscovery.includes('.from("video_assets").select("mux_asset_id")'),
-  "Mux asset discovery must fetch its bounded remote page first and check only matching database IDs rather than reading every linked asset row."
+  "Mux asset discovery must validate cursor input, preserve upstream pagination metadata and query only matching database IDs."
+);
+check(sharedHttp.includes("includeMetadata = false") &&
+  sharedHttp.includes("return includeMetadata ? payload : payload?.data;") &&
+  admin.includes('cursor.length > 1024') &&
+  admin.includes('nextCursor: nextCursor || null') &&
+  page.includes('id="previousMuxAssetsPage"') &&
+  page.includes('id="nextMuxAssetsPage"') &&
+  script.includes('loadMuxImportAssets(importNextCursor,"next")') &&
+  script.includes('loadMuxImportAssets(importCursorStack[importCursorStack.length-1],"previous")') &&
+  script.includes("importAssetsRequestId"),
+  "Mux import pagination must use bounded cursor validation, accessible previous/next controls, latest-request wins, and preserve existing Mux request return shapes by default."
 );
 check(page.includes('id="muxAssetSelect"') && page.includes('id="refreshMuxAssetsButton"') &&
-  script.includes('api("mux-assets")') && script.includes('No unlinked public-playback assets found') &&
+  script.includes('api("mux-assets"+') && script.includes('No unlinked public-playback assets found') &&
   page.includes('id="sidebar"') && page.includes('id="signOutButton"') &&
   page.includes('id="searchInput"') && page.includes('id="statusFilter"') &&
   page.includes('id="providerFilter"') && page.includes('id="gridViewButton"') &&

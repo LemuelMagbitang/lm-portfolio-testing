@@ -103,7 +103,7 @@ export class MuxApiError extends Error {
   }
 }
 
-export async function muxRequest(path: string, method = "GET", body?: unknown) {
+export async function muxRequest(path: string, method = "GET", body?: unknown, includeMetadata = false) {
   const id = Deno.env.get("MUX_TOKEN_ID");
   const secret = Deno.env.get("MUX_TOKEN_SECRET");
   if (!id || !secret) throw new Error("Mux API credentials are not configured on the server.");
@@ -144,7 +144,7 @@ export async function muxRequest(path: string, method = "GET", body?: unknown) {
   }
 
   if (!response.ok) throw new MuxApiError(response.status, payload?.error?.messages?.join("; ") || payload?.error?.message || payload?.message || "Mux API returned HTTP " + response.status);
-  return payload?.data;
+  return includeMetadata ? payload : payload?.data;
 }
 export function safeSlug(value: unknown): string | null {
   const slug = String(value || "").trim().toLowerCase();
