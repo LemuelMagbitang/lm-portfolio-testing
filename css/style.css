@@ -5147,7 +5147,7 @@ footer > .footer-content p{
   animation:holo-hint-breathe 3.8s ease-in-out infinite;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • MOVE / CLICK';}
-@media (pointer:coarse){
+@media (hover:none) and (pointer:coarse){
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{content:'FRONT • TAP TO FLIP';}
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped::before{content:'BACK • TAP TO FLIP';}
 }
@@ -5227,7 +5227,7 @@ footer > .footer-content p{
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face-status{color:rgba(255,255,255,.88);}
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-separator{color:rgba(255,255,255,.34);}
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{display:none;}
-@media(pointer:coarse){
+@media (hover:none) and (pointer:coarse){
  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action{display:none;}
  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{display:inline;}
  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{font-size:8px;letter-spacing:.095em;margin-top:0;}
@@ -6567,7 +6567,6 @@ body.menu-open .hamburger-icon span {
     animation:none!important;
   }
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before {
-    content:'TAP TO FLIP';
     top:10px;
     right:10px;
     font-size:8px;
