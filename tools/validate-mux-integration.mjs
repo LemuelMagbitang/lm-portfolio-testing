@@ -84,6 +84,14 @@ check(assetCreatedHandler.includes("d.new_asset_settings?.meta?.external_id") &&
   assetCreatedHandler.includes('mux_upload_id: d.id') &&
   (assetCreatedHandler.split("if (result.error) throw result.error;").length - 1) >= 2,
   "Upload-created webhooks must recover an early-arrival race using the stable external ID and check both database updates.");
+
+const uploadFailureHandler = webhook.split('} else if (["video.upload.errored","video.upload.timed_out","video.upload.cancelled"].includes(event.type)) {')[1]?.split('    }\n    if (updateError) throw updateError;')[0] || "";
+check(uploadFailureHandler.includes('d.new_asset_settings?.meta?.external_id') &&
+  uploadFailureHandler.includes('d.meta?.external_id') &&
+  uploadFailureHandler.includes('eq("mux_upload_id", d.id).or(newerEventFilter).select("id")') &&
+  uploadFailureHandler.includes('eq("external_id", externalId).or(newerEventFilter).select("id")') &&
+  (uploadFailureHandler.split("if (result.error) throw result.error;").length - 1) >= 2,
+  "Upload failure, timeout, and cancellation webhooks must recover an early-arrival race via the stable external ID and check both database updates.");
 check(webhook.includes('const { data: old, error: oldError }') && webhook.includes("if (oldError) throw oldError;"),
   "Webhook deduplication reads must fail on database errors.");
 
