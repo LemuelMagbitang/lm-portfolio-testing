@@ -14,20 +14,19 @@ const normal = await readRequestBodyLimited({
 }, normalBytes);
 assert.deepEqual(normal, { ok: true, body: normalBody, bytes: normalBytes });
 
-let streamStarted = false;
+let streamRead = false;
 const declaredTooLarge = await readRequestBodyLimited({
   headers: new Headers({ "content-length": "4097" }),
-  body: new ReadableStream({
-    start(controller) {
-      streamStarted = true;
-      controller.enqueue(new Uint8Array([1]));
-      controller.close();
+  body: {
+    getReader() {
+      streamRead = true;
+      throw new Error("The body stream should not be read when Content-Length exceeds the limit.");
     }
-  })
+  }
 }, 4096);
 assert.equal(declaredTooLarge.ok, false);
 assert.equal(declaredTooLarge.bytes, 4097);
-assert.equal(streamStarted, false, "declared oversized bodies should be rejected before reading the stream");
+assert.equal(streamRead, false, "declared oversized bodies should be rejected before reading the stream");
 
 let cancelled = false;
 const streamedTooLarge = await readRequestBodyLimited({
