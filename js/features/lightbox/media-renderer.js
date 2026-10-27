@@ -849,7 +849,7 @@ export function createLightboxMediaRenderer({
     const x = ((Number(event.clientX) - rect.left) / rect.width) * 100;
     const y = ((Number(event.clientY) - rect.top) / rect.height) * 100;
     const motion = holographicMotionStates.get(surface);
-    const rotation = motion && event?.pointerType === 'mouse' && supportsFoilHover(windowRef)
+    const rotation = motion && event?.pointerType === 'mouse'
       ? getFoilEdgeRotation(x, y, motion.rotationDirection)
       : 0;
     setHolographicTarget(surface, x, y, rotation);
