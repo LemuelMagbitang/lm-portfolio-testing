@@ -23,6 +23,15 @@ function readText(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
 }
 
+function hasVersionedReference(source, assetPath) {
+  const escapedPath = String(assetPath).replace(/[.*+?^${}()|[\]\\]/g, '\\function readText(file) {
+  return fs.readFileSync(path.join(ROOT, file), 'utf8');
+}
+
+function exists(file) {');
+  return new RegExp(escapedPath + "\\?v=[^'\"\\s>]+").test(String(source || ''));
+}
+
 function exists(file) {
   return fs.existsSync(path.join(ROOT, file));
 }
@@ -554,7 +563,7 @@ function validateLightboxFeatureStylesheet() {
   const featureCss = exists('css/features/lightbox.css') ? readText('css/features/lightbox.css') : '';
   const desktopCloseRule = (featureCss.match(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.lightbox-close\s*\{([^}]*)\}/) || [])[1] || '';
   const mobileCloseRule = (featureCss.match(/@media\s*\(max-width:\s*767px\)\s*\{[\s\S]*?\.lightbox-close\s*\{([^}]*)\}/) || [])[1] || '';
-  if (!entryHtml.includes('css/features/lightbox.css?v=20261020-01') ||
+  if (!hasVersionedReference(entryHtml, 'css/features/lightbox.css') ||
       !/width:\s*44px;/.test(desktopCloseRule) ||
       !/height:\s*44px;/.test(desktopCloseRule) ||
       !/width:\s*52px;/.test(mobileCloseRule) ||
@@ -1922,7 +1931,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   if (!contrast.includes('export function sampleMediaLuminance') ||
       !contrast.includes('export function foregroundForLuminance') ||
       !contrast.includes("['lottie-player', 'mux-video', 'mux-player'].includes(media?.localName)") ||
-      !navigation.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-02'") ||
+      !hasVersionedReference(navigation, '../../infrastructure/browser/media-contrast.js') ||
       !navigation.includes('logo.dataset.logoForeground = foreground') ||
       !navigation.includes('sampleMediaLuminance(root, media, point)') ||
       !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
@@ -2002,7 +2011,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('CMS settings sync: normalized hero timing must preserve the stored Ken Burns scale and duration fields.');
   }
 
-  if (!footer.includes("from '../../infrastructure/browser/media-contrast.js?v=20261026-02'") ||
+  if (!hasVersionedReference(footer, '../../infrastructure/browser/media-contrast.js') ||
       !footer.includes('chooseForeground(documentRef, source, media)') ||
       !footer.includes('windowRef.setInterval') ||
       !footer.includes('lifecycle.cleanup()')) {
@@ -2065,27 +2074,27 @@ function validateResponsiveHeroGalleryAndLogoContract() {
     err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
   }
 
-  if (!entry.includes("bootstrap.js?v=20261027-10") ||
-      !bootstrap.includes("cacheVersion = '20261027-10'") ||
-      !composition.includes("navigation/index.js?v=20261026-04") ||
-      !composition.includes("about/index.js?v=20261024-01") ||
-      !composition.includes("hero/index.js?v=20261027-11") ||
-      !composition.includes("footer/index.js?v=20261026-09") ||
-      !composition.includes("settings/index.js?v=20261021-02") ||
-      !composition.includes("interaction-feedback/index.js?v=20261018-03") ||
-      !composition.includes("gallery/index.js?v=20261024-02") ||
-      !composition.includes("projects/index.js?v=20261027-05") ||
-      !composition.includes("lightbox/index.js?v=20261027-05") ||
-      !settingsFeature.includes("site-settings.js?v=20261021-02") ||
-      !works.includes('js/app/bootstrap.js?v=20261027-10') ||
-      !works.includes('js/app/page-composition.js?v=20261027-10') ||
-      !works.includes('css/style.css?v=20261027-02') ||
-      !works.includes('js/script.js?v=20261027-10') ||
-      !about.includes('style.css?v=20261027-02') ||
-      !about.includes('js/app/bootstrap.js?v=20261027-10') ||
-      !about.includes('script.js?v=20261027-10') ||
-      !about.includes('page-composition.js?v=20261027-10')) {
-    err('Runtime asset cache contract: the affected feature modules and both page templates must request the current cache version.');
+  if (!hasVersionedReference(entry, 'bootstrap.js') ||
+      !/cacheVersion\\s*=\\s*'[^']+'/.test(bootstrap) ||
+      !hasVersionedReference(composition, 'navigation/index.js') ||
+      !hasVersionedReference(composition, 'about/index.js') ||
+      !hasVersionedReference(composition, 'hero/index.js') ||
+      !hasVersionedReference(composition, 'footer/index.js') ||
+      !hasVersionedReference(composition, 'settings/index.js') ||
+      !hasVersionedReference(composition, 'interaction-feedback/index.js') ||
+      !hasVersionedReference(composition, 'gallery/index.js') ||
+      !hasVersionedReference(composition, 'projects/index.js') ||
+      !hasVersionedReference(composition, 'lightbox/index.js') ||
+      !hasVersionedReference(settingsFeature, 'site-settings.js') ||
+      !hasVersionedReference(works, 'js/app/bootstrap.js') ||
+      !hasVersionedReference(works, 'js/app/page-composition.js') ||
+      !hasVersionedReference(works, 'css/style.css') ||
+      !hasVersionedReference(works, 'js/script.js') ||
+      !hasVersionedReference(about, 'style.css') ||
+      !hasVersionedReference(about, 'js/app/bootstrap.js') ||
+      !hasVersionedReference(about, 'script.js') ||
+      !hasVersionedReference(about, 'page-composition.js')) {
+    err('Runtime asset cache contract: runtime modules, affected features, and both page templates must use versioned references with consistent entrypoint cache versions.');
   }
 }
 
@@ -2308,7 +2317,7 @@ function validateCmsRegressionContracts() {
   }
 
   const foilNormalRenderer = exists('js/features/lightbox/foil-normal-renderer.js') ? readText('js/features/lightbox/foil-normal-renderer.js') : '';
-  if (!renderer.includes("import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';") ||
+  if (!hasVersionedReference(renderer, './foil-normal-renderer.js') ||
       !renderer.includes('createFoilNormalRenderer(normalCanvas, normalPatternUrls') ||
       !renderer.includes('holographicNormalControllers.get(surface)?.forEach(controller => controller.setLight') ||
       !foilNormalRenderer.includes('vec3 blendFoilNormals') || !foilNormalRenderer.includes('heightAt3(tileUV') || !foilNormalRenderer.includes('destroy()')) {
@@ -2445,6 +2454,9 @@ function validateReducedMotionThumbnailContract() {
   const thumbnail = exists('js/features/projects/project-thumbnail.js')
     ? readText('js/features/projects/project-thumbnail.js')
     : '';
+  const projectCard = exists('js/features/projects/project-card.js')
+    ? readText('js/features/projects/project-card.js')
+    : '';
   const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
     ? readText('js/features/lightbox/media-renderer.js')
     : '';
@@ -2458,6 +2470,23 @@ function validateReducedMotionThumbnailContract() {
     ? readText('tools/smoke-browser.mjs')
     : '';
   const styles = exists('css/style.css') ? readText('css/style.css') : '';
+
+  const projectThumbnailVersion = projectCard.match(/project-thumbnail\\.js\\?v=([^'"]+)/)?.[1] || '';
+  const smokeProjectThumbnailVersions = [...smoke.matchAll(/project-thumbnail\\.js\\?v=([^'"]+)/g)]
+    .map(match => match[1]);
+  const thumbnailAssetPreviewVersion = thumbnail.match(/asset-preview\\.js\\?v=([^'"]+)/)?.[1] || '';
+  const lightboxAssetPreviewVersion = mediaRenderer.match(/asset-preview\\.js\\?v=([^'"]+)/)?.[1] || '';
+  const smokeAssetPreviewVersion = smoke.match(/asset-preview\\.js\\?v=([^'"]+)/)?.[1] || '';
+
+  if (!projectThumbnailVersion || !smokeProjectThumbnailVersions.length ||
+      smokeProjectThumbnailVersions.some(version => version !== projectThumbnailVersion)) {
+    err('Project-thumbnail smoke fixtures: direct module imports must use the same cache key as the Projects runtime import.');
+  }
+  if (!thumbnailAssetPreviewVersion || !lightboxAssetPreviewVersion || !smokeAssetPreviewVersion ||
+      thumbnailAssetPreviewVersion !== lightboxAssetPreviewVersion ||
+      thumbnailAssetPreviewVersion !== smokeAssetPreviewVersion) {
+    err('Asset preview cache ownership: Projects, Lightbox, and smoke fixtures must share one versioned asset-preview module instance.');
+  }
 
   if (!thumbnail.includes("if (observers?.visibility && !reducedMotion) media.dataset.viewportReveal = 'pending';") ||
       !thumbnail.includes('delete media.dataset.viewportReveal;') ||
@@ -2522,7 +2551,7 @@ function validateReducedMotionThumbnailContract() {
       !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
       !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
       !smoke.includes('asset-preview-cache') ||
-      !smoke.includes('asset-preview.js?v=20261027-01') ||
+      !hasVersionedReference(smoke, 'asset-preview.js') ||
       !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-preview="true"]') ||
       !styles.includes('#lightboxMediaContainer .lightbox-media-fallback[data-preview="true"]') ||
       !styles.includes('.lightbox-modal.active .modal-interior') ||
@@ -2546,7 +2575,7 @@ function validateReducedMotionThumbnailContract() {
       !styles.includes('[data-media-reveal="ready"]') ||
       !mediaRenderer.includes('function markArtworkReady(artwork)') ||
       !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
-      !lightboxIndex.includes("media-renderer.js?v=20261027-05") ||
+      !hasVersionedReference(lightboxIndex, 'media-renderer.js') ||
       !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
       !smoke.includes('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group') ||
       smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||
@@ -2557,8 +2586,9 @@ function validateReducedMotionThumbnailContract() {
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion while keeping still-image priority hints') ||
       !styles.includes('@media (prefers-reduced-motion: reduce)') ||
       !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
-      !smoke.includes('project-thumbnail.js?v=20261027-06') ||
-      /project-thumbnail[.]js[?]v=(?!20261027-06)[^'"]+/.test(smoke)) {
+      !hasVersionedReference(projectCard, './project-thumbnail.js') ||
+      !smokeProjectThumbnailVersions.length ||
+      smokeProjectThumbnailVersions.some(version => version !== projectThumbnailVersion)) {
     err('Project thumbnails: retain reduced-motion behavior, selected-source loading overlays, 50% veil/text layering, adaptive status contrast, responsive smoke coverage, and consistent module caching.');
   }
 }
