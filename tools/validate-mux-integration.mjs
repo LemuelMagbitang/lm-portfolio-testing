@@ -199,7 +199,8 @@ check(uploadRoute.includes("const uploadAttemptId = crypto.randomUUID()") &&
   "Mux upload creation must reserve the asset with compare-and-swap, isolate webhook correlation per attempt, recover stale reservations, and account for fast-webhook races.");
 check(uploadRoute.includes("error instanceof MuxApiError && error.status >= 500") &&
   uploadRoute.includes('upload_state: responseUnconfirmed ? "awaiting_upload" : "failed"') &&
-  uploadRoute.includes('error.status === 504 ? 504 : 502'),
+  admin.includes('error.status === 504 ? 504 : 502') &&
+  admin.includes('"mux_api_unconfirmed"'),
   "Ambiguous Mux failures must retain the upload reservation long enough for webhook recovery instead of immediately duplicating a potentially-created upload.");
 const mainCmsScript = read("admin/admin.js");
 check(mainCmsScript.includes('data-picker-source="cms"') &&
