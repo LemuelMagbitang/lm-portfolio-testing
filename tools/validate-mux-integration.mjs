@@ -53,7 +53,7 @@ check(["mux-admin", "mux-webhook", "mux-public"].every((name) =>
 ), "Supabase Edge Function JWT overrides must match each function's own auth model.");
 check(migration.includes("mux_webhook_events") && migration.includes("enable row level security") && migration.includes("revoke all on public.video_assets from anon, authenticated"), "Webhook store or RLS boundary missing.");
 check(migration.includes("mux_asset_id text unique") && migration.includes("mux_upload_id text unique"), "Mux asset and upload IDs must be unique.");
-check(admin.includes("external_id: asset.external_id || asset.id") && read("supabase/functions/_shared/http.ts").includes("CMS_ADMIN_USER_IDS"), "Admin auth or external_id assignment missing.");
+check(admin.includes("external_id: uploadAttemptId") && read("supabase/functions/_shared/http.ts").includes("CMS_ADMIN_USER_IDS"), "Admin auth or per-attempt external_id assignment missing.");
 const sharedHttp = read("supabase/functions/_shared/http.ts");
 check(sharedHttp.includes("SUPABASE_SECRET_KEYS") && sharedHttp.includes("SUPABASE_PUBLISHABLE_KEYS") && sharedHttp.includes("SUPABASE_SERVICE_ROLE_KEY") && sharedHttp.includes("SUPABASE_ANON_KEY") && sharedHttp.includes("@supabase/supabase-js@2.118.0"), "Edge Functions must prefer platform-managed modern API keys, retain a logged legacy fallback, and pin supabase-js.");
 check(admin.includes("function muxTimestampToIso(value: unknown)") &&
