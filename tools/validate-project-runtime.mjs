@@ -384,6 +384,9 @@ const immediateFailureThumbnail = buildProjectThumbnailMedia(
   'Immediate failure',
   {documentRef:immediateFailureDocument,resolveAssetUrl:value=>'/assets/'+value,priority:true}
 );
+// A completed image with zero intrinsic dimensions is only an error once the
+// browser reports the failed source; complete alone must not false-fail a new src.
+immediateFailureThumbnail.dispatch('error');
 assert.equal(immediateFailureThumbnail.dataset.mediaState,'error');
 const immediateFailureHost = immediateFailureDocument.createElement('div');
 immediateFailureHost.appendChild(immediateFailureThumbnail);
