@@ -97,12 +97,12 @@ const MOBILE_DRAW_INTERVAL_MS = 32;
 export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase=0.18,uvScale=1}={}){
   if(!canvas?.getContext)return NOOP;
   const documentRef=canvas.ownerDocument||globalThis.document,view=documentRef?.defaultView||globalThis.window;
-  const compactTarget = isCompactFoilTarget(view);
+  let compactTarget = isCompactFoilTarget(view);
   let gl=null;
   try{gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'})||canvas.getContext('experimental-webgl');}catch(_){}
   if(!gl){canvas.dataset.normalMapStatus='unsupported';return NOOP;}
   let disposed=false,ready=false,textures=[],loadedImages=[],pendingImageCancels=new Set(),resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74,lastDrawTime=null;
-  const level=resolveFoilIntensity(intensity,compactTarget);
+  let level=resolveFoilIntensity(intensity,compactTarget);
   const mapUrls=Array.from(new Set((patternUrls||[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,4);
   canvas.dataset.normalMapPatternCount=String(mapUrls.length);
   canvas.dataset.normalMapStatus='loading';
@@ -198,8 +198,31 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
       drawNow();
     });
   }
-  const handleResize=()=>draw(),RO=view?.ResizeObserver;
-  if(typeof RO==='function'){resizeObserver=new RO(handleResize);resizeObserver.observe(canvas);}else view?.addEventListener?.('resize',handleResize,{passive:true});
+  const handleResize=()=>{
+    const nextCompactTarget=isCompactFoilTarget(view);
+    if(nextCompactTarget!==compactTarget){
+      compactTarget=nextCompactTarget;
+      level=resolveFoilIntensity(intensity,compactTarget);
+    }
+    draw();
+  };
+  const RO=view?.ResizeObserver;
+  if(typeof RO==='function'){resizeObserver=new RO(handleResize);resizeObserver.observe(canvas);}
+  // The ResizeObserver tracks canvas geometry; the window/media queries also
+  // track input-capability changes that can alter the compact intensity cap.
+  view?.addEventListener?.('resize',handleResize,{passive:true});
+  const responsiveMediaQueryCleanups=[];
+  for(const query of ['(max-width: 760px)','(hover: none) and (pointer: coarse)']){
+    let mediaQuery;
+    try{mediaQuery=view?.matchMedia?.(query);}catch(_){}
+    if(typeof mediaQuery?.addEventListener==='function'){
+      mediaQuery.addEventListener('change',handleResize);
+      responsiveMediaQueryCleanups.push(()=>mediaQuery.removeEventListener?.('change',handleResize));
+    }else if(typeof mediaQuery?.addListener==='function'){
+      mediaQuery.addListener(handleResize);
+      responsiveMediaQueryCleanups.push(()=>mediaQuery.removeListener?.(handleResize));
+    }
+  }
   async function loadPatterns(){
     const ImageCtor=view?.Image||globalThis.Image;
     if(typeof ImageCtor!=='function'||!mapUrls.length){canvas.dataset.normalMapStatus='unavailable';return;}
@@ -243,6 +266,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
       if(drawFrame!==null){try{view?.cancelAnimationFrame?.(drawFrame);}catch(_){}drawFrame=null;}
       if(drawTimer!==null){try{(view?.clearTimeout||globalThis.clearTimeout).call(view||globalThis,drawTimer);}catch(_){}drawTimer=null;}
       resizeObserver?.disconnect();view?.removeEventListener?.('resize',handleResize);
+      responsiveMediaQueryCleanups.splice(0).forEach(dispose=>{try{dispose();}catch(_){}});
       for(const cancelLoad of [...pendingImageCancels]){try{cancelLoad();}catch(_){}}
       pendingImageCancels.clear();
       loadedImages.forEach(image=>{image.onload=null;image.onerror=null;image.src='';});loadedImages=[];
