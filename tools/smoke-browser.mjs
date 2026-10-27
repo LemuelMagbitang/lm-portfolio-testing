@@ -9465,7 +9465,7 @@ try {
         url => url.pathname === '/' || url.pathname === '/index.html',
         { timeout: 8000 }
       );
-      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 8000 });
+      await page.goBack({ waitUntil: 'commit', timeout: 8000 });
       await returnedToWorks;
 
       await page.waitForFunction(() => {
