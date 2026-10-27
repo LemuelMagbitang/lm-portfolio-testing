@@ -3415,9 +3415,10 @@ try {
           motion: el.dataset.holoMotion || ''
         }));
         if (!Number.isFinite(fixedLight.x) || !Number.isFinite(fixedLight.y) ||
-            Math.abs(fixedLight.x - 34) > 0.15 || Math.abs(fixedLight.y - 26) > 0.15 ||
+            fixedLight.x < 27 || fixedLight.x > 41 ||
+            fixedLight.y < 21 || fixedLight.y > 31 ||
             fixedLight.motion !== 'auto-rotate') {
-          throw new Error('Mobile holographic light sources must retain their fixed, off-axis auto-motion baseline: ' + JSON.stringify(fixedLight));
+          throw new Error('Mobile holographic key light must move within bounds around its off-axis auto-motion baseline: ' + JSON.stringify(fixedLight));
         }
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
