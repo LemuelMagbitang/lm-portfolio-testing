@@ -1741,7 +1741,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             source: media.currentSrc || media.src || '',
             playbackId: media.getAttribute('playback-id') || '',
             controlsToken: getComputedStyle(media).getPropertyValue('--controls').trim(),
-            trackingDisabled: media.hasAttribute('disable-tracking')
+            trackingDisabled: media.hasAttribute('disable-tracking'),
+            preferPlayback: media.getAttribute('prefer-playback') || ''
           } : {
             present: false,
             activeType: active?.dataset?.heroType || active?.firstElementChild?.localName || ''
@@ -1760,7 +1761,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             throw new Error(label + ': interactive Mux Player hero must have a playback ID and hidden controls: ' + JSON.stringify(videoContract));
           }
           if (videoContract.playerType === 'mux-video' &&
-              (!videoContract.playbackId || !videoContract.trackingDisabled)) {
+              (!videoContract.playbackId || !videoContract.trackingDisabled || videoContract.preferPlayback !== 'mse')) {
             throw new Error(label + ': background Mux Video must have a playback ID and disable background analytics requests: ' + JSON.stringify(videoContract));
           }
           const mediaSelector = '#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video';

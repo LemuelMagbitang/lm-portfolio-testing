@@ -155,6 +155,8 @@ check(hero.includes("sourceOrigin: 'published-cms'") &&
   !hero.includes("LEGACY_HERO_MP4_FALLBACK") &&
   hero.includes("fallbackMuxToNativeVideo") &&
   heroMuxSetup.includes("documentRef.createElement('mux-video')") &&
+  heroMuxSetup.includes("media.setAttribute('prefer-playback', 'mse')") &&
+  heroMuxSetup.indexOf("media.setAttribute('prefer-playback', 'mse')") < heroMuxSetup.indexOf("media.setAttribute('playback-id', source.playbackId)") &&
   heroMuxSetup.includes("setAttribute('autoplay', '')") &&
   heroMuxSetup.includes("setAttribute('disable-tracking', '')") &&
   hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&

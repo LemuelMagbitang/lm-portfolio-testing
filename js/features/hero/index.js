@@ -571,6 +571,9 @@ async function ensureMuxVideo(...args) {
           }
         } else {
           media = documentRef.createElement('mux-video');
+          // Prevent native-HLS selection on browsers that expose incomplete HLS support.
+          // Set this before playback-id because that attribute initializes the source.
+          media.setAttribute('prefer-playback', 'mse');
           media.setAttribute('playback-id', source.playbackId);
           media.setAttribute('metadata-video-title', source.alt || 'Portfolio hero reel');
           media.setAttribute('stream-type', 'on-demand');

@@ -2047,6 +2047,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('function scheduleNetworkRetry(slide, media, event = null)') ||
       !hero.includes("details.networkState === 3") ||
       !hero.includes("function scheduleMuxUnsupportedSourceRecovery(slide, media, details)") ||
+      !hero.includes("media.setAttribute('prefer-playback', 'mse');\n          media.setAttribute('playback-id', source.playbackId);") ||
       !hero.includes("details.mediaErrorCode === 4") ||
       !hero.includes("media.dataset.networkRetryReason = 'mux-unsupported-source'") ||
       !smoke.includes('Mux hero no-source errors must trigger one bounded recovery attempt') ||
