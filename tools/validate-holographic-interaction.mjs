@@ -54,7 +54,7 @@ assert.match(mediaRenderer, /getFoilEdgeRotation\(x, y, motion\.rotationDirectio
 assert.match(mediaRenderer, /event\.pointerType !== 'mouse'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
-assert.match(normalRenderer, /resolveFoilIntensity\(intensity, compactTarget\)/);
+assert.match(normalRenderer, /resolveFoilIntensity\(intensity,\s*compactTarget\)/);
 assert.match(normalRenderer, /drawTimer/);
 assert.match(normalRenderer, /u_mapCount>1\.5/);
 assert.match(styles, /rotateZ\(var\(--holo-rotation,0deg\)\)/);
