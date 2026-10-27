@@ -1903,6 +1903,40 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
   }
 }
 
+let axeCoreSource = "";
+try {
+  axeCoreSource = readFileSync(new URL("../node_modules/axe-core/axe.min.js", import.meta.url), "utf8");
+} catch (_) {
+  // The functional smoke suite can still run locally without the optional
+  // CI accessibility package; CI installs axe-core before invoking this file.
+}
+
+async function assertAxeAccessibility(page, label) {
+  if (!axeCoreSource) {
+    throw new Error("axe-core is required for the accessibility smoke check. Install the pinned CI test dependencies first.");
+  }
+  await page.addScriptTag({ content: axeCoreSource });
+  const results = await page.evaluate(async () => await window.axe.run(document, {
+    runOnly: {
+      type: "tag",
+      values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]
+    }
+  }));
+  const violations = results.violations.map(violation => ({
+    id: violation.id,
+    impact: violation.impact,
+    help: violation.help,
+    nodes: violation.nodes.slice(0, 8).map(node => ({
+      target: node.target,
+      summary: node.failureSummary
+    }))
+  }));
+  if (violations.length) {
+    throw new Error(label + " accessibility violations: " + JSON.stringify(violations));
+  }
+  console.log("[a11y] PASS " + label + " (" + results.passes.length + " rules passed; " + results.incomplete.length + " need manual review)");
+}
+
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   // A narrow viewport alone does not emulate a phone. In Chromium the CSS
   // pointer media feature remains `pointer:fine`, which means touch-specific
@@ -3391,6 +3425,30 @@ try {
   const browser = await chromium.launch({ headless: true, args: ['--enable-webgl', '--enable-unsafe-swiftshader'] });
 
   try {
+    await smokePage(browser, '/', async page => {
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 6000 });
+      await assertAxeAccessibility(page, 'Works desktop initial view');
+    }, { width: 1440, height: 900 });
+
+    await smokePage(browser, '/about/', async page => {
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 6000 });
+      await assertAxeAccessibility(page, 'About desktop initial view');
+    }, { width: 1440, height: 900 });
+
+    await smokePage(browser, '/admin/', async page => {
+      await assertAxeAccessibility(page, 'CMS sign-in view');
+    }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/admin/videos.html', async page => {
+      await assertAxeAccessibility(page, 'Video Library sign-in view');
+    }, { width: 1280, height: 900 });
+
     await smokePage(
       browser,
       '/?holographic-smoke=1',
