@@ -1,6 +1,9 @@
 import { authorizeAdmin, corsHeaders, isSafePublicMp4Reference, jsonResponse, MuxApiError, muxRequest, safeSlug, safeText } from "../_shared/http.ts";
 import { readRequestBodyLimited } from "../_shared/request-body.ts";
 
+function isUniqueViolation(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && String((error as Record<string, unknown>).code || "") === "23505");
+}
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string" && error.trim()) return error.trim();
@@ -99,7 +102,10 @@ Deno.serve(async (request: Request) => {
       const { data: video, error } = await db.from("videos").update({
         title, slug, description: safeText(body.description, 2000)
       }).eq("id", route[1]).select("*").maybeSingle();
-      if (error) throw new Error("Could not save video details: " + errorMessage(error));
+      if (error) {
+        if (isUniqueViolation(error)) return jsonResponse(request, { error: "That slug is already in use. Choose a different slug." }, 409);
+        throw new Error("Could not save video details: " + errorMessage(error));
+      }
       if (!video) return jsonResponse(request, { error: "Video record not found." }, 404);
       return jsonResponse(request, { video });
     }
@@ -126,7 +132,10 @@ Deno.serve(async (request: Request) => {
       const { data: video, error: ve } = await db.from("videos").insert({
         id: videoId, title, slug, placement: place, description: safeText(body.description, 2000), published: false, created_by: auth.user.id
       }).select("*").single();
-      if (ve) throw new Error("Mux returned the asset, but inserting the CMS video row failed: " + errorMessage(ve));
+      if (ve) {
+        if (isUniqueViolation(ve)) return jsonResponse(request, { error: "That slug is already in use. Choose a different slug." }, 409);
+        throw new Error("Could not insert the CMS video row: " + errorMessage(ve));
+      }
       const { data: asset, error: ae } = await db.from("video_assets").insert({
         id: assetId, video_id: videoId, provider: "mux", external_id: assetId, upload_state: "not_started"
       }).select("*").single();
@@ -147,15 +156,28 @@ Deno.serve(async (request: Request) => {
       if (existingError) throw new Error("Import failed while checking for an existing asset in video_assets: " + errorMessage(existingError));
       if (existing) return jsonResponse(request, { error: "This asset is already linked to a CMS video.", videoId: existing.video_id }, 409);
       const remote = await muxRequest("/assets/" + encodeURIComponent(muxAssetId));
+      if (String(remote?.id || "") !== muxAssetId) {
+        return jsonResponse(request, { error: "Mux did not return the requested asset. Refresh the upload list and try again." }, 502);
+      }
+      const remoteStatus = String(remote?.status || "").toLowerCase();
+      if (!["ready", "preparing"].includes(remoteStatus)) {
+        return jsonResponse(request, { error: "Only ready or processing Mux assets can be imported into the library." }, 409);
+      }
+      const playbackIds = Array.isArray(remote?.playback_ids) ? remote.playback_ids : [];
+      const playback = playbackIds.find((p: any) => p?.policy === "public" && String(p?.id || "").trim()) || null;
+      if (!playback) {
+        return jsonResponse(request, { error: "This Mux asset has no public playback ID and cannot be published on the portfolio." }, 409);
+      }
       const videoId = crypto.randomUUID();
       const assetId = crypto.randomUUID();
-      const playbackIds = Array.isArray(remote?.playback_ids) ? remote.playback_ids : [];
-      const playback = playbackIds.find((p: any) => p.policy === "public") || playbackIds[0] || null;
       const { data: video, error: ve } = await db.from("videos").insert({
         id: videoId, title: safeText(body.title) || safeText(remote?.meta?.title) || "Imported Mux video",
         slug, placement: place, published: false, created_by: auth.user.id
       }).select("*").single();
-      if (ve) throw ve;
+      if (ve) {
+        if (isUniqueViolation(ve)) return jsonResponse(request, { error: "That slug is already in use. Choose a different slug." }, 409);
+        throw ve;
+      }
       const { data: asset, error: ae } = await db.from("video_assets").insert({
         id: assetId, video_id: videoId, provider: "mux",
         external_id: safeText(remote?.meta?.external_id, 128) || assetId,
@@ -167,7 +189,12 @@ Deno.serve(async (request: Request) => {
         uploaded_at: muxTimestampToIso(remote?.created_at),
         last_error: remote?.errors ? JSON.stringify(remote.errors) : null
       }).select("*").single();
-      if (ae) { await db.from("videos").delete().eq("id", videoId); throw ae; }
+      if (ae) {
+        const cleanup = await db.from("videos").delete().eq("id", videoId);
+        if (cleanup.error) throw new Error("Asset import failed and its draft video row could not be removed: " + errorMessage(cleanup.error));
+        if (isUniqueViolation(ae)) return jsonResponse(request, { error: "This Mux asset was linked by another request. Refresh the library." }, 409);
+        throw ae;
+      }
       return jsonResponse(request, { video, asset }, 201);
     }
 
@@ -181,13 +208,21 @@ Deno.serve(async (request: Request) => {
       const videoId = crypto.randomUUID();
       const assetId = crypto.randomUUID();
       const { data: video, error: ve } = await db.from("videos").insert({ id: videoId, title, slug, placement: place, published: false, created_by: auth.user.id }).select("*").single();
-      if (ve) throw ve;
+      if (ve) {
+        if (isUniqueViolation(ve)) return jsonResponse(request, { error: "That slug is already in use. Choose a different slug." }, 409);
+        throw ve;
+      }
       const { data: asset, error: ae } = await db.from("video_assets").insert({
         id: assetId, video_id: videoId, provider: "static_mp4", external_id: assetId,
         source_url: source, original_filename: source.split("/").pop()?.split("?")[0] || null,
         upload_state: "uploaded", asset_status: "ready", processing_state: "completed"
       }).select("*").single();
-      if (ae) { await db.from("videos").delete().eq("id", videoId); throw ae; }
+      if (ae) {
+        const cleanup = await db.from("videos").delete().eq("id", videoId);
+        if (cleanup.error) throw new Error("MP4 registration failed and its draft video row could not be removed: " + errorMessage(cleanup.error));
+        if (isUniqueViolation(ae)) return jsonResponse(request, { error: "This MP4 registration conflicted with an existing record. Refresh the library." }, 409);
+        throw ae;
+      }
       return jsonResponse(request, { video, asset }, 201);
     }
 
