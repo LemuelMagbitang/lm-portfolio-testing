@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   getSiteRootUrl,
   siteAssetUrl
-} from '../js/infrastructure/browser/site-paths.js?v=20261004-01';
+} from '../js/infrastructure/browser/site-paths.js?v=20261027-01';
 
 function makeScript(documentUrl, src) {
   return {
@@ -121,6 +121,28 @@ assert.equal(
   siteAssetUrl('javascript:alert(1)', configured),
   '',
   'executable URI schemes must remain rejected'
+);
+const unsafeLocalPaths = [
+  '../assets/projects/site/portfolio-logo.webp',
+  'assets/../data/projects.json',
+  '/assets/../../admin/admin.js',
+  'assets/%2e%2e/data/projects.json',
+  'assets%2F%2e%2e%2Fdata/projects.json',
+  'assets/%252e%252e/data/projects.json',
+  'assets/%2e%2e%5cdata/projects.json',
+  'assets/%00/hidden.webp'
+];
+for (const value of unsafeLocalPaths) {
+  assert.equal(
+    siteAssetUrl(value, configured),
+    '',
+    'asset paths that could escape the current site root must be rejected: ' + value
+  );
+}
+assert.equal(
+  siteAssetUrl('assets/cover.webp?variant=../preview', configured),
+  'https://example.github.io/renamed-project/assets/cover.webp?variant=../preview',
+  'query strings must not be mistaken for path traversal'
 );
 
 console.log('Site path portability: PASS');

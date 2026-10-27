@@ -50,6 +50,33 @@ export function getSiteRootUrl({
   }
 }
 
+function hasUnsafeAssetPathSegments(value) {
+  const raw = String(value || '').trim().replace(/\\/g, '/');
+  if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return true;
+
+  // Reject literal, slash-encoded, and nested URL-encoded traversal before
+  // URL() normalizes the path. That keeps local media inside a GitHub Pages
+  // repository prefix instead of silently resolving against the domain root.
+  const candidates = [raw];
+  let candidate = raw;
+  for (let decodeStep = 0; decodeStep < 3; decodeStep += 1) {
+    let decoded;
+    try {
+      decoded = decodeURIComponent(candidate).replace(/\\/g, '/');
+    } catch (_) {
+      break;
+    }
+    if (decoded === candidate) break;
+    candidates.push(decoded);
+    candidate = decoded;
+  }
+
+  return candidates.some(path =>
+    /[\u0000-\u001f\u007f]/.test(path) ||
+    path.split('/').some(segment => segment === '.' || segment === '..')
+  );
+}
+
 export function siteAssetUrl(src, options = {}) {
   if (!src) return '';
 
@@ -65,6 +92,11 @@ export function siteAssetUrl(src, options = {}) {
   // Asset URLs are a trust boundary: relative paths and HTTP(S) resources are
   // supported, while executable or otherwise unsupported URI schemes are not.
   if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return '';
+
+  // Ignore query/hash text when checking path segments so harmless URL
+  // parameters cannot be mistaken for traversal.
+  const pathOnly = value.split(/[?#]/, 1)[0];
+  if (hasUnsafeAssetPathSegments(pathOnly)) return '';
 
   try {
     const resolved = new URL(
