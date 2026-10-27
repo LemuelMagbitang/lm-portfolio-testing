@@ -69,10 +69,9 @@ assert.match(mediaRenderer, /syncResponsiveFoilIntensity = \(\) =>/);
 assert.match(mediaRenderer, /bindResponsiveFoilQuery\('\(max-width: 760px\)'\)/);
 assert.match(mediaRenderer, /if \(motion\?\.compactTarget\) tiltStrength = Math\.min\(tiltStrength, COMPACT_FOIL_MAX_INTENSITY\)/);
 assert.match(mediaRenderer, /intensity: isFront \? config\.intensity : config\.backIntensity/);
-assert.match(mediaRenderer, /holographicMotionStates\.set\(surface, \{[^}]*rotationDirection, compactTarget, hoverActive: false/);
-assert.match(mediaRenderer, /motion\.hoverActive = true/);
-assert.match(mediaRenderer, /surface\.style\.animationPlayState = 'paused'/);
-assert.match(mediaRenderer, /surface\.style\.removeProperty\('animation-play-state'\)/);
+assert.match(mediaRenderer, /holographicMotionStates\.set\(surface, \{[^}]*rotationDirection, compactTarget/);
+assert.doesNotMatch(mediaRenderer, /hoverActive|animationPlayState|animation-play-state/,
+  'Foil hover must not interrupt the artwork’s existing idle animation or make click targets unstable.');
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
 assert.match(normalRenderer, /resolveFoilIntensity\(intensity,\s*compactTarget\)/);
 assert.match(normalRenderer, /let compactTarget = isCompactFoilTarget\(view\)/);
