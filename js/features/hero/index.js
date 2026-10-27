@@ -770,34 +770,76 @@ async function ensureMuxVideo(...args) {
       const eventErrorName = eventError?.name ||
         (eventError && eventError.constructor?.name !== 'Object' ? eventError.constructor?.name : null) ||
         null;
+      const activeSource = innerMedia?.currentSrc || innerMedia?.src || media?.src || '';
       return {
         mediaElement: innerMedia?.localName || media?.localName || null,
         readyState,
         networkState,
         mediaErrorCode,
         mediaErrorMessage: String(errorMessage).slice(0, 180),
-        eventErrorName
+        eventErrorName,
+        // Report only the origin/path/protocol: Mux signed playback tokens must
+        // never be copied into diagnostics or the browser console.
+        activeSource: describeMediaSource(activeSource),
+        playbackIdAttributePresent: Boolean(media?.getAttribute?.('playback-id'))
       };
     }
 
+    function describeMediaSource(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return null;
+      try {
+        const parsed = new URL(raw, windowRef?.location?.href);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+          return parsed.origin + parsed.pathname;
+        }
+        return parsed.protocol === 'blob:' ? 'blob:' : parsed.protocol || null;
+      } catch (_) {
+        return 'unparsed-source';
+      }
+    }
+
+    function resetMuxPlaybackSource(slide, media) {
+      if (!['mux-player', 'mux-video'].includes(media?.localName)) return false;
+      const playbackId = String(
+        media.getAttribute?.('playback-id') || slide?.dataset?.muxPlaybackId || ''
+      ).trim();
+      if (!playbackId) return false;
+      try {
+        // Resetting the custom-element source gives Mux a fresh playback
+        // session/CDN selection when the underlying video reports no source.
+        media.removeAttribute('playback-id');
+        media.setAttribute('playback-id', playbackId);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
     function scheduleNetworkRetry(slide, media, event = null) {
-      // Retry one transient network failure automatically. Mux's host element
-      // can report NETWORK_NO_SOURCE (3) without exposing media.error.code;
-      // treat that specific no-code state as recoverable once as well.
+      // Retry one transient network failure automatically. Mux can report
+      // NETWORK_NO_SOURCE (3) with no MediaError, or code 4
+      // (MEDIA_ERR_SRC_NOT_SUPPORTED) while networkState is also NO_SOURCE.
+      // Reinitialize the playback ID once to recover transient HLS/CDN failures.
       if (disposed || slides[currentIndex] !== slide) return false;
       if (networkRetryTimer !== null) return media?.dataset?.playbackState === 'retrying';
       if (Number(media?.dataset?.networkRetryCount || 0) >= 1) return false;
       const isMuxMedia = ['mux-player', 'mux-video'].includes(media?.localName);
       const details = getPlaybackErrorDetails(media, event);
-      const recoverableNetworkError = details.mediaErrorCode === 2 ||
-        (isMuxMedia && details.mediaErrorCode === null && details.networkState === 3);
+      const recoverableMuxNoSource = isMuxMedia &&
+        details.networkState === 3 &&
+        (details.mediaErrorCode === null || details.mediaErrorCode === 4);
+      const recoverableNetworkError = details.mediaErrorCode === 2 || recoverableMuxNoSource;
       if (!recoverableNetworkError) return false;
       media.dataset.networkRetryCount = '1';
-      media.dataset.networkRetryReason = details.mediaErrorCode === 2 ? 'network-error' : 'mux-no-source';
+      media.dataset.networkRetryReason = details.mediaErrorCode === 2
+        ? 'network-error'
+        : (details.mediaErrorCode === 4 ? 'mux-unsupported-source' : 'mux-no-source');
       media.dataset.playbackState = 'retrying';
       networkRetryTimer = windowRef.setTimeout(() => {
         networkRetryTimer = null;
         if (disposed || slides[currentIndex] !== slide || !media.isConnected) return;
+        if (details.mediaErrorCode === 4) resetMuxPlaybackSource(slide, media);
         try { media.load?.(); } catch (_) {}
         activateMedia(slide);
       }, 500);
@@ -1003,12 +1045,12 @@ async function ensureMuxVideo(...args) {
       const details = getPlaybackErrorDetails(media);
       const isMuxMedia = ['mux-player', 'mux-video'].includes(media.localName);
       const muxHasNoSource = isMuxMedia &&
-        details.mediaErrorCode === null &&
-        details.networkState === 3;
+        details.networkState === 3 &&
+        (details.mediaErrorCode === null || details.mediaErrorCode === 4);
       // A restored document can retain the previous "playing" label even
       // though the browser has paused the element and reset readyState to 0.
-      // A Mux HLS element can also surface NETWORK_NO_SOURCE without a useful
-      // MediaError, so detect that before the usual retry gate.
+      // Mux can report both a no-code NETWORK_NO_SOURCE state and code 4
+      // (MEDIA_ERR_SRC_NOT_SUPPORTED) with networkState 3.
       const shouldRetry = state === 'blocked' || state === 'error' ||
         (media.paused && media.readyState >= 2) ||
         muxHasNoSource ||
@@ -1019,9 +1061,10 @@ async function ensureMuxVideo(...args) {
         windowRef.clearTimeout(networkRetryTimer);
         networkRetryTimer = null;
       }
-      // Re-load only a stream known to be in a recoverable network/no-source
-      // state. Otherwise, simply request playback again after page restoration.
+      // Reinitialize Mux's source when its inner video is stuck at NO_SOURCE;
+      // other recoverable network errors only need a native load/play request.
       if (details.mediaErrorCode === 2 || muxHasNoSource) {
+        if (isMuxMedia && details.mediaErrorCode === 4) resetMuxPlaybackSource(slide, media);
         try { media.load?.(); } catch (_) {}
       }
       activateMedia(slide);
