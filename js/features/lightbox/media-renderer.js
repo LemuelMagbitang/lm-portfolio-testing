@@ -781,9 +781,14 @@ export function createLightboxMediaRenderer({
     const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
     const foilX = 100 - clampedX;
     const foilY = 100 - clampedY;
-    const lightX = clampHolographic(50 + ((50 - clampedX) * 0.68), 16, 84);
-    const lightY = clampHolographic(50 + ((50 - clampedY) * 0.68), 16, 84);
     const motion = holographicMotionStates.get(surface);
+    // Touch-only auto motion orbits the original off-axis key light. Fine-pointer
+    // mode keeps the existing inverse pointer mapping, so the motion systems do
+    // not share competing baselines.
+    const lightBaseX = motion?.autoRotate ? 34 : 50;
+    const lightBaseY = motion?.autoRotate ? 26 : 50;
+    const lightX = clampHolographic(lightBaseX + ((50 - clampedX) * 0.68), 16, 84);
+    const lightY = clampHolographic(lightBaseY + ((50 - clampedY) * 0.68), 16, 84);
     let tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
     if (motion?.compactTarget) tiltStrength = Math.min(tiltStrength, COMPACT_FOIL_MAX_INTENSITY);
 
