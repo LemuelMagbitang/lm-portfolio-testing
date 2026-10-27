@@ -2002,8 +2002,8 @@ body.center-page {
   animation:holo-idle-sheen 5.4s ease-in-out infinite;
 }
 
-/* Once the visitor is actively controlling the card, the idle motion yields
-   completely to the live pointer/touch transform. */
+/* Hovering or keyboard-focusing the card yields the idle motion to the
+   user-driven transform while preserving the flip transition. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:hover,
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic:focus-visible{
   animation-play-state:paused;
