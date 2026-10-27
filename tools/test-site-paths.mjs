@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   getSiteRootUrl,
   siteAssetUrl
-} from '../js/infrastructure/browser/site-paths.js?v=20261027-03';
+} from '../js/infrastructure/browser/site-paths.js?v=20261027-04';
 
 function makeScript(documentUrl, src) {
   return {
@@ -122,6 +122,19 @@ assert.equal(
   '',
   'executable URI schemes must remain rejected'
 );
+function encodePathToken(value, depth) {
+  let encoded = value;
+  for (let index = 0; index < depth; index += 1) {
+    encoded = encoded
+      .replace(/%/g, '%25')
+      .replace(/\\./g, '%2e')
+      .replace(/\\//g, '%2f')
+      .replace(/\\\\/g, '%5c');
+  }
+  return encoded;
+}
+const deeplyEncodedDot = encodePathToken('.', 12);
+const deeplyEncodedSlash = encodePathToken('/', 12);
 const unsafeLocalPaths = [
   '../assets/projects/site/portfolio-logo.webp',
   'assets/../data/projects.json',
@@ -132,6 +145,8 @@ const unsafeLocalPaths = [
   'assets/%2e%2e%5cdata/projects.json',
   'assets/%2525252e%2525252e/data/projects.json',
   'assets%2525252F%2525252e%2525252e%2525252Fadmin/admin.js',
+  'assets/' + deeplyEncodedDot + deeplyEncodedDot + '/data/projects.json',
+  'assets' + deeplyEncodedSlash + deeplyEncodedDot + deeplyEncodedSlash + deeplyEncodedDot + deeplyEncodedSlash + 'admin/admin.js',
   'assets/%00/hidden.webp'
 ];
 for (const value of unsafeLocalPaths) {

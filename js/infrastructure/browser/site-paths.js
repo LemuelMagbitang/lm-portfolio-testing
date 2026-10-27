@@ -111,15 +111,16 @@ export function siteAssetUrl(src, options = {}) {
     // survive URL parsing. Normalize each decoding layer against the origin
     // so traversal is never re-based beneath the project prefix by accident.
     let decodedPath = resolved.pathname;
-    for (let decodeStep = 0; decodeStep < 8; decodeStep += 1) {
-      let decoded;
-      try {
-        decoded = decodeURIComponent(decodedPath).replace(/\\/g, '/');
-      } catch (_) {
-        return '';
-      }
+    while (true) {
+      const decoded = decodedPath
+        .replace(/%25/gi, '%')
+        .replace(/%2e/gi, '.')
+        .replace(/%2f/gi, '/')
+        .replace(/%5c/gi, '\\');
       if (decoded === decodedPath) break;
-      if (decoded.split('/').some(segment => segment === '.' || segment === '..')) return '';
+      if (/[\u0000-\u001f\u007f]/.test(decoded) ||
+          /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(decoded) ||
+          decoded.split('/').some(segment => segment === '.' || segment === '..')) return '';
       const normalizedDecoded = new URL(decoded, siteRoot.origin);
       if (normalizedDecoded.origin !== siteRoot.origin ||
           !normalizedDecoded.pathname.startsWith(rootPath)) return '';

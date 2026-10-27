@@ -104,3 +104,23 @@ The most useful feedback is:
 - browser name and version.
 
 Do not include tokens, cookies, authorization headers, or other credentials in screenshots or copied logs.
+## Manual promotion to the production repository
+
+The `projects-runtime-cutover` branch is the staging source. The production repository `LemuelMagbitang/lemuelmagbitang.github.io` remains untouched until you perform the manual transfer.
+
+Before copying files:
+
+1. Record the exact source commit SHA and confirm both **Validate portfolio** and **pages build and deployment** passed for that commit.
+2. Copy the tested working tree while preserving its directory structure. Avoid mixing new modules with stale HTML or data files. The HTML entry points, `js/script.js`, `js/app/bootstrap.js`, and the matching module import/cache-query updates must travel together.
+3. Keep production canonical/social URLs and the contact-form success redirect aimed at `https://lemuelmagbitang.github.io/`. The browser runtime discovers its asset root from the entry-point URL; do not replace that with a hard-coded staging repository path.
+4. Do not copy local `.env` files, access tokens, session data, or other credentials into the public repository. Keep repository history and Git metadata separate from the downloaded working files.
+
+### Changes that also touch Supabase or Mux
+
+Copying website files does **not** deploy Edge Functions or apply database migrations. Review the source commit before launch:
+
+- If `supabase/functions/**` changed, deploy the changed function(s) separately to the intended Supabase project. Follow the current deployment procedure in [Mux integration setup](MUX-INTEGRATION.md) and the [official Supabase Edge Function deployment guide](https://supabase.com/docs/guides/functions/deploy).
+- Apply database migrations only when the source commit introduces migrations that have not already been applied. Use the project's migration workflow; see the [official Supabase database migration guide](https://supabase.com/docs/guides/deployment/database-migrations).
+- Confirm production `CMS_ALLOWED_ORIGINS` and `MUX_UPLOAD_CORS_ORIGIN` use the approved production origins. Keep Mux tokens and service-role/secret keys in server-side secret configuration, never in public JSON or Git.
+
+After the transfer, test the production home page and `/about/`, verify local assets return successfully, test navigation and forms, and check the browser console/network panel. For CMS/Mux changes, also verify the deployed backend endpoints and upload/import flow rather than assuming the static file copy updates them.
