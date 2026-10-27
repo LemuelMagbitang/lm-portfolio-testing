@@ -8,7 +8,7 @@ import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { createLifecycle } from '../../core/lifecycle.js';
 
-const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';
+const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-02';
 let muxPlayerModulePromise = null;
 let muxPlayerModuleAttempt = 0;
 
