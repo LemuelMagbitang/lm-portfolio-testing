@@ -233,8 +233,15 @@ check(page.includes('id="muxAssetSelect"') && page.includes('id="refreshMuxAsset
   "Mux Media Library must include persistent navigation, logout, search/filter, grid/list, title-based import and a details inspector.");
 const openDialogHandler = script.split("function openDialog(")[1]?.split("function closeDialog()")[0] || "";
 check(!openDialogHandler.includes("loadMuxImportAssets(") &&
-  page.includes('src="videos.js?v=20261027-02"'),
+  page.includes('src="videos.js?v=20261027-03"'),
   "Opening the import dialog must not trigger a duplicate Mux catalog request, and changes to the CMS script must advance its cache key.");
+check(script.includes("function currentMuxImportSelection()") &&
+  script.includes("selected from another page") &&
+  script.includes("function syncSelectedMuxImportAsset()") &&
+  script.includes("importSelectedAsset=null") &&
+  script.includes("const refreshedSelection=pageAssets.find"),
+  "The selected Mux asset must remain available across cursor pages, refresh to the current page metadata when possible, and be cleared after import or logout."
+);
 check(!/Website Placements|Website placement/i.test(page + script) &&
   !script.includes('"/placement"') &&
   script.includes('method:"PATCH"') && script.includes('"/unpublish"'),
