@@ -2326,8 +2326,10 @@ function validateCmsRegressionContracts() {
       !css.includes('.lightbox-holographic.is-flipped .lightbox-holographic-flip') ||
       !renderer.includes("surface.style.setProperty('--holo-light-x', '34%')") ||
       !renderer.includes("surface.style.setProperty('--holo-light-y', '26%')") ||
-      !renderer.includes('const lightX = clampHolographic(50 + ((50 - clampedX) * 0.68), 16, 84)') ||
-      !renderer.includes('const lightY = clampHolographic(50 + ((50 - clampedY) * 0.68), 16, 84)') ||
+      !renderer.includes('const lightBaseX = motion?.autoRotate ? 34 : 50') ||
+      !renderer.includes('const lightX = clampHolographic(lightBaseX + ((50 - clampedX) * 0.68), 16, 84)') ||
+      !renderer.includes('const lightBaseY = motion?.autoRotate ? 26 : 50') ||
+      !renderer.includes('const lightY = clampHolographic(lightBaseY + ((50 - clampedY) * 0.68), 16, 84)') ||
       !css.includes('.lightbox-holographic-environment{') ||
       !css.includes('background-blend-mode:screen,screen,multiply,soft-light') ||
       !renderer.includes('lightbox-holographic-prism') ||
