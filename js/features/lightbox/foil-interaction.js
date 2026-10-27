@@ -2,7 +2,7 @@ export const COMPACT_FOIL_MAX_INTENSITY = 0.10;
 export const FOIL_MAX_EDGE_ROTATION_DEG = 13.5;
 const NARROW_FOIL_BREAKPOINT = 760;
 const EDGE_ROTATION_START = 0.62;
-const EDGE_ROTATION_MAX_RADIUS = 0.98;
+const EDGE_ROTATION_MAX_RADIUS = 0.97;
 
 function mediaMatches(view, query) {
   try {
