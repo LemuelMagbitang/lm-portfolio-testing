@@ -969,7 +969,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 .project-card.has-gallery-scroll-reveal[data-gallery-reveal-state="pending"] {
   opacity: .18 !important;
-  transform: translate3d(0, 14px, 0) scale(.985) !important;
+  transform: translate3d(0, 14px, 0) !important;
 }
 
 .card-thumbnail {
