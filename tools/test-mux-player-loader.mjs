@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ensureMuxPlayer, ensureMuxVideo } from '../js/infrastructure/mux/player.js?v=20261027-01';
+import { ensureMuxPlayer, ensureMuxVideo } from '../js/infrastructure/mux/player.js?v=20261027-02';
 
 const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'customElements');
 const registered = new Set();
