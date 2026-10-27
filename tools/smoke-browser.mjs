@@ -3560,17 +3560,12 @@ try {
         await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
         const holographic = page.locator('#lightboxMediaContainer .lightbox-holographic').first();
         await holographic.waitFor({ state: 'visible', timeout: 3000 });
-        const fixedLight = await holographic.evaluate(el => ({
-          x: Number.parseFloat(el.style.getPropertyValue('--holo-light-x')),
-          y: Number.parseFloat(el.style.getPropertyValue('--holo-light-y')),
+        const compactMode = await holographic.evaluate(el => ({
           motion: el.dataset.holoMotion || '',
           foil: el.dataset.holoFoil || ''
         }));
-        if (!Number.isFinite(fixedLight.x) || !Number.isFinite(fixedLight.y) ||
-            fixedLight.x < 20 || fixedLight.x > 48 ||
-            fixedLight.y < 16 || fixedLight.y > 36 ||
-            fixedLight.motion !== 'auto-rotate' || fixedLight.foil !== 'disabled') {
-          throw new Error('Mobile holographic key light must move within bounds around its off-axis auto-motion baseline: ' + JSON.stringify(fixedLight));
+        if (compactMode.motion !== 'auto-rotate' || compactMode.foil !== 'disabled') {
+          throw new Error('Mobile must disable foil materials while retaining automatic transform parallax: ' + JSON.stringify(compactMode));
         }
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
@@ -3621,9 +3616,9 @@ try {
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
             affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
             affordance.artworkOverflow !== 'visible' ||
-            affordance.environmentBlend !== 'soft-light' ||
-            !(affordance.environmentOpacity > 0) ||
-            !affordance.grainImage.includes('grain.webp') ||
+            affordance.environmentBlend !== 'normal' ||
+            affordance.environmentOpacity > 0.001 ||
+            affordance.grainImage !== 'none' ||
             affordance.faceRadius !== '0px' ||
             affordance.faceOverflow !== 'hidden' ||
             affordance.hintFace !== 'FRONT' ||
@@ -3678,28 +3673,48 @@ try {
 
         // Compact targets cap the configured front/back foil strength and
         // expose tap-to-flip without any touch-based hold/drag rotation path.
-        const mobileFoilBaseline = await holographic.evaluate(el => ({
+        const mobileParallaxBaseline = await holographic.evaluate(el => ({
           input: el.dataset.holoInput || '',
           motion: el.dataset.holoMotion || '',
           intensity: Number.parseFloat(el.style.getPropertyValue('--holo-intensity')),
           backIntensity: Number.parseFloat(el.querySelector('.lightbox-holographic-back')?.style.getPropertyValue('--holo-intensity') || 'NaN'),
-          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
-          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          rx: Number.parseFloat(el.style.getPropertyValue('--holo-rx')),
+          ry: Number.parseFloat(el.style.getPropertyValue('--holo-ry')),
+          shiftX: Number.parseFloat(el.style.getPropertyValue('--holo-shift-x')),
+          shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y')),
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
           pressed: el.getAttribute('aria-pressed') || 'false'
         }));
-        if (mobileFoilBaseline.input !== 'tap-only' || mobileFoilBaseline.motion !== 'auto-rotate' ||
-            !Number.isFinite(mobileFoilBaseline.intensity) || mobileFoilBaseline.intensity > 0.1001 ||
-            (Number.isFinite(mobileFoilBaseline.backIntensity) && mobileFoilBaseline.backIntensity > 0.1001) ||
-            mobileFoilBaseline.x < 32 || mobileFoilBaseline.x > 68 ||
-            mobileFoilBaseline.y < 37 || mobileFoilBaseline.y > 63 ||
-            Math.abs(mobileFoilBaseline.rotation) > 2.21) {
-          throw new Error('Compact foil configuration exceeded its touch-only auto-motion/intensity contract: ' + JSON.stringify(mobileFoilBaseline));
+        if (mobileParallaxBaseline.input !== 'tap-only' || mobileParallaxBaseline.motion !== 'auto-rotate' ||
+            !Number.isFinite(mobileParallaxBaseline.intensity) || mobileParallaxBaseline.intensity > 0.1001 ||
+            (Number.isFinite(mobileParallaxBaseline.backIntensity) && mobileParallaxBaseline.backIntensity > 0.1001) ||
+            !Number.isFinite(mobileParallaxBaseline.rx) || Math.abs(mobileParallaxBaseline.rx) > 7 ||
+            !Number.isFinite(mobileParallaxBaseline.ry) || Math.abs(mobileParallaxBaseline.ry) > 7 ||
+            Math.abs(mobileParallaxBaseline.shiftX) > 4 || Math.abs(mobileParallaxBaseline.shiftY) > 3 ||
+            Math.abs(mobileParallaxBaseline.rotation) > 2.5) {
+          throw new Error('Compact parallax pose exceeded its bounded transform/intensity contract: ' + JSON.stringify(mobileParallaxBaseline));
+        }
+        await page.waitForTimeout(650);
+        const mobileAutoPose = await holographic.evaluate(el => ({
+          rx: Number.parseFloat(el.style.getPropertyValue('--holo-rx')),
+          ry: Number.parseFloat(el.style.getPropertyValue('--holo-ry')),
+          shiftX: Number.parseFloat(el.style.getPropertyValue('--holo-shift-x')),
+          shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
+        }));
+        const autoPoseDelta = Math.max(
+          Math.abs(mobileAutoPose.rx - mobileParallaxBaseline.rx),
+          Math.abs(mobileAutoPose.ry - mobileParallaxBaseline.ry),
+          Math.abs(mobileAutoPose.shiftX - mobileParallaxBaseline.shiftX),
+          Math.abs(mobileAutoPose.shiftY - mobileParallaxBaseline.shiftY),
+          Math.abs(mobileAutoPose.rotation - mobileParallaxBaseline.rotation)
+        );
+        if (!(autoPoseDelta > 0.08)) {
+          throw new Error('Compact auto-parallax transform did not move between frames: ' + JSON.stringify({ mobileParallaxBaseline, mobileAutoPose }));
         }
 
-        // Even after the removed hold timeout, synthetic touch movement must
-        // leave foil position and rotation alone. It must not capture the
-        // pointer or suppress native scrolling.
+        // Touch must not take over the auto pose, start a hold/drag mode, or
+        // capture the pointer. The automatic transform remains bounded and smooth.
         await holographic.dispatchEvent('pointerdown', {
           pointerType: 'touch', isPrimary: true, pointerId: 81,
           clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0
@@ -3713,16 +3728,18 @@ try {
           input: el.dataset.holoInput || '',
           motion: el.dataset.holoMotion || '',
           engaged: el.classList.contains('is-holo-touch-engaged'),
-          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
-          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          rx: Number.parseFloat(el.style.getPropertyValue('--holo-rx')),
+          ry: Number.parseFloat(el.style.getPropertyValue('--holo-ry')),
+          shiftX: Number.parseFloat(el.style.getPropertyValue('--holo-shift-x')),
+          shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y')),
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
         }));
         if (mobileTouchMove.input !== 'tap-only' || mobileTouchMove.motion !== 'auto-rotate' ||
             mobileTouchMove.engaged ||
-            mobileTouchMove.x < 32 || mobileTouchMove.x > 68 ||
-            mobileTouchMove.y < 37 || mobileTouchMove.y > 63 ||
-            Math.abs(mobileTouchMove.rotation) > 2.21) {
-          throw new Error('Touch movement escaped the bounded auto-motion path: ' + JSON.stringify(mobileTouchMove));
+            Math.abs(mobileTouchMove.rx) > 7 || Math.abs(mobileTouchMove.ry) > 7 ||
+            Math.abs(mobileTouchMove.shiftX) > 4 || Math.abs(mobileTouchMove.shiftY) > 3 ||
+            Math.abs(mobileTouchMove.rotation) > 2.5) {
+          throw new Error('Touch movement escaped the bounded transform auto-motion path: ' + JSON.stringify(mobileTouchMove));
         }
         const touchMovePrevented = await holographic.evaluate(el => {
           const event = new Event('touchmove', { bubbles: true, cancelable: true });

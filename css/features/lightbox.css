@@ -108,6 +108,8 @@
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-normal-map {
     display:none!important;
     animation:none!important;
+    background-image:none!important;
+    opacity:0!important;
     filter:none!important;
     mix-blend-mode:normal!important;
   }

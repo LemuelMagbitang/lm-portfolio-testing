@@ -142,6 +142,11 @@ for (const layer of [
 ]) assert.ok(compactFoilCss.includes(layer), `Compact presentation must suppress ${layer}.`);
 assert.ok(compactFoilCss.includes('display:none!important;'),
   'Compact foil layers must not paint on mobile.');
+assert.ok(compactFoilCss.includes('background-image:none!important;'),
+  'Mobile must suppress foil textures at the cascade level.');
+assert.ok(compactFoilCss.includes('opacity:0!important;') &&
+  compactFoilCss.includes('mix-blend-mode:normal!important;'),
+  'Mobile foil layers must be transparent and use a non-blending composite mode.');
 assert.ok(compactFoilCss.includes('transform-style:preserve-3d;') &&
   compactFoilCss.includes('will-change:transform;'),
   'Mobile must retain the transform-only 3D parallax surface.');
