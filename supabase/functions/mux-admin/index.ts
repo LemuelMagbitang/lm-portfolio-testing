@@ -252,14 +252,18 @@ Deno.serve(async (request: Request) => {
         });
       } catch (error) {
         const failure = safeText(errorMessage(error), 4000) || "Mux upload creation failed.";
+        const responseUnconfirmed = error instanceof MuxApiError && error.status >= 500;
         const { error: releaseError } = await db.from("video_assets").update({
-          upload_state: "failed",
+          // A timeout/network error can occur after Mux has accepted the POST.
+          // Keep the version reserved so its webhook can correlate by this
+          // attempt ID; stale reservations can be reclaimed after five minutes.
+          upload_state: responseUnconfirmed ? "awaiting_upload" : "failed",
           asset_status: null,
           processing_state: null,
           last_error: failure
         }).eq("id", assetId).eq("external_id", uploadAttemptId).eq("upload_state", "awaiting_upload");
         if (releaseError) {
-          throw new Error("Mux upload creation failed and the asset reservation could not be released: " + errorMessage(releaseError));
+          throw new Error("Mux upload creation failed and the asset reservation could not be updated: " + errorMessage(releaseError));
         }
         throw error;
       }
@@ -313,12 +317,18 @@ Deno.serve(async (request: Request) => {
     if (error instanceof MuxApiError) {
       const authFailure = error.status === 401 || error.status === 403;
       const assetNotFound = error.status === 404;
+      const responseUnconfirmed = error.status >= 500;
       return jsonResponse(request, {
-        error: authFailure ? "Mux rejected the server API credentials." : assetNotFound ? "Mux could not find the requested asset." : "Mux API request failed.",
-        code: authFailure ? "mux_auth_failed" : assetNotFound ? "mux_asset_not_found" : "mux_api_error",
+        error: authFailure ? "Mux rejected the server API credentials." :
+          assetNotFound ? "Mux could not find the requested asset." :
+          error.status === 504 ? "Mux API request timed out. The upload may still complete; wait for processing or refresh the asset before retrying." :
+          responseUnconfirmed ? "The Mux API response could not be confirmed. Refresh the asset state before retrying." :
+          "Mux API request failed.",
+        code: authFailure ? "mux_auth_failed" : assetNotFound ? "mux_asset_not_found" :
+          error.status === 504 ? "mux_api_timeout" : responseUnconfirmed ? "mux_api_unconfirmed" : "mux_api_error",
         upstreamStatus: error.status,
         detail: error.message
-      }, 502);
+      }, error.status === 504 ? 504 : 502);
     }
     return jsonResponse(request, { error: errorMessage(error) }, 500);
   }
