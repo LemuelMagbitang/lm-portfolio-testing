@@ -11,14 +11,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="admin.css?v=20261024-03">
+<link rel="stylesheet" href="admin.css?v=20261027-01">
 </head>
 <body>
 
 <!-- ============================================================
      CONNECT SCREEN
      ============================================================ -->
-<div id="connectScreen">
+<main id="connectScreen">
   <div class="connect-card">
     <div class="connect-brand"><span class="dot"></span><span>LM. CMS</span></div>
     <h1>Connect your repository</h1>
@@ -27,21 +27,21 @@
     <div id="connectError"></div>
 
     <div class="field">
-      <label class="field-label">GitHub username / org</label>
+      <label class="field-label" for="inOwner">GitHub username / org</label>
       <input id="inOwner" placeholder="lemuelmagbitang" autocomplete="off">
     </div>
     <div class="row">
       <div class="field">
-        <label class="field-label">Repository</label>
+        <label class="field-label" for="inRepo">Repository</label>
         <input id="inRepo" placeholder="lemuelmagbitang.github.io" autocomplete="off">
       </div>
       <div class="field">
-        <label class="field-label">Branch</label>
+        <label class="field-label" for="inBranch">Branch</label>
         <input id="inBranch" placeholder="main" value="main" autocomplete="off">
       </div>
     </div>
     <div class="field">
-      <label class="field-label">Personal access token</label>
+      <label class="field-label" for="inToken">Personal access token</label>
       <input id="inToken" type="password" placeholder="github_pat_••••••••" autocomplete="new-password" autocapitalize="none" spellcheck="false">
     </div>
     <div class="remember-row">
@@ -65,7 +65,7 @@
       Full guide: <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens" target="_blank" rel="noopener noreferrer">docs.github.com — personal access tokens</a>
     </div>
   </div>
-</div>
+</main>
 
 <!-- ============================================================
      APP SHELL
@@ -116,9 +116,9 @@
     </div>
   </aside>
 
-  <main class="content" id="content">
+  <div class="content" id="content" role="main">
     <!-- injected per section -->
-  </main>
+  </div>
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
