@@ -1848,6 +1848,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
               return media &&
                 Number(media._loadCount) > loadCount &&
                 media.getAttribute('playback-id') === playbackId &&
+                media.getAttribute('prefer-playback') === 'mse' &&
                 media.dataset.networkRetryCount === '1' &&
                 media.dataset.networkRetryReason === 'mux-unsupported-source' &&
                 media.dataset.playbackState === 'playing' &&
@@ -1857,6 +1858,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             if (!unsupportedSourceRecovered) {
               const state = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => ({
                 playbackIdPresent: Boolean(media.getAttribute('playback-id')),
+                preferPlayback: media.getAttribute('prefer-playback') || '',
                 networkState: Number(media.networkState) || 0,
                 readyState: Number(media.readyState) || 0,
                 error: media.error ? { code: Number(media.error.code) || null, message: String(media.error.message || '') } : null,

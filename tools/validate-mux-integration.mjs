@@ -172,6 +172,7 @@ check(
   hero.includes("(details.mediaErrorCode === null || details.mediaErrorCode === 4)") &&
   hero.includes("details.mediaErrorCode === 4 ? 'mux-unsupported-source'") &&
   hero.includes("activeSource: describeMediaSource(activeSource)") &&
+  hero.includes("media.setAttribute('prefer-playback', 'mse')") &&
   hero.includes("media.removeAttribute('playback-id')") &&
   hero.includes("media.setAttribute('playback-id', playbackId)"),
   "Hero must reset Mux playback once for code-4/NETWORK_NO_SOURCE failures and log query-safe source details.");

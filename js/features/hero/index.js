@@ -806,8 +806,10 @@ async function ensureMuxVideo(...args) {
       ).trim();
       if (!playbackId) return false;
       try {
-        // Resetting the custom-element source gives Mux a fresh playback
-        // session/CDN selection when the underlying video reports no source.
+        // Code 4 means the browser rejected the active media source. Retry
+        // through Mux's MSE/HLS.js engine instead of repeating the same native
+        // HLS selection, then reset the playback ID to start a fresh session.
+        media.setAttribute('prefer-playback', 'mse');
         media.removeAttribute('playback-id');
         media.setAttribute('playback-id', playbackId);
         return true;
