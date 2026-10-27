@@ -23,6 +23,8 @@ const styles = read("css/style.css");
 const page = read("admin/videos.html"), script = read("admin/videos.js"), cms = read("admin/index.html");
 const workflow = read(".github/workflows/site-validation.yml");
 const smoke = read("tools/smoke-browser.mjs");
+const webhookBody = read("supabase/functions/_shared/request-body.ts");
+const webhookBodyTest = read("tools/test-mux-webhook-body-limit.mjs");
 const supabaseConfig = read("supabase/config.toml");
 const muxFeatureSources = [hero, footer, read("js/features/lightbox/media-renderer.js")];
 check(hero.includes("await import('../../infrastructure/mux/public-videos.js?v=20261027-01')") &&
@@ -36,6 +38,13 @@ check(muxFeatureSources.every(source =>
   !/import\s*\{\s*ensureMux(?:Video|Player)\s*\}\s*from\s*['"][^'"]*infrastructure\/mux\/player\.js/.test(source)
 ), "Optional Mux helper must be lazily imported with a common cache key, one retry, and a poster-safe failure path; it cannot be a static page dependency.");
 check(migration.includes("create table if not exists public.videos") && migration.includes("create table if not exists public.video_assets"), "Video tables missing.");
+check(webhook.includes("readRequestBodyLimited(request, 1_048_576)") &&
+  webhook.includes("status: 413") &&
+  webhookBody.includes("request.body.getReader()") &&
+  webhookBody.includes("total > limit") &&
+  workflow.includes("node tools/test-mux-webhook-body-limit.mjs") &&
+  webhookBodyTest.includes("streamed oversized bodies should be cancelled"),
+  "Mux webhook requests must be size-bounded while streaming and regression-tested before signature verification.");
 check(hardeningMigration.includes("set search_path = pg_catalog") && hardeningMigration.includes("videos_active_asset_id_idx") && hardeningMigration.includes("videos_created_by_idx"), "Video Library hardening migration must fix trigger search_path and index both referencing columns.");
 check(databaseTypes.includes("export type Database") && databaseTypes.includes("mux_webhook_events") && databaseTypes.includes("video_assets") && databaseTypes.includes("videos"), "Generated Supabase Database types must cover the Video Library schema.");
 check(ignore.includes(".env") && ignore.includes("!.env.example") && envExample.includes("MUX_TOKEN_SECRET=") && envExample.includes("MUX_WEBHOOK_SECRET=") && envExample.includes("CMS_ADMIN_USER_IDS="), "Local secrets must be ignored by Git and documented using a credential-free environment template.");
