@@ -5,7 +5,8 @@
  * and project selection remain in the Lightbox controller.
  */
 
-import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261016-01';
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-02';
+import { getFoilEdgeRotation, isCompactFoilTarget, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261027-01';
 import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
@@ -754,8 +755,6 @@ export function createLightboxMediaRenderer({
     'cosmos-middle': 'assets/holographic/cosmos-middle-trans.webp',
     'cosmos-top': 'assets/holographic/cosmos-top-trans.webp'
   };
-  const HOLOGRAPHIC_TOUCH_HOLD_MS = 220;
-  const HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX = 9;
   // Only mask overlays that the selected finish actually renders. Keeping
   // hidden overlays unmasked avoids needless alpha/luminance-mask compositing.
   const HOLOGRAPHIC_MASK_LAYERS = {
@@ -772,7 +771,7 @@ export function createLightboxMediaRenderer({
     aurora: ['prism', 'ribbons', 'sheen']
   };
 
-  function updateHolographicTilt(surface, x, y) {
+  function updateHolographicTilt(surface, x, y, rotation = 0) {
     if (!surface) return;
     const clampedX = clampHolographic(x);
     const clampedY = clampHolographic(y);
@@ -781,15 +780,10 @@ export function createLightboxMediaRenderer({
     const angle = Math.atan2(clampedY - 50, clampedX - 50) * (180 / Math.PI);
     const foilX = 100 - clampedX;
     const foilY = 100 - clampedY;
-    // Reflect a virtual studio key light against the hand movement rather than
-    // gluing a white flashlight to the pointer. Grazing angles reveal more foil.
     const lightX = clampHolographic(50 + ((50 - clampedX) * 0.68), 16, 84);
     const lightY = clampHolographic(50 + ((50 - clampedY) * 0.68), 16, 84);
     const tiltStrength = clampHolographic(Math.hypot(clampedX - 50, clampedY - 50) / 70, 0, 1);
 
-    // Input drives card tilt, inverse foil refraction and a counter-moving
-    // virtual key light. The animation-frame easing keeps the reflection
-    // optical and fluid rather than cursor-locked.
     surface.style.setProperty('--holo-x', clampedX + '%');
     surface.style.setProperty('--holo-y', clampedY + '%');
     surface.style.setProperty('--holo-foil-x', foilX.toFixed(2) + '%');
@@ -800,21 +794,24 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-rx', rx.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-ry', ry.toFixed(2) + 'deg');
     surface.style.setProperty('--holo-angle', angle.toFixed(2) + 'deg');
+    surface.style.setProperty('--holo-rotation', (Number(rotation) || 0).toFixed(2) + 'deg');
     holographicNormalControllers.get(surface)?.forEach(controller => controller.setLight(lightX / 100, 1 - (lightY / 100)));
   }
 
-  function setHolographicTarget(surface, x, y) {
+  function setHolographicTarget(surface, x, y, rotation = 0) {
     if (!surface) return;
     const motion = holographicMotionStates.get(surface);
     const targetX = clampHolographic(x);
     const targetY = clampHolographic(y);
+    const targetRotation = Math.max(-13.5, Math.min(13.5, Number(rotation) || 0));
     if (!motion || typeof windowRef?.requestAnimationFrame !== 'function') {
-      updateHolographicTilt(surface, targetX, targetY);
+      updateHolographicTilt(surface, targetX, targetY, targetRotation);
       return;
     }
 
     motion.targetX = targetX;
     motion.targetY = targetY;
+    motion.targetRotation = targetRotation;
     if (motion.frame !== null) return;
 
     const animate = timestamp => {
@@ -825,18 +822,21 @@ export function createLightboxMediaRenderer({
       motion.lastTime = timestamp;
       motion.x += (motion.targetX - motion.x) * alpha;
       motion.y += (motion.targetY - motion.y) * alpha;
+      motion.rotation += (motion.targetRotation - motion.rotation) * alpha;
 
       const dx = motion.targetX - motion.x;
       const dy = motion.targetY - motion.y;
-      if (Math.abs(dx) < 0.04 && Math.abs(dy) < 0.04) {
+      const dr = motion.targetRotation - motion.rotation;
+      if (Math.abs(dx) < 0.04 && Math.abs(dy) < 0.04 && Math.abs(dr) < 0.04) {
         motion.x = motion.targetX;
         motion.y = motion.targetY;
+        motion.rotation = motion.targetRotation;
         motion.lastTime = 0;
-        updateHolographicTilt(surface, motion.x, motion.y);
+        updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
         return;
       }
 
-      updateHolographicTilt(surface, motion.x, motion.y);
+      updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
       motion.frame = windowRef.requestAnimationFrame(animate);
     };
 
@@ -848,7 +848,11 @@ export function createLightboxMediaRenderer({
     if (!rect || !rect.width || !rect.height) return;
     const x = ((Number(event.clientX) - rect.left) / rect.width) * 100;
     const y = ((Number(event.clientY) - rect.top) / rect.height) * 100;
-    setHolographicTarget(surface, x, y);
+    const motion = holographicMotionStates.get(surface);
+    const rotation = motion && event?.pointerType === 'mouse' && supportsFoilHover(windowRef)
+      ? getFoilEdgeRotation(x, y, motion.rotationDirection)
+      : 0;
+    setHolographicTarget(surface, x, y, rotation);
   }
 
   // Luminance masks are front-face-only by design. White reveals foil;
@@ -918,12 +922,18 @@ export function createLightboxMediaRenderer({
     surface.className = 'lightbox-holographic';
     surface.dataset.holoStyle = config.style;
     surface.dataset.holoTextureMode = config.textureMode;
-    surface.dataset.holoInput = 'pointer';
+    const compactTarget = isCompactFoilTarget(windowRef);
+    const hoverAvailable = supportsFoilHover(windowRef);
+    const frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
+    const backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
+    const rotationDirection = Math.random() < 0.5 ? -1 : 1;
+    surface.dataset.holoInput = hoverAvailable ? 'hover-edge' : 'tap-only';
+    surface.dataset.holoRotationDirection = rotationDirection < 0 ? 'counterclockwise' : 'clockwise';
     const backHasCustomArtwork = Boolean(String(config.back || '').trim());
     const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled);
     surface.dataset.holoHasCustomBack = backHasCustomArtwork ? 'true' : 'false';
     surface.dataset.holoHasBackEffects = backFoilEnabled ? 'true' : 'false';
-    surface.style.setProperty('--holo-intensity', String(config.intensity));
+    surface.style.setProperty('--holo-intensity', String(frontStrength));
     surface.style.setProperty('--holo-x', '50%');
     surface.style.setProperty('--holo-y', '50%');
     surface.style.setProperty('--holo-foil-x', '50%');
@@ -931,7 +941,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-light-x', '34%');
     surface.style.setProperty('--holo-light-y', '26%');
     surface.style.setProperty('--holo-tilt-strength', '0');
-    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, frame: null, lastTime: 0 });
+    holographicMotionStates.set(surface, { x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0, rotationDirection, frame: null, lastTime: 0 });
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
     surface.style.setProperty('--holo-angle', '0deg');
@@ -956,10 +966,10 @@ export function createLightboxMediaRenderer({
     separator.setAttribute('aria-hidden', 'true');
     const desktopAction = documentRef.createElement('span');
     desktopAction.className = 'lightbox-holographic-desktop-action';
-    desktopAction.textContent = 'CLICK / MOVE';
+    desktopAction.textContent = 'HOVER EDGE / CLICK';
     const touchAction = documentRef.createElement('span');
     touchAction.className = 'lightbox-holographic-touch-action';
-    touchAction.textContent = 'HOLD + MOVE';
+    touchAction.textContent = 'TAP TO FLIP';
     hint.append(faceLabel, separator, desktopAction, touchAction);
     surface.__lightboxHoloHint = hint;
 
@@ -1004,7 +1014,7 @@ export function createLightboxMediaRenderer({
       const faceTextureUrl = isFront ? frontTextureUrl : backTextureUrl;
       const faceTextureMode = isFront ? config.textureMode : config.backTextureMode;
       const faceImage = isFront ? frontImage : backImage;
-      const faceStrength = isFront ? config.intensity : config.backIntensity;
+      const faceStrength = isFront ? frontStrength : backStrength;
       // Keep the front strength inherited from the surface so existing live
       // intensity interactions continue to respond; only the reverse overrides it.
       if (!isFront) {
@@ -1155,24 +1165,18 @@ export function createLightboxMediaRenderer({
     inner.appendChild(flip);
     surface.appendChild(inner);
 
-    let touchGesture = null;
-    let suppressNextClick = false;
-    let holdTimer = null;
-
-    const clearTouchGesture = () => {
-      if (holdTimer !== null) {
-        windowRef?.clearTimeout?.(holdTimer);
-        holdTimer = null;
+    let pointerFrame = null;
+    let pendingPointer = null;
+    const cancelQueuedPointer = () => {
+      if (pointerFrame !== null) {
+        try { windowRef?.cancelAnimationFrame?.(pointerFrame); } catch (_) {}
+        pointerFrame = null;
       }
-      touchGesture = null;
-      surface.classList.remove('is-holo-touch-engaged', 'is-holo-touch-pending');
+      pendingPointer = null;
     };
 
     const cleanup = () => {
-      clearTouchGesture();
-      // A foil's flipped state belongs to the current Lightbox session. Reset
-      // it before the media node is disposed or moved to a preload/teardown path.
-      // This keeps a reused grouped-artwork node from reopening on its reverse.
+      cancelQueuedPointer();
       surface.classList.remove('is-flipped');
       surface.setAttribute('aria-pressed', 'false');
       const faceLabel = surface.__lightboxHoloHint?.querySelector('[data-holo-face-label]');
@@ -1185,13 +1189,7 @@ export function createLightboxMediaRenderer({
       holographicNormalControllers.get(surface)?.forEach(controller => { try { controller.destroy(); } catch (_) {} });
       holographicNormalControllers.delete(surface);
       surface.removeEventListener('pointermove', onPointerMove);
-      surface.removeEventListener('pointerdown', onPointerDown);
-      surface.removeEventListener('pointerup', onPointerUp);
-      surface.removeEventListener('pointercancel', onPointerUp);
       surface.removeEventListener('pointerleave', onPointerLeave);
-      surface.removeEventListener('touchmove', onTouchMove);
-      surface.removeEventListener('touchend', onTouchEnd);
-      surface.removeEventListener('touchcancel', onTouchEnd);
       surface.removeEventListener('click', toggleFlip);
       surface.removeEventListener('keydown', toggleFlip);
       surface.__lightboxHoloHint?.remove();
@@ -1199,109 +1197,37 @@ export function createLightboxMediaRenderer({
     };
 
     const onPointerMove = event => {
-      const pointerType = event.pointerType || '';
-      if (pointerType === 'touch' || pointerType === 'pen') {
-        if (pointerType === 'touch' && event.isPrimary === false) return;
-        if (!touchGesture || touchGesture.pointerId !== event.pointerId) return;
-
-        const currentX = Number(event.clientX) || 0;
-        const currentY = Number(event.clientY) || 0;
-        const dx = currentX - touchGesture.startX;
-        const dy = currentY - touchGesture.startY;
-
-        if (!touchGesture.engaged) {
-          if (Math.hypot(dx, dy) > HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX) {
-            touchGesture.moved = true;
-            suppressNextClick = true;
-            clearTouchGesture();
-          }
-          return;
-        }
-
-        event.preventDefault();
-        setHolographicReflection(surface, event);
-        return;
-      }
-
-      if (pointerType === 'mouse') {
-        setHolographicReflection(surface, event);
-      }
-    };
-
-    const onPointerLeave = () => {
-      if (!touchGesture?.engaged) setHolographicTarget(surface, 50, 50);
-    };
-
-    const onPointerDown = event => {
-      const pointerType = event.pointerType || '';
-      if (pointerType === 'mouse') {
-        setHolographicReflection(surface, event);
-        return;
-      }
-      if ((pointerType !== 'touch' && pointerType !== 'pen') ||
-          (pointerType === 'touch' && event.isPrimary === false)) return;
-
-      clearTouchGesture();
-      suppressNextClick = false;
-      surface.classList.add('is-holo-touch-pending');
-      touchGesture = {
-        pointerId: event.pointerId,
-        startX: Number(event.clientX) || 0,
-        startY: Number(event.clientY) || 0,
-        engaged: false,
-        moved: false
+      // Only fine hover pointers can drive the optical response. Touch never
+      // enters a hold/drag mode, preserving native scrolling and tap-to-flip.
+      if (!hoverAvailable || event.pointerType !== 'mouse') return;
+      pendingPointer = {
+        clientX: Number(event.clientX) || 0,
+        clientY: Number(event.clientY) || 0,
+        pointerType: 'mouse'
       };
-
-      holdTimer = windowRef?.setTimeout?.(() => {
-        if (!touchGesture || touchGesture.pointerId !== event.pointerId || touchGesture.moved) return;
-        touchGesture.engaged = true;
-        suppressNextClick = true;
-        surface.classList.add('is-holo-touch-engaged');
-        try { surface.setPointerCapture?.(event.pointerId); } catch (_) {}
-        setHolographicReflection(surface, event);
-      }, HOLOGRAPHIC_TOUCH_HOLD_MS);
-    };
-
-    const onPointerUp = event => {
-      if (!touchGesture || touchGesture.pointerId !== event.pointerId) return;
-      const engaged = touchGesture.engaged;
-      const moved = touchGesture.moved;
-      if (engaged || moved) suppressNextClick = true;
-      try {
-        if (event.pointerId !== undefined) surface.releasePointerCapture?.(event.pointerId);
-      } catch (_) {}
-      clearTouchGesture();
-    };
-
-    // Pointer Events cover modern browsers, but Safari/iOS gesture arbitration
-    // can still hand scrolling to the page before a late pointermove
-    // preventDefault() is honored. Mirror the engaged gesture through a
-    // non-passive Touch Events path so a held hologram can reliably take over
-    // after the deliberate 220 ms hold without blocking ordinary scroll starts.
-    const onTouchMove = event => {
-      if (!touchGesture?.engaged) return;
-      const touch = event.touches?.[0] || event.changedTouches?.[0];
-      if (!touch) return;
-      event.preventDefault();
-      setHolographicReflection(surface, {
-        clientX: Number(touch.clientX) || 0,
-        clientY: Number(touch.clientY) || 0
+      if (pointerFrame !== null) return;
+      const requestFrame = windowRef?.requestAnimationFrame;
+      if (typeof requestFrame !== 'function') {
+        const latest = pendingPointer;
+        pendingPointer = null;
+        setHolographicReflection(surface, latest);
+        return;
+      }
+      pointerFrame = requestFrame.call(windowRef, () => {
+        pointerFrame = null;
+        const latest = pendingPointer;
+        pendingPointer = null;
+        if (!latest || destroyed) return;
+        setHolographicReflection(surface, latest);
       });
     };
 
-    const onTouchEnd = () => {
-      if (!touchGesture) return;
-      const engaged = touchGesture.engaged;
-      const moved = touchGesture.moved;
-      if (engaged || moved) suppressNextClick = true;
-      clearTouchGesture();
+    const onPointerLeave = () => {
+      cancelQueuedPointer();
+      setHolographicTarget(surface, 50, 50, 0);
     };
 
     const toggleFlip = event => {
-      if (event?.type === 'click' && suppressNextClick) {
-        suppressNextClick = false;
-        return;
-      }
       if (event?.type === 'keydown') {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
@@ -1313,18 +1239,12 @@ export function createLightboxMediaRenderer({
       if (faceLabel) faceLabel.textContent = isBack ? 'BACK' : 'FRONT';
     };
 
-    // Touch movement may call preventDefault() only after the deliberate hold
-    // threshold has engaged. Keep the listener non-passive so normal scrolling
-    // remains available before engagement, while an engaged hold can suppress
-    // scrolling and drive the holographic reflection.
-    surface.addEventListener('pointermove', onPointerMove, { passive: false });
-    surface.addEventListener('pointerdown', onPointerDown);
-    surface.addEventListener('pointerup', onPointerUp);
-    surface.addEventListener('pointercancel', onPointerUp);
-    surface.addEventListener('pointerleave', onPointerLeave);
-    surface.addEventListener('touchmove', onTouchMove, { passive: false });
-    surface.addEventListener('touchend', onTouchEnd);
-    surface.addEventListener('touchcancel', onTouchEnd);
+    // Passive, frame-coalesced hover input avoids layout/GPU work for every
+    // raw pointer event. Touch-only devices attach no hover listeners.
+    if (hoverAvailable) {
+      surface.addEventListener('pointermove', onPointerMove, { passive: true });
+      surface.addEventListener('pointerleave', onPointerLeave);
+    }
     surface.addEventListener('click', toggleFlip);
     surface.addEventListener('keydown', toggleFlip);
 
