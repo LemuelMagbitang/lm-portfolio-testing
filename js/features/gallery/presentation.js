@@ -11,6 +11,119 @@ function setGalleryEntryDelay(card, value = '') {
   card.style.setProperty('--gallery-entry-delay', value);
 }
 
+function clearGalleryScrollReveal(card, { complete = false } = {}) {
+  if (!card?.dataset) return;
+  if (complete) card.dataset.galleryRevealComplete = 'true';
+  card.classList?.remove('has-gallery-scroll-reveal');
+  card.style?.removeProperty?.('--gallery-scroll-reveal-delay');
+  if (typeof card.removeAttribute === 'function') card.removeAttribute('data-gallery-reveal-state');
+  else delete card.dataset.galleryRevealState;
+}
+
+function getGalleryColumnCount(grid, cards, windowRef) {
+  const template = String(windowRef?.getComputedStyle?.(grid)?.gridTemplateColumns || '').trim();
+  if (template && template !== 'none') {
+    const count = template.split(/\s+/).filter(Boolean).length;
+    if (count > 0) return count;
+  }
+  const leftEdges = [];
+  cards.forEach(card => {
+    const rect = card?.getBoundingClientRect?.();
+    if (!Number.isFinite(rect?.left) || !(rect?.width > 0)) return;
+    if (!leftEdges.some(left => Math.abs(left - rect.left) <= 2)) leftEdges.push(rect.left);
+  });
+  return Math.max(1, leftEdges.length);
+}
+
+/** Reveal stable card frames once as they enter Lightbox's inset viewport band. */
+export function applyGalleryViewportReveal({
+  grid, cards = [], windowRef = globalThis.window, renderToken = 0,
+  isCurrentRender = () => true, skipVisibleReveal = false
+} = {}) {
+  if (!grid || !Array.isArray(cards) || !cards.length) return () => {};
+  const eligible = cards.filter(card =>
+    card?.dataset && card?.classList?.add && card?.classList?.remove &&
+    card?.style?.setProperty && typeof card.getBoundingClientRect === 'function'
+  );
+  if (!eligible.length) return () => {};
+
+  const reducedMotion = !!windowRef?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const isInsideViewport = card => {
+    const rect = card.getBoundingClientRect();
+    const width = Number(windowRef?.innerWidth) || 0;
+    const height = Number(windowRef?.innerHeight) || 0;
+    return rect.bottom > 24 && rect.top < height - 24 && rect.right > 0 && rect.left < width;
+  };
+  const pendingCards = [];
+  eligible.forEach((card, index) => {
+    if (card.dataset.galleryRevealComplete === 'true') clearGalleryScrollReveal(card);
+    else if (reducedMotion || (skipVisibleReveal && isInsideViewport(card))) {
+      clearGalleryScrollReveal(card, { complete: true });
+    } else pendingCards.push({ card, index });
+  });
+  if (!pendingCards.length) return () => {};
+
+  const Observer = windowRef?.IntersectionObserver || globalThis.IntersectionObserver;
+  if (reducedMotion || typeof Observer !== 'function') {
+    pendingCards.forEach(({ card }) => clearGalleryScrollReveal(card, { complete: true }));
+    return () => {};
+  }
+
+  const columns = getGalleryColumnCount(grid, eligible, windowRef);
+  const controlledCards = [];
+  const transitionListeners = new Map();
+  let disposed = false;
+  const finishReveal = card => {
+    const active = transitionListeners.get(card);
+    if (!active) return;
+    card.removeEventListener?.('transitionend', active.listener);
+    if (active.timer !== null) windowRef?.clearTimeout?.(active.timer);
+    transitionListeners.delete(card);
+    clearGalleryScrollReveal(card);
+  };
+  const observer = new Observer(entries => {
+    if (disposed || !isCurrentRender(renderToken)) return;
+    entries.forEach(entry => {
+      const card = entry.target;
+      if (!entry.isIntersecting || !(entry.intersectionRatio > 0) ||
+          card?.dataset?.galleryRevealState !== 'pending') return;
+      observer.unobserve(card);
+      card.dataset.galleryRevealComplete = 'true';
+      card.dataset.galleryRevealState = 'revealing';
+      const listener = event => {
+        if (event?.target === card && event.propertyName === 'opacity') finishReveal(card);
+      };
+      card.addEventListener?.('transitionend', listener);
+      const timer = typeof windowRef?.setTimeout === 'function'
+        ? windowRef.setTimeout(() => finishReveal(card), 750)
+        : null;
+      transitionListeners.set(card, { listener, timer });
+    });
+  }, { root: null, rootMargin: '-24px 0px -24px 0px', threshold: 0.01 });
+
+  pendingCards.forEach(({ card, index }) => {
+    card.classList.add('has-gallery-scroll-reveal');
+    card.dataset.galleryRevealState = 'pending';
+    card.style.setProperty('--gallery-scroll-reveal-delay', String(Math.min(index % columns, 3) * 35) + 'ms');
+    controlledCards.push(card);
+    observer.observe(card);
+  });
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    observer.disconnect();
+    controlledCards.forEach(card => {
+      const active = transitionListeners.get(card);
+      if (active) {
+        card.removeEventListener?.('transitionend', active.listener);
+        if (active.timer !== null) windowRef?.clearTimeout?.(active.timer);
+        transitionListeners.delete(card);
+      }
+      clearGalleryScrollReveal(card);
+    });
+  };
+}
+
 export function captureGalleryCardRects(grid) {
   const rects = new Map();
   if (!grid) return rects;
@@ -137,6 +250,7 @@ export function applyGalleryReveal({
   let transitionFrame = null;
 
   hiddenCards.forEach(card => {
+    if (card.dataset?.galleryRevealState === 'pending') card.removeAttribute?.('data-gallery-reveal-state');
     card.style.opacity = '0';
     if (animateTransition) {
       card.style.transitionDuration = filterTransitionDuration;
@@ -282,6 +396,11 @@ export function applyGalleryReveal({
     }
   });
 
+  const cleanupViewportReveal = applyGalleryViewportReveal({
+    grid, cards: filteredCards, windowRef, renderToken, isCurrentRender,
+    skipVisibleReveal: animateTransition
+  });
+
   windowRef.requestAnimationFrame(() => {
     if (!isCurrentRender(renderToken) || animateTransition) return;
     filteredCards.forEach(card => {
@@ -325,12 +444,12 @@ export function applyGalleryReveal({
     });
   };
 
-  if (!showMoreButton || !showMoreWrapper) {
-    return () => {
-      windowRef.clearTimeout(hideTimer);
-      cleanupTransition();
-    };
-  }
+  const cleanup = () => {
+    windowRef.clearTimeout(hideTimer);
+    cleanupTransition();
+    cleanupViewportReveal();
+  };
+  if (!showMoreButton || !showMoreWrapper) return cleanup;
 
   const label = showMoreButton.querySelector('.btn-text');
   showMoreButton.setAttribute('aria-expanded', String(expanded));
@@ -345,10 +464,7 @@ export function applyGalleryReveal({
     showMoreWrapper.style.display = 'none';
   }
 
-  return () => {
-    windowRef.clearTimeout(hideTimer);
-    cleanupTransition();
-  };
+  return cleanup;
 }
 
 export function resetGalleryPresentation({
@@ -364,6 +480,10 @@ export function resetGalleryPresentation({
       card.style.display = '';
       card.style.transform = '';
       card.style.filter = '';
+      card.style.removeProperty?.('--gallery-scroll-reveal-delay');
+      card.classList?.remove('has-gallery-scroll-reveal');
+      card.removeAttribute?.('data-gallery-reveal-state');
+      card.removeAttribute?.('data-gallery-reveal-complete');
     });
   }
 

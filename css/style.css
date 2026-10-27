@@ -959,6 +959,19 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .project-card:focus-visible { outline: 2px solid rgba(255,255,255,.78); outline-offset: -2px; }
 
 
+/* First viewport entry follows Lightbox timing without changing the reserved card geometry. */
+.project-card.has-gallery-scroll-reveal {
+  transition:
+    opacity 440ms cubic-bezier(.22, 1, .36, 1),
+    transform 440ms cubic-bezier(.22, 1, .36, 1),
+    filter 440ms cubic-bezier(.22, 1, .36, 1);
+  transition-delay: var(--gallery-scroll-reveal-delay, 0ms);
+}
+.project-card.has-gallery-scroll-reveal[data-gallery-reveal-state="pending"] {
+  opacity: .18 !important;
+  transform: translate3d(0, 14px, 0) scale(.985) !important;
+}
+
 .card-thumbnail {
   position: absolute;
   inset: 0;
@@ -1028,6 +1041,14 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .project-card.has-gallery-scroll-reveal {
+    transition: none !important;
+    transition-delay: 0ms !important;
+  }
+  .project-card.has-gallery-scroll-reveal[data-gallery-reveal-state="pending"] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
   .card-thumbnail .project-thumb-media { transition: none; }
   .card-thumbnail .project-thumb-media.is-media-loading {
     filter: none !important;
