@@ -7,8 +7,43 @@
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-06';
 import { COMPACT_FOIL_MAX_INTENSITY, FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261027-04';
-import { ensureMuxPlayer } from '../../infrastructure/mux/player.js';
+
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
+
+const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';
+let muxPlayerModulePromise = null;
+let muxPlayerModuleAttempt = 0;
+
+async function loadMuxPlayerModule() {
+  if (!muxPlayerModulePromise) {
+    muxPlayerModuleAttempt += 1;
+    const moduleUrl = muxPlayerModuleAttempt === 1
+      ? MUX_PLAYER_MODULE_URL
+      : `${MUX_PLAYER_MODULE_URL}&retry=${muxPlayerModuleAttempt}`;
+    const pending = import(moduleUrl);
+    const guarded = pending.catch(error => {
+      if (muxPlayerModulePromise === guarded) muxPlayerModulePromise = null;
+      throw error;
+    });
+    muxPlayerModulePromise = guarded;
+  }
+  return muxPlayerModulePromise;
+}
+
+// Mux is an optional media capability. Its helper must never be a static edge
+// in the feature graph: a transient hosting/CDN failure should fall back to a
+// poster, not reject page-composition.js before the site can initialize.
+async function ensureMuxPlayer(...args) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const module = await loadMuxPlayerModule();
+      return await module.ensureMuxPlayer(...args);
+    } catch (_) {
+      if (attempt === 1) return false;
+    }
+  }
+  return false;
+}
 
 const YOUTUBE_PLAYER_ORIGIN = 'https://www.youtube.com';
 

@@ -7,8 +7,43 @@ import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
 import { createLifecycle } from '../../core/lifecycle.js';
+
+const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';
+let muxPlayerModulePromise = null;
+let muxPlayerModuleAttempt = 0;
+
+async function loadMuxPlayerModule() {
+  if (!muxPlayerModulePromise) {
+    muxPlayerModuleAttempt += 1;
+    const moduleUrl = muxPlayerModuleAttempt === 1
+      ? MUX_PLAYER_MODULE_URL
+      : `${MUX_PLAYER_MODULE_URL}&retry=${muxPlayerModuleAttempt}`;
+    const pending = import(moduleUrl);
+    const guarded = pending.catch(error => {
+      if (muxPlayerModulePromise === guarded) muxPlayerModulePromise = null;
+      throw error;
+    });
+    muxPlayerModulePromise = guarded;
+  }
+  return muxPlayerModulePromise;
+}
+
+// Mux is an optional media capability. Its helper must never be a static edge
+// in the feature graph: a transient hosting/CDN failure should fall back to a
+// poster, not reject page-composition.js before the site can initialize.
+async function ensureMuxVideo(...args) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const module = await loadMuxPlayerModule();
+      return await module.ensureMuxVideo(...args);
+    } catch (_) {
+      if (attempt === 1) return false;
+    }
+  }
+  return false;
+}
 import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';
-import { ensureMuxVideo } from '../../infrastructure/mux/player.js?v=20261026-09';
+
 
   /* =========================================
      4. HERO BANNER — AUTO-FILLED WITH THE

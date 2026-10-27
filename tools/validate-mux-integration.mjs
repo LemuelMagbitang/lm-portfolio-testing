@@ -13,6 +13,15 @@ const webhook = read("supabase/functions/mux-webhook/index.ts");
 const publicApi = read("supabase/functions/mux-public/index.ts");
 const bridge = read("js/infrastructure/mux/public-videos.js");
 const player = read("js/infrastructure/mux/player.js");
+const muxPlayerModuleUrl = "const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-01';";
+const muxFeatureSources = [hero, footer, read("js/features/lightbox/media-renderer.js")];
+check(muxFeatureSources.every(source =>
+  source.includes(muxPlayerModuleUrl) &&
+  source.includes("async function loadMuxPlayerModule()") &&
+  source.includes("const pending = import(moduleUrl)") &&
+  source.includes("if (attempt === 1) return false") &&
+  !/import\s*\{\s*ensureMux(?:Video|Player)\s*\}\s*from\s*['"][^'"]*infrastructure\/mux\/player\.js/.test(source)
+), "Optional Mux helper must be lazily imported with a common cache key, one retry, and a poster-safe failure path; it cannot be a static page dependency.");
 const databaseTypes = read("supabase/functions/_shared/database.types.ts");
 const envExample = read("supabase/functions/.env.example");
 const ignore = read(".gitignore");
