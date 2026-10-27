@@ -6,7 +6,7 @@
  */
 
 import { loadScriptOnce } from '../browser/script-loader.js?v=20261008-01';
-import { getSiteRootUrl } from '../browser/site-paths.js?v=20261027-02';
+import { getSiteRootUrl } from '../browser/site-paths.js?v=20261027-03';
 
 let mediaBackgroundPromise = null;
 

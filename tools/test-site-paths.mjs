@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   getSiteRootUrl,
   siteAssetUrl
-} from '../js/infrastructure/browser/site-paths.js?v=20261027-02';
+} from '../js/infrastructure/browser/site-paths.js?v=20261027-03';
 
 function makeScript(documentUrl, src) {
   return {

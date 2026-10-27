@@ -119,6 +119,7 @@ export function siteAssetUrl(src, options = {}) {
         return '';
       }
       if (decoded === decodedPath) break;
+      if (decoded.split('/').some(segment => segment === '.' || segment === '..')) return '';
       const normalizedDecoded = new URL(decoded, siteRoot.origin);
       if (normalizedDecoded.origin !== siteRoot.origin ||
           !normalizedDecoded.pathname.startsWith(rootPath)) return '';
