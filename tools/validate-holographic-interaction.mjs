@@ -14,7 +14,7 @@ import {
   resolveFoilIntensity,
   shouldAutoRotateFoil,
   supportsFoilHover
-} from '../js/features/lightbox/foil-interaction.js?v=20261028-01';
+} from '../js/features/lightbox/foil-interaction.js?v=20261028-02';
 
 const mediaQueryView = (innerWidth, options = {}) => ({
   innerWidth,
