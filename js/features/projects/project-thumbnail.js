@@ -112,10 +112,16 @@ function registerThumbnailMediaState(media, {
   let activationFrameId = null;
   let activationFrameIsTimer = false;
   let activationScheduled = false;
+  let viewportRevealFrameId = null;
   let lottieGeneration = 0;
 
   const clearLoadTimers = () => {
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
+  };
+  const clearViewportRevealFrame = () => {
+    if (viewportRevealFrameId === null) return;
+    try { windowRef?.cancelAnimationFrame?.(viewportRevealFrameId); } catch (_) {}
+    viewportRevealFrameId = null;
   };
   let fallbackAttachTimer = null;
   let fallbackAttachObserver = null;
@@ -551,11 +557,30 @@ function registerThumbnailMediaState(media, {
       const requestedVisible = Boolean(visible);
       const isVisible = requestedVisible &&
         (!observers?.visibility || isInsideThumbnailRevealBand(media, windowRef));
+      if (!isVisible) clearViewportRevealFrame();
       media.dataset.mediaVisible = isVisible ? 'true' : 'false';
       if (isVisible) {
-        // A ready image may finish decoding before it enters the viewport.
-        // Clear this one-time gate to let the existing reveal transition run.
-        delete media.dataset.viewportReveal;
+        // Layout can still settle after IntersectionObserver delivers its first
+        // positive entry (cards may have been observed while being assembled).
+        // Release the one-time reveal gate on the next frame only if the media
+        // is still in the actual viewport band; otherwise keep it pending.
+        if (media.hasAttribute?.('data-viewport-reveal') && observers?.visibility && !reducedMotion) {
+          if (viewportRevealFrameId === null) {
+            const requestFrame = windowRef?.requestAnimationFrame?.bind(windowRef);
+            if (requestFrame) {
+              viewportRevealFrameId = requestFrame(() => {
+                viewportRevealFrameId = null;
+                if (disposed || media.dataset.mediaVisible !== 'true') return;
+                if (!isInsideThumbnailRevealBand(media, windowRef)) return;
+                delete media.dataset.viewportReveal;
+              });
+            } else if (isInsideThumbnailRevealBand(media, windowRef)) {
+              delete media.dataset.viewportReveal;
+            }
+          }
+        } else {
+          delete media.dataset.viewportReveal;
+        }
         if (!usesViewportLifecycle) return;
         state.activate();
         if (reducedMotion) {
@@ -586,6 +611,7 @@ function registerThumbnailMediaState(media, {
       disposed = true;
       state.disposed = true;
       clearLoadTimers();
+      clearViewportRevealFrame();
       if (activationFrameId !== null) {
         if (activationFrameIsTimer) clearTimer?.(activationFrameId);
         else windowRef?.cancelAnimationFrame?.(activationFrameId);
