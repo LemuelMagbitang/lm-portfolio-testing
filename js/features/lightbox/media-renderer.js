@@ -945,6 +945,7 @@ export function createLightboxMediaRenderer({
     surface.style.setProperty('--holo-rx', '0deg');
     surface.style.setProperty('--holo-ry', '0deg');
     surface.style.setProperty('--holo-angle', '0deg');
+    surface.style.setProperty('--holo-rotation', '0deg');
     surface.tabIndex = 0;
     surface.setAttribute('role', 'button');
     surface.setAttribute('aria-label', project.title
