@@ -59,6 +59,7 @@ assert.match(normalRenderer, /drawTimer/);
 assert.match(normalRenderer, /u_mapCount>1\.5/);
 assert.match(styles, /rotateZ\(var\(--holo-rotation,0deg\)\)/);
 assert.match(styles, /@media\s*\(max-width:760px\),\s*\(hover:none\) and \(pointer:coarse\)/);
+assert.match(styles, /@media\s*\(any-hover:none\) and \(pointer:coarse\)/);
 assert.match(styles, /TAP TO FLIP/);
 
 console.log('Holographic foil responsive intensity and interaction contract validated.');
