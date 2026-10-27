@@ -20,12 +20,15 @@ const legacyRootModules = new Set([
   'media-background.js'
 ]);
 
-// Stateful infrastructure modules must resolve to one browser module identity.
-// Different query strings create different ES module instances, which can split
-// singleton state such as in-flight loaders/caches across otherwise identical
-// imports. Keep the canonical cache key here so future imports cannot silently
-// reintroduce that class of runtime duplication.
+// Runtime modules must keep one canonical cache key across source imports,
+// contract tests, public-page scripts, and modulepreload links. Different query
+// strings create separate ES module instances and can split singleton state or
+// cause a preload and the eventual import to download the same module twice.
 const canonicalModuleQueries = new Map([
+  ['script.js', '?v=20261028-03'],
+  ['app/bootstrap.js', '?v=20261028-03'],
+  ['app/page-composition.js', '?v=20261028-03'],
+  ['infrastructure/three/model-viewer.js', '?v=20261024-02'],
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261027-05'],
   ['infrastructure/browser/media-contrast.js', '?v=20261026-02'],
@@ -191,6 +194,18 @@ for (const htmlPath of publicHtmlEntrypoints) {
     if (!resourceUrl || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(resourceUrl)) continue;
     const resourcePath = resourceUrl.split(/[?#]/)[0].replace(/\\/g, '/');
     const resolvedPath = path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath.replaceAll(path.sep, '/')), resourcePath));
+    const canonicalModulePath = resolvedPath.startsWith('js/') ? resolvedPath.slice(3) : resolvedPath;
+    const expectedModuleQuery = canonicalModuleQueries.get(canonicalModulePath);
+    if (expectedModuleQuery) {
+      const queryMarker = resourceUrl.indexOf('?');
+      const actualModuleQuery = queryMarker < 0
+        ? ''
+        : `?${resourceUrl.slice(queryMarker + 1).split('#')[0]}`;
+      if (actualModuleQuery !== expectedModuleQuery) {
+        errors.push(`${htmlPath} references ${canonicalModulePath} with cache key ${actualModuleQuery || '(none)'}; expected ${expectedModuleQuery}`);
+      }
+    }
+
     if (resolvedPath.startsWith('admin/') && /\.m?js$/i.test(resolvedPath)) {
       errors.push(`${htmlPath} loads CMS implementation script ${resourceUrl}; public pages must not load admin code`);
     }
