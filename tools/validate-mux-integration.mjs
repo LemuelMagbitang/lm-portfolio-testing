@@ -186,6 +186,10 @@ check(!/Website Placements|Website placement/i.test(page + script) &&
   script.includes('method:"PATCH"') && script.includes('"/unpublish"'),
   "The Mux media library must not expose website placement controls and must support editing/unpublishing.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
+check(script.includes('payload?.code==="mux_api_timeout"') &&
+  script.includes('payload?.code==="mux_api_unconfirmed"') &&
+  script.includes("refresh the asset state before retrying"),
+  "The video CMS must give actionable guidance when a Mux upload outcome is ambiguous.");
 const uploadRoute = admin.split('route[4] === "upload") {')[1]?.split('if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "unpublish")')[0] || "";
 check(uploadRoute.includes("const uploadAttemptId = crypto.randomUUID()") &&
   uploadRoute.includes('.eq("upload_state", currentUploadState)') &&
