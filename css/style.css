@@ -2034,7 +2034,7 @@ body.center-page {
   position:absolute;
   inset:0;
   transform-style:preserve-3d;
-  transform:perspective(1200px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg));
+  transform:perspective(1200px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) rotateZ(var(--holo-rotation,0deg));
   /* Pointer easing is performed with requestAnimationFrame in the renderer. */
   will-change:transform;
 }
@@ -5112,7 +5112,7 @@ footer > .footer-content p{
    normal vertical scroll/swipe gesture. */
 @media (pointer:coarse){
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before{
-    content:'HOLD + MOVE';
+    content:'TAP TO FLIP';
     top:10px;
     right:10px;
     font-size:8px;
@@ -5680,7 +5680,7 @@ footer > .footer-content p{
    Environmental shading follows the exact same alpha/custom mask as the art,
    so transparent artwork keeps its silhouette and no outer frame is introduced. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner{
-  transform:perspective(900px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) translateZ(9px);
+  transform:perspective(900px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg)) rotateZ(var(--holo-rotation,0deg)) translateZ(9px);
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-environment{
   position:absolute; inset:0; z-index:27; margin:0; border:0; pointer-events:none;
@@ -6582,4 +6582,37 @@ body.menu-open .hamburger-icon span {
   #lightboxMediaContainer .lightbox-media-fallback[data-preview="true"] .lightbox-media-fallback-image,
   #lightboxMediaContainer .lightbox-media-fallback.is-preview-exiting{transition:none!important;transform:none!important;}
   #lightboxMediaContainer .lightbox-artwork.is-media-awaiting-viewport{opacity:1!important;transform:none!important;filter:none!important;}
+}
+
+
+/* Compact foil presentation: retain the artwork/foil layers, but stop idle
+   animation and promoted layers that provide no benefit on touch-first screens. */
+@media (max-width:760px), (hover:none) and (pointer:coarse) {
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-cosmos-layer,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-grain-layer,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-glitter-layer {
+    animation:none!important;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before {
+    content:'TAP TO FLIP';
+    top:10px;
+    right:10px;
+    font-size:8px;
+    letter-spacing:.11em;
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic {
+    will-change:auto;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-flip {
+    will-change:auto;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen {
+    transform:none!important;
+  }
 }
