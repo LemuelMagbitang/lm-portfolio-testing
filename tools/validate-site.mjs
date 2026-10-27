@@ -2045,7 +2045,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !hero.includes('function getPlaybackErrorDetails(media, event = null)') ||
       !hero.includes('function scheduleNetworkRetry(slide, media, event = null)') ||
       !hero.includes("details.networkState === 3") ||
-      !hero.includes("media.dataset.networkRetryReason = details.mediaErrorCode === 2 ? 'network-error' : 'mux-no-source'") ||
+      !hero.includes("details.mediaErrorCode === 4 ? 'mux-unsupported-source' : 'mux-no-source'") ||
       !smoke.includes('Mux hero no-source errors must trigger one bounded recovery attempt') ||
       !hero.includes("recovery: recoveryScheduled ? 'retry-scheduled' : 'awaiting-reconnect-or-gesture'") ||
       !smoke.includes('Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image') ||
