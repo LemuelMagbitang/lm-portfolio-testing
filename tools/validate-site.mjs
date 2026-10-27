@@ -2071,7 +2071,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
   }
 
   if (!hasVersionedReference(entry, 'bootstrap.js') ||
-      !/cacheVersion\\s*=\\s*'[^']+'/.test(bootstrap) ||
+      !/cacheVersion\s*=\s*'[^']+'/.test(bootstrap) ||
       !hasVersionedReference(composition, 'navigation/index.js') ||
       !hasVersionedReference(composition, 'about/index.js') ||
       !hasVersionedReference(composition, 'hero/index.js') ||
@@ -2467,12 +2467,12 @@ function validateReducedMotionThumbnailContract() {
     : '';
   const styles = exists('css/style.css') ? readText('css/style.css') : '';
 
-  const projectThumbnailVersion = projectCard.match(/project-thumbnail\\.js\\?v=([^'"]+)/)?.[1] || '';
-  const smokeProjectThumbnailVersions = [...smoke.matchAll(/project-thumbnail\\.js\\?v=([^'"]+)/g)]
+  const projectThumbnailVersion = projectCard.match(/project-thumbnail\.js\?v=([^'"]+)/)?.[1] || '';
+  const smokeProjectThumbnailVersions = [...smoke.matchAll(/project-thumbnail\.js\?v=([^'"]+)/g)]
     .map(match => match[1]);
-  const thumbnailAssetPreviewVersion = thumbnail.match(/asset-preview\\.js\\?v=([^'"]+)/)?.[1] || '';
-  const lightboxAssetPreviewVersion = mediaRenderer.match(/asset-preview\\.js\\?v=([^'"]+)/)?.[1] || '';
-  const smokeAssetPreviewVersion = smoke.match(/asset-preview\\.js\\?v=([^'"]+)/)?.[1] || '';
+  const thumbnailAssetPreviewVersion = thumbnail.match(/asset-preview\.js\?v=([^'"]+)/)?.[1] || '';
+  const lightboxAssetPreviewVersion = mediaRenderer.match(/asset-preview\.js\?v=([^'"]+)/)?.[1] || '';
+  const smokeAssetPreviewVersion = smoke.match(/asset-preview\.js\?v=([^'"]+)/)?.[1] || '';
 
   if (!projectThumbnailVersion || !smokeProjectThumbnailVersions.length ||
       smokeProjectThumbnailVersions.some(version => version !== projectThumbnailVersion)) {
