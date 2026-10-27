@@ -2,6 +2,7 @@ export const COMPACT_FOIL_MAX_INTENSITY = 0.10;
 export const FOIL_MAX_EDGE_ROTATION_DEG = 13.5;
 const NARROW_FOIL_BREAKPOINT = 760;
 const EDGE_ROTATION_START = 0.62;
+const EDGE_ROTATION_MAX_RADIUS = 0.98;
 
 function mediaMatches(view, query) {
   try {
@@ -45,7 +46,10 @@ export function getFoilEdgeRotation(xPercent, yPercent, direction = 1, maxRotati
   const x = Math.max(0, Math.min(100, Number(xPercent) || 0));
   const y = Math.max(0, Math.min(100, Number(yPercent) || 0));
   const radius = Math.min(1, Math.hypot((x - 50) / 50, (y - 50) / 50));
-  const progress = Math.max(0, Math.min(1, (radius - EDGE_ROTATION_START) / (1 - EDGE_ROTATION_START)));
+  // The surface is projected in 3D and has a subtle idle pose, so a real
+  // pointer at its visual outer edge may map a few pixels inside the AABB.
+  // Saturate in that narrow edge band instead of requiring an impossible 100%.
+  const progress = Math.max(0, Math.min(1, (radius - EDGE_ROTATION_START) / (EDGE_ROTATION_MAX_RADIUS - EDGE_ROTATION_START)));
   if (progress <= 0) return 0;
   const sign = Number(direction) < 0 ? -1 : 1;
   const limit = Math.max(0, Number(maxRotation) || 0);
