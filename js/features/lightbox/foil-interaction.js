@@ -49,7 +49,7 @@ export function getFoilPointerPose(xPercent, yPercent) {
   const y = Math.max(0, Math.min(100, Number(yPercent) || 0));
   const nx = (x - 50) / 50;
   const ny = (y - 50) / 50;
-  const round = value => Math.round(value * 1000) / 1000;
+  const round = value => { const rounded = Math.round(value * 1000) / 1000; return Object.is(rounded, -0) ? 0 : rounded; };
   return {
     x, y,
     rx: round(-ny * FOIL_MAX_HOVER_TILT_DEG),
@@ -63,7 +63,7 @@ export function getFoilPointerPose(xPercent, yPercent) {
 /** Gentle deterministic touch-only parallax; caller throttles updates to ~30 FPS. */
 export function getFoilAutoPose(elapsedSeconds = 0) {
   const time = Math.max(0, Number(elapsedSeconds) || 0);
-  const round = value => Math.round(value * 1000) / 1000;
+  const round = value => { const rounded = Math.round(value * 1000) / 1000; return Object.is(rounded, -0) ? 0 : rounded; };
   return {
     x: round(50 + 9 * Math.sin(time * 0.42)),
     y: round(50 + 6 * Math.sin(time * 0.34)),
