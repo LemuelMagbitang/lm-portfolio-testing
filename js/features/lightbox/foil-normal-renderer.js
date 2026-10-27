@@ -1,3 +1,5 @@
+import { isCompactFoilTarget, resolveFoilIntensity } from './foil-interaction.js?v=20261027-01';
+
 /**
  * Per-pixel holographic foil relief.
  * Grayscale source maps become height fields whose slopes are blended into a
@@ -38,29 +40,40 @@ void main(){
   vec2 tileUV=fract(v_uv*u_uvScale);
   vec2 step0=u_texel0*u_uvScale,step1=u_texel1*u_uvScale;
   vec2 step2=u_texel2*u_uvScale,step3=u_texel3*u_uvScale;
-  vec4 c0=texture2D(u_map0,tileUV),c1=texture2D(u_map1,tileUV);
-  vec4 c2=texture2D(u_map2,tileUV),c3=texture2D(u_map3,tileUV);
   float w1=step(1.5,u_mapCount),w2=step(2.5,u_mapCount),w3=step(3.5,u_mapCount);
+  vec4 c0=texture2D(u_map0,tileUV);
+  vec4 c1=vec4(0.0),c2=vec4(0.0),c3=vec4(0.0);
+  if(u_mapCount>1.5)c1=texture2D(u_map1,tileUV);
+  if(u_mapCount>2.5)c2=texture2D(u_map2,tileUV);
+  if(u_mapCount>3.5)c3=texture2D(u_map3,tileUV);
   float h0L=heightAt0(tileUV-vec2(step0.x,0.0)),h0R=heightAt0(tileUV+vec2(step0.x,0.0));
   float h0U=heightAt0(tileUV+vec2(0.0,step0.y)),h0D=heightAt0(tileUV-vec2(0.0,step0.y));
-  float h1L=heightAt1(tileUV-vec2(step1.x,0.0)),h1R=heightAt1(tileUV+vec2(step1.x,0.0));
-  float h1U=heightAt1(tileUV+vec2(0.0,step1.y)),h1D=heightAt1(tileUV-vec2(0.0,step1.y));
-  float h2L=heightAt2(tileUV-vec2(step2.x,0.0)),h2R=heightAt2(tileUV+vec2(step2.x,0.0));
-  float h2U=heightAt2(tileUV+vec2(0.0,step2.y)),h2D=heightAt2(tileUV-vec2(0.0,step2.y));
-  float h3L=heightAt3(tileUV-vec2(step3.x,0.0)),h3R=heightAt3(tileUV+vec2(step3.x,0.0));
-  float h3U=heightAt3(tileUV+vec2(0.0,step3.y)),h3D=heightAt3(tileUV-vec2(0.0,step3.y));
   vec2 s0=vec2(h0L-h0R,h0D-h0U)*3.2;
-  vec2 s1=vec2(h1L-h1R,h1D-h1U)*3.2;
-  vec2 s2=vec2(h2L-h2R,h2D-h2U)*3.2;
-  vec2 s3=vec2(h3L-h3R,h3D-h3U)*3.2;
+  vec2 s1=vec2(0.0),s2=vec2(0.0),s3=vec2(0.0);
+  if(u_mapCount>1.5){
+    float h1L=heightAt1(tileUV-vec2(step1.x,0.0)),h1R=heightAt1(tileUV+vec2(step1.x,0.0));
+    float h1U=heightAt1(tileUV+vec2(0.0,step1.y)),h1D=heightAt1(tileUV-vec2(0.0,step1.y));
+    s1=vec2(h1L-h1R,h1D-h1U)*3.2;
+  }
+  if(u_mapCount>2.5){
+    float h2L=heightAt2(tileUV-vec2(step2.x,0.0)),h2R=heightAt2(tileUV+vec2(step2.x,0.0));
+    float h2U=heightAt2(tileUV+vec2(0.0,step2.y)),h2D=heightAt2(tileUV-vec2(0.0,step2.y));
+    s2=vec2(h2L-h2R,h2D-h2U)*3.2;
+  }
+  if(u_mapCount>3.5){
+    float h3L=heightAt3(tileUV-vec2(step3.x,0.0)),h3R=heightAt3(tileUV+vec2(step3.x,0.0));
+    float h3U=heightAt3(tileUV+vec2(0.0,step3.y)),h3D=heightAt3(tileUV-vec2(0.0,step3.y));
+    s3=vec2(h3L-h3R,h3D-h3U)*3.2;
+  }
   vec3 normal=blendFoilNormals(s0,s1,s2,s3,w1,w2,w3);
   float cv0=luminance(c0),cv1=luminance(c1)*w1,cv2=luminance(c2)*w2,cv3=luminance(c3)*w3;
   float coverage=max(cv0,max(cv1,max(cv2,cv3)));
   if(coverage<0.008||u_intensity<=0.001){gl_FragColor=vec4(0.0);return;}
   float e0=max(abs(h0L-h0R),abs(h0U-h0D));
-  float e1=max(abs(h1L-h1R),abs(h1U-h1D))*w1;
-  float e2=max(abs(h2L-h2R),abs(h2U-h2D))*w2;
-  float e3=max(abs(h3L-h3R),abs(h3U-h3D))*w3;
+  float e1=0.0,e2=0.0,e3=0.0;
+  if(u_mapCount>1.5){e1=max(abs(heightAt1(tileUV-vec2(step1.x,0.0))-heightAt1(tileUV+vec2(step1.x,0.0))),abs(heightAt1(tileUV+vec2(0.0,step1.y))-heightAt1(tileUV-vec2(0.0,step1.y))))*w1;}
+  if(u_mapCount>2.5){e2=max(abs(heightAt2(tileUV-vec2(step2.x,0.0))-heightAt2(tileUV+vec2(step2.x,0.0))),abs(heightAt2(tileUV+vec2(0.0,step2.y))-heightAt2(tileUV-vec2(0.0,step2.y))))*w2;}
+  if(u_mapCount>3.5){e3=max(abs(heightAt3(tileUV-vec2(step3.x,0.0))-heightAt3(tileUV+vec2(step3.x,0.0))),abs(heightAt3(tileUV+vec2(0.0,step3.y))-heightAt3(tileUV-vec2(0.0,step3.y))))*w3;}
   float edge=clamp(max(e0,max(e1,max(e2,e3)))*3.1,0.0,1.0);
   vec3 L=normalize(vec3((u_light.x-v_uv.x)*1.7,(u_light.y-v_uv.y)*1.7,0.82));
   vec3 V=vec3(0.0,0.0,1.0),H=normalize(L+V);
@@ -84,12 +97,12 @@ const MOBILE_DRAW_INTERVAL_MS = 32;
 export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase=0.18,uvScale=1}={}){
   if(!canvas?.getContext)return NOOP;
   const documentRef=canvas.ownerDocument||globalThis.document,view=documentRef?.defaultView||globalThis.window;
-  const compactTarget = Boolean(view?.matchMedia?.('(pointer: coarse)')?.matches) || (Number(view?.innerWidth) > 0 && Number(view.innerWidth) <= 700);
+  const compactTarget = isCompactFoilTarget(view);
   let gl=null;
   try{gl=canvas.getContext('webgl',{alpha:true,antialias:false,depth:false,premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:'low-power'})||canvas.getContext('experimental-webgl');}catch(_){}
   if(!gl){canvas.dataset.normalMapStatus='unsupported';return NOOP;}
   let disposed=false,ready=false,textures=[],loadedImages=[],pendingImageCancels=new Set(),resizeObserver=null,width=0,height=0,lightX=0.34,lightY=0.74,lastDrawTime=null;
-  const level=Math.max(0,Math.min(1,Number(intensity)||0));
+  const level=resolveFoilIntensity(intensity,compactTarget);
   const mapUrls=Array.from(new Set((patternUrls||[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,4);
   canvas.dataset.normalMapPatternCount=String(mapUrls.length);
   canvas.dataset.normalMapStatus='loading';
@@ -131,6 +144,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     return NOOP;
   }
   let drawFrame = null;
+  let drawTimer = null;
   function drawNow(){
     if(disposed||!ready||!uniform)return;
     const rect=canvas.getBoundingClientRect();if(!(rect.width>0&&rect.height>0))return;
@@ -148,27 +162,41 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     for(let i=0;i<4;i++){gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,textures[i]);const image=loadedImages[i];if(image)gl.uniform2f(uniform.texels[i],1/Math.max(1,image.naturalWidth||image.width),1/Math.max(1,image.naturalHeight||image.height));}
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   }
-  // Coalesce high-frequency pointer/touch/resize events to at most one GPU
-  // draw per animation frame instead of synchronously repainting each event.
+  const scheduleDrawTimer = delay => {
+    if(drawTimer!==null)return;
+    const setTimer=typeof view?.setTimeout==='function'?view.setTimeout.bind(view):globalThis.setTimeout;
+    drawTimer=setTimer(()=>{
+      drawTimer=null;
+      draw();
+    },Math.max(1,delay));
+  };
+  // Coalesce input to one draw request, then use a timer to enforce the compact
+  // target's ~30 FPS ceiling instead of spinning requestAnimationFrame until
+  // the interval expires. The next draw always uses the latest light position.
   function draw(){
-    if(disposed||!ready||!uniform||drawFrame!==null)return;
+    if(disposed||!ready||!uniform||drawFrame!==null||drawTimer!==null)return;
     const requestFrame=view?.requestAnimationFrame;
-    if(typeof requestFrame!=='function'){drawNow();return;}
-    const renderFrame=timestamp=>{
-      if(disposed){drawFrame=null;return;}
-      const now=Number.isFinite(timestamp)?timestamp:(view?.performance?.now?.()??Date.now());
-      // Keep shader redraws near 30 FPS on touch-first devices. CSS reflection and
-      // card tilt still ease at display refresh rate, while the expensive relief
-      // pass reuses the latest light position instead of shading every frame.
+    if(typeof requestFrame!=='function'){
+      const now=view?.performance?.now?.()??Date.now();
       if(compactTarget&&lastDrawTime!==null&&now-lastDrawTime<MOBILE_DRAW_INTERVAL_MS){
-        drawFrame=requestFrame.call(view,renderFrame);
+        scheduleDrawTimer(MOBILE_DRAW_INTERVAL_MS-(now-lastDrawTime));
         return;
       }
-      drawFrame=null;
       lastDrawTime=now;
       drawNow();
-    };
-    drawFrame=requestFrame.call(view,renderFrame);
+      return;
+    }
+    drawFrame=requestFrame.call(view,timestamp=>{
+      drawFrame=null;
+      if(disposed)return;
+      const now=Number.isFinite(timestamp)?timestamp:(view?.performance?.now?.()??Date.now());
+      if(compactTarget&&lastDrawTime!==null&&now-lastDrawTime<MOBILE_DRAW_INTERVAL_MS){
+        scheduleDrawTimer(MOBILE_DRAW_INTERVAL_MS-(now-lastDrawTime));
+        return;
+      }
+      lastDrawTime=now;
+      drawNow();
+    });
   }
   const handleResize=()=>draw(),RO=view?.ResizeObserver;
   if(typeof RO==='function'){resizeObserver=new RO(handleResize);resizeObserver.observe(canvas);}else view?.addEventListener?.('resize',handleResize,{passive:true});
@@ -213,6 +241,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
       if(disposed)return;
       disposed=true;ready=false;
       if(drawFrame!==null){try{view?.cancelAnimationFrame?.(drawFrame);}catch(_){}drawFrame=null;}
+      if(drawTimer!==null){try{(view?.clearTimeout||globalThis.clearTimeout).call(view||globalThis,drawTimer);}catch(_){}drawTimer=null;}
       resizeObserver?.disconnect();view?.removeEventListener?.('resize',handleResize);
       for(const cancelLoad of [...pendingImageCancels]){try{cancelLoad();}catch(_){}}
       pendingImageCancels.clear();
