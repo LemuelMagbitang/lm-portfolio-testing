@@ -3888,7 +3888,7 @@ try {
           uploadedArtContract.defaultBackMirrored !== usesFrontAsBack ||
           !uploadedArtContract.backSrc.includes('funko-pop-sticker/') ||
           !uploadedArtContract.centeredHint || !uploadedArtContract.hintAfterArtwork || !uploadedArtContract.hintBeforeCaption ||
-          !uploadedArtContract.desktopActionText.includes('CLICK / MOVE') ||
+          !uploadedArtContract.desktopActionText.includes('HOVER EDGE / CLICK') ||
           uploadedArtContract.desktopActionDisplay === 'none' ||
           uploadedArtContract.surfaceIdleAnimation !== 'holo-idle-float' ||
           uploadedArtContract.sheenDisplay === 'none' ||
@@ -4121,7 +4121,7 @@ try {
           !inspectorPresentation.hintInFooter ||
           !inspectorPresentation.hintBeforeDescription ||
           inspectorPresentation.face !== 'FRONT' ||
-          inspectorPresentation.action !== 'CLICK / MOVE' ||
+          inspectorPresentation.action !== 'HOVER EDGE / CLICK' ||
           !inspectorPresentation.backIcon ||
           !inspectorPresentation.backLabel ||
           inspectorPresentation.backWidth < 44 ||
