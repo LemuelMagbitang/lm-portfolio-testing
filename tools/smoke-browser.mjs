@@ -1829,6 +1829,41 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
               }));
               throw new Error(label + ': Mux hero no-source errors must trigger one bounded recovery attempt: ' + JSON.stringify(state));
             }
+
+            const loadCountBeforeRestore = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => {
+              const count = Number(media._loadCount) || 0;
+              // Simulate a BFCache return where the player preserves a stale
+              // state label but the HLS source is no longer attached/ready.
+              media.dataset.networkRetryCount = '';
+              media.dataset.networkRetryReason = '';
+              media.dataset.playbackState = 'playing';
+              media.networkState = 3;
+              media.readyState = 0;
+              media.error = null;
+              media.paused = true;
+              return count;
+            });
+            await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+            const restoredStreamRecovered = await page.waitForFunction(previousLoadCount => {
+              const media = document.querySelector('#heroBanner .slide.active mux-video');
+              return media &&
+                Number(media._loadCount) > previousLoadCount &&
+                media.networkState !== 3 &&
+                media.dataset.playbackState === 'playing' &&
+                !media.paused &&
+                Number(media.currentTime) > 0.05;
+            }, loadCountBeforeRestore, { timeout: 3500 }).then(() => true).catch(() => false);
+            if (!restoredStreamRecovered) {
+              const state = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => ({
+                networkState: Number(media.networkState) || 0,
+                readyState: Number(media.readyState) || 0,
+                loadCount: Number(media._loadCount) || 0,
+                currentTime: Number(media.currentTime) || 0,
+                paused: Boolean(media.paused),
+                playbackState: media.dataset.playbackState || ''
+              }));
+              throw new Error(label + ': Mux HLS hero must recover after pageshow when its restored player is paused/no-source: ' + JSON.stringify(state));
+            }
           }
         } else if (videoContract.activeType === 'video') {
           throw new Error(label + ': video hero media was not rendered as a media element.');
