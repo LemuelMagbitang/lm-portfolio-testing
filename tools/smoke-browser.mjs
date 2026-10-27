@@ -5543,7 +5543,7 @@ try {
         const pointerBox = await holographic.boundingBox();
         if (!pointerBox) throw new Error('Desktop holographic surface lost its geometry after hover settled.');
         const pointerEdgeY = pointerBox.y + pointerBox.height * 0.5;
-        await page.mouse.move(pointerBox.x + pointerBox.width - 0.1, pointerEdgeY);
+        await page.mouse.move(pointerBox.x + pointerBox.width - 10, pointerEdgeY);
         try {
           await page.waitForFunction(() => {
             const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
@@ -5577,7 +5577,7 @@ try {
           throw new Error('Pointer edge did not produce the artwork instance’s maximum signed rotation: ' +
             JSON.stringify({ pointerContract, rightEdgePose, expectedRotation }));
         }
-        await page.mouse.move(pointerBox.x + 0.1, pointerEdgeY);
+        await page.mouse.move(pointerBox.x + 10, pointerEdgeY);
         await page.waitForFunction(expected => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
           if (!el) return false;
@@ -5626,7 +5626,7 @@ try {
         }, null, { timeout: 1500 });
         const compactResizeBox = await holographic.boundingBox();
         if (!compactResizeBox) throw new Error('Compact-resize foil fixture lost its geometry.');
-        await page.mouse.move(compactResizeBox.x + compactResizeBox.width - 0.1, compactResizeBox.y + compactResizeBox.height / 2);
+        await page.mouse.move(compactResizeBox.x + compactResizeBox.width - 4, compactResizeBox.y + compactResizeBox.height / 2);
         await page.waitForFunction(() => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
           if (!el) return false;
