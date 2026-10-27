@@ -9459,13 +9459,18 @@ try {
       }
       await page.locator('#aboutHeadline').waitFor({ state: 'visible', timeout: 5000 });
 
-      // Cover the reported real journey, not only a synthetic pageshow event:
-      // Works -> About -> browser Back -> restored Works hero playback.
+      // Cover the reported real navigation journey, not only a synthetic
+      // pageshow event: Works -> About -> select Designs -> active hero playback.
+      await page.locator('.hamburger').first().click();
+      const designsLink = page.locator('.nav-links a[href="../"]').first();
+      if (await designsLink.count() !== 1) {
+        throw new Error('About-to-Works playback regression cannot find the Designs navigation link.');
+      }
       const returnedToWorks = page.waitForURL(
         url => url.pathname === '/' || url.pathname === '/index.html',
         { timeout: 8000 }
       );
-      await page.goBack({ waitUntil: 'commit', timeout: 8000 });
+      await designsLink.click();
       await returnedToWorks;
 
       await page.waitForFunction(() => {
