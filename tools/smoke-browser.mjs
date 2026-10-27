@@ -5599,7 +5599,8 @@ try {
           const roll = Number.parseFloat(el.style.getPropertyValue('--holo-rotation'));
           return Math.abs(x - 50) < 0.15 && Math.abs(y - 50) < 0.15 && Math.abs(roll) < 0.15;
         }, null, { timeout: 1800 });
-        await holographic.click();
+        // The foil remains intentionally animated; force bypasses Playwright's stability wait while still exercising the real click handler.
+        await holographic.click({ force: true });
         const desktopFlipped = await holographic.evaluate(el => ({
           flipped: el.classList.contains('is-flipped'),
           pressed: el.getAttribute('aria-pressed')
@@ -5607,7 +5608,7 @@ try {
         if (!desktopFlipped.flipped || desktopFlipped.pressed !== 'true') {
           throw new Error('Desktop foil edge interaction broke click-to-flip: ' + JSON.stringify(desktopFlipped));
         }
-        await holographic.click();
+        await holographic.click({ force: true });
         const desktopFront = await holographic.evaluate(el => ({
           flipped: el.classList.contains('is-flipped'),
           pressed: el.getAttribute('aria-pressed')
@@ -5796,7 +5797,7 @@ try {
           throw new Error('Holographic Lightbox did not reuse the front artwork when no custom back image is configured.');
         }
 
-        await holographic.click();
+        await holographic.click({ force: true });
         if (await holographic.getAttribute('aria-pressed') !== 'true' ||
             !(await holographic.evaluate(el => el.classList.contains('is-flipped')))) {
           throw new Error('Holographic Lightbox tap/click did not flip the artwork.');
