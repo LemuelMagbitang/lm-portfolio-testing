@@ -174,7 +174,7 @@ async function configureLogoRoutes(page) {
           set poster(value) { if (value) this.setAttribute('poster', value); else this.removeAttribute('poster'); }
           play() { this._paused = false; this._currentTime += 0.1; this.dispatchEvent(new Event('playing')); return Promise.resolve(); }
           pause() { this._paused = true; this.dispatchEvent(new Event('pause')); }
-          load() { this._loadCount += 1; this._readyState = 4; this._networkState = 1; }
+          load() { this._loadCount += 1; this._readyState = 4; this._networkState = 1; this._error = null; }
         }
         customElements.define('mux-video', MockMuxVideo);
       }
@@ -1828,6 +1828,46 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
                 retryReason: media.dataset.networkRetryReason || ''
               }));
               throw new Error(label + ': Mux hero no-source errors must trigger one bounded recovery attempt: ' + JSON.stringify(state));
+            }
+
+            const unsupportedLoadState = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => {
+              const playbackId = media.getAttribute('playback-id') || '';
+              if (!playbackId) throw new Error('Mux code-4 recovery fixture has no playback ID to reinitialize.');
+              const loadCount = Number(media._loadCount) || 0;
+              media.dataset.networkRetryCount = '';
+              media.dataset.networkRetryReason = '';
+              media.networkState = 3;
+              media.readyState = 0;
+              media.error = { code: 4, message: '' };
+              media.paused = true;
+              media.dispatchEvent(new Event('error'));
+              return { playbackId, loadCount };
+            });
+            const unsupportedSourceRecovered = await page.waitForFunction(({ playbackId, loadCount }) => {
+              const media = document.querySelector('#heroBanner .slide.active mux-video');
+              return media &&
+                Number(media._loadCount) > loadCount &&
+                media.getAttribute('playback-id') === playbackId &&
+                media.dataset.networkRetryCount === '1' &&
+                media.dataset.networkRetryReason === 'mux-unsupported-source' &&
+                media.dataset.playbackState === 'playing' &&
+                !media.paused &&
+                Number(media.currentTime) > 0.05;
+            }, unsupportedLoadState, { timeout: 3500 }).then(() => true).catch(() => false);
+            if (!unsupportedSourceRecovered) {
+              const state = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => ({
+                playbackIdPresent: Boolean(media.getAttribute('playback-id')),
+                networkState: Number(media.networkState) || 0,
+                readyState: Number(media.readyState) || 0,
+                error: media.error ? { code: Number(media.error.code) || null, message: String(media.error.message || '') } : null,
+                loadCount: Number(media._loadCount) || 0,
+                currentTime: Number(media.currentTime) || 0,
+                paused: Boolean(media.paused),
+                playbackState: media.dataset.playbackState || '',
+                retryCount: media.dataset.networkRetryCount || '',
+                retryReason: media.dataset.networkRetryReason || ''
+              }));
+              throw new Error(label + ': Mux code-4/NO_SOURCE errors must reset the playback source and trigger one bounded recovery attempt: ' + JSON.stringify(state));
             }
 
             const loadCountBeforeRestore = await page.locator('#heroBanner .slide.active mux-video').evaluate(media => {

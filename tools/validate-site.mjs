@@ -2034,6 +2034,7 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
       !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
       !smoke.includes('hero video did not resume after a real interaction') ||
+      !smoke.includes('Mux code-4/NO_SOURCE errors must reset the playback source and trigger one bounded recovery attempt') ||
       !hero.includes("media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');") ||
       !hero.includes('if (!reducedMotion) media.src = resolveAssetUrl(source.src);') ||
       !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
