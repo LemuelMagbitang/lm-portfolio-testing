@@ -295,7 +295,7 @@ assert.ok(
   'Foil redraws should be frame-coalesced and pending animation frames cancelled on teardown.'
 );
 assert.ok(
-  foilNormalRendererSource.includes('const compactTarget = isCompactFoilTarget(view)') &&
+  foilNormalRendererSource.includes('let compactTarget = isCompactFoilTarget(view)') &&
   foilNormalRendererSource.includes('compactTarget?0.58:0.85') &&
   foilNormalRendererSource.includes('const maxSide=compactTarget?640:1024') &&
   foilNormalRendererSource.includes('MOBILE_DRAW_INTERVAL_MS = 32') &&
