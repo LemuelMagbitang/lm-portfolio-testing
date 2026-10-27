@@ -24,8 +24,8 @@ function readText(file) {
 }
 
 function hasVersionedReference(source, assetPath) {
-  const escapedPath = String(assetPath).replace(/[.*+?^${}()|[\]\\]/g, '\\function readText(file) {
-  return fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const escapedPath = String(assetPath).replaceAll('.', '\\.');
+  return new RegExp(escapedPath + "\\?v=[^'\"\\s>]+").test(String(source || ''));
 }
 
 function exists(file) {');
