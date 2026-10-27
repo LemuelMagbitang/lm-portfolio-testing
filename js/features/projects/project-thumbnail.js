@@ -38,6 +38,20 @@ const MEDIA_SLOW_LOAD_TIMEOUT_MS = 12000;
 const thumbnailMediaStateByElement = new WeakMap();
 const thumbnailViewportObserversByWindow = new WeakMap();
 
+function isInsideThumbnailRevealBand(media, windowRef) {
+  const viewportHeight = Number(windowRef?.innerHeight) ||
+    Number(windowRef?.document?.documentElement?.clientHeight) || 0;
+  const viewportWidth = Number(windowRef?.innerWidth) ||
+    Number(windowRef?.document?.documentElement?.clientWidth) || 0;
+  if (viewportHeight <= 0 && viewportWidth <= 0) return true;
+  if (media?.isConnected === false) return false;
+  const rect = media?.getBoundingClientRect?.();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return false;
+  if (viewportHeight > 0 && (rect.bottom <= 24 || rect.top >= viewportHeight - 24)) return false;
+  if (viewportWidth > 0 && (rect.right <= 0 || rect.left >= viewportWidth)) return false;
+  return true;
+}
+
 function getThumbnailViewportObservers(windowRef) {
   if (!windowRef || (typeof windowRef !== 'object' && typeof windowRef !== 'function')) return null;
   const cached = thumbnailViewportObserversByWindow.get(windowRef);
@@ -66,23 +80,7 @@ function getThumbnailViewportObservers(windowRef) {
         observers.visibility.unobserve(entry.target);
         return;
       }
-      // IntersectionObserver can deliver an initial entry generated while a
-      // card was detached or being laid out. Recheck current geometry before
-      // consuming the one-time reveal gate; stale positive entries must not
-      // reveal artwork that is still below the viewport.
-      const target = entry.target;
-      const rect = target.getBoundingClientRect?.();
-      const viewportHeight = Number(windowRef.innerHeight) ||
-        Number(windowRef.document?.documentElement?.clientHeight) || 0;
-      const viewportWidth = Number(windowRef.innerWidth) ||
-        Number(windowRef.document?.documentElement?.clientWidth) || 0;
-      const geometryVisible = !viewportHeight || !viewportWidth || (
-        target.isConnected !== false && rect &&
-        rect.width > 0 && rect.height > 0 &&
-        rect.bottom > 24 && rect.top < viewportHeight - 24 &&
-        rect.right > 0 && rect.left < viewportWidth
-      );
-      state.setVisible(Boolean(entry.isIntersecting && entry.intersectionRatio > 0 && geometryVisible));
+      state.setVisible(entry.isIntersecting && entry.intersectionRatio > 0);
     });
   }, { rootMargin: '-24px 0px -24px 0px', threshold: 0.01 });
 
@@ -547,7 +545,12 @@ function registerThumbnailMediaState(media, {
     },
     setVisible(visible) {
       if (disposed) return;
-      const isVisible = Boolean(visible);
+      // Always validate the element's current position before clearing the
+      // one-time reveal gate. This also protects callers outside observer
+      // callbacks and stale entries queued while a card was detached.
+      const requestedVisible = Boolean(visible);
+      const isVisible = requestedVisible &&
+        (!observers?.visibility || isInsideThumbnailRevealBand(media, windowRef));
       media.dataset.mediaVisible = isVisible ? 'true' : 'false';
       if (isVisible) {
         // A ready image may finish decoding before it enters the viewport.
