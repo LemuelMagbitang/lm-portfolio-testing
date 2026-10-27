@@ -62,8 +62,16 @@ assert.match(mediaRenderer, /const rotationDirection = Math\.random\(\) < 0\.5 \
 assert.match(mediaRenderer, /getFoilEdgeRotation\(x, y, motion\.rotationDirection/);
 assert.match(mediaRenderer, /event\.pointerType !== 'mouse'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
+assert.match(mediaRenderer, /syncResponsiveFoilIntensity = \(\) =>/);
+assert.match(mediaRenderer, /bindResponsiveFoilQuery\('\(max-width: 760px\)'\)/);
+assert.match(mediaRenderer, /if \(motion\?\.compactTarget\) tiltStrength = Math\.min\(tiltStrength, COMPACT_FOIL_MAX_INTENSITY\)/);
+assert.match(mediaRenderer, /intensity: isFront \? config\.intensity : config\.backIntensity/);
+assert.match(mediaRenderer, /holographicMotionStates\.set\(surface, \{[^}]*rotationDirection, compactTarget/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
 assert.match(normalRenderer, /resolveFoilIntensity\(intensity,\s*compactTarget\)/);
+assert.match(normalRenderer, /let compactTarget = isCompactFoilTarget\(view\)/);
+assert.match(normalRenderer, /level=resolveFoilIntensity\(intensity,compactTarget\)/);
+assert.match(normalRenderer, /mediaQuery\.addEventListener\('change',handleResize\)/);
 assert.match(normalRenderer, /drawTimer/);
 assert.match(normalRenderer, /u_mapCount>1\.5/);
 assert.match(styles, /rotateZ\(var\(--holo-rotation,0deg\)\)/);
