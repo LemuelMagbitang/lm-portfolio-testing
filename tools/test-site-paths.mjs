@@ -126,10 +126,9 @@ function encodePathToken(value, depth) {
   let encoded = value;
   for (let index = 0; index < depth; index += 1) {
     encoded = encoded
-      .replace(/%/g, '%25')
-      .replace(/\\./g, '%2e')
-      .replace(/\\//g, '%2f')
-      .replace(/\\\\/g, '%5c');
+      .replaceAll('%', '%25')
+      .replaceAll('.', '%2e')
+      .replaceAll('/', '%2f');
   }
   return encoded;
 }
