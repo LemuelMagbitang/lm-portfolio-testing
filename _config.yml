@@ -12,7 +12,7 @@ exclude:
   - vendor/gems/
   - vendor/ruby/
 
-  # Developer tooling and private QA evidence do not belong on the public site.
+  # Developer tooling and QA evidence do not belong on the public site.
   - tools/
   - incident-reports/
   - supabase/
