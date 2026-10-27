@@ -171,6 +171,17 @@ check(!/Website Placements|Website placement/i.test(page + script) &&
   script.includes('method:"PATCH"') && script.includes('"/unpublish"'),
   "The Mux media library must not expose website placement controls and must support editing/unpublishing.");
 check(script.includes("describeApiError") && script.includes("CMS_ADMIN_USER_IDS"), "CMS API errors should explain HTTP status and admin allowlist setup.");
+const uploadRoute = admin.split('route[4] === "upload") {')[1]?.split('if (request.method === "POST" && route.length === 3 && route[0] === "videos" && route[2] === "unpublish")')[0] || "";
+check(uploadRoute.includes("const uploadAttemptId = crypto.randomUUID()") &&
+  uploadRoute.includes('.eq("upload_state", currentUploadState)') &&
+  uploadRoute.includes('.eq("external_id", String(asset.external_id || asset.id))') &&
+  uploadRoute.includes('claimQuery.select("id").maybeSingle()') &&
+  uploadRoute.includes('external_id: uploadAttemptId') &&
+  uploadRoute.indexOf('claimQuery.select("id").maybeSingle()') < uploadRoute.indexOf('muxRequest("/uploads", "POST"') &&
+  uploadRoute.includes('updatedAtMs') &&
+  uploadRoute.includes('Date.now() - updatedAtMs > 5 * 60 * 1000') &&
+  uploadRoute.includes('current?.mux_upload_id !== upload.id'),
+  "Mux upload creation must reserve the asset with compare-and-swap, isolate webhook correlation per attempt, recover stale reservations, and account for fast-webhook races.");
 const mainCmsScript = read("admin/admin.js");
 check(mainCmsScript.includes('data-picker-source="cms"') &&
   mainCmsScript.includes('data-picker-source="mux"') &&
