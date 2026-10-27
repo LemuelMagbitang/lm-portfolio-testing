@@ -9505,6 +9505,128 @@ try {
       }
     }, { width: 390, height: 844 });
 
+    for (const viewport of [
+      { name: 'desktop', width: 1280, height: 900 },
+      { name: 'tablet', width: 834, height: 1112 },
+      { name: 'mobile', width: 390, height: 844 }
+    ]) {
+      await smokePage(browser, '/', async page => {
+        await page.waitForFunction(() => {
+          const gate = document.querySelector('#pageTransition');
+          return document.querySelectorAll('#portfolioGrid .project-card').length >= 6 &&
+            (!gate || (gate.dataset.loading === 'ready' && gate.getAttribute('aria-hidden') === 'true'));
+        }, null, { timeout: 10000 });
+
+        const showMore = page.locator('#showMoreBtn').first();
+        if (await showMore.count() &&
+            await showMore.isVisible().catch(() => false) &&
+            (await showMore.getAttribute('aria-expanded')) !== 'true') {
+          await showMore.click();
+          await page.waitForFunction(
+            () => document.querySelector('#showMoreBtn')?.getAttribute('aria-expanded') === 'true',
+            null,
+            { timeout: 3500 }
+          );
+        }
+        await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+        await page.waitForFunction(() => window.scrollY <= 8, null, { timeout: 1500 });
+
+        const targetIndex = await page.locator('#portfolioGrid .project-card').evaluateAll(cards =>
+          cards.findIndex(card => {
+            const rect = card.getBoundingClientRect();
+            const media = card.querySelector('.project-thumb-media');
+            const src = media?.currentSrc || media?.getAttribute('src') || '';
+            const localImage = media?.localName === 'img' &&
+              (!/^https?:/i.test(src) || src.startsWith(location.origin));
+            return localImage && card.dataset.galleryRevealState === 'pending' &&
+              rect.top >= window.innerHeight + 8 && getComputedStyle(card).display !== 'none';
+          })
+        );
+        if (targetIndex < 0) {
+          const snapshot = await page.evaluate(() => ({
+            viewportHeight: window.innerHeight,
+            cards: Array.from(document.querySelectorAll('#portfolioGrid .project-card')).map(card => ({
+              id: card.dataset.projectId || '',
+              state: card.dataset.galleryRevealState || '',
+              complete: card.dataset.galleryRevealComplete || '',
+              top: card.getBoundingClientRect().top,
+              media: card.querySelector('.project-thumb-media')?.localName || ''
+            })).slice(-10)
+          }));
+          throw new Error('Gallery viewport reveal has no offscreen local-image card at ' + viewport.name + ': ' + JSON.stringify(snapshot));
+        }
+
+        const target = page.locator('#portfolioGrid .project-card').nth(targetIndex);
+        const before = await target.evaluate(card => ({
+          id: card.dataset.projectId || '',
+          state: card.dataset.galleryRevealState || '',
+          complete: card.dataset.galleryRevealComplete || '',
+          width: card.offsetWidth,
+          height: card.offsetHeight,
+          top: card.getBoundingClientRect().top
+        }));
+        if (before.state !== 'pending' || before.complete === 'true' || before.top < window.innerHeight + 8) {
+          throw new Error('Gallery reveal fixture was not pending below the viewport at ' + viewport.name + ': ' + JSON.stringify(before));
+        }
+
+        await target.scrollIntoViewIfNeeded();
+        await page.waitForFunction(index => {
+          const card = document.querySelectorAll('#portfolioGrid .project-card')[index];
+          return card?.dataset.galleryRevealComplete === 'true' && !card.dataset.galleryRevealState;
+        }, targetIndex, { timeout: 4000 });
+
+        const after = await target.evaluate(card => {
+          const media = card.querySelector('.project-thumb-media');
+          const rect = card.getBoundingClientRect();
+          const style = getComputedStyle(card);
+          return {
+            id: card.dataset.projectId || '',
+            state: card.dataset.galleryRevealState || '',
+            complete: card.dataset.galleryRevealComplete || '',
+            width: card.offsetWidth,
+            height: card.offsetHeight,
+            opacity: Number.parseFloat(style.opacity),
+            transform: style.transform,
+            mediaState: media?.dataset?.mediaState || '',
+            imageReady: media?.localName === 'img' ? media.complete && media.naturalWidth > 0 : null
+          };
+        });
+        if (after.state || after.complete !== 'true' ||
+            Math.abs(after.width - before.width) > 1 ||
+            Math.abs(after.height - before.height) > 1 ||
+            after.opacity < 0.99 || after.transform !== 'none' ||
+            after.mediaState === 'error' ||
+            after.imageReady === false) {
+          throw new Error('Gallery reveal caused a layout/media regression at ' + viewport.name + ': ' + JSON.stringify({ before, after }));
+        }
+
+        await page.evaluate(() => window.scrollBy({ top: 700, behavior: 'auto' }));
+        await target.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(520);
+        const repeated = await target.evaluate(card => ({
+          complete: card.dataset.galleryRevealComplete || '',
+          state: card.dataset.galleryRevealState || '',
+          revealClass: card.classList.contains('has-gallery-scroll-reveal')
+        }));
+        if (repeated.complete !== 'true' || repeated.state || repeated.revealClass) {
+          throw new Error('Gallery scroll reveal replayed after first entry at ' + viewport.name + ': ' + JSON.stringify(repeated));
+        }
+
+        await target.click();
+        await page.locator('.lightbox-modal.active').first().waitFor({ state: 'visible', timeout: 6000 });
+        await page.waitForFunction(() => {
+          const container = document.getElementById('lightboxMediaContainer');
+          return !!container?.querySelector('.lightbox-media-item, .lightbox-artwork-group, .lightbox-artwork');
+        }, null, { timeout: 5000 });
+        await page.waitForFunction(() => {
+          const container = document.getElementById('lightboxMediaContainer');
+          return !!container?.querySelector('.lightbox-media-item[data-media-reveal="ready"], .lightbox-artwork.is-media-reveal-ready');
+        }, null, { timeout: 8000 });
+        await page.locator('#lightboxClose').first().click();
+        await page.waitForFunction(() => !document.querySelector('.lightbox-modal.active'), null, { timeout: 5000 });
+      }, { width: viewport.width, height: viewport.height });
+    }
+
     let cmsSmokePngMediaSha = 'smoke-png-existing';
     let cmsSmokePngUploadPayload = null;
     let cmsSmokeJpegWebPMediaSha = 'smoke-jpeg-webp';

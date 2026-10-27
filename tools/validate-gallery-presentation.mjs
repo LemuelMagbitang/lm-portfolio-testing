@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {
   getResponsiveBaseCount,
   getRowAlignedCount,
-  applyGalleryReveal
+  applyGalleryReveal,
+  applyGalleryViewportReveal
 } from '../js/features/gallery/presentation.js';
 
 assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 6 }), 6);
@@ -120,5 +121,119 @@ assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaL
 assert.match(mediaRendererForDensity, /container\.setAttribute\(\s*'data-has-youtube'/);
 assert.match(styleSource, /data-media-density="multi"\]\[data-has-youtube="true"\]/);
 assert.match(styleSource, /calc\(58svh \* var\(--lightbox-artwork-ratio/);
+
+
+
+function makeGalleryRevealCard({ left = 0, top = 900, width = 100, height = 100 } = {}) {
+  const listeners = new Map();
+  const classes = new Set();
+  const styleValues = new Map();
+  const dataset = {};
+  return {
+    dataset,
+    style: {
+      setProperty(name, value) { styleValues.set(name, String(value)); },
+      removeProperty(name) { styleValues.delete(name); },
+      getPropertyValue(name) { return styleValues.get(name) || ''; }
+    },
+    classList: {
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
+      contains(name) { return classes.has(name); }
+    },
+    getBoundingClientRect() { return { left, top, width, height, right: left + width, bottom: top + height }; },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
+    removeAttribute(name) {
+      if (name === 'data-gallery-reveal-state') delete dataset.galleryRevealState;
+      if (name === 'data-gallery-reveal-complete') delete dataset.galleryRevealComplete;
+    },
+    _listeners: listeners
+  };
+}
+
+class FakeGalleryIntersectionObserver {
+  static instances = [];
+  constructor(callback, options) {
+    this.callback = callback;
+    this.options = options;
+    this.observed = new Set();
+    this.disconnected = false;
+    FakeGalleryIntersectionObserver.instances.push(this);
+  }
+  observe(target) { this.observed.add(target); }
+  unobserve(target) { this.observed.delete(target); }
+  disconnect() { this.disconnected = true; this.observed.clear(); }
+  trigger(target, isIntersecting = true) {
+    this.callback([{ target, isIntersecting, intersectionRatio: isIntersecting ? 1 : 0 }]);
+  }
+}
+
+let nextGalleryTimer = 0;
+const galleryTimers = new Map();
+const galleryRevealWindow = {
+  innerWidth: 1280,
+  innerHeight: 700,
+  IntersectionObserver: FakeGalleryIntersectionObserver,
+  getComputedStyle: () => ({ gridTemplateColumns: '100px 100px 100px' }),
+  matchMedia: () => ({ matches: false }),
+  setTimeout(callback) { const id = ++nextGalleryTimer; galleryTimers.set(id, callback); return id; },
+  clearTimeout(id) { galleryTimers.delete(id); }
+};
+const galleryRevealGrid = {};
+const revealCardOne = makeGalleryRevealCard({ left: 0, top: 900 });
+const revealCardTwo = makeGalleryRevealCard({ left: 100, top: 900 });
+const revealCardThree = makeGalleryRevealCard({ left: 200, top: 900 });
+const observerCountBefore = FakeGalleryIntersectionObserver.instances.length;
+const cancelViewportReveal = applyGalleryViewportReveal({
+  grid: galleryRevealGrid,
+  cards: [revealCardOne, revealCardTwo, revealCardThree],
+  windowRef: galleryRevealWindow
+});
+const galleryObserver = FakeGalleryIntersectionObserver.instances.at(-1);
+assert.equal(FakeGalleryIntersectionObserver.instances.length, observerCountBefore + 1);
+assert.equal(galleryObserver.options.rootMargin, '-24px 0px -24px 0px');
+assert.equal(galleryObserver.options.threshold, 0.01);
+assert.equal(revealCardOne.dataset.galleryRevealState, 'pending');
+assert.equal(revealCardTwo.style.getPropertyValue('--gallery-scroll-reveal-delay'), '35ms');
+assert.equal(revealCardThree.style.getPropertyValue('--gallery-scroll-reveal-delay'), '70ms');
+galleryObserver.trigger(revealCardTwo);
+assert.equal(revealCardTwo.dataset.galleryRevealComplete, 'true');
+assert.equal(revealCardTwo.dataset.galleryRevealState, 'revealing');
+assert.equal(galleryObserver.observed.has(revealCardTwo), false);
+revealCardTwo._listeners.get('transitionend')?.({ target: revealCardTwo, propertyName: 'opacity' });
+assert.equal(revealCardTwo.dataset.galleryRevealState, undefined);
+assert.equal(revealCardTwo.classList.contains('has-gallery-scroll-reveal'), false);
+assert.equal(revealCardTwo.style.getPropertyValue('--gallery-scroll-reveal-delay'), '');
+cancelViewportReveal();
+assert.equal(galleryObserver.disconnected, true);
+assert.equal(revealCardOne.dataset.galleryRevealState, undefined);
+
+const observerCountAfterReveal = FakeGalleryIntersectionObserver.instances.length;
+applyGalleryViewportReveal({ grid: galleryRevealGrid, cards: [revealCardTwo], windowRef: galleryRevealWindow });
+assert.equal(FakeGalleryIntersectionObserver.instances.length, observerCountAfterReveal);
+
+const reducedMotionCard = makeGalleryRevealCard({ top: 900 });
+applyGalleryViewportReveal({
+  grid: galleryRevealGrid,
+  cards: [reducedMotionCard],
+  windowRef: { ...galleryRevealWindow, matchMedia: () => ({ matches: true }) }
+});
+assert.equal(reducedMotionCard.dataset.galleryRevealComplete, 'true');
+assert.equal(reducedMotionCard.dataset.galleryRevealState, undefined);
+assert.equal(reducedMotionCard.classList.contains('has-gallery-scroll-reveal'), false);
+
+const filterTransitionCard = makeGalleryRevealCard({ left: 100, top: 100 });
+applyGalleryViewportReveal({
+  grid: galleryRevealGrid,
+  cards: [filterTransitionCard],
+  windowRef: galleryRevealWindow,
+  skipVisibleReveal: true
+});
+assert.equal(filterTransitionCard.dataset.galleryRevealComplete, 'true');
+assert.equal(filterTransitionCard.dataset.galleryRevealState, undefined);
+assert.equal(filterTransitionCard.classList.contains('has-gallery-scroll-reveal'), false);
+assert.match(styleSource, /\.project-card\.has-gallery-scroll-reveal\[data-gallery-reveal-state="pending"\]/);
+assert.match(styleSource, /prefers-reduced-motion:\s*reduce[\s\S]*?\.project-card\.has-gallery-scroll-reveal/);
 
 console.log('Gallery presentation boundary validated.');
