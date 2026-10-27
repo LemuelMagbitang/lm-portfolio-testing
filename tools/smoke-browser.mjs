@@ -3410,11 +3410,14 @@ try {
         const holographic = page.locator('#lightboxMediaContainer .lightbox-holographic').first();
         await holographic.waitFor({ state: 'visible', timeout: 3000 });
         const fixedLight = await holographic.evaluate(el => ({
-          x: el.style.getPropertyValue('--holo-light-x'),
-          y: el.style.getPropertyValue('--holo-light-y')
+          x: Number.parseFloat(el.style.getPropertyValue('--holo-light-x')),
+          y: Number.parseFloat(el.style.getPropertyValue('--holo-light-y')),
+          motion: el.dataset.holoMotion || ''
         }));
-        if (fixedLight.x !== '34%' || fixedLight.y !== '26%') {
-          throw new Error('Mobile holographic light sources must begin at fixed, off-axis positions.');
+        if (!Number.isFinite(fixedLight.x) || !Number.isFinite(fixedLight.y) ||
+            Math.abs(fixedLight.x - 34) > 0.15 || Math.abs(fixedLight.y - 26) > 0.15 ||
+            fixedLight.motion !== 'auto-rotate') {
+          throw new Error('Mobile holographic light sources must retain their fixed, off-axis auto-motion baseline: ' + JSON.stringify(fixedLight));
         }
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
