@@ -10701,7 +10701,7 @@ try {
       }
 
       const reduced = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-03');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-04');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10765,7 +10765,7 @@ try {
 
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       const standard = await page.evaluate(async () => {
-        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-03');
+        const { buildProjectThumbnailMedia } = await import('/js/features/projects/project-thumbnail.js?v=20261027-04');
         const options = { resolveAssetUrl: value => value, priority: true };
         const lottie = buildProjectThumbnailMedia(
           { type: 'lottie', src: 'data:application/json,%7B%7D' },
@@ -10806,7 +10806,7 @@ try {
     await smokePage(browser, '/?media-cache-disabled=1', async page => {
       const result = await page.evaluate(async () => {
         const { buildProjectThumbnailMedia, disposeProjectThumbnailMedia } =
-          await import('/js/features/projects/project-thumbnail.js?v=20261027-03');
+          await import('/js/features/projects/project-thumbnail.js?v=20261027-04');
         const makeHost = () => {
           const host = document.createElement('div');
           host.className = 'card-thumbnail';
@@ -10955,7 +10955,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-02');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-03');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-loading-fixtures';
         Object.assign(fixture.style, {
@@ -11247,7 +11247,7 @@ try {
         const previousScrollTop = window.scrollY;
         document.documentElement.style.scrollBehavior = 'auto';
         window.scrollTo(0, 0);
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-02');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-03');
         const spacer = document.createElement('div');
         spacer.id = 'thumbnail-viewport-reveal-spacer';
         spacer.setAttribute('aria-hidden', 'true');
@@ -11336,7 +11336,7 @@ try {
       });
 
       await page.evaluate(async () => {
-        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-02');
+        const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-03');
         const fixture = document.createElement('section');
         fixture.id = 'thumbnail-placeholder-fixtures';
         Object.assign(fixture.style, {

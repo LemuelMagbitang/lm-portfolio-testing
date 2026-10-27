@@ -66,7 +66,23 @@ function getThumbnailViewportObservers(windowRef) {
         observers.visibility.unobserve(entry.target);
         return;
       }
-      state.setVisible(entry.isIntersecting && entry.intersectionRatio > 0);
+      // IntersectionObserver can deliver an initial entry generated while a
+      // card was detached or being laid out. Recheck current geometry before
+      // consuming the one-time reveal gate; stale positive entries must not
+      // reveal artwork that is still below the viewport.
+      const target = entry.target;
+      const rect = target.getBoundingClientRect?.();
+      const viewportHeight = Number(windowRef.innerHeight) ||
+        Number(windowRef.document?.documentElement?.clientHeight) || 0;
+      const viewportWidth = Number(windowRef.innerWidth) ||
+        Number(windowRef.document?.documentElement?.clientWidth) || 0;
+      const geometryVisible = !viewportHeight || !viewportWidth || (
+        target.isConnected !== false && rect &&
+        rect.width > 0 && rect.height > 0 &&
+        rect.bottom > 24 && rect.top < viewportHeight - 24 &&
+        rect.right > 0 && rect.left < viewportWidth
+      );
+      state.setVisible(Boolean(entry.isIntersecting && entry.intersectionRatio > 0 && geometryVisible));
     });
   }, { rootMargin: '-24px 0px -24px 0px', threshold: 0.01 });
 

@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261027-06'
+  cacheVersion = '20261027-07'
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
