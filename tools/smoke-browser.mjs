@@ -11247,19 +11247,21 @@ try {
         const previousScrollPriority = document.documentElement.style.getPropertyPriority('scroll-behavior');
         const previousBodyScrollBehavior = document.body.style.scrollBehavior;
         const previousBodyScrollPriority = document.body.style.getPropertyPriority('scroll-behavior');
+        const previousRootOverflowAnchor = document.documentElement.style.overflowAnchor;
+        const previousRootOverflowAnchorPriority = document.documentElement.style.getPropertyPriority('overflow-anchor');
+        const previousBodyOverflowAnchor = document.body.style.overflowAnchor;
+        const previousBodyOverflowAnchorPriority = document.body.style.getPropertyPriority('overflow-anchor');
         const previousScrollTop = window.scrollY;
 
-        // The preceding smoke scenarios can leave a smooth scroll in flight.
-        // Make the reset deterministic before observing a detached/offscreen
-        // fixture so a transient pass through the viewport cannot consume its
-        // one-time reveal gate.
+        // Keep the current document position stable instead of scrolling to the
+        // top: earlier scenarios may leave a viewport scroll in flight, which
+        // can sweep an appended fixture through the reveal band. The spacer is
+        // appended after existing content, so the fixture remains offscreen.
+        // Disable scroll anchoring while adding/removing the temporary content.
         document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important');
         document.body.style.setProperty('scroll-behavior', 'auto', 'important');
-        window.scrollTo(0, 0);
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        if (Math.abs(window.scrollY) > 1) {
-          throw new Error('Viewport reveal smoke fixture requires a settled top-of-document scroll position: ' + window.scrollY);
-        }
+        document.documentElement.style.setProperty('overflow-anchor', 'none', 'important');
+        document.body.style.setProperty('overflow-anchor', 'none', 'important');
         const { buildProjectCardElement } = await import('/js/features/projects/project-card.js?v=20261027-05');
         const spacer = document.createElement('div');
         spacer.id = 'thumbnail-viewport-reveal-spacer';
@@ -11282,6 +11284,10 @@ try {
         fixture.dataset.previousScrollPriority = previousScrollPriority;
         fixture.dataset.previousBodyScrollBehavior = previousBodyScrollBehavior;
         fixture.dataset.previousBodyScrollPriority = previousBodyScrollPriority;
+        fixture.dataset.previousRootOverflowAnchor = previousRootOverflowAnchor;
+        fixture.dataset.previousRootOverflowAnchorPriority = previousRootOverflowAnchorPriority;
+        fixture.dataset.previousBodyOverflowAnchor = previousBodyOverflowAnchor;
+        fixture.dataset.previousBodyOverflowAnchorPriority = previousBodyOverflowAnchorPriority;
         fixture.dataset.previousScrollTop = String(previousScrollTop);
       });
       try {
@@ -11348,20 +11354,28 @@ try {
         const rootPriority = fixture?.dataset.previousScrollPriority || '';
         const bodyStyle = fixture?.dataset.previousBodyScrollBehavior || '';
         const bodyPriority = fixture?.dataset.previousBodyScrollPriority || '';
+        const rootAnchor = fixture?.dataset.previousRootOverflowAnchor || '';
+        const rootAnchorPriority = fixture?.dataset.previousRootOverflowAnchorPriority || '';
+        const bodyAnchor = fixture?.dataset.previousBodyOverflowAnchor || '';
+        const bodyAnchorPriority = fixture?.dataset.previousBodyOverflowAnchorPriority || '';
         const scrollTop = Number(fixture?.dataset.previousScrollTop) || 0;
         fixture?.remove();
 
-        // Restore the original location instantly while smooth scrolling is
-        // still suppressed, then restore both inline declarations verbatim.
+        // Restore the original scroll position with scrolling/anchoring still
+        // suppressed, then restore the page's inline declarations verbatim.
         document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important');
         document.body.style.setProperty('scroll-behavior', 'auto', 'important');
-        window.scrollTo(0, scrollTop);
-        const restoreScrollBehavior = (element, value, priority) => {
-          if (value) element.style.setProperty('scroll-behavior', value, priority);
-          else element.style.removeProperty('scroll-behavior');
+        document.documentElement.style.setProperty('overflow-anchor', 'none', 'important');
+        document.body.style.setProperty('overflow-anchor', 'none', 'important');
+        window.scrollTo({left:window.scrollX,top:scrollTop,behavior:'instant'});
+        const restoreStyle = (element, property, value, priority) => {
+          if (value) element.style.setProperty(property, value, priority);
+          else element.style.removeProperty(property);
         };
-        restoreScrollBehavior(document.documentElement, rootStyle, rootPriority);
-        restoreScrollBehavior(document.body, bodyStyle, bodyPriority);
+        restoreStyle(document.documentElement, 'scroll-behavior', rootStyle, rootPriority);
+        restoreStyle(document.body, 'scroll-behavior', bodyStyle, bodyPriority);
+        restoreStyle(document.documentElement, 'overflow-anchor', rootAnchor, rootAnchorPriority);
+        restoreStyle(document.body, 'overflow-anchor', bodyAnchor, bodyAnchorPriority);
       });
 
       await page.evaluate(async () => {
