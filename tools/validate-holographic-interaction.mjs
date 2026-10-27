@@ -17,6 +17,12 @@ const smallTouchTablet = {
   innerWidth: 1024,
   matchMedia: query => ({ matches: query.includes('hover: none') })
 };
+const narrowMouseView = {
+  innerWidth: 600,
+  matchMedia: query => ({
+    matches: query.includes('any-hover: hover') || query.includes('any-pointer: fine')
+  })
+};
 const desktopView = {
   innerWidth: 1440,
   matchMedia: query => ({ matches: query.includes('any-hover: hover') || query.includes('any-pointer: fine') })
@@ -28,6 +34,9 @@ const touchOnlyView = {
 
 assert.equal(isCompactFoilTarget(mobileView), true);
 assert.equal(isCompactFoilTarget(smallTouchTablet), true);
+assert.equal(isCompactFoilTarget(narrowMouseView), true, 'Small viewport should remain compact even when a mouse is available.');
+assert.equal(supportsFoilHover(narrowMouseView), true, 'A fine hover pointer on a compact layout should retain hover rotation.');
+assert.equal(resolveFoilIntensity(0.95, isCompactFoilTarget(narrowMouseView)), COMPACT_FOIL_MAX_INTENSITY);
 assert.equal(isCompactFoilTarget(desktopView), false);
 assert.equal(resolveFoilIntensity(0.95, true), COMPACT_FOIL_MAX_INTENSITY);
 assert.equal(resolveFoilIntensity(0.10, true), 0.10);
