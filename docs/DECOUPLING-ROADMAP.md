@@ -861,3 +861,12 @@ This migration must not:
 - Browser smoke coverage now checks grouped artwork wrapper width, border-box sizing, and center offset before the Inspector interaction test, so the padding/overflow regression is caught automatically.
 - This checkpoint removes a 5,016,396-byte (about 4.78 MiB) bundled video. It does not delete or alter hosted Mux sources, other project media, or user content. Physical-device layout confirmation remains separate from automated CI.
 - **Next step:** inspect the updated validation and Pages workflow results, then check the affected artwork group at mobile/tablet/desktop sizes and confirm the intended Mux poster/fallback behavior in a clean session.
+
+
+### October 28, 2026 — Center holographic front and back artwork faces
+
+- Follow-up to the artwork-group layout fix: the user clarified that the group wrapper itself is centered; the visible holographic card artwork/front and reverse faces were the elements drifting off-center.
+- The Lightbox inner layer applies pointer-driven `--holo-shift-x/y` translation for parallax. The feature stylesheet now counter-translates each face plane by those same offsets, preserving face alignment with the centered holographic layout slot while retaining the existing face flip, tilt and foil effects.
+- Browser smoke now injects a known asymmetric `18px / -11px` shift and measures both front and back face centers against the card center. It fails if either face drifts more than 1.5px.
+- The feature stylesheet cache identity advances to `20261028-06`. This change is isolated to the active `projects-runtime-cutover` branch; the legacy production repository and `main` are untouched.
+- **Next step:** complete validation and Pages deployment, then visually verify both sides during hover/tap flip at desktop, tablet and mobile sizes.
