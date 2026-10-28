@@ -348,8 +348,8 @@
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
   position:relative;z-index:1;
-  width:min(calc(clamp(148px,22svh,196px) * var(--lightbox-artwork-ratio,1)),220px);
-  max-width:min(24vw,220px);height:auto;max-height:clamp(148px,22svh,196px);
+  width:min(124%,calc(clamp(148px,22svh,196px) * var(--lightbox-artwork-ratio,1)));
+  max-width:min(124%,24vw,220px);height:auto;max-height:clamp(148px,22svh,196px);
   aspect-ratio:var(--lightbox-artwork-ratio,1);
   padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;
   box-sizing:border-box;
@@ -400,8 +400,8 @@
 @media (max-width:760px){
   #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
   #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
-    width:min(calc(clamp(128px,21svh,160px) * var(--lightbox-artwork-ratio,1)),176px);
-    max-width:min(44vw,176px);height:auto;max-height:clamp(128px,21svh,160px);
+    width:min(124%,calc(clamp(128px,21svh,160px) * var(--lightbox-artwork-ratio,1)));
+    max-width:min(124%,33vw,140px);height:auto;max-height:clamp(128px,21svh,160px);
     aspect-ratio:var(--lightbox-artwork-ratio,1);
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{
