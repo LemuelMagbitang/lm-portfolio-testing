@@ -314,7 +314,7 @@
    is centered by the renderer so small sets stay visually balanced. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{
   display:grid;grid-template-columns:repeat(5,minmax(0,1fr));column-gap:0;
-  row-gap:2px;padding:4px 2px;
+  row-gap:2px;padding:4px clamp(16px,7vw,42px);
   align-items:stretch;justify-items:stretch;align-content:start;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item{
@@ -347,7 +347,7 @@
    retained; the artwork may overhang its grid cell for the collage effect. */
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
-  --artwork-shared-width:min(186%,calc(clamp(222px,33svh,294px) * var(--lightbox-artwork-ratio,1)),36vw,330px);
+  --artwork-shared-width:min(calc(clamp(222px,33svh,294px) * var(--lightbox-artwork-ratio,1)),36vw,330px);
   position:relative;left:calc((100% - var(--artwork-shared-width))/2);margin-inline:0;z-index:1;
   width:var(--artwork-shared-width);max-width:none;height:auto;max-height:clamp(222px,33svh,294px);
   aspect-ratio:var(--lightbox-artwork-ratio,1);
@@ -365,7 +365,7 @@
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork-group-items{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   column-gap:clamp(1px,.35vw,4px);row-gap:1px;
-  padding:4px 2px;
+  padding:4px clamp(16px,7vw,42px);
   align-items:stretch;justify-items:stretch;align-content:start;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item{
@@ -382,7 +382,7 @@
 }
 @media (max-width:1000px) and (min-width:761px){
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{
-    grid-template-columns:repeat(4,minmax(0,1fr));padding:4px 2px;row-gap:1px;
+    grid-template-columns:repeat(4,minmax(0,1fr));padding:4px clamp(16px,7vw,42px);row-gap:1px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(4n+1){
     --artwork-card-offset-x:8px;--artwork-card-offset-y:3px;--artwork-card-rotation:-4deg;
@@ -400,13 +400,13 @@
 @media (max-width:760px){
   #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
   #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
-    --artwork-shared-width:min(186%,calc(clamp(192px,31.5svh,240px) * var(--lightbox-artwork-ratio,1)),49.5vw,210px);
+    --artwork-shared-width:min(calc(clamp(192px,31.5svh,240px) * var(--lightbox-artwork-ratio,1)),49.5vw,210px);
     left:calc((100% - var(--artwork-shared-width))/2);
     width:var(--artwork-shared-width);max-width:none;height:auto;max-height:clamp(192px,31.5svh,240px);
     aspect-ratio:var(--lightbox-artwork-ratio,1);
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{
-    grid-template-columns:repeat(3,minmax(0,1fr));gap:1px 0;padding:4px 2px;
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:1px 0;padding:4px clamp(16px,7vw,42px);
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(3n+1){
     --artwork-card-offset-x:7px;--artwork-card-offset-y:3px;--artwork-card-rotation:-4deg;
@@ -418,7 +418,7 @@
     --artwork-card-offset-x:-7px;--artwork-card-offset-y:3px;--artwork-card-rotation:4deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork-group-items{
-    grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 2px;padding:4px 2px;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 2px;padding:4px clamp(16px,7vw,42px);
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item{
     --artwork-effective-sticker-rotation:var(--artwork-sticker-rotation-mobile,0deg);
