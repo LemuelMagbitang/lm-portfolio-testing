@@ -4,7 +4,7 @@ This is the implementation roadmap for converting the portfolio into a highly de
 
 ## Current implementation checkpoint
 
-As of October 28, 2026 (PHT), the active source of truth is `LemuelMagbitang/lm-portfolio-testing`, branch `projects-runtime-cutover`. The current HEAD is [`daa919a7944081e566d04b82ec835fa517b31562`](https://github.com/LemuelMagbitang/lm-portfolio-testing/commit/daa919a7944081e566d04b82ec835fa517b31562), `test(lightbox): measure compact auto motion by transforms`, committed at 10:42:39 AM PHT.
+As of October 28, 2026 (PHT), the active source of truth is `LemuelMagbitang/lm-portfolio-testing`, branch `projects-runtime-cutover`. The latest validated implementation checkpoint, excluding these roadmap-only documentation commits, is [`daa919a7944081e566d04b82ec835fa517b31562`](https://github.com/LemuelMagbitang/lm-portfolio-testing/commit/daa919a7944081e566d04b82ec835fa517b31562), `test(lightbox): measure compact auto motion by transforms`, committed at 10:42:39 AM PHT.
 
 Both required GitHub Actions workflows have completed successfully on this exact SHA: [Validate portfolio #40622542702](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/40622542702) completed at 10:46:59 AM PHT, and [Pages build/deployment #40622542618](https://github.com/LemuelMagbitang/lm-portfolio-testing/actions/runs/40622542618) completed at 10:43:31 AM PHT. The validation job and the Pages build, deploy, and status-report jobs are green. This is automated validation, not physical-device sign-off.
 
