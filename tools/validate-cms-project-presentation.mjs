@@ -476,7 +476,9 @@ assert.ok(
   !lightboxCss.includes('inset:4px 4px -5px') &&
   renderer.includes('function centerArtworkGroupRows') &&
   renderer.includes("entry.classList.add('is-artwork-selected')") &&
-  renderer.includes('const rotation = (stableSeed % 13) - 6;') &&
+  renderer.includes('const rotation = Number((((stableSeed / 0xFFFFFFFF) * 2 - 1) * 14).toFixed(2));') &&
+  renderer.includes('const mobileRotation = Number((rotation * 0.8).toFixed(2));') &&
+  lightboxCss.includes('rotate(var(--artwork-effective-sticker-rotation,0deg))') &&
   renderer.includes('selectGroupedArtworkEntry(entry, section)') &&
   admin.includes('<option value="cards">Horizontal Card Stack</option>') &&
   admin.includes('<option value="sticker">Sticker Card Layout</option>'),
