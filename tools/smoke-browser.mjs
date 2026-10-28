@@ -4217,6 +4217,48 @@ try {
             centerOffset: groupBeforeInspect.centerOffset
           }));
       }
+      // Force an asymmetric parallax offset and verify that both face planes
+      // remain centered on their holographic card instead of drifting with it.
+      const faceAlignment = await funkoHolo.evaluate(async el => {
+        const front = el.querySelector('.lightbox-holographic-face.lightbox-holographic-front');
+        const back = el.querySelector('.lightbox-holographic-face.lightbox-holographic-back');
+        if (!front || !back) return { missingFace: true };
+        const variables = ['--holo-rx', '--holo-ry', '--holo-rotation', '--holo-shift-x', '--holo-shift-y'];
+        const original = Object.fromEntries(variables.map(name => [name, el.style.getPropertyValue(name)]));
+        const centerOffset = (face, rootRect) => {
+          const rect = face.getBoundingClientRect();
+          return {
+            x: rect.left + rect.width / 2 - (rootRect.left + rootRect.width / 2),
+            y: rect.top + rect.height / 2 - (rootRect.top + rootRect.height / 2)
+          };
+        };
+        try {
+          el.style.setProperty('--holo-rx', '0deg');
+          el.style.setProperty('--holo-ry', '0deg');
+          el.style.setProperty('--holo-rotation', '0deg');
+          el.style.setProperty('--holo-shift-x', '18px');
+          el.style.setProperty('--holo-shift-y', '-11px');
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const rootRect = el.getBoundingClientRect();
+          return {
+            front: centerOffset(front, rootRect),
+            back: centerOffset(back, rootRect)
+          };
+        } finally {
+          for (const name of variables) {
+            if (original[name]) el.style.setProperty(name, original[name]);
+            else el.style.removeProperty(name);
+          }
+        }
+      });
+      if (faceAlignment.missingFace ||
+          !faceAlignment.front || !faceAlignment.back ||
+          Math.abs(faceAlignment.front.x) > 1.5 || Math.abs(faceAlignment.front.y) > 1.5 ||
+          Math.abs(faceAlignment.back.x) > 1.5 || Math.abs(faceAlignment.back.y) > 1.5) {
+        throw new Error('Holographic front and back artwork faces must stay centered under parallax: ' +
+          JSON.stringify(faceAlignment));
+      }
+
       const targetGroupIndex = groupBeforeInspect.children.findIndex(child => child.caption === 'Smooth Prism Foil');
       if (targetGroupIndex < 0 || groupBeforeInspect.children.length < 2) {
         throw new Error('Holographic Inspector regression fixture must have multiple grouped artwork items: ' +
