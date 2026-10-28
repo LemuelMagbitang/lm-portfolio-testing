@@ -2862,8 +2862,11 @@ export function createLightboxMediaRenderer({
         seed = Math.imul(seed,16777619);
       }
       const stableSeed = seed >>> 0;
-      const rotation = (stableSeed % 13) - 6;
-      const mobileRotation = Math.round(rotation * 0.65);
+      // Map the stable per-card hash across a wider pseudo-random range.
+      // The same group/index/source tuple always yields the same angle, even
+      // when the group is resized or the surrounding UI re-renders.
+      const rotation = Number((((stableSeed / 0xFFFFFFFF) * 2 - 1) * 14).toFixed(2));
+      const mobileRotation = Number((rotation * 0.8).toFixed(2));
       const x = ((stableSeed >>> 8) % 9) - 4;
       const y = ((stableSeed >>> 16) % 11) - 5;
       entry.style.setProperty('--artwork-sticker-rotation', rotation + 'deg');
