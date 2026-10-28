@@ -913,3 +913,12 @@ This migration must not:
 - Changed grouped holographic stage sizing to derive width from its preserved `--lightbox-artwork-ratio` and a responsive height budget. Mobile uses a tighter height budget but allows the artwork to use up to 75vw / 280px where the grid cell permits.
 - Extended the browser smoke metrics to assert ratio preservation within a 6% tolerance alongside equal cell widths, consistent row spacing, and centered artwork at desktop, tablet, 390px, and 320px widths.
 - **Next step:** rerun full site validation and Pages deployment; then visually inspect the grouped portrait, square, and landscape artwork sizes on real phone/tablet screens.
+
+
+### October 28, 2026 — Compact card-stack and sticker layouts
+
+- Tightened the Horizontal Card Stack's outer padding and row spacing, reduced card rotation/scale offsets, and added a restrained backing edge so the stack reads as a denser set of connected cards rather than oversized, loosely spaced tiles.
+- Tightened Sticker Card Layout's minimum grid track, row/column gaps, and container padding. A narrow light sticker rim, soft edge shadow, and smaller artwork stage make each piece feel more like a physical sticker while preserving its seeded playful rotation.
+- Gave both layouts dedicated aspect-ratio-aware artwork size budgets at desktop/tablet and mobile breakpoints. The mobile rules preserve the single-column fallback for stacked cards and a two-column sticker grid where space allows.
+- Extended the CMS presentation validator and browser smoke test to enforce compact stage dimensions in addition to the existing equal-track, centering, responsive fallback, and artwork-ratio checks. Advanced the Lightbox feature stylesheet cache key to `20261028-13`.
+- **Next step:** complete the active-branch validation/browser smoke and Pages workflows, then visually inspect the two compositions against the incident clip at desktop, tablet, and small-phone widths. No change is needed to unrelated gallery, navigation, or Inspector behavior.

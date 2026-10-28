@@ -469,6 +469,14 @@ assert.ok(lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') 
   lightboxCss.includes('width:min(100%,calc(clamp(200px,38svh,320px) * var(--lightbox-artwork-ratio,1)))') &&
   lightboxCss.includes('max-height:clamp(200px,38svh,320px)') &&
   lightboxCss.includes('max-width:min(100%,75vw,280px)') &&
+  lightboxCss.includes('clamp(180px,32svh,270px)') &&
+  lightboxCss.includes('clamp(150px,26svh,220px)') &&
+  lightboxCss.includes('clamp(160px,28svh,232px)') &&
+  lightboxCss.includes('clamp(140px,25svh,190px)') &&
+  lightboxCss.includes('minmax(min(100%,180px),1fr)') &&
+  lightboxCss.includes('row-gap:clamp(18px,2vw,26px)') &&
+  lightboxCss.includes('border:2px solid rgba(255,255,255,.94)') &&
+  lightboxCss.includes('inset:4px 4px -5px') &&
   lightboxCss.includes('overflow:visible;') &&
   lightboxCss.includes('z-index:10002;') &&
   lightboxCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') &&

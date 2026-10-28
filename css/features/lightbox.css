@@ -309,86 +309,96 @@
   align-items:stretch;
   justify-items:stretch;
 }
-/* Horizontal Card Stack: equal grid cells with a controlled visual overlap.
-   Transforms do not alter the underlying layout tracks or row wrapping. */
+/* Horizontal Card Stack: keep the fan of overlapping cards, but use a tighter
+   footprint, a quiet backing edge and smaller transforms so each piece reads as one card. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  column-gap:0;
-  row-gap:clamp(28px,3vw,40px);
-  padding:clamp(28px,3.4vw,42px);
-  align-items:stretch;
-  justify-items:stretch;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:0;
+  row-gap:clamp(18px,2vw,26px);padding:clamp(14px,1.8vw,22px) clamp(12px,1.6vw,20px);
+  align-items:stretch;justify-items:stretch;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item{
-  transform:translate3d(10px,2px,0) rotate(-2.4deg) scale(1.04);
-  z-index:1;
+  transform:translate3d(4px,1px,0) rotate(-1.5deg) scale(1.015);z-index:1;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(3n+2){
-  transform:translate3d(-8px,-1px,0) rotate(1.5deg) scale(1.06);
-  z-index:2;
+  transform:translate3d(-3px,0,0) rotate(1deg) scale(1.025);z-index:2;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(3n){
-  transform:translate3d(-18px,2px,0) rotate(-1.3deg) scale(1.06);
-  z-index:3;
+  transform:translate3d(-6px,1px,0) rotate(-.8deg) scale(1.025);z-index:3;
 }
-/* Sticker Card Layout: seeded low-amplitude variation gives each artwork a
-   stable collage position without random motion between rerenders. */
+/* A slim plate behind the art supplies a card edge without a second full card UI. */
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"]) .lightbox-media-item::before{
+  content:"";position:absolute;inset:4px 4px -5px;z-index:0;
+  border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.045);
+  box-shadow:0 6px 14px rgba(0,0,0,.2);pointer-events:none;
+}
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"]) .lightbox-artwork.has-holographic,
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
+  position:relative;z-index:1;
+  width:min(100%,calc(clamp(180px,32svh,270px) * var(--lightbox-artwork-ratio,1)));
+  max-width:min(100%,40vw,300px);height:auto;max-height:clamp(180px,32svh,270px);
+  padding:6px;border:1px solid rgba(255,255,255,.2);border-radius:14px;
+  background:rgba(255,255,255,.045);
+  box-shadow:0 7px 15px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.1);
+  box-sizing:border-box;
+}
+
+/* Sticker Card Layout: smaller minimum tracks, closer packing, a clean sticker rim,
+   and only gentle seeded variation to keep the collage readable at a glance. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork-group-items{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));
-  column-gap:clamp(14px,2vw,26px);
-  row-gap:clamp(24px,3vw,38px);
-  padding:clamp(22px,3vw,36px);
-  align-items:stretch;
-  justify-items:stretch;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+  column-gap:clamp(8px,1.2vw,16px);row-gap:clamp(12px,1.8vw,22px);
+  padding:clamp(12px,1.8vw,20px);align-items:stretch;justify-items:stretch;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item{
   transform:translate3d(var(--artwork-sticker-x,0px),var(--artwork-sticker-y,0px),0)
-    rotate(var(--artwork-sticker-rotation,0deg)) scale(.985);
+    rotate(var(--artwork-sticker-rotation,0deg)) scale(.965);
   transform-origin:50% 52%;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item:nth-child(4n+1){z-index:2;}
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item:nth-child(4n+2){z-index:3;}
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item:nth-child(4n+3){z-index:1;}
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item:nth-child(4n){z-index:2;}
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
+  position:relative;z-index:1;
+  width:min(100%,calc(clamp(160px,28svh,232px) * var(--lightbox-artwork-ratio,1)));
+  max-width:min(100%,36vw,252px);height:auto;max-height:clamp(160px,28svh,232px);
+  padding:5px;border:2px solid rgba(255,255,255,.94);border-radius:12px;background:#f4f0e7;
+  box-shadow:0 5px 12px rgba(0,0,0,.24),inset 0 0 0 1px rgba(24,23,18,.04);
+  box-sizing:border-box;
+}
 @media (max-width:1000px) and (min-width:761px){
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    padding:clamp(20px,3vw,30px);
+    grid-template-columns:repeat(2,minmax(0,1fr));padding:12px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item{
-    transform:translate3d(10px,2px,0) rotate(-2deg) scale(1.035);
+    transform:translate3d(3px,1px,0) rotate(-1.2deg) scale(1.01);
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(2n){
-    transform:translate3d(-12px,-1px,0) rotate(1.5deg) scale(1.05);
+    transform:translate3d(-4px,0,0) rotate(1deg) scale(1.02);
   }
 }
 @media (max-width:760px){
-  /* Overlap-heavy card stacks are not forced into a narrow viewport. */
+  /* The fan relaxes to a single compact column; the card treatment stays intact. */
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-artwork-group-items{
-    grid-template-columns:minmax(0,1fr);
-    gap:clamp(16px,4vw,24px);
-    padding:12px;
+    grid-template-columns:minmax(0,1fr);gap:clamp(12px,3vw,18px);padding:10px;
   }
-  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-media-item{
-    transform:none;
+  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-media-item{transform:none;}
+  #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"]) .lightbox-artwork.has-holographic,
+  #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
+    width:min(100%,calc(clamp(150px,26svh,220px) * var(--lightbox-artwork-ratio,1)));
+    max-width:min(100%,68vw,220px);height:auto;max-height:clamp(150px,26svh,220px);padding:5px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork-group-items{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:14px 10px;
-    padding:18px;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 8px;padding:12px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item{
-    transform:translate3d(0,0,0)
-      rotate(var(--artwork-sticker-rotation-mobile,0deg)) scale(.99);
+    transform:translate3d(0,0,0) rotate(var(--artwork-sticker-rotation-mobile,0deg)) scale(.975);
   }
-  #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork.has-holographic,
-  #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork.has-holographic.is-media-reveal-ready{
-    width:min(100%,calc(clamp(180px,36svh,280px) * var(--lightbox-artwork-ratio,1)));
-    max-width:min(100%,75vw,280px);
-    height:auto;
-    max-height:clamp(180px,36svh,280px);
+  #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
+  #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
+    width:min(100%,calc(clamp(140px,25svh,190px) * var(--lightbox-artwork-ratio,1)));
+    max-width:min(100%,64vw,190px);height:auto;max-height:clamp(140px,25svh,190px);padding:4px;
   }
 }
 @media (hover:hover) and (pointer:fine){

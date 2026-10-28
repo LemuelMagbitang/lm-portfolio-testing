@@ -4213,6 +4213,8 @@ try {
               width: el.offsetWidth,
               height: el.offsetHeight,
               rotationDegrees,
+              artworkWidth: artwork?.offsetWidth || 0,
+              artworkHeight: artwork?.offsetHeight || 0,
               artworkAspectRatioDelta: artwork && Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')) > 0 && artwork.offsetHeight > 0
                 ? Math.abs((artwork.offsetWidth / artwork.offsetHeight) - Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')))
                 : null,
@@ -4260,6 +4262,8 @@ try {
         const maxArtworkAspectRatioDelta = artworkAspectRatioDeltas.length
           ? Math.max(...artworkAspectRatioDeltas)
           : 0;
+        const artworkWidths = layout.children.map(child => child.artworkWidth || 0).filter(width => width > 0);
+        const artworkHeights = layout.children.map(child => child.artworkHeight || 0).filter(height => height > 0);
         return {
           display: layout.itemsDisplay,
           columnCount: columnStarts.length,
@@ -4267,7 +4271,9 @@ try {
           dividerSpacingSpread,
           centeredArtworkCount: centeredArtwork.length,
           maxArtworkCenterOffset,
-          maxArtworkAspectRatioDelta
+          maxArtworkAspectRatioDelta,
+          maxArtworkWidth: artworkWidths.length ? Math.max(...artworkWidths) : 0,
+          maxArtworkHeight: artworkHeights.length ? Math.max(...artworkHeights) : 0
         };
       };
       const assertEqualSectionGrid = (layout, context) => {
@@ -4332,6 +4338,17 @@ try {
                 JSON.stringify({ mode, viewport, expectedEffectiveLayout, layout }));
             }
             const metrics = assertEqualSectionGrid(layout, mode + ' at ' + viewport.width + 'px');
+            if (mode === 'cards' || mode === 'sticker') {
+              const mobile = viewport.width <= 760;
+              const footprintLimit = mode === 'cards'
+                ? (mobile ? { width:220, height:220 } : { width:300, height:270 })
+                : (mobile ? { width:190, height:190 } : { width:252, height:232 });
+              if (metrics.maxArtworkWidth > footprintLimit.width + 2 ||
+                  metrics.maxArtworkHeight > footprintLimit.height + 2) {
+                throw new Error('Card-stack and sticker artwork must keep their compact responsive footprint: ' +
+                  JSON.stringify({ mode, viewport, footprintLimit, metrics }));
+              }
+            }
             if (mode === 'sticker') {
               const maxRotation = Math.max(...layout.children.map(child => Math.abs(child.rotationDegrees || 0)));
               if (maxRotation > 45.01) {
