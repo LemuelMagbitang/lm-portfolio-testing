@@ -468,8 +468,11 @@ assert.ok(
   lightboxCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
   lightboxCss.includes('translate:var(--artwork-row-center-shift,0px) 0;') &&
   lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&
-  lightboxCss.includes('max-height:clamp(160px,24svh,216px)') &&
-  lightboxCss.includes('max-height:clamp(155px,24svh,198px)') &&
+  lightboxCss.includes('width:min(calc(clamp(148px,22svh,196px) * var(--lightbox-artwork-ratio,1)),220px)') &&
+  lightboxCss.includes('max-height:clamp(148px,22svh,196px)') &&
+  lightboxCss.includes('width:min(calc(clamp(128px,21svh,160px) * var(--lightbox-artwork-ratio,1)),176px)') &&
+  lightboxCss.includes('max-height:clamp(128px,21svh,160px)') &&
+  lightboxCss.includes('[data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]') &&
   lightboxCss.includes('padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;') &&
   lightboxCss.includes('filter:drop-shadow(0 4px 5px rgba(0,0,0,.28))') &&
   lightboxCss.includes(':focus-visible:not(.is-inspect-focus-return)') &&
