@@ -3610,7 +3610,7 @@ try {
         });
         if (affordance.foil !== 'disabled' || affordance.environmentDisplay !== 'none' ||
             affordance.normalMapDisplay !== 'none' ||
-            !affordance.desktopRecommendation.toLowerCase().includes('best viewed') ||
+            !affordance.desktopRecommendation.toLowerCase().includes('switch to desktop for the full effect') ||
             !affordance.desktopRecommendation.toLowerCase().includes('desktop') ||
             affordance.desktopRecommendationDisplay === 'none' ||
             affordance.animationName !== 'none' ||
