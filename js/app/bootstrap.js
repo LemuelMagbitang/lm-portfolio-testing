@@ -243,7 +243,7 @@ export async function bootstrapPortfolioApp({
       parseYouTubeUrl
     };
 
-    await createPortfolioApp({
+    const app = await createPortfolioApp({
       root,
       runtime,
       cms,
@@ -253,6 +253,13 @@ export async function bootstrapPortfolioApp({
     await waitForReadyPaint();
     settleInitialHashTarget();
     hideInitialPageTransition();
+    // Start first-viewport reveals only after the branded gate is gone; otherwise
+    // the shortest page can finish animating behind the loading overlay.
+    try {
+      app?.contentReveal?.refresh?.();
+    } catch (revealError) {
+      console.warn('Content reveal could not start.', revealError);
+    }
     if (initialTransitionFrame) windowRef.cancelAnimationFrame?.(initialTransitionFrame);
   } catch (error) {
     console.error('Portfolio runtime failed to initialize', error);
