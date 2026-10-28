@@ -98,7 +98,7 @@ export async function createPortfolioApp({
   let activeCuratedViewSlug = '';
   let lightboxFeature = null;
   let contentRevealFeature = null;
-  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261029-01')
+  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261029-02')
     .catch(error => {
       console.warn('Content reveal: optional feature could not load.', error);
       return null;
@@ -560,7 +560,6 @@ export async function createPortfolioApp({
     const contentRevealModule = await contentRevealModulePromise;
     if (typeof contentRevealModule?.initContentReveal === 'function') {
       contentRevealFeature = contentRevealModule.initContentReveal({ root });
-      contentRevealFeature?.refresh?.();
     }
   } catch (error) {
     console.warn('Content reveal: initialization failed.', error);
