@@ -4330,12 +4330,19 @@ try {
           });
         }
         const defaultColumnCounts = responsiveGridMetrics.map(result => result.metrics.columnCount);
-        if (!(defaultColumnCounts[0] >= defaultColumnCounts[1] &&
-              defaultColumnCounts[1] >= defaultColumnCounts[2] &&
-              defaultColumnCounts[2] === 1 &&
-              defaultColumnCounts[3] === 1)) {
-          throw new Error('Holographic artwork columns must responsively wrap without overflow at desktop, tablet, and mobile widths: ' +
-            JSON.stringify({ responsiveGridMetrics }));
+        const expectedDenseColumnCounts = originalRequestedLayout === 'cards'
+          ? [5,4,3,3]
+          : (originalRequestedLayout === 'sticker' ? [3,3,2,2] : null);
+        const baselineColumnsMatch = expectedDenseColumnCounts
+          ? expectedDenseColumnCounts.every((count,index) =>
+              defaultColumnCounts[index] === Math.min(count, groupBeforeInspect.children.length))
+          : (defaultColumnCounts[0] >= defaultColumnCounts[1] &&
+             defaultColumnCounts[1] >= defaultColumnCounts[2] &&
+             defaultColumnCounts[2] === 1 &&
+             defaultColumnCounts[3] === 1);
+        if (!baselineColumnsMatch) {
+          throw new Error('Holographic artwork columns must responsively match the requested layout without viewport overflow: ' +
+            JSON.stringify({ originalRequestedLayout, expectedDenseColumnCounts, defaultColumnCounts, responsiveGridMetrics }));
         }
 
         const layoutModeChecks = [];
