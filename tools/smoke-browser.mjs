@@ -3864,6 +3864,7 @@ try {
           const middle = face.querySelector('.lightbox-holographic-cosmos-middle');
           const top = face.querySelector('.lightbox-holographic-cosmos-top');
           const readFoilLayer = layer => ({
+            display: getComputedStyle(layer).display,
             background: getComputedStyle(layer).backgroundImage,
             mask: layer.style.maskImage || layer.style.webkitMaskImage,
             maskMode: layer.style.maskMode || layer.style.webkitMaskSourceType
@@ -3878,20 +3879,20 @@ try {
           };
         });
         if (cosmosMaterial.style !== 'cosmos' ||
-            !cosmosMaterial.bottom.background.includes('conic-gradient') ||
+            cosmosMaterial.bottom.display !== 'none' || cosmosMaterial.bottom.background !== 'none' ||
             !cosmosMaterial.bottom.mask.includes('cosmos-bottom.webp') ||
             !cosmosMaterial.bottom.maskMode.includes('luminance') ||
-            !cosmosMaterial.middle.background.includes('conic-gradient') ||
+            cosmosMaterial.middle.display !== 'none' || cosmosMaterial.middle.background !== 'none' ||
             !cosmosMaterial.middle.mask.includes('cosmos-middle-trans.webp') ||
             !cosmosMaterial.middle.maskMode.includes('luminance') ||
-            !cosmosMaterial.top.background.includes('conic-gradient') ||
+            cosmosMaterial.top.display !== 'none' || cosmosMaterial.top.background !== 'none' ||
             !cosmosMaterial.top.mask.includes('cosmos-top-trans.webp') ||
             !cosmosMaterial.top.maskMode.includes('luminance') ||
-            !cosmosMaterial.grain.includes('grain.webp') ||
+            cosmosMaterial.grain !== 'none' ||
             cosmosMaterial.layerNames.indexOf('cosmos-bottom') < 0 ||
             cosmosMaterial.layerNames.indexOf('cosmos-middle') <= cosmosMaterial.layerNames.indexOf('cosmos-bottom') ||
             cosmosMaterial.layerNames.indexOf('cosmos-top') <= cosmosMaterial.layerNames.indexOf('cosmos-middle')) {
-          throw new Error('Cosmos renderer profile must apply each grayscale texture as its own luminance mask over an ordered spectral layer: ' + JSON.stringify(cosmosMaterial));
+          throw new Error('Compact Cosmos artwork must retain its texture-mask configuration while suppressing all rendered foil layers: ' + JSON.stringify(cosmosMaterial));
         }
         for (const asset of ['cosmos-bottom.webp', 'cosmos-middle-trans.webp', 'cosmos-top-trans.webp']) {
           const response = await page.request.get(`${BASE_URL}/assets/holographic/${asset}`);
