@@ -1313,9 +1313,28 @@ export function createLightboxMediaRenderer({
       const motion = holographicMotionStates.get(surface);
       if (motion) {
         motion.compactTarget = compactTarget;
-        // Reapply the current pointer state immediately so an on-edge desktop
-        // tilt cannot remain above the compact visual-strength cap after resize.
-        updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
+        if (compactTarget) {
+          // Compact mode is deliberately static: discard any queued pointer
+          // input/interpolation and reset both the active 3D pose and hidden
+          // reflection coordinates in one resize-time pass. Do not keep easing
+          // toward center after hover interaction has been disabled.
+          cancelQueuedPointer();
+          if (motion.frame !== null && motion.frame !== undefined) {
+            try { windowRef?.cancelAnimationFrame?.(motion.frame); } catch (_) {}
+            motion.frame = null;
+          }
+          motion.x = motion.targetX = 50;
+          motion.y = motion.targetY = 50;
+          motion.rotation = motion.targetRotation = 0;
+          motion.lastTime = 0;
+          surface.style.setProperty('--holo-x', '50%');
+          surface.style.setProperty('--holo-y', '50%');
+          surface.style.setProperty('--holo-foil-x', '50%');
+          surface.style.setProperty('--holo-foil-y', '50%');
+          updateHolographicTilt(surface, 50, 50, 0);
+        } else {
+          updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
+        }
       }
     };
     const bindResponsiveFoilQuery = (query, handler = syncResponsiveFoilIntensity) => {
