@@ -468,7 +468,8 @@ assert.ok(lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') 
   lightboxCss.includes('rotate(var(--artwork-sticker-rotation-mobile,0deg))') &&
   lightboxCss.includes('width:min(100%,calc(clamp(200px,38svh,320px) * var(--lightbox-artwork-ratio,1)))') &&
   lightboxCss.includes('max-height:clamp(200px,38svh,320px)') &&
-  lightboxCss.includes('max-width:min(100%,75vw,280px)') &&
+  lightboxCss.includes('max-width:min(100%,68vw,220px)') &&
+  lightboxCss.includes('max-width:min(100%,64vw,190px)') &&
   lightboxCss.includes('clamp(180px,32svh,270px)') &&
   lightboxCss.includes('clamp(150px,26svh,220px)') &&
   lightboxCss.includes('clamp(160px,28svh,232px)') &&
