@@ -5,7 +5,7 @@ import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
 import { ensureMediaBackgroundHelper } from '../../infrastructure/media-background/loader.js?v=20261023-01';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
-import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
+import { normalizeProjects } from '../../data/project-normalizer.js?v=20261028-01';
 import { createLifecycle } from '../../core/lifecycle.js';
 
 const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-02';

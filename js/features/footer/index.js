@@ -9,7 +9,7 @@
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
 
-import { normalizeProjects } from '../../data/project-normalizer.js?v=20261026-01';
+import { normalizeProjects } from '../../data/project-normalizer.js?v=20261028-01';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
 import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261026-02';
