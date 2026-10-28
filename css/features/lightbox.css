@@ -1,7 +1,7 @@
 /* Lightbox feature-owned finishing layer.
    Loaded after css/style.css so artwork fit, Inspector layering and controls have one
    late-cascade owner. The shared file still owns the underlying Lightbox implementation. */
-#lightboxMediaContainer .lightbox-artwork-group-items{padding:clamp(14px,2.6vw,30px);}
+#lightboxMediaContainer .lightbox-artwork-group-items{box-sizing:border-box;width:100%;max-width:100%;margin-inline:auto;padding:clamp(14px,2.6vw,30px);}
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork{
   overflow:visible;padding:clamp(8px,1vw,14px);box-sizing:border-box;
 }

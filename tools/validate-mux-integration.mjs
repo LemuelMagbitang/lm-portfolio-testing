@@ -330,10 +330,9 @@ check(script.includes('"mux_auth_failed"') &&
   script.includes("Mux Video Read permission"),
   "CMS must explain how to resolve rejected Mux API credentials.");
 check(
-  fs.existsSync("assets/projects/site/banner/hero-reel.mp4") &&
   hero.includes("fallbackMuxToNativeVideo") &&
   !hero.includes("LEGACY_HERO_MP4_FALLBACK"),
-  "The legacy MP4 asset must remain available but must not be automatically substituted for the published Mux Hero source."
+  "Hero must retain source-provided native-video fallback handling without overriding the published Mux source."
 );
 const supabaseUrl = String(config.supabaseUrl || "").trim();
 const supabaseKey = String(config.supabasePublishableKey || config.supabaseAnonKey || "").trim();

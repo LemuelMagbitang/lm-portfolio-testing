@@ -113,7 +113,7 @@ The CMS media library continues to handle files stored in the repository. Use Mu
 Mux is a hosted service, not a lifetime archive. Availability depends on account standing, billing/plan limits, the asset not being deleted, and the applicable service terms. Mux's current Free plan lists up to 10 stored videos and 100,000 monthly delivery minutes; its Pay-as-you-go plan lists no storage limit, but storage is billed per video minute per month and delivery beyond included allowances is usage-based. See [current Mux pricing](https://www.mux.com/pricing). Mux also states that it does not keep the original upload in its exact form, so keep an independent backup of original master video files: [Mux streaming guide](https://www.mux.com/docs/core/stream-video-files).
 
 ## Public hero integration
-The Hero first loads `data/video-platform.json`, then requests the published `mux-public?placement=hero` feed. Each request has its own bounded timeout so the public-config fetch and CORS preflight do not consume the same timeout budget. In manual mode, a non-empty published feed replaces the checked-in `data/hero-loop.json` list; in mixed mode, curated entries remain first and published placements are appended. The Hero uses the lightweight `mux-video` component for background playback. A slow module import may take up to 15 seconds before fallback; a stalled stream gets a 15-second startup window, and playback errors/startup fallbacks now emit a `[Hero Mux]` warning and record the reason on the slide's `data-mux-fallback-reason` attribute. The checked-in `assets/projects/site/banner/hero-reel.mp4` remains an explicit recovery fallback. Reduced-motion handling and lifecycle cleanup remain in force.
+The Hero first loads `data/video-platform.json`, then requests the published `mux-public?placement=hero` feed. Each request has its own bounded timeout so the public-config fetch and CORS preflight do not consume the same timeout budget. In manual mode, a non-empty published feed replaces the checked-in `data/hero-loop.json` list; in mixed mode, curated entries remain first and published placements are appended. The Hero uses the lightweight `mux-video` component for background playback. A slow module import may take up to 15 seconds before fallback; a stalled stream gets a 15-second startup window, and playback errors/startup fallbacks now emit a `[Hero Mux]` warning and record the reason on the slide's `data-mux-fallback-reason` attribute. A local MP4 fallback is not bundled by default; any native-video fallback must be explicitly supplied by the media source. Reduced-motion handling and lifecycle cleanup remain in force.
 
 ## Validation checklist
 - Non-allowlisted users receive 401/403 from admin API.
@@ -122,7 +122,7 @@ The Hero first loads `data/video-platform.json`, then requests the published `mu
 - Duplicate events are safe; invalid signatures are rejected.
 - Errored/timed-out/deleted assets cannot be published.
 - Public feed returns only published, ready public-playback assets.
-- Blank config and API/player failures preserve legacy MP4 hero.
+- Blank config and API/player failures preserve the configured poster and any source-provided fallback behavior.
 - Test mobile autoplay, reduced motion, media errors, captions/lightbox cleanup and offline behavior.
 
 The code/schema has been deployed to the configured Supabase project, but live upload/import success still depends on correct server secrets, the exact CMS origin, the administrator UID allowlist, and the registered Mux webhook.

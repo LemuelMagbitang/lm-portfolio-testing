@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { findAssetReferences } from './media-reference-audit.mjs';
 
-const asset = 'assets/projects/site/banner/hero-reel.mp4';
+const asset = 'assets/media/audit-fixture.mp4';
 
 assert.deepEqual(
   findAssetReferences(asset, [{
     path: 'admin/videos.html',
-    content: '<input id="staticSourceUrl" placeholder="assets/projects/site/banner/hero-reel.mp4">'
+    content: '<input id="staticSourceUrl" placeholder="assets/media/audit-fixture.mp4">'
   }]),
   [],
   'A form placeholder must not count as proof that a media file is used.'
@@ -15,7 +15,7 @@ assert.deepEqual(
 assert.deepEqual(
   findAssetReferences(asset, [{
     path: 'index.html',
-    content: '<!-- Legacy source: assets/projects/site/banner/hero-reel.mp4 -->'
+    content: '<!-- Legacy source: assets/media/audit-fixture.mp4 -->'
   }]),
   [],
   'An HTML comment must not count as a live media reference.'
@@ -24,7 +24,7 @@ assert.deepEqual(
 assert.deepEqual(
   findAssetReferences(asset, [{
     path: 'admin/videos.html',
-    content: '<video src="assets/projects/site/banner/hero-reel.mp4"></video>'
+    content: '<video src="assets/media/audit-fixture.mp4"></video>'
   }]),
   ['admin/videos.html'],
   'A real HTML src reference must be detected.'
@@ -33,7 +33,7 @@ assert.deepEqual(
 assert.deepEqual(
   findAssetReferences(asset, [{
     path: 'js/hero.js',
-    content: "const fallbackSrc = 'assets/projects/site/banner/hero-reel.mp4';"
+    content: "const fallbackSrc = 'assets/media/audit-fixture.mp4';"
   }]),
   ['js/hero.js'],
   'A JavaScript fallback source must be detected.'

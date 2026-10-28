@@ -4176,9 +4176,19 @@ try {
       await funkoHolo.scrollIntoViewIfNeeded();
       await funkoHolo.hover();
       await page.waitForTimeout(650); // let staggered card and hover transforms settle
-      const readArtworkGroupLayout = () => artworkGroupItems.evaluate(items => ({
-        layout: items.closest('.lightbox-artwork-group')?.dataset.artworkEffectiveLayout || '',
+      const readArtworkGroupLayout = () => artworkGroupItems.evaluate(items => {
+        const group = items.closest('.lightbox-artwork-group');
+        const groupRect = group?.getBoundingClientRect();
+        const itemsRect = items.getBoundingClientRect();
+        return {
+        layout: group?.dataset.artworkEffectiveLayout || '',
         width: items.clientWidth,
+        groupWidth: groupRect?.width || 0,
+        itemsWidth: itemsRect.width,
+        itemsBoxSizing: getComputedStyle(items).boxSizing,
+        centerOffset: groupRect && itemsRect
+          ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
+          : Number.POSITIVE_INFINITY,
         children: Array.from(items.children).map((el, index) => {
           const rect = el.getBoundingClientRect();
           return {
@@ -4191,8 +4201,22 @@ try {
             height: rect.height
           };
         })
-      }));
+      };
+      });
       const groupBeforeInspect = await readArtworkGroupLayout();
+      if (groupBeforeInspect.itemsBoxSizing !== 'border-box' ||
+          groupBeforeInspect.groupWidth <= 0 ||
+          Math.abs(groupBeforeInspect.itemsWidth - groupBeforeInspect.groupWidth) > 2 ||
+          Math.abs(groupBeforeInspect.centerOffset) > 1.5) {
+        throw new Error('Grouped artwork must remain centered without padding overflow: ' +
+          JSON.stringify({
+            layout: groupBeforeInspect.layout,
+            boxSizing: groupBeforeInspect.itemsBoxSizing,
+            groupWidth: groupBeforeInspect.groupWidth,
+            itemsWidth: groupBeforeInspect.itemsWidth,
+            centerOffset: groupBeforeInspect.centerOffset
+          }));
+      }
       const targetGroupIndex = groupBeforeInspect.children.findIndex(child => child.caption === 'Smooth Prism Foil');
       if (targetGroupIndex < 0 || groupBeforeInspect.children.length < 2) {
         throw new Error('Holographic Inspector regression fixture must have multiple grouped artwork items: ' +
@@ -10122,10 +10146,10 @@ try {
         return {
           available: typeof window.validateCmsMediaSource === 'function',
           validImage: check('image', 'assets/projects/site/portfolio-logo.webp'),
-          validVideoWithQuery: check('video', 'assets/projects/site/banner/hero-reel.mp4?v=smoke'),
+          validVideoWithQuery: check('video', 'assets/media/audit-fixture.mp4?v=smoke'),
           validExternalDynamicUrl: check('video', 'https://media.example.test/stream?id=smoke'),
           rejectsImageAsVideo: !check('video', 'assets/projects/site/portfolio-logo.webp'),
-          rejectsVideoAsImage: !check('image', 'assets/projects/site/banner/hero-reel.mp4'),
+          rejectsVideoAsImage: !check('image', 'assets/media/audit-fixture.mp4'),
           rejectsImageAsLottie: !check('lottie', 'assets/projects/site/portfolio-logo.webp'),
           rejectsDataUrl: !check('image', 'data:image/png;base64,AAAA'),
           rejectsBlobUrl: !check('video', 'blob:https://example.test/temporary-id'),
