@@ -7861,11 +7861,19 @@ try {
       const next = page.locator('.lightbox-next').first();
       const close = page.locator('#lightboxClose').first();
 
+      // This scenario targets input that arrives before the 280ms visual transition
+      // commits. Dispatch each click synchronously so Playwright's pointer-action
+      // stability wait cannot turn the intended rapid pair into ordinary navigation.
       for (let i = 0; i < 4; i += 1) {
-        await next.click();
+        await next.evaluate(button => button.click());
         await page.waitForTimeout(80);
-        await previous.click();
+        await previous.evaluate(button => button.click());
         await page.waitForTimeout(80);
+      }
+
+      const currentTitle = (await page.locator('#modalTitle').textContent() || '').trim();
+      if (currentTitle !== 'Haeru') {
+        throw new Error(`Rapid Next/Previous input should preserve the current Haeru project; modal title is "${currentTitle}".`);
       }
 
       const mediaItems = await page.locator('#lightboxMediaContainer .lightbox-media-item').count();
