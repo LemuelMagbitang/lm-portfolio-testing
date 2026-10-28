@@ -4131,15 +4131,32 @@ try {
 
       // Desktop must react to real pointer movement, with the foil reflection
       // travelling opposite the pointer rather than remaining a static overlay.
-      const desktopHoloBox = await funkoHolo.boundingBox();
-      if (!desktopHoloBox) throw new Error('Desktop holographic artwork lost its interaction geometry.');
-      // The enlarged card intentionally overlaps its right neighbor. Probe
-      // an exposed interior point, not the overlap edge where the next card
-      // correctly owns pointer input.
-      await page.mouse.move(
-        desktopHoloBox.x + desktopHoloBox.width * 0.16,
-        desktopHoloBox.y + desktopHoloBox.height * 0.16
-      );
+      // Grouped artwork can overlap transformed neighbors, so locate an actually
+      // exposed point by hit-testing the live layout instead of assuming a fixed
+      // percentage is uncovered in every artwork arrangement.
+      const pointerProbe = await funkoHolo.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        const candidates = [
+          [0.5, 0.2], [0.2, 0.5], [0.8, 0.5], [0.5, 0.8],
+          [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75],
+          [0.16, 0.16], [0.84, 0.16], [0.16, 0.84], [0.84, 0.84]
+        ];
+        for (const [rx, ry] of candidates) {
+          const x = rect.left + rect.width * rx;
+          const y = rect.top + rect.height * ry;
+          const target = document.elementFromPoint(x, y);
+          if (target?.closest?.('.lightbox-holographic') === el &&
+              Math.abs(rx * 100 - 50) >= 5 &&
+              Math.abs(ry * 100 - 50) >= 5) {
+            return { x, y, relativeX: rx, relativeY: ry, target: target.tagName };
+          }
+        }
+        return null;
+      });
+      if (!pointerProbe) {
+        throw new Error('Desktop holographic artwork has no exposed off-center pointer target.');
+      }
+      await page.mouse.move(pointerProbe.x, pointerProbe.y);
       await page.waitForTimeout(120);
       const desktopTiltState = await funkoHolo.evaluate(el => {
         const read = name => Number.parseFloat(el.style.getPropertyValue(name));
