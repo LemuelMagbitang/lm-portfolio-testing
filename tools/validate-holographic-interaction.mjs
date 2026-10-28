@@ -114,25 +114,34 @@ const normalRenderer = await readFile(new URL('../js/features/lightbox/foil-norm
 const styles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const lightboxStyles = await readFile(new URL('../css/features/lightbox.css', import.meta.url), 'utf8');
 assert.match(mediaRenderer, /getFoilPointerPose\(x, y\)/);
-assert.match(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000, motion\.autoMotion\)/);
-assert.match(mediaRenderer, /autoMotion:\s*createFoilAutoMotionProfile\(\)/);
+assert.doesNotMatch(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000, motion\.autoMotion\)/,
+  'Grouped lightbox artwork must not run a continuous per-surface auto-motion loop.');
+assert.doesNotMatch(mediaRenderer, /autoMotion:\s*createFoilAutoMotionProfile\(\)/,
+  'Rendering many compact holo artworks must not allocate an unused motion profile per item.');
 assert.match(lightboxStyles, /grid-template-areas:\s*"hint-primary"\s*"recommendation"/,
   'Compact foil hint must keep the nested face/flip row separate from the desktop recommendation.');
 assert.doesNotMatch(lightboxStyles, /grid-template-areas:\s*"face separator action"/,
   'The obsolete direct-child grid must not return after the hint DOM was grouped.');
-assert.match(mediaRenderer, /motion\.autoFrame = windowRef\.requestAnimationFrame\(animate\)/);
+assert.doesNotMatch(mediaRenderer, /motion\.autoFrame = windowRef\.requestAnimationFrame\(animate\)/,
+  'Holo surfaces must not schedule a continuous animation loop while foil effects are disabled on compact devices.');
 assert.match(mediaRenderer, /cancelAnimationFrame\?\.\(motion\.autoFrame\)/);
 assert.match(mediaRenderer, /prefersReducedFoilMotion\(windowRef\)/);
 assert.match(mediaRenderer, /syncFoilMotionMode = \(\) =>/);
-assert.match(mediaRenderer, /surface\.dataset\.holoMotion = autoRotationAvailable \? 'auto-rotate'/);
+assert.match(mediaRenderer, /surface\.dataset\.holoMotion = hoverAvailable \? 'pointer' : 'static'/);
+assert.match(mediaRenderer, /let hoverAvailable = !compactTarget && supportsFoilHover\(windowRef\)/);
+assert.match(mediaRenderer, /const nextHoverAvailable = !isCompactFoilTarget\(windowRef\)/);
+assert.match(mediaRenderer, /if \(holo\?\.back && !isCompactFoilTarget\(windowRef\)\)/);
+assert.match(mediaRenderer, /\{ eager: !compactTarget \}/);
+assert.ok(!mediaRenderer.includes('startFoilAutoRotation('),
+  'Automatic rotation must be removed from the grouped lightbox lifecycle.');
 assert.match(mediaRenderer, /surface\.dataset\.holoFoil = compactTarget \? 'disabled' : 'enabled'/);
 assert.match(mediaRenderer, /syncHolographicNormalRendering\(surface, !compactTarget\)/);
 assert.ok(mediaRenderer.includes('if (motion?.compactTarget) return;'),
   'Compact motion updates must skip foil-lighting calculations and writes.');
 assert.ok(mediaRenderer.includes("surface.style.setProperty('--holo-rx'"),
-  'Compact parallax must continue to update the 3D transform.');
+  'Transform properties must remain available for centered desktop pointer response.');
 assert.ok(mediaRenderer.includes("surface.style.setProperty('--holo-shift-x'"),
-  'Compact parallax must retain its translation component.');
+  'Artwork translation properties must remain initialized for centering and reset behavior.');
 assert.match(mediaRenderer, /record\.canvas\.dataset\.foilNormalState = enabled \? 'active' : 'suspended'/);
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /Math\.random\(\)|rotationDirection|getFoilEdgeRotation/);
