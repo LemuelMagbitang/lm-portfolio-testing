@@ -4283,6 +4283,7 @@ try {
         return {
           display: layout.itemsDisplay,
           columnCount: columnStarts.length,
+          trackCount: layout.trackCount,
           widthSpread,
           dividerSpacingSpread,
           centeredArtworkCount: centeredArtwork.length,
