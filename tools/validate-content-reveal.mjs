@@ -32,7 +32,7 @@ assert.ok(
   bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
   'Initial content reveal must start after the branded page-transition gate closes.'
 );
-assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-03"/);
+assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-01"/);
 assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-01"/);
 
 // Exercise the observer and lifecycle with small DOM-shaped fakes.
