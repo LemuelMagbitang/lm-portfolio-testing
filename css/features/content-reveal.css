@@ -18,6 +18,13 @@
   translate: 0 0;
 }
 
+/* Form surfaces may contain interactive controls. Keep their foreground
+   fully painted while retaining the viewport-triggered translate/stagger. */
+.lm-content-reveal-target[data-lm-content-reveal-motion="position-only"],
+.lm-content-reveal-target[data-lm-content-reveal-motion="position-only"].is-lm-content-revealed {
+  opacity: 1;
+}
+
 /* Keyboard focus must never remain on content that is visually transparent. */
 .lm-content-reveal-target:focus-within,
 .lm-content-reveal-target:focus-visible {

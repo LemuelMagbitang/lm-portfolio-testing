@@ -116,6 +116,13 @@ export function initContentReveal({
         if (target.dataset.lmContentRevealState ||
             target.closest?.('[data-lm-content-reveal="off"]')) return;
 
+        // Form controls remain fully opaque while waiting for the viewport.
+        // Their container still uses translate motion for entrance, but does not
+        // disappear from full-document accessibility audits before it is viewed.
+        if (target.matches?.('.form-container') || target.querySelector?.('form')) {
+          target.dataset.lmContentRevealMotion = 'position-only';
+        }
+
         // Delay only sibling members; clamp it to avoid a slow cascade on longer lists.
         const delay = Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS);
         target.style.setProperty('--lm-content-reveal-delay', delay + 'ms');
@@ -164,7 +171,10 @@ export function initContentReveal({
       }
       targets.forEach(target => {
         target.classList?.remove('lm-content-reveal-target', 'is-lm-content-revealed');
-        if (target.dataset) delete target.dataset.lmContentRevealState;
+        if (target.dataset) {
+          delete target.dataset.lmContentRevealState;
+          delete target.dataset.lmContentRevealMotion;
+        }
         target.style?.removeProperty?.('--lm-content-reveal-delay');
       });
       pendingTargets.clear();
