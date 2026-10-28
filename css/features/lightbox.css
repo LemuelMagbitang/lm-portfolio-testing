@@ -320,6 +320,7 @@
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item{
   --artwork-card-offset-x:8px;--artwork-card-offset-y:3px;
   --artwork-card-rotation:-4deg;
+  align-items:flex-start;
   z-index:var(--artwork-layout-layer,1);
   translate:var(--artwork-row-center-shift,0px) 0;
   transform:translate3d(var(--artwork-card-offset-x,8px),var(--artwork-card-offset-y,3px),0)
@@ -370,6 +371,7 @@
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item{
   --artwork-effective-sticker-rotation:var(--artwork-sticker-rotation,0deg);
+  align-items:flex-start;
   z-index:var(--artwork-layout-layer,1);
   translate:var(--artwork-row-center-shift,0px) 0;
   transform:translate3d(var(--artwork-sticker-x,0px),var(--artwork-sticker-y,0px),0)
