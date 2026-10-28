@@ -480,13 +480,13 @@
       {
         "id": "group1",
         "name": "group1",
-        "layout": "stack",
+        "layout": "cards",
         "color": "#849573"
       },
       {
         "id": "group2",
         "name": "group2",
-        "layout": "stack",
+        "layout": "sticker",
         "color": "#ff0000"
       }
     ],
