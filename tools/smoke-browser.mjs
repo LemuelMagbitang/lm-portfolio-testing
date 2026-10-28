@@ -4713,9 +4713,22 @@ try {
         const back = overlay.querySelector('.lightbox-inspect-back');
         const description = overlay.querySelector('.lightbox-inspect-description');
         const hint = overlay.querySelector('.lightbox-holographic-hint');
+        const primaryHint = hint?.querySelector('.lightbox-holographic-hint-primary');
         const face = hint?.querySelector('[data-holo-face-label]')?.textContent?.trim() || '';
         const action = hint?.querySelector('.lightbox-holographic-desktop-action')?.textContent?.trim() || '';
-        const backStyle = back ? getComputedStyle(back) : null;
+        const touchAction = hint?.querySelector('.lightbox-holographic-touch-action');
+        const recommendation = hint?.querySelector('.lightbox-holographic-desktop-recommendation');
+        const frontImage = artwork?.querySelector('.lightbox-holographic-front img');
+        const touchActionFontSize = touchAction ? getComputedStyle(touchAction).fontSize : '';
+        const recommendationFontSize = recommendation ? getComputedStyle(recommendation).fontSize : '';
+        const naturalRatio = frontImage?.naturalWidth > 0 && frontImage?.naturalHeight > 0
+          ? frontImage.naturalWidth / frontImage.naturalHeight : 0;
+        const renderedRatio = artworkRect?.width > 0 && artworkRect?.height > 0
+          ? artworkRect.width / artworkRect.height : 0;
+        const centerOffsetX = stageRect && artworkRect
+          ? Math.abs((artworkRect.left + artworkRect.width / 2) - (stageRect.left + stageRect.width / 2)) : Infinity;
+        const centerOffsetY = stageRect && artworkRect
+          ? Math.abs((artworkRect.top + artworkRect.height / 2) - (stageRect.top + stageRect.height / 2)) : Infinity;
         const artworkFitsStage = Boolean(stageRect && artworkRect &&
           artworkRect.width > 0 && artworkRect.height > 0 &&
           artworkRect.left >= stageRect.left - 1 &&
@@ -4734,6 +4747,14 @@ try {
           hintDisplay: hint ? getComputedStyle(hint).display : 'missing',
           hintInFooter: Boolean(hint && hint.parentElement?.classList.contains('lightbox-inspect-footer')),
           hintBeforeDescription: Boolean(hint && description && hint.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING),
+          hasPrimaryHintRow: Boolean(primaryHint),
+          touchActionText: touchAction?.textContent?.trim() || '',
+          recommendationText: recommendation?.textContent?.trim() || '',
+          touchActionFontSize,
+          recommendationFontSize,
+          centerOffsetX,
+          centerOffsetY,
+          artworkRatioDelta: naturalRatio > 0 && renderedRatio > 0 ? Math.abs(renderedRatio - naturalRatio) : Infinity,
           face,
           action,
           backIcon: Boolean(back?.querySelector('i.fa-arrow-left')),
@@ -4754,6 +4775,13 @@ try {
           inspectorPresentation.hintDisplay === 'none' ||
           !inspectorPresentation.hintInFooter ||
           !inspectorPresentation.hintBeforeDescription ||
+          !inspectorPresentation.hasPrimaryHintRow ||
+          inspectorPresentation.touchActionText !== 'TAP TO FLIP' ||
+          inspectorPresentation.recommendationText !== 'Switch to desktop for the full effect.' ||
+          inspectorPresentation.touchActionFontSize !== inspectorPresentation.recommendationFontSize ||
+          inspectorPresentation.centerOffsetX > 2 ||
+          inspectorPresentation.centerOffsetY > 2 ||
+          inspectorPresentation.artworkRatioDelta > .025 ||
           inspectorPresentation.face !== 'FRONT' ||
           inspectorPresentation.action !== 'HOVER EDGE / CLICK' ||
           !inspectorPresentation.backIcon ||

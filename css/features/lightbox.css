@@ -490,3 +490,144 @@
     text-align:center;text-transform:none;white-space:normal;overflow-wrap:normal;
   }
 }
+
+/* Inspect polish: keep the two-line foil hint consistent and keep the selected
+   artwork in a neutral, viewport-bounded frame after it leaves a grouped layout. */
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
+  display:flex!important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  width:min(100%,820px);
+  max-width:100%;
+  min-height:0;
+  margin:0 auto 7px;
+  padding:0;
+  box-sizing:border-box;
+  color:rgba(255,255,255,.76);
+  font-family:inherit;
+  font-size:clamp(9px,1.1vw,11px);
+  font-weight:600;
+  line-height:1.35;
+  letter-spacing:.015em;
+  text-align:center;
+  text-transform:none;
+  white-space:normal;
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-primary{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  width:100%;
+  min-width:0;
+  color:inherit;
+  font-family:inherit;
+  font-size:inherit;
+  font-weight:inherit;
+  line-height:inherit;
+  letter-spacing:.095em;
+  text-align:center;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face-status,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{
+  font-family:inherit;
+  font-size:inherit;
+  font-weight:inherit;
+  line-height:inherit;
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face-status{
+  color:rgba(255,255,255,.9);
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-separator{
+  color:rgba(255,255,255,.38);
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action,
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{
+  letter-spacing:inherit;
+  text-transform:inherit;
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{
+  display:none!important;
+  flex:0 0 auto;
+  width:100%;
+  max-width:44ch;
+  margin:0 auto;
+  color:rgba(255,255,255,.68);
+  letter-spacing:.015em;
+  text-align:center;
+  text-transform:none;
+  white-space:normal;
+}
+@media (any-hover:none) and (pointer:coarse){
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action{display:none!important;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{display:inline!important;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{display:block!important;}
+}
+@media (any-hover:hover) and (any-pointer:fine){
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action{display:inline!important;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{display:none!important;}
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{display:none!important;}
+}
+
+/* Size to both viewport axes while retaining the source image aspect ratio.
+   The explicit centering and transform reset prevent card/sticker gallery poses
+   from shifting or shrinking the artwork when it is portaled into Inspect. */
+.lightbox-inspect-stage{
+  display:grid;
+  place-items:center;
+  justify-items:center;
+  align-items:center;
+  min-width:0;
+  min-height:0;
+}
+.lightbox-inspect-frame{
+  display:grid;
+  place-items:center;
+  justify-self:center;
+  margin-inline:auto;
+}
+.lightbox-inspect-frame .lightbox-media-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  min-height:0;
+  transform:none!important;
+}
+.lightbox-inspect-frame .lightbox-artwork{
+  width:min(100%,calc(100vw - 48px),calc((100dvh - 220px) * var(--lightbox-artwork-ratio,1)));
+  max-width:min(100%,calc(100vw - 48px));
+  max-height:max(1px,calc(100dvh - 220px));
+  height:auto;
+  aspect-ratio:var(--lightbox-artwork-ratio,1);
+  margin-inline:auto;
+  align-self:center;
+  justify-self:center;
+  box-sizing:border-box;
+}
+.lightbox-inspect-frame .lightbox-artwork>img,
+.lightbox-inspect-frame .lightbox-artwork>video,
+.lightbox-inspect-frame .lightbox-artwork>iframe,
+.lightbox-inspect-frame .lightbox-artwork>lottie-player,
+.lightbox-inspect-frame .lightbox-artwork>.lightbox-holographic{
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  object-position:center;
+}
+@media(max-width:760px){
+  .lightbox-inspect-frame .lightbox-artwork{
+    width:min(100%,calc(100vw - 32px),calc((100dvh - 190px) * var(--lightbox-artwork-ratio,1)));
+    max-width:min(100%,calc(100vw - 32px));
+    max-height:max(1px,calc(100dvh - 190px));
+  }
+}

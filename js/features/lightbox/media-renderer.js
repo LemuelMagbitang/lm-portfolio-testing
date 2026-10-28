@@ -1118,7 +1118,10 @@ export function createLightboxMediaRenderer({
     const desktopRecommendation = documentRef.createElement('span');
     desktopRecommendation.className = 'lightbox-holographic-desktop-recommendation';
     desktopRecommendation.textContent = 'Switch to desktop for the full effect.';
-    hint.append(faceLabel, separator, desktopAction, touchAction, desktopRecommendation);
+    const primaryHint = documentRef.createElement('span');
+    primaryHint.className = 'lightbox-holographic-hint-primary';
+    primaryHint.append(faceLabel, separator, desktopAction, touchAction);
+    hint.append(primaryHint, desktopRecommendation);
     surface.__lightboxHoloHint = hint;
 
     const inner = documentRef.createElement('div');
@@ -2684,6 +2687,7 @@ export function createLightboxMediaRenderer({
       if(active.placeholder?.parentNode)active.placeholder.replaceWith(active.entry);
       if(active.foilHintPlaceholder?.parentNode&&active.foilHint)active.foilHintPlaceholder.replaceWith(active.foilHint);
       active.overlay.remove();
+      if(active.resumeAutoRotation&&active.foilSurface?.isConnected)startFoilAutoRotation(active.foilSurface);
       active.restoreLightboxScroll?.();
       windowRef.requestAnimationFrame(()=>{active.restoreLightboxScroll?.();windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());});
 
@@ -2730,6 +2734,12 @@ export function createLightboxMediaRenderer({
   function openArtworkInspect(container, entry, project, focusTarget) {
     if(!entry?.parentNode||!container)return;
     if(activeInspector)closeArtworkInspect({immediate:true});
+    const foilSurface=entry.querySelector('.lightbox-holographic');
+    const foilMotion=foilSurface?holographicMotionStates.get(foilSurface):null;
+    const resumeAutoRotation=Boolean(foilMotion?.autoRotate);
+    // A pointer pose from the gallery must not carry into the full-screen
+    // Inspector or contaminate the opening FLIP geometry. Start face-on.
+    if(foilSurface)resetFoilMotionImmediately(foilSurface);
     const parent=entry.parentNode,originRect=entry.getBoundingClientRect?.();
     const lightbox=container.closest?.('#lightbox')||documentRef.getElementById('lightbox');
     const lightboxScrollTop=Number(lightbox?.scrollTop)||0;
@@ -2826,7 +2836,7 @@ export function createLightboxMediaRenderer({
     };
     overlay.addEventListener('click',onBackdropClick);
     overlay.addEventListener('keydown',onKeyDown);
-    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,overlay,frame,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
+    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,resumeAutoRotation,overlay,frame,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
     activeInspector=active;
     documentRef.body.appendChild(overlay);
     restoreLightboxScroll();
