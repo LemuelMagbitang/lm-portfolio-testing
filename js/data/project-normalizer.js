@@ -9,7 +9,7 @@
 const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'mux', 'youtube', 'lottie', 'model']);
 const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
 const HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
-const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards']);
+const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','sticker']);
 const DEFAULT_ARTWORK_GROUP_COLOR = '#849573';
 function normalizeArtworkGroupColor(value) {
   const color = normalizeString(value);

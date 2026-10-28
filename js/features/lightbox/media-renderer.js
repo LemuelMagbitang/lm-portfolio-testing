@@ -1116,7 +1116,7 @@ export function createLightboxMediaRenderer({
     touchAction.textContent = 'TAP TO FLIP';
     const desktopRecommendation = documentRef.createElement('span');
     desktopRecommendation.className = 'lightbox-holographic-desktop-recommendation';
-    desktopRecommendation.textContent = 'Best viewed on desktop for full effect.';
+    desktopRecommendation.textContent = 'Switch to desktop for the full effect.';
     hint.append(faceLabel, separator, desktopAction, touchAction, desktopRecommendation);
     surface.__lightboxHoloHint = hint;
 
@@ -2852,36 +2852,53 @@ export function createLightboxMediaRenderer({
     else animateOpen();
   }
 
+  function applyStickerCardVariation(record) {
+    record.entries.forEach((entry,index) => {
+      const source = entry.querySelector('.lightbox-holographic-face img, img, video, iframe')?.getAttribute('src') || '';
+      const seedText = String(record.section.dataset.artworkGroup || '') + ':' + index + ':' + source;
+      let seed = 2166136261;
+      for (let i=0;i<seedText.length;i+=1) {
+        seed ^= seedText.charCodeAt(i);
+        seed = Math.imul(seed,16777619);
+      }
+      const stableSeed = seed >>> 0;
+      const rotation = (stableSeed % 27) - 13;
+      const mobileRotation = Math.round(rotation * 0.38);
+      const x = ((stableSeed >>> 8) % 13) - 6;
+      const y = ((stableSeed >>> 16) % 17) - 8;
+      entry.style.setProperty('--artwork-sticker-rotation', rotation + 'deg');
+      entry.style.setProperty('--artwork-sticker-rotation-mobile', mobileRotation + 'deg');
+      entry.style.setProperty('--artwork-sticker-x', x + 'px');
+      entry.style.setProperty('--artwork-sticker-y', y + 'px');
+    });
+  }
+
   function measureArtworkGroupLayout(record) {
     const {section, items, requestedLayout, entries} = record;
     if (!section?.isConnected || !items) return;
-    const allFoil = entries.length > 0 && entries.every(entry => entry.dataset.artworkFoil === 'true');
-    section.dataset.artworkAllFoil = allFoil ? 'true' : 'false';
 
-    // Only foil artwork uses the responsive horizontal-to-layered treatment.
-    // Mixed or non-foil groups fall back to the clean grid instead of hiding
-    // artwork beneath overlapping cards.
-    if (requestedLayout === 'grid' || !allFoil) {
-      section.dataset.artworkEffectiveLayout = 'grid';
-      return;
-    }
-
-    const computed = windowRef?.getComputedStyle?.(items);
-    const gap = Number.parseFloat(computed?.columnGap || computed?.gap) || 18;
-    const targetHeight = entries.reduce((maxHeight, entry) => {
-      const stage = entry.querySelector('.lightbox-artwork');
-      return Math.max(maxHeight, Number.parseFloat(windowRef?.getComputedStyle?.(stage)?.height) || 0);
-    }, 0);
-    const naturalWidth = entries.reduce((total, entry) => {
-      const stage = entry.querySelector('.lightbox-artwork');
-      const storedRatio = Number.parseFloat(stage?.style?.getPropertyValue('--lightbox-artwork-ratio'));
-      const actualRatio = storedRatio > 0 ? storedRatio : 1;
-      return total + (targetHeight > 0 ? targetHeight * actualRatio : (stage?.getBoundingClientRect?.().width || 240));
-    }, 0) + Math.max(0, entries.length - 1) * gap;
-
+    // Respect the CMS layout instead of deriving another visual mode from foil
+    // capability. Overlap-heavy cards fall back to a clean grid on narrow
+    // screens; sticker layouts use the same fallback only when too narrow.
+    const supportedLayouts = new Set(['grid','stack','cards','sticker']);
+    const domRequestedLayout = String(section.dataset.artworkLayout || '').trim().toLowerCase();
+    const layout = supportedLayouts.has(domRequestedLayout)
+      ? domRequestedLayout
+      : (supportedLayouts.has(requestedLayout) ? requestedLayout : 'grid');
+    const itemsWidth = items.clientWidth || items.getBoundingClientRect?.().width || 0;
     const narrowViewport = Boolean(windowRef?.matchMedia?.('(max-width: 760px)')?.matches);
-    const exceedsAvailableWidth = naturalWidth > (items.clientWidth || 0) + 2;
-    section.dataset.artworkEffectiveLayout = narrowViewport || exceedsAvailableWidth ? 'layered' : 'horizontal';
+    const hasEnoughItems = entries.length > 1;
+
+    section.dataset.artworkAllFoil = entries.length > 0 &&
+      entries.every(entry => entry.dataset.artworkFoil === 'true') ? 'true' : 'false';
+
+    let effectiveLayout = layout;
+    if (layout === 'cards' && (!hasEnoughItems || narrowViewport || itemsWidth < 560)) {
+      effectiveLayout = 'grid';
+    } else if (layout === 'sticker' && (!hasEnoughItems || itemsWidth < 340)) {
+      effectiveLayout = 'grid';
+    }
+    section.dataset.artworkEffectiveLayout = effectiveLayout;
   }
 
   function watchArtworkGroupLayout(container, record) {
@@ -2954,7 +2971,7 @@ export function createLightboxMediaRenderer({
         .filter(group => group && typeof group === 'object' && String(group.id || '').trim())
         .map(group => [String(group.id), {
           id:String(group.id), name:String(group.name || group.id),
-          layout:['grid','stack','cards'].includes(group.layout) ? group.layout : 'grid'
+          layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid'
         }])
     );
     const groupRecords = new Map();
@@ -3004,7 +3021,10 @@ export function createLightboxMediaRenderer({
       rendered += 1;
     });
 
-    groupRecords.forEach(record => watchArtworkGroupLayout(container, record));
+    groupRecords.forEach(record => {
+      applyStickerCardVariation(record);
+      watchArtworkGroupLayout(container, record);
+    });
     const youtubeFrames = container.querySelectorAll('iframe[data-lm-youtube]');
     if (youtubeFrames.length) bindYouTubeStateHandoff(container);
     return rendered;
