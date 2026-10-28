@@ -496,6 +496,7 @@
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
   display:grid!important;
   grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"hint-primary" "recommendation";
   justify-items:center;
   align-content:center;
   gap:4px;
@@ -516,6 +517,7 @@
   white-space:normal;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-primary{
+  grid-area:hint-primary;
   display:flex;
   align-items:center;
   justify-content:center;
