@@ -494,10 +494,10 @@
 /* Inspect polish: keep the two-line foil hint consistent and keep the selected
    artwork in a neutral, viewport-bounded frame after it leaves a grouped layout. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
-  display:flex!important;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr);
+  justify-items:center;
+  align-content:center;
   gap:4px;
   width:min(100%,820px);
   max-width:100%;
