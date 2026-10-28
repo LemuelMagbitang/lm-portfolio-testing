@@ -4723,8 +4723,17 @@ try {
         const modal = document.querySelector('#lightbox');
         const controls = document.querySelector('.lightbox-controls');
         const stage = overlay.querySelector('.lightbox-inspect-stage');
+        const frame = overlay.querySelector('.lightbox-inspect-frame');
+        const entry = frame?.querySelector('.lightbox-media-item');
         const artwork = overlay.querySelector('.lightbox-artwork');
+        const originalGridColumnStart = entry?.style.gridColumnStart ?? '';
+        // Recreate the inline placement applied to an incomplete cards/sticker row.
+        // Inspect must ignore it instead of creating implicit grid tracks in the frame.
+        if (entry) entry.style.gridColumnStart = '3';
+        const injectedGridColumnStart = entry?.style.gridColumnStart || '';
+        const frameStyle = frame ? getComputedStyle(frame) : null;
         const stageRect = stage?.getBoundingClientRect();
+        const frameRect = frame?.getBoundingClientRect();
         const artworkRect = artwork?.getBoundingClientRect();
         const back = overlay.querySelector('.lightbox-inspect-back');
         const description = overlay.querySelector('.lightbox-inspect-description');
@@ -4742,21 +4751,29 @@ try {
           ? frontImage.naturalWidth / frontImage.naturalHeight : 0;
         const renderedRatio = artworkRect?.width > 0 && artworkRect?.height > 0
           ? artworkRect.width / artworkRect.height : 0;
-        const centerOffsetX = stageRect && artworkRect
-          ? Math.abs((artworkRect.left + artworkRect.width / 2) - (stageRect.left + stageRect.width / 2)) : Infinity;
-        const centerOffsetY = stageRect && artworkRect
-          ? Math.abs((artworkRect.top + artworkRect.height / 2) - (stageRect.top + stageRect.height / 2)) : Infinity;
+        const centerOffsetX = frameRect && artworkRect
+          ? Math.abs((artworkRect.left + artworkRect.width / 2) - (frameRect.left + frameRect.width / 2)) : Infinity;
+        const centerOffsetY = frameRect && artworkRect
+          ? Math.abs((artworkRect.top + artworkRect.height / 2) - (frameRect.top + frameRect.height / 2)) : Infinity;
         const artworkFitsStage = Boolean(stageRect && artworkRect &&
           artworkRect.width > 0 && artworkRect.height > 0 &&
           artworkRect.left >= stageRect.left - 1 &&
           artworkRect.top >= stageRect.top - 1 &&
           artworkRect.right <= stageRect.right + 1 &&
           artworkRect.bottom <= stageRect.bottom + 1);
+        if (entry) {
+          if (originalGridColumnStart) entry.style.gridColumnStart = originalGridColumnStart;
+          else entry.style.removeProperty('grid-column-start');
+        }
         return {
           modalZ: Number.parseInt(getComputedStyle(modal).zIndex, 10),
           controlsZ: Number.parseInt(getComputedStyle(controls).zIndex, 10),
           overlayZ: Number.parseInt(getComputedStyle(overlay).zIndex, 10),
           stageOverflow: getComputedStyle(stage).overflow,
+          frameDisplay: frameStyle?.display || 'missing',
+          frameGridTemplateColumns: frameStyle?.gridTemplateColumns || 'missing',
+          injectedGridColumnStart,
+          frameRect: frameRect ? { left:frameRect.left, top:frameRect.top, width:frameRect.width, height:frameRect.height } : null,
           artworkFitsStage,
           description: description?.textContent?.trim() || '',
           projectDescriptionLeaked: (description?.textContent || '').includes('this is a funko pop in 2d'),
@@ -4786,6 +4803,9 @@ try {
       if (!(inspectorPresentation.modalZ < inspectorPresentation.controlsZ &&
             inspectorPresentation.controlsZ < inspectorPresentation.overlayZ) ||
           inspectorPresentation.stageOverflow === 'hidden' ||
+          inspectorPresentation.frameDisplay !== 'flex' ||
+          inspectorPresentation.frameGridTemplateColumns !== 'none' ||
+          inspectorPresentation.injectedGridColumnStart !== '3' ||
           !inspectorPresentation.artworkFitsStage ||
           inspectorPresentation.description !== 'Smooth Prism Foil' ||
           inspectorPresentation.projectDescriptionLeaked ||

@@ -559,9 +559,14 @@
   min-width:0;
   min-height:0;
 }
+/* Artwork can retain an inline grid-column-start from an incomplete cards/sticker
+   row. The Inspector reparents that same node; a grid frame then creates implicit
+   columns from the old placement and shifts the artwork. Flex ignores the stale
+   source-grid placement while keeping the artwork centered in the full-size frame. */
 .lightbox-inspect-frame{
-  display:grid;
-  place-items:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   justify-self:center;
   margin-inline:auto;
 }
