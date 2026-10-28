@@ -13,7 +13,7 @@ assert.doesNotMatch(revealSource, /\bimport\s+.*(?:react|gsap|ScrollTrigger)/i,
   'Content reveal must not add React or GSAP to the public runtime.');
 assert.match(revealSource, /IntersectionObserver/);
 assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
-assert.match(revealSource, /resume-main[\s\S]*?\[id\$=\\"List\\"\] > \*/);
+assert.match(revealSource, /resume-main[\s\S]*?\[id\$="List"\] > \*/);
 assert.match(revealSource, /contact-block > h2[\s\S]*?contact-block > \.form-container/);
 assert.match(revealSource, /prefers-reduced-motion: reduce/);
 assert.match(revealSource, /pendingTargets\.forEach\(revealTarget\)/,
