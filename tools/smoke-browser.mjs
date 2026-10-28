@@ -4718,6 +4718,7 @@ try {
         const action = hint?.querySelector('.lightbox-holographic-desktop-action')?.textContent?.trim() || '';
         const touchAction = hint?.querySelector('.lightbox-holographic-touch-action');
         const recommendation = hint?.querySelector('.lightbox-holographic-desktop-recommendation');
+        const backStyle = back ? getComputedStyle(back) : null;
         const frontImage = artwork?.querySelector('.lightbox-holographic-front img');
         const touchActionFontSize = touchAction ? getComputedStyle(touchAction).fontSize : '';
         const recommendationFontSize = recommendation ? getComputedStyle(recommendation).fontSize : '';
