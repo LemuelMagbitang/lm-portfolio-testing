@@ -940,3 +940,6 @@ This migration must not:
 - Sticker Card Layout now uses three columns on desktop/tablet and two columns on mobile, with gentle seeded rotation and staggered offsets. The visible cut-out art overlaps while its grid hit areas remain separate; mouse hover, keyboard focus, and tapped/activated pieces move to the front.
 - Added a selected-entry class before the Inspector handoff, dynamic grid-row centering, responsive track-count checks, final-row centering assertions, and a tighter -6° to +6° sticker rotation guard. The feature CSS cache identity advances to `20261028-15`.
 - **Next step:** confirm the new browser smoke and Pages workflows, then perform the final visual/touch check on the active test preview. Production and `main` remain untouched.
+
+
+- Follow-up from the first responsive smoke: row centering now uses the independent CSS `translate` property, separate from the card/sticker rotation transform. The browser check waits through the layout transition before measuring the centered final row, avoiding transient mid-animation geometry.

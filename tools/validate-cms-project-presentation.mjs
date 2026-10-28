@@ -466,7 +466,7 @@ assert.ok(
   lightboxCss.includes('grid-template-columns:repeat(4,minmax(0,1fr))') &&
   lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') &&
   lightboxCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
-  lightboxCss.includes('calc(var(--artwork-row-center-shift,0px) + var(--artwork-card-offset-x,0px))') &&
+  lightboxCss.includes('translate:var(--artwork-row-center-shift,0px) 0;') &&
   lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&
   lightboxCss.includes('max-height:clamp(160px,24svh,216px)') &&
   lightboxCss.includes('max-height:clamp(155px,24svh,198px)') &&

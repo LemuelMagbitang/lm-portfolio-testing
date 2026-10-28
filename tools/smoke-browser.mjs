@@ -4350,7 +4350,7 @@ try {
           for (const viewport of responsiveViewports) {
             await page.setViewportSize(viewport);
             await setRequestedLayout(mode);
-            await page.waitForTimeout(120);
+            await page.waitForTimeout(520);
             const layout = await readArtworkGroupLayout();
             const shouldFallbackToGrid =
               ((mode === 'cards' || mode === 'sticker') && layout.children.length < 2);
