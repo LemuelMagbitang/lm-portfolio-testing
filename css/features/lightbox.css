@@ -444,7 +444,7 @@
    Keep the card's authored rotation during interaction instead of flattening it. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:is(.is-artwork-selected,.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return)){
   z-index:250;translate:var(--artwork-row-center-shift,0px) 0;
-  transform:translate3d(0,-8px,0) rotate(var(--artwork-card-rotation,0deg)) scale(1.1);
+  transform:translate3d(0,-8px,0) rotate(0deg) scale(1.1);
   filter:drop-shadow(0 12px 16px rgba(0,0,0,.38));
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item:is(.is-artwork-selected,.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return)){
@@ -462,7 +462,7 @@
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item.is-grouped-artwork-interactive:hover{
     z-index:250;translate:var(--artwork-row-center-shift,0px) 0;
-    transform:translate3d(0,-9px,0) rotate(var(--artwork-card-rotation,0deg)) scale(1.11);
+    transform:translate3d(0,-9px,0) rotate(0deg) scale(1.11);
     filter:drop-shadow(0 14px 18px rgba(0,0,0,.4));
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-media-item.is-grouped-artwork-interactive:hover{
