@@ -347,7 +347,7 @@
    retained; the artwork may overhang its grid cell for the collage effect. */
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic,
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
-  position:relative;z-index:1;
+  position:relative;left:50%;translate:-50% 0;margin-inline:0;z-index:1;
   width:min(186%,calc(clamp(222px,33svh,294px) * var(--lightbox-artwork-ratio,1)));
   max-width:min(186%,36vw,330px);height:auto;max-height:clamp(222px,33svh,294px);
   aspect-ratio:var(--lightbox-artwork-ratio,1);
