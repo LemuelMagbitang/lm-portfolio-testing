@@ -4259,8 +4259,13 @@ try {
           });
         });
       });
-      await page.mouse.move(pointerProbe.x, pointerProbe.y);
-      await page.waitForTimeout(120);
+      // Start outside the artwork and enter at a known exposed point. This
+      // prevents a pre-existing hover/leave state from swallowing the one-step
+      // mouse move in headless Chromium.
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(40);
+      await page.mouse.move(pointerProbe.x, pointerProbe.y, { steps: 4 });
+      await page.waitForTimeout(160);
       const desktopTiltState = await funkoHolo.evaluate(el => {
         const read = name => Number.parseFloat(el.style.getPropertyValue(name));
         return {
@@ -4292,7 +4297,7 @@ try {
         Math.abs((desktopTiltState.x + desktopTiltState.foilX) - 100) > 1.5 ||
         Math.abs((desktopTiltState.y + desktopTiltState.foilY) - 100) > 1.5
       ) {
-        throw new Error('Desktop holographic pointer movement did not drive the inverse foil reflection: ' + JSON.stringify(desktopTiltState));
+        throw new Error('Desktop holographic pointer movement did not drive the inverse foil reflection: ' + JSON.stringify({ pointerProbe, desktopTiltState }));
       }
 
       await funkoHolo.evaluate(el => { el.style.removeProperty('animation-play-state'); });
