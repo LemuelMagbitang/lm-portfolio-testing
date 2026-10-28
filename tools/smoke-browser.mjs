@@ -4242,8 +4242,12 @@ try {
                 // offsetTop do not include CSS individual translate, so account
                 // for it here rather than falsely flagging centered overhang.
                 const position = getComputedStyle(artwork).translate.split(/\s+/);
-                const translateX = position[0] === '-50%' ? artwork.offsetWidth / 2 : 0;
-                const translateY = position[1] === '-50%' ? artwork.offsetHeight / 2 : 0;
+                const resolveTranslate = (value, size) => {
+                  const amount = Number.parseFloat(value) || 0;
+                  return String(value || '').trim().endsWith('%') ? amount * size / 100 : amount;
+                };
+                const translateX = resolveTranslate(position[0], artwork.offsetWidth);
+                const translateY = resolveTranslate(position[1], artwork.offsetHeight);
                 return {
                   x: (artwork.offsetLeft - translateX + artwork.offsetWidth / 2) - (el.clientWidth / 2),
                   y: (artwork.offsetTop - translateY + artwork.offsetHeight / 2) - (el.clientHeight / 2)
