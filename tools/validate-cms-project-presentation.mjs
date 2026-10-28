@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261026-01';
+import { normalizeProject, normalizeProjectMedia } from '../js/data/project-normalizer.js?v=20261028-01';
 import { mountProjectListPreviews } from '../admin/project-preview-runtime.js?v=20261025-02';
 import { createFoilNormalRenderer } from '../js/features/lightbox/foil-normal-renderer.js?v=20261027-07';
 
@@ -396,7 +396,9 @@ const groupedProject = normalizeProject({
   id:'group-contract-test',title:'Group contract',subtitle:'Optional layout groups',
   mediaGroups:[
     {id:'studies',name:'Studies',layout:'grid',color:'#B6D2A7'},
-    {id:'legacy',name:'Legacy group',layout:'stack'}
+    {id:'legacy',name:'Legacy group',layout:'stack'},
+    {id:'card-stack',name:'Card stack',layout:'cards'},
+    {id:'sticker-set',name:'Sticker set',layout:'sticker'}
   ],
   media:[
     {type:'image',src:'assets/projects/test/one.jpg',groupId:'studies'},
@@ -405,7 +407,9 @@ const groupedProject = normalizeProject({
 });
 assert.deepEqual(groupedProject.mediaGroups,[
   {id:'studies',name:'Studies',layout:'grid',color:'#b6d2a7'},
-  {id:'legacy',name:'Legacy group',layout:'stack',color:'#849573'}
+  {id:'legacy',name:'Legacy group',layout:'stack',color:'#849573'},
+  {id:'card-stack',name:'Card stack',layout:'cards',color:'#849573'},
+  {id:'sticker-set',name:'Sticker set',layout:'sticker',color:'#849573'}
 ], 'Group colors must persist and legacy groups must receive a stable color.');
 assert.equal(groupedProject.media[0].groupId,'studies',
   'Artwork membership must survive normalization.');
@@ -419,6 +423,8 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
   renderer.includes('description.hidden=!caption') &&
   renderer.includes("desktopAction.textContent = 'HOVER EDGE / CLICK'") &&
   renderer.includes("touchAction.textContent = 'TAP TO FLIP'") &&
+  renderer.includes("desktopRecommendation.textContent = 'Switch to desktop for the full effect.'") &&
+  !renderer.includes('Best viewed on desktop for full effect.') &&
   renderer.includes("faceLabel.textContent = isBack ? 'BACK' : 'FRONT'") &&
   renderer.includes("footer.append(description,back)") &&
   renderer.includes("if(foilHint)footer.appendChild(foilHint)") &&
@@ -430,12 +436,14 @@ assert.ok(renderer.includes('function openArtworkInspect') &&
 const focused3dActivation = renderer.match(/onActivate:\s*\(\)\s*=>\s*\{([\s\S]*?)\},\s*onDeactivate:/)?.[1] || '';
 assert.ok(focused3dActivation && !/lightbox\.scrollTop|pre3dScrollTop/.test(focused3dActivation),
   'Entering the 3D inspection layer must not rewrite the Lightbox scroll position.');
-assert.ok(siteCss.includes('data-artwork-effective-layout="grid"') &&
-  siteCss.includes('data-artwork-effective-layout="horizontal"') &&
-  siteCss.includes('data-artwork-effective-layout="layered"') &&
+assert.ok(lightboxCss.includes('data-artwork-effective-layout="grid"') &&
+  lightboxCss.includes('data-artwork-effective-layout="stack"') &&
+  lightboxCss.includes('data-artwork-effective-layout="cards"') &&
+  lightboxCss.includes('data-artwork-effective-layout="sticker"') &&
+  renderer.includes("const supportedLayouts = new Set(['grid','stack','cards','sticker'])") &&
   siteCss.includes('backdrop-filter:blur(18px)') &&
   siteCss.includes('background:transparent;box-shadow:none;'),
-  'Artwork groups must use only the clean grid/horizontal/layered presentation states with a blurred Inspector backdrop.');
+  'Artwork groups must use the four CMS-driven layout states without altering the blurred Inspector backdrop.');
 assert.ok(!admin.includes('value="flow"') &&
   !renderer.includes('inspectTrigger') &&
   !siteCss.includes('.lightbox-artwork-inspect-trigger') &&
@@ -453,14 +461,18 @@ assert.ok(!admin.includes('value="flow"') &&
   siteCss.includes('@media (hover:hover) and (pointer:fine)') &&
   !siteCss.includes('data-artwork-layout="flow"'),
   'Flow is retired; grouped artwork has no in-card Inspect chip and uses centered 3D-style Inspect with desktop-only hover.');
-assert.ok(siteCss.includes('data-artwork-effective-layout="layered"] .lightbox-artwork-group-items') &&
-  siteCss.includes('flex-flow:row wrap') &&
-  siteCss.includes('overflow:visible') &&
-  siteCss.includes('height:clamp(200px,38svh,320px)') &&
-  siteCss.includes('overflow:visible;padding:0;margin:0;') &&
+assert.ok(lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') &&
+  lightboxCss.includes('data-artwork-effective-layout="cards"] .lightbox-media-item') &&
+  lightboxCss.includes('data-artwork-effective-layout="sticker"] .lightbox-media-item') &&
+  lightboxCss.includes('var(--artwork-sticker-rotation') &&
+  lightboxCss.includes('rotate(var(--artwork-sticker-rotation-mobile,0deg))') &&
+  lightboxCss.includes('height:clamp(200px,38svh,320px)') &&
+  lightboxCss.includes('overflow:visible;') &&
   lightboxCss.includes('z-index:10002;') &&
-  lightboxCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{'),
-  'Responsive layered cards must wrap without a horizontal scroller and keep equal-height, aspect-aware artwork frames.');
+  lightboxCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') &&
+  admin.includes('<option value="cards">Horizontal Card Stack</option>') &&
+  admin.includes('<option value="sticker">Sticker Card Layout</option>'),
+  'Responsive card stacks and seeded sticker layouts must use equal layout tracks, respect mobile fallbacks, and preserve aspect-aware artwork frames.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
   'Grouped artwork presentation must not use horizontal gallery scrolling.');

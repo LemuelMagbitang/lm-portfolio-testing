@@ -3204,7 +3204,7 @@ function serializeProjectEditorModel(project){
     mediaGroups:(Array.isArray(project.mediaGroups) ? project.mediaGroups : []).map(group => ({
       id:String(group.id || ''),
       name:String(group.name || ''),
-      layout:['grid','stack','cards'].includes(group.layout) ? group.layout : 'grid',
+      layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid',
       color:normalizeArtworkGroupColor(group.color)
     })).filter(group => group.id && group.name),
     media:(Array.isArray(project.media) ? project.media : []).map(media => ({
@@ -3239,7 +3239,7 @@ function buildProjectBody(el, p, options = {}){
     ? p.mediaGroups.filter(group => group && typeof group === 'object').map(group => ({
         id:String(group.id || ''),
         name:String(group.name || ''),
-        layout:['grid','stack','cards'].includes(group.layout) ? group.layout : 'grid',
+        layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid',
         color:normalizeArtworkGroupColor(group.color)
       })).filter(group => group.id && group.name)
     : [];
@@ -3326,7 +3326,8 @@ function buildProjectBody(el, p, options = {}){
             <select id="artworkGroupLayout" data-new-group-layout>
               <option value="grid">Grid / Tiling (columns)</option>
               <option value="stack">Horizontal Stack</option>
-              <option value="cards">Horizontal Card Layout</option>
+              <option value="cards">Horizontal Card Stack</option>
+              <option value="sticker">Sticker Card Layout</option>
             </select>
           </div>
           <div class="field artwork-group-color-field">
@@ -3650,7 +3651,8 @@ function buildProjectBody(el, p, options = {}){
             '<select id="artwork-group-layout-' + attr(group.id) + '" data-edit-group-layout>' +
               '<option value="grid" ' + (group.layout === 'grid' ? 'selected' : '') + '>Grid / Tiling</option>' +
               '<option value="stack" ' + (group.layout === 'stack' ? 'selected' : '') + '>Horizontal Stack</option>' +
-              '<option value="cards" ' + (group.layout === 'cards' ? 'selected' : '') + '>Horizontal Card Layout</option>' +
+              '<option value="cards" ' + (group.layout === 'cards' ? 'selected' : '') + '>Horizontal Card Stack</option>' +
+              '<option value="sticker" ' + (group.layout === 'sticker' ? 'selected' : '') + '>Sticker Card Layout</option>' +
             '</select></div>' +
           '<div class="field artwork-group-color-field"><label class="field-label" for="artwork-group-color-' + attr(group.id) + '">Color</label>' +
             '<input id="artwork-group-color-' + attr(group.id) + '" type="color" data-edit-group-color value="' + color + '" aria-label="Color for ' + attr(group.name) + '"></div>' +
@@ -3677,7 +3679,7 @@ function buildProjectBody(el, p, options = {}){
         syncArtworkGroupCards();
       });
       card.querySelector('[data-edit-group-layout]')?.addEventListener('change', event => {
-        group.layout = ['grid','stack','cards'].includes(event.target.value) ? event.target.value : 'grid';
+        group.layout = ['grid','stack','cards','sticker'].includes(event.target.value) ? event.target.value : 'grid';
         if (groupStatus) groupStatus.textContent = 'Layout updated. Remember to publish your changes.';
         markChanged();
       });
@@ -3717,7 +3719,7 @@ function buildProjectBody(el, p, options = {}){
     const group = {
       id,
       name,
-      layout: ['grid','stack','cards'].includes(requestedLayout) ? requestedLayout : 'grid',
+      layout: ['grid','stack','cards','sticker'].includes(requestedLayout) ? requestedLayout : 'grid',
       color: normalizeArtworkGroupColor(requestedColor)
     };
     p.mediaGroups.push(group);
