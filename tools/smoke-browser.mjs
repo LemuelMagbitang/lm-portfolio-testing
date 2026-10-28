@@ -4653,7 +4653,20 @@ try {
       await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
       const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
       await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
-      await page.waitForTimeout(500); // let the card-to-viewport transition settle
+      // Wait for the actual FLIP animation to finish instead of sleeping for a
+      // fixed duration. Under load, 500 ms can still sample the final animated
+      // frame a few pixels before its neutral transform has settled.
+      await inspectMode.locator('.lightbox-inspect-frame').evaluate(async frame => {
+        const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+        await nextFrame();
+        await nextFrame();
+        const openingAnimations = frame.getAnimations().filter(animation =>
+          Number(animation.effect?.getTiming?.().duration) >= 400
+        );
+        await Promise.all(openingAnimations.map(animation => animation.finished.catch(() => {})));
+        await nextFrame();
+        await nextFrame();
+      });
       const groupDuringInspect = await readArtworkGroupLayout();
       if (groupDuringInspect.layout !== groupBeforeInspect.layout ||
           groupDuringInspect.width !== groupBeforeInspect.width ||
@@ -4755,6 +4768,8 @@ try {
           recommendationFontSize,
           centerOffsetX,
           centerOffsetY,
+          stageRect: stageRect ? { left:stageRect.left, top:stageRect.top, width:stageRect.width, height:stageRect.height } : null,
+          artworkRect: artworkRect ? { left:artworkRect.left, top:artworkRect.top, width:artworkRect.width, height:artworkRect.height } : null,
           artworkRatioDelta: naturalRatio > 0 && renderedRatio > 0 ? Math.abs(renderedRatio - naturalRatio) : Infinity,
           face,
           action,
