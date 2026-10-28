@@ -245,7 +245,7 @@
    their existing transforms and stacking. */
 #lightboxMediaContainer .lightbox-artwork-group:has(.lightbox-artwork.has-holographic) .lightbox-artwork-group-items{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
   align-items:stretch;
   justify-items:stretch;
   gap:clamp(16px,2.4vw,30px);
@@ -273,7 +273,7 @@
   align-items:center;
   justify-content:center;
   width:auto;
-  max-width:min(100%,44vw,420px);
+  max-width:min(100%,44vw,360px);
   height:clamp(200px,38svh,320px);
   max-height:clamp(200px,38svh,320px);
   aspect-ratio:var(--lightbox-artwork-ratio,1);
