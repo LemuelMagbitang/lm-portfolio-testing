@@ -4190,6 +4190,7 @@ try {
           itemsBoxSizing: itemsStyle.boxSizing,
           itemsDisplay: itemsStyle.display,
           gridTemplateColumns: itemsStyle.gridTemplateColumns,
+          trackCount: itemsStyle.gridTemplateColumns.split(/\s+/).filter(Boolean).length,
           columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
           centerOffset: groupRect && itemsRect
             ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
@@ -4210,6 +4211,10 @@ try {
               caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
               left: el.offsetLeft,
               top: el.offsetTop,
+              visualCenterX: (() => {
+                const rect = el.getBoundingClientRect();
+                return rect.left + rect.width / 2 - itemsRect.left;
+              })(),
               width: el.offsetWidth,
               height: el.offsetHeight,
               rotationDegrees,
@@ -4341,19 +4346,34 @@ try {
             await page.waitForTimeout(120);
             const layout = await readArtworkGroupLayout();
             const shouldFallbackToGrid =
-              (mode === 'cards' && (viewport.width <= 760 || layout.width < 560 || layout.children.length < 2)) ||
-              (mode === 'sticker' && (layout.width < 340 || layout.children.length < 2));
+              ((mode === 'cards' || mode === 'sticker') && layout.children.length < 2);
             const expectedEffectiveLayout = shouldFallbackToGrid ? 'grid' : mode;
             if (layout.layout !== expectedEffectiveLayout) {
               throw new Error('CMS artwork layout must retain its requested mode unless a narrow viewport requires a coherent grid fallback: ' +
                 JSON.stringify({ mode, viewport, expectedEffectiveLayout, layout }));
             }
             const metrics = assertEqualSectionGrid(layout, mode + ' at ' + viewport.width + 'px');
+            const expectedTrackCount = mode === 'cards'
+              ? (viewport.width <= 760 ? 3 : (viewport.width <= 1000 ? 4 : 5))
+              : (mode === 'sticker' ? (viewport.width <= 760 ? 2 : 3) : null);
+            if (expectedTrackCount && layout.layout === mode && layout.trackCount !== expectedTrackCount) {
+              throw new Error('CMS card/sticker layout must use its intended responsive number of columns: ' +
+                JSON.stringify({ mode, viewport, expectedTrackCount, layout }));
+            }
             if (mode === 'cards' || mode === 'sticker') {
+              const lastRowTop = Math.max(...layout.children.map(child => child.top));
+              const lastRow = layout.children.filter(child => Math.abs(child.top - lastRowTop) < 2);
+              if (layout.children.length > expectedTrackCount && lastRow.length) {
+                const lastRowCenter = lastRow.reduce((sum, child) => sum + child.visualCenterX, 0) / lastRow.length;
+                if (Math.abs(lastRowCenter - layout.width / 2) > 18) {
+                  throw new Error('Incomplete card/sticker rows must stay centered instead of leaving a ragged left edge: ' +
+                    JSON.stringify({ mode, viewport, lastRowCenter, groupCenter:layout.width / 2, lastRow, layout }));
+                }
+              }
               const mobile = viewport.width <= 760;
               const footprintLimit = mode === 'cards'
                 ? (mobile ? { width:220, height:220 } : { width:300, height:270 })
-                : (mobile ? { width:190, height:190 } : { width:252, height:232 });
+                : (mobile ? { width:190, height:200 } : { width:252, height:232 });
               if (metrics.maxArtworkWidth > footprintLimit.width + 2 ||
                   metrics.maxArtworkHeight > footprintLimit.height + 2) {
                 throw new Error('Card-stack and sticker artwork must keep their compact responsive footprint: ' +
@@ -4373,8 +4393,8 @@ try {
                   JSON.stringify({ viewport, stickerFrames, layout }));
               }
               const maxRotation = Math.max(...layout.children.map(child => Math.abs(child.rotationDegrees || 0)));
-              if (maxRotation > 45.01) {
-                throw new Error('Sticker artwork rotation must stay within -45 to 45 degrees: ' +
+              if (maxRotation > 6.01) {
+                throw new Error('Sticker artwork rotation must stay within the Figma-aligned -6 to 6 degree range: ' +
                   JSON.stringify({ viewport, maxRotation, layout }));
               }
               metrics.maxRotation = maxRotation;
@@ -4384,8 +4404,9 @@ try {
         }
         const mobileCards = layoutModeChecks.find(check => check.mode === 'cards' && check.viewport.width === 390);
         const compactSticker = layoutModeChecks.find(check => check.mode === 'sticker' && check.viewport.width === 320);
-        if (mobileCards?.effectiveLayout !== 'grid' || compactSticker?.effectiveLayout !== 'grid') {
-          throw new Error('Overlapping card stacks and sticker layouts must fall back to a coherent grid when narrow mobile screens cannot support the composition.');
+        if (mobileCards?.effectiveLayout !== 'cards' || mobileCards?.metrics.trackCount !== 3 ||
+            compactSticker?.effectiveLayout !== 'sticker' || compactSticker?.metrics.trackCount !== 2) {
+          throw new Error('Card stacks must preserve their three-column mobile layout and stickers their overlapping two-column mobile collage.');
         }
       } finally {
         await setRequestedLayout(originalRequestedLayout);

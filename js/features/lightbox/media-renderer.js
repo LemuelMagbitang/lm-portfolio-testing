@@ -2862,10 +2862,10 @@ export function createLightboxMediaRenderer({
         seed = Math.imul(seed,16777619);
       }
       const stableSeed = seed >>> 0;
-      const rotation = (stableSeed % 27) - 13;
-      const mobileRotation = Math.round(rotation * 0.38);
-      const x = ((stableSeed >>> 8) % 13) - 6;
-      const y = ((stableSeed >>> 16) % 17) - 8;
+      const rotation = (stableSeed % 13) - 6;
+      const mobileRotation = Math.round(rotation * 0.65);
+      const x = ((stableSeed >>> 8) % 9) - 4;
+      const y = ((stableSeed >>> 16) % 11) - 5;
       entry.style.setProperty('--artwork-sticker-rotation', rotation + 'deg');
       entry.style.setProperty('--artwork-sticker-rotation-mobile', mobileRotation + 'deg');
       entry.style.setProperty('--artwork-sticker-x', x + 'px');
@@ -2873,32 +2873,63 @@ export function createLightboxMediaRenderer({
     });
   }
 
+  function centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport) {
+    const items = record?.items;
+    if (!items) return;
+    const slots = Array.from(items.children);
+    slots.forEach(slot => {
+      slot.style.removeProperty('grid-column-start');
+      slot.style.removeProperty('--artwork-row-center-shift');
+      slot.style.removeProperty('--artwork-layout-layer');
+    });
+    if (effectiveLayout !== 'cards' && effectiveLayout !== 'sticker') return;
+
+    const columns = effectiveLayout === 'cards'
+      ? (narrowViewport ? 3 : (tabletViewport ? 4 : 5))
+      : (narrowViewport ? 2 : 3);
+    slots.forEach((slot, index) => {
+      const row = Math.floor(index / columns);
+      const column = index % columns;
+      const centerBias = Math.round(columns - Math.abs(column - ((columns - 1) / 2)));
+      slot.style.setProperty('--artwork-layout-layer', String(row * 10 + centerBias));
+    });
+
+    const remainder = slots.length % columns;
+    if (!remainder) return;
+    const lastRowStart = slots.length - remainder;
+    const startColumn = Math.floor((columns - remainder) / 2);
+    const shiftHalfTrack = (columns - remainder) % 2 === 1;
+    slots.slice(lastRowStart).forEach((slot, index) => {
+      slot.style.gridColumnStart = String(startColumn + index + 1);
+      if (shiftHalfTrack) slot.style.setProperty('--artwork-row-center-shift', '50%');
+    });
+  }
+
   function measureArtworkGroupLayout(record) {
     const {section, items, requestedLayout, entries} = record;
     if (!section?.isConnected || !items) return;
 
-    // Respect the CMS layout instead of deriving another visual mode from foil
-    // capability. Overlap-heavy cards fall back to a clean grid on narrow
-    // screens; sticker layouts use the same fallback only when too narrow.
+    // Keep the CMS-selected presentation active at every viewport width.
+    // The responsive CSS changes column counts; only a single-item group needs
+    // a grid fallback because no stack/collage can be formed from one piece.
     const supportedLayouts = new Set(['grid','stack','cards','sticker']);
     const domRequestedLayout = String(section.dataset.artworkLayout || '').trim().toLowerCase();
     const layout = supportedLayouts.has(domRequestedLayout)
       ? domRequestedLayout
       : (supportedLayouts.has(requestedLayout) ? requestedLayout : 'grid');
-    const itemsWidth = items.clientWidth || items.getBoundingClientRect?.().width || 0;
     const narrowViewport = Boolean(windowRef?.matchMedia?.('(max-width: 760px)')?.matches);
+    const tabletViewport = Boolean(windowRef?.matchMedia?.('(max-width: 1000px) and (min-width: 761px)')?.matches);
     const hasEnoughItems = entries.length > 1;
 
     section.dataset.artworkAllFoil = entries.length > 0 &&
       entries.every(entry => entry.dataset.artworkFoil === 'true') ? 'true' : 'false';
 
     let effectiveLayout = layout;
-    if (layout === 'cards' && (!hasEnoughItems || narrowViewport || itemsWidth < 560)) {
-      effectiveLayout = 'grid';
-    } else if (layout === 'sticker' && (!hasEnoughItems || itemsWidth < 340)) {
+    if ((layout === 'cards' || layout === 'sticker') && !hasEnoughItems) {
       effectiveLayout = 'grid';
     }
     section.dataset.artworkEffectiveLayout = effectiveLayout;
+    centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport);
   }
 
   function watchArtworkGroupLayout(container, record) {
@@ -2933,6 +2964,14 @@ export function createLightboxMediaRenderer({
     });
   }
 
+  function selectGroupedArtworkEntry(entry, section) {
+    if (!entry || !section) return;
+    section.querySelectorAll('.lightbox-media-item.is-artwork-selected').forEach(previous => {
+      if (previous !== entry) previous.classList.remove('is-artwork-selected');
+    });
+    entry.classList.add('is-artwork-selected');
+  }
+
   function bindGroupedArtworkInteractions(container, entry, project, section) {
     entry.classList.add('is-grouped-artwork-interactive');
     entry.tabIndex=0;
@@ -2946,11 +2985,13 @@ export function createLightboxMediaRenderer({
       if(target.closest?.('button,a,input,select,textarea,video,mux-player,iframe,.model-viewer-shell,.lightbox-inspect-back'))return;
       event.preventDefault?.();
       event.stopPropagation?.();
+      selectGroupedArtworkEntry(entry, section);
       openArtworkInspect(container,entry,project,entry);
     };
     const onEntryKeydown=event=>{
       if(event.target!==entry||!['Enter',' '].includes(event.key))return;
       event.preventDefault();
+      selectGroupedArtworkEntry(entry, section);
       openArtworkInspect(container,entry,project,entry);
     };
     entry.addEventListener('click',onEntryClick,true);

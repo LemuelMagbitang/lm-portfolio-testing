@@ -461,31 +461,26 @@ assert.ok(!admin.includes('value="flow"') &&
   siteCss.includes('@media (hover:hover) and (pointer:fine)') &&
   !siteCss.includes('data-artwork-layout="flow"'),
   'Flow is retired; grouped artwork has no in-card Inspect chip and uses centered 3D-style Inspect with desktop-only hover.');
-assert.ok(lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') &&
-  lightboxCss.includes('data-artwork-effective-layout="cards"] .lightbox-media-item') &&
-  lightboxCss.includes('data-artwork-effective-layout="sticker"] .lightbox-media-item') &&
-  lightboxCss.includes('var(--artwork-sticker-rotation') &&
-  lightboxCss.includes('rotate(var(--artwork-sticker-rotation-mobile,0deg))') &&
-  lightboxCss.includes('width:min(100%,calc(clamp(200px,38svh,320px) * var(--lightbox-artwork-ratio,1)))') &&
-  lightboxCss.includes('max-height:clamp(200px,38svh,320px)') &&
-  lightboxCss.includes('max-width:min(100%,75vw,280px)') &&
-  lightboxCss.includes('max-width:min(100%,68vw,220px)') &&
-  lightboxCss.includes('max-width:min(100%,64vw,190px)') &&
-  lightboxCss.includes('clamp(180px,32svh,270px)') &&
-  lightboxCss.includes('clamp(150px,26svh,220px)') &&
-  lightboxCss.includes('clamp(160px,28svh,232px)') &&
-  lightboxCss.includes('clamp(140px,25svh,190px)') &&
-  lightboxCss.includes('minmax(min(100%,180px),1fr)') &&
-  lightboxCss.includes('row-gap:clamp(18px,2vw,26px)') &&
+assert.ok(
+  lightboxCss.includes('grid-template-columns:repeat(5,minmax(0,1fr))') &&
+  lightboxCss.includes('grid-template-columns:repeat(4,minmax(0,1fr))') &&
+  lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') &&
+  lightboxCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
+  lightboxCss.includes('calc(var(--artwork-row-center-shift,0px) + var(--artwork-card-offset-x,0px))') &&
+  lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&
+  lightboxCss.includes('max-height:clamp(160px,24svh,216px)') &&
+  lightboxCss.includes('max-height:clamp(155px,24svh,198px)') &&
   lightboxCss.includes('padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;') &&
   lightboxCss.includes('filter:drop-shadow(0 4px 5px rgba(0,0,0,.28))') &&
-  lightboxCss.includes('inset:4px 4px -5px') &&
-  lightboxCss.includes('overflow:visible;') &&
-  lightboxCss.includes('z-index:10002;') &&
-  lightboxCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') &&
+  lightboxCss.includes(':focus-visible:not(.is-inspect-focus-return)') &&
+  !lightboxCss.includes('inset:4px 4px -5px') &&
+  renderer.includes('function centerArtworkGroupRows') &&
+  renderer.includes("entry.classList.add('is-artwork-selected')") &&
+  renderer.includes('const rotation = (stableSeed % 13) - 6;') &&
+  renderer.includes('selectGroupedArtworkEntry(entry, section)') &&
   admin.includes('<option value="cards">Horizontal Card Stack</option>') &&
   admin.includes('<option value="sticker">Sticker Card Layout</option>'),
-  'Responsive card stacks and seeded sticker layouts must use equal layout tracks, respect mobile fallbacks, and preserve aspect-aware artwork frames.');
+  'Card stacks must wrap 5/4/3 across desktop/tablet/mobile, stickers must collage 3/2 across, incomplete rows must center, and selection/focus must rise above neighboring art.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
   'Grouped artwork presentation must not use horizontal gallery scrolling.');

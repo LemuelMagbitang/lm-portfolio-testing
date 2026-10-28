@@ -931,3 +931,12 @@ This migration must not:
 - Added CMS validator and browser smoke assertions to protect the transparent stage, zero padding/border, and silhouette shadow without changing the horizontal card stack backing edge or unrelated lightbox behavior.
 - Advanced the feature CSS cache key to `20261028-14`.
 - **Next step:** run validation and Pages again; then visually confirm the cut-out shadow reads well against the dark Lightbox background at desktop and on a small phone.
+
+
+### October 28, 2026 — Figma-aligned card stack and sticker collage
+
+- Compared the current Lightbox layouts with the supplied current-state screenshots and Figma reference. The previous horizontal card stack behaved like a three-column grid of translucent panels; the reference instead uses a close horizontal fan with five pieces across and a centered continuation row. The existing sticker layout also left excessive gaps and did not overlap on phones.
+- Horizontal Card Stack now uses five columns on desktop, four on tablet, and three on mobile. Items remain in source order and wrap naturally to later rows; the renderer centers the final incomplete row without hardcoded per-artwork positions.
+- Sticker Card Layout now uses three columns on desktop/tablet and two columns on mobile, with gentle seeded rotation and staggered offsets. The visible cut-out art overlaps while its grid hit areas remain separate; mouse hover, keyboard focus, and tapped/activated pieces move to the front.
+- Added a selected-entry class before the Inspector handoff, dynamic grid-row centering, responsive track-count checks, final-row centering assertions, and a tighter -6° to +6° sticker rotation guard. The feature CSS cache identity advances to `20261028-15`.
+- **Next step:** confirm the new browser smoke and Pages workflows, then perform the final visual/touch check on the active test preview. Production and `main` remain untouched.
