@@ -431,7 +431,7 @@
 
 /* Selected/focused artwork rises above its neighbors. DOM grid cells remain
    separate hit targets, so overlap only affects the visible artwork silhouette.
-   Keep the card's authored rotation during interaction instead of flattening it. */
+   The sticker collage retains each card's authored angle during interaction. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:is(.is-artwork-selected,.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return)){
   z-index:250;translate:var(--artwork-row-center-shift,0px) 0;
   transform:translate3d(0,-8px,0) rotate(0deg) scale(1.06);
