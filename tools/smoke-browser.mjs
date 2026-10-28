@@ -4236,23 +4236,10 @@ try {
               artworkAspectRatioDelta: artwork && Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')) > 0 && artwork.offsetHeight > 0
                 ? Math.abs((artwork.offsetWidth / artwork.offsetHeight) - Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')))
                 : null,
-              artworkCenterOffset: artwork ? (() => {
-                // The oversized artwork frame is positioned at the cell center
-                // then translated left by half its own dimensions. offsetLeft/
-                // offsetTop do not include CSS individual translate, so account
-                // for it here rather than falsely flagging centered overhang.
-                const position = getComputedStyle(artwork).translate.split(/\s+/);
-                const resolveTranslate = (value, size) => {
-                  const amount = Number.parseFloat(value) || 0;
-                  return String(value || '').trim().endsWith('%') ? amount * size / 100 : amount;
-                };
-                const translateX = resolveTranslate(position[0], artwork.offsetWidth);
-                const translateY = resolveTranslate(position[1], artwork.offsetHeight);
-                return {
-                  x: (artwork.offsetLeft - translateX + artwork.offsetWidth / 2) - (el.clientWidth / 2),
-                  y: (artwork.offsetTop - translateY + artwork.offsetHeight / 2) - (el.clientHeight / 2)
-                };
-              })() : null
+              artworkCenterOffset: artwork ? {
+                x: (artwork.offsetLeft + artwork.offsetWidth / 2) - (el.clientWidth / 2),
+                y: (artwork.offsetTop + artwork.offsetHeight / 2) - (el.clientHeight / 2)
+              } : null
             };
           })
         };
