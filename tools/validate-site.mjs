@@ -1727,7 +1727,7 @@ function validateResponsiveUiContracts() {
   const tabletThreeColumn = style.includes('@media (min-width: 768px) and (max-width: 1099px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
   const desktopThreeColumn = style.includes('@media (min-width: 1100px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
   const artworkGroupLayoutModes = ['grid','stack','cards','sticker'];
-  const artworkGroupCss = fs.readFileSync(path.join(root, 'css/features/lightbox.css'), 'utf8');
+  const artworkGroupCss = fs.readFileSync(path.join(ROOT, 'css/features/lightbox.css'), 'utf8');
   const artworkGroupRuntime = fs.readFileSync(path.join(root, 'js/features/lightbox/media-renderer.js'), 'utf8');
   const artworkGroupAdmin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
   const groupedLayoutContract = artworkGroupLayoutModes.every(mode =>
