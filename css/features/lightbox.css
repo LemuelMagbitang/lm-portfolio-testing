@@ -208,9 +208,10 @@
 }
 
 
-/* Keep both artwork faces anchored to the hologram's centered layout slot.
-   The inner card translates for parallax; counter that x/y translation on the
-   front and reverse planes so interaction moves the foil, not the artwork. */
+/* Keep artwork faces anchored to the hologram's centered layout slot.
+   The inner card translates for parallax; counter that x/y translation on each
+   face. The reverse/forward CSS flip rotates the plane again, so the inverse
+   translation reverses sign while the card is flipped. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face.lightbox-holographic-front {
   transform: translate3d(
     calc(0px - var(--holo-shift-x, 0px)),
@@ -225,6 +226,15 @@
       calc(0px - var(--holo-shift-y, 0px)),
       0px
     )
+    rotateY(180deg)
+    translateZ(.01px);
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped .lightbox-holographic-face.lightbox-holographic-front {
+  transform: translate3d(var(--holo-shift-x, 0px), var(--holo-shift-y, 0px), .01px);
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped .lightbox-holographic-face.lightbox-holographic-back {
+  transform:
+    translate3d(var(--holo-shift-x, 0px), var(--holo-shift-y, 0px), 0px)
     rotateY(180deg)
     translateZ(.01px);
 }
