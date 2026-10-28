@@ -159,5 +159,5 @@ assert.ok(styles.includes('.lightbox-holographic-spectrum{'),
 assert.match(lightboxStyles, /lightbox-holographic-desktop-recommendation/);
 assert.match(lightboxStyles, /@media \(max-width:767px\)\s*\{[\s\S]*?#lightboxMediaContainer \.lightbox-media-item:has\(\.lightbox-holographic\)\s*\{[\s\S]*?width:75%;[\s\S]*?max-width:75%;/,
   'Mobile holographic media items must stay centered at 75% width; desktop sizing must not be changed.');
-assert.match(mediaRenderer, /Best viewed on desktop for full effect\./);
+assert.match(mediaRenderer, /Switch to desktop for the full effect\./);
 console.log('Responsive foil modes and bounded pointer/auto poses validated.');
