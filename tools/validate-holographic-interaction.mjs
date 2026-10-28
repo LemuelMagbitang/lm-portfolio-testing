@@ -147,6 +147,10 @@ assert.ok(compactFoilCss.includes('background-image:none!important;'),
 assert.ok(compactFoilCss.includes('opacity:0!important;') &&
   compactFoilCss.includes('mix-blend-mode:normal!important;'),
   'Mobile foil layers must be transparent and use a non-blending composite mode.');
+assert.ok(compactFoilCss.includes('.lightbox-holographic[data-holo-style] .lightbox-holographic-prism') &&
+  compactFoilCss.includes('.lightbox-holographic[data-holo-style] .lightbox-holographic-ribbons') &&
+  compactFoilCss.includes('.lightbox-holographic[data-holo-style] .lightbox-holographic-sheen'),
+  'Mobile overrides must beat the higher-specificity style-specific foil enable rules.');
 assert.ok(compactFoilCss.includes('transform-style:preserve-3d;') &&
   compactFoilCss.includes('will-change:transform;'),
   'Mobile must retain the transform-only 3D parallax surface.');

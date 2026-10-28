@@ -113,6 +113,19 @@
     filter:none!important;
     mix-blend-mode:normal!important;
   }
+  /* Style-specific foil rules in the shared stylesheet can opt these layers
+     back in with display:block!important. Match their specificity here so the
+     compact/mobile rendering removes the materials regardless of foil style. */
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style] .lightbox-holographic-prism,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style] .lightbox-holographic-ribbons,
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic[data-holo-style] .lightbox-holographic-sheen {
+    display:none!important;
+    animation:none!important;
+    background-image:none!important;
+    opacity:0!important;
+    filter:none!important;
+    mix-blend-mode:normal!important;
+  }
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-inner{
     transform-style:preserve-3d;
     will-change:transform;
