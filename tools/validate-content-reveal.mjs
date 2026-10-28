@@ -28,8 +28,8 @@ assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
 assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\s*#bdbdbd\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
   'The review heading must keep a high-contrast, non-blended foreground.');
-assert.match(mainStyles, /#contactReviewPanel \.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*background-color:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
-  'The review submit button must keep a high-contrast foreground and surface.');
+assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
+  'The review submit button must use its own high-contrast surface even if rendered outside its original panel.');
 assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-03/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);

@@ -6612,11 +6612,14 @@ body.menu-open .hamburger-icon span {
   opacity: 1 !important;
   text-shadow: none !important;
 }
-#contactReviewPanel .submit-btn-secondary {
+button.submit-btn.submit-btn-secondary {
   color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: #242424 !important;
   background-color: #242424 !important;
   border-color: rgba(255,255,255,.78) !important;
   mix-blend-mode: normal !important;
+  isolation: isolate !important;
   opacity: 1 !important;
   filter: none !important;
   text-shadow: none !important;
