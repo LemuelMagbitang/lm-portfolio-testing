@@ -4241,7 +4241,7 @@ try {
                 // then translated left by half its own dimensions. offsetLeft/
                 // offsetTop do not include CSS individual translate, so account
                 // for it here rather than falsely flagging centered overhang.
-                const position = getComputedStyle(artwork).translate.split(/\\s+/);
+                const position = getComputedStyle(artwork).translate.split(/\s+/);
                 const translateX = position[0] === '-50%' ? artwork.offsetWidth / 2 : 0;
                 const translateY = position[1] === '-50%' ? artwork.offsetHeight / 2 : 0;
                 return {
