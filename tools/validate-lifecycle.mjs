@@ -344,3 +344,7 @@ const navigationTrackerIndex = adminSource.indexOf('deployTrackVersion++;', navi
 assert.ok(navigationGuardIndex >= 0 && navigationConfirmIndex > navigationGuardIndex && navigationTrackerIndex > navigationConfirmIndex);
 
 console.log('Lightbox BFCache and 3D mount-race contracts validated.');
+
+// Keep the new viewport-reveal observer/reduced-motion contract in the required
+// lifecycle validation run; the portfolio's CI workflow invokes this suite.
+await import('./validate-content-reveal.mjs');
