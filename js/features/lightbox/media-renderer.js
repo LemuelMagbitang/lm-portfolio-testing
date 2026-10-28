@@ -2646,7 +2646,6 @@ export function createLightboxMediaRenderer({
       if(active.placeholder?.parentNode)active.placeholder.replaceWith(active.entry);
       if(active.foilHintPlaceholder?.parentNode&&active.foilHint)active.foilHintPlaceholder.replaceWith(active.foilHint);
       active.overlay.remove();
-      if(active.resumeAutoRotation&&active.foilSurface?.isConnected)startFoilAutoRotation(active.foilSurface);
       active.restoreLightboxScroll?.();
       windowRef.requestAnimationFrame(()=>{active.restoreLightboxScroll?.();windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());});
 
@@ -2694,8 +2693,6 @@ export function createLightboxMediaRenderer({
     if(!entry?.parentNode||!container)return;
     if(activeInspector)closeArtworkInspect({immediate:true});
     const foilSurface=entry.querySelector('.lightbox-holographic');
-    const foilMotion=foilSurface?holographicMotionStates.get(foilSurface):null;
-    const resumeAutoRotation=Boolean(foilMotion?.autoRotate);
     // A pointer pose from the gallery must not carry into the full-screen
     // Inspector or contaminate the opening FLIP geometry. Start face-on.
     if(foilSurface)resetFoilMotionImmediately(foilSurface);
@@ -2795,7 +2792,7 @@ export function createLightboxMediaRenderer({
     };
     overlay.addEventListener('click',onBackdropClick);
     overlay.addEventListener('keydown',onKeyDown);
-    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,resumeAutoRotation,overlay,frame,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
+    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,overlay,frame,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
     activeInspector=active;
     documentRef.body.appendChild(overlay);
     restoreLightboxScroll();
