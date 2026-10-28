@@ -10,13 +10,23 @@
 const REVEAL_TARGET_GROUPS = [
   { selector: '.about-hero .photo-frame' },
   { selector: '.about-hero .about-bio-text > *' },
-  { selector: '.about-page main .resume-skills-row > .resume-block' },
-  { selector: '.about-page main .resume-main > .resume-block' },
+  {
+    selector: '.about-page main .resume-skills-row > .resume-block > h3, ' +
+      '.about-page main .resume-skills-row .skill-list > li'
+  },
+  {
+    selector: '.about-page main .resume-main > .resume-block > h3, ' +
+      '.about-page main .resume-main > .resume-block [id$="List"] > *'
+  },
   { selector: 'main.works-main > .filter-nav-wrapper' },
   { selector: '.curated-view-heading' },
   { selector: '#contact-section > .contact-mobile-tabs > .contact-mobile-tab' },
-  { selector: '#contact-section #web3-forms-container > .contact-block' },
+  {
+    selector: '#contact-section #web3-forms-container > .contact-block > h2, ' +
+      '#contact-section #web3-forms-container > .contact-block > .form-container'
+  },
   { selector: '#showMoreWrapper' },
+  { selector: '.reviews-section .reviews-marquee' },
   { selector: '.footer-content > .social-icons, .footer-content > p' }
 ];
 
