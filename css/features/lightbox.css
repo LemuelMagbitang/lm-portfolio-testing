@@ -363,9 +363,11 @@
   position:relative;z-index:1;
   width:min(100%,calc(clamp(160px,28svh,232px) * var(--lightbox-artwork-ratio,1)));
   max-width:min(100%,36vw,252px);height:auto;max-height:clamp(160px,28svh,232px);
-  padding:5px;border:2px solid rgba(255,255,255,.94);border-radius:12px;background:#f4f0e7;
-  box-shadow:0 5px 12px rgba(0,0,0,.24),inset 0 0 0 1px rgba(24,23,18,.04);
+  padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;
   box-sizing:border-box;
+}
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork.has-holographic .lightbox-holographic{
+  filter:drop-shadow(0 4px 5px rgba(0,0,0,.28));
 }
 @media (max-width:1000px) and (min-width:761px){
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-artwork-group-items{

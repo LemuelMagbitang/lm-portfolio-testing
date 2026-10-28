@@ -922,3 +922,12 @@ This migration must not:
 - Gave both layouts dedicated aspect-ratio-aware artwork size budgets at desktop/tablet and mobile breakpoints. The mobile rules preserve the single-column fallback for stacked cards and a two-column sticker grid where space allows.
 - Extended the CMS presentation validator and browser smoke test to enforce compact stage dimensions in addition to the existing equal-track, centering, responsive fallback, and artwork-ratio checks. Advanced the Lightbox feature stylesheet cache key to `20261028-13`.
 - **Next step:** complete the active-branch validation/browser smoke and Pages workflows, then visually inspect the two compositions against the incident clip at desktop, tablet, and small-phone widths. No change is needed to unrelated gallery, navigation, or Inspector behavior.
+
+
+### October 28, 2026 — Match sticker framing to the cut-out artwork
+
+- Frame review of the attached Works incident video confirmed that these sticker assets already have a white die-cut outline. A pale rectangular surface border behind each transparent cut-out made the compact layout read too much like a sheet of mini cards.
+- Removed the rectangular background, border, radius, and box shadow from the sticker artwork stage while retaining its aspect-aware compact dimensions. Added a restrained alpha-shaped drop shadow to the holographic surface so the asset's own silhouette supplies the physical-sticker edge.
+- Added CMS validator and browser smoke assertions to protect the transparent stage, zero padding/border, and silhouette shadow without changing the horizontal card stack backing edge or unrelated lightbox behavior.
+- Advanced the feature CSS cache key to `20261028-14`.
+- **Next step:** run validation and Pages again; then visually confirm the cut-out shadow reads well against the dark Lightbox background at desktop and on a small phone.

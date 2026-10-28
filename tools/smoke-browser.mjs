@@ -4215,6 +4215,17 @@ try {
               rotationDegrees,
               artworkWidth: artwork?.offsetWidth || 0,
               artworkHeight: artwork?.offsetHeight || 0,
+              stickerAppearance: artwork ? (() => {
+                const frameStyle = getComputedStyle(artwork);
+                const foil = artwork.querySelector('.lightbox-holographic');
+                return {
+                  backgroundColor:frameStyle.backgroundColor,
+                  borderTopWidth:frameStyle.borderTopWidth,
+                  borderRightWidth:frameStyle.borderRightWidth,
+                  padding:frameStyle.padding,
+                  foilFilter:foil ? getComputedStyle(foil).filter : ''
+                };
+              })() : null,
               artworkAspectRatioDelta: artwork && Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')) > 0 && artwork.offsetHeight > 0
                 ? Math.abs((artwork.offsetWidth / artwork.offsetHeight) - Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')))
                 : null,
@@ -4350,6 +4361,17 @@ try {
               }
             }
             if (mode === 'sticker') {
+              const stickerFrames = layout.children.map(child => child.stickerAppearance).filter(Boolean);
+              if (stickerFrames.length && stickerFrames.some(frame =>
+                frame.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+                frame.borderTopWidth !== '0px' ||
+                frame.borderRightWidth !== '0px' ||
+                frame.padding !== '0px' ||
+                !frame.foilFilter.includes('drop-shadow')
+              )) {
+                throw new Error('Sticker mode must preserve the cut-out silhouette instead of adding a rectangular card backing: ' +
+                  JSON.stringify({ viewport, stickerFrames, layout }));
+              }
               const maxRotation = Math.max(...layout.children.map(child => Math.abs(child.rotationDegrees || 0)));
               if (maxRotation > 45.01) {
                 throw new Error('Sticker artwork rotation must stay within -45 to 45 degrees: ' +

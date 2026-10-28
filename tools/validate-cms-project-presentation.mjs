@@ -477,7 +477,8 @@ assert.ok(lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') 
   lightboxCss.includes('clamp(140px,25svh,190px)') &&
   lightboxCss.includes('minmax(min(100%,180px),1fr)') &&
   lightboxCss.includes('row-gap:clamp(18px,2vw,26px)') &&
-  lightboxCss.includes('border:2px solid rgba(255,255,255,.94)') &&
+  lightboxCss.includes('padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;') &&
+  lightboxCss.includes('filter:drop-shadow(0 4px 5px rgba(0,0,0,.28))') &&
   lightboxCss.includes('inset:4px 4px -5px') &&
   lightboxCss.includes('overflow:visible;') &&
   lightboxCss.includes('z-index:10002;') &&
