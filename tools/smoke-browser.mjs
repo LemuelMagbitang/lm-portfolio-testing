@@ -4449,7 +4449,14 @@ try {
               metrics.maxRotation = maxRotation;
               metrics.rotationSpread = rotationSpread;
             }
-            layoutModeChecks.push({ mode, viewport, metrics, effectiveLayout:layout.layout });
+            layoutModeChecks.push({
+              mode, viewport, metrics, effectiveLayout:layout.layout,
+              artworkDimensions:layout.children.map(child => ({
+                width:child.artworkWidth || 0,
+                height:child.artworkHeight || 0,
+                aspectRatioDelta:child.artworkAspectRatioDelta
+              }))
+            });
           }
         }
         // The same media set must keep the same actual artwork dimensions
@@ -4463,11 +4470,23 @@ try {
             check.mode === 'sticker' && check.viewport.width === viewport.width
           );
           if (cardLayout?.effectiveLayout === 'cards' && stickerLayout?.effectiveLayout === 'sticker') {
-            const widthDelta = Math.abs(cardLayout.metrics.maxArtworkWidth - stickerLayout.metrics.maxArtworkWidth);
-            const heightDelta = Math.abs(cardLayout.metrics.maxArtworkHeight - stickerLayout.metrics.maxArtworkHeight);
-            if (widthDelta > 1 || heightDelta > 1) {
-              throw new Error('The same assets must retain consistent dimensions across card-stack and sticker modes: ' +
-                JSON.stringify({ viewport, widthDelta, heightDelta, card:cardLayout.metrics, sticker:stickerLayout.metrics }));
+            const dimensionsMatch =
+              cardLayout.artworkDimensions.length === stickerLayout.artworkDimensions.length &&
+              cardLayout.artworkDimensions.every((card,index) => {
+                const sticker = stickerLayout.artworkDimensions[index];
+                return sticker &&
+                  Math.abs(card.width - sticker.width) <= 1 &&
+                  Math.abs(card.height - sticker.height) <= 1 &&
+                  (card.aspectRatioDelta === null || sticker.aspectRatioDelta === null ||
+                   Math.abs(card.aspectRatioDelta - sticker.aspectRatioDelta) <= 0.01);
+              });
+            if (!dimensionsMatch) {
+              throw new Error('Each asset must retain matching dimensions and aspect-ratio fidelity across card-stack and sticker modes: ' +
+                JSON.stringify({
+                  viewport,
+                  card:cardLayout.artworkDimensions,
+                  sticker:stickerLayout.artworkDimensions
+                }));
             }
           }
         }
