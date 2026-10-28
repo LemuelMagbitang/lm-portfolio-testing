@@ -4653,20 +4653,23 @@ try {
       await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
       const inspectedHolo = inspectMode.locator('.lightbox-holographic').first();
       await inspectedHolo.waitFor({ state: 'visible', timeout: 2000 });
-      // Wait for the actual FLIP animation to finish instead of sleeping for a
-      // fixed duration. Under load, 500 ms can still sample the final animated
-      // frame a few pixels before its neutral transform has settled.
-      await inspectMode.locator('.lightbox-inspect-frame').evaluate(async frame => {
-        const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
-        await nextFrame();
-        await nextFrame();
+      // Wait for the actual FLIP animation instead of sleeping for a fixed
+      // duration. Use Playwright's bounded wait so a stalled browser animation
+      // cannot hang the entire end-to-end suite; retain the strict final geometry check.
+      await page.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      ));
+      await page.waitForFunction(() => {
+        const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
+        if (!frame) return false;
         const openingAnimations = frame.getAnimations().filter(animation =>
           Number(animation.effect?.getTiming?.().duration) >= 400
         );
-        await Promise.all(openingAnimations.map(animation => animation.finished.catch(() => {})));
-        await nextFrame();
-        await nextFrame();
-      });
+        return openingAnimations.every(animation => animation.playState !== 'running');
+      }, null, { timeout: 2000 });
+      await page.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      ));
       const groupDuringInspect = await readArtworkGroupLayout();
       if (groupDuringInspect.layout !== groupBeforeInspect.layout ||
           groupDuringInspect.width !== groupBeforeInspect.width ||
