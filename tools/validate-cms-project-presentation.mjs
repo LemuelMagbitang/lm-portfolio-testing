@@ -475,7 +475,11 @@ assert.ok(
   lightboxCss.includes('position:relative;margin-inline:0;z-index:1;') &&
   lightboxCss.includes('[data-artwork-layout="cards"],[data-artwork-effective-layout="cards"],[data-artwork-layout="sticker"],[data-artwork-effective-layout="sticker"]') &&
   lightboxCss.includes('padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;') &&
-  lightboxCss.includes('filter:drop-shadow(0 4px 5px rgba(0,0,0,.28))') &&
+  lightboxCss.includes('filter:drop-shadow(0 0 1px rgba(255,255,255,.78)) drop-shadow(0 5px 6px rgba(0,0,0,.30))') &&
+  lightboxCss.includes('filter:drop-shadow(0 6px 7px rgba(0,0,0,.32))') &&
+  lightboxCss.includes('row-gap:0;padding:2px clamp(8px,3vw,24px);') &&
+  lightboxCss.includes('column-gap:clamp(0px,.2vw,2px);row-gap:0;') &&
+  lightboxCss.includes('gap:0 1px;padding:2px clamp(8px,4vw,18px);') &&
   lightboxCss.includes(':focus-visible:not(.is-inspect-focus-return)') &&
   !lightboxCss.includes('inset:4px 4px -5px') &&
   renderer.includes('function centerArtworkGroupRows') &&
