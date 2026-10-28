@@ -13,11 +13,12 @@ const LARGE_VIDEO_REVIEW_THRESHOLD = 4 * MIB;
 const RASTER_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tif', '.tiff', '.avif'
 ]);
-// These deliberate compatibility exceptions are documented separately rather
-// than being reported as pending WebP conversions on every CI run.
+// These reviewed raster assets are intentionally retained for platform
+// compatibility or because measured WebP output was larger than the source.
 const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/site/favicon.png', 'Kept as PNG for favicon compatibility.'],
-  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.']
+  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.'],
+  ['assets/projects/site/profile.jpg', 'Kept as JPEG because the measured WebP conversion (65,398 bytes) was larger than the original JPEG (56,418 bytes).']
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);
@@ -328,12 +329,12 @@ reportItems(
   item => item.path + ' — ' + bytesLabel(item.size)
 );
 reportItems(
-  'Compatibility-preserved raster assets (excluded from WebP conversion backlog)',
+  'Intentionally retained raster assets (excluded from WebP conversion backlog)',
   findings.preservedRaster,
   item => item.path + ' — ' + bytesLabel(item.size) + ' — ' + item.reason
 );
 reportItems(
-  'Stale compatibility-preservation entries (non-blocking; update the allowlist)',
+  'Stale retained-raster entries (non-blocking; update the allowlist)',
   findings.stalePreservedRaster,
   item => item.path + ' — ' + item.reason
 );

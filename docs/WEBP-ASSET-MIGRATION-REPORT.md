@@ -150,12 +150,13 @@ The current payload for the migrated asset set is **22,933,941 bytes (21.871 MiB
 - assets/projects/site/portfolio-logo.png → assets/projects/site/portfolio-logo.webp — 1080×1080 px; 0.04 MiB → 0.00 MiB; lossless WebP
 - assets/projects/site/profile.jpg → assets/projects/site/profile.webp — 1135×1135 px; 0.05 MiB → 0.06 MiB; WebP quality 92
 
-## Preserved compatibility-sensitive assets
+## Intentionally retained raster assets
 
-- assets/projects/site/favicon.png — restored from the pre-migration Git commit; retained as PNG.
-- assets/projects/site/og-image.jpg — restored from the pre-migration Git commit; retained as JPEG for social-sharing crawlers.
+- `assets/projects/site/favicon.png` — retained as PNG for favicon compatibility.
+- `assets/projects/site/og-image.jpg` — retained as JPEG for social-sharing crawler compatibility.
+- `assets/projects/site/profile.jpg` — retained as JPEG because the measured WebP conversion at quality 92 (65,398 bytes) was larger than the original JPEG (56,418 bytes). The About page and its image preload still reference this JPEG.
 
 
-## Current-state note — October 28, 2026
+## Current-state note — October 29, 2026
 
-The initial conversion CSV above remains an immutable record of the original size comparison, not a live optimization backlog. A fresh repository-tree review of `projects-runtime-cutover` found only two remaining raster source files: `assets/projects/site/favicon.png` and `assets/projects/site/og-image.jpg`. Both are intentional compatibility exceptions. The asset-audit allowlist now includes only these present files and reports any future stale exception entries separately as non-blocking findings. Do not re-encode or remove media solely from the historical CSV; inspect the currently referenced asset and compare visual quality and current byte size first.
+The initial conversion CSV above remains an immutable record of the original size comparison, not a live optimization backlog. A fresh repository-tree review of `projects-runtime-cutover` found three remaining raster source files: `assets/projects/site/favicon.png`, `assets/projects/site/og-image.jpg`, and `assets/projects/site/profile.jpg`. The first two are retained for platform compatibility; the profile photo remains JPEG because the measured WebP conversion was larger than the original. The asset-audit allowlist includes these three reviewed files and reports future stale entries separately as non-blocking findings. Do not re-encode or remove media solely from the historical CSV; inspect the currently referenced asset and compare visual quality and current byte size first.
