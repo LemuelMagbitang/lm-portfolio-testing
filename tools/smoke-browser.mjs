@@ -4382,9 +4382,11 @@ try {
                 }
               }
               const mobile = viewport.width <= 760;
-              const footprintLimit = mode === 'cards'
-                ? (mobile ? { width:220, height:220 } : { width:300, height:270 })
-                : (mobile ? { width:190, height:200 } : { width:252, height:232 });
+              // Artwork is intentionally 50% larger now, with the same
+              // responsive size envelope for card-stack and sticker modes.
+              const footprintLimit = mobile
+                ? { width:212, height:242 }
+                : { width:332, height:296 };
               if (metrics.maxArtworkWidth > footprintLimit.width + 2 ||
                   metrics.maxArtworkHeight > footprintLimit.height + 2) {
                 throw new Error('Card-stack and sticker artwork must keep their compact responsive footprint: ' +
