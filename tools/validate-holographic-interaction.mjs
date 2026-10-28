@@ -116,7 +116,7 @@ const lightboxStyles = await readFile(new URL('../css/features/lightbox.css', im
 assert.match(mediaRenderer, /getFoilPointerPose\(x, y\)/);
 assert.match(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000, motion\.autoMotion\)/);
 assert.match(mediaRenderer, /autoMotion:\s*createFoilAutoMotionProfile\(\)/);
-assert.match(lightboxStyles, /grid-template-areas:\s*"face separator action"\s*"recommendation recommendation recommendation"/);
+assert.match(lightboxStyles, /grid-template-areas:\s*"hint-primary"\s*"recommendation"/,\n  'Compact foil hint must keep the nested face/flip row separate from the desktop recommendation.');\nassert.doesNotMatch(lightboxStyles, /grid-template-areas:\s*"face separator action"/,\n  'The obsolete direct-child grid must not return after the hint DOM was grouped.');
 assert.match(mediaRenderer, /motion\.autoFrame = windowRef\.requestAnimationFrame\(animate\)/);
 assert.match(mediaRenderer, /cancelAnimationFrame\?\.\(motion\.autoFrame\)/);
 assert.match(mediaRenderer, /prefersReducedFoilMotion\(windowRef\)/);

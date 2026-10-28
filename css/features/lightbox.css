@@ -463,34 +463,6 @@
 }
 
 
-/* Touch layouts keep the flip affordance and desktop recommendation on explicit,
-   separate rows instead of relying on flex-basis and min-content sizing. */
-@media (max-width:760px), (hover:none) and (pointer:coarse) {
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
-    display:grid;
-    grid-template-columns:max-content max-content max-content;
-    grid-template-areas:"face separator action" "recommendation recommendation recommendation";
-    align-items:center;justify-content:center;justify-items:center;
-    column-gap:5px;row-gap:3px;
-    width:min(100%,calc(85svh * var(--lightbox-artwork-ratio,1)));
-    max-width:calc(100% - 24px);min-height:0;
-    margin:2px auto 0;
-    font-size:9px;letter-spacing:.095em;line-height:1.25;
-    flex-wrap:initial;
-  }
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face-status{grid-area:face;}
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-separator{grid-area:separator;}
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-action,
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-touch-action{grid-area:action;}
-  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{
-    grid-area:recommendation;display:block;flex:initial;
-    width:100%;max-width:100%;min-width:0;margin:0;
-    color:inherit;font-size:inherit;font-weight:inherit;
-    letter-spacing:inherit;line-height:inherit;
-    text-align:center;text-transform:none;white-space:normal;overflow-wrap:normal;
-  }
-}
-
 /* Inspect polish: keep the two-line foil hint consistent and keep the selected
    artwork in a neutral, viewport-bounded frame after it leaves a grouped layout. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
