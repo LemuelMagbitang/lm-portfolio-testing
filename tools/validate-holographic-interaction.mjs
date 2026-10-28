@@ -7,6 +7,7 @@ import {
   FOIL_MAX_HOVER_SHIFT_X_PX,
   FOIL_MAX_HOVER_SHIFT_Y_PX,
   FOIL_MAX_HOVER_TILT_DEG,
+  createFoilAutoMotionProfile,
   getFoilAutoPose,
   getFoilPointerPose,
   isCompactFoilTarget,
@@ -14,7 +15,7 @@ import {
   resolveFoilIntensity,
   shouldAutoRotateFoil,
   supportsFoilHover
-} from '../js/features/lightbox/foil-interaction.js?v=20261028-02';
+} from '../js/features/lightbox/foil-interaction.js?v=20261028-03';
 
 const mediaQueryView = (innerWidth, options = {}) => ({
   innerWidth,
@@ -70,6 +71,28 @@ assert.equal(bottomLeftPose.shiftY, FOIL_MAX_HOVER_SHIFT_Y_PX);
 
 assert.deepEqual(getFoilAutoPose(0), { x: 50, y: 50, rotation: 0 });
 assert.notDeepEqual(getFoilAutoPose(1.5), getFoilAutoPose(2.5), 'Auto pose should progress.');
+const slowerMotionProfile = createFoilAutoMotionProfile(() => 0.08);
+const fasterMotionProfile = createFoilAutoMotionProfile(() => 0.92);
+assert.ok(Object.isFrozen(slowerMotionProfile), 'Each surface motion profile must stay stable for its lifetime.');
+assert.notDeepEqual(slowerMotionProfile, fasterMotionProfile, 'Separate holograms must use independent motion parameters.');
+assert.deepEqual(
+  getFoilAutoPose(3.25, slowerMotionProfile),
+  getFoilAutoPose(3.25, slowerMotionProfile),
+  'Reusing one profile at the same elapsed time must produce a stable pose.'
+);
+assert.notDeepEqual(
+  getFoilAutoPose(3.25, slowerMotionProfile),
+  getFoilAutoPose(3.25, fasterMotionProfile),
+  'Independent profiles must produce different movement and phase.'
+);
+for (const profile of [slowerMotionProfile, fasterMotionProfile]) {
+  for (let step = 0; step <= 80; step++) {
+    const pose = getFoilAutoPose(step * 0.25, profile);
+    assert.ok(pose.x >= 20 && pose.x <= 80);
+    assert.ok(pose.y >= 28 && pose.y <= 72);
+    assert.ok(Math.abs(pose.rotation) <= 2.5);
+  }
+}
 const autoPoses = [];
 for (let step = 0; step <= 80; step++) {
   const pose = getFoilAutoPose(step * 0.25);
@@ -91,7 +114,9 @@ const normalRenderer = await readFile(new URL('../js/features/lightbox/foil-norm
 const styles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const lightboxStyles = await readFile(new URL('../css/features/lightbox.css', import.meta.url), 'utf8');
 assert.match(mediaRenderer, /getFoilPointerPose\(x, y\)/);
-assert.match(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000\)/);
+assert.match(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000, motion\.autoMotion\)/);
+assert.match(mediaRenderer, /autoMotion:\s*createFoilAutoMotionProfile\(\)/);
+assert.match(lightboxStyles, /grid-template-areas:\s*"face separator action"\s*"recommendation recommendation recommendation"/);
 assert.match(mediaRenderer, /motion\.autoFrame = windowRef\.requestAnimationFrame\(animate\)/);
 assert.match(mediaRenderer, /cancelAnimationFrame\?\.\(motion\.autoFrame\)/);
 assert.match(mediaRenderer, /prefersReducedFoilMotion\(windowRef\)/);

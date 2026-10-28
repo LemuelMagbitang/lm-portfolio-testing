@@ -5,8 +5,8 @@
  * and project selection remain in the Lightbox controller.
  */
 
-import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261027-07';
-import { FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261028-02';
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261028-08';
+import { FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, createFoilAutoMotionProfile, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261028-03';
 
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
@@ -942,7 +942,7 @@ export function createLightboxMediaRenderer({
       if (!motion.autoRotate || destroyed) return;
       if (motion.autoStartTime === null) motion.autoStartTime = timestamp;
       if (timestamp - motion.lastAutoFrame >= FOIL_AUTO_MOTION_FRAME_INTERVAL_MS) {
-        const pose = getFoilAutoPose((timestamp - motion.autoStartTime) / 1000);
+        const pose = getFoilAutoPose((timestamp - motion.autoStartTime) / 1000, motion.autoMotion);
         motion.x = motion.targetX = pose.x;
         motion.y = motion.targetY = pose.y;
         motion.rotation = motion.targetRotation = pose.rotation;
@@ -1083,6 +1083,7 @@ export function createLightboxMediaRenderer({
     holographicMotionStates.set(surface, {
       x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0,
       compactTarget, frame: null, lastTime: 0, autoRotate: false,
+      autoMotion: createFoilAutoMotionProfile(),
       autoFrame: null, autoStartTime: null, lastAutoFrame: -Infinity
     });
     surface.style.setProperty('--holo-rx', '0deg');

@@ -3636,6 +3636,51 @@ try {
             Number.parseFloat(affordance.flipTransition) <= 0) {
           throw new Error('Mobile holographic surface must suppress foil layers while preserving parallax, tap-to-flip, and the desktop recommendation: ' + JSON.stringify(affordance));
         }
+        for (const viewport of [
+          { width: 320, height: 568, name: 'compact mobile' },
+          { width: 390, height: 844, name: 'standard mobile' },
+          { width: 440, height: 956, name: 'iPhone 16 Pro Max CSS viewport' }
+        ]) {
+          await page.setViewportSize({ width: viewport.width, height: viewport.height });
+          await page.waitForTimeout(90);
+          const hintLayout = await page.evaluate(() => {
+            const hint = document.querySelector('#lightboxMediaContainer .lightbox-holographic-hint');
+            const face = hint?.querySelector('[data-holo-face-label]');
+            const action = hint?.querySelector('.lightbox-holographic-touch-action');
+            const recommendation = hint?.querySelector('.lightbox-holographic-desktop-recommendation');
+            const rect = element => {
+              const r = element?.getBoundingClientRect();
+              return r ? { left:r.left, right:r.right, top:r.top, bottom:r.bottom, width:r.width, height:r.height } : null;
+            };
+            const hintStyle = hint ? getComputedStyle(hint) : null;
+            const actionStyle = action ? getComputedStyle(action) : null;
+            const recommendationStyle = recommendation ? getComputedStyle(recommendation) : null;
+            return {
+              display: hintStyle?.display || 'none',
+              hint: rect(hint), face: rect(face), action: rect(action), recommendation: rect(recommendation),
+              actionFontSize: actionStyle?.fontSize || '',
+              recommendationFontSize: recommendationStyle?.fontSize || '',
+              recommendationLineHeight: Number.parseFloat(recommendationStyle?.lineHeight || '0'),
+              hintScrollWidth: hint?.scrollWidth || 0,
+              hintClientWidth: hint?.clientWidth || 0
+            };
+          });
+          if (hintLayout.display !== 'grid' || !hintLayout.hint || !hintLayout.face ||
+              !hintLayout.action || !hintLayout.recommendation ||
+              Math.abs(hintLayout.face.top - hintLayout.action.top) > 2.5 ||
+              hintLayout.recommendation.top < hintLayout.action.bottom - 1 ||
+              hintLayout.recommendation.left < hintLayout.hint.left - 1 ||
+              hintLayout.recommendation.right > hintLayout.hint.right + 1 ||
+              hintLayout.recommendation.bottom > hintLayout.hint.bottom + 1 ||
+              Math.abs(Number.parseFloat(hintLayout.actionFontSize) - Number.parseFloat(hintLayout.recommendationFontSize)) > 0.01 ||
+              hintLayout.recommendation.height > hintLayout.recommendationLineHeight * 1.8 + 1 ||
+              hintLayout.hintScrollWidth > hintLayout.hintClientWidth + 1) {
+            throw new Error(viewport.name + ' holographic hint must be separate, readable, non-overlapping rows with equal font sizes: ' + JSON.stringify(hintLayout));
+          }
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(80);
+
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
           const back = el.querySelector('.lightbox-holographic-back');
@@ -6110,6 +6155,22 @@ try {
             Number.parseFloat(affordance.flipTransition) <= 0) {
           throw new Error('Desktop holographic surface is missing its intended affordance/geometry: ' + JSON.stringify(affordance));
         }
+        const desktopHintLayout = await holographic.evaluate(el => {
+          const hint = el.closest('.lightbox-media-item')?.querySelector('.lightbox-holographic-hint');
+          const action = hint?.querySelector('.lightbox-holographic-desktop-action');
+          const recommendation = hint?.querySelector('.lightbox-holographic-desktop-recommendation');
+          return {
+            hintDisplay: hint ? getComputedStyle(hint).display : 'none',
+            actionDisplay: action ? getComputedStyle(action).display : 'none',
+            recommendationDisplay: recommendation ? getComputedStyle(recommendation).display : 'none'
+          };
+        });
+        if (desktopHintLayout.hintDisplay !== 'flex' ||
+            desktopHintLayout.actionDisplay === 'none' ||
+            desktopHintLayout.recommendationDisplay !== 'none') {
+          throw new Error('Desktop holographic hint must retain its existing single-row affordance: ' + JSON.stringify(desktopHintLayout));
+        }
+
         // Fine-pointer devices use a deterministic, bounded pointer pose.
         const pointerContract = await holographic.evaluate(el => ({
           input: el.dataset.holoInput || '',
