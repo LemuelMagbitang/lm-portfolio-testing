@@ -494,11 +494,10 @@
 /* Inspect polish: keep the two-line foil hint consistent and keep the selected
    artwork in a neutral, viewport-bounded frame after it leaves a grouped layout. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr);
-  grid-template-areas:"hint-primary" "recommendation";
-  justify-items:center;
-  align-content:center;
+  display:flex!important;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
   gap:4px;
   width:min(100%,820px);
   max-width:100%;
@@ -631,5 +630,34 @@
     width:min(100%,calc(100vw - 32px),calc((100dvh - 190px) * var(--lightbox-artwork-ratio,1)));
     max-width:min(100%,calc(100vw - 32px));
     max-height:max(1px,calc(100dvh - 190px));
+  }
+}
+/* Preserve the desktop's original single-row affordance. Compact/touch layouts
+   use two explicit grid rows: the face/flip instruction above the recommendation. */
+@media (max-width:760px), (hover:none) and (pointer:coarse){
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"hint-primary" "recommendation";
+    justify-items:center;
+    align-content:center;
+    gap:4px;
+    flex-direction:initial;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint-primary{
+    grid-area:hint-primary;
+  }
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{
+    grid-area:recommendation;
+    width:100%;
+    max-width:44ch;
+    margin:0 auto;
+    text-align:center;
+  }
+}
+@media (min-width:761px) and (hover:hover) and (pointer:fine){
+  :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-hint{
+    display:flex!important;
+    flex-direction:row;
   }
 }
