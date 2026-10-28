@@ -305,6 +305,16 @@ assert.ok(
   'Compact foil relief must use the responsive intensity policy, reduced backing resolution, a bounded canvas, and timer-throttled GPU redraws.'
 );
 assert.ok(
+  renderer.includes("let hoverAvailable = !compactTarget && supportsFoilHover(windowRef)") &&
+  renderer.includes("surface.dataset.holoMotion = hoverAvailable ? 'pointer' : 'static'") &&
+  renderer.includes("{ eager: !compactTarget }") &&
+  renderer.includes("if (holo?.back && !isCompactFoilTarget(windowRef))") &&
+  renderer.includes("const nextHoverAvailable = !isCompactFoilTarget(windowRef)") &&
+  !renderer.includes('startFoilAutoRotation(') &&
+  !renderer.includes('autoRotationAvailable ?'),
+  'Compact holographic groups must remain static, use lazy reverse artwork, and avoid continuous per-surface auto-motion while desktop hover remains available.'
+);
+assert.ok(
   foilNormalRendererSource.includes('pendingImageCancels=new Set()') &&
   foilNormalRendererSource.includes('pendingImageCancels.add(cancel)') &&
   foilNormalRendererSource.includes('for(const cancelLoad of [...pendingImageCancels])'),

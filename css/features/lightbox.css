@@ -85,8 +85,8 @@
   );
 }
 
-/* Compact artwork: retain image flip and JS-driven 3D parallax, but remove
-   visible foil materials and suspend the WebGL normal-map renderer on mobile. */
+/* Compact artwork: retain tap-to-flip, but keep the surface static and remove
+   visible foil materials while suspending the WebGL normal-map renderer. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-desktop-recommendation{display:none;}
 @media (max-width:760px), (hover:none) and (pointer:coarse) {
   :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic::before,

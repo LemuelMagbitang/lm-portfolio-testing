@@ -6,7 +6,7 @@
  */
 
 import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261028-08';
-import { FOIL_AUTO_MOTION_FRAME_INTERVAL_MS, createFoilAutoMotionProfile, getFoilAutoPose, getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, shouldAutoRotateFoil, supportsFoilHover } from './foil-interaction.js?v=20261028-03';
+import { getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261028-03';
 
 import { captureAssetPreview, getAssetPreview, installAssetPreviewOnFallback } from '../../infrastructure/media/asset-preview.js?v=20261027-01';
 
@@ -593,7 +593,7 @@ export function createLightboxMediaRenderer({
 
         if (type === 'image') {
           const holo = normalizeHolographicConfig(item.holographic);
-          if (holo?.back) {
+          if (holo?.back && !isCompactFoilTarget(windowRef)) {
             const backUrl = resolveAssetUrl(holo.back);
             scheduleJob('holographic-back:' + backUrl, () => preloadImage(backUrl, { fetchPriority: 'low' }), false);
           }
@@ -926,34 +926,6 @@ export function createLightboxMediaRenderer({
     motion.frame = windowRef.requestAnimationFrame(animate);
   }
 
-  function startFoilAutoRotation(surface) {
-    const motion = holographicMotionStates.get(surface);
-    if (!motion || motion.autoRotate || typeof windowRef?.requestAnimationFrame !== 'function') return;
-    if (motion.frame !== null) {
-      try { windowRef.cancelAnimationFrame?.(motion.frame); } catch (_) {}
-      motion.frame = null;
-    }
-    motion.lastTime = 0;
-    motion.autoRotate = true;
-    motion.autoStartTime = null;
-    motion.lastAutoFrame = -Infinity;
-    const animate = timestamp => {
-      motion.autoFrame = null;
-      if (!motion.autoRotate || destroyed) return;
-      if (motion.autoStartTime === null) motion.autoStartTime = timestamp;
-      if (timestamp - motion.lastAutoFrame >= FOIL_AUTO_MOTION_FRAME_INTERVAL_MS) {
-        const pose = getFoilAutoPose((timestamp - motion.autoStartTime) / 1000, motion.autoMotion);
-        motion.x = motion.targetX = pose.x;
-        motion.y = motion.targetY = pose.y;
-        motion.rotation = motion.targetRotation = pose.rotation;
-        updateHolographicTilt(surface, motion.x, motion.y, motion.rotation);
-        motion.lastAutoFrame = timestamp;
-      }
-      motion.autoFrame = windowRef.requestAnimationFrame(animate);
-    };
-    motion.autoFrame = windowRef.requestAnimationFrame(animate);
-  }
-
   function stopFoilAutoRotation(surface) {
     const motion = holographicMotionStates.get(surface);
     if (!motion) return;
@@ -1060,12 +1032,11 @@ export function createLightboxMediaRenderer({
     surface.dataset.holoTextureMode = config.textureMode;
     let compactTarget = isCompactFoilTarget(windowRef);
     surface.dataset.holoFoil = compactTarget ? 'disabled' : 'enabled';
-    let hoverAvailable = supportsFoilHover(windowRef) && !prefersReducedFoilMotion(windowRef);
-    let autoRotationAvailable = shouldAutoRotateFoil(windowRef);
+    let hoverAvailable = !compactTarget && supportsFoilHover(windowRef) && !prefersReducedFoilMotion(windowRef);
     let frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
     let backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
     surface.dataset.holoInput = hoverAvailable ? 'hover-edge' : 'tap-only';
-    surface.dataset.holoMotion = autoRotationAvailable ? 'auto-rotate' : (hoverAvailable ? 'pointer' : 'static');
+    surface.dataset.holoMotion = hoverAvailable ? 'pointer' : 'static';
     const backHasCustomArtwork = Boolean(String(config.back || '').trim());
     const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled);
     surface.dataset.holoHasCustomBack = backHasCustomArtwork ? 'true' : 'false';
@@ -1083,7 +1054,6 @@ export function createLightboxMediaRenderer({
     holographicMotionStates.set(surface, {
       x: 50, y: 50, targetX: 50, targetY: 50, rotation: 0, targetRotation: 0,
       compactTarget, frame: null, lastTime: 0, autoRotate: false,
-      autoMotion: createFoilAutoMotionProfile(),
       autoFrame: null, autoStartTime: null, lastAutoFrame: -Infinity
     });
     surface.style.setProperty('--holo-rx', '0deg');
@@ -1141,7 +1111,7 @@ export function createLightboxMediaRenderer({
       backHasCustomArtwork
         ? (project.title ? `${project.title} — reverse artwork` : 'Reverse artwork')
         : (project.title ? `${project.title} — holographic reverse` : 'Holographic reverse'),
-      { eager: true }
+      { eager: !compactTarget }
     );
     if (!backHasCustomArtwork) backImage.classList.add('lightbox-holographic-default-reverse');
     back.appendChild(backImage);
@@ -1331,6 +1301,9 @@ export function createLightboxMediaRenderer({
       if (nextCompactTarget === compactTarget) return;
 
       compactTarget = nextCompactTarget;
+      backImage.loading = compactTarget ? 'lazy' : 'eager';
+      if (compactTarget) backImage.removeAttribute('fetchpriority');
+      else backImage.fetchPriority = 'high';
       frontStrength = resolveFoilIntensity(config.intensity, compactTarget);
       backStrength = resolveFoilIntensity(config.backIntensity, compactTarget);
       surface.style.setProperty('--holo-intensity', String(frontStrength));
@@ -1422,37 +1395,24 @@ export function createLightboxMediaRenderer({
 
     const syncFoilMotionMode = () => {
       const reducedMotion = prefersReducedFoilMotion(windowRef);
-      const nextHoverAvailable = supportsFoilHover(windowRef) && !reducedMotion;
-      const nextAutoRotationAvailable = shouldAutoRotateFoil(windowRef);
+      const nextHoverAvailable = !isCompactFoilTarget(windowRef) &&
+        supportsFoilHover(windowRef) && !reducedMotion;
       const previousHoverAvailable = hoverAvailable;
-      const previousAutoRotationAvailable = autoRotationAvailable;
-      if (nextHoverAvailable === previousHoverAvailable &&
-          nextAutoRotationAvailable === previousAutoRotationAvailable) return;
+      if (nextHoverAvailable === previousHoverAvailable) return;
 
       hoverAvailable = nextHoverAvailable;
-      autoRotationAvailable = nextAutoRotationAvailable;
       surface.dataset.holoInput = hoverAvailable ? 'hover-edge' : 'tap-only';
-      surface.dataset.holoMotion = autoRotationAvailable ? 'auto-rotate' : (hoverAvailable ? 'pointer' : 'static');
+      surface.dataset.holoMotion = hoverAvailable ? 'pointer' : 'static';
 
-      if (previousHoverAvailable !== hoverAvailable) {
-        if (hoverAvailable) {
-          surface.addEventListener('pointermove', onPointerMove, { passive: true });
-          surface.addEventListener('pointerleave', onPointerLeave);
-        } else {
-          surface.removeEventListener('pointermove', onPointerMove);
-          surface.removeEventListener('pointerleave', onPointerLeave);
-          cancelQueuedPointer();
-        }
-      }
-
-      if (autoRotationAvailable) {
-        if (!previousAutoRotationAvailable) startFoilAutoRotation(surface);
+      if (hoverAvailable) {
+        surface.addEventListener('pointermove', onPointerMove, { passive: true });
+        surface.addEventListener('pointerleave', onPointerLeave);
       } else {
-        if (previousAutoRotationAvailable) stopFoilAutoRotation(surface);
+        surface.removeEventListener('pointermove', onPointerMove);
+        surface.removeEventListener('pointerleave', onPointerLeave);
+        cancelQueuedPointer();
         if (reducedMotion) resetFoilMotionImmediately(surface);
-        else if (previousAutoRotationAvailable || previousHoverAvailable !== hoverAvailable) {
-          setHolographicTarget(surface, 50, 50, 0);
-        }
+        else setHolographicTarget(surface, 50, 50, 0);
       }
     };
 
@@ -1487,7 +1447,6 @@ export function createLightboxMediaRenderer({
       surface.addEventListener('pointermove', onPointerMove, { passive: true });
       surface.addEventListener('pointerleave', onPointerLeave);
     }
-    if (autoRotationAvailable) startFoilAutoRotation(surface);
     surface.addEventListener('click', toggleFlip);
     surface.addEventListener('keydown', toggleFlip);
 

@@ -3564,8 +3564,8 @@ try {
           motion: el.dataset.holoMotion || '',
           foil: el.dataset.holoFoil || ''
         }));
-        if (compactMode.motion !== 'auto-rotate' || compactMode.foil !== 'disabled') {
-          throw new Error('Mobile must disable foil materials while retaining automatic transform parallax: ' + JSON.stringify(compactMode));
+        if (compactMode.motion !== 'static' || compactMode.foil !== 'disabled') {
+          throw new Error('Mobile must disable foil materials and continuous motion while retaining tap-to-flip: ' + JSON.stringify(compactMode));
         }
         const box = await holographic.boundingBox();
         if (!box) throw new Error('Mobile holographic fixture has no geometry.');
