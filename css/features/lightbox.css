@@ -238,3 +238,57 @@
     rotateY(180deg)
     translateZ(.01px);
 }
+
+/* Holographic artwork groups use equal-width responsive cells. The outer
+   cards no longer fan/overlap across section boundaries; each artwork slot
+   stays centered while its inner front/back planes and foil layers retain
+   their existing transforms and stacking. */
+#lightboxMediaContainer .lightbox-artwork-group:has(.lightbox-artwork.has-holographic) .lightbox-artwork-group-items{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));
+  align-items:stretch;
+  justify-items:stretch;
+  gap:clamp(16px,2.4vw,30px);
+  box-sizing:border-box;
+  padding:clamp(12px,2.6vw,30px);
+  margin:0;
+}
+#lightboxMediaContainer .lightbox-artwork-group:has(.lightbox-artwork.has-holographic) .lightbox-media-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  margin:0;
+  padding:0;
+  overflow:visible;
+  transform:none;
+  transform-origin:center;
+}
+#lightboxMediaContainer .lightbox-artwork-group:has(.lightbox-artwork.has-holographic) .lightbox-artwork.has-holographic{
+  display:flex;
+  flex:0 1 auto;
+  align-items:center;
+  justify-content:center;
+  width:auto;
+  max-width:min(100%,44vw,420px);
+  height:clamp(200px,38svh,320px);
+  max-height:clamp(200px,38svh,320px);
+  aspect-ratio:var(--lightbox-artwork-ratio,1);
+  margin:auto;
+  align-self:center;
+  justify-self:center;
+  box-sizing:border-box;
+}
+@media(max-width:767px){
+  #lightboxMediaContainer .lightbox-artwork-group:has(.lightbox-artwork.has-holographic) .lightbox-artwork-group-items{
+    grid-template-columns:minmax(0,1fr);
+    gap:clamp(16px,4vw,24px);
+    padding:12px;
+  }
+  #lightboxMediaContainer .lightbox-artwork-group:has(.lightbox-artwork.has-holographic) .lightbox-artwork.has-holographic{
+    max-width:min(100%,44vw,360px);
+  }
+}

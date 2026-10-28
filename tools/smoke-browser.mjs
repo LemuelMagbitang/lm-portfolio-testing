@@ -4180,28 +4180,38 @@ try {
         const group = items.closest('.lightbox-artwork-group');
         const groupRect = group?.getBoundingClientRect();
         const itemsRect = items.getBoundingClientRect();
+        const itemsStyle = getComputedStyle(items);
         return {
-        layout: group?.dataset.artworkEffectiveLayout || '',
-        width: items.clientWidth,
-        groupWidth: groupRect?.width || 0,
-        itemsWidth: itemsRect.width,
-        itemsBoxSizing: getComputedStyle(items).boxSizing,
-        centerOffset: groupRect && itemsRect
-          ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
-          : Number.POSITIVE_INFINITY,
-        children: Array.from(items.children).map((el, index) => {
-          const rect = el.getBoundingClientRect();
-          return {
-            index,
-            placeholder: el.classList.contains('lightbox-inspect-placeholder'),
-            caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height
-          };
-        })
-      };
+          layout: group?.dataset.artworkEffectiveLayout || '',
+          width: items.clientWidth,
+          groupWidth: groupRect?.width || 0,
+          itemsWidth: itemsRect.width,
+          itemsBoxSizing: itemsStyle.boxSizing,
+          itemsDisplay: itemsStyle.display,
+          gridTemplateColumns: itemsStyle.gridTemplateColumns,
+          columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
+          centerOffset: groupRect && itemsRect
+            ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
+            : Number.POSITIVE_INFINITY,
+          children: Array.from(items.children).map((el, index) => {
+            const rect = el.getBoundingClientRect();
+            const artwork = el.querySelector('.lightbox-artwork.has-holographic.is-media-reveal-ready');
+            const artworkRect = artwork?.getBoundingClientRect();
+            return {
+              index,
+              placeholder: el.classList.contains('lightbox-inspect-placeholder'),
+              caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+              artworkCenterOffset: artworkRect ? {
+                x: (artworkRect.left + artworkRect.width / 2) - (rect.left + rect.width / 2),
+                y: (artworkRect.top + artworkRect.height / 2) - (rect.top + rect.height / 2)
+              } : null
+            };
+          })
+        };
       });
       const groupBeforeInspect = await readArtworkGroupLayout();
       if (groupBeforeInspect.itemsBoxSizing !== 'border-box' ||
@@ -4216,6 +4226,66 @@ try {
             itemsWidth: groupBeforeInspect.itemsWidth,
             centerOffset: groupBeforeInspect.centerOffset
           }));
+      }
+      const measureEqualSectionGrid = layout => {
+        const sectionWidths = layout.children.map(child => child.width).filter(width => width > 0);
+        const widthSpread = sectionWidths.length
+          ? Math.max(...sectionWidths) - Math.min(...sectionWidths)
+          : Number.POSITIVE_INFINITY;
+        const columnStarts = [...new Set(layout.children
+          .map(child => Math.round(child.left * 10) / 10))].sort((a, b) => a - b);
+        const columnSteps = columnStarts.slice(1).map((left, index) => left - columnStarts[index]);
+        const dividerSpacingSpread = columnSteps.length
+          ? Math.max(...columnSteps) - Math.min(...columnSteps)
+          : 0;
+        const centeredArtwork = layout.children
+          .map(child => child.artworkCenterOffset).filter(Boolean);
+        const maxArtworkCenterOffset = centeredArtwork.length
+          ? Math.max(...centeredArtwork.map(offset => Math.max(Math.abs(offset.x), Math.abs(offset.y))))
+          : Number.POSITIVE_INFINITY;
+        return {
+          display: layout.itemsDisplay,
+          columnCount: columnStarts.length,
+          widthSpread,
+          dividerSpacingSpread,
+          centeredArtworkCount: centeredArtwork.length,
+          maxArtworkCenterOffset
+        };
+      };
+      const assertEqualSectionGrid = (layout, context) => {
+        const metrics = measureEqualSectionGrid(layout);
+        if (layout.itemsDisplay !== 'grid' || metrics.columnCount < 1 ||
+            metrics.widthSpread > 2 || metrics.dividerSpacingSpread > 2 ||
+            metrics.centeredArtworkCount < 1 || metrics.maxArtworkCenterOffset > 2) {
+          throw new Error('Holographic artwork sections must have equal-width grid cells, evenly spaced columns, and centered artwork (' + context + '): ' +
+            JSON.stringify({ metrics, gridTemplateColumns: layout.gridTemplateColumns, layout }));
+        }
+        return metrics;
+      };
+      const initialGridMetrics = assertEqualSectionGrid(groupBeforeInspect, 'initial viewport');
+      const originalViewport = page.viewportSize();
+      const responsiveGridMetrics = [];
+      if (originalViewport) {
+        try {
+          for (const viewport of [
+            { width:1280, height:900 },
+            { width:820, height:1180 },
+            { width:390, height:844 }
+          ]) {
+            await page.setViewportSize(viewport);
+            await page.waitForTimeout(100);
+            const responsiveLayout = await readArtworkGroupLayout();
+            responsiveGridMetrics.push({ viewport, metrics:assertEqualSectionGrid(responsiveLayout, viewport.width + 'px viewport') });
+          }
+        } finally {
+          await page.setViewportSize(originalViewport);
+          await page.waitForTimeout(120);
+        }
+        const columnCounts = responsiveGridMetrics.map(result => result.metrics.columnCount);
+        if (!(columnCounts[0] >= columnCounts[1] && columnCounts[1] >= columnCounts[2] && columnCounts[2] === 1)) {
+          throw new Error('Holographic artwork columns must responsively collapse from desktop to tablet to one mobile column: ' +
+            JSON.stringify({ responsiveGridMetrics }));
+        }
       }
       // Force an asymmetric parallax offset and verify that both face planes
       // remain centered in normal and flipped states.

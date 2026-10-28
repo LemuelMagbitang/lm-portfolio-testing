@@ -885,3 +885,12 @@ This migration must not:
 - Corrected both flipped front/back face transforms to keep the inverted horizontal compensation while negating the vertical parallax offset. Advanced the feature stylesheet cache identity to `20261028-08`.
 - This change is limited to `css/features/lightbox.css`, its public stylesheet cache reference in `index.html`, and this roadmap entry. It does not change the face flip interaction or the legacy production site.
 - **Next step:** rerun the full validation/browser-smoke workflow and check the Pages deployment result. If the centering test passes, perform the targeted desktop/tablet/mobile hover-or-tap and front/back flip visual checks.
+
+
+### October 28, 2026 — Equal-width responsive holographic artwork sections
+
+- The grouped Lightbox renderer can choose horizontal or overlapping layered presentation for all-holographic `cards` groups. Those modes give outer items natural widths or negative inline margins, so the section boundaries are not evenly distributed and the artwork slot can appear off-center.
+- Added a feature-owned responsive CSS Grid override for groups containing holographic artwork. Each item receives an equal-width section; the outer fan/overlap transform is removed for these group slots, while the artwork's established sizing constraints and the inner front/back, parallax, and foil layers remain unchanged.
+- The artwork stage is centered horizontally and vertically inside its assigned cell. The grid auto-fits equal-width columns with consistent gaps at wider breakpoints and collapses to a single column on mobile.
+- Extended the browser smoke layout measurement to verify equal item widths, evenly spaced column starts, artwork-stage centering, and responsive column counts at 1280px, 820px, and 390px viewports. The Lightbox feature stylesheet cache key advances to `20261028-09`.
+- **Next step:** confirm the updated validation/browser-smoke workflow and Pages deployment pass, then visually verify the grouped holographic artwork at desktop, tablet, and mobile sizes.
