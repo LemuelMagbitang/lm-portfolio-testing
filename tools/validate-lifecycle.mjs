@@ -194,13 +194,17 @@ assert.match(mediaRendererSource, /scheduleJob\(\s*'viewer-module',\s*\(\) => wi
 assert.match(mediaRendererSource, /while \(cursor < queue\.length\) \{\s*if \(destroyed\) break;/);
 assert.match(mediaRendererSource, /if \(!destroyed && width > 0 && height > 0\) \{[\s\S]*?imageDimensionCache\.set\(url, \{ width, height \}\);[\s\S]*?captureAssetPreview\(url, image/);
 assert.match(mediaRendererSource, /function normalizeHolographicConfig\(value\)/);
-// Fine-pointer parallax and touch-only auto motion use separate modes:
-// no touch hold/drag lifecycle should remain, and pointer updates stay coalesced.
+// Fine-pointer desktop parallax and compact static presentation use separate modes:
+// no touch hold/drag or per-surface auto-motion loop should remain.
 assert.doesNotMatch(mediaRendererSource, /HOLOGRAPHIC_TOUCH_HOLD_MS|HOLOGRAPHIC_TOUCH_MOVE_CANCEL_PX|onTouchMove|is-holo-touch-pending|touchGesture\.engaged|is-holo-touch-engaged|setPointerCapture/);
 assert.match(mediaRendererSource, /const onPointerMove = event =>/);
 assert.match(mediaRendererSource, /event\.pointerType !== 'mouse'/);
 assert.match(mediaRendererSource, /getFoilPointerPose\(x, y\)/);
-assert.match(mediaRendererSource, /startFoilAutoRotation\(surface\)/);
+assert.doesNotMatch(mediaRendererSource, /startFoilAutoRotation\(surface\)/);
+assert.match(mediaRendererSource, /let hoverAvailable = !compactTarget && supportsFoilHover\(windowRef\)/);
+assert.match(mediaRendererSource, /surface\.dataset\.holoMotion = hoverAvailable \? 'pointer' : 'static'/);
+assert.match(mediaRendererSource, /\{ eager: !compactTarget \}/);
+assert.match(mediaRendererSource, /if \(holo\?\.back && !isCompactFoilTarget\(windowRef\)\)/);
 assert.match(mediaRendererSource, /syncFoilMotionMode = \(\) =>/);
 assert.match(mediaRendererSource, /prefersReducedFoilMotion\(windowRef\)/);
 assert.match(mediaRendererSource, /surface\.addEventListener\('pointermove', onPointerMove, \{ passive: true \}\)/);
