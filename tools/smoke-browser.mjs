@@ -3577,6 +3577,9 @@ try {
           const face = el.querySelector('.lightbox-holographic-front');
           const sheen = el.querySelector('.lightbox-holographic-front .lightbox-holographic-sheen');
           return {
+            foil: el.dataset.holoFoil || '',
+            mediaItemWidth: el.closest('.lightbox-media-item')?.getBoundingClientRect().width || 0,
+            containerWidth: el.closest('#lightboxMediaContainer')?.getBoundingClientRect().width || 0,
             animationName: base.animationName,
             contain: base.contain,
             borderRadius: base.borderRadius,
@@ -3607,7 +3610,7 @@ try {
         });
         if (affordance.foil !== 'disabled' || affordance.environmentDisplay !== 'none' ||
             affordance.normalMapDisplay !== 'none' ||
-            !affordance.desktopRecommendation.toLowerCase().includes('full visual experience') ||
+            !affordance.desktopRecommendation.toLowerCase().includes('best viewed') ||
             !affordance.desktopRecommendation.toLowerCase().includes('desktop') ||
             affordance.desktopRecommendationDisplay === 'none' ||
             affordance.animationName !== 'none' ||
@@ -3616,6 +3619,8 @@ try {
             affordance.borderWidth !== '0px' || affordance.borderStyle !== 'none' ||
             affordance.boxShadow !== 'none' || affordance.outlineStyle !== 'none' ||
             affordance.artworkOverflow !== 'visible' ||
+            affordance.containerWidth <= 0 ||
+            Math.abs((affordance.mediaItemWidth / affordance.containerWidth) - 0.75) > 0.03 ||
             affordance.environmentBlend !== 'normal' ||
             affordance.environmentOpacity > 0.001 ||
             affordance.grainImage !== 'none' ||

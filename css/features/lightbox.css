@@ -143,6 +143,17 @@
   }
 }
 
+/* Mobile holographic artwork gets a 25% narrower footprint. Keeping the media
+   item centered leaves a clear parallax safety margin at both viewport edges. */
+@media (max-width:767px) {
+  #lightboxMediaContainer .lightbox-media-item:has(.lightbox-holographic) {
+    width:75%;
+    max-width:75%;
+    margin-inline:auto;
+    justify-self:center;
+  }
+}
+
 /* Desktop: the close control matches the shared 44px navbar pill height.
    Both arrows mirror the same left/right page edges. */
 @media (min-width:768px){

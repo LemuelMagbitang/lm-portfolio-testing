@@ -153,5 +153,7 @@ assert.ok(compactFoilCss.includes('transform-style:preserve-3d;') &&
 assert.ok(styles.includes('.lightbox-holographic-spectrum{'),
   'Desktop foil material rules must remain available.');
 assert.match(lightboxStyles, /lightbox-holographic-desktop-recommendation/);
-assert.match(mediaRenderer, /For the full visual experience, we recommend viewing on a desktop\./);
+assert.match(lightboxStyles, /@media \(max-width:767px\)\s*\{[\s\S]*?#lightboxMediaContainer \.lightbox-media-item:has\(\.lightbox-holographic\)\s*\{[\s\S]*?width:75%;[\s\S]*?max-width:75%;/,
+  'Mobile holographic media items must stay centered at 75% width; desktop sizing must not be changed.');
+assert.match(mediaRenderer, /Best viewed on desktop for full effect\./);
 console.log('Responsive foil modes and bounded pointer/auto poses validated.');

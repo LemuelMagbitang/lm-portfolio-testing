@@ -1116,7 +1116,7 @@ export function createLightboxMediaRenderer({
     touchAction.textContent = 'TAP TO FLIP';
     const desktopRecommendation = documentRef.createElement('span');
     desktopRecommendation.className = 'lightbox-holographic-desktop-recommendation';
-    desktopRecommendation.textContent = 'For the full visual experience, we recommend viewing on a desktop.';
+    desktopRecommendation.textContent = 'Best viewed on desktop for full effect.';
     hint.append(faceLabel, separator, desktopAction, touchAction, desktopRecommendation);
     surface.__lightboxHoloHint = hint;
 
