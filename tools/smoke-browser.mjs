@@ -2025,6 +2025,87 @@ async function assertAxeAccessibility(page, label) {
     }))
   }));
   if (violations.length) {
+    // Capture the actual compositing state for contrast failures. Axe's rendered
+    // foreground can differ from an element's computed `color` when
+    // parent opacity, blend modes, pseudos, or overlapping layers are involved.
+    const contrastDiagnostics = await page.evaluate(() => {
+      const readStyle = element => {
+        if (!element) return null;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          id: element.id || '',
+          className: typeof element.className === 'string' ? element.className : '',
+          text: String(element.textContent || '').trim().slice(0, 80),
+          inlineStyle: element.getAttribute('style') || '',
+          color: style.color,
+          webkitTextFillColor: style.webkitTextFillColor,
+          backgroundColor: style.backgroundColor,
+          backgroundImage: style.backgroundImage,
+          opacity: style.opacity,
+          mixBlendMode: style.mixBlendMode,
+          isolation: style.isolation,
+          filter: style.filter,
+          textShadow: style.textShadow,
+          position: style.position,
+          zIndex: style.zIndex,
+          rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
+          pseudoBefore: (() => {
+            const pseudo = getComputedStyle(element, '::before');
+            return { content: pseudo.content, color: pseudo.color, backgroundColor: pseudo.backgroundColor, mixBlendMode: pseudo.mixBlendMode, opacity: pseudo.opacity, filter: pseudo.filter };
+          })(),
+          pseudoAfter: (() => {
+            const pseudo = getComputedStyle(element, '::after');
+            return { content: pseudo.content, color: pseudo.color, backgroundColor: pseudo.backgroundColor, mixBlendMode: pseudo.mixBlendMode, opacity: pseudo.opacity, filter: pseudo.filter };
+          })()
+        };
+      };
+      const targets = Array.from(document.querySelectorAll(
+        '#contactReviewPanel > .section-title, .submit-btn-secondary'
+      ));
+      return targets.map(target => {
+        const rect = target.getBoundingClientRect();
+        const point = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        let ancestors = [];
+        for (let current = target; current && ancestors.length < 7; current = current.parentElement) {
+          ancestors.push(readStyle(current));
+        }
+        const hitStack = document.elementsFromPoint(point.x, point.y).slice(0, 8).map(readStyle);
+        const matchingRules = [];
+        const visitRules = (rules, sheetHref = '') => {
+          for (const rule of Array.from(rules || [])) {
+            if (rule.cssRules) {
+              try { visitRules(rule.cssRules, sheetHref); } catch (_) {}
+            } else if (rule.selectorText && rule.style) {
+              try {
+                if (target.matches(rule.selectorText) &&
+                    /submit|contact|button|simple-form/i.test(rule.selectorText)) {
+                  matchingRules.push({
+                    sheetHref,
+                    selector: rule.selectorText,
+                    color: rule.style.color,
+                    webkitTextFillColor: rule.style.getPropertyValue('-webkit-text-fill-color'),
+                    background: rule.style.background,
+                    backgroundColor: rule.style.backgroundColor,
+                    mixBlendMode: rule.style.mixBlendMode,
+                    opacity: rule.style.opacity,
+                    filter: rule.style.filter,
+                    importantColor: rule.style.getPropertyPriority('color'),
+                    importantBackground: rule.style.getPropertyPriority('background')
+                  });
+                }
+              } catch (_) {}
+            }
+          }
+        };
+        Array.from(document.styleSheets).forEach(sheet => {
+          try { visitRules(sheet.cssRules, sheet.href || 'inline'); } catch (_) {}
+        });
+        return { target: readStyle(target), ancestors, hitStack, matchingRules };
+      });
+    });
+    console.log('[a11y-debug] contrast render state ' + JSON.stringify(contrastDiagnostics));
     throw new Error(label + " accessibility violations: " + JSON.stringify(violations));
   }
   console.log("[a11y] PASS " + label + " (" + results.passes.length + " rules passed; " + results.incomplete.length + " need manual review)");
