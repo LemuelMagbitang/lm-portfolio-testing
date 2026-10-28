@@ -25,9 +25,9 @@ const legacyRootModules = new Set([
 // strings create separate ES module instances and can split singleton state or
 // cause a preload and the eventual import to download the same module twice.
 const canonicalModuleQueries = new Map([
-  ['script.js', '?v=20261028-05'],
-  ['app/bootstrap.js', '?v=20261028-05'],
-  ['app/page-composition.js', '?v=20261028-05'],
+  ['script.js', '?v=20261028-06'],
+  ['app/bootstrap.js', '?v=20261028-06'],
+  ['app/page-composition.js', '?v=20261028-06'],
   ['infrastructure/three/model-viewer.js', '?v=20261024-02'],
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261027-05'],
@@ -37,17 +37,17 @@ const canonicalModuleQueries = new Map([
   ['infrastructure/mux/public-videos.js', '?v=20261027-01'],
   ['infrastructure/media/asset-preview.js', '?v=20261027-01'],
   ['infrastructure/software-logo/lookup.js', '?v=20261008-01'],
-  ['features/projects/index.js', '?v=20261027-05'],
+  ['features/projects/index.js', '?v=20261028-06'],
   ['features/projects/browser-runtime.js', '?v=20261027-05'],
-  ['features/projects/project-loader.js', '?v=20261026-01'],
+  ['features/projects/project-loader.js', '?v=20261028-01'],
   ['features/projects/project-card.js', '?v=20261027-05'],
   ['features/projects/project-thumbnail.js', '?v=20261027-06'],
   ['features/gallery/index.js', '?v=20261027-01'],
-  ['features/lightbox/index.js', '?v=20261028-02'],
-  ['features/lightbox/media-renderer.js', '?v=20261028-02'],
+  ['features/lightbox/index.js', '?v=20261028-03'],
+  ['features/lightbox/media-renderer.js', '?v=20261028-03'],
   ['features/lightbox/foil-normal-renderer.js', '?v=20261027-07'],
   ['features/lightbox/foil-interaction.js', '?v=20261028-02'],
-  ['data/project-normalizer.js', '?v=20261026-01']
+  ['data/project-normalizer.js', '?v=20261028-01']
 ]);
 
 for (const legacy of legacyRootModules) {
