@@ -5867,16 +5867,32 @@ try {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
           return el?.dataset.holoInput === 'tap-only' && el?.dataset.holoMotion === 'auto-rotate';
         }, null, { timeout: 1500 });
-        const mobileAutoBefore = await readFoilPose();
+        const readCompactTransformPose = () => holographic.evaluate(el => ({
+          input: el.dataset.holoInput || '',
+          motion: el.dataset.holoMotion || '',
+          rx: Number.parseFloat(el.style.getPropertyValue('--holo-rx')),
+          ry: Number.parseFloat(el.style.getPropertyValue('--holo-ry')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
+          shiftX: Number.parseFloat(el.style.getPropertyValue('--holo-shift-x')),
+          shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y'))
+        }));
+        const mobileAutoBefore = await readCompactTransformPose();
         await page.waitForTimeout(220);
-        const mobileAutoAfter = await readFoilPose();
-        if (Math.abs(mobileAutoAfter.x - mobileAutoBefore.x) +
-            Math.abs(mobileAutoAfter.y - mobileAutoBefore.y) < 0.15 ||
+        const mobileAutoAfter = await readCompactTransformPose();
+        const compactPoseDelta = Math.max(
+          Math.abs(mobileAutoAfter.rx - mobileAutoBefore.rx),
+          Math.abs(mobileAutoAfter.ry - mobileAutoBefore.ry),
+          Math.abs(mobileAutoAfter.rotation - mobileAutoBefore.rotation),
+          Math.abs(mobileAutoAfter.shiftX - mobileAutoBefore.shiftX),
+          Math.abs(mobileAutoAfter.shiftY - mobileAutoBefore.shiftY)
+        );
+        if (mobileAutoAfter.input !== 'tap-only' || mobileAutoAfter.motion !== 'auto-rotate' ||
+            !(compactPoseDelta > 0.08) ||
+            Math.abs(mobileAutoAfter.rx) > 7 || Math.abs(mobileAutoAfter.ry) > 7 ||
             Math.abs(mobileAutoAfter.rotation) > 2.5 ||
-            mobileAutoAfter.x < 20 || mobileAutoAfter.x > 80 ||
-            mobileAutoAfter.y < 28 || mobileAutoAfter.y > 72) {
-          throw new Error('Touch-only auto motion did not progress within its bounds: ' +
-            JSON.stringify({ mobileAutoBefore, mobileAutoAfter }));
+            Math.abs(mobileAutoAfter.shiftX) > 4 || Math.abs(mobileAutoAfter.shiftY) > 3) {
+          throw new Error('Touch-only transform auto motion did not progress within its bounds: ' +
+            JSON.stringify({ compactPoseDelta, mobileAutoBefore, mobileAutoAfter }));
         }
         const touchModeBox = await holographic.boundingBox();
         if (!touchModeBox) throw new Error('Touch-only foil lost its geometry.');
