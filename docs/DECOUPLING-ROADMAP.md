@@ -943,3 +943,5 @@ This migration must not:
 
 
 - Follow-up from the first responsive smoke: row centering now uses the independent CSS `translate` property, separate from the card/sticker rotation transform. The browser check waits through the layout transition before measuring the centered final row, avoiding transient mid-animation geometry.
+
+- Bumped the Lightbox stylesheet cache version to `20261028-16` for the finalized transform and row-centering correction.
