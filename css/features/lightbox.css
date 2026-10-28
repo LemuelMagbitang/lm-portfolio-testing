@@ -379,6 +379,15 @@
   }
 }
 @media (max-width:760px){
+  /* Retain the standard mobile stage budget for grid/stack; compact variants
+     below override it only when their requested/effective layout is active. */
+  #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork.has-holographic,
+  #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork.has-holographic.is-media-reveal-ready{
+    width:min(100%,calc(clamp(180px,36svh,280px) * var(--lightbox-artwork-ratio,1)));
+    max-width:min(100%,75vw,280px);
+    height:auto;
+    max-height:clamp(180px,36svh,280px);
+  }
   /* The fan relaxes to a single compact column; the card treatment stays intact. */
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-layout="cards"] .lightbox-artwork-group-items{
     grid-template-columns:minmax(0,1fr);gap:clamp(12px,3vw,18px);padding:10px;
