@@ -4450,6 +4450,25 @@ try {
             layoutModeChecks.push({ mode, viewport, metrics, effectiveLayout:layout.layout });
           }
         }
+        // The same media set must keep the same actual artwork dimensions
+        // when switching between card-stack and sticker presentation. Layout
+        // cells/overlap can differ, but the shared size envelope cannot.
+        for (const viewport of responsiveViewports) {
+          const cardLayout = layoutModeChecks.find(check =>
+            check.mode === 'cards' && check.viewport.width === viewport.width
+          );
+          const stickerLayout = layoutModeChecks.find(check =>
+            check.mode === 'sticker' && check.viewport.width === viewport.width
+          );
+          if (cardLayout?.effectiveLayout === 'cards' && stickerLayout?.effectiveLayout === 'sticker') {
+            const widthDelta = Math.abs(cardLayout.metrics.maxArtworkWidth - stickerLayout.metrics.maxArtworkWidth);
+            const heightDelta = Math.abs(cardLayout.metrics.maxArtworkHeight - stickerLayout.metrics.maxArtworkHeight);
+            if (widthDelta > 1 || heightDelta > 1) {
+              throw new Error('The same assets must retain consistent dimensions across card-stack and sticker modes: ' +
+                JSON.stringify({ viewport, widthDelta, heightDelta, card:cardLayout.metrics, sticker:stickerLayout.metrics }));
+            }
+          }
+        }
         const mobileCards = layoutModeChecks.find(check => check.mode === 'cards' && check.viewport.width === 390);
         const compactSticker = layoutModeChecks.find(check => check.mode === 'sticker' && check.viewport.width === 320);
         if (mobileCards?.effectiveLayout !== 'cards' || mobileCards?.metrics.trackCount !== 3 ||
