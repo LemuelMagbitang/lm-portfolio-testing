@@ -331,16 +331,16 @@
   --artwork-card-offset-x:9px;--artwork-card-offset-y:4px;--artwork-card-rotation:-5deg;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(5n+2){
-  --artwork-card-offset-x:5px;--artwork-card-offset-y:-2px;--artwork-card-rotation:-2.5deg;--artwork-card-scale:1.08;
+  --artwork-card-offset-x:5px;--artwork-card-offset-y:-2px;--artwork-card-rotation:-2.5deg;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(5n+3){
-  --artwork-card-offset-x:0px;--artwork-card-offset-y:-5px;--artwork-card-rotation:0deg;--artwork-card-scale:1.11;
+  --artwork-card-offset-x:0px;--artwork-card-offset-y:-5px;--artwork-card-rotation:0deg;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(5n+4){
-  --artwork-card-offset-x:-5px;--artwork-card-offset-y:-2px;--artwork-card-rotation:2.5deg;--artwork-card-scale:1.08;
+  --artwork-card-offset-x:-5px;--artwork-card-offset-y:-2px;--artwork-card-rotation:2.5deg;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(5n){
-  --artwork-card-offset-x:-9px;--artwork-card-offset-y:4px;--artwork-card-rotation:5deg;--artwork-card-scale:1.04;
+  --artwork-card-offset-x:-9px;--artwork-card-offset-y:4px;--artwork-card-rotation:5deg;
 }
 /* Card-stack and sticker artwork share one compact size envelope. Each asset
    scales to fit the same width/height caps, while its original aspect ratio is
@@ -385,16 +385,16 @@
     grid-template-columns:repeat(4,minmax(0,1fr));padding:4px 2px;row-gap:1px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(4n+1){
-    --artwork-card-offset-x:8px;--artwork-card-offset-y:3px;--artwork-card-rotation:-4deg;--artwork-card-scale:1.04;
+    --artwork-card-offset-x:8px;--artwork-card-offset-y:3px;--artwork-card-rotation:-4deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(4n+2){
-    --artwork-card-offset-x:4px;--artwork-card-offset-y:-3px;--artwork-card-rotation:-1.7deg;--artwork-card-scale:1.08;
+    --artwork-card-offset-x:4px;--artwork-card-offset-y:-3px;--artwork-card-rotation:-1.7deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(4n+3){
-    --artwork-card-offset-x:-4px;--artwork-card-offset-y:-3px;--artwork-card-rotation:1.7deg;--artwork-card-scale:1.08;
+    --artwork-card-offset-x:-4px;--artwork-card-offset-y:-3px;--artwork-card-rotation:1.7deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(4n){
-    --artwork-card-offset-x:-8px;--artwork-card-offset-y:3px;--artwork-card-rotation:4deg;--artwork-card-scale:1.04;
+    --artwork-card-offset-x:-8px;--artwork-card-offset-y:3px;--artwork-card-rotation:4deg;
   }
 }
 @media (max-width:760px){
@@ -408,13 +408,13 @@
     grid-template-columns:repeat(3,minmax(0,1fr));gap:1px 0;padding:4px 2px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(3n+1){
-    --artwork-card-offset-x:7px;--artwork-card-offset-y:3px;--artwork-card-rotation:-4deg;--artwork-card-scale:1.08;
+    --artwork-card-offset-x:7px;--artwork-card-offset-y:3px;--artwork-card-rotation:-4deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(3n+2){
-    --artwork-card-offset-x:0px;--artwork-card-offset-y:-3px;--artwork-card-rotation:0deg;--artwork-card-scale:1.12;
+    --artwork-card-offset-x:0px;--artwork-card-offset-y:-3px;--artwork-card-rotation:0deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="cards"] .lightbox-media-item:nth-child(3n){
-    --artwork-card-offset-x:-7px;--artwork-card-offset-y:3px;--artwork-card-rotation:4deg;--artwork-card-scale:1.08;
+    --artwork-card-offset-x:-7px;--artwork-card-offset-y:3px;--artwork-card-rotation:4deg;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork-group-items{
     grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 2px;padding:4px 2px;
