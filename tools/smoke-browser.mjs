@@ -4239,6 +4239,20 @@ try {
       if (!pointerProbe) {
         throw new Error('Desktop holographic artwork has no exposed off-center pointer target.');
       }
+      // Record whether a pointer event reaches the target independently of the
+      // transform assertion. This distinguishes media-query gating from hover
+      // delivery/timing regressions in the headless desktop context.
+      await funkoHolo.evaluate(el => {
+        window.__lmHoloPointerEvents = [];
+        el.addEventListener('pointermove', event => {
+          window.__lmHoloPointerEvents.push({
+            type: event.pointerType,
+            x: Math.round(event.clientX),
+            y: Math.round(event.clientY),
+            target: event.target?.tagName || ''
+          });
+        });
+      });
       await page.mouse.move(pointerProbe.x, pointerProbe.y);
       await page.waitForTimeout(120);
       const desktopTiltState = await funkoHolo.evaluate(el => {
@@ -4247,7 +4261,19 @@ try {
           x: read('--holo-x'),
           y: read('--holo-y'),
           foilX: read('--holo-foil-x'),
-          foilY: read('--holo-foil-y')
+          foilY: read('--holo-foil-y'),
+          input: el.dataset.holoInput || '',
+          motion: el.dataset.holoMotion || '',
+          compactFoil: el.dataset.holoFoil || '',
+          viewportWidth: window.innerWidth,
+          media: {
+            anyHover: matchMedia('(any-hover: hover)').matches,
+            anyPointerFine: matchMedia('(any-pointer: fine)').matches,
+            hoverNone: matchMedia('(hover: none)').matches,
+            pointerCoarse: matchMedia('(pointer: coarse)').matches,
+            reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
+          },
+          pointerEvents: window.__lmHoloPointerEvents || []
         };
       });
       if (
