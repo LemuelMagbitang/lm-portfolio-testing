@@ -4092,8 +4092,8 @@ try {
       // an exposed interior point, not the overlap edge where the next card
       // correctly owns pointer input.
       await page.mouse.move(
-        desktopHoloBox.x + desktopHoloBox.width * 0.4,
-        desktopHoloBox.y + desktopHoloBox.height * 0.4
+        desktopHoloBox.x + desktopHoloBox.width * 0.16,
+        desktopHoloBox.y + desktopHoloBox.height * 0.16
       );
       await page.waitForTimeout(120);
       const desktopTiltState = await funkoHolo.evaluate(el => {
