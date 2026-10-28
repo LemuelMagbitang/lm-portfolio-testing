@@ -53,6 +53,7 @@ const makeTarget = id => {
   const properties = new Map();
   return {
     id,
+    textContent: id,
     dataset: {},
     style: {
       setProperty(name, value) { properties.set(name, value); },
