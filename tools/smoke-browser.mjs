@@ -4088,9 +4088,12 @@ try {
       // travelling opposite the pointer rather than remaining a static overlay.
       const desktopHoloBox = await funkoHolo.boundingBox();
       if (!desktopHoloBox) throw new Error('Desktop holographic artwork lost its interaction geometry.');
+      // The enlarged card intentionally overlaps its right neighbor. Probe
+      // an exposed interior point, not the overlap edge where the next card
+      // correctly owns pointer input.
       await page.mouse.move(
-        desktopHoloBox.x + desktopHoloBox.width * 0.74,
-        desktopHoloBox.y + desktopHoloBox.height * 0.28
+        desktopHoloBox.x + desktopHoloBox.width * 0.4,
+        desktopHoloBox.y + desktopHoloBox.height * 0.4
       );
       await page.waitForTimeout(120);
       const desktopTiltState = await funkoHolo.evaluate(el => {
