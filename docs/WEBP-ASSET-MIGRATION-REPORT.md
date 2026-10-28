@@ -57,7 +57,7 @@ After comparing original JPEGs from pre-migration commit `9db228e38fa7acd0eb18df
 - `assets/projects/haeru/haeru-logo-construct.jpg` — original 69,570 bytes; removed WebP was 72,148 bytes.
 - `assets/projects/site/profile.jpg` — original 56,418 bytes; removed WebP was 65,398 bytes.
 
-These are restorations of historical source files, not new lossy re-encodes. The twenty-seven targeted rollbacks save **1,118,831 bytes (1,092.6 KiB)** compared with the larger WebP derivatives. The per-file CSV remains the historical record of the initial conversion measurements. **3** JPEG-derived WebP files that were larger than their source remain for selective review.
+These are restorations of historical source files, not new lossy re-encodes. The twenty-seven targeted rollbacks save **1,118,831 bytes (1,092.6 KiB)** compared with the larger WebP derivatives. The per-file CSV remains the historical record of the initial conversion measurements. The initial comparison identified three JPEG-derived WebP candidates for selective review at that time; this count is historical, not a current asset inventory. File paths and derivatives have since changed, so use the current asset tree and remeasure the exact live files before selecting further conversions.
 
 The current payload for the migrated asset set is **22,933,941 bytes (21.871 MiB)** versus the original **36,545,836 bytes (34.853 MiB)** — a net reduction of **13,611,895 bytes (12.982 MiB, 37.25%)**.
 
@@ -154,3 +154,8 @@ The current payload for the migrated asset set is **22,933,941 bytes (21.871 MiB
 
 - assets/projects/site/favicon.png — restored from the pre-migration Git commit; retained as PNG.
 - assets/projects/site/og-image.jpg — restored from the pre-migration Git commit; retained as JPEG for social-sharing crawlers.
+
+
+## Current-state note — October 28, 2026
+
+The initial conversion CSV above remains an immutable record of the original size comparison, not a live optimization backlog. A fresh repository-tree review of `projects-runtime-cutover` found only two remaining raster source files: `assets/projects/site/favicon.png` and `assets/projects/site/og-image.jpg`. Both are intentional compatibility exceptions. The asset-audit allowlist now includes only these present files and reports any future stale exception entries separately as non-blocking findings. Do not re-encode or remove media solely from the historical CSV; inspect the currently referenced asset and compare visual quality and current byte size first.
