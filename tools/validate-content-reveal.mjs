@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-02';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-03';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -12,6 +12,9 @@ const aboutHtml = await readFile(new URL('../about/index.html', import.meta.url)
 assert.doesNotMatch(revealSource, /\bimport\s+.*(?:react|gsap|ScrollTrigger)/i,
   'Content reveal must not add React or GSAP to the public runtime.');
 assert.match(revealSource, /IntersectionObserver/);
+assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
+assert.match(revealSource, /resume-main[\s\S]*?\[id\$=\\"List\\"\] > \*/);
+assert.match(revealSource, /contact-block > h2[\s\S]*?contact-block > \.form-container/);
 assert.match(revealSource, /prefers-reduced-motion: reduce/);
 assert.match(revealSource, /pendingTargets\.forEach\(revealTarget\)/,
   'A live reduced-motion preference change must reveal pending content immediately.');
@@ -22,15 +25,15 @@ assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero
 assert.match(revealCss, /transition:[\s\S]*?opacity 720ms[\s\S]*?translate 720ms/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-02/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-03/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
 assert.ok(
   bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
   'Initial content reveal must start after the branded page-transition gate closes.'
 );
-assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-02"/);
-assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-02"/);
+assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-03"/);
+assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-03"/);
 
 // Exercise the observer and lifecycle with small DOM-shaped fakes.
 const selectorTargets = new Map();
