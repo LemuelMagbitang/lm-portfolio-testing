@@ -6442,28 +6442,58 @@ try {
           delete window.__lmNativeMatchMedia;
           window.dispatchEvent(new Event('resize'));
         });
+        // Restoring fine-pointer capability must not override the narrow-viewport
+        // gate. Compact layouts stay static until the viewport itself returns to desktop.
         await page.waitForFunction(() => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          return el?.dataset.holoInput === 'hover-edge' && el?.dataset.holoMotion === 'pointer';
+          return el?.dataset.holoInput === 'tap-only' &&
+            el?.dataset.holoMotion === 'static' &&
+            el?.dataset.holoFoil === 'disabled';
         }, null, { timeout: 1500 });
         const compactResizeBox = await holographic.boundingBox();
         if (!compactResizeBox) throw new Error('Compact-resize foil fixture lost its geometry.');
         await page.mouse.move(compactResizeBox.x + compactResizeBox.width - 4, compactResizeBox.y + compactResizeBox.height / 2);
-        await page.waitForFunction(() => {
-          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          if (!el) return false;
-          const intensity = Number.parseFloat(el.style.getPropertyValue('--holo-intensity'));
-          const tiltStrength = Number.parseFloat(el.style.getPropertyValue('--holo-tilt-strength'));
-          const rotation = Number.parseFloat(el.style.getPropertyValue('--holo-rotation'));
-          return intensity <= 0.1001 && tiltStrength <= 0.1001 && Math.abs(rotation) >= 2.3;
-        }, null, { timeout: 1800 });
+        await page.waitForTimeout(120);
+        const compactPointerPose = await holographic.evaluate(el => ({
+          input: el.dataset.holoInput || '',
+          motion: el.dataset.holoMotion || '',
+          foil: el.dataset.holoFoil || '',
+          intensity: Number.parseFloat(el.style.getPropertyValue('--holo-intensity')),
+          x: Number.parseFloat(el.style.getPropertyValue('--holo-x')),
+          y: Number.parseFloat(el.style.getPropertyValue('--holo-y')),
+          rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
+          shiftX: Number.parseFloat(el.style.getPropertyValue('--holo-shift-x')),
+          shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y'))
+        }));
+        if (compactPointerPose.input !== 'tap-only' || compactPointerPose.motion !== 'static' ||
+            compactPointerPose.foil !== 'disabled' || compactPointerPose.intensity > 0.1001 ||
+            Math.abs(compactPointerPose.x - 50) > 0.01 ||
+            Math.abs(compactPointerPose.y - 50) > 0.01 ||
+            Math.abs(compactPointerPose.rotation) > 0.01 ||
+            Math.abs(compactPointerPose.shiftX) > 0.01 ||
+            Math.abs(compactPointerPose.shiftY) > 0.01) {
+          throw new Error('Restored pointer capability must not enable holo effects while the viewport remains compact: ' +
+            JSON.stringify(compactPointerPose));
+        }
+
         await page.setViewportSize({ width: 1280, height: 900 });
         await page.waitForFunction(expected => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
           const canvas = el?.querySelector('.lightbox-holographic-normal-map');
-          return el && el.dataset.holoFoil === 'enabled' && canvas?.dataset.foilNormalState === 'active' &&
+          return el && el.dataset.holoInput === 'hover-edge' && el.dataset.holoMotion === 'pointer' &&
+            el.dataset.holoFoil === 'enabled' && canvas?.dataset.foilNormalState === 'active' &&
             Math.abs(Number.parseFloat(el.style.getPropertyValue('--holo-intensity')) - expected) < 0.001;
         }, pointerContract.intensity, { timeout: 2500 });
+        const desktopResizeBox = await holographic.boundingBox();
+        if (!desktopResizeBox) throw new Error('Desktop-resize foil fixture lost its geometry.');
+        await page.mouse.move(desktopResizeBox.x + desktopResizeBox.width - 4, desktopResizeBox.y + desktopResizeBox.height / 2);
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
+          if (!el || el.dataset.holoMotion !== 'pointer' || el.dataset.holoFoil !== 'enabled') return false;
+          const intensity = Number.parseFloat(el.style.getPropertyValue('--holo-intensity'));
+          const rotation = Number.parseFloat(el.style.getPropertyValue('--holo-rotation'));
+          return intensity > 0.1 && Math.abs(rotation) >= 2.3;
+        }, null, { timeout: 1800 });
 
         const maskState = await holographic.evaluate(el => {
           const front = el.querySelector('.lightbox-holographic-front');
