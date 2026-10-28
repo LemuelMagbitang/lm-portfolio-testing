@@ -22,15 +22,15 @@ assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero
 assert.match(revealCss, /transition:[\s\S]*?opacity 720ms[\s\S]*?translate 720ms/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-01/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-02/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
 assert.ok(
   bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
   'Initial content reveal must start after the branded page-transition gate closes.'
 );
-assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-01"/);
-assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-01"/);
+assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-02"/);
+assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-02"/);
 
 // Exercise the observer and lifecycle with small DOM-shaped fakes.
 const selectorTargets = new Map();
