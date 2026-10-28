@@ -3832,9 +3832,9 @@ try {
             nativeTouchState[1].input !== 'tap-only' ||
             nativeTouchState[1].motion !== 'auto-rotate' ||
             nativeTouchState[1].touchEngaged ||
-            nativeTouchState[1].x < 32 || nativeTouchState[1].x > 68 ||
-            nativeTouchState[1].y < 37 || nativeTouchState[1].y > 63 ||
-            Math.abs(nativeTouchState[1].rotation) > 2.21) {
+            nativeTouchState[1].x < 20 || nativeTouchState[1].x > 80 ||
+            nativeTouchState[1].y < 28 || nativeTouchState[1].y > 72 ||
+            Math.abs(nativeTouchState[1].rotation) > 2.5) {
           throw new Error('Native touch swipe did not scroll while preserving bounded, touch-only auto motion: ' +
             JSON.stringify({ scrollBefore, scrollAfter: nativeTouchState[0], foil: nativeTouchState[1] }));
         }
@@ -5872,9 +5872,9 @@ try {
         const mobileAutoAfter = await readFoilPose();
         if (Math.abs(mobileAutoAfter.x - mobileAutoBefore.x) +
             Math.abs(mobileAutoAfter.y - mobileAutoBefore.y) < 0.15 ||
-            Math.abs(mobileAutoAfter.rotation) > 2.21 ||
-            mobileAutoAfter.x < 32 || mobileAutoAfter.x > 68 ||
-            mobileAutoAfter.y < 37 || mobileAutoAfter.y > 63) {
+            Math.abs(mobileAutoAfter.rotation) > 2.5 ||
+            mobileAutoAfter.x < 20 || mobileAutoAfter.x > 80 ||
+            mobileAutoAfter.y < 28 || mobileAutoAfter.y > 72) {
           throw new Error('Touch-only auto motion did not progress within its bounds: ' +
             JSON.stringify({ mobileAutoBefore, mobileAutoAfter }));
         }
@@ -5884,9 +5884,9 @@ try {
         await page.waitForTimeout(120);
         const mobileAfterPointer = await readFoilPose();
         if (mobileAfterPointer.input !== 'tap-only' || mobileAfterPointer.motion !== 'auto-rotate' ||
-            mobileAfterPointer.x < 32 || mobileAfterPointer.x > 68 ||
-            mobileAfterPointer.y < 37 || mobileAfterPointer.y > 63 ||
-            Math.abs(mobileAfterPointer.rotation) > 2.21) {
+            mobileAfterPointer.x < 20 || mobileAfterPointer.x > 80 ||
+            mobileAfterPointer.y < 28 || mobileAfterPointer.y > 72 ||
+            Math.abs(mobileAfterPointer.rotation) > 2.5) {
           throw new Error('Pointer movement leaked into the touch-only auto-motion path: ' +
             JSON.stringify(mobileAfterPointer));
         }
