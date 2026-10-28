@@ -280,9 +280,9 @@
   flex:0 1 auto;
   align-items:center;
   justify-content:center;
-  width:auto;
+  width:min(100%,calc(clamp(200px,38svh,320px) * var(--lightbox-artwork-ratio,1)));
   max-width:min(100%,44vw,360px);
-  height:clamp(200px,38svh,320px);
+  height:auto;
   max-height:clamp(200px,38svh,320px);
   aspect-ratio:var(--lightbox-artwork-ratio,1);
   margin:auto;
@@ -383,9 +383,12 @@
     transform:translate3d(0,0,0)
       rotate(var(--artwork-sticker-rotation-mobile,0deg)) scale(.99);
   }
-  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork.has-holographic,
-  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="sticker"] .lightbox-artwork.has-holographic.is-media-reveal-ready{
-    max-width:min(100%,44vw,220px);
+  #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork.has-holographic,
+  #lightboxMediaContainer .lightbox-artwork-group .lightbox-artwork.has-holographic.is-media-reveal-ready{
+    width:min(100%,calc(clamp(180px,36svh,280px) * var(--lightbox-artwork-ratio,1)));
+    max-width:min(100%,75vw,280px);
+    height:auto;
+    max-height:clamp(180px,36svh,280px);
   }
 }
 @media (hover:hover) and (pointer:fine){

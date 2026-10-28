@@ -905,3 +905,11 @@ This migration must not:
 - The artwork stage is centered within its tile. The existing front/back holographic face transforms, parallax compensation, foil layers, reveal lifecycle, keyboard activation, and Inspector handoff remain separate from outer layout styling.
 - Updated the CMS selectors, project normalizer, runtime cache keys, smoke assertions, and CMS presentation contract to cover all four layouts and mobile fallbacks.
 - **Next step:** pass the validation and Pages gates, then inspect all four modes at desktop, tablet, and mobile sizes. The production repository and legacy `main` remain untouched.
+
+
+### October 28, 2026 — Responsive grouped artwork sizing audit
+
+- Found a small-screen sizing conflict in the grouped holographic artwork slot: a narrow `44vw` width cap was paired with a fixed height. That could violate the media ratio and produce unnecessarily tall or narrow empty space.
+- Changed grouped holographic stage sizing to derive width from its preserved `--lightbox-artwork-ratio` and a responsive height budget. Mobile uses a tighter height budget but allows the artwork to use up to 75vw / 280px where the grid cell permits.
+- Extended the browser smoke metrics to assert ratio preservation within a 6% tolerance alongside equal cell widths, consistent row spacing, and centered artwork at desktop, tablet, 390px, and 320px widths.
+- **Next step:** rerun full site validation and Pages deployment; then visually inspect the grouped portrait, square, and landscape artwork sizes on real phone/tablet screens.

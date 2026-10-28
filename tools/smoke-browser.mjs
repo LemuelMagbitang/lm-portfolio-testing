@@ -4213,6 +4213,9 @@ try {
               width: el.offsetWidth,
               height: el.offsetHeight,
               rotationDegrees,
+              artworkAspectRatioDelta: artwork && Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')) > 0 && artwork.offsetHeight > 0
+                ? Math.abs((artwork.offsetWidth / artwork.offsetHeight) - Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')))
+                : null,
               artworkCenterOffset: artwork ? {
                 x: (artwork.offsetLeft + artwork.offsetWidth / 2) - (el.clientWidth / 2),
                 y: (artwork.offsetTop + artwork.offsetHeight / 2) - (el.clientHeight / 2)
@@ -4251,20 +4254,28 @@ try {
         const maxArtworkCenterOffset = centeredArtwork.length
           ? Math.max(...centeredArtwork.map(offset => Math.max(Math.abs(offset.x), Math.abs(offset.y))))
           : Number.POSITIVE_INFINITY;
+        const artworkAspectRatioDeltas = layout.children
+          .map(child => child.artworkAspectRatioDelta)
+          .filter(delta => Number.isFinite(delta));
+        const maxArtworkAspectRatioDelta = artworkAspectRatioDeltas.length
+          ? Math.max(...artworkAspectRatioDeltas)
+          : 0;
         return {
           display: layout.itemsDisplay,
           columnCount: columnStarts.length,
           widthSpread,
           dividerSpacingSpread,
           centeredArtworkCount: centeredArtwork.length,
-          maxArtworkCenterOffset
+          maxArtworkCenterOffset,
+          maxArtworkAspectRatioDelta
         };
       };
       const assertEqualSectionGrid = (layout, context) => {
         const metrics = measureEqualSectionGrid(layout);
         if (layout.itemsDisplay !== 'grid' || metrics.columnCount < 1 ||
             metrics.widthSpread > 2 || metrics.dividerSpacingSpread > 2 ||
-            metrics.centeredArtworkCount < 1 || metrics.maxArtworkCenterOffset > 2) {
+            metrics.centeredArtworkCount < 1 || metrics.maxArtworkCenterOffset > 2 ||
+            metrics.maxArtworkAspectRatioDelta > 0.06) {
           throw new Error('Holographic artwork sections must have equal-width grid cells, evenly spaced columns, and centered artwork (' + context + '): ' +
             JSON.stringify({ metrics, gridTemplateColumns: layout.gridTemplateColumns, layout }));
         }

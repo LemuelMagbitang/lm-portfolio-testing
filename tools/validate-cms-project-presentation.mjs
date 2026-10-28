@@ -466,7 +466,9 @@ assert.ok(lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') 
   lightboxCss.includes('data-artwork-effective-layout="sticker"] .lightbox-media-item') &&
   lightboxCss.includes('var(--artwork-sticker-rotation') &&
   lightboxCss.includes('rotate(var(--artwork-sticker-rotation-mobile,0deg))') &&
-  lightboxCss.includes('height:clamp(200px,38svh,320px)') &&
+  lightboxCss.includes('width:min(100%,calc(clamp(200px,38svh,320px) * var(--lightbox-artwork-ratio,1)))') &&
+  lightboxCss.includes('max-height:clamp(200px,38svh,320px)') &&
+  lightboxCss.includes('max-width:min(100%,75vw,280px)') &&
   lightboxCss.includes('overflow:visible;') &&
   lightboxCss.includes('z-index:10002;') &&
   lightboxCss.includes('.lightbox-inspect-footer .lightbox-holographic-hint{') &&
