@@ -7901,15 +7901,22 @@ try {
       const next = page.locator('.lightbox-next').first();
       const close = page.locator('#lightboxClose').first();
 
-      // This scenario targets input that arrives before the 280ms visual transition
-      // commits. Dispatch each click synchronously so Playwright's pointer-action
-      // stability wait cannot turn the intended rapid pair into ordinary navigation.
-      for (let i = 0; i < 4; i += 1) {
-        await next.evaluate(button => button.click());
-        await page.waitForTimeout(80);
-        await previous.evaluate(button => button.click());
-        await page.waitForTimeout(80);
-      }
+      // This scenario targets a Next -> Previous pair before the 280ms
+      // navigation timer commits. Dispatch each pair in one browser task so
+      // CI scheduling and repeated round-trips cannot accidentally let the
+      // timer expire between the two intended rapid inputs.
+      await page.evaluate(() => {
+        const nextButton = document.querySelector('.lightbox-next');
+        const previousButton = document.querySelector('.lightbox-prev');
+        if (!nextButton || !previousButton) {
+          throw new Error('Rapid Lightbox navigation controls are missing.');
+        }
+        for (let i = 0; i < 4; i += 1) {
+          nextButton.click();
+          previousButton.click();
+        }
+      });
+      await page.waitForTimeout(80);
 
       const currentTitle = (await page.locator('#modalTitle').textContent() || '').trim();
       if (currentTitle !== 'Haeru') {
