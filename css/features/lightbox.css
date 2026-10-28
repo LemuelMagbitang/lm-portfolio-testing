@@ -230,11 +230,11 @@
     translateZ(.01px);
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped .lightbox-holographic-face.lightbox-holographic-front {
-  transform: translate3d(var(--holo-shift-x, 0px), var(--holo-shift-y, 0px), .01px);
+  transform: translate3d(var(--holo-shift-x, 0px), calc(0px - var(--holo-shift-y, 0px)), .01px);
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic.is-flipped .lightbox-holographic-face.lightbox-holographic-back {
   transform:
-    translate3d(var(--holo-shift-x, 0px), var(--holo-shift-y, 0px), 0px)
+    translate3d(var(--holo-shift-x, 0px), calc(0px - var(--holo-shift-y, 0px)), 0px)
     rotateY(180deg)
     translateZ(.01px);
 }

@@ -877,3 +877,11 @@ This migration must not:
 - The face-positioning audit included the wrapper flip transform: the visible reverse face needs the opposite compensation sign after the card's outer flip rotates 180 degrees. Added flipped-state overrides for both face planes so they remain centered while the card is reversed as well as at rest.
 - Extended browser smoke from a single rest-state check to a controlled `18px / -11px` parallax test in both unflipped and flipped states. It verifies all four face-center offsets stay within 1.5px and restores interaction state after measurement.
 - Updated the Lightbox stylesheet cache identity to `20261028-07`. Automated validation and Pages deployment remain the next gate.
+
+
+### October 28, 2026 — Correct flipped holographic face vertical compensation
+
+- The first flipped-state browser regression run exposed a real remaining alignment defect: with an injected `18px / -11px` shift, both faces stayed centered unflipped, but moved approximately `-22.2px` vertically when flipped. The two `-11px` vertical translations were being applied in the same direction because a 180° rotation around the Y axis reverses horizontal direction, not vertical direction.
+- Corrected both flipped front/back face transforms to keep the inverted horizontal compensation while negating the vertical parallax offset. Advanced the feature stylesheet cache identity to `20261028-08`.
+- This change is limited to `css/features/lightbox.css`, its public stylesheet cache reference in `index.html`, and this roadmap entry. It does not change the face flip interaction or the legacy production site.
+- **Next step:** rerun the full validation/browser-smoke workflow and check the Pages deployment result. If the centering test passes, perform the targeted desktop/tablet/mobile hover-or-tap and front/back flip visual checks.
