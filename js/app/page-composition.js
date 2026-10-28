@@ -11,8 +11,8 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261028-03';
-import { initFooterAnimation } from '../features/footer/index.js?v=20261027-02';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261028-04';
+import { initFooterAnimation } from '../features/footer/index.js?v=20261028-01';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261023-01';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 
@@ -114,7 +114,7 @@ export async function createPortfolioApp({
   // Load their public APIs in parallel on Works; About keeps the shared app
   // shell but skips the project card/media implementation entirely.
   const projectsModulePromise = hasProjectGallery
-    ? import('../features/projects/index.js?v=20261028-06')
+    ? import('../features/projects/index.js?v=20261028-07')
     : Promise.resolve(null);
   const projectNormalizerModulePromise = shouldLoadProjectModels
     ? import('../data/project-normalizer.js?v=20261028-01')
