@@ -870,3 +870,10 @@ This migration must not:
 - Browser smoke now injects a known asymmetric `18px / -11px` shift and measures both front and back face centers against the card center. It fails if either face drifts more than 1.5px.
 - The feature stylesheet cache identity advances to `20261028-06`. This change is isolated to the active `projects-runtime-cutover` branch; the legacy production repository and `main` are untouched.
 - **Next step:** complete validation and Pages deployment, then visually verify both sides during hover/tap flip at desktop, tablet and mobile sizes.
+
+
+### October 28, 2026 — Flipped-state face alignment coverage
+
+- The face-positioning audit included the wrapper flip transform: the visible reverse face needs the opposite compensation sign after the card's outer flip rotates 180 degrees. Added flipped-state overrides for both face planes so they remain centered while the card is reversed as well as at rest.
+- Extended browser smoke from a single rest-state check to a controlled `18px / -11px` parallax test in both unflipped and flipped states. It verifies all four face-center offsets stay within 1.5px and restores interaction state after measurement.
+- Updated the Lightbox stylesheet cache identity to `20261028-07`. Automated validation and Pages deployment remain the next gate.
