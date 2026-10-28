@@ -16,34 +16,7 @@ const RASTER_EXTENSIONS = new Set([
 // than being reported as pending WebP conversions on every CI run.
 const PRESERVED_RASTER_ASSETS = new Map([
   ['assets/projects/site/favicon.png', 'Kept as PNG for favicon compatibility.'],
-  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.'],
-  ['assets/projects/aol/figureground.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/funko-pop-sticker/8.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/haeru/app-lowfi-sketch.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/2024shell-nsac/full.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/graphic-design/bakeries-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/florilegium.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/aol/combination.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/temporal-constraints.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/graphic-design/watch-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/haeru/00app-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/the-half-of-us.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/2024shell-nsac/sketch.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/the-dead-king-midas.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/gog-render-challenge/original-character-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/haeru/01app-design.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/product-packaging/shampoo00.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/product-packaging/aureus00.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/aol/continuity.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/tender-reverence.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/product-packaging/wine-box.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/graphic-design/wine-poster.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/melodies-of-innerself.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/graphic-design/commercial-renders.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/ephiphany-3d-illustration/aqua-vitae.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/retail-spatial-layouts/lss03.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/haeru/haeru-logo-construct.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.'],
-  ['assets/projects/site/profile.jpg', 'Kept as original JPEG because visual review found the quality-92 WebP was larger without a meaningful visible benefit.']
+  ['assets/projects/site/og-image.jpg', 'Kept as JPEG for social-sharing crawler compatibility.']
 ]);
 const VECTOR_EXTENSIONS = new Set(['.svg']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv']);
@@ -58,6 +31,7 @@ const KNOWN_EXTENSIONS = new Set([
 const findings = {
   legacyRaster: [],
   preservedRaster: [],
+  stalePreservedRaster: [],
   largeImages: [],
   largeAssets: [],
   nonPreferredVideo: [],
@@ -170,6 +144,23 @@ function collectFiles(dir) {
 
 function auditAssets() {
   const files = collectFiles(ASSET_ROOT);
+  const currentAssetPaths = new Set(files.map(file =>
+    path.relative(ROOT, file).split(path.sep).join('/')
+  ));
+
+  // Keep compatibility exceptions synchronized with the real tree. Stale
+  // entries do not affect rendering, but otherwise linger silently and make
+  // future asset audits harder to trust.
+  for (const [preservedPath, reason] of PRESERVED_RASTER_ASSETS) {
+    if (!currentAssetPaths.has(preservedPath)) {
+      findings.stalePreservedRaster.push({
+        path: preservedPath,
+        size: 0,
+        reason: reason + ' The configured exception no longer matches an existing asset.'
+      });
+    }
+  }
+
   const extensionSummary = new Map();
   let totalBytes = 0;
 
@@ -335,6 +326,11 @@ reportItems(
   'Compatibility-preserved raster assets (excluded from WebP conversion backlog)',
   findings.preservedRaster,
   item => item.path + ' — ' + bytesLabel(item.size) + ' — ' + item.reason
+);
+reportItems(
+  'Stale compatibility-preservation entries (non-blocking; update the allowlist)',
+  findings.stalePreservedRaster,
+  item => item.path + ' — ' + item.reason
 );
 reportItems(
   'Raster images at or above 1 MiB',
