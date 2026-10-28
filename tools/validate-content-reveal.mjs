@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-04';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-05';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -13,8 +13,10 @@ const aboutHtml = await readFile(new URL('../about/index.html', import.meta.url)
 assert.doesNotMatch(revealSource, /\bimport\s+.*(?:react|gsap|ScrollTrigger)/i,
   'Content reveal must not add React or GSAP to the public runtime.');
 assert.match(revealSource, /IntersectionObserver/);
-assert.match(revealSource, /target\.matches\?\.\('\.form-container'\)/,
-  'Form containers must be marked for position-only entrance motion.');
+assert.match(revealSource, /String\(target\.textContent \|\| ''\)\.trim\(\)\.length > 0/,
+  'Text-bearing reveal targets must remain opaque before entering the viewport.');
+assert.match(revealSource, /target\.matches\?\.\('\.form-container, a, button, input, textarea, select, \[role="button"\]'\)/,
+  'Interactive targets must use position-only entrance motion.');
 assert.match(revealCss, /data-lm-content-reveal-motion="position-only"[^}]*opacity:\s*1;/,
   'Form-containing reveal targets must never fade their controls to opacity zero.');
 assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
@@ -118,6 +120,8 @@ assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
 assert.equal(bioCopy.properties.get('--lm-content-reveal-delay'), '70ms');
 assert.equal(reviewFormContainer.dataset.lmContentRevealMotion, 'position-only',
   'Form controls must animate by position without fading out during accessibility checks.');
+assert.equal(bioHeading.dataset.lmContentRevealMotion, 'position-only',
+  'Text-bearing content must remain opaque while its translate reveal is pending.');
 
 observer.callback([{ target: bioHeading, isIntersecting: true, intersectionRatio: 0.5 }]);
 assert.ok(bioHeading.classes.has('is-lm-content-revealed'));

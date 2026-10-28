@@ -116,10 +116,15 @@ export function initContentReveal({
         if (target.dataset.lmContentRevealState ||
             target.closest?.('[data-lm-content-reveal="off"]')) return;
 
-        // Form controls remain fully opaque while waiting for the viewport.
-        // Their container still uses translate motion for entrance, but does not
-        // disappear from full-document accessibility audits before it is viewed.
-        if (target.matches?.('.form-container') || target.querySelector?.('form')) {
+        // Text-bearing targets and interactive descendants stay fully opaque while
+        // waiting for the viewport. Their staggered translate remains active, but
+        // readable content never becomes effectively invisible to full-page audits.
+        const hasReadableText = String(target.textContent || '').trim().length > 0;
+        const hasInteractiveContent = Boolean(
+          target.matches?.('.form-container, a, button, input, textarea, select, [role="button"]') ||
+          target.querySelector?.('form, a[href], button, input, textarea, select, [role="button"]')
+        );
+        if (hasReadableText || hasInteractiveContent) {
           target.dataset.lmContentRevealMotion = 'position-only';
         }
 
