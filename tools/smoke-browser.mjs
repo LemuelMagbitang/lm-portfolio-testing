@@ -4182,6 +4182,7 @@ try {
         const itemsRect = items.getBoundingClientRect();
         const itemsStyle = getComputedStyle(items);
         return {
+          requestedLayout: group?.dataset.artworkLayout || '',
           layout: group?.dataset.artworkEffectiveLayout || '',
           width: items.clientWidth,
           groupWidth: groupRect?.width || 0,
@@ -4194,20 +4195,27 @@ try {
             ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
             : Number.POSITIVE_INFINITY,
           children: Array.from(items.children).map((el, index) => {
-            const rect = el.getBoundingClientRect();
             const artwork = el.querySelector('.lightbox-artwork.has-holographic.is-media-reveal-ready');
-            const artworkRect = artwork?.getBoundingClientRect();
+            const transform = getComputedStyle(el).transform;
+            let rotationDegrees = 0;
+            if (transform && transform !== 'none') {
+              try {
+                const matrix = new DOMMatrixReadOnly(transform);
+                rotationDegrees = Math.atan2(matrix.b, matrix.a) * 180 / Math.PI;
+              } catch (_) {}
+            }
             return {
               index,
               placeholder: el.classList.contains('lightbox-inspect-placeholder'),
               caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              height: rect.height,
-              artworkCenterOffset: artworkRect ? {
-                x: (artworkRect.left + artworkRect.width / 2) - (rect.left + rect.width / 2),
-                y: (artworkRect.top + artworkRect.height / 2) - (rect.top + rect.height / 2)
+              left: el.offsetLeft,
+              top: el.offsetTop,
+              width: el.offsetWidth,
+              height: el.offsetHeight,
+              rotationDegrees,
+              artworkCenterOffset: artwork ? {
+                x: (artwork.offsetLeft + artwork.offsetWidth / 2) - (el.clientWidth / 2),
+                y: (artwork.offsetTop + artwork.offsetHeight / 2) - (el.clientHeight / 2)
               } : null
             };
           })
@@ -4265,27 +4273,74 @@ try {
       const initialGridMetrics = assertEqualSectionGrid(groupBeforeInspect, 'initial viewport');
       const originalViewport = page.viewportSize();
       const responsiveGridMetrics = [];
-      if (originalViewport) {
-        try {
-          for (const viewport of [
-            { width:1280, height:900 },
-            { width:820, height:1180 },
-            { width:390, height:844 }
-          ]) {
-            await page.setViewportSize(viewport);
-            await page.waitForTimeout(100);
-            const responsiveLayout = await readArtworkGroupLayout();
-            responsiveGridMetrics.push({ viewport, metrics:assertEqualSectionGrid(responsiveLayout, viewport.width + 'px viewport') });
-          }
-        } finally {
-          await page.setViewportSize(originalViewport);
-          await page.waitForTimeout(120);
+      const originalRequestedLayout = groupBeforeInspect.requestedLayout || 'grid';
+      const layoutModes = ['grid','stack','cards','sticker'];
+      const responsiveViewports = [
+        { width:1280, height:900 },
+        { width:820, height:1180 },
+        { width:390, height:844 },
+        { width:320, height:568 }
+      ];
+      const setRequestedLayout = async mode => artworkGroupItems.evaluate((items, layout) => {
+        const group = items.closest('.lightbox-artwork-group');
+        group.dataset.artworkLayout = layout;
+        window.dispatchEvent(new Event('resize'));
+      }, mode);
+      try {
+        for (const viewport of responsiveViewports) {
+          await page.setViewportSize(viewport);
+          await page.waitForTimeout(100);
+          const responsiveLayout = await readArtworkGroupLayout();
+          responsiveGridMetrics.push({
+            viewport,
+            metrics:assertEqualSectionGrid(responsiveLayout, viewport.width + 'px viewport')
+          });
         }
-        const columnCounts = responsiveGridMetrics.map(result => result.metrics.columnCount);
-        if (!(columnCounts[0] >= columnCounts[1] && columnCounts[1] >= columnCounts[2] && columnCounts[2] === 1)) {
-          throw new Error('Holographic artwork columns must responsively collapse from desktop to tablet to one mobile column: ' +
+        const defaultColumnCounts = responsiveGridMetrics.map(result => result.metrics.columnCount);
+        if (!(defaultColumnCounts[0] >= defaultColumnCounts[1] &&
+              defaultColumnCounts[1] >= defaultColumnCounts[2] &&
+              defaultColumnCounts[2] === 1 &&
+              defaultColumnCounts[3] === 1)) {
+          throw new Error('Holographic artwork columns must responsively wrap without overflow at desktop, tablet, and mobile widths: ' +
             JSON.stringify({ responsiveGridMetrics }));
         }
+
+        const layoutModeChecks = [];
+        for (const mode of layoutModes) {
+          for (const viewport of responsiveViewports) {
+            await page.setViewportSize(viewport);
+            await setRequestedLayout(mode);
+            await page.waitForTimeout(120);
+            const layout = await readArtworkGroupLayout();
+            const shouldFallbackToGrid =
+              (mode === 'cards' && (viewport.width <= 760 || layout.width < 560 || layout.children.length < 2)) ||
+              (mode === 'sticker' && (layout.width < 340 || layout.children.length < 2));
+            const expectedEffectiveLayout = shouldFallbackToGrid ? 'grid' : mode;
+            if (layout.layout !== expectedEffectiveLayout) {
+              throw new Error('CMS artwork layout must retain its requested mode unless a narrow viewport requires a coherent grid fallback: ' +
+                JSON.stringify({ mode, viewport, expectedEffectiveLayout, layout }));
+            }
+            const metrics = assertEqualSectionGrid(layout, mode + ' at ' + viewport.width + 'px');
+            if (mode === 'sticker') {
+              const maxRotation = Math.max(...layout.children.map(child => Math.abs(child.rotationDegrees || 0)));
+              if (maxRotation > 45.01) {
+                throw new Error('Sticker artwork rotation must stay within -45 to 45 degrees: ' +
+                  JSON.stringify({ viewport, maxRotation, layout }));
+              }
+              metrics.maxRotation = maxRotation;
+            }
+            layoutModeChecks.push({ mode, viewport, metrics, effectiveLayout:layout.layout });
+          }
+        }
+        const mobileCards = layoutModeChecks.find(check => check.mode === 'cards' && check.viewport.width === 390);
+        const compactSticker = layoutModeChecks.find(check => check.mode === 'sticker' && check.viewport.width === 320);
+        if (mobileCards?.effectiveLayout !== 'grid' || compactSticker?.effectiveLayout !== 'grid') {
+          throw new Error('Overlapping card stacks and sticker layouts must fall back to a coherent grid when narrow mobile screens cannot support the composition.');
+        }
+      } finally {
+        await setRequestedLayout(originalRequestedLayout);
+        await page.setViewportSize(originalViewport || { width:1280, height:900 });
+        await page.waitForTimeout(160);
       }
       // Force an asymmetric parallax offset and verify that both face planes
       // remain centered in normal and flipped states.
