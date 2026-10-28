@@ -8,6 +8,7 @@ const ROOT = process.cwd();
 const ASSET_ROOT = path.join(ROOT, 'assets');
 const DATA_ROOT = path.join(ROOT, 'data');
 const MIB = 1024 * 1024;
+const LARGE_VIDEO_REVIEW_THRESHOLD = 4 * MIB;
 
 const RASTER_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tif', '.tiff', '.avif'
@@ -34,6 +35,7 @@ const findings = {
   stalePreservedRaster: [],
   largeImages: [],
   largeAssets: [],
+  largeVideoAssets: [],
   nonPreferredVideo: [],
   unknownFiles: [],
   avifVideoReferences: [],
@@ -187,6 +189,10 @@ function auditAssets() {
       if (size >= 1 * MIB) findings.largeImages.push({ path: relative, size, ext, dimensions: readRasterDimensions(file, ext) });
     }
 
+    if (VIDEO_EXTENSIONS.has(ext) && size >= LARGE_VIDEO_REVIEW_THRESHOLD) {
+      findings.largeVideoAssets.push({ path: relative, size, ext });
+    }
+
     if (VIDEO_EXTENSIONS.has(ext) && !PREFERRED_VIDEO_EXTENSIONS.has(ext)) {
       findings.nonPreferredVideo.push({ path: relative, size, ext });
     }
@@ -249,9 +255,8 @@ function auditLargeVideoReferences() {
     } catch (_) {}
   }
 
-  const largeVideoThreshold = 4 * MIB;
   for (const file of collectFiles(ASSET_ROOT)) {
-    if (!VIDEO_EXTENSIONS.has(extensionOf(file)) || fs.statSync(file).size < largeVideoThreshold) continue;
+    if (!VIDEO_EXTENSIONS.has(extensionOf(file)) || fs.statSync(file).size < LARGE_VIDEO_REVIEW_THRESHOLD) continue;
     const relative = path.relative(ROOT, file).split(path.sep).join('/');
     const referencedBy = findAssetReferences(relative, referenceFiles);
     if (!referencedBy.length) {
@@ -342,6 +347,11 @@ reportItems(
 reportItems(
   'Assets at or above 5 MiB',
   findings.largeAssets,
+  item => item.path + ' — ' + bytesLabel(item.size)
+);
+reportItems(
+  'Video assets at or above 4 MiB (review delivery and playback need)',
+  findings.largeVideoAssets,
   item => item.path + ' — ' + bytesLabel(item.size)
 );
 reportItems(
