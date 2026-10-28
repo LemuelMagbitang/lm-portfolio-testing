@@ -8457,6 +8457,20 @@ try {
       const shorts = page.locator('#lightboxMediaContainer .lightbox-media-item iframe.yt-portrait').first();
       if (await shorts.count() !== 1) throw new Error('Short-phone Lightbox did not render the Friends Gacha Short.');
 
+      // The modal interior starts at scale(.992) and settles over its entrance
+      // transition. Wait for its final geometry before asserting viewport width;
+      // measuring the in-flight transform can report ~3px short at a 430px viewport.
+      await page.waitForFunction(() => {
+        const interior = document.querySelector('#lightbox.active .modal-interior');
+        if (!interior) return false;
+        const transform = getComputedStyle(interior).transform;
+        if (transform === 'none') return true;
+        const matrix = new DOMMatrixReadOnly(transform);
+        return Math.abs(matrix.a - 1) < 0.001 &&
+          Math.abs(matrix.d - 1) < 0.001 &&
+          Math.abs(matrix.m42) < 0.1;
+      }, null, { timeout: 2500 });
+
       const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
       const box = await shorts.evaluate(el => {
         const rect = el.getBoundingClientRect();
