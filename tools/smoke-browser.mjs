@@ -4218,13 +4218,16 @@ try {
           }));
       }
       // Force an asymmetric parallax offset and verify that both face planes
-      // remain centered on their holographic card instead of drifting with it.
+      // remain centered in normal and flipped states.
       const faceAlignment = await funkoHolo.evaluate(async el => {
         const front = el.querySelector('.lightbox-holographic-face.lightbox-holographic-front');
         const back = el.querySelector('.lightbox-holographic-face.lightbox-holographic-back');
-        if (!front || !back) return { missingFace: true };
+        const flip = el.querySelector('.lightbox-holographic-flip');
+        if (!front || !back || !flip) return { missingFace: true };
         const variables = ['--holo-rx', '--holo-ry', '--holo-rotation', '--holo-shift-x', '--holo-shift-y'];
         const original = Object.fromEntries(variables.map(name => [name, el.style.getPropertyValue(name)]));
+        const wasFlipped = el.classList.contains('is-flipped');
+        const originalTransition = flip.style.transition;
         const centerOffset = (face, rootRect) => {
           const rect = face.getBoundingClientRect();
           return {
@@ -4232,30 +4235,52 @@ try {
             y: rect.top + rect.height / 2 - (rootRect.top + rootRect.height / 2)
           };
         };
+        const measureFaces = () => {
+          const rootRect = el.getBoundingClientRect();
+          return { front: centerOffset(front, rootRect), back: centerOffset(back, rootRect) };
+        };
+        const nextFrame = () => new Promise(resolve =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve))
+        );
         try {
+          flip.style.transition = 'none';
           el.style.setProperty('--holo-rx', '0deg');
           el.style.setProperty('--holo-ry', '0deg');
           el.style.setProperty('--holo-rotation', '0deg');
           el.style.setProperty('--holo-shift-x', '18px');
           el.style.setProperty('--holo-shift-y', '-11px');
-          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          const rootRect = el.getBoundingClientRect();
-          return {
-            front: centerOffset(front, rootRect),
-            back: centerOffset(back, rootRect)
-          };
+
+          el.classList.remove('is-flipped');
+          getComputedStyle(flip).transform;
+          await nextFrame();
+          const unflipped = measureFaces();
+
+          el.classList.add('is-flipped');
+          getComputedStyle(flip).transform;
+          await nextFrame();
+          const flipped = measureFaces();
+          return { unflipped, flipped };
         } finally {
+          if (wasFlipped) el.classList.add('is-flipped');
+          else el.classList.remove('is-flipped');
+          flip.style.transition = originalTransition;
           for (const name of variables) {
             if (original[name]) el.style.setProperty(name, original[name]);
             else el.style.removeProperty(name);
           }
         }
       });
+      const faceAlignmentOffsets = [
+        faceAlignment.unflipped?.front,
+        faceAlignment.unflipped?.back,
+        faceAlignment.flipped?.front,
+        faceAlignment.flipped?.back
+      ];
       if (faceAlignment.missingFace ||
-          !faceAlignment.front || !faceAlignment.back ||
-          Math.abs(faceAlignment.front.x) > 1.5 || Math.abs(faceAlignment.front.y) > 1.5 ||
-          Math.abs(faceAlignment.back.x) > 1.5 || Math.abs(faceAlignment.back.y) > 1.5) {
-        throw new Error('Holographic front and back artwork faces must stay centered under parallax: ' +
+          faceAlignmentOffsets.some(offset =>
+            !offset || Math.abs(offset.x) > 1.5 || Math.abs(offset.y) > 1.5
+          )) {
+        throw new Error('Holographic front and back artwork faces must stay centered under parallax in both flip states: ' +
           JSON.stringify(faceAlignment));
       }
 
