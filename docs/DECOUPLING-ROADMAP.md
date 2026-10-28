@@ -894,3 +894,14 @@ This migration must not:
 - The artwork stage is centered horizontally and vertically inside its assigned cell. The grid auto-fits equal-width columns with a 320px minimum track to preserve the existing artwork footprint where space allows, and collapses to a single column on mobile.
 - Extended the browser smoke layout measurement to verify equal item widths, evenly spaced column starts, artwork-stage centering, and responsive column counts at 1280px, 820px, and 390px viewports. The Lightbox feature stylesheet cache key advances to `20261028-10`.
 - **Next step:** confirm the updated validation/browser-smoke workflow and Pages deployment pass, then visually verify the grouped holographic artwork at desktop, tablet, and mobile sizes.
+
+
+### October 28, 2026 — CMS-driven responsive artwork group layouts
+
+- Reviewed the legacy `main` branch as a read-only visual/interaction reference. Its older monolithic Lightbox predates the current CMS artwork-group runtime, so active `mediaGroups.layout` remains the configuration source for the four grouped presentation modes.
+- Replaced the holographic recommendation with “Switch to desktop for the full effect.”
+- Added explicit CMS modes: Grid / Tiling (`grid`), Horizontal Stack (`stack`), Horizontal Card Stack (`cards`), and Sticker Card Layout (`sticker`). Existing stored values `grid`, `stack`, and `cards` remain valid.
+- All modes use equal layout tracks and consistent CSS Grid auto-layout. Horizontal Stack wraps equal-width tiles at row boundaries. Horizontal Card Stack uses controlled overlap on desktop/tablet and falls back to a clean grid on narrow viewports. Sticker Card Layout uses stable per-artwork seeded offsets and rotations; rotations are bounded to ±45 degrees and reduced on mobile.
+- The artwork stage is centered within its tile. The existing front/back holographic face transforms, parallax compensation, foil layers, reveal lifecycle, keyboard activation, and Inspector handoff remain separate from outer layout styling.
+- Updated the CMS selectors, project normalizer, runtime cache keys, smoke assertions, and CMS presentation contract to cover all four layouts and mobile fallbacks.
+- **Next step:** pass the validation and Pages gates, then inspect all four modes at desktop, tablet, and mobile sizes. The production repository and legacy `main` remain untouched.
