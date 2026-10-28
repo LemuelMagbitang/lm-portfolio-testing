@@ -20,7 +20,9 @@ const REVEAL_TARGET_GROUPS = [
   },
   { selector: 'main.works-main > .filter-nav-wrapper' },
   { selector: '.curated-view-heading' },
-  { selector: '#contact-section > .contact-mobile-tabs > .contact-mobile-tab' },
+  // The Contact tabs own a live segmented-control pill and drag state. Keep
+  // those buttons out of generic reveal transforms so the hit areas and pill
+  // geometry remain stable while selection/dragging is in progress.
   // Keep interactive form controls in their stable row geometry. Their
   // heading still participates in the reveal; moving the form container itself
   // can visibly desynchronize paired inputs while the stagger is in flight.

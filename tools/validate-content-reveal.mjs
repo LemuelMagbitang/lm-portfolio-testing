@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-06';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-07';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -23,6 +23,8 @@ assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
 assert.match(revealSource, /resume-main[\s\S]*?\[id\$="List"\] > \*/);
 const revealGroupsSource = revealSource.match(/const REVEAL_TARGET_GROUPS = \[([\s\S]*?)\n\];/)?.[1] || '';
 assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
+assert.doesNotMatch(revealGroupsSource, /\.contact-mobile-tab/,
+  'Contact tabs already have their own moving pill and drag state; they must not receive generic reveal transforms.');
 assert.doesNotMatch(revealGroupsSource, /\.form-container/,
   'Interactive form containers must not be translated independently of their paired form rows.');
 assert.match(revealSource, /prefers-reduced-motion: reduce/);
