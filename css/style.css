@@ -6602,3 +6602,22 @@ body.menu-open .hamburger-icon span {
   white-space: nowrap !important;
   border: 0 !important;
 }
+
+/* Accessible contact contrast.
+   Keep the quieter secondary heading, but prevent dark output from blended
+   color/foreground states on the review panel and its outlined submit action. */
+#contactReviewPanel > .section-title {
+  color: #bdbdbd !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+#contactReviewPanel .submit-btn-secondary {
+  color: #fff !important;
+  background-color: #242424 !important;
+  border-color: rgba(255,255,255,.78) !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+  filter: none !important;
+  text-shadow: none !important;
+}

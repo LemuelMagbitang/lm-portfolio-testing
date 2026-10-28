@@ -4,6 +4,7 @@ import { initContentReveal } from '../js/features/content-reveal/index.js?v=2026
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
+const mainStyles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 const bootstrapSource = await readFile(new URL('../js/app/bootstrap.js', import.meta.url), 'utf8');
 const rootHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
@@ -25,6 +26,10 @@ assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero
 assert.match(revealCss, /transition:[\s\S]*?opacity 720ms[\s\S]*?translate 720ms/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
+assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\s*#bdbdbd\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
+  'The review heading must keep a high-contrast, non-blended foreground.');
+assert.match(mainStyles, /#contactReviewPanel \.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*background-color:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
+  'The review submit button must keep a high-contrast foreground and surface.');
 assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-03/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
