@@ -138,8 +138,8 @@ export function initContentReveal({
     reducedMotionQuery.addListener(handleMotionPreferenceChange);
   }
 
-  refresh();
-
+  // Page composition owns the start timing; bootstrap calls refresh only after
+  // the branded startup gate is dismissed so first-screen motion is visible.
   return {
     refresh,
     destroy() {
