@@ -4239,10 +4239,16 @@ try {
               artworkAspectRatioDelta: artwork && Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')) > 0 && artwork.offsetHeight > 0
                 ? Math.abs((artwork.offsetWidth / artwork.offsetHeight) - Number.parseFloat(artwork.style.getPropertyValue('--lightbox-artwork-ratio')))
                 : null,
-              artworkCenterOffset: artwork ? {
-                x: (artwork.offsetLeft + artwork.offsetWidth / 2) - (el.clientWidth / 2),
-                y: (artwork.offsetTop + artwork.offsetHeight / 2) - (el.clientHeight / 2)
-              } : null
+              artworkCenterOffset: artwork ? (() => {
+                // Compare the rendered centers so relative-position offsets and
+                // the parent card's authored rotation are included consistently.
+                const artworkRect = artwork.getBoundingClientRect();
+                const entryRect = el.getBoundingClientRect();
+                return {
+                  x: (artworkRect.left + artworkRect.width / 2) - (entryRect.left + entryRect.width / 2),
+                  y: (artworkRect.top + artworkRect.height / 2) - (entryRect.top + entryRect.height / 2)
+                };
+              })() : null
             };
           })
         };
