@@ -22,7 +22,7 @@ assert.match(revealCss, /transition:[\s\S]*?opacity 720ms[\s\S]*?translate 720ms
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
 assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-01/);
-assert.match(compositionSource, /contentRevealFeature\.destroy\?\.\(\)/);
+assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-01"/);
 assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-01"/);
 
