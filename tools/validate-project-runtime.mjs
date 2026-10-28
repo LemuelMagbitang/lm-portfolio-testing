@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261027-05';
+import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261028-06';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261028-01';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261027-05';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261027-06';
