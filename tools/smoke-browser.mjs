@@ -4212,6 +4212,12 @@ try {
         throw new Error('Holographic artwork must preserve transparent sizing, use its configured back-face behavior, and retain all interaction hints: ' + JSON.stringify(uploadedArtContract));
       }
 
+      // Freeze only the ambient outer-surface float while validating pointer
+      // response. The animation-name contract is checked above; pausing here
+      // prevents the animated surface from moving out from under a stationary
+      // test pointer and firing pointerleave before the RAF pose is asserted.
+      await funkoHolo.evaluate(el => { el.style.animationPlayState = 'paused'; });
+
       // Desktop must react to real pointer movement, with the foil reflection
       // travelling opposite the pointer rather than remaining a static overlay.
       // Grouped artwork can overlap transformed neighbors, so locate an actually
@@ -4288,6 +4294,8 @@ try {
       ) {
         throw new Error('Desktop holographic pointer movement did not drive the inverse foil reflection: ' + JSON.stringify(desktopTiltState));
       }
+
+      await funkoHolo.evaluate(el => { el.style.removeProperty('animation-play-state'); });
 
       // Inspect must be layered over the existing Lightbox scroll position,
       // not trigger anchor reconciliation when the foil card is moved to body.
