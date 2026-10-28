@@ -1733,7 +1733,7 @@ function validateResponsiveUiContracts() {
   const groupedLayoutContract = artworkGroupLayoutModes.every(mode =>
     artworkGroupCss.includes(`data-artwork-effective-layout="${mode}"`) &&
     artworkGroupRuntime.includes("'"+mode+"'") &&
-    artworkGroupAdmin.includes("value=\\""+mode+"\\"")
+    artworkGroupAdmin.includes('value="' + mode + '"')
   );
   if (!groupedLayoutContract) {
     err('Artwork groups: CMS, runtime, and feature CSS must support grid, stack, cards, and sticker layouts consistently.');
