@@ -97,6 +97,12 @@ export async function createPortfolioApp({
 
   let activeCuratedViewSlug = '';
   let lightboxFeature = null;
+  let contentRevealFeature = null;
+  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261029-01')
+    .catch(error => {
+      console.warn('Content reveal: optional feature could not load.', error);
+      return null;
+    });
   let galleryFeatureRef = null;
   let pendingProjectOpen = null;
   let mainProjectModels = [];
@@ -548,6 +554,18 @@ export async function createPortfolioApp({
     aboutAssetPreloadPromise
   ]);
 
+  // Content reveal is an optional presentation feature. It is initialized after
+  // CMS-backed content has rendered and while the page-transition gate is still up.
+  try {
+    const contentRevealModule = await contentRevealModulePromise;
+    if (typeof contentRevealModule?.initContentReveal === 'function') {
+      contentRevealFeature = contentRevealModule.initContentReveal({ root });
+      contentRevealFeature?.refresh?.();
+    }
+  } catch (error) {
+    console.warn('Content reveal: initialization failed.', error);
+  }
+
   if (lightboxFeature?.openCard && pendingProjectOpen) {
     const pending = pendingProjectOpen;
     pendingProjectOpen = null;
@@ -565,10 +583,12 @@ export async function createPortfolioApp({
     lightbox: lightboxFeature,
     reviews: reviewsFeature,
     about: aboutFeature,
+    contentReveal: contentRevealFeature,
     forms,
     interactionFeedback,
     destroy() {
       deferredMediaDestroyed = true;
+      contentRevealFeature?.destroy?.();
       lightboxFeature?.destroy?.();
       heroFeature?.destroy?.();
       footerFeature?.destroy?.();
