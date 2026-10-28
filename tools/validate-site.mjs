@@ -17,7 +17,7 @@ const SUPPORTED_MEDIA = new Set(['image', 'video', 'mux', 'youtube', 'lottie', '
 const SUPPORTED_MODEL_EXT = new Set(['obj', 'gltf', 'glb', 'fbx']);
 const ORIENTATIONS = new Set(['', 'auto', 'landscape', 'portrait', 'square']);
 const SUPPORTED_HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
-const SUPPORTED_ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards']);
+const SUPPORTED_ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','sticker']);
 
 function readText(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -1726,6 +1726,18 @@ function validateResponsiveUiContracts() {
   const phoneTwoColumn = style.includes('@media (max-width: 767px)') && style.includes('grid-template-columns:repeat(2,minmax(0,1fr));');
   const tabletThreeColumn = style.includes('@media (min-width: 768px) and (max-width: 1099px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
   const desktopThreeColumn = style.includes('@media (min-width: 1100px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
+  const artworkGroupLayoutModes = ['grid','stack','cards','sticker'];
+  const artworkGroupCss = fs.readFileSync(path.join(root, 'css/features/lightbox.css'), 'utf8');
+  const artworkGroupRuntime = fs.readFileSync(path.join(root, 'js/features/lightbox/media-renderer.js'), 'utf8');
+  const artworkGroupAdmin = fs.readFileSync(path.join(root, 'admin/admin.js'), 'utf8');
+  const groupedLayoutContract = artworkGroupLayoutModes.every(mode =>
+    artworkGroupCss.includes(`data-artwork-effective-layout="${mode}"`) &&
+    artworkGroupRuntime.includes("'"+mode+"'") &&
+    artworkGroupAdmin.includes("value=\\""+mode+"\\"")
+  );
+  if (!groupedLayoutContract) {
+    err('Artwork groups: CMS, runtime, and feature CSS must support grid, stack, cards, and sticker layouts consistently.');
+  }
   if (!phoneTwoColumn || !tabletThreeColumn || !desktopThreeColumn) {
     err('Gallery responsive layout contract: phone must use two columns, tablet and desktop must use three columns.');
   }
