@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-01';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-02';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
+const bootstrapSource = await readFile(new URL('../js/app/bootstrap.js', import.meta.url), 'utf8');
 const rootHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const aboutHtml = await readFile(new URL('../about/index.html', import.meta.url), 'utf8');
 
@@ -23,6 +24,11 @@ assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
 assert.match(compositionSource, /content-reveal\/index\.js\?v=20261029-01/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
+assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
+assert.ok(
+  bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
+  'Initial content reveal must start after the branded page-transition gate closes.'
+);
 assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-01"/);
 assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-01"/);
 
@@ -79,6 +85,7 @@ const windowRef = {
 };
 const root = { defaultView: windowRef, querySelectorAll(selector) { return selectorTargets.get(selector) || []; } };
 const feature = initContentReveal({ root, windowRef });
+assert.equal(feature.refresh(), 3, 'The first explicit refresh must attach the selected targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
