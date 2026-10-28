@@ -3735,36 +3735,36 @@ try {
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation')),
           pressed: el.getAttribute('aria-pressed') || 'false'
         }));
-        if (mobileParallaxBaseline.input !== 'tap-only' || mobileParallaxBaseline.motion !== 'auto-rotate' ||
+        if (mobileParallaxBaseline.input !== 'tap-only' || mobileParallaxBaseline.motion !== 'static' ||
             !Number.isFinite(mobileParallaxBaseline.intensity) || mobileParallaxBaseline.intensity > 0.1001 ||
             (Number.isFinite(mobileParallaxBaseline.backIntensity) && mobileParallaxBaseline.backIntensity > 0.1001) ||
-            !Number.isFinite(mobileParallaxBaseline.rx) || Math.abs(mobileParallaxBaseline.rx) > 7 ||
-            !Number.isFinite(mobileParallaxBaseline.ry) || Math.abs(mobileParallaxBaseline.ry) > 7 ||
-            Math.abs(mobileParallaxBaseline.shiftX) > 4 || Math.abs(mobileParallaxBaseline.shiftY) > 3 ||
-            Math.abs(mobileParallaxBaseline.rotation) > 2.5) {
-          throw new Error('Compact parallax pose exceeded its bounded transform/intensity contract: ' + JSON.stringify(mobileParallaxBaseline));
+            !Number.isFinite(mobileParallaxBaseline.rx) || Math.abs(mobileParallaxBaseline.rx) > 0.01 ||
+            !Number.isFinite(mobileParallaxBaseline.ry) || Math.abs(mobileParallaxBaseline.ry) > 0.01 ||
+            Math.abs(mobileParallaxBaseline.shiftX) > 0.01 || Math.abs(mobileParallaxBaseline.shiftY) > 0.01 ||
+            Math.abs(mobileParallaxBaseline.rotation) > 0.01) {
+          throw new Error('Compact holographic artwork must stay centered and static at capped intensity: ' + JSON.stringify(mobileParallaxBaseline));
         }
         await page.waitForTimeout(650);
-        const mobileAutoPose = await holographic.evaluate(el => ({
+        const mobileStaticPose = await holographic.evaluate(el => ({
           rx: Number.parseFloat(el.style.getPropertyValue('--holo-rx')),
           ry: Number.parseFloat(el.style.getPropertyValue('--holo-ry')),
           shiftX: Number.parseFloat(el.style.getPropertyValue('--holo-shift-x')),
           shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y')),
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
         }));
-        const autoPoseDelta = Math.max(
-          Math.abs(mobileAutoPose.rx - mobileParallaxBaseline.rx),
-          Math.abs(mobileAutoPose.ry - mobileParallaxBaseline.ry),
-          Math.abs(mobileAutoPose.shiftX - mobileParallaxBaseline.shiftX),
-          Math.abs(mobileAutoPose.shiftY - mobileParallaxBaseline.shiftY),
-          Math.abs(mobileAutoPose.rotation - mobileParallaxBaseline.rotation)
+        const staticPoseDelta = Math.max(
+          Math.abs(mobileStaticPose.rx - mobileParallaxBaseline.rx),
+          Math.abs(mobileStaticPose.ry - mobileParallaxBaseline.ry),
+          Math.abs(mobileStaticPose.shiftX - mobileParallaxBaseline.shiftX),
+          Math.abs(mobileStaticPose.shiftY - mobileParallaxBaseline.shiftY),
+          Math.abs(mobileStaticPose.rotation - mobileParallaxBaseline.rotation)
         );
-        if (!(autoPoseDelta > 0.08)) {
-          throw new Error('Compact auto-parallax transform did not move between frames: ' + JSON.stringify({ mobileParallaxBaseline, mobileAutoPose }));
+        if (staticPoseDelta > 0.01) {
+          throw new Error('Compact holographic transform changed without user input: ' + JSON.stringify({ mobileParallaxBaseline, mobileStaticPose, staticPoseDelta }));
         }
 
-        // Touch must not take over the auto pose, start a hold/drag mode, or
-        // capture the pointer. The automatic transform remains bounded and smooth.
+        // Touch must not start a hold/drag mode, engage the surface, or alter
+        // the centered static pose. Native scrolling remains available.
         await holographic.dispatchEvent('pointerdown', {
           pointerType: 'touch', isPrimary: true, pointerId: 81,
           clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0
@@ -3784,12 +3784,14 @@ try {
           shiftY: Number.parseFloat(el.style.getPropertyValue('--holo-shift-y')),
           rotation: Number.parseFloat(el.style.getPropertyValue('--holo-rotation'))
         }));
-        if (mobileTouchMove.input !== 'tap-only' || mobileTouchMove.motion !== 'auto-rotate' ||
+        if (mobileTouchMove.input !== 'tap-only' || mobileTouchMove.motion !== 'static' ||
             mobileTouchMove.engaged ||
-            Math.abs(mobileTouchMove.rx) > 7 || Math.abs(mobileTouchMove.ry) > 7 ||
-            Math.abs(mobileTouchMove.shiftX) > 4 || Math.abs(mobileTouchMove.shiftY) > 3 ||
-            Math.abs(mobileTouchMove.rotation) > 2.5) {
-          throw new Error('Touch movement escaped the bounded transform auto-motion path: ' + JSON.stringify(mobileTouchMove));
+            Math.abs(mobileTouchMove.rx - mobileParallaxBaseline.rx) > 0.01 ||
+            Math.abs(mobileTouchMove.ry - mobileParallaxBaseline.ry) > 0.01 ||
+            Math.abs(mobileTouchMove.shiftX - mobileParallaxBaseline.shiftX) > 0.01 ||
+            Math.abs(mobileTouchMove.shiftY - mobileParallaxBaseline.shiftY) > 0.01 ||
+            Math.abs(mobileTouchMove.rotation - mobileParallaxBaseline.rotation) > 0.01) {
+          throw new Error('Touch input must not animate or displace compact holographic artwork: ' + JSON.stringify(mobileTouchMove));
         }
         const touchMovePrevented = await holographic.evaluate(el => {
           const event = new Event('touchmove', { bubbles: true, cancelable: true });
@@ -3875,12 +3877,12 @@ try {
         await touchSession.detach();
         if (nativeTouchState[0] < scrollBefore + 4 ||
             nativeTouchState[1].input !== 'tap-only' ||
-            nativeTouchState[1].motion !== 'auto-rotate' ||
+            nativeTouchState[1].motion !== 'static' ||
             nativeTouchState[1].touchEngaged ||
-            nativeTouchState[1].x < 20 || nativeTouchState[1].x > 80 ||
-            nativeTouchState[1].y < 28 || nativeTouchState[1].y > 72 ||
-            Math.abs(nativeTouchState[1].rotation) > 2.5) {
-          throw new Error('Native touch swipe did not scroll while preserving bounded, touch-only auto motion: ' +
+            Math.abs(nativeTouchState[1].x - 50) > 0.01 ||
+            Math.abs(nativeTouchState[1].y - 50) > 0.01 ||
+            Math.abs(nativeTouchState[1].rotation) > 0.01) {
+          throw new Error('Native touch swipe must scroll while holo artwork remains centered and static: ' +
             JSON.stringify({ scrollBefore, scrollAfter: nativeTouchState[0], foil: nativeTouchState[1] }));
         }
         await page.evaluate(() => {
@@ -6371,8 +6373,8 @@ try {
           throw new Error('Desktop foil second click did not restore the front face: ' + JSON.stringify(desktopFront));
         }
 
-        // Verify compact intensity and then simulate touch-only capabilities,
-        // independently testing auto motion and ensuring pointer input is ignored.
+        // Verify compact intensity and simulate touch-only capabilities,
+        // ensuring the holo pose stays static and pointer input is ignored.
         await page.setViewportSize({ width: 390, height: 844 });
         await page.waitForFunction(() => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
@@ -6394,7 +6396,7 @@ try {
         });
         await page.waitForFunction(() => {
           const el = document.querySelector('#lightboxMediaContainer .lightbox-holographic');
-          return el?.dataset.holoInput === 'tap-only' && el?.dataset.holoMotion === 'auto-rotate';
+          return el?.dataset.holoInput === 'tap-only' && el?.dataset.holoMotion === 'static';
         }, null, { timeout: 1500 });
         const readCompactTransformPose = () => holographic.evaluate(el => ({
           input: el.dataset.holoInput || '',
@@ -6415,12 +6417,12 @@ try {
           Math.abs(mobileAutoAfter.shiftX - mobileAutoBefore.shiftX),
           Math.abs(mobileAutoAfter.shiftY - mobileAutoBefore.shiftY)
         );
-        if (mobileAutoAfter.input !== 'tap-only' || mobileAutoAfter.motion !== 'auto-rotate' ||
-            !(compactPoseDelta > 0.08) ||
-            Math.abs(mobileAutoAfter.rx) > 7 || Math.abs(mobileAutoAfter.ry) > 7 ||
-            Math.abs(mobileAutoAfter.rotation) > 2.5 ||
-            Math.abs(mobileAutoAfter.shiftX) > 4 || Math.abs(mobileAutoAfter.shiftY) > 3) {
-          throw new Error('Touch-only transform auto motion did not progress within its bounds: ' +
+        if (mobileAutoAfter.input !== 'tap-only' || mobileAutoAfter.motion !== 'static' ||
+            compactPoseDelta > 0.01 ||
+            Math.abs(mobileAutoAfter.rx) > 0.01 || Math.abs(mobileAutoAfter.ry) > 0.01 ||
+            Math.abs(mobileAutoAfter.rotation) > 0.01 ||
+            Math.abs(mobileAutoAfter.shiftX) > 0.01 || Math.abs(mobileAutoAfter.shiftY) > 0.01) {
+          throw new Error('Touch-only mode must stay static without recurring holo motion: ' +
             JSON.stringify({ compactPoseDelta, mobileAutoBefore, mobileAutoAfter }));
         }
         const touchModeBox = await holographic.boundingBox();
@@ -6428,11 +6430,11 @@ try {
         await page.mouse.move(touchModeBox.x + touchModeBox.width - 3, touchModeBox.y + touchModeBox.height / 2);
         await page.waitForTimeout(120);
         const mobileAfterPointer = await readFoilPose();
-        if (mobileAfterPointer.input !== 'tap-only' || mobileAfterPointer.motion !== 'auto-rotate' ||
-            mobileAfterPointer.x < 20 || mobileAfterPointer.x > 80 ||
-            mobileAfterPointer.y < 28 || mobileAfterPointer.y > 72 ||
-            Math.abs(mobileAfterPointer.rotation) > 2.5) {
-          throw new Error('Pointer movement leaked into the touch-only auto-motion path: ' +
+        if (mobileAfterPointer.input !== 'tap-only' || mobileAfterPointer.motion !== 'static' ||
+            Math.abs(mobileAfterPointer.x - 50) > 0.01 ||
+            Math.abs(mobileAfterPointer.y - 50) > 0.01 ||
+            Math.abs(mobileAfterPointer.rotation) > 0.01) {
+          throw new Error('Pointer movement must not animate or displace touch-only holo artwork: ' +
             JSON.stringify(mobileAfterPointer));
         }
         await page.evaluate(() => {
