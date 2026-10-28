@@ -4218,6 +4218,8 @@ try {
               width: el.offsetWidth,
               height: el.offsetHeight,
               rotationDegrees,
+              stickerRotationValue: Number.parseFloat(el.style.getPropertyValue('--artwork-sticker-rotation')),
+              mobileStickerRotationValue: Number.parseFloat(el.style.getPropertyValue('--artwork-sticker-rotation-mobile')),
               artworkWidth: artwork?.offsetWidth || 0,
               artworkHeight: artwork?.offsetHeight || 0,
               stickerAppearance: artwork ? (() => {
@@ -4347,6 +4349,7 @@ try {
         }
 
         const layoutModeChecks = [];
+        let stableStickerRotationValues = null;
         for (const mode of layoutModes) {
           for (const viewport of responsiveViewports) {
             await page.setViewportSize(viewport);
@@ -4400,12 +4403,49 @@ try {
                 throw new Error('Sticker mode must preserve the cut-out silhouette instead of adding a rectangular card backing: ' +
                   JSON.stringify({ viewport, stickerFrames, layout }));
               }
+              const authoredRotations = layout.children.map(child => child.stickerRotationValue);
+              const mobileRotations = layout.children.map(child => child.mobileStickerRotationValue);
+              if (authoredRotations.some(angle => !Number.isFinite(angle) || Math.abs(angle) > 14.01) ||
+                  mobileRotations.some(angle => !Number.isFinite(angle) || Math.abs(angle) > 11.21)) {
+                throw new Error('Every sticker must receive a finite, bounded per-card rotation for desktop and mobile: ' +
+                  JSON.stringify({ viewport, authoredRotations, mobileRotations, layout }));
+              }
+              const rotationSpread = Math.max(...authoredRotations) - Math.min(...authoredRotations);
+              if (authoredRotations.length > 2 && rotationSpread < 8) {
+                throw new Error('Sticker angles must have visibly varied per-card values instead of clustering around a near-uniform pose: ' +
+                  JSON.stringify({ viewport, rotationSpread, authoredRotations, layout }));
+              }
+              const rotationSnapshot = layout.children.map(child => [
+                child.stickerRotationValue, child.mobileStickerRotationValue
+              ]);
+              if (stableStickerRotationValues) {
+                const stable = rotationSnapshot.length === stableStickerRotationValues.length &&
+                  rotationSnapshot.every((pair,index) =>
+                    Math.abs(pair[0] - stableStickerRotationValues[index][0]) < 0.001 &&
+                    Math.abs(pair[1] - stableStickerRotationValues[index][1]) < 0.001
+                  );
+                if (!stable) {
+                  throw new Error('Sticker rotations must remain stable when the responsive layout changes: ' +
+                    JSON.stringify({ viewport, stableStickerRotationValues, rotationSnapshot }));
+                }
+              } else {
+                stableStickerRotationValues = rotationSnapshot;
+              }
+              const mobile = viewport.width <= 760;
               const maxRotation = Math.max(...layout.children.map(child => Math.abs(child.rotationDegrees || 0)));
-              if (maxRotation > 6.01) {
-                throw new Error('Sticker artwork rotation must stay within the Figma-aligned -6 to 6 degree range: ' +
-                  JSON.stringify({ viewport, maxRotation, layout }));
+              const rotationLimit = mobile ? 11.21 : 14.01;
+              const expectedAngles = layout.children.map(child =>
+                mobile ? child.mobileStickerRotationValue : child.stickerRotationValue
+              );
+              const maxAngleError = Math.max(...layout.children.map((child,index) =>
+                Math.abs((child.rotationDegrees || 0) - expectedAngles[index])
+              ));
+              if (maxRotation > rotationLimit || maxAngleError > 1.25) {
+                throw new Error('Rendered sticker transforms must preserve their independent per-card rotations without flattening selected/hovered cards: ' +
+                  JSON.stringify({ viewport, maxRotation, rotationLimit, maxAngleError, expectedAngles, layout }));
               }
               metrics.maxRotation = maxRotation;
+              metrics.rotationSpread = rotationSpread;
             }
             layoutModeChecks.push({ mode, viewport, metrics, effectiveLayout:layout.layout });
           }
