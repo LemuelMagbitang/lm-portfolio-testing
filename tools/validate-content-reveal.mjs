@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-05';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-06';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -21,7 +21,10 @@ assert.match(revealCss, /data-lm-content-reveal-motion="position-only"[^}]*opaci
   'Form-containing reveal targets must never fade their controls to opacity zero.');
 assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
 assert.match(revealSource, /resume-main[\s\S]*?\[id\$="List"\] > \*/);
-assert.match(revealSource, /contact-block > h2[\s\S]*?contact-block > \.form-container/);
+const revealGroupsSource = revealSource.match(/const REVEAL_TARGET_GROUPS = \[([\s\S]*?)\n\];/)?.[1] || '';
+assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
+assert.doesNotMatch(revealGroupsSource, /\.form-container/,
+  'Interactive form containers must not be translated independently of their paired form rows.');
 assert.match(revealSource, /prefers-reduced-motion: reduce/);
 assert.match(revealSource, /pendingTargets\.forEach\(revealTarget\)/,
   'A live reduced-motion preference change must reveal pending content immediately.');
@@ -72,14 +75,12 @@ const makeTarget = id => {
 const bioHeading = makeTarget('bio-heading');
 const bioCopy = makeTarget('bio-copy');
 const filterRail = makeTarget('filter-rail');
-const reviewFormContainer = makeTarget('review-form-container');
-reviewFormContainer.matches = selector => selector === '.form-container';
-reviewFormContainer.querySelector = selector => selector === 'form' ? {} : null;
+const reviewHeading = makeTarget('review-heading');
 selectorTargets.set('.about-hero .about-bio-text > *', [bioHeading, bioCopy]);
 selectorTargets.set('main.works-main > .filter-nav-wrapper', [filterRail]);
 selectorTargets.set(
-  '#contact-section #web3-forms-container > .contact-block > h2, #contact-section #web3-forms-container > .contact-block > .form-container',
-  [reviewFormContainer]
+  '#contact-section #web3-forms-container > .contact-block > h2',
+  [reviewHeading]
 );
 
 const mediaListeners = new Set();
@@ -110,7 +111,7 @@ const root = {
   querySelectorAll(selector) { return selectorTargets.get(selector) || []; }
 };
 const feature = initContentReveal({ root, windowRef });
-assert.equal(feature.refresh(), 4, 'The first explicit refresh must attach selected targets, including the form surface.');
+assert.equal(feature.refresh(), 4, 'The first explicit refresh must attach selected text and section targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
@@ -119,8 +120,8 @@ assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers 
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
 assert.equal(bioCopy.properties.get('--lm-content-reveal-delay'), '70ms');
-assert.equal(reviewFormContainer.dataset.lmContentRevealMotion, 'position-only',
-  'Form controls must animate by position without fading out during accessibility checks.');
+assert.equal(reviewHeading.dataset.lmContentRevealMotion, 'position-only',
+  'The Contact heading must keep its text opaque while the heading reveal is pending.');
 assert.equal(bioHeading.dataset.lmContentRevealMotion, 'position-only',
   'Text-bearing content must remain opaque while its translate reveal is pending.');
 
@@ -137,7 +138,7 @@ assert.ok(filterRail.classes.has('is-lm-content-revealed'));
 assert.ok(observer.disconnected);
 
 feature.destroy();
-for (const target of [bioHeading, bioCopy, filterRail, reviewFormContainer]) {
+for (const target of [bioHeading, bioCopy, filterRail, reviewHeading]) {
   assert.ok(!target.classes.has('lm-content-reveal-target'));
   assert.ok(!target.classes.has('is-lm-content-revealed'));
   assert.equal(target.dataset.lmContentRevealState, undefined);

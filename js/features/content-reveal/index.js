@@ -21,10 +21,10 @@ const REVEAL_TARGET_GROUPS = [
   { selector: 'main.works-main > .filter-nav-wrapper' },
   { selector: '.curated-view-heading' },
   { selector: '#contact-section > .contact-mobile-tabs > .contact-mobile-tab' },
-  {
-    selector: '#contact-section #web3-forms-container > .contact-block > h2, ' +
-      '#contact-section #web3-forms-container > .contact-block > .form-container'
-  },
+  // Keep interactive form controls in their stable row geometry. Their
+  // heading still participates in the reveal; moving the form container itself
+  // can visibly desynchronize paired inputs while the stagger is in flight.
+  { selector: '#contact-section #web3-forms-container > .contact-block > h2' },
   { selector: '#showMoreWrapper' },
   { selector: '.reviews-section .reviews-marquee' },
   { selector: '.footer-content > .social-icons, .footer-content > p' }
