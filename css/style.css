@@ -1,4 +1,4 @@
-@import url('./tokens.css');
+@import url('./tokens.css?v=20261029-01');
 
 /* --- GLOBAL RESETS --- */
 * {
@@ -24,6 +24,7 @@ body {
      it was quietly falling back all the way to plain Roboto/Arial). The
      system names after it are just an offline/slow-network safety net. */
   font-family: var(--lm-font-sans);
+  font-size: var(--lm-type-size-base, 16px);
   overflow-x: hidden;
 }
 

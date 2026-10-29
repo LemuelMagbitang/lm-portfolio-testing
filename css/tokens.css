@@ -53,4 +53,32 @@
   --lm-motion-slow: 0.4s;
   --lm-motion-image: 0.8s;
   --lm-motion-ease: ease;
+  /* Semantic colors exposed to CMS controls and new components. */
+  --lm-color-accent: #a8bd88;
+  --lm-color-accent-strong: #849573;
+  --lm-color-focus: #b7c99b;
+  --lm-color-danger: #e0584f;
+  --lm-color-success: #2ecc71;
+  --lm-color-warning: #e0b04f;
+  --lm-color-border: rgba(255,255,255,.12);
+  /* Shared type scale and line heights. */
+  --lm-type-size-xs: 12px;
+  --lm-type-size-sm: 14px;
+  --lm-type-size-base: 16px;
+  --lm-type-size-lg: 18px;
+  --lm-type-size-xl: 24px;
+  --lm-type-size-2xl: 32px;
+  --lm-type-size-3xl: 48px;
+  --lm-line-height-tight: 1.15;
+  --lm-line-height-body: 1.5;
+  /* Four-pixel spacing rhythm. */
+  --lm-space-1: 4px;
+  --lm-space-2: 8px;
+  --lm-space-3: 12px;
+  --lm-space-4: 16px;
+  --lm-space-6: 24px;
+  --lm-space-8: 32px;
+  /* Shared elevation recipes. */
+  --lm-elevation-card: 0 12px 32px rgba(0,0,0,.24);
+  --lm-elevation-floating: 0 20px 56px rgba(0,0,0,.35);
 }

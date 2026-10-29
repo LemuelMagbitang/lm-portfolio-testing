@@ -1717,7 +1717,7 @@ function validateResponsiveUiContracts() {
   const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
   const style = exists('css/style.css') ? readText('css/style.css') : '';
   const tokens = exists('css/tokens.css') ? readText('css/tokens.css') : '';
-  if (!style.startsWith("@import url('./tokens.css');")) {
+  if (!/^@import url\('\.\/tokens\.css(?:\?[^']*)?'\);/.test(style)) {
     err('CSS foundation: style.css must load the shared UI token layer first.');
   }
   if (!/--lm-color-background:/.test(tokens) ||

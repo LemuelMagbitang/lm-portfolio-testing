@@ -498,7 +498,8 @@ const SECTIONS = {
   about:    { file: 'data/about.json',    label: 'About Page' },
   reviews:  { file: 'data/reviews.json',  label: 'Reviews' },
   curatedViews: { file: 'data/curated-views.json', label: 'Curated Views' },
-  settings: { file: 'data/settings.json', label: 'Settings & Toggles' }
+  settings: { file: 'data/settings.json', label: 'Settings & Toggles' },
+  designSystem: { file: 'css/tokens.css', label: 'Design System', rawText: true }
 };
 const requestedSection = new URLSearchParams(location.search).get('section') || String(location.hash || '').replace(/^#/, '');
 if (SECTIONS[requestedSection] || ['media','guide'].includes(requestedSection)) currentSection = requestedSection;
@@ -624,6 +625,7 @@ const CMS_WRITABLE_PATHS = new Set([
   '404.html',
   'success/index.html',
   'css/style.css',
+  'css/tokens.css',
   'js/script.js',
   'js/infrastructure/media-background/engine.js'
 ]);
@@ -988,6 +990,15 @@ function enterApp(){
    ===================================================================== */
 document.querySelectorAll('.nav-item[data-section]').forEach(el => {
   el.addEventListener('click', () => goToSection(el.dataset.section));
+  if (el.tagName !== 'A' && el.tagName !== 'BUTTON') {
+    el.setAttribute('role', 'button');
+    if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+  }
+  el.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    goToSection(el.dataset.section);
+  });
 });
 
 /* Mobile drawer: the sidebar (aside.sidebar) is the drawer itself —
@@ -1026,7 +1037,10 @@ function goToSection(name){
   lastMediaImpact.sections = (lastMediaImpact.sections||[]).filter(key=>key!==name);
   updateMediaImpactIndicators();
   document.querySelectorAll('.nav-item[data-section]').forEach(el=>{
-    el.classList.toggle('active', el.dataset.section === name);
+    const active = el.dataset.section === name;
+    el.classList.toggle('active', active);
+    if(active) el.setAttribute('aria-current', 'page');
+    else el.removeAttribute('aria-current');
   });
 
   const label = SECTIONS[name]?.label || (name === 'guide' ? 'Setup Guide' : name === 'media' ? 'Media Library' : name);
@@ -1137,6 +1151,7 @@ let renderVersion = 0;
 async function render(){
   const version = ++renderVersion;
   const section = currentSection;
+  content.classList.toggle('ds-active', section === 'designSystem');
   disposeProjectListPreviews();
   disposeProjectListPreviews = () => {};
   const isCurrentRender = () => version === renderVersion && section === currentSection;
@@ -1146,6 +1161,10 @@ async function render(){
 
   content.innerHTML = `<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading ${SECTIONS[section].label.toLowerCase()}…</div>`;
   try{
+    if(section === 'designSystem'){
+      await RENDERERS.designSystem(null, isCurrentRender);
+      return;
+    }
     const data = await loadSection(section);
     // Navigation can change while GitHub is responding. Never let an older
     // section request paint into the section the user selected afterward.
@@ -1383,6 +1402,14 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
         {name:'settings',path:SECTIONS.settings.file,content:JSON.stringify(next,null,2)+'\n',encoding:'utf-8'}
       ],'CMS: update hero loop and transition settings',editRevisionAtStart);
       toast(`Saved — hero loop and transition settings committed to ${conn.branch}.`);
+    }else if(name === 'designSystem'){
+      if(!obj || typeof obj.text !== 'string' || typeof obj.sha !== 'string') throw new Error('Design System save snapshot is invalid. Reload the panel and try again.');
+      commitSha=await GH.commitFiles([{path:filePath,content:obj.text,encoding:'utf-8',expectedSha:obj.sha}], 'CMS: update shared design tokens');
+      const latest=await GH.getTextFile(filePath);
+      saveContext.onSaved?.(latest,obj);
+      dirty[name]=getEditRevision(name)!==(editRevisionAtStart[name]||0);
+      updateDirtyDots();
+      toast(`Saved — ${filePath} committed to ${conn.branch}.`);
     }else{
       commitSha=await saveSection(name,obj,`CMS: update ${filePath}`,editRevisionAtStart);
       toast(`Saved — ${filePath} committed to ${conn.branch}.`);
@@ -1424,6 +1451,70 @@ function flagUnsaved(){
    7. SECTION: HERO MESSAGES
    ===================================================================== */
 const RENDERERS = {};
+
+
+/* SHARED DESIGN SYSTEM — only whitelisted token declarations are editable. */
+const DS_FONT_STACKS = {
+ 'Inter':'"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+ 'Satoshi':'"Satoshi", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+ 'DM Sans':'"DM Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+ 'Outfit':'"Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+};
+const DS_COLOR_TOKENS=[['--lm-color-background','Background'],['--lm-color-surface','Surface'],['--lm-color-text-primary','Primary text'],['--lm-color-text-secondary','Secondary text'],['--lm-color-text-muted','Muted text'],['--lm-color-accent','Accent'],['--lm-color-focus','Focus'],['--lm-color-danger','Danger'],['--lm-color-success','Success'],['--lm-color-warning','Warning']];
+function dsReadToken(source,token){const m=source.match(new RegExp('^[\\t ]*'+token+'[\\t ]*:[\\t ]*([^;\\r\\n]+);','m'));if(!m)throw new Error('The shared token '+token+' is missing from css/tokens.css.');return m[1].trim();}
+function dsReplaceToken(source,token,value){const re=new RegExp('(^[\\t ]*'+token+'[\\t ]*:[\\t ]*)([^;\\r\\n]+)(;)','gm');let count=0;const next=source.replace(re,(_w,p,_o,semi)=>{count++;return p+value+semi;});if(count!==1)throw new Error('Expected one declaration for '+token+'; found '+count+'. No source was saved.');return next;}
+function dsHex(source,token,fallback){let value;try{value=dsReadToken(source,token)}catch(_){return fallback;}if(/^#[\da-f]{3}$/i.test(value))value='#'+value.slice(1).split('').map(ch=>ch+ch).join('');return /^#[\da-f]{6}$/i.test(value)?value:fallback;}
+function dsNumber(source,token,fallback,min,max){let value=Number.parseFloat(dsReadToken(source,token));if(!Number.isFinite(value))value=fallback;return Math.min(max,Math.max(min,value));}
+function dsFontKey(source,token){let value='';try{value=dsReadToken(source,token)}catch(_){}return Object.keys(DS_FONT_STACKS).find(f=>value.includes('"'+f+'"'))||'Inter';}
+function dsFontSelect(token,label,source){const id='ds-'+token.replace(/[^a-z0-9]+/gi,'-'),selected=dsFontKey(source,token);const options=Object.keys(DS_FONT_STACKS).map(f=>'<option value="'+f+'"'+(f===selected?' selected':'')+'>'+f+'</option>').join('');return '<div class="ds-field"><label for="'+id+'">'+label+'</label><select id="'+id+'" data-ds-token="'+token+'" data-ds-type="font">'+options+'</select></div>';}
+function dsRangeField(token,label,min,max,step,unit,source){const id='ds-'+token.replace(/[^a-z0-9]+/gi,'-'),value=dsNumber(source,token,min,min,max),type=unit==='s'?'seconds':'px';return '<div class="ds-field ds-range-field"><div class="ds-field-heading"><label for="'+id+'">'+label+'</label><output for="'+id+'">'+value+unit+'</output></div><input id="'+id+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+value+'" data-ds-token="'+token+'" data-ds-type="'+type+'" data-ds-unit="'+unit+'"></div>';}
+function dsColorField(token,label,source){const id='ds-'+token.replace(/[^a-z0-9]+/gi,'-'),value=dsHex(source,token,'#888888');return '<div class="ds-field ds-color-field"><label for="'+id+'">'+label+'</label><div class="ds-color-row"><input id="'+id+'" type="color" value="'+value+'" data-ds-token="'+token+'" data-ds-type="color"><span>'+value.toUpperCase()+'</span></div></div>';}
+RENDERERS.designSystem=async function(_data,isCurrentRender=()=>true){
+ const filePath='css/tokens.css';content.innerHTML='<div class="loading-row"><i class="fa-solid fa-circle-notch spin"></i> Loading shared design tokens…</div>';const loaded=await GH.getTextFile(filePath);if(!isCurrentRender())return;
+ let baseSha=loaded.sha,savedText=loaded.text,workingText=loaded.text;
+ const managed=[...DS_COLOR_TOKENS.map(([t])=>t),'--lm-font-sans','--lm-font-display','--lm-font-label','--lm-font-accent','--lm-type-size-base','--lm-shape-card-radius','--lm-page-gutter','--lm-glass-blur','--lm-motion-standard'];managed.forEach(t=>dsReadToken(workingText,t));
+ const colorFields=DS_COLOR_TOKENS.map(([t,l])=>dsColorField(t,l,workingText)).join('');
+ const fontFields=[dsFontSelect('--lm-font-sans','Body font',workingText),dsFontSelect('--lm-font-display','Display font',workingText),dsFontSelect('--lm-font-label','Label font',workingText),dsFontSelect('--lm-font-accent','Accent font',workingText)].join('');
+ const layoutFields=[dsRangeField('--lm-type-size-base','Base type size',14,20,1,'px',workingText),dsRangeField('--lm-page-gutter','Page gutter',12,48,2,'px',workingText),dsRangeField('--lm-shape-card-radius','Card radius',12,40,2,'px',workingText),dsRangeField('--lm-glass-blur','Glass blur',0,28,1,'px',workingText),dsRangeField('--lm-motion-standard','Standard motion',.1,.6,.05,'s',workingText)].join('');
+ content.innerHTML=sectionHead('Design System','Edit the shared CSS tokens that define the portfolio’s visual foundation. Changes update this preview locally; saving commits css/tokens.css to the connected branch.')+`
+  <div class="ds-shell" id="designSystemPanel">
+   <div class="ds-controls">
+    <section class="ds-card" aria-labelledby="dsPaletteHeading"><div class="ds-card-heading"><div><h3 id="dsPaletteHeading">Color palette</h3><p>Core surfaces, text, and semantic states.</p></div><span class="ds-section-index">01</span></div><div class="ds-field-grid ds-colors">${colorFields}</div></section>
+    <section class="ds-card" aria-labelledby="dsTypographyHeading"><div class="ds-card-heading"><div><h3 id="dsTypographyHeading">Typography</h3><p>Shared font roles used by site stylesheets.</p></div><span class="ds-section-index">02</span></div><div class="ds-field-grid">${fontFields}</div></section>
+    <section class="ds-card" aria-labelledby="dsLayoutHeading"><div class="ds-card-heading"><div><h3 id="dsLayoutHeading">Layout, shape, and motion</h3><p>Bounded values keep the system predictable.</p></div><span class="ds-section-index">03</span></div><div class="ds-layout-fields">${layoutFields}</div></section>
+   </div>
+   <section class="ds-preview-wrap" aria-labelledby="dsPreviewHeading">
+    <div class="ds-preview-top"><div><h3 id="dsPreviewHeading">Live preview</h3><p>Representative components using the edited tokens.</p></div><span class="ds-local-tag"><span aria-hidden="true"></span> Local preview</span></div>
+    <div class="ds-preview" id="dsPreview">
+     <div class="ds-preview-nav"><span class="ds-preview-mark">LM.</span><span class="ds-preview-nav-label">SELECTED WORK</span><span class="ds-preview-nav-pill">Portfolio</span></div>
+     <div class="ds-preview-hero"><p class="ds-preview-eyebrow">VISUAL DESIGN · MOTION · INTERACTION</p><h4>Design with intent.</h4><p class="ds-preview-copy">A shared visual language, refined through clear hierarchy, consistent spacing, and deliberate interaction.</p><button type="button" class="ds-preview-cta">Explore projects <span aria-hidden="true">↗</span></button></div>
+     <div class="ds-preview-grid"><article class="ds-preview-card"><div class="ds-preview-card-label">01 / SURFACE</div><div class="ds-preview-surface"><span>Balanced contrast</span><span>24 px</span></div><p>Surface and text</p><small>Hierarchy stays clear at a glance.</small></article><article class="ds-preview-card"><div class="ds-preview-card-label">02 / ACCENT</div><div class="ds-preview-accent"><span>Interactive state</span><span aria-hidden="true">↗</span></div><p>Accent and focus</p><small>Use color to reinforce meaning.</small></article></div>
+     <div class="ds-preview-footer"><span>SHARED TOKENS</span><span class="ds-preview-glass">Glass control</span></div>
+    </div><p class="ds-preview-note" id="dsPreviewStatus" aria-live="polite">Preview only. Save to write the token file to GitHub.</p>
+   </section>
+  </div>`;
+ const preview=content.querySelector('#dsPreview'),statusNote=content.querySelector('#dsPreviewStatus'),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+ function safeNumber(token,fallback,min,max,unit){let raw='';try{raw=dsReadToken(workingText,token)}catch(_){}let v=Number.parseFloat(raw);if(!Number.isFinite(v))v=fallback;return clamp(v,min,max)+unit;}
+ function safeFont(token){return DS_FONT_STACKS[dsFontKey(workingText,token)]||DS_FONT_STACKS.Inter;}
+ function updatePreview(){
+  if(!preview?.isConnected)return;let glass='rgba(255,255,255,.05)';try{const raw=dsReadToken(workingText,'--lm-glass-fill');if(/^rgba?\([\d.,%\s]+\)$/i.test(raw))glass=raw}catch(_){}
+  const vars={'--ds-background':dsHex(workingText,'--lm-color-background','#121212'),'--ds-surface':dsHex(workingText,'--lm-color-surface','#1d1d1d'),'--ds-primary':dsHex(workingText,'--lm-color-text-primary','#fff'),'--ds-secondary':dsHex(workingText,'--lm-color-text-secondary','#ccc'),'--ds-muted':dsHex(workingText,'--lm-color-text-muted','#888'),'--ds-accent':dsHex(workingText,'--lm-color-accent','#a8bd88'),'--ds-radius':safeNumber('--lm-shape-card-radius',24,12,40,'px'),'--ds-gutter':safeNumber('--lm-page-gutter',24,12,48,'px'),'--ds-base-size':safeNumber('--lm-type-size-base',16,14,20,'px'),'--ds-blur':safeNumber('--lm-glass-blur',10,0,28,'px'),'--ds-motion':safeNumber('--lm-motion-standard',.3,.1,.6,'s'),'--ds-font-sans':safeFont('--lm-font-sans'),'--ds-font-display':safeFont('--lm-font-display'),'--ds-glass-fill':glass};
+  Object.entries(vars).forEach(([n,v])=>preview.style.setProperty(n,v));content.querySelectorAll('[data-ds-token][data-ds-type="color"]').forEach(input=>{const swatch=input.parentElement?.querySelector('span');if(swatch)swatch.textContent=input.value.toUpperCase();});
+  const radius=preview.querySelector('.ds-preview-surface span:last-child');if(radius)radius.textContent=vars['--ds-radius'];
+  if(statusNote)statusNote.textContent=workingText===savedText?'Preview matches the last saved token source. Save writes to the connected branch.':'Unsaved token edits are previewed here only. Save to commit css/tokens.css.';
+ }
+ const saveContext=wireSave(()=>({text:workingText,sha:baseSha}),'designSystem',filePath);
+ saveContext.onSaved=(latest,snapshot)=>{baseSha=latest.sha;savedText=latest.text;if(workingText===snapshot.text)workingText=latest.text;updatePreview();};
+ content.querySelectorAll('[data-ds-token]').forEach(input=>{
+  const output=input.closest('.ds-field')?.querySelector('output');
+  const onChange=()=>{const token=input.dataset.dsToken,type=input.dataset.dsType;let value;
+   if(type==='color'){if(!/^#[\da-f]{6}$/i.test(input.value))return;value=input.value.toLowerCase();}
+   else if(type==='font'){value=DS_FONT_STACKS[input.value];if(!value)return;}
+   else{const n=Number(input.value),min=Number(input.min),max=Number(input.max);if(!Number.isFinite(n)||n<min||n>max)return;value=type==='seconds'?n.toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'s':n+'px';if(output)output.textContent=n+input.dataset.dsUnit;}
+   try{workingText=dsReplaceToken(workingText,token,value)}catch(err){toast(err.message,true);return;}flagUnsaved();updatePreview();
+  };input.addEventListener(input.type==='range'?'input':'change',onChange);
+ });updatePreview();
+};
 
 RENDERERS.hero = function(data){
   let items = withUids((data.json || []).map(x => ({ label:x.label||'', text:x.text||'', author:x.author||'', source:x.source||'', weight: (x.weight===undefined||x.weight===null)?1:x.weight })));

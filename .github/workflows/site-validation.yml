@@ -43,6 +43,9 @@ jobs:
       - name: Validate site data, paths, and JavaScript
         run: node tools/validate-site.mjs
 
+      - name: Validate CMS Design System editor contract
+        run: node tools/validate-design-system.mjs
+
       - name: Test repository-independent site path resolution
         run: node tools/test-site-paths.mjs
 
