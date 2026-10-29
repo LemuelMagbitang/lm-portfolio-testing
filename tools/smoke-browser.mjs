@@ -5295,7 +5295,168 @@ try {
       if (disposedFoilState.flipped || disposedFoilState.pressed !== 'false' || disposedFoilState.face !== 'FRONT') {
         throw new Error('Closing the Lightbox did not reset the foil state to FRONT: ' + JSON.stringify(disposedFoilState));
       }
+
+      // Group navigation should stay inside the current Inspector instead of
+      // closing/reopening it, and the group's placeholder must keep its slot.
+      await funkoCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      const navigationGroupItems = page.locator('#lightboxMediaContainer .lightbox-artwork-group-items').first();
+      const navigationEntries = navigationGroupItems.locator('.lightbox-media-item');
+      const navigationCaptions = await navigationEntries.evaluateAll(entries =>
+        entries.map(entry => entry.querySelector('.media-caption')?.textContent?.trim() || '')
+      );
+      const navigationStartIndex = navigationCaptions.indexOf('Smooth Prism Foil');
+      if (navigationStartIndex < 0 || navigationCaptions.length < 3 || navigationCaptions.some(caption => !caption)) {
+        throw new Error('Inspector navigation fixture needs at least three captioned artworks in one group: ' +
+          JSON.stringify({ navigationStartIndex, navigationCaptions }));
+      }
+      await navigationEntries.nth(navigationStartIndex).click({ force: true });
+      await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
+      const inspectorPrevious = inspectMode.locator('.lightbox-inspect-prev');
+      const inspectorNext = inspectMode.locator('.lightbox-inspect-next');
+      if (!(await inspectorPrevious.isVisible()) || !(await inspectorNext.isVisible()) ||
+          !(await inspectMode.locator('.lightbox-inspect-back').isVisible()) ||
+          await inspectMode.locator('.lightbox-inspect-close').count()) {
+        throw new Error('Desktop Inspector must expose only the two artwork chevrons and existing Back control.');
+      }
+      const waitForInspectorCaption = caption => page.waitForFunction(expected =>
+        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-description')?.textContent?.trim() === expected,
+      caption, { timeout: 2500 });
+      const waitForInspectorMotion = () => page.waitForFunction(() => {
+        const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
+        return frame && Array.from(frame.getAnimations()).every(animation => animation.playState !== 'running');
+      }, null, { timeout: 2000 });
+      const assertGroupSlotStable = async expectedIndex => {
+        const state = await navigationGroupItems.evaluate(items => ({
+          childCount: items.children.length,
+          placeholders: items.querySelectorAll(':scope > .lightbox-inspect-placeholder').length,
+          children: Array.from(items.children).map(child => child.classList.contains('lightbox-inspect-placeholder')
+            ? 'placeholder'
+            : child.querySelector('.media-caption')?.textContent?.trim() || '')
+        }));
+        if (state.childCount !== navigationCaptions.length || state.placeholders !== 1 ||
+            state.children[expectedIndex] !== 'placeholder') {
+          throw new Error('Inspector navigation must preserve the original grouped artwork slot: ' +
+            JSON.stringify({ expectedIndex, state, navigationCaptions }));
+        }
+      };
+
+      let currentGroupIndex = navigationStartIndex;
+      for (let index = currentGroupIndex - 1; index >= 0; index -= 1) {
+        await inspectorPrevious.click();
+        await waitForInspectorCaption(navigationCaptions[index]);
+        currentGroupIndex = index;
+      }
+      await waitForInspectorMotion();
+      await inspectorPrevious.click();
+      await page.waitForFunction(() => Array.from(
+        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
+      ).some(animation => animation.playState === 'running' &&
+        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await waitForInspectorCaption(navigationCaptions[0]);
+      await assertGroupSlotStable(0);
+
+      for (let index = 1; index < navigationCaptions.length; index += 1) {
+        await inspectorNext.click();
+        await waitForInspectorCaption(navigationCaptions[index]);
+        currentGroupIndex = index;
+        await assertGroupSlotStable(currentGroupIndex);
+      }
+      await waitForInspectorMotion();
+      await inspectorNext.click();
+      await page.waitForFunction(() => Array.from(
+        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
+      ).some(animation => animation.playState === 'running' &&
+        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await waitForInspectorCaption(navigationCaptions[navigationCaptions.length - 1]);
+      await assertGroupSlotStable(navigationCaptions.length - 1);
+
+      for (let index = navigationCaptions.length - 2; index >= navigationStartIndex; index -= 1) {
+        await inspectorPrevious.click();
+        await waitForInspectorCaption(navigationCaptions[index]);
+      }
+      await waitForInspectorCaption('Smooth Prism Foil');
+      await inspectMode.locator('.lightbox-inspect-back').click();
+      await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
+      await page.locator('#lightboxClose').first().click();
+      await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
     }, { width: 1280, height: 900 });
+
+    await smokePage(browser, '/', async page => {
+      const funkoCard = page.locator('#portfolioGrid .project-card[data-project-id="funko-pop-test"]').first();
+      await funkoCard.waitFor({ state: 'visible', timeout: 4000 });
+      await funkoCard.click();
+      await page.locator('#lightbox.active').waitFor({ state: 'visible', timeout: 3000 });
+      const groupItems = page.locator('#lightboxMediaContainer .lightbox-artwork-group-items').first();
+      const entries = groupItems.locator('.lightbox-media-item');
+      const captions = await entries.evaluateAll(items =>
+        items.map(entry => entry.querySelector('.media-caption')?.textContent?.trim() || '')
+      );
+      if (captions.length < 3 || captions.some(caption => !caption)) {
+        throw new Error('Mobile Inspector navigation fixture needs at least three captioned artworks: ' + JSON.stringify(captions));
+      }
+      await entries.first().click({ force: true });
+      const inspect = page.locator('.lightbox-inspect-mode');
+      await inspect.waitFor({ state: 'visible', timeout: 2000 });
+      const previous = inspect.locator('.lightbox-inspect-prev');
+      const next = inspect.locator('.lightbox-inspect-next');
+      if (await previous.isVisible() || await next.isVisible() ||
+          !(await inspect.locator('.lightbox-inspect-back').isVisible())) {
+        throw new Error('Mobile Inspector must hide both chevrons and retain the existing Back control.');
+      }
+      const swipeSession = await page.context().newCDPSession(page);
+      const dispatchSwipe = async (deltaX, id) => {
+        const frameBox = await inspect.locator('.lightbox-inspect-frame').boundingBox();
+        if (!frameBox) throw new Error('Mobile Inspector frame has no swipe geometry.');
+        const startX = frameBox.x + frameBox.width / 2;
+        const startY = frameBox.y + frameBox.height / 2;
+        await swipeSession.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ id, x: startX, y: startY, radiusX: 2, radiusY: 2, force: 1 }]
+        });
+        await page.waitForTimeout(40);
+        await swipeSession.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ id, x: startX + deltaX, y: startY, radiusX: 2, radiusY: 2, force: 1 }]
+        });
+        await page.waitForTimeout(40);
+        await swipeSession.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      };
+      const waitForMobileCaption = caption => page.waitForFunction(expected =>
+        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-description')?.textContent?.trim() === expected,
+      caption, { timeout: 2500 });
+      const waitForMobileInspectorMotion = () => page.waitForFunction(() => {
+        const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
+        return frame && Array.from(frame.getAnimations()).every(animation => animation.playState !== 'running');
+      }, null, { timeout: 2000 });
+      await dispatchSwipe(-96, 71);
+      await waitForMobileCaption(captions[1]);
+      await dispatchSwipe(96, 72);
+      await waitForMobileCaption(captions[0]);
+      await waitForMobileInspectorMotion();
+      await dispatchSwipe(96, 73);
+      await page.waitForFunction(() => Array.from(
+        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
+      ).some(animation => animation.playState === 'running' &&
+        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await waitForMobileCaption(captions[0]);
+      for (let index = 1; index < captions.length; index += 1) {
+        await dispatchSwipe(-96, 80 + index);
+        await waitForMobileCaption(captions[index]);
+      }
+      await waitForMobileInspectorMotion();
+      await dispatchSwipe(-96, 90);
+      await page.waitForFunction(() => Array.from(
+        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
+      ).some(animation => animation.playState === 'running' &&
+        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await waitForMobileCaption(captions[captions.length - 1]);
+      await swipeSession.detach();
+      await inspect.locator('.lightbox-inspect-back').click();
+      await inspect.waitFor({ state: 'detached', timeout: 2000 });
+      await page.locator('#lightboxClose').first().click();
+      await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
+    }, { width: 390, height: 844 });
 
     await smokePage(browser, '/', async page => {
       await page.waitForFunction(() => {
