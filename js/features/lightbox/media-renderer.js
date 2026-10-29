@@ -2804,8 +2804,16 @@ export function createLightboxMediaRenderer({
       activeInspector=null;
       active.overlay.removeEventListener('click',active.onBackdropClick);
       active.overlay.removeEventListener('keydown',active.onKeyDown);
+      active.overlay.removeEventListener('pointerdown',active.onInspectPointerDown);
+      active.overlay.removeEventListener('pointermove',active.onInspectPointerMove);
+      active.overlay.removeEventListener('pointerup',active.onInspectPointerUp);
+      active.overlay.removeEventListener('pointercancel',active.onInspectPointerCancel);
+      active.previousButton?.removeEventListener('click',active.onPreviousClick);
+      active.nextButton?.removeEventListener('click',active.onNextClick);
       try{active.openAnimation?.cancel?.();}catch(_){}
       try{active.overlayAnimation?.cancel?.();}catch(_){}
+      try{active.navigationAnimation?.cancel?.();}catch(_){}
+      try{active.edgeAnimation?.cancel?.();}catch(_){}
       if(active.placeholder?.parentNode)active.placeholder.replaceWith(active.entry);
       if(active.foilHintPlaceholder?.parentNode&&active.foilHint)active.foilHintPlaceholder.replaceWith(active.foilHint);
       active.overlay.remove();
