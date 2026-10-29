@@ -5405,7 +5405,7 @@ try {
         throw new Error('Mobile Inspector must hide both chevrons and retain the existing Back control.');
       }
       const swipeSession = await page.context().newCDPSession(page);
-      const dispatchSwipe = async (deltaX, id) => {
+      const dispatchSwipe = async (deltaX, id, deltaY = 0) => {
         const frameBox = await inspect.locator('.lightbox-inspect-frame').boundingBox();
         if (!frameBox) throw new Error('Mobile Inspector frame has no swipe geometry.');
         const startX = frameBox.x + frameBox.width / 2;
@@ -5417,7 +5417,7 @@ try {
         await page.waitForTimeout(40);
         await swipeSession.send('Input.dispatchTouchEvent', {
           type: 'touchMove',
-          touchPoints: [{ id, x: startX + deltaX, y: startY, radiusX: 2, radiusY: 2, force: 1 }]
+          touchPoints: [{ id, x: startX + deltaX, y: startY + deltaY, radiusX: 2, radiusY: 2, force: 1 }]
         });
         await page.waitForTimeout(40);
         await swipeSession.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
@@ -5425,6 +5425,9 @@ try {
       const waitForMobileCaption = caption => page.waitForFunction(expected =>
         document.querySelector('.lightbox-inspect-mode .lightbox-inspect-description')?.textContent?.trim() === expected,
       caption, { timeout: 2500 });
+      // A vertical gesture must not be mistaken for an artwork-advance swipe.
+      await dispatchSwipe(0, 70, 96);
+      await waitForMobileCaption(captions[0]);
       const waitForMobileInspectorMotion = () => page.waitForFunction(() => {
         const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
         return frame && Array.from(frame.getAnimations()).every(animation => animation.playState !== 'running');
