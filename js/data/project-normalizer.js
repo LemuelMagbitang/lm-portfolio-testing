@@ -15,6 +15,11 @@ function normalizeArtworkGroupColor(value) {
   const color = normalizeString(value);
   return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : DEFAULT_ARTWORK_GROUP_COLOR;
 }
+function normalizeArtworkGridColumns(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return 3;
+  const columns = Number(value);
+  return Number.isFinite(columns) ? Math.min(5, Math.max(2, Math.round(columns))) : 3;
+}
 function normalizeMediaGroups(groups) {
   if (!Array.isArray(groups)) return [];
   const seen = new Set();
@@ -25,7 +30,12 @@ function normalizeMediaGroups(groups) {
     seen.add(id);
     const name = normalizeString(group.name) || id;
     const layout = normalizeString(group.layout).toLowerCase();
-    return {id,name,layout:ARTWORK_GROUP_LAYOUTS.has(layout)?layout:'grid',color:normalizeArtworkGroupColor(group.color)};
+    return {
+      id,name,
+      layout:ARTWORK_GROUP_LAYOUTS.has(layout)?layout:'grid',
+      gridColumns:normalizeArtworkGridColumns(group.gridColumns),
+      color:normalizeArtworkGroupColor(group.color)
+    };
   }).filter(Boolean);
 }
 

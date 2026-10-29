@@ -1747,6 +1747,7 @@ function validateResponsiveUiContracts() {
   const artworkGroupCss = fs.readFileSync(path.join(ROOT, 'css/features/lightbox.css'), 'utf8');
   const artworkGroupRuntime = fs.readFileSync(path.join(ROOT, 'js/features/lightbox/media-renderer.js'), 'utf8');
   const artworkGroupAdmin = fs.readFileSync(path.join(ROOT, 'admin/admin.js'), 'utf8');
+  const artworkGroupNormalizer = fs.readFileSync(path.join(ROOT, 'js/data/project-normalizer.js'), 'utf8');
   const groupedLayoutContract = artworkGroupLayoutModes.every(mode =>
     artworkGroupCss.includes(`data-artwork-effective-layout="${mode}"`) &&
     artworkGroupRuntime.includes("'"+mode+"'") &&
@@ -1763,7 +1764,8 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('clamp(324px,57svh,480px)') &&
     artworkGroupRuntime.includes("section.style.setProperty('--artwork-grid-columns', String(gridColumns))") &&
     artworkGroupAdmin.includes('data-edit-grid-columns') &&
-    artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)');
+    artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)') &&
+    artworkGroupNormalizer.includes('gridColumns:normalizeArtworkGridColumns(group.gridColumns)');
   if (!independentGridStackContract) {
     err('Artwork groups: Grid/Tiling must expose 2–5 configurable desktop columns and two mobile columns, while Horizontal Stack must use wrapping flex rows and the expanded size envelope.');
   }

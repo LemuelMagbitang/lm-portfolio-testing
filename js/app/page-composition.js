@@ -120,7 +120,7 @@ export async function createPortfolioApp({
   // Load their public APIs in parallel on Works; About keeps the shared app
   // shell but skips the project card/media implementation entirely.
   const projectsModulePromise = hasProjectGallery
-    ? import('../features/projects/index.js?v=20261028-07')
+    ? import('../features/projects/index.js?v=20261029-01')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
     ? import('../features/gallery/index.js?v=20261027-01').catch(error => {
@@ -170,7 +170,7 @@ export async function createPortfolioApp({
       ? settingsPromise.then(settingsFeature => settingsFeature.getState()?.heroTiming?.loopMode !== 'manual')
       : Promise.resolve(hasProjectArtworkFeature));
   const projectNormalizerModulePromise = projectModelsRequiredPromise.then(shouldLoadProjectModels =>
-    shouldLoadProjectModels ? import('../data/project-normalizer.js?v=20261028-01') : null
+    shouldLoadProjectModels ? import('../data/project-normalizer.js?v=20261029-01') : null
   );
   const mainProjectsPayloadPromise = projectModelsRequiredPromise.then(shouldLoadProjectModels =>
     shouldLoadProjectModels && config.urls.projects

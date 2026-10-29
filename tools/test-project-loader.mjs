@@ -4,7 +4,7 @@ import {
   getProjects,
   getCardForProject,
   destroyProjects
-} from '../js/features/projects/project-loader.js?v=20261028-01';
+} from '../js/features/projects/project-loader.js?v=20261029-01';
 
 function createHarness(initialChildren = []) {
   const grid = {

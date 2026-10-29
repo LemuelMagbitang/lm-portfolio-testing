@@ -3,13 +3,18 @@ import {
   normalizeProject,
   normalizeProjectMedia,
   normalizeProjects
-} from '../js/data/project-normalizer.js?v=20261028-01';
+} from '../js/data/project-normalizer.js?v=20261029-01';
 
 const project = normalizeProject({
   id: '  demo-project  ',
   title: '  Demo Project  ',
   subtitle: 42,
   filters: ['3d', '3d', '', ' motion '],
+  mediaGroups: [
+    { id:'grid-five', name:'Grid Five', layout:'grid', gridColumns:5, color:'#123456' },
+    { id:'stack-two', name:'Stack Two', layout:'stack', gridColumns:2, color:'#ABCDEF' },
+    { id:'grid-default', name:'Grid Default', layout:'grid', color:'#849573' }
+  ],
   thumbnail: {
     type: 'MODEL',
     src: ' media/demo.glb ',
@@ -34,6 +39,11 @@ assert.deepEqual(project, {
   badge: '',
   badges: [],
   filters: ['3d', 'motion'],
+  mediaGroups: [
+    { id:'grid-five', name:'Grid Five', layout:'grid', gridColumns:5, color:'#123456' },
+    { id:'stack-two', name:'Stack Two', layout:'stack', gridColumns:2, color:'#abcdef' },
+    { id:'grid-default', name:'Grid Default', layout:'grid', gridColumns:3, color:'#849573' }
+  ],
   thumbnail: {
     src: 'media/demo.glb',
     type: 'model',
