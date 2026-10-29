@@ -124,8 +124,10 @@ jobs:
           node --check admin/admin.js
           node --check admin/videos.js
 
-      - name: Syntax-check smoke test
-        run: node --check tools/smoke-browser.mjs
+      - name: Syntax-check browser smoke tests
+        run: |
+          node --check tools/smoke-browser.mjs
+          node --check tools/smoke-design-system.mjs
 
       - name: Browser smoke test
         run: |
@@ -133,3 +135,4 @@ jobs:
           npm install --no-save --ignore-scripts playwright@1.63.0 axe-core@4.14.0
           npx playwright install --with-deps chromium
           node tools/smoke-browser.mjs
+          node tools/smoke-design-system.mjs
