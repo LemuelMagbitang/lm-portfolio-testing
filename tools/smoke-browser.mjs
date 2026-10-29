@@ -5398,6 +5398,13 @@ try {
       await entries.first().click({ force: true });
       const inspect = page.locator('.lightbox-inspect-mode');
       await inspect.waitFor({ state: 'visible', timeout: 2000 });
+      const scrollLock = await page.evaluate(() => ({
+        html: document.documentElement.classList.contains('lm-artwork-inspect-open'),
+        body: document.body.classList.contains('lm-artwork-inspect-open')
+      }));
+      if (!scrollLock.html || !scrollLock.body) {
+        throw new Error('Mobile Inspector must lock the page behind its horizontal-swipe surface: ' + JSON.stringify(scrollLock));
+      }
       const previous = inspect.locator('.lightbox-inspect-prev');
       const next = inspect.locator('.lightbox-inspect-next');
       if (await previous.isVisible() || await next.isVisible() ||
@@ -5457,6 +5464,9 @@ try {
       await swipeSession.detach();
       await inspect.locator('.lightbox-inspect-back').click();
       await inspect.waitFor({ state: 'detached', timeout: 2000 });
+      await page.waitForFunction(() =>
+        !document.documentElement.classList.contains('lm-artwork-inspect-open') &&
+        !document.body.classList.contains('lm-artwork-inspect-open'), null, { timeout: 2000 });
       await page.locator('#lightboxClose').first().click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
     }, { width: 390, height: 844 });
