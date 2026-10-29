@@ -3755,6 +3755,42 @@ try {
       await assertContentRevealReducedMotion(page, 'About', '#softwareSkillsList > li:nth-child(5)');
     }, { width: 1440, height: 900 });
 
+    // Desktop axe coverage can miss issues introduced by the mobile layout and
+    // the full-screen navigation overlay. Check both page states at a phone width.
+    await smokePage(browser, '/', async page => {
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 6000 });
+      await assertAxeAccessibility(page, 'Works mobile initial view');
+      await page.locator('.hamburger').first().click();
+      await page.waitForFunction(() => {
+        const menu = document.querySelector('.nav-links');
+        const button = document.querySelector('.hamburger');
+        return menu?.classList.contains('active') && menu.classList.contains('is-open') &&
+          document.body.classList.contains('menu-open') && button?.getAttribute('aria-expanded') === 'true';
+      }, null, { timeout: 2000 });
+      await page.waitForTimeout(320);
+      await assertAxeAccessibility(page, 'Works mobile open navigation');
+    }, { width: 390, height: 844 });
+
+    await smokePage(browser, '/about/', async page => {
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 6000 });
+      await assertAxeAccessibility(page, 'About mobile initial view');
+      await page.locator('.hamburger').first().click();
+      await page.waitForFunction(() => {
+        const menu = document.querySelector('.nav-links');
+        const button = document.querySelector('.hamburger');
+        return menu?.classList.contains('active') && menu.classList.contains('is-open') &&
+          document.body.classList.contains('menu-open') && button?.getAttribute('aria-expanded') === 'true';
+      }, null, { timeout: 2000 });
+      await page.waitForTimeout(320);
+      await assertAxeAccessibility(page, 'About mobile open navigation');
+    }, { width: 390, height: 844 });
+
     await smokePage(browser, '/admin/', async page => {
       await assertAxeAccessibility(page, 'CMS sign-in view');
     }, { width: 1280, height: 900 });
