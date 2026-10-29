@@ -8515,6 +8515,7 @@ try {
 
     await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      await shortsCard.waitFor({ state: 'visible', timeout: 8000 });
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts desktop smoke fixture card is missing.');
 
       await shortsCard.click();
@@ -8575,6 +8576,7 @@ try {
     }, { width: 1280, height: 900 });
     await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      await shortsCard.waitFor({ state: 'visible', timeout: 8000 });
       if (await shortsCard.count() !== 1) throw new Error('Friends Gacha Shorts smoke fixture card is missing.');
 
       await shortsCard.click();
@@ -8621,6 +8623,7 @@ try {
     // This catches regressions where a viewport-height cap quietly shrinks Shorts.
     await smokePage(browser, '/', async page => {
       const shortsCard = page.locator('#portfolioGrid .project-card[data-project-id="friends-gacha"]').first();
+      await shortsCard.waitFor({ state: 'visible', timeout: 8000 });
       if (await shortsCard.count() !== 1) throw new Error('Short-phone Shorts fixture card is missing.');
 
       await shortsCard.click();
@@ -8783,7 +8786,10 @@ try {
       await page.evaluate(() => {
         const contact = document.querySelector('#contact-section');
         if (!contact) throw new Error('Contact logo smoke fixture could not find #contact-section.');
-        window.scrollTo(0, contact.getBoundingClientRect().top + window.scrollY + 80);
+        window.scrollTo({
+          top: contact.getBoundingClientRect().top + window.scrollY + 80,
+          behavior: 'instant'
+        });
       });
       await page.waitForFunction(() => {
         const logo = document.querySelector('.site-logo');
@@ -8793,7 +8799,7 @@ try {
         const y = logoRect ? logoRect.top + logoRect.height / 2 : -1;
         return !!contact && !!logo && logo.dataset.logoForeground === 'light' &&
           y >= contact.top && y <= contact.bottom;
-      }, null, { timeout: 4000 });
+      }, null, { timeout: 8000 });
       const contactLogoState = await page.evaluate(() => {
         const logo = document.querySelector('.site-logo');
         return { foreground: logo?.dataset?.logoForeground,
