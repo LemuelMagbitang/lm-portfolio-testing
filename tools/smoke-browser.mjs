@@ -3748,6 +3748,10 @@ try {
         duration: '460ms',
         delay: '128ms'
       });
+      await assertContentRevealTarget(page, 'About multimedia column timing', '#multimediaSkillsList > li:nth-child(1)', {
+        duration: '460ms',
+        delay: '0ms'
+      });
       await assertContentRevealReducedMotion(page, 'About', '#softwareSkillsList > li:nth-child(5)');
     }, { width: 1440, height: 900 });
 
