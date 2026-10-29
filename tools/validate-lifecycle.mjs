@@ -81,7 +81,8 @@ assert.match(pageCompositionSource, /const startupDependencies = isAboutPage\s*\
 assert.match(pageCompositionSource, /const settleInBackground = \(promise, assign, dispose, label\) => \{[\s\S]*?if \(deferredMediaDestroyed\) \{[\s\S]*?dispose\?\.\(feature\);[\s\S]*?assign\(feature\);[\s\S]*?\}/);
 assert.match(pageCompositionSource, /settleInBackground\(heroPromise,/);
 assert.match(pageCompositionSource, /settleInBackground\(footerPromise,/);
-assert.match(pageCompositionSource, /galleryFeature = await galleryPromise;\s*\} else \{\s*\[heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature\] = await Promise\.all\(/);
+assert.match(pageCompositionSource, /settleInBackground\([\s\S]*?galleryPromise,[\s\S]*?galleryFeature = feature;[\s\S]*?galleryFeatureRef = feature;[\s\S]*?feature => feature\?\.destroy\?\.\(\),[\s\S]*?'Gallery'\s*\);/);
+assert.match(pageCompositionSource, /\} else \{\s*\[heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature\] = await Promise\.all\(/);
 assert.match(pageCompositionSource, /visibleReviewsPromise/);
 assert.doesNotMatch(pageCompositionSource, /projectLottiePlayerPreloadPromise/);
 assert.doesNotMatch(pageCompositionSource, /LOTTIE_PLAYER_STARTUP_WAIT_MS/);

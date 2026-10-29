@@ -508,7 +508,17 @@ export async function createPortfolioApp({
       feature => feature?.cleanup?.(),
       'About'
     );
-    galleryFeature = await galleryPromise;
+    // Curated View URL resolution is not required for About's static first paint.
+    // Let it settle independently, but keep the late assignment and teardown path.
+    settleInBackground(
+      galleryPromise,
+      feature => {
+        galleryFeature = feature;
+        galleryFeatureRef = feature;
+      },
+      feature => feature?.destroy?.(),
+      'Gallery'
+    );
   } else {
     [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
       heroPromise,
@@ -566,7 +576,8 @@ export async function createPortfolioApp({
   // renders text and visible fallback frames from CMS data; never keep the
   // first-paint transition open while optional images load from local or remote
   // sources. The warm-up continues in the background below.
-  await projectMediaPreloadPromise;
+  if (!isAboutPage) await projectMediaPreloadPromise;
+  else void projectMediaPreloadPromise;
 
   // About-page prefetching and image/logo warm-up are non-critical navigation
   // optimizations. Run them in the background so they cannot delay the initial
