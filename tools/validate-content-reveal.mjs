@@ -80,9 +80,25 @@ const makeTarget = id => {
 };
 const bioHeading = makeTarget('bio-heading');
 const bioCopy = makeTarget('bio-copy');
+const skillHeadingA = makeTarget('skill-heading-a');
+const skillHeadingB = makeTarget('skill-heading-b');
+const skillItemA = makeTarget('skill-item-a');
+const skillItemB = makeTarget('skill-item-b');
+const resumeHeadingA = makeTarget('resume-heading-a');
+const resumeHeadingB = makeTarget('resume-heading-b');
+const experienceA = makeTarget('experience-a');
+const experienceB = makeTarget('experience-b');
+const educationA = makeTarget('education-a');
+const awardsA = makeTarget('awards-a');
 const filterRail = makeTarget('filter-rail');
 const reviewHeading = makeTarget('review-heading');
 selectorTargets.set('.about-hero .about-bio-text > *', [bioHeading, bioCopy]);
+selectorTargets.set('.about-page main .resume-skills-row > .resume-block > h3', [skillHeadingA, skillHeadingB]);
+selectorTargets.set('.about-page main .resume-skills-row .skill-list > li', [skillItemA, skillItemB]);
+selectorTargets.set('.about-page main .resume-main > .resume-block > h3', [resumeHeadingA, resumeHeadingB]);
+selectorTargets.set('#experienceList > *', [experienceA, experienceB]);
+selectorTargets.set('#educationList > *', [educationA]);
+selectorTargets.set('#awardsList > *', [awardsA]);
 selectorTargets.set('main.works-main > .filter-nav-wrapper', [filterRail]);
 selectorTargets.set(
   '#contact-section #web3-forms-container > .contact-block > h2',
@@ -117,17 +133,28 @@ const root = {
   querySelectorAll(selector) { return selectorTargets.get(selector) || []; }
 };
 const feature = initContentReveal({ root, windowRef });
-assert.equal(feature.refresh(), 4, 'The first explicit refresh must attach selected text and section targets.');
+assert.equal(feature.refresh(), 15, 'The first explicit refresh must attach About and Works reveal targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
-assert.equal(observer.observed.size, 4);
+assert.equal(observer.observed.size, 15);
 assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers to an existing target.');
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
 assert.equal(bioCopy.properties.get('--lm-content-reveal-delay'), '48ms');
 assert.equal(bioHeading.properties.get('--lm-content-reveal-distance'), '24px');
 assert.equal(bioHeading.properties.get('--lm-content-reveal-duration'), '560ms');
+assert.equal(skillHeadingA.properties.get('--lm-content-reveal-delay'), '0ms');
+assert.equal(skillHeadingB.properties.get('--lm-content-reveal-delay'), '44ms');
+assert.equal(skillItemA.properties.get('--lm-content-reveal-duration'), '460ms');
+assert.equal(skillItemA.properties.get('--lm-content-reveal-delay'), '0ms');
+assert.equal(skillItemB.properties.get('--lm-content-reveal-delay'), '32ms');
+assert.equal(experienceA.properties.get('--lm-content-reveal-delay'), '0ms');
+assert.equal(experienceB.properties.get('--lm-content-reveal-delay'), '30ms');
+assert.equal(educationA.properties.get('--lm-content-reveal-delay'), '0ms',
+  'Each About timeline section must restart its own stagger.');
+assert.equal(awardsA.properties.get('--lm-content-reveal-delay'), '0ms',
+  'Award entries must not inherit delay from earlier resume sections.');
 assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '18px',
   'Untuned targets must retain the existing short movement distance.');
 assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '480ms',
@@ -154,7 +181,7 @@ assert.ok(filterRail.classes.has('is-lm-content-revealed'));
 assert.ok(observer.disconnected);
 
 feature.destroy();
-for (const target of [bioHeading, bioCopy, filterRail, reviewHeading]) {
+for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, filterRail, reviewHeading]) {
   assert.ok(!target.classes.has('lm-content-reveal-target'));
   assert.ok(!target.classes.has('is-lm-content-revealed'));
   assert.equal(target.dataset.lmContentRevealState, undefined);
