@@ -72,7 +72,6 @@ function jsonResponse(status, body) {
 }
 
 async function main() {
-  const server = startServer();
   let browser;
   try {
     await waitForServer(`${BASE_URL}/admin/`);
