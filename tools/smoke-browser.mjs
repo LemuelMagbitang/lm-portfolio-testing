@@ -4719,14 +4719,7 @@ try {
         const nextFrame = () => new Promise(resolve =>
           requestAnimationFrame(() => requestAnimationFrame(resolve))
         );
-        try {
-          flip.style.transition = 'none';
-          el.style.setProperty('--holo-rx', '11deg');
-          el.style.setProperty('--holo-ry', '-14deg');
-          el.style.setProperty('--holo-rotation', '5deg');
-          el.style.setProperty('--holo-shift-x', '18px');
-          el.style.setProperty('--holo-shift-y', '-11px');
-
+        const measureBothFlipStates = async () => {
           el.classList.remove('is-flipped');
           getComputedStyle(flip).transform;
           await nextFrame();
@@ -4737,6 +4730,26 @@ try {
           await nextFrame();
           const flipped = measureFaces();
           return { unflipped, flipped };
+        };
+        try {
+          flip.style.transition = 'none';
+          el.style.setProperty('--holo-shift-x', '18px');
+          el.style.setProperty('--holo-shift-y', '-11px');
+
+          // Flat pose: verify absolute centering in the surface slot.
+          el.style.setProperty('--holo-rx', '0deg');
+          el.style.setProperty('--holo-ry', '0deg');
+          el.style.setProperty('--holo-rotation', '0deg');
+          const flat = await measureBothFlipStates();
+
+          // Perspective tilt can move an axis-aligned child bounding box relative
+          // to its parent even when both face planes share the same transform origin.
+          // Under tilt, assert front/back alignment and stable pair centering across flips.
+          el.style.setProperty('--holo-rx', '11deg');
+          el.style.setProperty('--holo-ry', '-14deg');
+          el.style.setProperty('--holo-rotation', '5deg');
+          const tilted = await measureBothFlipStates();
+          return { flat, tilted };
         } finally {
           if (wasFlipped) el.classList.add('is-flipped');
           else el.classList.remove('is-flipped');
@@ -4747,18 +4760,48 @@ try {
           }
         }
       });
-      const faceAlignmentOffsets = [
-        faceAlignment.unflipped?.front,
-        faceAlignment.unflipped?.back,
-        faceAlignment.flipped?.front,
-        faceAlignment.flipped?.back
+      const flatOffsets = [
+        faceAlignment.flat?.unflipped?.front,
+        faceAlignment.flat?.unflipped?.back,
+        faceAlignment.flat?.flipped?.front,
+        faceAlignment.flat?.flipped?.back
       ];
+      const tiltedStates = [
+        faceAlignment.tilted?.unflipped,
+        faceAlignment.tilted?.flipped
+      ];
+      const tiltedFaceMisalignment = tiltedStates.map(state => {
+        const front = state?.front;
+        const back = state?.back;
+        return front && back
+          ? { x: front.x - back.x, y: front.y - back.y }
+          : null;
+      });
+      const tiltedPairCenters = tiltedStates.map(state => {
+        const front = state?.front;
+        const back = state?.back;
+        return front && back
+          ? { x: (front.x + back.x) / 2, y: (front.y + back.y) / 2 }
+          : null;
+      });
+      const tiltedPairDrift = tiltedPairCenters[0] && tiltedPairCenters[1]
+        ? {
+            x: tiltedPairCenters[1].x - tiltedPairCenters[0].x,
+            y: tiltedPairCenters[1].y - tiltedPairCenters[0].y
+          }
+        : null;
       if (faceAlignment.missingFace ||
-          faceAlignmentOffsets.some(offset =>
+          flatOffsets.some(offset =>
             !offset || Math.abs(offset.x) > 1.5 || Math.abs(offset.y) > 1.5
-          )) {
-        throw new Error('Holographic front and back artwork faces must stay centered under parallax in both flip states: ' +
-          JSON.stringify(faceAlignment));
+          ) ||
+          tiltedFaceMisalignment.some(offset =>
+            !offset || Math.abs(offset.x) > 1.5 || Math.abs(offset.y) > 1.5
+          ) ||
+          !tiltedPairDrift ||
+          Math.abs(tiltedPairDrift.x) > 1.5 ||
+          Math.abs(tiltedPairDrift.y) > 1.5) {
+        throw new Error('Holographic front/back faces must align in flat and tilted poses, with stable centering through flips: ' +
+          JSON.stringify({ faceAlignment, tiltedFaceMisalignment, tiltedPairDrift }));
       }
 
       const targetGroupIndex = groupBeforeInspect.children.findIndex(child => child.caption === 'Smooth Prism Foil');
