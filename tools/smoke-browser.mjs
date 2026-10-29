@@ -4694,8 +4694,8 @@ try {
         await page.setViewportSize(originalViewport || { width:1280, height:900 });
         await page.waitForTimeout(160);
       }
-      // Force an asymmetric parallax offset and verify that both face planes
-      // remain centered in normal and flipped states.
+      // Force a tilted pose and asymmetric parallax offset; both face planes
+      // must remain centered in normal and flipped states.
       const faceAlignment = await funkoHolo.evaluate(async el => {
         const front = el.querySelector('.lightbox-holographic-face.lightbox-holographic-front');
         const back = el.querySelector('.lightbox-holographic-face.lightbox-holographic-back');
@@ -4721,9 +4721,9 @@ try {
         );
         try {
           flip.style.transition = 'none';
-          el.style.setProperty('--holo-rx', '0deg');
-          el.style.setProperty('--holo-ry', '0deg');
-          el.style.setProperty('--holo-rotation', '0deg');
+          el.style.setProperty('--holo-rx', '11deg');
+          el.style.setProperty('--holo-ry', '-14deg');
+          el.style.setProperty('--holo-rotation', '5deg');
           el.style.setProperty('--holo-shift-x', '18px');
           el.style.setProperty('--holo-shift-y', '-11px');
 
