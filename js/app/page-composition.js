@@ -129,7 +129,7 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(null);
   const lightboxModulePromise = hasProjectGallery
-    ? import('../features/lightbox/index.js?v=20261029-07').catch(error => {
+    ? import('../features/lightbox/index.js?v=20261029-10').catch(error => {
         console.warn('Lightbox module failed to load:', error);
         return null;
       })
