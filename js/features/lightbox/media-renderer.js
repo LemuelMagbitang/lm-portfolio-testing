@@ -663,9 +663,9 @@ export function createLightboxMediaRenderer({
       }
     });
 
-    // Keep the 3D viewer module in the startup-critical tier too. The Works
-    // document also modulepreloads it, so this closes the remaining race where
-    // the first 3D open beats the module graph.
+    // Keep the 3D viewer module in the startup-critical tier only when model
+    // media exists. The composition root supplies the loader for model-enabled
+    // Projects; a global modulepreload is intentionally omitted otherwise.
     if (hasModel && typeof preloadModelModule === 'function') {
       scheduleJob(
         'viewer-module',
