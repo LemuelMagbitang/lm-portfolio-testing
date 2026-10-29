@@ -67,6 +67,9 @@ jobs:
       - name: Validate architecture boundaries
         run: node tools/validate-architecture.mjs
 
+      - name: Test content reveal lifecycle and timing
+        run: node tools/validate-content-reveal.mjs
+
       - name: Validate project data contract
         run: node tools/validate-project-contract.mjs
 
