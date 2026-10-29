@@ -10178,8 +10178,15 @@ try {
           JSON.stringify(unexpectedFeatureModules));
       }
       const projectDataRequestCount = loadedPaths.filter(path => path === '/data/projects.json').length;
-      if (projectDataRequestCount > 1) {
-        throw new Error('About Hero/Footer should share one projects.json request; observed ' +
+      const configuredHeroLoopMode = JSON.parse(
+        readFileSync(new URL('../data/settings.json', import.meta.url), 'utf8')
+      ).heroTiming?.loopMode || 'latest';
+      if (configuredHeroLoopMode === 'manual' && projectDataRequestCount > 0) {
+        throw new Error('About manual Hero/Footer mode must not request the unused Projects feed; observed ' +
+          projectDataRequestCount + ' request(s).');
+      }
+      if (configuredHeroLoopMode !== 'manual' && projectDataRequestCount > 1) {
+        throw new Error('About Hero/Footer should share one projects.json request in latest/mixed mode; observed ' +
           projectDataRequestCount + ' requests.');
       }
       const aboutDataRequestCount = loadedPaths.filter(path => path === '/data/about.json').length;
