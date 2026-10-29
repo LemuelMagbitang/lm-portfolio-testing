@@ -12399,6 +12399,11 @@ try {
     await smokePage(browser, '/?reduced-motion-thumbnail=1', async page => {
       await page.locator('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video')
         .waitFor({ state: 'attached', timeout: 6000 });
+      await page.waitForFunction(() => {
+        const transition = document.querySelector('#pageTransition');
+        return transition?.dataset.loading === 'ready' &&
+          transition.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 7000 });
       const reducedHeroState = await page.evaluate(() => {
         const media = document.querySelector('#heroBanner .slide.active video, #heroBanner .slide.active mux-player, #heroBanner .slide.active mux-video');
         const transition = document.querySelector('#pageTransition');
