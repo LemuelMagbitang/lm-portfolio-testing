@@ -20,7 +20,8 @@ assert.match(revealSource, /target\.matches\?\.\('\.form-container, a, button, i
 assert.match(revealCss, /data-lm-content-reveal-motion="position-only"[^}]*opacity:\s*1;/,
   'Form-containing reveal targets must never fade their controls to opacity zero.');
 const revealGroupsSource = revealSource.match(/const REVEAL_TARGET_GROUPS = \[([\s\S]*?)\n\];/)?.[1] || '';
-assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
+assert.match(revealGroupsSource, /#softwareSkillsList > \*/);
+assert.match(revealGroupsSource, /#multimediaSkillsList > \*/);
 assert.match(revealGroupsSource, /#experienceList > \*/);
 assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
@@ -84,6 +85,8 @@ const skillHeadingA = makeTarget('skill-heading-a');
 const skillHeadingB = makeTarget('skill-heading-b');
 const skillItemA = makeTarget('skill-item-a');
 const skillItemB = makeTarget('skill-item-b');
+const skillItemC = makeTarget('multimedia-skill-item-a');
+const skillItemD = makeTarget('multimedia-skill-item-b');
 const resumeHeadingA = makeTarget('resume-heading-a');
 const resumeHeadingB = makeTarget('resume-heading-b');
 const experienceA = makeTarget('experience-a');
@@ -94,7 +97,8 @@ const filterRail = makeTarget('filter-rail');
 const reviewHeading = makeTarget('review-heading');
 selectorTargets.set('.about-hero .about-bio-text > *', [bioHeading, bioCopy]);
 selectorTargets.set('.about-page main .resume-skills-row > .resume-block > h3', [skillHeadingA, skillHeadingB]);
-selectorTargets.set('.about-page main .resume-skills-row .skill-list > li', [skillItemA, skillItemB]);
+selectorTargets.set('#softwareSkillsList > li', [skillItemA, skillItemB]);
+selectorTargets.set('#multimediaSkillsList > li', [skillItemC, skillItemD]);
 selectorTargets.set('.about-page main .resume-main > .resume-block > h3', [resumeHeadingA, resumeHeadingB]);
 selectorTargets.set('#experienceList > *', [experienceA, experienceB]);
 selectorTargets.set('#educationList > *', [educationA]);
@@ -133,11 +137,11 @@ const root = {
   querySelectorAll(selector) { return selectorTargets.get(selector) || []; }
 };
 const feature = initContentReveal({ root, windowRef });
-assert.equal(feature.refresh(), 14, 'The first explicit refresh must attach About and Works reveal targets.');
+assert.equal(feature.refresh(), 16, 'The first explicit refresh must attach About and Works reveal targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
-assert.equal(observer.observed.size, 14);
+assert.equal(observer.observed.size, 16);
 assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers to an existing target.');
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
@@ -149,6 +153,9 @@ assert.equal(skillHeadingB.properties.get('--lm-content-reveal-delay'), '44ms');
 assert.equal(skillItemA.properties.get('--lm-content-reveal-duration'), '460ms');
 assert.equal(skillItemA.properties.get('--lm-content-reveal-delay'), '0ms');
 assert.equal(skillItemB.properties.get('--lm-content-reveal-delay'), '32ms');
+assert.equal(skillItemC.properties.get('--lm-content-reveal-delay'), '0ms');
+assert.equal(skillItemD.properties.get('--lm-content-reveal-delay'), '32ms',
+  'The Multimedia Skills column must restart its own stagger instead of inheriting the Software Skills delay.');
 assert.equal(experienceA.properties.get('--lm-content-reveal-delay'), '0ms');
 assert.equal(experienceB.properties.get('--lm-content-reveal-delay'), '30ms');
 assert.equal(educationA.properties.get('--lm-content-reveal-delay'), '0ms',
@@ -181,7 +188,7 @@ assert.ok(filterRail.classes.has('is-lm-content-revealed'));
 assert.ok(observer.disconnected);
 
 feature.destroy();
-for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, filterRail, reviewHeading]) {
+for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, skillItemC, skillItemD, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, filterRail, reviewHeading]) {
   assert.ok(!target.classes.has('lm-content-reveal-target'));
   assert.ok(!target.classes.has('is-lm-content-revealed'));
   assert.equal(target.dataset.lmContentRevealState, undefined);
