@@ -416,11 +416,11 @@ const groupedProject = normalizeProject({
   ]
 });
 assert.deepEqual(groupedProject.mediaGroups,[
-  {id:'studies',name:'Studies',layout:'grid',color:'#b6d2a7'},
-  {id:'legacy',name:'Legacy group',layout:'stack',color:'#849573'},
-  {id:'card-stack',name:'Card stack',layout:'cards',color:'#849573'},
-  {id:'sticker-set',name:'Sticker set',layout:'sticker',color:'#849573'}
-], 'Group colors must persist and legacy groups must receive a stable color.');
+  {id:'studies',name:'Studies',layout:'grid',gridColumns:3,color:'#b6d2a7'},
+  {id:'legacy',name:'Legacy group',layout:'stack',gridColumns:3,color:'#849573'},
+  {id:'card-stack',name:'Card stack',layout:'cards',gridColumns:3,color:'#849573'},
+  {id:'sticker-set',name:'Sticker set',layout:'sticker',gridColumns:3,color:'#849573'}
+], 'Group colors and Grid column defaults must persist, including for legacy groups.');
 assert.equal(groupedProject.media[0].groupId,'studies',
   'Artwork membership must survive normalization.');
 assert.equal(groupedProject.media[1].groupId,undefined,
