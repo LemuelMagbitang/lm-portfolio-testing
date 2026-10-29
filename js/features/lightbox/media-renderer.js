@@ -2956,6 +2956,19 @@ export function createLightboxMediaRenderer({
       const dy=(Number(event.clientY)||0)-start.y;
       if(Math.abs(dx)<52||Math.abs(dx)<=Math.abs(dy)*1.25)return;
       event.preventDefault();
+      const swipedEntry=activeInspector?.entry;
+      if(swipedEntry){
+        const suppressSwipeClick=clickEvent=>{
+          documentRef.removeEventListener('click',suppressSwipeClick,true);
+          if(clickEvent.detail>0&&swipedEntry.contains?.(clickEvent.target)){
+            clickEvent.preventDefault();
+            clickEvent.stopPropagation();
+            clickEvent.stopImmediatePropagation();
+          }
+        };
+        documentRef.addEventListener('click',suppressSwipeClick,true);
+        windowRef?.setTimeout?.(()=>documentRef.removeEventListener('click',suppressSwipeClick,true),0);
+      }
       navigateArtworkInspect(dx<0?1:-1);
     };
     const onInspectPointerCancel=event=>{
