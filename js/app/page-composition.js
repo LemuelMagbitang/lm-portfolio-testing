@@ -307,15 +307,13 @@ export async function createPortfolioApp({
 
   const forms = initForms({ root });
 
-  // Settings and project data are the minimum dependencies needed to
-  // start media warm-up. Reviews/About/Gallery/Hero continue in parallel so
-  // the branded loading screen can overlap their work instead of putting media
-  // behind the entire feature-initialization queue.
-  const [settingsFeature] = await Promise.all([
-    settingsPromise,
-    projectsPromise,
-    projectModelsPromise
-  ]);
+  // Settings configure the shared UI. About already has a useful static HTML
+  // first view, so project models are not a startup dependency there: they feed
+  // optional Hero/Footer artwork and can initialize in the background.
+  const startupDependencies = isAboutPage
+    ? [settingsPromise]
+    : [settingsPromise, projectsPromise, projectModelsPromise];
+  const [settingsFeature] = await Promise.all(startupDependencies);
 
   const settings = settingsFeature.getState();
   settingsFeature.applyDom();
@@ -390,8 +388,7 @@ export async function createPortfolioApp({
   // Project-card Lottie thumbnails load the player only as they approach the viewport.
 
 
-  const heroPromise = hero
-    ? initHeroBannerV2({
+  const initializeHero = () => initHeroBannerV2({
         heroLoopUrl: config.urls.heroLoop,
         heroMessagesUrl: config.urls.heroMessages,
         projectsUrl: config.urls.projects,
@@ -411,14 +408,16 @@ export async function createPortfolioApp({
         parseYouTubeUrl,
         getProjects: () => mainProjectModels.slice(),
         prefersReducedMotion: runtime.prefersReducedMotion
-      }).catch(error => {
+      });
+  const heroPromise = hero
+    ? (isAboutPage ? projectModelsPromise.then(initializeHero) : initializeHero())
+      .catch(error => {
         console.warn('Hero: initialization failed', error);
         return null;
       })
     : Promise.resolve(null);
 
-  const footerPromise = root.getElementById('footerAnimation')
-    ? initFooterAnimation({
+  const initializeFooter = () => initFooterAnimation({
         root,
         footerLoopUrl: config.urls.footerLoop || 'data/footer-loop.json',
         heroLoopUrl: config.urls.heroLoop,
@@ -429,7 +428,10 @@ export async function createPortfolioApp({
         resolveAssetUrl: siteAssetUrl,
         ensureLottiePlayer,
         prefersReducedMotion: runtime.prefersReducedMotion
-      }).catch(error => {
+      });
+  const footerPromise = root.getElementById('footerAnimation')
+    ? (isAboutPage ? projectModelsPromise.then(initializeFooter) : initializeFooter())
+      .catch(error => {
         console.warn('Footer animation: initialization failed', error);
         return null;
       })
@@ -465,11 +467,11 @@ export async function createPortfolioApp({
   let galleryFeature = null;
   let deferredMediaDestroyed = false;
 
-  if (root.body?.classList.contains('about-page')) {
-    // About's hero/footer animations and profile/software content are visible
-    // above or within the first page view. Resolve them under the branded gate
-    // so their player scripts and local data are not first requested after it
-    // disappears. Reviews remain optional because they are hidden on this page.
+  if (isAboutPage) {
+    // The pre-rendered About shell is the first-paint fallback. Do not hold it
+    // behind project-data, CMS-profile, review, or decorative-media hydration.
+    // Late features still use the same lifecycle and clean themselves up if the
+    // page is destroyed before their asynchronous initialization finishes.
     const visibleReviewsPromise = settings.showReviews
       ? reviewsPromise.then(feature => {
           feature?.setVisible?.(true);
@@ -477,16 +479,36 @@ export async function createPortfolioApp({
         })
       : Promise.resolve(null);
 
-    [heroFeature, footerFeature, galleryFeature, aboutFeature, reviewsFeature] = await Promise.all([
-      heroPromise,
-      footerPromise,
-      galleryPromise,
+    const settleInBackground = (promise, assign, dispose, label) => {
+      void promise.then(feature => {
+        if (deferredMediaDestroyed) {
+          dispose?.(feature);
+          return;
+        }
+        assign(feature);
+      }).catch(error => {
+        console.warn(`${label}: background initialization failed`, error);
+      });
+    };
+
+    settleInBackground(heroPromise, feature => { heroFeature = feature; }, feature => feature?.destroy?.(), 'Hero');
+    settleInBackground(footerPromise, feature => { footerFeature = feature; }, feature => feature?.destroy?.(), 'Footer');
+    settleInBackground(visibleReviewsPromise, feature => { reviewsFeature = feature; }, feature => feature?.cleanup?.(), 'Reviews');
+    settleInBackground(
       aboutPromise.then(feature => {
-        feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
+        feature?.setSoftwareLogosVisible?.(settings.showSoftwareLogos);
         return feature;
       }),
-      visibleReviewsPromise
-    ]);
+      feature => {
+        aboutFeature = feature;
+        try { contentRevealFeature?.refresh?.(); } catch (error) {
+          console.warn('Content reveal could not refresh after About hydration.', error);
+        }
+      },
+      feature => feature?.cleanup?.(),
+      'About'
+    );
+    galleryFeature = await galleryPromise;
   } else {
     [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
       heroPromise,
@@ -577,11 +599,11 @@ export async function createPortfolioApp({
     settings,
     navigation,
     gallery: galleryFeature,
-    hero: heroFeature,
-    footer: footerFeature,
+    get hero() { return heroFeature; },
+    get footer() { return footerFeature; },
     lightbox: lightboxFeature,
-    reviews: reviewsFeature,
-    about: aboutFeature,
+    get reviews() { return reviewsFeature; },
+    get about() { return aboutFeature; },
     contentReveal: contentRevealFeature,
     forms,
     interactionFeedback,
