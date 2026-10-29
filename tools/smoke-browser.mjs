@@ -4946,6 +4946,89 @@ try {
           throw new Error('Horizontal Stack must stay a wrapping flex layout and must not reuse Grid/Tiling tracks.');
         }
 
+        // Exercise short, incomplete and multi-row groups without changing
+        // project data: temporary DOM subsets are restored before continuing.
+        const artworkCountChecks = await artworkGroupItems.evaluate(async items => {
+          const group = items.closest('.lightbox-artwork-group');
+          const originalChildren = Array.from(items.children);
+          const originalLayout = group.dataset.artworkLayout;
+          const originalGridColumns = group.dataset.artworkGridColumns || '3';
+          const nextFrame = () => new Promise(resolve =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve))
+          );
+          const measure = () => {
+            const style = getComputedStyle(items);
+            const itemsRect = items.getBoundingClientRect();
+            const children = Array.from(items.children).map(el => {
+              const rect = el.getBoundingClientRect();
+              return {
+                left:rect.left - itemsRect.left,
+                top:rect.top - itemsRect.top,
+                width:rect.width,
+                centerX:rect.left + rect.width / 2 - itemsRect.left
+              };
+            });
+            const rows = new Map();
+            children.forEach(child => {
+              const key = Math.round(child.top);
+              if (!rows.has(key)) rows.set(key, []);
+              rows.get(key).push(child);
+            });
+            return {
+              display:style.display,
+              flexWrap:style.flexWrap,
+              gridTracks:style.display === 'grid' ? style.gridTemplateColumns.split(/\\s+/).filter(Boolean).length : 0,
+              rows:[...rows.values()].map(row => ({
+                count:row.length,
+                widthSpread:Math.max(...row.map(child => child.width)) - Math.min(...row.map(child => child.width)),
+                center:row.reduce((sum,child) => sum + child.centerX,0) / row.length
+              })),
+              containerCenter:itemsRect.width / 2
+            };
+          };
+          const results = [];
+          try {
+            for (const count of [...new Set([2,4,Math.min(7,originalChildren.length)])]) {
+              if (count < 2 || count > originalChildren.length) continue;
+              items.replaceChildren(...originalChildren.slice(0,count));
+              group.dataset.artworkLayout = 'grid';
+              group.dataset.artworkGridColumns = '3';
+              window.dispatchEvent(new Event('resize'));
+              await nextFrame();
+              const grid = measure();
+              const gridExpectedTracks = 3;
+              const gridRowsCentered = grid.rows.every(row => Math.abs(row.center - grid.containerCenter) <= 2 ||
+                row.count === gridExpectedTracks);
+              if (grid.display !== 'grid' || grid.gridTracks !== gridExpectedTracks ||
+                  grid.rows.some(row => row.widthSpread > 2) || !gridRowsCentered) {
+                throw new Error('Grid/Tiling must stay balanced for ' + count + ' artworks: ' + JSON.stringify({grid,gridRowsCentered}));
+              }
+
+              group.dataset.artworkLayout = 'stack';
+              window.dispatchEvent(new Event('resize'));
+              await nextFrame();
+              const stack = measure();
+              const stackExpectedTracks = window.innerWidth <= 760 ? 2 : 3;
+              if (stack.display !== 'flex' || stack.flexWrap !== 'wrap' ||
+                  stack.rows.some(row => row.count > stackExpectedTracks || row.widthSpread > 2 ||
+                    Math.abs(row.center - stack.containerCenter) > 2)) {
+                throw new Error('Horizontal Stack must wrap and center incomplete rows for ' + count + ' artworks: ' + JSON.stringify({stack,stackExpectedTracks}));
+              }
+              results.push({count,gridRows:grid.rows.map(row=>row.count),stackRows:stack.rows.map(row=>row.count)});
+            }
+            return results;
+          } finally {
+            items.replaceChildren(...originalChildren);
+            group.dataset.artworkLayout = originalLayout;
+            group.dataset.artworkGridColumns = originalGridColumns;
+            window.dispatchEvent(new Event('resize'));
+            await nextFrame();
+          }
+        });
+        if (!artworkCountChecks.length) {
+          throw new Error('Responsive grouped layout regression must exercise at least one alternate artwork count.');
+        }
+
         // The same media set must keep the same actual artwork dimensions
         // when switching between card-stack and sticker presentation. Layout
         // cells/overlap can differ, but the shared size envelope cannot.
