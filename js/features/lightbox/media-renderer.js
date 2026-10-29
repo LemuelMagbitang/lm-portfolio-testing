@@ -2938,7 +2938,7 @@ export function createLightboxMediaRenderer({
     const inspectSwipeDisabledTarget=target=>Boolean(target?.closest?.('button,a,input,select,textarea,video,mux-player,iframe,.model-viewer-shell,.lightbox-inspect-footer'));
     const onInspectPointerDown=event=>{
       if(!windowRef?.matchMedia?.('(max-width:767px)')?.matches||event.pointerType==='mouse'||event.isPrimary===false)return;
-      if(inspectSwipeDisabledTarget(event.target))return;
+      if(inspectSwipeDisabledTarget(event.target)||!event.target?.closest?.('.lightbox-inspect-stage'))return;
       inspectSwipeStart={x:Number(event.clientX)||0,y:Number(event.clientY)||0,pointerId:event.pointerId};
     };
     const onInspectPointerMove=event=>{
@@ -2971,6 +2971,8 @@ export function createLightboxMediaRenderer({
     const onKeyDown=event=>{
       if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtworkInspect({viaKeyboard:true});return;}
       if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+        // Keep native seek/selection keys available to embedded media controls.
+        if(event.target?.closest?.('video,mux-player,iframe,input,textarea,select,[role="slider"],[part~="range"]'))return;
         event.preventDefault();
         event.stopPropagation();
         navigateArtworkInspect(event.key==='ArrowLeft'?-1:1);
