@@ -1,0 +1,48 @@
+{
+  "protectionEnabled": true,
+  "defaultVideoPoster": "",
+  "formsEnabled": {
+    "project": true,
+    "review": true
+  },
+  "showReviews": false,
+  "showSoftwareLogos": true,
+  "showHeroMessage": false,
+  "showFooterMessage": true,
+  "interactionFeedback": {
+    "enabled": true,
+    "soundEnabled": true,
+    "hapticsEnabled": true,
+    "volume": 0.12,
+    "navigationSound": "assets/projects/site/sounds/navigation.wav",
+    "selectionSound": "assets/projects/site/sounds/selection.wav"
+  },
+  "web3forms": {
+    "projectKey": "15822b98-f9a5-42fe-86f0-149ed102f521",
+    "reviewKey": "b0a32379-4abd-4770-a9eb-c9f39b45e7d3"
+  },
+  "redirectUrl": "https://lemuelmagbitang.github.io/success/",
+  "contactEmail": "lemuelmagbitangt@gmail.com",
+  "socials": {
+    "instagram": "https://www.instagram.com/llem_09",
+    "tiktok": "https://www.tiktok.com/@artsoflem",
+    "youtube": "https://youtube.com/@aol_lem"
+  },
+  "siteTitle": "Lemuel Magbitang | Works",
+  "siteDescription": "2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.",
+  "heroTiming": {
+    "fadeMs": 600,
+    "autoRotateMs": 9000,
+    "crossfadeMs": 3500,
+    "kenBurnsFromScale": 1,
+    "kenBurnsToScale": 1.15,
+    "kenBurnsDurationS": 14,
+    "loopMode": "manual",
+    "transitionStyle": "kenburns"
+  },
+  "ogImage": "assets/projects/site/og-image.jpg",
+  "ogImageVersion": 2,
+  "ogImageAlt": "Lemuel Magbitang — 3D & Motion Illustrator portfolio",
+  "ogImageWidth": 1200,
+  "ogImageHeight": 630
+}

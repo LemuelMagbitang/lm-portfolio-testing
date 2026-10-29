@@ -1,0 +1,6 @@
+{
+  "supabaseUrl": "https://dlupqhobmfpnybcurptz.supabase.co",
+  "supabasePublishableKey": "sb_publishable_-s7Y6WoC2zA7mfTi41fwCA_T9Y_VfJt",
+  "creatorId": "lemuel-magbitang",
+  "note": "Public config only. Never place MUX_TOKEN_SECRET, MUX_WEBHOOK_SECRET or SUPABASE_SERVICE_ROLE_KEY in this file."
+}

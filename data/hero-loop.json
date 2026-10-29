@@ -1,0 +1,16 @@
+[
+  {
+    "type": "mux",
+    "src": "https://image.mux.com/iPz8AatW27Pq61sVP02QImByquyvJy8svjFSWk4ynIkc/thumbnail.jpg?time=1.5&width=1600",
+    "alt": "hero-reel",
+    "focus": "50% 50%",
+    "zoom": 1,
+    "rotate": 0,
+    "playbackId": "iPz8AatW27Pq61sVP02QImByquyvJy8svjFSWk4ynIkc",
+    "poster": "https://image.mux.com/iPz8AatW27Pq61sVP02QImByquyvJy8svjFSWk4ynIkc/thumbnail.jpg?time=1.5&width=1600",
+    "fadeInMs": 1500,
+    "fadeOutMs": 2000,
+    "zoomTransition": true,
+    "fadeTransition": true
+  }
+]

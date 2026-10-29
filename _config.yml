@@ -1,0 +1,31 @@
+# Keep the published Pages artifact focused on the portfolio and its CMS.
+# Include Jekyll's standard exclusions explicitly for Pages/Jekyll compatibility.
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+  # Developer tooling and QA evidence do not belong on the public site.
+  - tools/
+  - incident-reports/
+  - supabase/
+
+  # Keep user-facing third-party attribution and license files in docs/,
+  # but do not publish internal architecture, migration, and testing notes.
+  - docs/ARCHITECTURE.md
+  - docs/ARCHITECTURE-RULES.md
+  - docs/ARCHITECTURE-CHANGE-MATRIX.md
+  - docs/CMS-BOUNDARY-GUIDE.md
+  - docs/CURATED-VIEWS.md
+  - docs/DECOUPLING-ROADMAP.md
+  - docs/LOCAL-TESTING.md
+  - docs/MUX-INTEGRATION.md
+  - docs/WEBP-ASSET-BY-ASSET-SIZE-REPORT.csv
+  - docs/WEBP-ASSET-MIGRATION-REPORT.md

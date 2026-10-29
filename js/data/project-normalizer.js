@@ -1,0 +1,267 @@
+/**
+ * Project data normalization boundary.
+ *
+ * This module is deliberately DOM-free and CMS-provider agnostic. It turns
+ * the flexible JSON shape accepted by the CMS into a predictable application
+ * shape before project features render anything.
+ */
+
+const SUPPORTED_MEDIA_TYPES = new Set(['image', 'video', 'mux', 'youtube', 'lottie', 'model']);
+const ORIENTATIONS = new Set(['auto', 'landscape', 'portrait', 'square']);
+const HOLOGRAPHIC_STYLES = new Set(['holographic', 'cosmos', 'brushed', 'beams', 'crosshatch', 'shattered', 'glitter', 'waves', 'cat-eye', 'iridescent', 'aurora']);
+const ARTWORK_GROUP_LAYOUTS = new Set(['grid','stack','cards','sticker']);
+const DEFAULT_ARTWORK_GROUP_COLOR = '#849573';
+function normalizeArtworkGroupColor(value) {
+  const color = normalizeString(value);
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : DEFAULT_ARTWORK_GROUP_COLOR;
+}
+function normalizeMediaGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  const seen = new Set();
+  return groups.map(group => {
+    if (!group || typeof group !== 'object' || Array.isArray(group)) return null;
+    const id = normalizeString(group.id);
+    if (!id || seen.has(id)) return null;
+    seen.add(id);
+    const name = normalizeString(group.name) || id;
+    const layout = normalizeString(group.layout).toLowerCase();
+    return {id,name,layout:ARTWORK_GROUP_LAYOUTS.has(layout)?layout:'grid',color:normalizeArtworkGroupColor(group.color)};
+  }).filter(Boolean);
+}
+
+function normalizeString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeFilters(filters) {
+  if (!Array.isArray(filters)) return [];
+  return [...new Set(filters.map(normalizeString).filter(Boolean))];
+}
+
+function normalizeBadges(badges, legacyBadge = '') {
+  const source = Array.isArray(badges) ? badges : (legacyBadge ? [legacyBadge] : []);
+  return [...new Set(source.map(normalizeString).filter(Boolean))];
+}
+
+function normalizeExtensions(extensions) {
+  if (!extensions || typeof extensions !== 'object' || Array.isArray(extensions)) return undefined;
+  const normalized = {};
+  Object.entries(extensions).forEach(([key, value]) => {
+    const name = normalizeString(key);
+    if (!name || value === undefined) return;
+    normalized[name] = value;
+  });
+  return Object.keys(normalized).length ? normalized : undefined;
+}
+
+function normalizeHolographicEffect(effect) {
+  if (!effect || typeof effect !== 'object' || Array.isArray(effect)) return undefined;
+
+  const style = normalizeString(effect.style).toLowerCase();
+  const intensityValue = effect.intensity === '' || effect.intensity == null ? NaN : Number(effect.intensity);
+  const intensity = Number.isFinite(intensityValue)
+    ? Math.round(Math.max(0, Math.min(1, intensityValue)) * 100) / 100
+    : 0.7;
+  const texture = normalizeString(effect.texture);
+  const textureModeValue = normalizeString(effect.textureMode).toLowerCase();
+  const textureMode = ['tile', 'fill'].includes(textureModeValue) ? textureModeValue : 'fill';
+  const back = normalizeString(effect.back);
+  const mask = normalizeString(effect.mask);
+  // Back-side foil settings are meaningful only with a custom reverse image.
+  const backTexture = back ? normalizeString(effect.backTexture) : '';
+  const backTextureModeValue = normalizeString(effect.backTextureMode).toLowerCase();
+  const backTextureMode = ['tile', 'fill'].includes(backTextureModeValue) ? backTextureModeValue : 'fill';
+  const backMask = back ? normalizeString(effect.backMask) : '';
+  const glitterLayer = effect.glitterLayer === true;
+  const grainLayer = effect.grainLayer !== false; // retain existing grain by default
+  // Preserve the CMS reverse-side switch. Older project records have no explicit
+  // switch, so keep their historical behavior: a back pattern or mask enables foil.
+  const backFoilEnabled = back && (
+    effect.backFoilEnabled === true ||
+    (effect.backFoilEnabled == null && Boolean(backTexture || backMask))
+  );
+  const rawBackIntensity = effect.backIntensity === '' || effect.backIntensity == null
+    ? intensity
+    : Number(effect.backIntensity);
+  const backIntensity = Number.isFinite(rawBackIntensity)
+    ? Math.round(Math.max(0, Math.min(1, rawBackIntensity)) * 100) / 100
+    : intensity;
+
+  if (!HOLOGRAPHIC_STYLES.has(style) && !texture && !back && !mask && !backTexture && !backMask &&
+      effect.intensity === undefined && effect.glitterLayer === undefined && effect.grainLayer === undefined) {
+    return undefined;
+  }
+
+  return {
+    style: HOLOGRAPHIC_STYLES.has(style) ? style : 'holographic',
+    intensity,
+    textureMode,
+    glitterLayer,
+    grainLayer,
+    ...(back ? { backTextureMode } : {}),
+    ...(texture ? { texture } : {}),
+    ...(back ? { back, backFoilEnabled: Boolean(backFoilEnabled), backIntensity } : {}),
+    ...(mask ? { mask } : {}),
+    ...(backTexture ? { backTexture } : {}),
+    ...(backMask ? { backMask } : {})
+  };
+}
+
+function normalizeBackground(background) {
+  if (!background || typeof background !== 'object' || Array.isArray(background)) return undefined;
+
+  const normalized = {};
+  if (normalizeString(background.type)) normalized.type = normalizeString(background.type);
+  if (normalizeString(background.color)) normalized.color = normalizeString(background.color);
+  if (normalizeString(background.image)) normalized.image = normalizeString(background.image);
+  if (Number.isFinite(Number(background.opacity))) normalized.opacity = Number(background.opacity);
+
+  return Object.keys(normalized).length ? normalized : undefined;
+}
+
+export function normalizeProjectMedia(media = {}) {
+  if (!media || typeof media !== 'object' || Array.isArray(media)) return null;
+
+  const src = normalizeString(media.src);
+  const explicitType = normalizeString(media.type).toLowerCase();
+  const playbackId = normalizeString(media.playbackId);
+  if (!src && !(explicitType === 'mux' && playbackId)) return null;
+
+  const sourcePath = src.split('?')[0].split('#')[0].toLowerCase();
+  const inferredType = /\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(sourcePath)
+    ? 'video'
+    : /\.json$/.test(sourcePath)
+      ? 'lottie'
+      : /\.(obj|gltf|glb|fbx)$/.test(sourcePath)
+        ? 'model'
+        : 'image';
+  const type = explicitType || inferredType;
+  const orientation = normalizeString(media.orientation).toLowerCase();
+  const normalized = {
+    // Preserve explicit future media types rather than coercing them into
+    // images. Current validators still reject unsupported production types,
+    // while the normalized contract remains forward-compatible for features
+    // that add a renderer later.
+    type,
+    src
+  };
+
+  const caption = normalizeString(media.caption);
+  if (caption) normalized.caption = caption;
+
+  if (type === 'mux' && playbackId) normalized.playbackId = playbackId;
+  const poster = normalizeString(media.poster);
+  if (poster) normalized.poster = poster;
+  const durationSeconds = Number(media.durationSeconds);
+  if (media.durationSeconds !== undefined && Number.isFinite(durationSeconds) && durationSeconds >= 0) normalized.durationSeconds = durationSeconds;
+  const aspectRatio = normalizeString(media.aspectRatio);
+  if (aspectRatio) normalized.aspectRatio = aspectRatio;
+
+  const groupId = normalizeString(media.groupId);
+  if (groupId) normalized.groupId = groupId;
+
+  if (ORIENTATIONS.has(orientation)) normalized.orientation = orientation;
+
+  const background = normalizeBackground(media.background);
+  if (background) normalized.background = background;
+
+  const holographic = normalizeHolographicEffect(media.holographic);
+  if (holographic) normalized.holographic = holographic;
+
+  return normalized;
+}
+
+export function normalizeProject(project = {}) {
+  if (!project || typeof project !== 'object' || Array.isArray(project)) return null;
+
+  const title = normalizeString(project.title);
+  const thumbnailSource = project.thumbnail && typeof project.thumbnail === 'object'
+    ? project.thumbnail
+    : {};
+  const thumbnailSrc = normalizeString(thumbnailSource.src);
+
+  const mediaGroups = normalizeMediaGroups(project.mediaGroups);
+  const validMediaGroupIds = new Set(mediaGroups.map(group => group.id));
+  const media = Array.isArray(project.media)
+    ? project.media.map(normalizeProjectMedia).filter(Boolean).map(item => {
+        if (item.groupId && !validMediaGroupIds.has(item.groupId)) delete item.groupId;
+        return item;
+      })
+    : [];
+
+  const capabilities = {
+    hasImage: media.some(item => item.type === 'image'),
+    hasVideo: media.some(item => item.type === 'video' || item.type === 'mux'),
+    hasYouTube: media.some(item => item.type === 'youtube'),
+    hasLottie: media.some(item => item.type === 'lottie'),
+    hasModel: media.some(item => item.type === 'model')
+  };
+
+  const extensions = normalizeExtensions(project.extensions);
+  const normalized = {
+    id: normalizeString(project.id),
+    title,
+    subtitle: normalizeString(project.subtitle),
+    description: normalizeString(project.description),
+    badge: normalizeString(project.badge),
+    badges: normalizeBadges(project.badges, project.badge),
+    filters: normalizeFilters(project.filters),
+    thumbnail: {},
+    mediaCount: media.length,
+    capabilities
+  };
+
+  // Extensions are feature-owned content metadata. Keeping them outside the
+  // core project shape lets future capabilities add data without forcing the
+  // Gallery/Lightbox/presentation contracts to know about that feature.
+  if (extensions) normalized.extensions = extensions;
+
+  // Thumbnail presentation controls remain meaningful even when the CMS
+  // leaves thumbnail.src empty and the Projects card chooses its first media
+  // item automatically as the visible thumbnail.
+  if (thumbnailSrc) {
+    normalized.thumbnail.src = thumbnailSrc;
+  }
+  const thumbnailHolographic = normalizeHolographicEffect(thumbnailSource.holographic);
+  if (thumbnailHolographic) normalized.thumbnail.holographic = thumbnailHolographic;
+
+  const thumbnailType = normalizeString(thumbnailSource.type).toLowerCase();
+  // Preserve an explicitly declared type. If CMS data omits it, leave the
+  // field unset so the Projects card runtime can retain extension inference.
+  if (SUPPORTED_MEDIA_TYPES.has(thumbnailType)) {
+    normalized.thumbnail.type = thumbnailType;
+  }
+  if (thumbnailType === 'mux') {
+    const playbackId = normalizeString(thumbnailSource.playbackId);
+    if (playbackId) normalized.thumbnail.playbackId = playbackId;
+    const poster = normalizeString(thumbnailSource.poster);
+    if (poster) normalized.thumbnail.poster = poster;
+  }
+
+  const focus = normalizeString(thumbnailSource.focus);
+  if (focus) normalized.thumbnail.focus = focus;
+
+  const orientation = normalizeString(thumbnailSource.orientation).toLowerCase();
+  if (ORIENTATIONS.has(orientation)) normalized.thumbnail.orientation = orientation;
+
+  const zoom = Number(thumbnailSource.zoom);
+  if (Number.isFinite(zoom) && zoom > 0) normalized.thumbnail.zoom = zoom;
+
+  const rotate = Number(thumbnailSource.rotate);
+  if (Number.isFinite(rotate)) normalized.thumbnail.rotate = rotate;
+
+  const background = normalizeBackground(thumbnailSource.background);
+  if (background) normalized.thumbnail.background = background;
+
+  normalized.media = media;
+  if (mediaGroups.length) normalized.mediaGroups = mediaGroups;
+  return normalized;
+}
+
+export function normalizeProjects(payload) {
+  const list = Array.isArray(payload)
+    ? payload
+    : (Array.isArray(payload?.projects) ? payload.projects : []);
+
+  return list.map(normalizeProject).filter(Boolean);
+}

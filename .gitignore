@@ -1,0 +1,20 @@
+# Local secrets and per-machine settings
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Supabase CLI working state and local environments
+supabase/.temp/
+supabase/.branches/
+supabase/functions/.env
+supabase/functions/.env.local
+
+# Node/browser test and build artifacts
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.cache/
+.DS_Store
+Thumbs.db

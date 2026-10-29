@@ -1,0 +1,37 @@
+/*
+ * Media-background infrastructure adapter.
+ *
+ * Feature code asks for the optional global capability without owning the
+ * loading mechanism or the site-root calculation.
+ */
+
+import { loadScriptOnce } from '../browser/script-loader.js?v=20261008-01';
+import { getSiteRootUrl } from '../browser/site-paths.js?v=20261027-05';
+
+let mediaBackgroundPromise = null;
+
+export function ensureMediaBackgroundHelper() {
+  if (window.LMMediaBackground) return Promise.resolve(true);
+  if (mediaBackgroundPromise) return mediaBackgroundPromise;
+
+  mediaBackgroundPromise = loadScriptOnce(
+    new URL('js/infrastructure/media-background/engine.js?v=20261023-01', getSiteRootUrl()).href,
+    () => !!window.LMMediaBackground
+  ).finally(() => {
+    if (!window.LMMediaBackground) mediaBackgroundPromise = null;
+  });
+
+  return mediaBackgroundPromise;
+}
+
+/**
+ * Apply an optional media background through the loaded helper.
+ * Consumers do not need to know that the helper exposes a global.
+ */
+export async function applyMediaBackground(element, background, resolveAssetUrl) {
+  if (!element || !background) return false;
+  const ready = await ensureMediaBackgroundHelper();
+  if (!ready || !window.LMMediaBackground?.apply) return false;
+  window.LMMediaBackground.apply(element, background, resolveAssetUrl);
+  return true;
+}

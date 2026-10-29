@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Lemuel Magbitang | Works</title>
+  <meta name="title" content="Lemuel Magbitang | Works">
+  <meta name="description" content="2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.">
+  <meta name="theme-color" content="#121212">
+  <link rel="canonical" href="https://lemuelmagbitang.github.io/">
+
+  <!-- Social previews intentionally use the canonical production hostname. Relative app assets resolve from the detected site root, so the same files work on the production user site and a GitHub Pages project path. -->
+  <!-- Primary Search Engine & Canonical Tags -->
+
+<!-- Open Graph / Meta Apps (Facebook, Messenger, WhatsApp, LinkedIn, Discord) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lemuel Magbitang">
+<meta property="og:url" content="https://lemuelmagbitang.github.io/">
+<meta property="og:title" content="Lemuel Magbitang | Works">
+<meta property="og:description" content="2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.">
+<meta property="og:image" content="https://lemuelmagbitang.github.io/assets/projects/site/og-image.jpg?v=2">
+<meta property="og:image:secure_url" content="https://lemuelmagbitang.github.io/assets/projects/site/og-image.jpg?v=2">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Lemuel Magbitang — 3D & Motion Illustrator portfolio">
+<meta property="og:locale" content="en_US">
+
+<!-- X (Twitter) Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lemuel Magbitang | Works">
+<meta name="twitter:description" content="2D and 3D Illustration, Motion Graphics, Brand Design, and UI/UX portfolio of Lemuel Magbitang — freelance multimedia artist open for work.">
+<meta name="twitter:image" content="https://lemuelmagbitang.github.io/assets/projects/site/og-image.jpg?v=2">
+
+  <link rel="icon" type="image/png" href="assets/projects/site/favicon.png">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Site typeface: loaded directly instead of relying on whatever
+       system font a visitor's OS/browser happens to substitute (this is
+       what previously showed up wrong on Android/Windows). Preconnect
+       first for a faster first paint. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <!-- Media-capability warm-up can reach these origins during startup. -->
+  <link rel="preconnect" href="https://www.youtube.com">
+  <link rel="preconnect" href="https://img.youtube.com">
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@500,700,800,900&display=swap">
+
+  <link rel="stylesheet" href="css/style.css?v=20261029-13">
+  <link rel="stylesheet" href="css/features/content-reveal.css?v=20261029-03">
+  <link rel="stylesheet" href="css/features/lightbox.css?v=20261029-04">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+  }
+  </script>
+  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261029-17">
+  <link rel="modulepreload" href="js/app/page-composition.js?v=20261029-17">
+  <link rel="modulepreload" href="js/infrastructure/three/model-viewer.js?v=20261024-02">
+  <link rel="prefetch" href="about/" as="document">
+
+</head>
+<body>
+
+  <!-- PAGE TRANSITION — brief branded flourish on real page navigation
+       (Works <-> About). Startup/transition state is owned by the
+       application bootstrap/composition layer; keep this element as the
+       presentation hook only. -->
+  <div class="page-transition" id="pageTransition" aria-hidden="false">
+    <div class="page-transition-inner">
+      <img src="assets/projects/site/portfolio-logo.webp" alt="" class="page-transition-logo">
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <nav class="navbar">
+  <div class="nav-container">
+    <a href="./" class="nav-logo">
+      <img src="assets/projects/site/portfolio-logo.webp" alt="Lemuel Magbitang Logo" class="site-logo">
+    </a>
+    
+    <button class="hamburger" id="hamburger" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="navLinks">
+      <span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+    </button>
+    
+    <ul class="nav-links" id="navLinks">
+      <li><a href="./" class="active-link" aria-current="page"><span class="nav-link-label">Designs</span></a></li>
+      <li><a href="about/"><span class="nav-link-label">About Me</span></a></li>
+      <li><a href="#contact-start"><span class="nav-link-label">Contacts</span></a></li>
+    </ul>
+  </div>
+</nav>
+
+  <!-- HERO SECTION -->
+  <header class="hero-section hero-section--message">
+  <!-- Rotating artwork backdrop — populated by the Hero feature from CMS data. -->
+  <div class="hero-banner" id="heroBanner"></div>
+ 
+  <div class="hero-overlay quote-overlay">
+    <!-- Intentionally empty. The Hero feature mounts the label, statement
+         and credit line here from the normalized hero/message data.
+         Edit the source content through the CMS/data files rather than
+         duplicating the rendered text in this HTML. -->
+    <div class="hero-quote" id="heroQuote"></div>
+  </div>
+</header>
+
+  <!-- MAIN WORKS SECTION -->
+  <main class="container page-spacing works-main">
+    <h1 class="visually-hidden">Portfolio — Lemuel Magbitang</h1>
+
+    <!-- FILTER TABS -->
+    <div class="filter-nav-wrapper" role="group" aria-label="Project categories">
+      <div class="filter-nav-viewport">
+        <div class="filter-tabs filter-nav-scroller">
+          <div class="filter-nav-content">
+            <!-- Rebuilt from data/filters.json by the Gallery feature on every
+                 load. This ALL button is the permanent fallback shown before
+                 CMS filter data is hydrated. Edit filter tabs through admin/,
+                 not here. -->
+            <button class="tab-btn active" data-filter="all" aria-pressed="true">ALL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project cards now live in data/projects.json and are edited
+         through admin/. The Projects feature rebuilds #portfolioGrid
+         from normalized project data on load. The single card kept
+         here is a presentation fallback so the grid is not structurally
+         empty if CMS data cannot be hydrated. Do not add real projects
+         here — edit project content through the CMS/data source. -->
+
+    <h2 class="visually-hidden">Selected projects</h2>
+    <div class="portfolio-wrapper">
+
+      <!-- Grid viewport owns clipping/fade geometry. The Show More control
+           stays outside this viewport and therefore remains in document flow. -->
+      <div class="portfolio-grid-viewport" id="portfolioGridViewport">
+        <div class="seamless-grid" id="portfolioGrid">
+          <div class="project-card archive">
+            <div class="glass-info">
+              <h3>Content is loading…</h3>
+              <p>If this doesn't change, data/projects.json may be unreachable — check the CMS.</p>
+            </div>
+            <div class="card-thumbnail"></div>
+          </div>
+        </div> <!-- End seamless-grid -->
+
+        <!-- Visual "there's more below" fade. JS only toggles is-hidden. -->
+        <div class="grid-fade-overlay" id="gridFadeOverlay"></div>
+      </div> <!-- End portfolio-grid-viewport -->
+
+      <!-- SHOW MORE / SHOW LESS BUTTON CONTAINER -->
+      <div class="show-more-wrapper" id="showMoreWrapper">
+        <button id="showMoreBtn" class="btn-show-more" type="button">
+          <span class="btn-text">SHOW MORE</span>
+          <i class="fa-solid fa-chevron-down btn-icon"></i>
+        </button>
+      </div>
+      
+    </div> <!-- End portfolio-wrapper -->
+  </main>
+
+  <!-- CONTACT & REVIEWS -->
+  <section id="contact-section" class="container page-spacing" aria-labelledby="contact-start" style="border-top: 1px solid #222;">
+    <div class="contact-mobile-tabs" role="tablist" aria-label="Contact options">
+      <button type="button" class="contact-mobile-tab" id="contactTabProject"
+              role="tab" aria-selected="true" aria-controls="contactProjectPanel"
+              data-contact-tab="project">START A PROJECT</button>
+      <button type="button" class="contact-mobile-tab" id="contactTabReview"
+              role="tab" aria-selected="false" aria-controls="contactReviewPanel"
+              data-contact-tab="review">LEAVE A REVIEW</button>
+    </div>
+
+    <div id="web3-forms-container" class="contact-grid">
+
+      <!-- PRIMARY: Start a Project (the main call-to-action) -->
+      <div class="contact-block contact-primary is-contact-active" id="contactProjectPanel" data-contact-panel="project">
+        <h2 id="contact-start" class="section-title start-project-title hello-heading">START A PROJECT WITH LM.</h2>
+        <!-- To pause the project form, change the Forms setting in the
+             CMS/site settings. The Forms feature will switch this surface
+             to the configured direct-contact fallback without HTML edits. -->
+        <div class="form-container" id="projectFormContainer">
+          <form class="simple-form" id="projectForm" action="https://api.web3forms.com/submit" method="POST">
+            <input type="hidden" name="access_key" value="15822b98-f9a5-42fe-86f0-149ed102f521">
+            <input type="hidden" name="subject" value="New Project Inquiry">
+            <input type="hidden" name="redirect" value="https://lemuelmagbitang.github.io/success/">
+            <input type="text" name="name" autocomplete="name" placeholder="Name" aria-label="Your name" required>
+            <input type="email" name="email" autocomplete="email" placeholder="Email" aria-label="Your email" required>
+            <textarea name="message" rows="4" placeholder="Tell me about your project..." aria-label="Project details" required></textarea>
+            <button type="submit" class="submit-btn">SEND MESSAGE</button>
+          </form>
+          <a href="mailto:lemuelmagbitangt@gmail.com?subject=New%20Project%20Inquiry" class="email-me-btn" id="projectEmailBtn" style="display:none;">
+            <i class="fa-solid fa-envelope"></i> EMAIL ME DIRECTLY
+          </a>
+        </div>
+      </div>
+
+      <!-- SECONDARY: Leave a Review (lighter visual weight) -->
+      <div class="contact-block contact-secondary" id="contactReviewPanel" data-contact-panel="review">
+        <h2 class="section-title">LEAVE A REVIEW</h2>
+        <!-- The Review form is controlled by the site settings/CMS.
+             The Forms feature owns the enabled/disabled fallback state. -->
+        <div class="form-container" id="reviewFormContainer">
+          <form class="simple-form" id="reviewForm" action="https://api.web3forms.com/submit" method="POST">
+            <input type="hidden" name="access_key" value="b0a32379-4abd-4770-a9eb-c9f39b45e7d3">
+            <input type="hidden" name="subject" value="New Portfolio Review Received!">
+            <input type="hidden" name="redirect" value="https://lemuelmagbitang.github.io/success/">
+            <input type="text" name="name" autocomplete="nickname" placeholder="Your Name / Handle" aria-label="Your name or handle" required>
+            
+            <div class="star-rating" role="radiogroup" aria-label="Portfolio rating" style="display: flex; flex-direction: row-reverse; justify-content: center; gap: 10px; margin: 10px 0;">
+              <input type="radio" id="star5" name="rating" value="5" aria-label="5 stars" required/><label for="star5" title="5 stars">★</label>
+              <input type="radio" id="star4" name="rating" value="4" aria-label="4 stars"/><label for="star4" title="4 stars">★</label>
+              <input type="radio" id="star3" name="rating" value="3" aria-label="3 stars"/><label for="star3" title="3 stars">★</label>
+              <input type="radio" id="star2" name="rating" value="2" aria-label="2 stars"/><label for="star2" title="2 stars">★</label>
+              <input type="radio" id="star1" name="rating" value="1" aria-label="1 star"/><label for="star1" title="1 star">★</label>
+            </div>
+
+            <textarea name="review" rows="3" placeholder="Write your review here..." aria-label="Your review" required></textarea>
+            <button type="submit" class="submit-btn submit-btn-secondary">SUBMIT REVIEW</button>
+          </form>
+          <a href="mailto:lemuelmagbitangt@gmail.com?subject=Portfolio%20Review" class="email-me-btn" id="reviewEmailBtn" style="display:none;">
+            <i class="fa-solid fa-envelope"></i> EMAIL ME YOUR REVIEW
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CLIENT REVIEWS CAROUSEL -->
+  <section class="container page-spacing reviews-section" aria-labelledby="client-reviews-heading" style="border-top: 1px solid #222;">
+    <h2 id="client-reviews-heading" class="visually-hidden">Client reviews</h2>
+    <!-- Reviews now live in data/reviews.json and are edited through
+         admin/. The Reviews feature builds #reviewsTrack from the
+         normalized review data before this section becomes visible.
+         The one card kept here is a fallback only, shown if the data
+         fetch fails. Do not add real reviews here. -->
+    <div class="reviews-marquee">
+      <div class="reviews-track" id="reviewsTrack">
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-quote">"Content is loading…"</p>
+          <span class="review-author">— check the CMS if this doesn't change</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIGHTBOX MODAL -->
+  <!-- Navigation is a separate top-level layer. The project content lives in
+       the scrolling modal below it, so only the project groups participate in
+       next/previous transitions while the close/chevron chrome stays fixed
+       to the viewport and uses artwork-aware difference compositing. -->
+  <div class="lightbox-controls" id="lightboxControls">
+    <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close project"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous project"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Next project"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+  </div>
+  <div class="lightbox-modal" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modalTitle">
+    <div class="modal-interior">
+      <div class="modal-header">
+        <h2 id="modalTitle">Project Title</h2>
+        <p id="modalDesc">Project description goes here.</p>
+        <div id="modalFullDesc" class="modal-full-desc"></div>
+      </div>
+      <div class="modal-gallery" id="lightboxMediaContainer"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-animation" id="footerAnimation" aria-hidden="true"></div>
+    <div class="footer-fade" aria-hidden="true"></div>
+    <div class="footer-content">
+      <div class="social-icons">
+        <a href="https://www.instagram.com/llem_09" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.tiktok.com/@artsoflem" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="https://youtube.com/@aol_lem" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+        <a href="mailto:lemuelmagbitangt@gmail.com" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      </div>
+      <p>&copy; 2026 Lemuel Magbitang. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <!-- APP CONFIG HOOK — public-page startup receives these CMS source
+       locations through the composition/bootstrap layer. The features
+       own their own loading and presentation behavior; keep these values
+       limited to source configuration rather than embedding feature logic
+       in the HTML. -->
+  <script>
+    window.HERO_MESSAGES_URL = 'data/hero.json';
+    window.SETTINGS_URL = 'data/settings.json';
+    window.PROJECTS_URL = 'data/projects.json';
+    window.REVIEWS_URL = 'data/reviews.json';
+    window.FILTERS_URL = 'data/filters.json';
+    window.HERO_LOOP_URL = 'data/hero-loop.json';
+    window.FOOTER_LOOP_URL = 'data/footer-loop.json';
+  </script>
+  <script type="module" src="js/script.js?v=20261029-17"></script>
+</body>
+</html>

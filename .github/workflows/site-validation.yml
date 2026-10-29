@@ -1,0 +1,132 @@
+name: Validate portfolio
+
+concurrency:
+  group: site-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+      - architecture-security-hardening
+      - projects-runtime-cutover
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.8
+
+      - name: Type-check Supabase Edge Functions
+        run: deno check supabase/functions/mux-admin/index.ts supabase/functions/mux-public/index.ts supabase/functions/mux-webhook/index.ts
+
+      - name: Validate site data, paths, and JavaScript
+        run: node tools/validate-site.mjs
+
+      - name: Test repository-independent site path resolution
+        run: node tools/test-site-paths.mjs
+
+      - name: Validate Mux video integration contracts
+        run: node tools/validate-mux-integration.mjs
+
+      - name: Test Mux player loader retry lifecycle
+        run: node tools/test-mux-player-loader.mjs
+
+      - name: Test Mux webhook request-body limit
+        run: node tools/test-mux-webhook-body-limit.mjs
+
+      - name: Test media reference audit
+        run: node tools/test-media-reference-audit.mjs
+
+      - name: Audit asset formats and file sizes
+        run: node tools/audit-media-assets.mjs
+
+      - name: Validate architecture boundaries
+        run: node tools/validate-architecture.mjs
+
+      - name: Validate project data contract
+        run: node tools/validate-project-contract.mjs
+
+      - name: Test Projects loader contract
+        run: node tools/test-project-loader.mjs
+
+      - name: Test Curated View resolver
+        run: node tools/test-curated-view-resolver.mjs
+
+      - name: Test CMS loader lifecycle contract
+        run: node tools/test-cms-loader.mjs
+
+      - name: Test browser script-loader lifecycle contract
+        run: node tools/test-script-loader.mjs
+
+      - name: Validate site settings contract
+        run: node tools/validate-site-settings.mjs
+
+      - name: Validate contact form fallbacks
+        run: node tools/validate-forms.mjs
+
+      - name: Validate CMS Projects presentation
+        run: node tools/validate-cms-project-presentation.mjs
+
+      - name: Test CMS path and write safety
+        run: node tools/test-cms-path-safety.mjs
+
+      - name: Test CMS atomic-save conflict handling
+        run: node tools/test-cms-atomic-save.mjs
+
+      - name: Test CMS Media Library folder rename
+        run: node tools/test-cms-media-rename.mjs
+      - name: Test CMS image upload conversion policy
+        run: node tools/test-cms-upload-policy.mjs
+
+      - name: Validate Projects runtime composition
+        run: node tools/validate-project-runtime.mjs
+
+      - name: Validate Gallery presentation boundary
+        run: node tools/validate-gallery-presentation.mjs
+
+      - name: Validate holographic foil interaction
+        run: node tools/validate-holographic-interaction.mjs
+
+      - name: Validate feature lifecycle boundary
+        run: node tools/validate-lifecycle.mjs
+
+      - name: Syntax-check every JavaScript module
+        run: |
+          set -euo pipefail
+          find js -type f -name '*.js' -print0 | sort -z | xargs -0 -r -n1 node --check
+
+      - name: Syntax-check CMS
+        run: |
+          node --check admin/admin.js
+          node --check admin/videos.js
+
+      - name: Syntax-check smoke test
+        run: node --check tools/smoke-browser.mjs
+
+      - name: Browser smoke test
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts playwright@1.63.0 axe-core@4.14.0
+          npx playwright install --with-deps chromium
+          node tools/smoke-browser.mjs

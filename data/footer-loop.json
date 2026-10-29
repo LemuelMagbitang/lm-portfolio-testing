@@ -1,0 +1,11 @@
+{
+  "mode": "hero",
+  "manual": {
+    "type": "image",
+    "src": "",
+    "alt": "Footer animation",
+    "focus": "50% 50%",
+    "zoom": 1,
+    "rotate": 0
+  }
+}
