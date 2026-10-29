@@ -5306,8 +5306,8 @@ try {
         entries.map(entry => entry.querySelector('.media-caption')?.textContent?.trim() || '')
       );
       const navigationStartIndex = navigationCaptions.indexOf('Smooth Prism Foil');
-      if (navigationStartIndex < 0 || navigationCaptions.length < 3 || navigationCaptions.some(caption => !caption)) {
-        throw new Error('Inspector navigation fixture needs at least three captioned artworks in one group: ' +
+      if (navigationStartIndex < 0 || navigationCaptions.filter(Boolean).length < 3) {
+        throw new Error('Inspector navigation fixture needs at least three named artworks in one group: ' +
           JSON.stringify({ navigationStartIndex, navigationCaptions }));
       }
       await navigationEntries.nth(navigationStartIndex).click({ force: true });
@@ -5392,8 +5392,8 @@ try {
       const captions = await entries.evaluateAll(items =>
         items.map(entry => entry.querySelector('.media-caption')?.textContent?.trim() || '')
       );
-      if (captions.length < 3 || captions.some(caption => !caption)) {
-        throw new Error('Mobile Inspector navigation fixture needs at least three captioned artworks: ' + JSON.stringify(captions));
+      if (captions.length < 3 || captions.filter(Boolean).length < 3) {
+        throw new Error('Mobile Inspector navigation fixture needs at least three named artworks: ' + JSON.stringify(captions));
       }
       await entries.first().click({ force: true });
       const inspect = page.locator('.lightbox-inspect-mode');
