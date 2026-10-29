@@ -1751,6 +1751,20 @@ function validateResponsiveUiContracts() {
   if (!groupedLayoutContract) {
     err('Artwork groups: CMS, runtime, and feature CSS must support grid, stack, cards, and sticker layouts consistently.');
   }
+
+  const groupedInspectorNavigationContract =
+    artworkGroupRuntime.includes('function navigateArtworkInspect(direction)') &&
+    artworkGroupRuntime.includes('active.groupEntries.length') &&
+    artworkGroupRuntime.includes('animateInspectBoundary(active,delta)') &&
+    artworkGroupRuntime.includes('createArtworkInspectPlaceholder(nextEntry)') &&
+    artworkGroupRuntime.includes('onInspectPointerUp') &&
+    artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-prev') &&
+    artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-next') &&
+    artworkGroupCss.includes('touch-action:pan-y;') &&
+    artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-nav{display:none!important;}');
+  if (!groupedInspectorNavigationContract) {
+    err('Grouped artwork Inspector navigation must stay bounded, preserve layout placeholders, support mobile swipes, and hide chevrons on mobile.');
+  }
   if (!phoneTwoColumn || !tabletThreeColumn || !desktopThreeColumn) {
     err('Gallery responsive layout contract: phone must use two columns, tablet and desktop must use three columns.');
   }
