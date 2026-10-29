@@ -117,12 +117,14 @@
         "id": "h2oh",
         "name": "h2oh",
         "layout": "grid",
+        "gridColumns": 2,
         "color": "#849573"
       },
       {
         "id": "artwork-group-2",
         "name": "lss",
         "layout": "stack",
+        "gridColumns": 3,
         "color": "#ffd500"
       }
     ],
@@ -504,12 +506,14 @@
         "id": "group1",
         "name": "group1",
         "layout": "cards",
+        "gridColumns": 3,
         "color": "#849573"
       },
       {
         "id": "group2",
         "name": "group2",
         "layout": "sticker",
+        "gridColumns": 3,
         "color": "#ff0000"
       }
     ],
