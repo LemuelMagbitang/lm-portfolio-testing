@@ -638,3 +638,67 @@
     flex-direction:row;
   }
 }
+
+/* Grouped artwork Inspector navigation. Match the global Lightbox chevrons,
+   but keep the controls above the Inspector layer and out of the mobile UI. */
+.lightbox-inspect-mode .lightbox-inspect-nav{
+  position:fixed;
+  top:50svh;
+  bottom:auto;
+  transform:translate3d(0,-50%,0);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  height:44px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  color:#fff;
+  background:transparent!important;
+  z-index:10003;
+  cursor:pointer;
+  pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;
+}
+.lightbox-inspect-mode .lightbox-inspect-prev{
+  left:calc(14px + env(safe-area-inset-left,0px));
+  right:auto;
+}
+.lightbox-inspect-mode .lightbox-inspect-next{
+  right:calc(14px + env(safe-area-inset-right,0px));
+  left:auto;
+}
+.lightbox-inspect-mode .lightbox-inspect-nav::before{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:50%;
+  background:rgba(0,0,0,.38);
+  box-shadow:0 6px 18px rgba(0,0,0,.22);
+  pointer-events:none;
+}
+.lightbox-inspect-mode .lightbox-inspect-nav i{
+  position:relative;
+  z-index:1;
+  color:inherit;
+  font-size:1.15em;
+  pointer-events:none;
+}
+.lightbox-inspect-mode .lightbox-inspect-nav:focus-visible{
+  outline:none;
+}
+.lightbox-inspect-mode .lightbox-inspect-nav:focus-visible i{
+  filter:drop-shadow(0 0 3px currentColor);
+}
+@media(hover:hover) and (pointer:fine){
+  .lightbox-inspect-mode .lightbox-inspect-nav:hover{opacity:.72;}
+}
+.lightbox-inspect-stage,
+.lightbox-inspect-frame{
+  touch-action:pan-y;
+}
+@media(max-width:767px){
+  .lightbox-inspect-mode .lightbox-inspect-nav{display:none!important;}
+}
+
