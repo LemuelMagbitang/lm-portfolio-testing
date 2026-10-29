@@ -10,6 +10,33 @@ export function getLightboxSwipeDirection(deltaX, deltaY, { threshold = 56, axis
   return x < 0 ? 1 : -1;
 }
 
+const LIGHTBOX_MUX_CONTROL_SELECTOR = [
+  'button', 'a', 'input', 'select', 'textarea', '[role="slider"]',
+  'media-time-range', 'media-chrome-range', 'media-range',
+  '[part~="range"]', '[part~="button"]', '[part~="play"]',
+  '[part~="seek-backward"]', '[part~="seek-forward"]', '[part~="mute"]',
+  '[part~="volume"]', '[part~="captions"]', '[part~="airplay"]',
+  '[part~="pip"]', '[part~="cast"]', '[part~="fullscreen"]',
+  '[part~="playback-rate"]', '[part~="time"]', '[part~="display"]'
+].join(', ');
+
+/**
+ * Mux Player retargets pointer events across its shadow DOM. Inspect the composed
+ * path for its public control parts so scrubbing/buttons keep their native pointer
+ * sequence instead of being claimed by the Lightbox navigation recognizer.
+ */
+export function isLightboxSwipeControlEvent(event) {
+  let path = [];
+  try {
+    path = typeof event?.composedPath === 'function' ? event.composedPath() : [];
+  } catch (_) {}
+  return Array.isArray(path) && path.some(node => {
+    if (typeof node?.matches !== 'function') return false;
+    try { return node.matches(LIGHTBOX_MUX_CONTROL_SELECTOR); }
+    catch (_) { return false; }
+  });
+}
+
 function createLightboxA11y(lightboxEl, documentRef = globalThis.document, windowRef = globalThis.window, lifecycle = null) {
   if (!lightboxEl) return { open() {}, close() {} };
   const controlsEl = documentRef?.getElementById?.('lightboxControls') || null;
@@ -524,8 +551,16 @@ const handleSwipePointerDown = event => {
   if (event.pointerType === 'mouse' || event.isPrimary === false) return;
 
   const target = event.target;
+  const eventPath = typeof event.composedPath === 'function' ? event.composedPath() : [];
+  const muxPlayer = target?.closest?.('mux-player') ||
+    eventPath.find(node => node?.localName === 'mux-player') ||
+    null;
+
+  // Preserve native media controls. In particular, Mux's time range is inside a
+  // shadow DOM, so target.closest() alone cannot identify a timeline drag.
   if (
-    target?.closest?.('button, a, iframe, video, .model-viewer-shell, .lightbox-holographic')
+    target?.closest?.('button, a, iframe, video, .model-viewer-shell, .lightbox-holographic') ||
+    isLightboxSwipeControlEvent(event)
   ) {
     swipeStart = null;
     return;
@@ -534,14 +569,30 @@ const handleSwipePointerDown = event => {
   swipeStart = {
     x: Number(event.clientX) || 0,
     y: Number(event.clientY) || 0,
-    pointerId: event.pointerId
+    pointerId: event.pointerId,
+    // Capturing pointerup on the Lightbox breaks the native click sequence for
+    // the Mux surface. Let Mux keep its pointer stream; Lightbox still receives
+    // bubbled pointerup while the gesture remains inside the modal.
+    capturePointer: !muxPlayer
   };
 
-  try { lightbox.setPointerCapture?.(event.pointerId); } catch (_) {}
+  if (!muxPlayer) {
+    try { lightbox.setPointerCapture?.(event.pointerId); } catch (_) {}
+  }
+};
+
+const handleSwipePointerMove = event => {
+  if (!swipeStart) return;
+  if (event?.pointerId !== undefined && event.pointerId !== swipeStart.pointerId) return;
+  // A gesture that crosses onto Mux's timeline or another control is no longer
+  // a project-navigation gesture. Do not preventDefault or stop propagation:
+  // the player must retain native scrubbing, play/pause, and accessibility.
+  if (isLightboxSwipeControlEvent(event)) swipeStart = null;
 };
 
 const handleSwipePointerUp = event => {
   if (!swipeStart || event.pointerType === 'mouse' || event.isPrimary === false) return;
+  if (event?.pointerId !== undefined && event.pointerId !== swipeStart.pointerId) return;
 
   const start = swipeStart;
   swipeStart = null;
@@ -550,7 +601,9 @@ const handleSwipePointerUp = event => {
     (Number(event.clientX) || 0) - start.x,
     (Number(event.clientY) || 0) - start.y
   );
-  try { lightbox.releasePointerCapture?.(event.pointerId); } catch (_) {}
+  if (start.capturePointer) {
+    try { lightbox.releasePointerCapture?.(event.pointerId); } catch (_) {}
+  }
   if (!direction) return;
 
   event.preventDefault();
@@ -560,7 +613,9 @@ const handleSwipePointerUp = event => {
 const handleSwipePointerCancel = event => {
   if (!swipeStart) return;
   if (event?.pointerId !== undefined && event.pointerId !== swipeStart.pointerId) return;
-  try { lightbox.releasePointerCapture?.(event.pointerId); } catch (_) {}
+  if (swipeStart.capturePointer) {
+    try { lightbox.releasePointerCapture?.(event.pointerId); } catch (_) {}
+  }
   swipeStart = null;
 };
 
@@ -620,6 +675,7 @@ bind(lightboxPrev, 'click', handlePrev);
 bind(lightboxNext, 'click', handleNext);
 bind(lightbox, 'click', handleBackdropClick);
 bind(lightbox, 'pointerdown', handleSwipePointerDown, { passive: true });
+bind(lightbox, 'pointermove', handleSwipePointerMove, { passive: true });
 bind(lightbox, 'pointerup', handleSwipePointerUp);
 bind(lightbox, 'pointercancel', handleSwipePointerCancel);
 bind(documentRef, 'keydown', handleDocumentKeydown);

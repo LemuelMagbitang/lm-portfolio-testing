@@ -1010,6 +1010,14 @@ function validateLightboxLifecycle() {
     err('Lightbox: project content must come from the normalized Projects contract, not card markup.');
   }
 
+  if (!source.includes('export function isLightboxSwipeControlEvent') ||
+      !source.includes('capturePointer: !muxPlayer') ||
+      !source.includes('if (start.capturePointer)') ||
+      !source.includes("bind(lightbox, 'pointermove', handleSwipePointerMove") ||
+      !source.includes('isLightboxSwipeControlEvent(event)')) {
+    err('Lightbox: Mux timeline/control gestures must bypass project-swipe arbitration while preserving native pointer handling.');
+  }
+
   const failureStart = modelViewer.indexOf('  } catch (err) {');
   const failureEnd = modelViewer.indexOf('\n\n  const resizeViewer = () => {', failureStart);
   const failurePath = failureStart >= 0 && failureEnd > failureStart

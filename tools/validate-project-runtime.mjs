@@ -3,7 +3,7 @@ import { mountProjects } from '../js/features/projects/browser-runtime.js?v=2026
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261028-01';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261027-05';
 import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261027-06';
-import { getLightboxSwipeDirection } from '../js/features/lightbox/index.js?v=20261029-04';
+import { getLightboxSwipeDirection, isLightboxSwipeControlEvent } from '../js/features/lightbox/index.js?v=20261029-05';
 import {
   applyProjectCardOrientation,
   getProjectCardOrientation,
@@ -976,6 +976,24 @@ assert.equal(getLightboxSwipeDirection(120, -14), -1);
 assert.equal(getLightboxSwipeDirection(40, 4), 0);
 assert.equal(getLightboxSwipeDirection(-120, 110), 0);
 assert.equal(getLightboxSwipeDirection(-120, 18, { threshold: 140 }), 0);
+
+// Shadow-DOM Mux controls must never be mistaken for Lightbox navigation gestures.
+const fakeMuxTimelineControl = {
+  matches(selector) {
+    return selector.split(',').some(part => part.trim() === '[part~="range"]');
+  }
+};
+const fakeMuxVideoSurface = { matches() { return false; } };
+assert.equal(
+  isLightboxSwipeControlEvent({ composedPath: () => [fakeMuxTimelineControl] }),
+  true,
+  'The exposed Mux range part should be classified as a player control.'
+);
+assert.equal(
+  isLightboxSwipeControlEvent({ composedPath: () => [fakeMuxVideoSurface] }),
+  false,
+  'The Mux video surface should remain eligible for horizontal project navigation.'
+);
 
 assert.equal(getProjectCardOrientation({
   thumbnail: { orientation: 'portrait' },
