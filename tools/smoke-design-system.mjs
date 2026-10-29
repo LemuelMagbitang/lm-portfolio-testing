@@ -116,7 +116,7 @@ async function main() {
           path: 'data/hero.json',
           sha: 'smoke-hero-sha',
           encoding: 'base64',
-          content: Buffer.from('[]\\n', 'utf8').toString('base64')
+          content: Buffer.from('[]\n', 'utf8').toString('base64')
         }));
         return;
       }
@@ -216,7 +216,7 @@ async function main() {
           path: filePath,
           sha: `smoke-file-${filePath.replace(/[^A-Za-z0-9]+/g, '-')}`,
           encoding: 'base64',
-          content: Buffer.from('[]\\n', 'utf8').toString('base64')
+          content: Buffer.from('[]\n', 'utf8').toString('base64')
         }));
         return;
       }
