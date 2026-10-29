@@ -1758,8 +1758,11 @@ function validateResponsiveUiContracts() {
     artworkGroupRuntime.includes('animateInspectBoundary(active,delta)') &&
     artworkGroupRuntime.includes('createArtworkInspectPlaceholder(nextEntry)') &&
     artworkGroupRuntime.includes('onInspectPointerUp') &&
+    artworkGroupRuntime.includes("classList?.add('lm-artwork-inspect-open')") &&
+    artworkGroupRuntime.includes("classList?.remove('lm-artwork-inspect-open')") &&
     artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-prev') &&
     artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-next') &&
+    artworkGroupCss.includes('.lightbox-inspect-mode{touch-action:pan-y;}') &&
     artworkGroupCss.includes('touch-action:pan-y;') &&
     artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-nav{display:none!important;}');
   if (!groupedInspectorNavigationContract) {
