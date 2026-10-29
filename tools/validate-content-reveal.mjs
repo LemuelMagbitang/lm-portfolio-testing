@@ -133,11 +133,11 @@ const root = {
   querySelectorAll(selector) { return selectorTargets.get(selector) || []; }
 };
 const feature = initContentReveal({ root, windowRef });
-assert.equal(feature.refresh(), 15, 'The first explicit refresh must attach About and Works reveal targets.');
+assert.equal(feature.refresh(), 14, 'The first explicit refresh must attach About and Works reveal targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
-assert.equal(observer.observed.size, 15);
+assert.equal(observer.observed.size, 14);
 assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers to an existing target.');
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
