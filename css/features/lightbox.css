@@ -653,7 +653,7 @@
   height:44px;
   padding:0;
   border:0;
-  border-radius:50%;
+  border-radius:16px;
   color:#fff;
   background:transparent!important;
   z-index:10003;
@@ -673,7 +673,7 @@
   content:"";
   position:absolute;
   inset:4px;
-  border-radius:50%;
+  border-radius:16px;
   background:rgba(0,0,0,.38);
   box-shadow:0 6px 18px rgba(0,0,0,.22);
   pointer-events:none;
