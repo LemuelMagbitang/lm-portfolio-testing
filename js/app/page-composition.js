@@ -98,7 +98,7 @@ export async function createPortfolioApp({
   let activeCuratedViewSlug = '';
   let lightboxFeature = null;
   let contentRevealFeature = null;
-  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261029-07')
+  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261029-08')
     .catch(error => {
       console.warn('Content reveal: optional feature could not load.', error);
       return null;

@@ -9,7 +9,13 @@
 
 const REVEAL_TARGET_GROUPS = [
   { selector: '.about-hero .photo-frame' },
-  { selector: '.about-hero .about-bio-text > *' },
+  {
+    selector: '.about-hero .about-bio-text > *',
+    // React Bits AnimatedContent-inspired profile, mapped to the site's native
+    // IntersectionObserver/CSS system. Keep the hero entrance editorial, not
+    // the generic demo's full 100px travel, and stagger each direct child.
+    motion: { distance: 40, durationMs: 800, staggerStepMs: 80, staggerMaxMs: 240 }
+  },
   {
     selector: '.about-page main .resume-skills-row > .resume-block > h3, ' +
       '.about-page main .resume-skills-row .skill-list > li'
@@ -96,7 +102,7 @@ export function initContentReveal({
     }, {
       root: null,
       rootMargin: '0px 0px -40px 0px',
-      threshold: 0.01
+      threshold: 0.1
     });
     return observer;
   };
@@ -130,8 +136,22 @@ export function initContentReveal({
           target.dataset.lmContentRevealMotion = 'position-only';
         }
 
-        // Delay only sibling members; clamp it to avoid a slow cascade on longer lists.
-        const delay = Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS);
+        // Profiles are scoped to selector groups. Existing targets retain
+        // the default 24px / 720ms behavior; the About hero uses the
+        // AnimatedContent-inspired 40px / 800ms / 80ms stagger profile.
+        const motion = group.motion || {};
+        const distance = Number.isFinite(motion.distance) ? Math.max(0, motion.distance) : 24;
+        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 720;
+        const staggerStepMs = Number.isFinite(motion.staggerStepMs)
+          ? Math.max(0, motion.staggerStepMs)
+          : STAGGER_STEP_MS;
+        const staggerMaxMs = Number.isFinite(motion.staggerMaxMs)
+          ? Math.max(0, motion.staggerMaxMs)
+          : STAGGER_MAX_MS;
+        const delay = Math.min(index * staggerStepMs, staggerMaxMs);
+        target.style.setProperty('--lm-content-reveal-distance', distance + 'px');
+        target.style.setProperty('--lm-content-reveal-duration', durationMs + 'ms');
+        target.style.setProperty('--lm-content-reveal-ease', 'cubic-bezier(.16,1,.3,1)');
         target.style.setProperty('--lm-content-reveal-delay', delay + 'ms');
         target.dataset.lmContentRevealState = 'pending';
         target.classList.add('lm-content-reveal-target');
@@ -183,6 +203,9 @@ export function initContentReveal({
           delete target.dataset.lmContentRevealMotion;
         }
         target.style?.removeProperty?.('--lm-content-reveal-delay');
+        target.style?.removeProperty?.('--lm-content-reveal-distance');
+        target.style?.removeProperty?.('--lm-content-reveal-duration');
+        target.style?.removeProperty?.('--lm-content-reveal-ease');
       });
       pendingTargets.clear();
       targets.clear();
