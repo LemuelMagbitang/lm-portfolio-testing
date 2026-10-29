@@ -2966,7 +2966,7 @@ export function createLightboxMediaRenderer({
       if(event.key!=='Tab')return;
       event.stopPropagation();
       const focusables=Array.from(overlay.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]'))
-        .filter(node=>!node.closest('[hidden],[inert]'));
+        .filter(node=>!node.closest('[hidden],[inert]')&&node.getClientRects().length>0&&windowRef.getComputedStyle(node).visibility!=='hidden');
       if(!focusables.length){event.preventDefault();back.focus();return;}
       const first=focusables[0],last=focusables[focusables.length-1];
       if(event.shiftKey&&documentRef.activeElement===first){event.preventDefault();last.focus();}
