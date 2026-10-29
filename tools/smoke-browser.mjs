@@ -14,6 +14,10 @@ import process from 'node:process';
 
 import { chromium } from 'playwright';
 
+const PORTFOLIO_SMOKE_FIXTURES = JSON.parse(
+  readFileSync(new URL('./fixtures/portfolio-smoke-fixtures.json', import.meta.url), 'utf8')
+);
+
 const PORT = 4173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const SMOKE_PAGE_TIMEOUT_MS = 30000;
@@ -2111,6 +2115,62 @@ async function assertAxeAccessibility(page, label) {
   console.log("[a11y] PASS " + label + " (" + results.passes.length + " rules passed; " + results.incomplete.length + " need manual review)");
 }
 
+async function configurePortfolioSmokeFixtures(page) {
+  // These records exercise media/3D/CMS edge cases. Keep them in the smoke-test
+  // harness rather than publishing placeholder projects through data/*.json.
+  await page.route('**/data/projects.json**', async route => {
+    const response = await route.fetch();
+    if (!response.ok()) {
+      await route.fulfill({ response });
+      return;
+    }
+    let projects;
+    try { projects = await response.json(); } catch (_) {
+      await route.fulfill({ response });
+      return;
+    }
+    if (!Array.isArray(projects)) {
+      await route.fulfill({ response });
+      return;
+    }
+    const fixtures = Array.isArray(PORTFOLIO_SMOKE_FIXTURES.projects)
+      ? PORTFOLIO_SMOKE_FIXTURES.projects
+      : [];
+    const fixtureIds = new Set(fixtures.map(project => String(project?.id || '')).filter(Boolean));
+    const publicProjects = projects.filter(project => !fixtureIds.has(String(project?.id || '')));
+    const existingIds = new Set(publicProjects.map(project => String(project?.id || '')).filter(Boolean));
+    publicProjects.push(...fixtures.filter(project =>
+      project?.id && !existingIds.has(String(project.id))
+    ));
+    await route.fulfill({ response, body: JSON.stringify(publicProjects) });
+  });
+
+  await page.route('**/data/curated-views.json**', async route => {
+    const response = await route.fetch();
+    if (!response.ok()) {
+      await route.fulfill({ response });
+      return;
+    }
+    let views;
+    try { views = await response.json(); } catch (_) {
+      await route.fulfill({ response });
+      return;
+    }
+    if (!Array.isArray(views)) {
+      await route.fulfill({ response });
+      return;
+    }
+    const fixtures = Array.isArray(PORTFOLIO_SMOKE_FIXTURES.curatedViews)
+      ? PORTFOLIO_SMOKE_FIXTURES.curatedViews
+      : [];
+    const existingIds = new Set(views.map(view => String(view?.id || view?.slug || '')).filter(Boolean));
+    views.push(...fixtures.filter(view =>
+      (view?.id || view?.slug) && !existingIds.has(String(view.id || view.slug))
+    ));
+    await route.fulfill({ response, body: JSON.stringify(views) });
+  });
+}
+
 async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
   // A narrow viewport alone does not emulate a phone. In Chromium the CSS
   // pointer media feature remains `pointer:fine`, which means touch-specific
@@ -2181,6 +2241,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
   try {
     await waitForSmokeTask(async () => {
       await configureLogoRoutes(page);
+      await configurePortfolioSmokeFixtures(page);
 
       if (isMobileSmoke) {
         const coarse = await page.evaluate(() =>

@@ -696,6 +696,17 @@ const settings = parseJson('data/settings.json', {});
 const about = parseJson('data/about.json', {});
 const heroLoop = parseJson('data/hero-loop.json', []);
 const curatedViews = parseJson('data/curated-views.json', []);
+if (Array.isArray(projects) && projects.some(project => project?.id === 'test-project')) {
+  err('Public project data must not include the test-project QA fixture; smoke-browser injects it only during tests.');
+}
+if (Array.isArray(curatedViews) && curatedViews.some(view =>
+  view?.id === 'test-portfolio' || view?.slug === 'test-portfolio' ||
+  (Array.isArray(view?.projects) && view.projects.some(entry =>
+    entry?.project?.id === 'test-project-on-curated-view'
+  ))
+)) {
+  err('Public Curated Views data must not include the test-portfolio QA fixture.');
+}
 parseJson('data/hero.json', []);
 parseJson('data/reviews.json', []);
 
