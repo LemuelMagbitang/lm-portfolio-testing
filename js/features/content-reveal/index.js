@@ -21,7 +21,11 @@ const REVEAL_TARGET_GROUPS = [
     motion: { distance: 16, durationMs: 460, staggerStepMs: 44, staggerMaxMs: 44 }
   },
   {
-    selector: '.about-page main .resume-skills-row .skill-list > li',
+    selector: '#softwareSkillsList > li',
+    motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
+  },
+  {
+    selector: '#multimediaSkillsList > li',
     motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
   },
   {
