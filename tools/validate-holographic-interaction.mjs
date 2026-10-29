@@ -143,6 +143,8 @@ assert.ok(mediaRenderer.includes("surface.style.setProperty('--holo-rx'"),
 assert.ok(mediaRenderer.includes("surface.style.setProperty('--holo-shift-x'"),
   'Artwork translation properties must remain initialized for centering and reset behavior.');
 assert.match(mediaRenderer, /record\.canvas\.dataset\.foilNormalState = enabled \? 'active' : 'suspended'/);
+assert.match(mediaRenderer, /const onPointerLeave = event => \{[\s\S]*?clientX >= rect\.left && clientX < rect\.right[\s\S]*?clientY >= rect\.top && clientY < rect\.bottom[\s\S]*?return;[\s\S]*?setHolographicTarget\(surface, 50, 50, 0\);/,
+  'Transient pointerleave inside the outer card bounds must not erase desktop foil response.');
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /Math\.random\(\)|rotationDirection|getFoilEdgeRotation/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);

@@ -4258,6 +4258,15 @@ try {
             target: event.target?.tagName || ''
           });
         });
+        el.addEventListener('pointerleave', event => {
+          window.__lmHoloPointerEvents.push({
+            type: 'leave',
+            pointerType: event.pointerType,
+            x: Math.round(event.clientX),
+            y: Math.round(event.clientY),
+            target: event.relatedTarget?.tagName || ''
+          });
+        });
       });
       // Start outside the artwork and enter at a known exposed point. This
       // prevents a pre-existing hover/leave state from swallowing the one-step

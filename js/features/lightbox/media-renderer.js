@@ -1407,7 +1407,20 @@ export function createLightboxMediaRenderer({
       });
     };
 
-    const onPointerLeave = () => {
+    const onPointerLeave = event => {
+      // A transformed inner face can move away from a stationary pointer and
+      // emit pointerleave while the pointer is still inside the outer card.
+      // Preserve the current pose through that transient hit-test gap; reset
+      // only after the pointer has actually left the card's layout bounds.
+      const rect = surface.getBoundingClientRect?.();
+      const clientX = Number(event?.clientX);
+      const clientY = Number(event?.clientY);
+      if (rect && rect.width > 0 && rect.height > 0 &&
+          Number.isFinite(clientX) && Number.isFinite(clientY) &&
+          clientX >= rect.left && clientX < rect.right &&
+          clientY >= rect.top && clientY < rect.bottom) {
+        return;
+      }
       cancelQueuedPointer();
       setHolographicTarget(surface, 50, 50, 0);
     };
