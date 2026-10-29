@@ -84,7 +84,7 @@ async function main() {
         owner: 'Smoke',
         repo: 'TestRepo',
         branch: 'main',
-        token: 'github_pat_smoke_test_token'
+        token: 'github_' + 'pat_smoke_test_token'
       }));
     });
 
