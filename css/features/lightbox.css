@@ -694,6 +694,9 @@
 @media(hover:hover) and (pointer:fine){
   .lightbox-inspect-mode .lightbox-inspect-nav:hover{opacity:.72;}
 }
+/* Override the legacy Inspector's touch-action:none so vertical gestures
+   can remain native; only a dominant horizontal swipe selects another piece. */
+.lightbox-inspect-mode{touch-action:pan-y;}
 .lightbox-inspect-stage,
 .lightbox-inspect-frame{
   touch-action:pan-y;
