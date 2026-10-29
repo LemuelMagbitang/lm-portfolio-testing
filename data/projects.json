@@ -496,18 +496,7 @@
         "src": "assets/projects/funko-pop-sticker/miles-morales-front-1.webp",
         "caption": "Smooth Prism Foil",
         "groupId": "group1",
-        "orientation": "square",
-        "holographic": {
-          "style": "holographic",
-          "intensity": 0.1,
-          "textureMode": "fill",
-          "glitterLayer": true,
-          "grainLayer": true,
-          "backTextureMode": "fill",
-          "back": "assets/projects/funko-pop-sticker/miles-morales-back-1.webp",
-          "backFoilEnabled": true,
-          "backIntensity": 0.1
-        }
+        "orientation": "square"
       },
       {
         "type": "image",
