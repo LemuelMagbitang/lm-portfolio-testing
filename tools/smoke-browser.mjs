@@ -17,6 +17,38 @@ import { chromium } from 'playwright';
 const PORTFOLIO_SMOKE_FIXTURES = JSON.parse(
   readFileSync(new URL('./fixtures/portfolio-smoke-fixtures.json', import.meta.url), 'utf8')
 );
+const PORTFOLIO_PUBLIC_PROJECTS = JSON.parse(
+  readFileSync(new URL('../data/projects.json', import.meta.url), 'utf8')
+);
+const PORTFOLIO_PUBLIC_CURATED_VIEWS = JSON.parse(
+  readFileSync(new URL('../data/curated-views.json', import.meta.url), 'utf8')
+);
+
+function mergeSmokeFixtureRecords(publicRecords, fixtureRecords, getId) {
+  const records = Array.isArray(publicRecords) ? publicRecords : [];
+  const fixtures = Array.isArray(fixtureRecords) ? fixtureRecords : [];
+  const fixtureIds = new Set(fixtures.map(getId).filter(Boolean));
+  const merged = records.filter(record => !fixtureIds.has(getId(record)));
+  const seen = new Set(merged.map(getId).filter(Boolean));
+  fixtures.forEach(record => {
+    const id = getId(record);
+    if (!id || seen.has(id)) return;
+    merged.push(record);
+    seen.add(id);
+  });
+  return merged;
+}
+
+const PORTFOLIO_SMOKE_PROJECTS = mergeSmokeFixtureRecords(
+  PORTFOLIO_PUBLIC_PROJECTS,
+  PORTFOLIO_SMOKE_FIXTURES.projects,
+  project => String(project?.id || '')
+);
+const PORTFOLIO_SMOKE_CURATED_VIEWS = mergeSmokeFixtureRecords(
+  PORTFOLIO_PUBLIC_CURATED_VIEWS,
+  PORTFOLIO_SMOKE_FIXTURES.curatedViews,
+  view => String(view?.id || view?.slug || '')
+);
 
 const PORT = 4173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -2116,58 +2148,23 @@ async function assertAxeAccessibility(page, label) {
 }
 
 async function configurePortfolioSmokeFixtures(page) {
-  // These records exercise media/3D/CMS edge cases. Keep them in the smoke-test
-  // harness rather than publishing placeholder projects through data/*.json.
+  // Fulfill from local files to keep fixture injection deterministic and avoid
+  // nested network requests during page teardown. Later test-specific routes
+  // still take precedence for isolated project-list scenarios.
   await page.route('**/data/projects.json**', async route => {
-    const response = await route.fetch();
-    if (!response.ok()) {
-      await route.fulfill({ response });
-      return;
-    }
-    let projects;
-    try { projects = await response.json(); } catch (_) {
-      await route.fulfill({ response });
-      return;
-    }
-    if (!Array.isArray(projects)) {
-      await route.fulfill({ response });
-      return;
-    }
-    const fixtures = Array.isArray(PORTFOLIO_SMOKE_FIXTURES.projects)
-      ? PORTFOLIO_SMOKE_FIXTURES.projects
-      : [];
-    const fixtureIds = new Set(fixtures.map(project => String(project?.id || '')).filter(Boolean));
-    const publicProjects = projects.filter(project => !fixtureIds.has(String(project?.id || '')));
-    const existingIds = new Set(publicProjects.map(project => String(project?.id || '')).filter(Boolean));
-    publicProjects.push(...fixtures.filter(project =>
-      project?.id && !existingIds.has(String(project.id))
-    ));
-    await route.fulfill({ response, body: JSON.stringify(publicProjects) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json; charset=utf-8',
+      body: JSON.stringify(PORTFOLIO_SMOKE_PROJECTS)
+    });
   });
 
   await page.route('**/data/curated-views.json**', async route => {
-    const response = await route.fetch();
-    if (!response.ok()) {
-      await route.fulfill({ response });
-      return;
-    }
-    let views;
-    try { views = await response.json(); } catch (_) {
-      await route.fulfill({ response });
-      return;
-    }
-    if (!Array.isArray(views)) {
-      await route.fulfill({ response });
-      return;
-    }
-    const fixtures = Array.isArray(PORTFOLIO_SMOKE_FIXTURES.curatedViews)
-      ? PORTFOLIO_SMOKE_FIXTURES.curatedViews
-      : [];
-    const existingIds = new Set(views.map(view => String(view?.id || view?.slug || '')).filter(Boolean));
-    views.push(...fixtures.filter(view =>
-      (view?.id || view?.slug) && !existingIds.has(String(view.id || view.slug))
-    ));
-    await route.fulfill({ response, body: JSON.stringify(views) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json; charset=utf-8',
+      body: JSON.stringify(PORTFOLIO_SMOKE_CURATED_VIEWS)
+    });
   });
 }
 
