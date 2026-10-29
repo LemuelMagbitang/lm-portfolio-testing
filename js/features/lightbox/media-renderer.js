@@ -2963,6 +2963,12 @@ export function createLightboxMediaRenderer({
     const onBackdropClick=event=>{if(event.target===overlay)closeArtworkInspect();};
     const onKeyDown=event=>{
       if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtworkInspect({viaKeyboard:true});return;}
+      if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+        event.preventDefault();
+        event.stopPropagation();
+        navigateArtworkInspect(event.key==='ArrowLeft'?-1:1);
+        return;
+      }
       if(event.key!=='Tab')return;
       event.stopPropagation();
       const focusables=Array.from(overlay.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]'))
