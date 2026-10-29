@@ -112,66 +112,89 @@
       "focus": "50% 30%",
       "zoom": 1
     },
-    "mediaGroups": [],
+    "mediaGroups": [
+      {
+        "id": "h2oh",
+        "name": "h2oh",
+        "layout": "grid",
+        "color": "#849573"
+      },
+      {
+        "id": "artwork-group-2",
+        "name": "lss",
+        "layout": "stack",
+        "color": "#ffd500"
+      }
+    ],
     "media": [
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/h20h00.webp",
         "caption": "H2OH Concept Store",
+        "groupId": "h2oh",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/h20h01.webp",
         "caption": "",
+        "groupId": "h2oh",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/h20h02.webp",
         "caption": "",
+        "groupId": "h2oh",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/h20h03.webp",
         "caption": "",
+        "groupId": "h2oh",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/h20h05.webp",
         "caption": "",
+        "groupId": "h2oh",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/h20h04.webp",
         "caption": "",
+        "groupId": "h2oh",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/lss00.webp",
         "caption": "Little Sprinkle and Sparkle. Pop-Up Retail Kiosk Design",
+        "groupId": "artwork-group-2",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/lss01.webp",
         "caption": "",
+        "groupId": "artwork-group-2",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/lss02.webp",
         "caption": "",
+        "groupId": "artwork-group-2",
         "orientation": ""
       },
       {
         "type": "image",
         "src": "assets/projects/retail-spatial-layouts/lss03.webp",
         "caption": "",
+        "groupId": "artwork-group-2",
         "orientation": ""
       },
       {
