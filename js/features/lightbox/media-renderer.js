@@ -2693,8 +2693,11 @@ export function createLightboxMediaRenderer({
 
   function animateInspectBoundary(active, direction) {
     if(!active?.frame||prefersReducedInspectMotion()||typeof active.frame.animate!=='function')return;
+    try{active.openAnimation?.cancel?.();}catch(_){}
     try{active.edgeAnimation?.cancel?.();}catch(_){}
     try{active.navigationAnimation?.cancel?.();}catch(_){}
+    active.openAnimation=null;
+    active.navigationAnimation=null;
     const offset=direction>0?-8:8;
     active.edgeAnimation=active.frame.animate([
       {transform:'translate3d(0,0,0)'},
@@ -2818,6 +2821,8 @@ export function createLightboxMediaRenderer({
       if(active.placeholder?.parentNode)active.placeholder.replaceWith(active.entry);
       if(active.foilHintPlaceholder?.parentNode&&active.foilHint)active.foilHintPlaceholder.replaceWith(active.foilHint);
       active.overlay.remove();
+      documentRef.documentElement?.classList?.remove('lm-artwork-inspect-open');
+      documentRef.body?.classList?.remove('lm-artwork-inspect-open');
       active.restoreLightboxScroll?.();
       windowRef.requestAnimationFrame(()=>{active.restoreLightboxScroll?.();windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());});
 
@@ -2984,6 +2989,8 @@ export function createLightboxMediaRenderer({
     overlay.addEventListener('keydown',onKeyDown);
     const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,overlay,frame,footer,description,back,previousButton,nextButton,groupItems,groupSection,groupEntries,currentIndex,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,onPreviousClick,onNextClick,onInspectPointerDown,onInspectPointerMove,onInspectPointerUp,onInspectPointerCancel,openAnimation:null,overlayAnimation:null,closeAnimation:null,navigationAnimation:null,edgeAnimation:null,isClosing:false};
     activeInspector=active;
+    documentRef.documentElement?.classList?.add('lm-artwork-inspect-open');
+    documentRef.body?.classList?.add('lm-artwork-inspect-open');
     documentRef.body.appendChild(overlay);
     restoreLightboxScroll();
     windowRef.requestAnimationFrame(()=>{restoreLightboxScroll();windowRef.requestAnimationFrame(restoreLightboxScroll);});
