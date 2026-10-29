@@ -29,7 +29,15 @@ const REVEAL_TARGET_GROUPS = [
     motion: { distance: 16, durationMs: 480, staggerStepMs: 44, staggerMaxMs: 88 }
   },
   {
-    selector: '#experienceList > *, #educationList > *, #awardsList > *',
+    selector: '#experienceList > *',
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
+  },
+  {
+    selector: '#educationList > *',
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
+  },
+  {
+    selector: '#awardsList > *',
     motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
   { selector: 'main.works-main > .filter-nav-wrapper' },
