@@ -284,6 +284,7 @@ async function main() {
     console.log('CMS Design System browser smoke passed: tab render, token hydration, live preview, guarded save, and saved state.');
   } finally {
     await browser?.close();
+    if (!server.killed) server.kill('SIGTERM');
   }
 }
 
