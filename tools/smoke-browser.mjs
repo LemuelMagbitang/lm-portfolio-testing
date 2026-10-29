@@ -4977,7 +4977,7 @@ try {
             return {
               display:style.display,
               flexWrap:style.flexWrap,
-              gridTracks:style.display === 'grid' ? style.gridTemplateColumns.split(/\\s+/).filter(Boolean).length : 0,
+              gridTracks:style.display === 'grid' ? style.gridTemplateColumns.split(/\s+/).filter(Boolean).length : 0,
               rows:[...rows.values()].map(row => ({
                 count:row.length,
                 widthSpread:Math.max(...row.map(child => child.width)) - Math.min(...row.map(child => child.width)),
