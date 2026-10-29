@@ -1306,22 +1306,21 @@ function validateLazyModelViewerLoading() {
 
   // A global modulepreload would fetch Three.js + OrbitControls on every Works
   // visit, even when the published project set contains no 3D model media.
-  // The composition root already dynamically imports and warms the viewer only
-  // when model content exists, while individual model previews can load it on
-  // demand. Keep the HTML entrypoint from defeating that lazy-loading contract.
-  const eagerViewerPreload = [...html.matchAll(/<link\\b[^>]*>/gi)]
+  // The composition root dynamically imports and warms the viewer only when
+  // model content exists, while an individual model preview can load it on demand.
+  const eagerViewerPreload = [...html.matchAll(/<link\b[^>]*>/gi)]
     .map(match => match[0])
     .find(tag =>
-      /\\brel\\s*=\\s*["'][^"']*\\bmodulepreload\\b[^"']*["']/i.test(tag) &&
-      /\\bhref\\s*=\\s*["'](?:\\.\\.\\/)?js\\/infrastructure\\/three\\/model-viewer\\.js(?:\\?[^"']*)?["']/i.test(tag)
+      /\brel\s*=\s*["'][^"']*\bmodulepreload\b[^"']*["']/i.test(tag) &&
+      /\bhref\s*=\s*["'](?:\.\.\/)?js\/infrastructure\/three\/model-viewer\.js(?:\?[^"']*)?["']/i.test(tag)
     );
   if (eagerViewerPreload) {
     err('3D viewer loading: model-viewer.js must not be globally modulepreloaded; load the Three.js graph only when model media is present or requested.');
   }
 
-  if (!/const loadModelViewerModule = async \\(\\) => \\(\\s*import\\(\\s*["']\\.\\.\\/infrastructure\\/three\\/model-viewer\\.js\\?v=/.test(composition) ||
-      !/const hasModelMedia = projectModels\\.some\\(project => project\\?\\.capabilities\\?\\.hasModel\\)/.test(composition) ||
-      !/const preloadModelModule = hasModelMedia\\s*\\?\\s*async \\(\\) => \\{[\\s\\S]*?await module\\.preloadModelViewerModules\\?\\.\\(formats\\);[\\s\\S]*?\\}\\s*:\\s*null;/.test(composition)) {
+  if (!/const loadModelViewerModule = async \(\) => \(\s*import\(\s*["']\.\.\/infrastructure\/three\/model-viewer\.js\?v=/.test(composition) ||
+      !/const hasModelMedia = projectModels\.some\(project => project\?\.capabilities\?\.hasModel\)/.test(composition) ||
+      !/const preloadModelModule = hasModelMedia\s*\?\s*async \(\) => \{[\s\S]*?await module\.preloadModelViewerModules\?\.\(formats\);[\s\S]*?\}\s*:\s*null;/.test(composition)) {
     err('3D viewer loading: retain the dynamic model-viewer import and model-media-gated module warm-up.');
   }
 }
