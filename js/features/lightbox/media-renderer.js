@@ -2724,12 +2724,13 @@ export function createLightboxMediaRenderer({
     active.navigationAnimation=null;
 
     const previousEntry=active.entry;
-    pauseOtherPlayback(previousEntry);
+    if(!active.placeholder?.parentNode)return;
+    previousEntry.querySelectorAll('video,mux-player').forEach(media=>{try{media.pause?.();}catch(_){}});
+    previousEntry.querySelectorAll('iframe[data-lm-youtube]').forEach(pauseYouTubeFrame);
     resetArtworkForInspection(previousEntry);
     if(active.foilHint&&active.foilHintPlaceholder?.parentNode){
       active.foilHintPlaceholder.replaceWith(active.foilHint);
     }
-    if(!active.placeholder?.parentNode)return;
     active.placeholder.replaceWith(previousEntry);
 
     const nextPlaceholder=createArtworkInspectPlaceholder(nextEntry);
