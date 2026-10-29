@@ -317,9 +317,11 @@
 /* Grid / Tiling: an explicit, configurable desktop grid with equal-width tracks.
    The renderer supplies --artwork-grid-columns (2–5); mobile always uses two. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
+  --artwork-grid-gap:clamp(8px,.9vw,12px);
+  --artwork-grid-gap-half:clamp(4px,.45vw,6px);
   display:grid;
   grid-template-columns:repeat(var(--artwork-grid-columns,3),minmax(0,1fr));
-  gap:clamp(8px,.9vw,12px);
+  gap:var(--artwork-grid-gap);
   padding:clamp(6px,.8vw,10px);
   align-items:stretch;
   justify-items:stretch;

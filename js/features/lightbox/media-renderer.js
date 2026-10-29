@@ -3090,7 +3090,14 @@ export function createLightboxMediaRenderer({
     const shiftHalfTrack = (columns - remainder) % 2 === 1;
     slots.slice(lastRowStart).forEach((slot, index) => {
       slot.style.gridColumnStart = String(startColumn + index + 1);
-      if (shiftHalfTrack) slot.style.setProperty('--artwork-row-center-shift', '50%');
+      if (shiftHalfTrack) {
+      // Center the final partial Grid row by half a track pitch (tile width + gap).
+      // Card Stack and Sticker keep their existing half-tile positioning.
+      const centerShift = effectiveLayout === 'grid'
+        ? 'calc(50% + var(--artwork-grid-gap-half, 0px))'
+        : '50%';
+      slot.style.setProperty('--artwork-row-center-shift', centerShift);
+    }
     });
   }
 
