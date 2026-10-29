@@ -1014,8 +1014,9 @@ function validateLightboxLifecycle() {
       !source.includes('capturePointer: !muxPlayer') ||
       !source.includes('if (start.capturePointer)') ||
       !source.includes("bind(lightbox, 'pointermove', handleSwipePointerMove") ||
-      !source.includes('isLightboxSwipeControlEvent(event)')) {
-    err('Lightbox: Mux timeline/control gestures must bypass project-swipe arbitration while preserving native pointer handling.');
+      !source.includes('isLightboxSwipeControlEvent(event)') ||
+      !source.includes("event.target?.closest?.('mux-player, video')")) {
+    err('Lightbox: Mux timeline/control gestures and focused-player keyboard controls must bypass project-navigation arbitration.');
   }
 
   const failureStart = modelViewer.indexOf('  } catch (err) {');

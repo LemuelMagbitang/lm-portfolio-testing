@@ -633,16 +633,15 @@ const handleDocumentKeydown = (event) => {
     return;
   }
 
-  if (event.key === 'ArrowLeft') {
-    event.preventDefault();
-    navigateLightbox(-1);
-    return;
-  }
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
 
-  if (event.key === 'ArrowRight') {
-    event.preventDefault();
-    navigateLightbox(1);
-  }
+  // Mux Player's keyboard controls bubble through its shadow DOM with the player
+  // as the retargeted event target. Do not steal arrows used to seek or operate
+  // the focused video; Escape remains available to close the Lightbox.
+  if (event.target?.closest?.('mux-player, video')) return;
+
+  event.preventDefault();
+  navigateLightbox(event.key === 'ArrowLeft' ? -1 : 1);
 };
 
 const handlePageHide = event => {
