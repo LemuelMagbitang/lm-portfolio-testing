@@ -36,7 +36,7 @@ assert.match(revealSource, /observer\?\.disconnect\?\.\(\)/);
 assert.match(revealSource, /target\.style\?\.removeProperty\?\.\('--lm-content-reveal-delay'\)/);
 assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero-banner/,
   'Gallery cards, Lightbox media, and animated hero artwork remain owned by their existing features.');
-assert.match(revealCss, /opacity var\\(--lm-content-reveal-duration, 720ms\\)[\\s\\S]*?translate var\\(--lm-content-reveal-duration, 720ms\\)/);
+assert.match(revealCss, /opacity var\(--lm-content-reveal-duration, 720ms\)[\s\S]*?translate var\(--lm-content-reveal-duration, 720ms\)/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
 assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\s*#bdbdbd\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
