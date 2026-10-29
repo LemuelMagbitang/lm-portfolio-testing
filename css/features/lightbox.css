@@ -290,24 +290,84 @@
   justify-self:center;
   box-sizing:border-box;
 }
-/* Grid / Tiling: equal tracks with a stable minimum card footprint. */
+/* Grid and Horizontal Stack get a larger shared artwork envelope.
+   This raises the allowed artwork height from 320px to 480px (1.5x) on desktop,
+   while each item still respects its cell width, aspect ratio, and image fit. */
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork.has-holographic,
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
+  width:min(100%,calc(clamp(324px,57svh,480px) * var(--lightbox-artwork-ratio,1)));
+  max-width:100%;
+  max-height:clamp(324px,57svh,480px);
+  margin:auto;
+  align-self:center;
+  justify-self:center;
+  box-sizing:border-box;
+}
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork:not(.has-holographic){
+  width:100%;
+  max-width:100%;
+  height:auto;
+  max-height:clamp(324px,57svh,480px);
+  aspect-ratio:var(--lightbox-artwork-ratio,auto);
+  margin-inline:auto;
+  overflow:visible;
+  box-sizing:border-box;
+}
+
+/* Grid / Tiling: an explicit, configurable desktop grid with equal-width tracks.
+   The renderer supplies --artwork-grid-columns (2–5); mobile always uses two. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
-  gap:clamp(16px,2.4vw,30px);
-  padding:clamp(12px,2.6vw,26px);
+  grid-template-columns:repeat(var(--artwork-grid-columns,3),minmax(0,1fr));
+  gap:clamp(8px,.9vw,12px);
+  padding:clamp(6px,.8vw,10px);
   align-items:stretch;
   justify-items:stretch;
 }
-/* Horizontal Stack: row-major auto-layout. Full rows share equal-width cells;
-   items that do not fit continue at the next row without stretching the tail. */
+#lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-media-item{
+  translate:var(--artwork-row-center-shift,0px) 0;
+}
+
+/* Horizontal Stack: Figma-style horizontal auto-layout. Flex rows wrap naturally;
+   each row shares equal item widths without the card rotations/overlap of Card Stack. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
-  gap:clamp(12px,1.8vw,22px);
-  padding:clamp(12px,2.2vw,24px);
+  --artwork-stack-gap:12px;
+  display:flex;
+  flex-flow:row wrap;
   align-items:stretch;
-  justify-items:stretch;
+  align-content:flex-start;
+  justify-content:flex-start;
+  gap:var(--artwork-stack-gap);
+  padding:8px;
+}
+#lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
+  flex:0 0 calc(33.333333% - 8px);
+  width:auto;
+  max-width:none;
+  min-width:0;
+}
+@media (min-width:761px) and (max-width:1000px){
+  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
+    --artwork-stack-gap:10px;
+    padding:8px;
+  }
+  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
+    flex-basis:calc(33.333333% - 6.6667px);
+  }
+}
+@media (max-width:760px){
+  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    padding:6px;
+  }
+  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
+    --artwork-stack-gap:8px;
+    padding:6px;
+  }
+  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
+    flex-basis:calc(50% - 4px);
+  }
 }
 /* Horizontal Card Stack — five cards across on desktop, four on tablet,
    and three on mobile. Overflow flows row-by-row, and an incomplete final row

@@ -4561,8 +4561,18 @@ try {
           itemsWidth: itemsRect.width,
           itemsBoxSizing: itemsStyle.boxSizing,
           itemsDisplay: itemsStyle.display,
+          itemsFlexWrap: itemsStyle.flexWrap,
           gridTemplateColumns: itemsStyle.gridTemplateColumns,
-          trackCount: itemsStyle.gridTemplateColumns.split(/\s+/).filter(Boolean).length,
+          configuredGridColumns: Number(group?.dataset.artworkGridColumns || 3),
+          viewportWidth: window.innerWidth,
+          trackCount: itemsStyle.display === 'grid'
+            ? itemsStyle.gridTemplateColumns.split(/\s+/).filter(Boolean).length
+            : (() => {
+                const firstTop = items.firstElementChild?.getBoundingClientRect().top;
+                return firstTop === undefined ? 0 : Array.from(items.children).filter(el =>
+                  Math.abs(el.getBoundingClientRect().top - firstTop) < 2
+                ).length;
+              })(),
           columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
           centerOffset: groupRect && itemsRect
             ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
@@ -4583,6 +4593,11 @@ try {
               caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
               left: el.offsetLeft,
               top: el.offsetTop,
+              visualTop: (() => {
+                const rect = el.getBoundingClientRect();
+                return rect.top - itemsRect.top;
+              })(),
+              artworkMaxHeight: artwork ? (Number.parseFloat(getComputedStyle(artwork).maxHeight) || 0) : 0,
               visualCenterX: (() => {
                 const rect = el.getBoundingClientRect();
                 return rect.left + rect.width / 2 - itemsRect.left;
@@ -4684,10 +4699,38 @@ try {
         }
         return metrics;
       };
-      const initialGridMetrics = assertEqualSectionGrid(groupBeforeInspect, 'initial viewport');
+      const assertHorizontalStack = (layout, context) => {
+        const metrics = measureEqualSectionGrid(layout);
+        const expectedTracks = layout.viewportWidth <= 760 ? 2 : 3;
+        const rows = new Map();
+        layout.children.forEach(child => {
+          const key = Math.round(child.visualTop);
+          if (!rows.has(key)) rows.set(key, []);
+          rows.get(key).push(child);
+        });
+        const malformedRows = [...rows.values()].some(row => {
+          const widths = row.map(child => child.width);
+          const widthSpread = widths.length ? Math.max(...widths) - Math.min(...widths) : 0;
+          const tops = row.map(child => child.visualTop);
+          return widthSpread > 2 || (tops.length && Math.max(...tops) - Math.min(...tops) > 2);
+        });
+        if (layout.itemsDisplay !== 'flex' || layout.itemsFlexWrap !== 'wrap' ||
+            layout.trackCount !== expectedTracks || metrics.widthSpread > 2 ||
+            metrics.dividerSpacingSpread > 2 || metrics.centeredArtworkCount < 1 ||
+            metrics.maxArtworkCenterOffset > 2 || metrics.maxArtworkAspectRatioDelta > 0.06 ||
+            malformedRows) {
+          throw new Error('Horizontal Stack must use a wrapping flex row with equal-width items and aligned rows (' + context + '): ' +
+            JSON.stringify({ metrics, expectedTracks, layout }));
+        }
+        return metrics;
+      };
+      const initialGridMetrics = groupBeforeInspect.layout === 'stack'
+        ? assertHorizontalStack(groupBeforeInspect, 'initial viewport')
+        : assertEqualSectionGrid(groupBeforeInspect, 'initial viewport');
       const originalViewport = page.viewportSize();
       const responsiveGridMetrics = [];
       const originalRequestedLayout = groupBeforeInspect.requestedLayout || 'grid';
+      const originalRequestedGridColumns = groupBeforeInspect.configuredGridColumns || 3;
       const layoutModes = ['grid','stack','cards','sticker'];
       const responsiveViewports = [
         { width:1280, height:900 },
@@ -4698,6 +4741,7 @@ try {
       const setRequestedLayout = async mode => artworkGroupItems.evaluate((items, layout) => {
         const group = items.closest('.lightbox-artwork-group');
         group.dataset.artworkLayout = layout;
+        if (layout === 'grid') group.dataset.artworkGridColumns = '3';
         window.dispatchEvent(new Event('resize'));
       }, mode);
       try {
@@ -4707,13 +4751,19 @@ try {
           const responsiveLayout = await readArtworkGroupLayout();
           responsiveGridMetrics.push({
             viewport,
-            metrics:assertEqualSectionGrid(responsiveLayout, viewport.width + 'px viewport')
+            metrics:responsiveLayout.layout === 'stack'
+              ? assertHorizontalStack(responsiveLayout, viewport.width + 'px viewport')
+              : assertEqualSectionGrid(responsiveLayout, viewport.width + 'px viewport')
           });
         }
-        const defaultColumnCounts = responsiveGridMetrics.map(result => result.metrics.columnCount);
+        const defaultColumnCounts = responsiveGridMetrics.map(result => result.metrics.trackCount);
         const expectedDenseColumnCounts = originalRequestedLayout === 'cards'
           ? [5,4,3,3]
-          : (originalRequestedLayout === 'sticker' ? [3,3,2,2] : null);
+          : (originalRequestedLayout === 'sticker'
+            ? [3,3,2,2]
+            : (originalRequestedLayout === 'grid'
+              ? [originalRequestedGridColumns,originalRequestedGridColumns,2,2]
+              : [3,3,2,2]));
         const baselineColumnsMatch = expectedDenseColumnCounts
           ? expectedDenseColumnCounts.every((count,index) =>
               defaultColumnCounts[index] === Math.min(count, groupBeforeInspect.children.length))
@@ -4741,13 +4791,25 @@ try {
               throw new Error('CMS artwork layout must retain its requested mode unless a narrow viewport requires a coherent grid fallback: ' +
                 JSON.stringify({ mode, viewport, expectedEffectiveLayout, layout }));
             }
-            const metrics = assertEqualSectionGrid(layout, mode + ' at ' + viewport.width + 'px');
-            const expectedTrackCount = mode === 'cards'
-              ? (viewport.width <= 760 ? 3 : (viewport.width <= 1000 ? 4 : 5))
-              : (mode === 'sticker' ? (viewport.width <= 760 ? 2 : 3) : null);
+            const metrics = mode === 'stack'
+              ? assertHorizontalStack(layout, mode + ' at ' + viewport.width + 'px')
+              : assertEqualSectionGrid(layout, mode + ' at ' + viewport.width + 'px');
+            const expectedTrackCount = mode === 'grid' || mode === 'stack'
+              ? (viewport.width <= 760 ? 2 : 3)
+              : (mode === 'cards'
+                ? (viewport.width <= 760 ? 3 : (viewport.width <= 1000 ? 4 : 5))
+                : (mode === 'sticker' ? (viewport.width <= 760 ? 2 : 3) : null));
             if (expectedTrackCount && layout.layout === mode && layout.trackCount !== expectedTrackCount) {
-              throw new Error('CMS card/sticker layout must use its intended responsive number of columns: ' +
+              throw new Error('CMS Grid/Stack/Card/Sticker layout must use its intended responsive number of columns: ' +
                 JSON.stringify({ mode, viewport, expectedTrackCount, layout }));
+            }
+            if (mode === 'grid' || mode === 'stack') {
+              const expectedMaxHeight = viewport.height <= 600 ? 324 : 480;
+              const actualMaxHeights = layout.children.map(child => child.artworkMaxHeight).filter(height => height > 0);
+              if (!actualMaxHeights.length || actualMaxHeights.some(height => Math.abs(height - expectedMaxHeight) > 2)) {
+                throw new Error('Grid and Horizontal Stack must use the 1.5x expanded artwork height envelope: ' +
+                  JSON.stringify({ mode, viewport, expectedMaxHeight, actualMaxHeights, layout }));
+              }
             }
             if (mode === 'cards' || mode === 'sticker') {
               const lastRowTop = Math.max(...layout.children.map(child => child.top));
@@ -4837,6 +4899,53 @@ try {
             });
           }
         }
+        // Grid columns are configurable from two to five on desktop/tablet,
+        // while compact/mobile viewports must always resolve to two columns.
+        await page.setViewportSize({ width:1280, height:900 });
+        await setRequestedLayout('grid');
+        for (const columns of [2,3,4,5]) {
+          await artworkGroupItems.evaluate((items, value) => {
+            const group = items.closest('.lightbox-artwork-group');
+            group.dataset.artworkGridColumns = String(value);
+            window.dispatchEvent(new Event('resize'));
+          }, columns);
+          await page.waitForTimeout(100);
+          const layout = await readArtworkGroupLayout();
+          assertEqualSectionGrid(layout, 'Grid ' + columns + ' desktop columns');
+          if (layout.configuredGridColumns !== columns || layout.trackCount !== columns) {
+            throw new Error('Grid/Tiling desktop column setting must support every integer from two to five: ' +
+              JSON.stringify({ columns, layout }));
+          }
+        }
+        await artworkGroupItems.evaluate(items => {
+          const group = items.closest('.lightbox-artwork-group');
+          group.dataset.artworkGridColumns = '5';
+          window.dispatchEvent(new Event('resize'));
+        });
+        for (const viewport of [
+          { width:820, height:1180 },
+          { width:390, height:844 },
+          { width:320, height:568 }
+        ]) {
+          await page.setViewportSize(viewport);
+          await page.waitForTimeout(100);
+          const layout = await readArtworkGroupLayout();
+          const expectedColumns = viewport.width <= 760 ? 2 : 5;
+          assertEqualSectionGrid(layout, 'Grid responsive configured columns at ' + viewport.width + 'px');
+          if (layout.trackCount !== expectedColumns) {
+            throw new Error('Grid must retain its selected desktop columns on larger viewports and use two columns on mobile: ' +
+              JSON.stringify({ viewport, expectedColumns, layout }));
+          }
+        }
+        await setRequestedLayout('stack');
+        await page.setViewportSize({ width:1280, height:900 });
+        await page.waitForTimeout(100);
+        const flexStackLayout = await readArtworkGroupLayout();
+        assertHorizontalStack(flexStackLayout, 'Horizontal Stack flex-vs-grid separation');
+        if (flexStackLayout.itemsDisplay !== 'flex' || flexStackLayout.gridTemplateColumns !== 'none') {
+          throw new Error('Horizontal Stack must stay a wrapping flex layout and must not reuse Grid/Tiling tracks.');
+        }
+
         // The same media set must keep the same actual artwork dimensions
         // when switching between card-stack and sticker presentation. Layout
         // cells/overlap can differ, but the shared size envelope cannot.
@@ -4875,7 +4984,12 @@ try {
           throw new Error('Card stacks must preserve their three-column mobile layout and stickers their overlapping two-column mobile collage.');
         }
       } finally {
-        await setRequestedLayout(originalRequestedLayout);
+        await artworkGroupItems.evaluate((items, state) => {
+          const group = items.closest('.lightbox-artwork-group');
+          group.dataset.artworkLayout = state.layout;
+          group.dataset.artworkGridColumns = String(state.columns);
+          window.dispatchEvent(new Event('resize'));
+        }, { layout:originalRequestedLayout, columns:originalRequestedGridColumns });
         await page.setViewportSize(originalViewport || { width:1280, height:900 });
         await page.waitForTimeout(160);
       }

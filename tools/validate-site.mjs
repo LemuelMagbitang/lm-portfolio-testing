@@ -198,6 +198,10 @@ function validateMediaGroups(project, where) {
     else ids.add(id);
     if (!name) err(`${groupWhere}: missing name.`);
     if (!SUPPORTED_ARTWORK_GROUP_LAYOUTS.has(layout)) err(`${groupWhere}: unsupported layout "${layout}".`);
+    if (group.gridColumns !== undefined &&
+        (!Number.isInteger(group.gridColumns) || group.gridColumns < 2 || group.gridColumns > 5)) {
+      err(`${groupWhere}: gridColumns must be an integer from 2 through 5 when present.`);
+    }
   });
   (Array.isArray(project.media) ? project.media : []).forEach((item,index) => {
     if (item?.groupId === undefined || item.groupId === null || item.groupId === '') return;
@@ -1750,6 +1754,18 @@ function validateResponsiveUiContracts() {
   );
   if (!groupedLayoutContract) {
     err('Artwork groups: CMS, runtime, and feature CSS must support grid, stack, cards, and sticker layouts consistently.');
+  }
+  const independentGridStackContract =
+    artworkGroupCss.includes('repeat(var(--artwork-grid-columns,3),minmax(0,1fr))') &&
+    artworkGroupCss.includes('grid-template-columns:repeat(2,minmax(0,1fr));') &&
+    artworkGroupCss.includes('display:flex;') &&
+    artworkGroupCss.includes('flex-flow:row wrap;') &&
+    artworkGroupCss.includes('clamp(324px,57svh,480px)') &&
+    artworkGroupRuntime.includes("section.style.setProperty('--artwork-grid-columns', String(gridColumns))") &&
+    artworkGroupAdmin.includes('data-edit-grid-columns') &&
+    artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)');
+  if (!independentGridStackContract) {
+    err('Artwork groups: Grid/Tiling must expose 2–5 configurable desktop columns and two mobile columns, while Horizontal Stack must use wrapping flex rows and the expanded size envelope.');
   }
 
   const groupedInspectorNavigationContract =

@@ -3055,7 +3055,7 @@ export function createLightboxMediaRenderer({
     });
   }
 
-  function centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport) {
+  function centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport, configuredGridColumns = 3) {
     const items = record?.items;
     if (!items) return;
     const slots = Array.from(items.children);
@@ -3064,17 +3064,24 @@ export function createLightboxMediaRenderer({
       slot.style.removeProperty('--artwork-row-center-shift');
       slot.style.removeProperty('--artwork-layout-layer');
     });
-    if (effectiveLayout !== 'cards' && effectiveLayout !== 'sticker') return;
+    if (effectiveLayout !== 'grid' && effectiveLayout !== 'cards' && effectiveLayout !== 'sticker') return;
 
-    const columns = effectiveLayout === 'cards'
-      ? (narrowViewport ? 3 : (tabletViewport ? 4 : 5))
-      : (narrowViewport ? 2 : 3);
-    slots.forEach((slot, index) => {
-      const row = Math.floor(index / columns);
-      const column = index % columns;
-      const centerBias = Math.round(columns - Math.abs(column - ((columns - 1) / 2)));
-      slot.style.setProperty('--artwork-layout-layer', String(row * 10 + centerBias));
-    });
+    // Grid uses the CMS desktop column count but always resolves to two columns
+    // at the mobile breakpoint. Card Stack and Sticker retain their existing
+    // independent responsive column counts and z-ordering.
+    const columns = effectiveLayout === 'grid'
+      ? (narrowViewport ? 2 : configuredGridColumns)
+      : (effectiveLayout === 'cards'
+        ? (narrowViewport ? 3 : (tabletViewport ? 4 : 5))
+        : (narrowViewport ? 2 : 3));
+    if (effectiveLayout === 'cards' || effectiveLayout === 'sticker') {
+      slots.forEach((slot, index) => {
+        const row = Math.floor(index / columns);
+        const column = index % columns;
+        const centerBias = Math.round(columns - Math.abs(column - ((columns - 1) / 2)));
+        slot.style.setProperty('--artwork-layout-layer', String(row * 10 + centerBias));
+      });
+    }
 
     const remainder = slots.length % columns;
     if (!remainder) return;
@@ -3101,6 +3108,12 @@ export function createLightboxMediaRenderer({
       : (supportedLayouts.has(requestedLayout) ? requestedLayout : 'grid');
     const narrowViewport = Boolean(windowRef?.matchMedia?.('(max-width: 760px)')?.matches);
     const tabletViewport = Boolean(windowRef?.matchMedia?.('(max-width: 1000px) and (min-width: 761px)')?.matches);
+    const rawGridColumns = Number(section.dataset.artworkGridColumns || record.gridColumns || 3);
+    const gridColumns = Number.isFinite(rawGridColumns)
+      ? Math.min(5, Math.max(2, Math.round(rawGridColumns)))
+      : 3;
+    section.dataset.artworkGridColumns = String(gridColumns);
+    section.style.setProperty('--artwork-grid-columns', String(gridColumns));
     const hasEnoughItems = entries.length > 1;
 
     section.dataset.artworkAllFoil = entries.length > 0 &&
@@ -3111,7 +3124,7 @@ export function createLightboxMediaRenderer({
       effectiveLayout = 'grid';
     }
     section.dataset.artworkEffectiveLayout = effectiveLayout;
-    centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport);
+    centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport, gridColumns);
   }
 
   function watchArtworkGroupLayout(container, record) {
@@ -3194,7 +3207,8 @@ export function createLightboxMediaRenderer({
         .filter(group => group && typeof group === 'object' && String(group.id || '').trim())
         .map(group => [String(group.id), {
           id:String(group.id), name:String(group.name || group.id),
-          layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid'
+          layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid',
+          gridColumns:(Number.isFinite(Number(group.gridColumns)) ? Math.min(5,Math.max(2,Math.round(Number(group.gridColumns)))) : 3)
         }])
     );
     const groupRecords = new Map();
@@ -3218,6 +3232,8 @@ export function createLightboxMediaRenderer({
           section.className = 'lightbox-artwork-group';
           section.dataset.artworkGroup = group.id;
           section.dataset.artworkLayout = group.layout;
+          section.dataset.artworkGridColumns = String(group.gridColumns);
+          section.style.setProperty('--artwork-grid-columns', String(group.gridColumns));
           section.dataset.artworkEffectiveLayout = 'grid';
           section.setAttribute('role', 'region');
           section.setAttribute('aria-label', 'Artwork Group: ' + group.name);
@@ -3225,7 +3241,7 @@ export function createLightboxMediaRenderer({
           items.className = 'lightbox-artwork-group-items';
           section.appendChild(items);
           container.appendChild(section);
-          record = {section,items,requestedLayout:group.layout,entries:[]};
+          record = {section,items,requestedLayout:group.layout,gridColumns:group.gridColumns,entries:[]};
           groupRecords.set(group.id,record);
         }
         record.entries.push(entry);

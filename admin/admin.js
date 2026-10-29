@@ -3261,6 +3261,12 @@ function normalizeArtworkGroupColor(value) {
   const color = String(value || '').trim();
   return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : DEFAULT_ARTWORK_GROUP_COLOR;
 }
+function normalizeArtworkGridColumns(value) {
+  const columns = Number(value);
+  return Number.isFinite(columns)
+    ? Math.min(5, Math.max(2, Math.round(columns)))
+    : 3;
+}
 
 function serializeProjectEditorModel(project){
   const badges = Array.isArray(project.badges)
@@ -3298,6 +3304,7 @@ function serializeProjectEditorModel(project){
       id:String(group.id || ''),
       name:String(group.name || ''),
       layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid',
+      gridColumns:normalizeArtworkGridColumns(group.gridColumns),
       color:normalizeArtworkGroupColor(group.color)
     })).filter(group => group.id && group.name),
     media:(Array.isArray(project.media) ? project.media : []).map(media => ({
@@ -3333,6 +3340,7 @@ function buildProjectBody(el, p, options = {}){
         id:String(group.id || ''),
         name:String(group.name || ''),
         layout:['grid','stack','cards','sticker'].includes(group.layout) ? group.layout : 'grid',
+        gridColumns:normalizeArtworkGridColumns(group.gridColumns),
         color:normalizeArtworkGroupColor(group.color)
       })).filter(group => group.id && group.name)
     : [];
@@ -3747,6 +3755,13 @@ function buildProjectBody(el, p, options = {}){
               '<option value="cards" ' + (group.layout === 'cards' ? 'selected' : '') + '>Horizontal Card Stack</option>' +
               '<option value="sticker" ' + (group.layout === 'sticker' ? 'selected' : '') + '>Sticker Card Layout</option>' +
             '</select></div>' +
+          '<div class="field" data-edit-grid-columns-field' + (group.layout === 'grid' ? '' : ' hidden') + '><label class="field-label" for="artwork-group-columns-' + attr(group.id) + '">Desktop columns</label>' +
+            '<select id="artwork-group-columns-' + attr(group.id) + '" data-edit-grid-columns>' +
+              '<option value="2" ' + (normalizeArtworkGridColumns(group.gridColumns) === 2 ? 'selected' : '') + '>2 columns</option>' +
+              '<option value="3" ' + (normalizeArtworkGridColumns(group.gridColumns) === 3 ? 'selected' : '') + '>3 columns</option>' +
+              '<option value="4" ' + (normalizeArtworkGridColumns(group.gridColumns) === 4 ? 'selected' : '') + '>4 columns</option>' +
+              '<option value="5" ' + (normalizeArtworkGridColumns(group.gridColumns) === 5 ? 'selected' : '') + '>5 columns</option>' +
+            '</select></div>' +
           '<div class="field artwork-group-color-field"><label class="field-label" for="artwork-group-color-' + attr(group.id) + '">Color</label>' +
             '<input id="artwork-group-color-' + attr(group.id) + '" type="color" data-edit-group-color value="' + color + '" aria-label="Color for ' + attr(group.name) + '"></div>' +
           '<div class="artwork-group-card-meta"><span data-group-assigned-count>' + count + ' artwork' + (count === 1 ? '' : 's') + '</span>' +
@@ -3758,6 +3773,8 @@ function buildProjectBody(el, p, options = {}){
       const group = p.mediaGroups.find(item => item.id === card.dataset.groupCard);
       if (!group) return;
       const nameInput = card.querySelector('[data-edit-group-name]');
+      const gridColumnsField = card.querySelector('[data-edit-grid-columns-field]');
+      if (gridColumnsField) gridColumnsField.hidden = group.layout !== 'grid';
       nameInput?.addEventListener('input', () => {
         group.name = nameInput.value;
         syncArtworkGroupSelectors();
@@ -3773,7 +3790,14 @@ function buildProjectBody(el, p, options = {}){
       });
       card.querySelector('[data-edit-group-layout]')?.addEventListener('change', event => {
         group.layout = ['grid','stack','cards','sticker'].includes(event.target.value) ? event.target.value : 'grid';
+        if (gridColumnsField) gridColumnsField.hidden = group.layout !== 'grid';
         if (groupStatus) groupStatus.textContent = 'Layout updated. Remember to publish your changes.';
+        markChanged();
+      });
+      card.querySelector('[data-edit-grid-columns]')?.addEventListener('change', event => {
+        group.gridColumns = normalizeArtworkGridColumns(event.target.value);
+        event.target.value = String(group.gridColumns);
+        if (groupStatus) groupStatus.textContent = 'Desktop Grid columns updated. Mobile stays at two columns. Remember to publish your changes.';
         markChanged();
       });
       card.querySelector('[data-edit-group-color]')?.addEventListener('input', event => {
@@ -3813,6 +3837,7 @@ function buildProjectBody(el, p, options = {}){
       id,
       name,
       layout: ['grid','stack','cards','sticker'].includes(requestedLayout) ? requestedLayout : 'grid',
+      gridColumns: 3,
       color: normalizeArtworkGroupColor(requestedColor)
     };
     p.mediaGroups.push(group);
@@ -4353,7 +4378,7 @@ RENDERERS.curatedViews = async function(data, isCurrent=()=>true){
               ? {holographic:structuredClone(p.thumbnail.holographic)}
               : {})
           },
-          mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),color:normalizeArtworkGroupColor(g.color)})):[],
+          mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),gridColumns:normalizeArtworkGridColumns(g.gridColumns),color:normalizeArtworkGroupColor(g.color)})):[],
           media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',playbackId:String(m.playbackId||''),poster:String(m.poster||''),durationSeconds:m.durationSeconds,aspectRatio:String(m.aspectRatio||''),groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
         }};
       }
@@ -4560,7 +4585,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
     filters:Array.isArray(p.filters)?[...p.filters]:[], description:p.description||'',
     extensions:p.extensions && typeof p.extensions === 'object' && !Array.isArray(p.extensions) ? structuredClone(p.extensions) : undefined,
     thumbnail:{ type:(p.thumbnail&&p.thumbnail.type)||'image', src:(p.thumbnail&&p.thumbnail.src)||'', focus:(p.thumbnail&&p.thumbnail.focus)||'50% 50%', zoom:(p.thumbnail&&p.thumbnail.zoom)||1, background:(p.thumbnail&&p.thumbnail.background)||null },
-    mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),color:normalizeArtworkGroupColor(g.color)})):[],
+    mediaGroups:Array.isArray(p.mediaGroups)?p.mediaGroups.map(g=>({id:String(g.id||''),name:String(g.name||''),layout:String(g.layout||'grid'),gridColumns:normalizeArtworkGridColumns(g.gridColumns),color:normalizeArtworkGroupColor(g.color)})):[],
           media:withUids(Array.isArray(p.media)?p.media.map(m=>({type:m.type||'image',src:m.src||'',caption:m.caption||'',playbackId:String(m.playbackId||''),poster:String(m.poster||''),durationSeconds:m.durationSeconds,aspectRatio:String(m.aspectRatio||''),groupId:String(m.groupId||''),orientation:m.orientation||'',background:m.background||null,holographic:m.holographic && typeof m.holographic === 'object' && !Array.isArray(m.holographic) ? structuredClone(m.holographic) : null})):[])
   })));
   let filterDefs = [];
