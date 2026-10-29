@@ -3648,6 +3648,66 @@ async function assertMobileNavigation(page, label) {
 
 }
 
+async function assertContentRevealTarget(page, label, selector, expected) {
+  const target = page.locator(selector).first();
+  await target.waitFor({ state: 'attached', timeout: 6000 });
+  await page.waitForFunction(selector => {
+    const element = document.querySelector(selector);
+    return Boolean(element?.classList.contains('lm-content-reveal-target'));
+  }, selector, { timeout: 6000 });
+
+  const timing = await target.evaluate(element => ({
+    duration: element.style.getPropertyValue('--lm-content-reveal-duration').trim(),
+    delay: element.style.getPropertyValue('--lm-content-reveal-delay').trim(),
+    state: element.dataset.lmContentRevealState || '',
+    motion: element.dataset.lmContentRevealMotion || ''
+  }));
+  if (timing.duration !== expected.duration || timing.delay !== expected.delay) {
+    throw new Error(label + ' reveal timing mismatch: ' + JSON.stringify({ selector, expected, timing }));
+  }
+
+  await target.scrollIntoViewIfNeeded();
+  await page.waitForFunction(selector => {
+    const element = document.querySelector(selector);
+    return element?.dataset.lmContentRevealState === 'shown' &&
+      element.classList.contains('is-lm-content-revealed');
+  }, selector, { timeout: 6000 });
+
+  // A revealed target must remain revealed after leaving and re-entering view.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await target.scrollIntoViewIfNeeded();
+  const stateAfterReentry = await target.evaluate(element => ({
+    state: element.dataset.lmContentRevealState || '',
+    revealed: element.classList.contains('is-lm-content-revealed')
+  }));
+  if (stateAfterReentry.state !== 'shown' || !stateAfterReentry.revealed) {
+    throw new Error(label + ' reveal replayed or reset after re-entry: ' + JSON.stringify(stateAfterReentry));
+  }
+}
+
+async function assertContentRevealReducedMotion(page, label, selector) {
+  const target = page.locator(selector).first();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForFunction(selector => {
+    const element = document.querySelector(selector);
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    const durations = style.transitionDuration.split(',').map(value => Number.parseFloat(value) || 0);
+    return element.classList.contains('is-lm-content-revealed') &&
+      style.translate === 'none' &&
+      durations.every(duration => duration === 0);
+  }, selector, { timeout: 5000 });
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const state = await target.evaluate(element => ({
+    state: element.dataset.lmContentRevealState || '',
+    revealed: element.classList.contains('is-lm-content-revealed')
+  }));
+  if (state.state !== 'shown' || !state.revealed) {
+    throw new Error(label + ' reveal reset after reduced-motion preference changed: ' + JSON.stringify(state));
+  }
+}
+
 const { server, getStderr } = startServer();
 process.on('exit', () => stopServer(server));
 
@@ -3663,6 +3723,11 @@ try {
         return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'Works desktop initial view');
+      await assertContentRevealTarget(page, 'Works', 'main.works-main > .filter-nav-wrapper', {
+        duration: '480ms',
+        delay: '0ms'
+      });
+      await assertContentRevealReducedMotion(page, 'Works', 'main.works-main > .filter-nav-wrapper');
     }, { width: 1440, height: 900 });
 
     await smokePage(browser, '/about/', async page => {
@@ -3671,6 +3736,19 @@ try {
         return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'About desktop initial view');
+      await assertContentRevealTarget(page, 'About hero', '.about-hero .about-bio-text > *', {
+        duration: '560ms',
+        delay: '0ms'
+      });
+      await assertContentRevealTarget(page, 'About skills', '#softwareSkillsList > li:nth-child(1)', {
+        duration: '460ms',
+        delay: '0ms'
+      });
+      await assertContentRevealTarget(page, 'About skills stagger', '#softwareSkillsList > li:nth-child(5)', {
+        duration: '460ms',
+        delay: '128ms'
+      });
+      await assertContentRevealReducedMotion(page, 'About', '#softwareSkillsList > li:nth-child(5)');
     }, { width: 1440, height: 900 });
 
     await smokePage(browser, '/admin/', async page => {
