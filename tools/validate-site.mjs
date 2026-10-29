@@ -1325,6 +1325,1314 @@ function validateLazyModelViewerLoading() {
   }
 }
 
+function parseCacheVersion(version) {
+  const parts = String(version || '').split('-');
+  if (parts.length !== 2) return null;
+
+  const [datePart, sequencePart] = parts;
+  if (datePart.length !== 8 || !/^[0-9]+$/.test(datePart) || !/^[0-9]+$/.test(sequencePart)) {
+    return null;
+  }
+
+  return {
+    date: Number(datePart),
+    sequence: Number(sequencePart)
+  };
+}
+
+function validateFeatureModuleCacheGraph() {
+  const composition = exists('js/app/page-composition.js')
+    ? readText('js/app/page-composition.js')
+    : '';
+
+  const checks = [
+    {
+      name: 'Gallery',
+      importPattern: /(?:from\s+|import\(\s*)['"]\.\.\/features\/gallery\/index\.js\?v=([^'"]+)['"]/,
+      file: 'js/features/gallery/index.js',
+      nestedPattern: /from ['"]\.\/presentation\.js\?v=([^'"]+)/g
+    },
+    {
+      name: 'Lightbox',
+      importPattern: /(?:from\s+|import\(\s*)['"]\.\.\/features\/lightbox\/index\.js\?v=([^'"]+)['"]/,
+      file: 'js/features/lightbox/index.js',
+      nestedPattern: /from ['"]\.\/media-renderer\.js\?v=([^'"]+)/g
+    }
+  ];
+
+  for (const check of checks) {
+    const directVersion = composition.match(check.importPattern)?.[1] || '';
+    const module = exists(check.file) ? readText(check.file) : '';
+    const nestedVersions = [...module.matchAll(check.nestedPattern)].map(match => match[1]);
+
+    if (!directVersion || !nestedVersions.length) continue;
+
+    const direct = parseCacheVersion(directVersion);
+    const nested = nestedVersions
+      .map(parseCacheVersion)
+      .filter(Boolean)
+      .sort((a, b) => (a.date - b.date) || (a.sequence - b.sequence));
+
+    if (!direct || !nested.length) continue;
+
+    const newestNested = nested.at(-1);
+    if (
+      newestNested.date > direct.date ||
+      (newestNested.date === direct.date && newestNested.sequence > direct.sequence)
+    ) {
+      err(`Cache graph: ${check.name} feature import key ${directVersion} is older than its nested module key ${newestNested.date}-${newestNested.sequence}.`);
+    }
+  }
+}
+
+function validateBootstrapHardening() {
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+
+  if (!/import \{ bootstrapPortfolioApp \} from ['"]\.\/app\/bootstrap\.js/.test(entry)) {
+    err('Bootstrap: js/script.js must delegate to app/bootstrap.js.');
+  }
+
+  const transitionPos = bootstrap.indexOf("const pageTransition = root?.getElementById('pageTransition');");
+  const importPos = bootstrap.indexOf('const { createPortfolioApp } = await import(');
+  const transitionCallPos = bootstrap.indexOf('showInitialPageTransition();');
+  if (transitionPos < 0 || transitionCallPos < 0 || importPos < 0 || transitionCallPos > importPos) {
+    err('Bootstrap: page transition must initialize before application module loading.');
+  }
+
+  if (!/initialTransitionTimer\s*=\s*root\.defaultView\.setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?\},\s*900\)/.test(bootstrap)) {
+    err('Bootstrap: initial page transition is missing its fail-safe timeout.');
+  }
+
+  if (!/await\s+createPortfolioApp\(\{\s*root,\s*runtime,\s*cms,\s*config\s*\}\)/.test(bootstrap)) {
+    err('Bootstrap: composition root must receive normalized app configuration.');
+  }
+
+  if (!/catch \(error\) \{\s*console\.error\('Portfolio runtime failed to initialize'/.test(bootstrap)) {
+    err('Bootstrap: top-level initialization error boundary is missing.');
+  }
+
+  if (/function\s+(loadProjectsFromCMS|openLightbox|initHeroBanner|initGallery)\s*\(/.test(entry)) {
+    err('Bootstrap: implementation logic has leaked back into js/script.js.');
+  }
+
+  if (!/export async function createPortfolioApp\(/.test(composition)) {
+    err('Composition: createPortfolioApp() public entry point is missing.');
+  }
+
+  if (!/hero-section, #heroBanner, #heroBannerAbout/.test(composition)) {
+    err('Composition: Hero must initialize against the actual public hero section/container.');
+  }
+
+  if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
+      !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition) ||
+      !/crossfadeMs:\s*settings\.heroTiming\.crossfadeMs/.test(composition) ||
+      !/messageFadeMs:\s*settings\.heroTiming\.fadeMs/.test(composition) ||
+      /messageAutoRotateMs:\s*settings\.heroTiming\.autoRotateMs/.test(composition) ||
+      !/showHeroMessage:\s*settings\.showHeroMessage/.test(composition) ||
+      !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition) ||
+      !/const initializeFooter = \(\) => initFooterAnimation\(\{[\s\S]*?heroTiming:\s*settings\.heroTiming[\s\S]*?\}\);/.test(composition) ||
+      !/const footerPromise = root\.getElementById\('footerAnimation'\)\s*\?\s*\(isAboutPage\s*\?\s*projectModelsPromise\.then\(initializeFooter\)\s*:\s*initializeFooter\(\)\)/.test(composition)) {
+    err('Composition: artwork timing and message toggles must be passed through while footer animation remains independent.');
+  }
+
+  if (!/hero-section, #heroBanner, #heroBannerAbout/.test(composition)) {
+    err('Composition: Hero must initialize against the actual public hero section/container.');
+  }
+
+  const lightbox = exists('js/features/lightbox/index.js') ? readText('js/features/lightbox/index.js') : '';
+  if (!/createLifecycle/.test(lightbox) || !/lifecycle\.cleanup\(\)/.test(lightbox)) {
+    err('Lightbox: public feature lifecycle must use the shared lifecycle primitive.');
+  }
+
+  if (!/lightboxFeature\?\.destroy\?\.\(\)/.test(composition) ||
+      !/heroFeature\?\.destroy\?\.\(\)/.test(composition) ||
+      !/galleryFeature\?\.destroy\?\.\(\)/.test(composition) ||
+      !/navigation\.destroy\?\.\(\)/.test(composition)) {
+    err('Composition: Hero, Gallery, Lightbox, and Navigation lifecycle cleanup must be wired to app.destroy().');
+  }
+
+  const hero = exists('js/features/hero/index.js') ? readText('js/features/hero/index.js') : '';
+  if (!/dataset\.component = 'portfolio-hero'/.test(hero)) {
+    err('Hero: explicit component marker is missing.');
+  }
+  if (!/heroMessageCandidate\.hidden = !showHeroMessage/.test(hero) ||
+      !/heroSection\.classList\.toggle\('hero-section--message', showHeroMessage\)/.test(hero)) {
+    err('Hero: message visibility must also toggle content-driven hero sizing.');
+  }
+  if (!/footerElement\.classList\.toggle\('footer--message-enabled', showFooterMessage\)/.test(hero)) {
+    err('Hero/footer scrim must follow footer-message visibility while artwork continues independently.');
+  }
+  const heroCss = exists('css/style.css') ? readText('css/style.css') : '';
+  const heroQuoteRule = (heroCss.match(/\.hero-quote\s*\{[^}]*\}/) || [])[0] || '';
+  const footerAnimationIsHiddenByMessageToggle =
+    /footer:not\(\.footer--message-enabled\)\s*>\s*\.footer-animation[\s\S]*?display\s*:\s*none\s*!important/.test(heroCss);
+  if (!/\.hero-section:has\(\.hero-quote:not\(\[hidden\]\)\)/.test(heroCss) ||
+      !heroQuoteRule ||
+      /(?:^|\n)\s*(?:background(?:-color)?|border(?:-[\w-]+)?|border-radius)\s*:/.test(heroQuoteRule) ||
+      !/\.hero-quote \{ padding: clamp\(22px, 5\.4vw, 30px\) 24px; \}/.test(heroCss) ||
+      !/footerMessageRoot\.classList\.add\('hero-quote'\)/.test(hero) ||
+      !/\.footer-content \.footer-hero-message\s*\{[^}]*margin:\s*0 auto clamp\(36px,5vw,64px\)/.test(heroCss) ||
+      /\.hero-quote\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
+      /\.footer-content \.footer-hero-message\s*\{[^}]*backdrop-filter\s*:\s*blur/.test(heroCss) ||
+      !/footer\.footer--message-enabled\s*>\s*\.footer-content\s*\{[^}]*background:\s*rgba\(0,\s*0,\s*0,\s*\.42\)/.test(heroCss) ||
+      !/\.footer-content > p\s*\{\s*color:inherit;margin:0;\s*\}/.test(heroCss) ||
+      !/\.footer-content > p \{ text-align: center; \}/.test(heroCss) ||
+      !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner::after\s*\{\s*background:\s*transparent;\s*\}/.test(heroCss) ||
+      !/\.hero-section:not\(\.about-hero\):not\(\.hero-section--message\) \.hero-banner \.slide\.active\s*\{\s*opacity:\s*1;\s*\}/.test(heroCss) ||
+      footerAnimationIsHiddenByMessageToggle) {
+    err('Hero/footer message: transparent quote, conditional footer-content scrim, independent artwork visibility, and spacing must remain wired.');
+  }
+  if (/messageAutoRotateMs|messageRotationTimer|fadeToMessageSet/.test(hero)) {
+    err('Hero/footer messages must be randomly selected once per page load and must not auto-rotate.');
+  }
+  if (!/normalizeProjects/.test(hero) || !/getProjects/.test(hero)) {
+    err('Hero: artwork selection must consume normalized Projects data through an explicit contract.');
+  }
+  if (!/createLifecycle/.test(hero) || !/lifecycle\.cleanup\(\)/.test(hero)) {
+    err('Hero: long-lived timers and crossfade resources must use the shared lifecycle.');
+  }
+  if (/\.project-card|\.project-media-list|\.card-thumbnail|\.glass-info/.test(hero)) {
+    err('Hero: project artwork selection must not depend on project-card DOM markup.');
+  }
+
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  if (!/return \{[\s\S]*destroy\(\)[\s\S]*lifecycle\.cleanup\(\)/.test(gallery)) {
+    err('Gallery: public feature lifecycle must expose destroy() through the shared lifecycle primitive.');
+  }
+
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  if (!/return \{[\s\S]*destroy\(\)[\s\S]*cleanup\.splice\(0\)/.test(navigation)) {
+    err('Navigation: public feature lifecycle must expose destroy() and release persistent listeners.');
+  }
+  const publicWorks = exists('index.html') ? readText('index.html') : '';
+  const publicAbout = exists('about/index.html') ? readText('about/index.html') : '';
+  if (!/class="hamburger"/.test(publicWorks) || !/class="nav-links"/.test(publicWorks) ||
+      !/class="hamburger"/.test(publicAbout) || !/class="nav-links"/.test(publicAbout)) {
+    err('Navigation: public Works/About markup must expose the .hamburger and .nav-links contract.');
+  }
+  if (!/querySelector\('\.hamburger, \.menu-button'\)/.test(navigation) ||
+      !/querySelector\('\.nav-links, \.mobile-menu'\)/.test(navigation) ||
+      !/mobileMenu\.classList\.add\('active'(?:, 'is-open')?\)/.test(navigation)) {
+    err('Navigation: runtime must bind the public hamburger to the public nav-links menu and toggle its active state.');
+  }
+
+  if (!publicWorks.includes('aria-controls="navLinks"') || !publicAbout.includes('aria-controls="navLinks"')) {
+    err('Navigation: hamburger buttons must explicitly control the public navLinks menu for assistive technology.');
+  }
+  const navigationCss = exists('css/style.css') ? readText('css/style.css') : '';
+  const navbarRule = (navigationCss.match(/\.navbar\s*\{[^}]*\}/) || [])[0] || '';
+  const logoRule = (navigationCss.match(/\.site-logo\s*\{[^}]*\}/) || [])[0] || '';
+  const hamburgerRule = (navigationCss.match(/(?:^|\n)\.hamburger\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
+  const hamburgerButtonRule = (navigationCss.match(/(?:^|\n)button\.hamburger\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
+  const hamburgerIconRule = (navigationCss.match(/(?:^|\n)\.hamburger-icon span\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
+  const hamburgerHoverRule = (navigationCss.match(/\.hamburger:hover\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
+  const hamburgerPressRule = (navigationCss.match(/\.hamburger:active\s*\{[^}]*\}/g) || []).slice(-1)[0] || '';
+  const pillRule = (navigationCss.match(/\.nav-links a\s*\{[^}]*\}/) || [])[0] || '';
+  const activePillRule = (navigationCss.match(/\.nav-links a\.active-link\s*\{[^}]*\}/) || [])[0] || '';
+  const hoverPillRule = (navigationCss.match(/\.nav-links a:hover\s*\{[^}]*\}/) || [])[0] || '';
+  const mobileMenuRule = (navigationCss.match(/@media \(max-width: 767px\) \{\s*\.hamburger \{ display: block; \}[\s\S]*?\.nav-links \{[^}]*\}/) || [])[0] || '';
+  const mobileOpenMenuRule = (navigationCss.match(/\.nav-links\.active\.is-open\s*\{[^}]*\}/) || [])[0] || '';
+  const menuBackdropRule = (navigationCss.match(/\.nav-menu-backdrop\s*\{[^}]*\}/) || [])[0] || '';
+  const bodyMenuOpenRule = (navigationCss.match(/body\.menu-open\s*\{[^}]*\}/) || [])[0] || '';
+  if (!publicWorks.includes('class="active-link" aria-current="page"><span class="nav-link-label">Designs</span></a>') ||
+      !publicAbout.includes('class="active-link" aria-current="page"><span class="nav-link-label">About Me</span></a>') ||
+      !publicWorks.includes('<span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>') ||
+      !publicAbout.includes('<span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>') ||
+      !publicWorks.includes('<li><a href="#contact-start"><span class="nav-link-label">Contacts</span></a></li>') ||
+      !publicAbout.includes('<li><a href="../#contact-start"><span class="nav-link-label">Contacts</span></a></li>') ||
+      /class="nav-(?:item-dropdown|dropdown-menu|dropdown-toggle)/.test(publicWorks + publicAbout)) {
+    err('Navigation: Works/About must use direct Designs, About Me, and Contacts links without nested dropdown markup.');
+  }
+  if (/\b(?:background|background-color|backdrop-filter|border-bottom)\s*:/.test(navbarRule) ||
+      !/filter:\s*brightness\(0\) invert\(1\)/.test(logoRule) ||
+      !/mix-blend-mode\s*:\s*normal/.test(logoRule) ||
+      !/background:\s*transparent/.test(hamburgerButtonRule) ||
+      !/mix-blend-mode\s*:\s*normal/.test(hamburgerRule) ||
+      !/backdrop-filter:\s*none/.test(hamburgerButtonRule) ||
+      !/width:\s*38px/.test(hamburgerButtonRule) ||
+      !/min-width:\s*38px/.test(hamburgerButtonRule) ||
+      !/height:\s*38px/.test(hamburgerButtonRule) ||
+      navigationCss.includes('.navbar::before') ||
+      !/mix-blend-mode\s*:\s*normal/.test(hamburgerIconRule) ||
+      !/background:\s*var\(--hamburger-foreground,\s*#fff\)/.test(hamburgerIconRule) ||
+      !/height:\s*2\.5px/.test(hamburgerIconRule) ||
+       !navigationCss.includes('background-color .22s ease') ||
+      !/background:\s*transparent/.test(hamburgerHoverRule) ||
+      !/background:\s*transparent/.test(hamburgerPressRule) ||
+      !/body\.menu-open \.hamburger-icon span\s*\{[^}]*background:\s*#fff/s.test(navigationCss) ||
+      !/function syncHamburgerForeground/.test(navigation) ||
+      !/menuButton\.dataset\.foreground = resolvedForeground/.test(navigation) ||
+      !/menuButton\.style\.setProperty\('--hamburger-foreground'/.test(navigation) ||
+      !/border-radius\s*:\s*999px/.test(pillRule) ||
+      !/border:\s*0/.test(pillRule) ||
+      /border-color\s*:/.test(pillRule + activePillRule + hoverPillRule) ||
+      !/background\s*:\s*#000/.test(pillRule) ||
+      !/color\s*:\s*#fff/.test(pillRule) ||
+      !/background\s*:\s*#fff/.test(activePillRule) ||
+      !/color\s*:\s*#000/.test(activePillRule) ||
+      !/background\s*:\s*#fff/.test(hoverPillRule) ||
+      !/color\s*:\s*#000/.test(hoverPillRule) ||
+      !/position\s*:\s*fixed/.test(mobileOpenMenuRule) ||
+      !/background\s*:\s*#000/.test(mobileOpenMenuRule) ||
+      !/background:\s*#000/.test(menuBackdropRule) ||
+      !/background-color:\s*#000/.test(bodyMenuOpenRule) ||
+      !/overflow:\s*hidden/.test(bodyMenuOpenRule) ||
+      !/background:\s*transparent/.test(mobileMenuRule) ||
+      !/border:\s*0/.test(mobileMenuRule) ||
+      !/box-shadow:\s*none/.test(mobileMenuRule) ||
+      !/nav-menu-enter/.test(navigationCss) ||
+      !/nav-menu-exit/.test(navigationCss) ||
+      !/nav-link-select/.test(navigationCss) ||
+      !/prefers-reduced-motion:\s*reduce/.test(navigationCss) ||
+      !/0 0 0 2px #000, 0 0 0 4px #fff/.test(navigationCss) ||
+      !/classList\.add\('is-open'\)/.test(navigation) ||
+      !/classList\.add\('is-closing'\)/.test(navigation) ||
+      !/replayingMenuLink/.test(navigation)) {
+    err('Navigation: transparent chrome, state-driven logo foreground, inverted active pill, difference-blended menu icon, and seamless full-screen mobile menu must remain in the CSS contract.');
+  }
+
+  const about = exists('js/features/about/index.js') ? readText('js/features/about/index.js') : '';
+  if (!/about\.softwareSkills/.test(about) ||
+      !/about\.experience/.test(about) ||
+      !/about\.education/.test(about) ||
+      !/about\.awards/.test(about)) {
+    err('About: CMS feature must render software skills, experience, education, and awards data.');
+  }
+
+  if (!/skill\.icon \|\| skill\.logo/.test(about)) {
+    err('About: CMS software skill icons must support the stored icon field.');
+  }
+}
+function validateArchitecture() {
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+
+  const required = [
+    ['js/infrastructure/cms/loader.js', /export async function loadCmsJson/],
+    ['js/infrastructure/browser/site-paths.js', /export function getSiteRootUrl/],
+    ['js/infrastructure/youtube/url.js', /export function parseYouTubeUrl/],
+    ['js/infrastructure/three/model-viewer.js', /export (?:async )?function mountModelViewer/],
+    ['js/infrastructure/software-logo/lookup.js', /export function findSoftwareLogoCandidates/],
+    ['js/core/lifecycle.js', /export function createLifecycle/],
+    ['js/features/gallery/presentation.js', /export function applyGalleryReveal/],
+    ['js/features/projects/index.js', /export \{ mountProjects \}/],
+    ['js/features/gallery/index.js', /export async function initGallery/],
+    ['js/features/hero/index.js', /export \{ initHeroBanner as initHeroBannerV2 \}/],
+    ['js/features/lightbox/index.js', /export function initLightbox/],
+    ['js/features/lightbox/media-renderer.js', /export function createLightboxMediaRenderer/],
+    ['js/features/settings/index.js', /export async function initSiteSettings/]
+  ];
+
+  required.forEach(([file, pattern]) => {
+    if (!exists(file) || !pattern.test(readText(file))) {
+      err('Architecture V2: expected module contract missing from ' + file + '.');
+    }
+  });
+
+  ['js/cms-data.js', 'js/site-runtime.js'].forEach(file => {
+    if (exists(file)) err('Architecture V2: legacy runtime facade must be removed: ' + file);
+  });
+
+  if (entry.split(/\r?\n/).length > 40) {
+    err('Architecture V2: js/script.js must remain a thin browser entrypoint.');
+  }
+
+  if (/function\s+(initGallery|initHeroBanner|openLightbox|buildProjectCardEl|loadProjectsFromCMS)\s*\(/.test(entry)) {
+    err('Architecture V2: feature implementation remains in js/script.js.');
+  }
+
+  if (/\bfetch\s*\(/.test(entry) || /(?:SETTINGS|PROJECTS|REVIEWS|ABOUT|FILTERS)_URL/.test(entry)) {
+    err('Architecture V2: CMS/page configuration access remains in js/script.js.');
+  }
+
+  if (!/initNavigation\(/.test(composition) ||
+      !/initReviews\(/.test(composition) ||
+      !/initAbout\(/.test(composition) ||
+      !/initForms\(/.test(composition) ||
+      !/initSiteSettings\(/.test(composition) ||
+      !/initGallery\(/.test(composition) ||
+      !/initLightbox\(/.test(composition)) {
+    err('Architecture V2: page-shell features are not composed through explicit feature APIs.');
+  }
+
+  if (!/runtime\s*,\s*cms/.test(composition)) {
+    err('Architecture V2: runtime and CMS services must enter through the composition boundary.');
+  }
+
+  if (/from ['"]\.\/site-runtime\.js/.test(composition) ||
+      /from ['"]\.\/cms-data\.js/.test(composition)) {
+    err('Architecture V2: composition must not import legacy runtime/data facades.');
+  }
+}
+validateSoftwareLogoLookup();
+validateResponsiveUiContracts();
+scanSourceForBadPatterns();
+validateSecuritySecrets();
+validateAdminStorageSecurity();
+validateWorkflowHardening();
+validateWorkflowActionPins();
+validateExternalDependencyPins();
+validateAdminConnectionSecurity();
+validateTargetBlankRel('index.html');
+validateTargetBlankRel('about/index.html');
+validateTargetBlankRel('admin/index.html');
+validateArchitecture();
+validateBootstrapHardening();
+validateModuleScriptContract();
+
+
+function validateSoftwareLogoLookup() {
+  const resolver = exists('js/infrastructure/software-logo/lookup.js')
+    ? readText('js/infrastructure/software-logo/lookup.js')
+    : '';
+  const about = exists('js/features/about/index.js')
+    ? readText('js/features/about/index.js')
+    : '';
+  const admin = exists('admin/admin.js')
+    ? readText('admin/admin.js')
+    : '';
+
+  if (resolver.includes('logo.clearbit.com') || admin.includes('logo.clearbit.com')) {
+    err('Software logos: retired Clearbit Logo API must not be referenced.');
+  }
+  if (!resolver.includes('cdn.simpleicons.org/')) {
+    err('Software logos: public resolver must use the reference Simple Icons CDN.');
+  }
+  if (!resolver.includes('api.iconify.design/search')) {
+    err('Software logos: public resolver must use the Iconify search API as a discovery fallback.');
+  }
+  if (!about.includes('findSoftwareLogoCandidates')) {
+    err('Software logos: About feature must consume the automatic logo resolver.');
+  }
+  if (!admin.includes('findAutomaticSoftwareLogoCandidates')) {
+    err('Software logos: CMS must use the automatic logo lookup for skills without manual icons.');
+  }
+}
+
+function validateResponsiveUiContracts() {
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
+  const style = exists('css/style.css') ? readText('css/style.css') : '';
+  const tokens = exists('css/tokens.css') ? readText('css/tokens.css') : '';
+  if (!style.startsWith("@import url('./tokens.css');")) {
+    err('CSS foundation: style.css must load the shared UI token layer first.');
+  }
+  if (!/--lm-color-background:/.test(tokens) ||
+      !/--lm-container-max:/.test(tokens) ||
+      !/--lm-card-radius:/.test(tokens) ||
+      !/--lm-motion-standard:/.test(tokens)) {
+    err('CSS foundation: shared visual and motion tokens are incomplete.');
+  }
+  const adminCss = exists('admin/admin.css') ? readText('admin/admin.css') : '';
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+
+  if (!/phoneCount/.test(presentation) || !/tabletShortCount/.test(presentation) ||
+      !/tabletTallCount/.test(presentation) || !/desktopCount/.test(presentation)) {
+    err('Gallery responsive presentation contract: density must be configurable outside the Gallery state controller.');
+  }
+  if (!/phoneBreakpoint/.test(presentation) || !/tabletBreakpoint/.test(presentation)) {
+    err('Gallery responsive presentation contract: breakpoint decisions belong to the presentation boundary.');
+  }
+  const phoneTwoColumn = style.includes('@media (max-width: 767px)') && style.includes('grid-template-columns:repeat(2,minmax(0,1fr));');
+  const tabletThreeColumn = style.includes('@media (min-width: 768px) and (max-width: 1099px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
+  const desktopThreeColumn = style.includes('@media (min-width: 1100px)') && style.includes('grid-template-columns:repeat(3,minmax(0,1fr));');
+  const artworkGroupLayoutModes = ['grid','stack','cards','sticker'];
+  const artworkGroupCss = fs.readFileSync(path.join(ROOT, 'css/features/lightbox.css'), 'utf8');
+  const artworkGroupRuntime = fs.readFileSync(path.join(ROOT, 'js/features/lightbox/media-renderer.js'), 'utf8');
+  const artworkGroupAdmin = fs.readFileSync(path.join(ROOT, 'admin/admin.js'), 'utf8');
+  const groupedLayoutContract = artworkGroupLayoutModes.every(mode =>
+    artworkGroupCss.includes(`data-artwork-effective-layout="${mode}"`) &&
+    artworkGroupRuntime.includes("'"+mode+"'") &&
+    artworkGroupAdmin.includes('value="' + mode + '"')
+  );
+  if (!groupedLayoutContract) {
+    err('Artwork groups: CMS, runtime, and feature CSS must support grid, stack, cards, and sticker layouts consistently.');
+  }
+  if (!phoneTwoColumn || !tabletThreeColumn || !desktopThreeColumn) {
+    err('Gallery responsive layout contract: phone must use two columns, tablet and desktop must use three columns.');
+  }
+  if (!/Responsive lightbox sizing/.test(style)) err('Lightbox responsive sizing contract is missing.');
+
+  if (!/media-bg-control/.test(adminCss) || !/media-bg-row/.test(adminCss)) {
+    err('CMS visual contract: transparent-media background controls are missing.');
+  }
+  if (!/function mediaSupportsBackground\(type\)/.test(admin) ||
+      !/wireBackgroundControl\(/.test(admin)) {
+    err('CMS visual contract: background controls must be available for Lottie and 3D.');
+  }
+  if (!/tokenInput\?\.closest\('\.field'\)\?\.remove\(\)|tokenInput\.disabled = true/.test(admin)) {
+    err('CMS credential UI contract: the password-like token field should be removed from active browser interaction after connection.');
+  }
+}
+
+function validateCuratedViewRuntimeContract() {
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const resolver = exists('js/features/curated-views/resolver.js') ? readText('js/features/curated-views/resolver.js') : '';
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const loader = exists('js/features/projects/project-loader.js') ? readText('js/features/projects/project-loader.js') : '';
+  if (!composition.includes('resolveCuratedView({ hash: currentHash, views, mainProjects: mainPayload })') ||
+      !composition.includes('projectData: projectPayload') ||
+      !composition.includes('mainProjectModels.slice()') ||
+      !resolver.includes('export function resolveCuratedView(') ||
+      !resolver.includes("entry.source === 'main'") ||
+      !resolver.includes("entry.source !== 'curated'") ||
+      !navigation.includes('getCuratedViewSlug') ||
+      !bootstrap.includes("root.getElementById('curatedViewHeading')") ||
+      !loader.includes('projectData !== undefined')) {
+    err('Curated View runtime: hash resolution, ordered payloads, navigation context, and shared Projects loading must remain connected.');
+  }
+}
+
+function validateAboutFirstPaintContract() {
+  const composition = exists('js/app/page-composition.js')
+    ? readText('js/app/page-composition.js')
+    : '';
+  const waitStart = composition.search(/await projectMediaPreloadPromise;/);
+  const waitEnd = composition.indexOf('// About-page prefetching and image/logo warm-up', waitStart);
+  if (waitStart < 0 || waitEnd <= waitStart) {
+    err('About first paint: startup media-warm-up boundary could not be verified.');
+    return;
+  }
+  if (composition.includes('projectLottiePlayerPreloadPromise') ||
+      !composition.includes('applyMediaBackground,\n          ensureLottiePlayer,\n          waitForThumbnailReadiness')) {
+    err('Project Lottie thumbnails must request the player on demand instead of warming it during startup.');
+  }
+  const criticalWait = composition.slice(waitStart, waitEnd);
+  if (criticalWait.includes('aboutAssetPreloadPromise')) {
+    err('About first paint: optional profile/software-logo image preloads must not block the initial transition.');
+  }
+}
+
+function validateResponsiveHeroGalleryAndLogoContract() {
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const works = exists('index.html') ? readText('index.html') : '';
+  const about = exists('about/index.html') ? readText('about/index.html') : '';
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const settingsFeature = exists('js/features/settings/index.js') ? readText('js/features/settings/index.js') : '';
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  const hero = exists('js/features/hero/index.js') ? readText('js/features/hero/index.js') : '';
+  const footer = exists('js/features/footer/index.js') ? readText('js/features/footer/index.js') : '';
+  const contrast = exists('js/infrastructure/browser/media-contrast.js')
+    ? readText('js/infrastructure/browser/media-contrast.js')
+    : '';
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+  const siteSettings = exists('js/data/site-settings.js') ? readText('js/data/site-settings.js') : '';
+
+  if (!works.includes('<main class="container page-spacing works-main">') ||
+      !css.includes('.works-main {\n  padding-inline: 0;\n}') ||
+      !css.includes('.hero-section:not(.about-hero):not(.hero-section--message)') ||
+      !css.includes('min-height: clamp(440px, 64svh, 780px);') ||
+      !css.includes('min-height: clamp(420px, 60svh, 680px);') ||
+      !css.includes('min-height: clamp(360px, 62svh, 620px);')) {
+    err('Responsive Works presentation: the message-free hero sizing and gallery-specific gutter reset are incomplete.');
+  }
+
+  if (/\.hero-section:not\(\.about-hero\) \.hero-banner::before\s*\{[^}]*linear-gradient/s.test(css)) {
+    err('Hero presentation: the Works hero artwork must not have a bottom-edge gradient fade.');
+  }
+
+  const navigationPillRule = (css.match(/\.nav-links a\s*\{([^}]*)\}/) || [])[1] || '';
+  const navigationLabelRule = (css.match(/\.nav-link-label\s*\{([^}]*)\}/) || [])[1] || '';
+  if (!/display:\s*flex/.test(navigationPillRule) ||
+      !/align-items:\s*center/.test(navigationPillRule) ||
+      !/justify-content:\s*center/.test(navigationPillRule) ||
+      !/text-align:\s*center/.test(navigationPillRule) ||
+      !/box-sizing:\s*border-box/.test(navigationPillRule) ||
+      !/display:\s*block/.test(navigationLabelRule) ||
+      !/width:\s*max-content/.test(navigationLabelRule) ||
+      !/line-height:\s*1/.test(navigationLabelRule) ||
+      !/text-box-trim:\s*trim-both/.test(navigationLabelRule) ||
+      !/text-box-edge:\s*cap alphabetic/.test(navigationLabelRule)) {
+    err('Navigation pills: explicit content-sized label boxes must remain mathematically centered without manual offsets.');
+  }
+
+  const filterPillRule = (css.match(/\.filter-tabs\s+\.tab-btn\s*\{([^}]*)\}/) || [])[1] || '';
+  const showMorePillRule = (css.match(/(?:^|\n)\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
+  const showMoreHitTargetRule = (css.match(/\.show-more-wrapper\s+\.btn-show-more\s*\{([^}]*)\}/) || [])[1] || '';
+  const contactPillRule = (css.match(/\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
+  // Validate the compact mobile segmented control and its single sliding,
+  // drag-follow indicator; the tab labels remain transparent above that pill.
+  const contactTabsMobileRuleStart = css.lastIndexOf('.contact-mobile-tabs{');
+  const contactTabsMobileMediaStart = contactTabsMobileRuleStart >= 0
+    ? css.lastIndexOf('@media', contactTabsMobileRuleStart)
+    : -1;
+  const contactTabsMobileCss = contactTabsMobileMediaStart >= 0
+    ? css.slice(contactTabsMobileMediaStart)
+    : '';
+  const compactContactPillRule = (contactTabsMobileCss.match(/\.contact-mobile-tab\s*\{([^}]*)\}/) || [])[1] || '';
+  const compactContactActivePillRule = (contactTabsMobileCss.match(/\.contact-mobile-tab\.is-active,\s*\.contact-mobile-tab\[aria-selected="true"\]\s*\{([^}]*)\}/) || [])[1] || '';
+  const compactContactIndicatorRule = (contactTabsMobileCss.match(/\.contact-mobile-tabs::before\s*\{([^}]*)\}/) || [])[1] || '';
+  const compactContactDragIndicatorRule = (contactTabsMobileCss.match(/\.contact-mobile-tabs\.is-dragging::before\s*\{([^}]*)\}/) || [])[1] || '';
+  const sharedPillTokenRule = (css.match(/:root\s*\{([^}]*--lm-nav-pill-min-height[^}]*)\}/) || [])[1] || '';
+  const compactPillTokenRule = (css.match(/@media\s*\(max-width:\s*767px\)\s*\{\s*:root\s*\{([^}]*)\}/) || [])[1] || '';
+  const sharedPillDeclarations = [
+    'min-height: var(--lm-nav-pill-min-height);',
+    'padding: 0 var(--lm-nav-pill-inline-padding);',
+    'font-size: var(--lm-nav-pill-font-size);',
+    'font-weight: var(--lm-nav-pill-font-weight);',
+    'letter-spacing: var(--lm-nav-pill-letter-spacing);',
+    'line-height: var(--lm-nav-pill-line-height);'
+  ];
+  if (!sharedPillTokenRule.includes('--lm-nav-pill-min-height: 44px;') ||
+      !sharedPillTokenRule.includes('--lm-nav-pill-inline-padding: 18px;') ||
+      !sharedPillTokenRule.includes('--lm-nav-pill-font-size: 0.78rem;') ||
+      !compactPillTokenRule.includes('--lm-nav-pill-min-height: 46px;') ||
+      !compactPillTokenRule.includes('--lm-nav-pill-font-size: 0.8rem;') ||
+      !sharedPillDeclarations.every(declaration =>
+        [navigationPillRule, filterPillRule, showMorePillRule, contactPillRule]
+          .every(rule => rule.includes(declaration))) ||
+      ![navigationPillRule, filterPillRule, showMorePillRule, contactPillRule]
+        .every(rule => rule.includes('text-transform: uppercase;')) ||
+      !showMorePillRule.includes('font-family: var(--lm-font-label);') ||
+      !showMoreHitTargetRule.includes('pointer-events: auto;') ||
+      !contactPillRule.includes('font-family: var(--lm-font-label);') ||
+      !compactContactPillRule.includes('min-height: var(--lm-nav-pill-min-height);') ||
+      !compactContactPillRule.includes('padding: 0 8px;') ||
+      !compactContactActivePillRule.includes('background:transparent;') ||
+      !compactContactActivePillRule.includes('color:#000;') ||
+      !compactContactIndicatorRule.includes('background:#fff;') ||
+      !compactContactIndicatorRule.includes('width:calc((100% - 18px) / 2);') ||
+      !compactContactIndicatorRule.includes('transition:transform 300ms cubic-bezier(.22,1,.36,1)') ||
+      !compactContactDragIndicatorRule.includes('var(--contact-pill-drag-base-x') ||
+      !contactTabsMobileCss.includes('.contact-mobile-tabs[data-active="review"]::before') ||
+      !css.includes('.btn-show-more.expanded{') ||
+      !css.includes('width:var(--lm-nav-pill-min-height);') ||
+      !css.includes('height:var(--lm-nav-pill-min-height);')) {
+    err('Navigation, filters, Show More/Show Less, mobile Contact tabs, and desktop Lightbox close must share the pill sizing/type system.');
+  }
+
+  const filterWrapperRule = (css.match(/\.filter-nav-wrapper\s*\{([^}]*)\}/) || [])[1] || '';
+  const filterScrollerRule = (css.match(/\.filter-tabs\.filter-nav-scroller\s*\{([^}]*)\}/) || [])[1] || '';
+  const filterContentRule = (css.match(/\.filter-nav-content\s*\{([^}]*)\}/) || [])[1] || '';
+  if (!/width:\s*calc\(100% - 40px\)/.test(filterWrapperRule) ||
+      !/max-width:\s*var\(--lm-container-max\)/.test(filterWrapperRule) ||
+      !/padding-block:\s*12px/.test(filterWrapperRule) ||
+      !/width:\s*100%/.test(filterScrollerRule) ||
+      !/overflow-x:\s*auto/.test(filterScrollerRule) ||
+      !/justify-content:\s*center/.test(filterContentRule)) {
+    err('Filter tabs: the shared wrapper must own balanced gutters while the content stays centered until scrolling is needed.');
+  }
+  if (!/\.tab-btn\s*\{[^}]*display:\s*inline-flex/s.test(css) ||
+      !/\.tab-btn\s*\{[^}]*min-height:\s*44px/s.test(css) ||
+      !css.includes('.hero-section:not(.about-hero) + main.works-main.page-spacing {\n  padding-top: 0;') ||
+      !/mask-image:\s*linear-gradient\(90deg, transparent 0, #000 20px, #000 calc\(100% - 20px\), transparent 100%\)/.test(css) ||
+      !/touch-action:\s*pan-y;/.test(filterScrollerRule) ||
+      css.includes('scroll-snap-stop: always')) {
+    err('Works filters must retain balanced hero/gallery spacing, 44px targets, overflow-edge fading, and natural vertical touch scrolling.');
+  }
+
+  const logoCommentStart = css.lastIndexOf('/* Adaptive logo foreground is driven');
+  const logoRuleStart = logoCommentStart >= 0 ? css.indexOf('.site-logo {', logoCommentStart) : -1;
+  const logoRuleEnd = logoRuleStart >= 0 ? css.indexOf('}', logoRuleStart) : -1;
+  const logoRule = logoRuleStart >= 0 && logoRuleEnd > logoRuleStart
+    ? css.slice(logoRuleStart, logoRuleEnd)
+    : '';
+  if (!logoRule.includes('mix-blend-mode: normal') ||
+      !logoRule.includes('filter var(--lm-motion-standard) ease') ||
+      !logoRule.includes('transform 0.3s ease') ||
+      !/\.site-logo:hover\s*\{\s*transform:\s*translateY\(-1px\) scale\(1\.06\)/s.test(css) ||
+      !/\.nav-logo:active \.site-logo\s*\{\s*transform:\s*scale\(\.96\)\s*;?\s*\}/s.test(css) ||
+      !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.site-logo\s*\{\s*transition:\s*none/s.test(css) ||
+      !/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.nav-logo:active \.site-logo\s*\{\s*transform:\s*none/s.test(css)) {
+    err('Adaptive logo: backdrop-state feedback, subtle pointer/press motion, and reduced-motion behavior must remain wired.');
+  }
+
+  const generalMediaSampleIndex = navigation.indexOf('if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack)');
+  const opaqueBackdropFallbackIndex = navigation.indexOf('if (!media && !isHeroMediaContainer && backdropColor && backdropColor.a >= 0.98)');
+  if (generalMediaSampleIndex < 0 || opaqueBackdropFallbackIndex < 0 || generalMediaSampleIndex > opaqueBackdropFallbackIndex) {
+    err('Adaptive contrast: inspect visible gallery media before falling back to an opaque card canvas.');
+  }
+
+  if (!contrast.includes('export function sampleMediaLuminance') ||
+      !contrast.includes('export function foregroundForLuminance') ||
+      !contrast.includes("['lottie-player', 'mux-video', 'mux-player'].includes(media?.localName)") ||
+      !hasVersionedReference(navigation, '../../infrastructure/browser/media-contrast.js') ||
+      !navigation.includes('logo.dataset.logoForeground = foreground') ||
+      !navigation.includes('sampleMediaLuminance(root, media, point)') ||
+      !navigation.includes('function isVisibleMediaAtPoint(candidate, x, y)') ||
+      !navigation.includes("const mediaSelector = 'video, img, canvas, lottie-player, mux-video, mux-player'") ||
+       !navigation.includes('function updateHamburgerContrast()') ||
+       !navigation.includes('function sampleBackdropAtElement(subjectElement)') ||
+       !navigation.includes("syncHamburgerForeground(menuButton.dataset.foreground || logo?.dataset?.logoForeground || 'light')") ||
+      !navigation.includes("current.classList?.contains('slide') && !current.classList.contains('active')") ||
+      !navigation.includes('function setLogoFallbackForeground(') ||
+      !navigation.includes("function effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
+      !navigation.includes("const heroBanner = heroSection?.querySelector?.('.hero-banner')") ||
+      !navigation.includes("const dynamic = Boolean(media.closest?.('.hero-banner')) ||") ||
+      !navigation.includes("media.closest?.('.card-thumbnail')?.querySelector?.('.project-thumb-foil')") ||
+      navigation.includes("bind(root, 'pointermove', scheduleLogoContrast") ||
+      !navigation.includes("bind(root, 'pointerover', scheduleLogoContrast") ||
+      !navigation.includes("if (!media) media = findMediaAtPoint(backdrop, point.x, point.y, stack)") ||
+      navigation.includes("if (heroSection?.classList.contains('hero-section--message')) {") ||
+      navigation.includes("const contactAreaUnderTarget = stack.some(element => element?.closest?.('#contact-section'))") ||
+      
+      
+       navigation.includes('contact-area-logo') ||
+       navigation.includes('logo-contrast-fallback') ||
+       css.includes('.nav-logo::before') ||
+       css.includes('.nav-logo.logo-contrast-fallback::before') ||
+       css.includes('.nav-logo.contact-area-logo::before') ||
+      !css.includes('--lm-contrast-scrim-top-alpha') ||
+      !css.includes('--lm-contrast-scrim-bottom-alpha') ||
+      !navigation.includes("function effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
+      !navigation.includes("effectiveHeroMediaLuminance(media, sampledLuminance, point)") ||
+      !css.includes("--about-hero-scrim-top-alpha") ||
+      !css.includes("--about-hero-scrim-bottom-alpha") ||
+      !navigation.includes('instantLogoReset') ||
+      
+      !navigation.includes('MutationObserver') ||
+      (!navigation.includes("function setDynamicBackdropState(isDynamic, surface = 'logo')") ||
+       !navigation.includes('function sampleBackdropAtElement(subjectElement)') ||
+       !navigation.includes('function updateHamburgerContrast()') ||
+       !navigation.includes('function foregroundStateForLuminance(luminance, current)') ||
+       !navigation.includes("setDynamicBackdropState(sample.dynamic, 'hamburger')") ||
+       !navigation.includes('setHamburgerForeground(sample.luminance)')) ||
+      !navigation.includes('logoBackdropIsDynamic') ||
+      !navigation.includes("root.visibilityState !== 'hidden'") ||
+      !navigation.includes('const backdropColor = parseColor(') ||
+      !navigation.includes("bind(windowRef, 'scroll', scheduleLogoContrast") ||
+      !navigation.includes("bind(root, 'loadeddata', scheduleLogoContrast")) {
+    err('Adaptive logo runtime: active-media sampling, fallback surface, state updates, and DOM-state observation must remain connected.');
+  }
+
+  if (!hero.includes('if (!slides.length) return () => {};') ||
+      hero.includes('if (slides.length <= 1 || isReducedMotionFn()) return () => {};') ||
+      !hero.includes('const shouldLoop = slides.length === 1') ||
+      !hero.includes("if (shouldLoop) media.setAttribute('loop', '');") ||
+      !hero.includes('activateMedia(slides[currentIndex])') ||
+      !hero.includes("media.dataset.playbackState = 'blocked'") ||
+      !hero.includes("const posterSource = source.poster || config.defaultVideoPoster || source.src;") ||
+      !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
+      !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
+      !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
+      hero.includes('og-image.jpg') ||
+      !hero.includes('if (media.readyState < 2)') ||
+      !hero.includes("media.addEventListener('canplay', retryAfterReady, { once: true });") ||
+      !hero.includes("bind(interactionSurface, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes("bind(documentRef, 'pointerdown', retryBlockedVideo") ||
+      !hero.includes("bind(windowRef, 'online', retryBlockedVideo") ||
+      !hero.includes('const activeMediaCleanups = [];') ||
+      !hero.includes('clearActiveMediaListeners()') ||
+      !hero.includes('if (reducedMotion) {')) {
+    err('Hero media runtime: a single video/Lottie must activate, loop where appropriate, handle rejected playback, and respect reduced motion.');
+  }
+
+  if (!siteSettings.includes('kenBurnsFromScale: 1') ||
+      !siteSettings.includes('kenBurnsToScale: 1.15') ||
+      !siteSettings.includes('kenBurnsDurationS: 14') ||
+      !siteSettings.includes('const numericKenBurnsFrom = Number(hero.kenBurnsFromScale)') ||
+      !siteSettings.includes('const numericKenBurnsTo = Number(hero.kenBurnsToScale)') ||
+      !siteSettings.includes('const numericKenBurnsDuration = Number(hero.kenBurnsDurationS)')) {
+    err('CMS settings sync: normalized hero timing must preserve the stored Ken Burns scale and duration fields.');
+  }
+
+  if (!hasVersionedReference(footer, '../../infrastructure/browser/media-contrast.js') ||
+      !footer.includes('chooseForeground(documentRef, source, media)') ||
+      !footer.includes('windowRef.setInterval') ||
+      !footer.includes('lifecycle.cleanup()')) {
+    err('Footer regression contract: the shared contrast helper, video refresh, and lifecycle cleanup must remain connected.');
+  }
+
+  if (!smoke.includes('async function assertWorksHeroGalleryResponsive') ||
+      !smoke.includes("await assertWorksHeroGalleryResponsive(page, true, 'Hero Message enabled')") ||
+      smoke.split('footerSlides.length > 0').length - 1 < 2 ||
+      smoke.split('activeFooterSlides.length === 1').length - 1 < 2 ||
+      smoke.split('const normalizeOpaqueColor = color => String(color ||').length - 1 < 4 ||
+      !smoke.includes('normalizeOpaqueColor(style.backgroundColor)') ||
+      !smoke.includes("'Works Hero current CMS setting'") ||
+      !smoke.includes('filterHeroGap') || !smoke.includes('filterTabCenterDeltaX') ||
+      !smoke.includes('filterTouchAction') || !smoke.includes('async function assertNoLogoBackingPlate') ||
+      !smoke.includes('Loading gate') || !smoke.includes('Footer') ||
+      !smoke.includes('logo-slide-stack') ||
+       !smoke.includes("const hasVisibleHamburger = await page.evaluate(() => {") ||
+       smoke.split('if (hasVisibleHamburger)').length - 1 < 2 ||
+       !smoke.includes('(hasVisibleHamburger && independentChromeContrast.hamburgerForeground !== \'dark\')') ||
+       !smoke.includes("hamburgerBackdrop.style.background = '#fff'") ||
+       !smoke.includes("addBackdrop('__smoke-hamburger-backdrop', hamburgerRect, '#000')") ||
+      !smoke.includes("page.emulateMedia({ reducedMotion: 'reduce' })") ||
+      !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'dark'") ||
+      !smoke.includes("await page.waitForFunction(\n        () => document.querySelector('.site-logo')?.dataset?.logoForeground === 'light'") ||
+      !smoke.includes('hero video did not resume after a real interaction') ||
+      !smoke.includes('Mux code-4/NO_SOURCE errors must reset the playback source and trigger one bounded recovery attempt') ||
+      !hero.includes("media.preload = reducedMotion ? 'none' : (i === 0 ? 'auto' : 'metadata');") ||
+      !hero.includes('if (!reducedMotion) media.src = resolveAssetUrl(source.src);') ||
+      !hero.includes("const posterSource = source.poster || config.defaultVideoPoster;") ||
+       !hero.includes("const posterUrl = posterSource ? resolveAssetUrl(posterSource) : '';") ||
+       !hero.includes("defaultVideoPoster: typeof options.defaultVideoPoster === 'string' ? options.defaultVideoPoster.trim() : ''") ||
+       !hero.includes("if (source.type === 'video' && !hasVideoPoster) {") ||
+      hero.includes('og-image.jpg') ||
+      !hero.includes("sources[0]?.type !== 'video'") ||
+      !hero.includes('function getPlaybackErrorDetails(media, event = null)') ||
+      !hero.includes('function scheduleNetworkRetry(slide, media, event = null)') ||
+      !hero.includes("details.networkState === 3") ||
+      !hero.includes("function scheduleMuxUnsupportedSourceRecovery(slide, media, details)") ||
+      !hero.includes("media.setAttribute('prefer-playback', 'mse');\n          media.setAttribute('playback-id', source.playbackId);") ||
+      !hero.includes("details.mediaErrorCode === 4") ||
+      !hero.includes("media.dataset.networkRetryReason = 'mux-unsupported-source'") ||
+      !smoke.includes('Mux hero no-source errors must trigger one bounded recovery attempt') ||
+      !hero.includes("recovery: recoveryScheduled ? 'retry-scheduled'") ||
+      !hero.includes("'mse-recovery-attempted'") ||
+      !smoke.includes('Reduced-motion hero must keep the video source detached and avoid reusing the Open Graph image') ||
+      !smoke.includes("for (const viewport of viewports)") ||
+      /if \(viewport\.name === 'desktop'\) \{\s*const videoContract/.test(smoke) ||
+      !smoke.includes("const retryTarget = expectedMessage ? '.hero-overlay' : '#heroBanner';") ||
+      !smoke.includes("await page.locator('.hero-overlay').click({ position: { x: 12, y: 12 } })") ||
+      !smoke.includes('CMS heroTiming Ken Burns values were not synchronized into the footer renderer') ||
+      !smoke.includes("document.body.classList.contains('menu-open')") ||
+      !smoke.includes("gate.dataset.loading = 'active'") ||
+      about.includes('about-filter-rail') ||
+      css.includes('.about-filter-rail') ||
+      !smoke.includes('About page must not render Works category filter tabs') ||
+      !smoke.includes('About adaptive-logo fixture') ||
+      !smoke.includes('Contact-area logo lost its white/filter transition') ||
+      !smoke.includes('message hero media must dynamically switch both logo and hamburger contrast') ||
+      !smoke.includes('Gallery contrast fixture disappeared before the reverse-state check.') ||
+      !smoke.includes('navigation label box or visible text is not centered') ||
+      css.includes('.nav-logo::before') ||
+      css.includes('.nav-logo.logo-contrast-fallback::before') ||
+      css.includes('.nav-logo.contact-area-logo::before')) {
+    err('Responsive browser smoke: both message states, contrast changes, single-video playback, and reduced motion must be exercised.');
+  }
+
+  if (!hasVersionedReference(entry, 'bootstrap.js') ||
+      !/cacheVersion\s*=\s*'[^']+'/.test(bootstrap) ||
+      !hasVersionedReference(composition, 'navigation/index.js') ||
+      !hasVersionedReference(composition, 'about/index.js') ||
+      !hasVersionedReference(composition, 'hero/index.js') ||
+      !hasVersionedReference(composition, 'footer/index.js') ||
+      !hasVersionedReference(composition, 'settings/index.js') ||
+      !hasVersionedReference(composition, 'interaction-feedback/index.js') ||
+      !hasVersionedReference(composition, 'gallery/index.js') ||
+      !hasVersionedReference(composition, 'projects/index.js') ||
+      !hasVersionedReference(composition, 'lightbox/index.js') ||
+      !hasVersionedReference(settingsFeature, 'site-settings.js') ||
+      !hasVersionedReference(works, 'js/app/bootstrap.js') ||
+      !hasVersionedReference(works, 'js/app/page-composition.js') ||
+      !hasVersionedReference(works, 'css/style.css') ||
+      !hasVersionedReference(works, 'js/script.js') ||
+      !hasVersionedReference(about, 'style.css') ||
+      !hasVersionedReference(about, 'js/app/bootstrap.js') ||
+      !hasVersionedReference(about, 'script.js') ||
+      !hasVersionedReference(about, 'page-composition.js')) {
+    err('Runtime asset cache contract: runtime modules, affected features, and both page templates must use versioned references with consistent entrypoint cache versions.');
+  }
+}
+
+function validateFilterSoundAndFeedbackContract() {
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const feedback = exists('js/features/interaction-feedback/index.js') ? readText('js/features/interaction-feedback/index.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+
+  const filterStateCss = css.slice(css.indexOf('.tab-btn.active,'), css.indexOf('/* Pointer focus does not keep'));
+  if (!css.includes('font-weight: 650;') ||
+      !filterStateCss.includes('font-weight: 650;') ||
+      /font-weight:\s*(?:580|700);/.test(filterStateCss) ||
+      !gallery.includes('suppressFilterSettleUntil = Date.now() + 800;') ||
+      !gallery.includes('syncFilterActiveIndicator(undefined, { followingScroll: true });') ||
+      !smoke.includes('previewFontWeight') || !smoke.includes('activeFontWeight')) {
+    err('Filter carousel stability: active/preview label metrics must stay constant, swipe preview must update with the pointer frame, and scrollend must not trigger a second settlement.');
+  }
+
+  if (!gallery.includes("new CustomEventConstructor('lm:filter-centered'") ||
+      !gallery.includes('function scheduleCenteredFilter()') ||
+       !gallery.includes('settleCenteredFilter();') ||
+      !gallery.includes("'(prefers-reduced-motion: reduce)'") ||
+      !gallery.includes("event.key === 'ArrowRight'") ||
+      !gallery.includes("event.key === 'Home'")) {
+    err('Mobile filter behavior: centered changes must settle once, dispatch a cue, support keyboard navigation and respect reduced motion.');
+  }
+  const filterHoverStart = css.indexOf('.tab-btn:hover:not(.active):not([aria-pressed="true"]):not(:disabled):not([aria-disabled="true"])');
+  const filterHoverOpen = css.indexOf('{', filterHoverStart);
+  const filterHoverClose = css.indexOf('}', filterHoverOpen);
+  const filterHoverRule = filterHoverStart >= 0 && filterHoverOpen >= 0 && filterHoverClose > filterHoverOpen
+    ? css.slice(filterHoverOpen + 1, filterHoverClose)
+    : '';
+  if (!filterHoverRule.includes('background: rgba(255, 255, 255, .12)') ||
+      !filterHoverRule.includes('border-color: transparent') ||
+      !filterHoverRule.includes('outline: none') ||
+      !filterHoverRule.includes('box-shadow: none')) {
+    err('Filter tabs: fine-pointer hover must use the neutral gray treatment without an outline, border, or ring.');
+  }
+
+  if (!css.includes('.filter-active-indicator') ||
+      !gallery.includes('function getFilterViewportCenterX()') ||
+      !gallery.includes('const centerX = getFilterViewportCenterX() - hostRect.left - hostClientLeft;') ||
+      !gallery.includes("indicator.style.translate = '-50% 0'") ||
+      !gallery.includes("indicator.style.transform = 'translate3d(-50%, 0, 0)'") ||
+      !gallery.includes('const delta = (buttonRect.left + buttonRect.width / 2) -\n      getFilterViewportCenterX();') ||
+      !css.includes('overscroll-behavior-x: none;') ||
+      !css.includes('width 420ms cubic-bezier(.34, 1.45, .64, 1)') ||
+      css.includes('transform 160ms cubic-bezier(.2, 0, 0, 1)') ||
+      !css.includes('.tab-btn:disabled') ||
+      css.includes('.tab-btn.active::before') ||
+      css.includes('content: "✓"') ||
+      !gallery.includes('function syncFilterActiveIndicator') ||
+      !gallery.includes('function normalizeFilterButtonWidths') ||
+      !gallery.includes('documentRef.fonts?.ready') ||
+      !gallery.includes('button.disabled = !availableProjects.some(') ||
+      !gallery.includes("filterAnnouncement.setAttribute('role', 'status')") ||
+      !smoke.includes('filter-announcement') ||
+      !smoke.includes('Desktop uses the same centered carousel') ||
+      !smoke.includes('Desktop hover stays in the existing gray palette')) {
+    err('Filter interaction: a stationary center-anchored pill must resize to content labels, avoid page overscroll, and retain mobile/desktop swipe plus hover coverage.');
+  }
+
+  const works = exists('index.html') ? readText('index.html') : '';
+  const navigation = exists('js/features/navigation/index.js') ? readText('js/features/navigation/index.js') : '';
+  if (!works.includes('<div class="filter-nav-wrapper" role="group" aria-label="Project categories">') ||
+      !works.includes('class="filter-nav-viewport"') ||
+      !works.includes('class="filter-tabs filter-nav-scroller"') ||
+      !works.includes('class="filter-nav-content"') ||
+      !gallery.includes("filterTabs?.querySelector('.filter-nav-content') || filterTabs") ||
+      !gallery.includes('function isFilterScroller()') ||
+      !gallery.includes("filterContent.replaceChildren(fragment)") ||
+      !gallery.includes("filterContent.prepend(leading)") ||
+      !gallery.includes("filterContent.append(trailing)") ||
+      !css.includes('.filter-tabs[data-overflow="true"]') ||
+      css.includes('scroll-snap-stop: always') ||
+      !css.includes('scroll-snap-type: none') ||
+      !css.includes('-webkit-overflow-scrolling: auto;') ||
+      !gallery.includes("centerFilterButton(nearest, 'auto', true)") ||
+       gallery.includes('runFilterInertia') ||
+       !css.includes('.filter-nav-content.has-active-indicator.is-following-filter-scroll .tab-btn.is-centered-preview') ||
+       !css.includes('mix-blend-mode: exclusion;') ||
+       !css.includes('mix-blend-mode: normal !important;') ||
+       !css.includes('.filter-tabs .tab-btn:active { transform: none;') ||
+      !navigation.includes("bind(windowRef, 'pointerup', resetPointerFocus)") ||
+      !navigation.includes('logoLink.blur()') ||
+      !smoke.includes('filterGalleryGap') ||
+      !smoke.includes('layout.filterHeroGap < 12 || layout.filterGalleryGap < 12') ||
+      !smoke.includes('filterHasOverflow') ||
+      !smoke.includes('layout.filterHasOverflow && !hasFilterEdgeFade') ||
+      !css.includes('.nav-logo:focus:not(:focus-visible)') ||
+      !css.includes('.nav-logo.is-pointer-focused:focus-visible') ||
+      !navigation.includes("bind(logoLink, 'pointerdown'") ||
+      !navigation.includes("logoLink.classList.add('is-pointer-focused')") ||
+      !smoke.includes('assertFilterNavigationResponsive(page,')) {
+    err('Responsive filter navigation and adaptive-logo focus contract: wrapper layers, overflow-aware centering, snap/reduced-motion, and keyboard-versus-pointer focus must remain covered.');
+  }
+  if (!feedback.includes("root.addEventListener('lm:filter-centered', handleCenteredFilter)") ||
+      !feedback.includes("audio.preload = 'auto'") ||
+      !feedback.includes("audioByCue.forEach(otherAudio =>") ||
+      feedback.includes('localStorage') ||
+      feedback.includes('interaction-feedback-toggle')) {
+    err('Interaction feedback: centered cues must be gesture-aware, single-channel, CMS-controlled, and free of visitor preference state.');
+  }
+  if (css.includes('.interaction-feedback-toggle') ||
+      !smoke.includes('must never render a public interaction-feedback control') ||
+      !smoke.includes('selectionSoundCalls')) {
+    err('Public feedback control: the toggle must be absent from CSS and browser smoke must cover centered-filter sound behavior.');
+  }
+}
+
+function validateCmsRegressionContracts() {
+  const admin = exists('admin/admin.js') ? readText('admin/admin.js') : '';
+  if (!admin.includes('function validateCmsMediaSource(') ||
+      !admin.includes("validateCmsMediaSource(manual.type, manual.src, 'Manual footer media')") ||
+      !admin.includes('validateCmsMediaSource(item.type, item.src, `Hero artwork ${index + 1}`)')) {
+    err('CMS media validation: Hero Loop and manual Footer sources must be validated before save.');
+  }
+  const smoke = exists('tools/smoke-browser.mjs') ? readText('tools/smoke-browser.mjs') : '';
+  if (!smoke.includes("page.on('requestfailed'") ||
+      !smoke.includes('failedSameOriginRequests') ||
+      !smoke.includes('Same-origin HTTP 404 URLs')) {
+    err('Browser smoke network contract: same-origin HTTP 404s and failed requests must fail validation.');
+  }
+  if (!/let renderVersion = 0;/.test(admin) ||
+      !/const version = \+\+renderVersion;/.test(admin) ||
+      !/const section = currentSection;/.test(admin) ||
+      !/if\(version !== renderVersion \|\| section !== currentSection\) return;/.test(admin)) {
+    err('CMS render: asynchronous section loads must be guarded against stale navigation responses.');
+  }
+  const mediaReferenceBlock = admin.slice(
+    admin.indexOf('const MEDIA_REFERENCE_FILES = ['),
+    admin.indexOf('async function renameMediaFolder(', admin.indexOf('const MEDIA_REFERENCE_FILES = ['))
+  );
+  if (!mediaReferenceBlock.includes("'data/curated-views.json'") ||
+      !mediaReferenceBlock.includes("'data/footer-loop.json'")) {
+    err('CMS Media Library: folder renames must update Curated View-owned project media and footer animation references.');
+  }
+  if (!admin.includes('async getTree(ref=conn.branch)') ||
+      !admin.includes('async getTextFile(path, ref=conn.branch)') ||
+      !admin.includes('const tree=await GH.getTree(parentSha);') ||
+      !admin.includes('GH.getTextFile(filePath,parentSha)') ||
+      !admin.includes('`,parentSha);')) {
+    err('CMS Media Library: folder renames must read the asset tree and references from one immutable commit snapshot before writing.');
+  }
+  if (!admin.includes('const cacheKey = version || mediaTreeShaByPath?.get(assetPath)') ||
+      !admin.includes('await loadMediaTree(true)') ||
+      !admin.includes('const existingIndex = uploadTree.findIndex') ||
+      !admin.includes('setMediaTreeCache(uploadTree)') ||
+      !admin.includes('let needsInitialRefresh=true') ||
+      !admin.includes('paintVersion!==pickerPaintVersion')) {
+    err('CMS Media Library: fresh replacement uploads, SHA-keyed previews, and guarded picker refreshes are required.');
+  }
+  if (admin.includes('SOFTWARE_DOMAINS') || admin.includes('logo.clearbit.com')) {
+    err('CMS software logos: retired inline SOFTWARE_DOMAINS/Clearbit lookup must not return.');
+  }
+  if (!/const SOFTWARE_LOGO_LOOKUP = import\(['"]\.\.\/js\/infrastructure\/software-logo\/lookup\.js/.test(admin) ||
+      !/async function findAutomaticSoftwareLogoCandidates\(name\)/.test(admin)) {
+    err('CMS software logos: About editor must resolve automatic logos through the shared lookup adapter.');
+  }
+
+  const gallery = exists('js/features/gallery/index.js') ? readText('js/features/gallery/index.js') : '';
+  const presentation = exists('js/features/gallery/presentation.js') ? readText('js/features/gallery/presentation.js') : '';
+  const projectCard = exists('js/features/projects/project-card.js') ? readText('js/features/projects/project-card.js') : '';
+  const renderer = exists('js/features/lightbox/media-renderer.js') ? readText('js/features/lightbox/media-renderer.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+
+  if (!admin.includes('saveSectionsAtomic([')) err('CMS save: Hero Loop and settings must stay atomic.');
+  if (!/async getFile\(path, ref=conn\.branch\)/.test(admin) ||
+      !admin.includes("GH.getFile(file.path, parentSha)") ||
+      !admin.includes("expectedSha: previous.sha ?? null") ||
+      !admin.includes("JSON.stringify(fresh.json) !== JSON.stringify(parsed)")) {
+    err('CMS atomic saves: file revisions must be checked against the parent commit and post-save content verified before clearing dirty state.');
+  }
+  if (!/async\s+(?:function\s+)?updateBranch\(commitSha\)/.test(admin) ||
+      !/body:JSON\.stringify\(\{sha:commitSha,force:false\}\)/.test(admin) ||
+      !/await GH\.updateBranch\(newCommit\.sha\)/.test(admin)) {
+    err('CMS save: atomic Git writes must use a non-forced branch ref update.');
+  }
+  if (!admin.includes('await onCollect()')) err('CMS save: save collectors must support asynchronous cross-file validation/migrations.');
+  if (!admin.includes('filtersWithProjects')) err('CMS filters: filter/project relationship saves must be atomic.');
+  if (admin.includes("import('../js/model-viewer.js')") || /['"]js\/model-viewer\.js['"]/.test(admin)) {
+    err('CMS 3D preview: retired js/model-viewer.js path must not be referenced.');
+  }
+  if (!/import\(['"]\.\.\/js\/infrastructure\/three\/model-viewer\.js(?:\?[^'"]*)?['"]\)/.test(admin)) {
+    err('CMS 3D preview: the Projects editor must import the infrastructure Three.js adapter.');
+  }
+  if (!admin.includes('Duplicate filter ID')) err('CMS filters: duplicate filter IDs must be rejected.');
+  if (!renderer.includes("const effectiveType = String(connection?.effectiveType || '').trim().toLowerCase();") ||
+      !renderer.includes('const downlink = Number(connection?.downlink);') ||
+      !renderer.includes('const roundTripTime = Number(connection?.rtt);') ||
+      !renderer.includes('/^(?:slow-)?[23]g$/.test(effectiveType)') ||
+      !renderer.includes('downlink < 1.5') ||
+      !renderer.includes('roundTripTime > 500') ||
+      !renderer.includes('const STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT = 4;') ||
+      !renderer.includes('projectIndex < STARTUP_PRIMARY_MEDIA_PROJECT_LIMIT') ||
+      !renderer.includes('if (!critical && !nonBlocking) return;')) {
+    err('Lightbox preload policy: restrict startup to four primary project previews, intentional 3D warm-ups, and the capped nonblocking YouTube cache.');
+  }
+
+  if (!renderer.includes("function applyHolographicMask(layer, maskUrl, artworkUrl = '', detailMaskUrl = '', detailOptions = {})") ||
+      !renderer.includes('layer.style.maskMode = modeList') ||
+      !renderer.includes("const asCssUrl = value => 'url(\"' + String(value).split('\"').join('%22') + '\")';") ||
+      renderer.includes("encodeURI(String(value).split('\"').join('%22'))") ||
+      renderer.includes("encodeURI(String(faceTextureUrl).split('\"').join('%22'))") ||
+      !renderer.includes("modes.push('alpha')") ||
+      !renderer.includes("sizes.push('contain')") ||
+      !renderer.includes("const faceMaskUrl = isFront ? frontMaskUrl : backMaskUrl") ||
+      !renderer.includes("if (maskedLayers.has('spectrum')) applyFaceHolographicMask(spectrum)") ||
+      !renderer.includes("if (maskedLayers.has('environment')) applyFaceHolographicMask(environment)") ||
+      !renderer.includes("if (maskedLayers.has('prism')) applyFaceHolographicMask(prism)") ||
+      !renderer.includes("if (maskedLayers.has('ribbons')) applyFaceHolographicMask(ribbons)") ||
+      !renderer.includes("if (maskedLayers.has('diffraction')) applyFaceHolographicMask(diffraction)") ||
+      !renderer.includes("if (maskedLayers.has('sparkles')) applyFaceHolographicMask(sparkles)") ||
+      !renderer.includes("if (maskedLayers.has('sheen')) applyFaceHolographicMask(sheen)") ||
+      !renderer.includes("texture.style.backgroundImage =\n          'url(\"' + faceTextureUrl.split('\"').join('%22') + '\"), '") ||
+      !renderer.includes('applyFaceHolographicMask(texture, faceTextureUrl, {')) {
+    err('Lightbox holographic mask: every foil layer must follow image alpha and its optional custom luminance mask.');
+  }
+
+  const foilNormalRenderer = exists('js/features/lightbox/foil-normal-renderer.js') ? readText('js/features/lightbox/foil-normal-renderer.js') : '';
+  if (!hasVersionedReference(renderer, './foil-normal-renderer.js') ||
+      !renderer.includes('const controller = createFoilNormalRenderer(record.canvas, record.patternUrls, record.options)') ||
+      !renderer.includes('controller.setLight(0.34, 0.74)') ||
+      !renderer.includes('syncHolographicNormalRendering(surface, !compactTarget)') ||
+      !renderer.includes("record.canvas.dataset.foilNormalState = enabled ? 'active' : 'suspended'") ||
+      !css.includes('.lightbox-holographic-normal-map{') ||
+      !foilNormalRenderer.includes('vec3 blendFoilNormals') || !foilNormalRenderer.includes('heightAt3(tileUV') || !foilNormalRenderer.includes('destroy()')) {
+    err('Lightbox foil normals: source-map slopes must blend into tilt-responsive lighting, suspend safely on compact targets, and preserve the CSS foil fallback.');
+  }
+
+  if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||
+      !renderer.includes('function setHolographicTarget(') ||
+      !renderer.includes("flip.className = 'lightbox-holographic-flip'") ||
+      !css.includes('.lightbox-holographic.is-flipped .lightbox-holographic-flip') ||
+      !renderer.includes("surface.style.setProperty('--holo-light-x', '34%')") ||
+      !renderer.includes("surface.style.setProperty('--holo-light-y', '26%')") ||
+      !renderer.includes('const lightBaseX = motion?.autoRotate ? 34 : 50') ||
+      !renderer.includes('const lightX = clampHolographic(lightBaseX + ((50 - clampedX) * 0.68), 16, 84)') ||
+      !renderer.includes('const lightBaseY = motion?.autoRotate ? 26 : 50') ||
+      !renderer.includes('const lightY = clampHolographic(lightBaseY + ((50 - clampedY) * 0.68), 16, 84)') ||
+      !css.includes('.lightbox-holographic-environment{') ||
+      !css.includes('background-blend-mode:screen,screen,multiply,soft-light') ||
+      !renderer.includes('lightbox-holographic-prism') ||
+      !renderer.includes('lightbox-holographic-ribbons') ||
+      !css.includes('@keyframes holo-prism-drift') ||
+      !css.includes('@keyframes holo-light-ribbons') ||
+      !css.includes('data-holo-texture-mode="tile"') ||
+      !css.includes('background-size:auto') ||
+      !css.includes('.lightbox-holographic-ribbons{\n    animation:none;')) {
+    err('Holographic rendering: eased inverse lighting, masked environmental shading, and tile/fill texture mapping must remain available.');
+  }
+
+  if (!renderer.includes('const HOLOGRAPHIC_MASK_LAYERS = {') ||
+      !renderer.includes("holographic: ['prism', 'ribbons', 'sheen']") ||
+      !renderer.includes("glitter: ['sparkles']") ||
+      !renderer.includes("...(HOLOGRAPHIC_MASK_LAYERS[config.style] || [])") ||
+      !renderer.includes("if (maskedLayers.has('environment')) applyFaceHolographicMask(environment)") ||
+      !renderer.includes("if (maskedLayers.has('prism')) applyFaceHolographicMask(prism)") ||
+      !css.includes('background-image:url("../assets/holographic/grain.webp")') ||
+      !css.includes('mix-blend-mode:hard-light') ||
+      !css.includes('@keyframes holo-spectrum-breathe{\n  0%,100%{opacity:') ||
+      !css.includes('@keyframes holo-glitter-twinkle{\n  0%,100%{opacity:')) {
+    err('Holographic material: use a locally cached generic grain, moving neutral interference and profile-specific masks; continuous spectrum/glitter animation must avoid filter changes.');
+  }
+  if (!exists('assets/holographic/grain.webp')) {
+    err('Holographic material: generic local grain texture asset is missing.');
+  }
+
+  if (!renderer.includes('const backFoilEnabled = backHasCustomArtwork && Boolean(config.backFoilEnabled)') ||
+      !renderer.includes('if (!isFront && !backFoilEnabled) return;') ||
+      !renderer.includes('config.backTextureMode') ||
+      !admin.includes('data-holo-back-enabled') ||
+      !admin.includes('backFoilEnabled') ||
+      !renderer.includes('__lightboxHoloHint') ||
+      !renderer.includes('lightbox-holographic-default-reverse') ||
+      !admin.includes('value="brushed"') ||
+      !admin.includes('value="beams"') ||
+      !admin.includes('value="crosshatch"') ||
+      !admin.includes('value="shattered"') ||
+      !admin.includes('value="glitter"') ||
+      !admin.includes('value="waves"') ||
+      !admin.includes('value="cat-eye"') ||
+      !css.includes('lightbox-holographic-diffraction') ||
+      !css.includes('lightbox-holographic-sparkles') ||
+      !css.includes(':is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-diffraction,\n :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sparkles{animation:none!important;}') ||
+      !css.includes('background-blend-mode:overlay,color-dodge;') ||
+      !css.includes('@keyframes holo-spectrum-breathe') ||
+      !css.includes('.lightbox-holographic-sparkles,\n:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-sheen{\n  display:none!important;') ||
+      !css.includes('.lightbox-holographic-hint') ||
+      !css.includes('display:none!important;content:none!important;')) {
+    err('Holographic card: reverse toggle, no-back mirroring, eight foil finishes, and the interaction cue must remain available.');
+  }
+
+  if (!css.includes('.lightbox-artwork.has-holographic{\n  overflow:visible;') ||
+      !css.includes('border:0;\n  box-shadow:none;\n  outline:none;') ||
+      !css.includes('outline:none!important;') ||
+      !css.includes(':is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-holographic-face{\n  border-radius:0;\n  overflow:hidden;') ||
+      !renderer.includes("layer.style.webkitMaskComposite = webkitIntersections || 'source-over'")) {
+    err('Holographic card: the artwork slot must not crop tilt; foil must have no added frame and clip to image alpha.');
+  }
+
+  if (!gallery.includes('getEffectiveBaseCount') ||
+      !gallery.includes('getRowAlignedCount') ||
+      !presentation.includes('getRowAlignedCount') ||
+      !presentation.includes('applyGalleryReveal')) {
+    err('Gallery: row-aware Show More state/presentation contract is missing.');
+  }
+
+  if (!gallery.includes('getFilteredProjects') ||
+      !gallery.includes('projectMatchesFilter') ||
+      !gallery.includes('getCardForProject') ||
+      !gallery.includes('getProjects')) {
+    err('Gallery filters: filter state must consume normalized Projects and map selections to cards through the Projects API.');
+  }
+
+  if (!/className = 'tab-btn filter-btn active'/.test(gallery) ||
+      !/className = 'tab-btn filter-btn'/.test(gallery) ||
+      !/filterBtns = Array\.from\(document(?:Ref)?\.querySelectorAll\('\.filter-tabs \.filter-btn, \.filter-tabs \.tab-btn'\)\)/.test(gallery)) {
+    err('Gallery filters: CMS filter buttons must have an owned click/filter contract.');
+  }
+
+  if (!/(?:filterBtns\.forEach\(btn\s*=>\s*btn\.addEventListener|filterBtns\.forEach\(btn\s*=>\s*bind\(btn,\s*'click')/.test(gallery)) {
+    err('Gallery filters: filter buttons must be connected through the feature lifecycle.');
+  }
+
+  if (!/async function loadFilterButtons\(\)/.test(gallery) || !/options\.filterUrl/.test(gallery)) {
+    err('Gallery filters: CMS filter loading must remain inside the Gallery feature boundary.');
+  }
+
+  if (!/className = 'tab-btn filter-btn active'/.test(gallery) ||
+      !/dataset\.filter = 'all'/.test(gallery)) {
+    err('Gallery filters: ALL must remain a permanent structural filter and retain the tab styling contract.');
+  }
+
+  if (!composition.includes('mountProjects(') ||
+      !composition.includes('initGallery(') ||
+      !composition.includes('initLightbox(')) {
+    err('Portfolio composition: Projects, Gallery, and Lightbox controllers must remain explicitly wired.');
+  }
+
+  if (!composition.includes('getProjects()') || /project-media-list/.test(composition)) {
+    err('Composition: runtime media capability checks must use normalized Projects, not hidden card markup.');
+  }
+
+  if (!projectCard.includes("card.className = 'project-card'") ||
+      /className = \['project-card', \.\.\.filters\]/.test(projectCard) ||
+      projectCard.includes('project-media-list') ||
+      projectCard.includes('buildMediaItemElement') ||
+      !projectCard.includes("const modelThumbnailSource = fallbackThumbnail?.type === 'model'") ||
+      !projectCard.includes("media.setAttribute('data-model-thumb', modelThumbnailSource)")) {
+    err('Project cards: taxonomy must remain data-driven and presentation markup must not act as an inter-feature project-data bus.');
+  }
+
+  if (!css.includes('--hero-fade-in-ms') || !css.includes('--hero-fade-out-ms')) {
+    err('Hero: per-slide fade timing CSS variables are missing.');
+  }
+}
+
+function validateReducedMotionThumbnailContract() {
+  const thumbnail = exists('js/features/projects/project-thumbnail.js')
+    ? readText('js/features/projects/project-thumbnail.js')
+    : '';
+  const projectCard = exists('js/features/projects/project-card.js')
+    ? readText('js/features/projects/project-card.js')
+    : '';
+  const mediaRenderer = exists('js/features/lightbox/media-renderer.js')
+    ? readText('js/features/lightbox/media-renderer.js')
+    : '';
+  const assetPreview = exists('js/infrastructure/media/asset-preview.js')
+    ? readText('js/infrastructure/media/asset-preview.js')
+    : '';
+  const lightboxIndex = exists('js/features/lightbox/index.js')
+    ? readText('js/features/lightbox/index.js')
+    : '';
+  const smoke = exists('tools/smoke-browser.mjs')
+    ? readText('tools/smoke-browser.mjs')
+    : '';
+  const styles = exists('css/style.css') ? readText('css/style.css') : '';
+
+  const projectThumbnailVersion = projectCard.match(/project-thumbnail\.js\?v=([^'"]+)/)?.[1] || '';
+  const smokeProjectThumbnailVersions = [...smoke.matchAll(/project-thumbnail\.js\?v=([^'"]+)/g)]
+    .map(match => match[1]);
+  const thumbnailAssetPreviewVersion = thumbnail.match(/asset-preview\.js\?v=([^'"]+)/)?.[1] || '';
+  const lightboxAssetPreviewVersion = mediaRenderer.match(/asset-preview\.js\?v=([^'"]+)/)?.[1] || '';
+  const smokeAssetPreviewVersion = smoke.match(/asset-preview\.js\?v=([^'"]+)/)?.[1] || '';
+
+  if (!projectThumbnailVersion || !smokeProjectThumbnailVersions.length ||
+      smokeProjectThumbnailVersions.some(version => version !== projectThumbnailVersion)) {
+    err('Project-thumbnail smoke fixtures: direct module imports must use the same cache key as the Projects runtime import.');
+  }
+  if (!thumbnailAssetPreviewVersion || !lightboxAssetPreviewVersion || !smokeAssetPreviewVersion ||
+      thumbnailAssetPreviewVersion !== lightboxAssetPreviewVersion ||
+      thumbnailAssetPreviewVersion !== smokeAssetPreviewVersion) {
+    err('Asset preview cache ownership: Projects, Lightbox, and smoke fixtures must share one versioned asset-preview module instance.');
+  }
+
+  if (!thumbnail.includes("if (observers?.visibility && !reducedMotion) media.dataset.viewportReveal = 'pending';") ||
+      !thumbnail.includes('delete media.dataset.viewportReveal;') ||
+      !thumbnail.includes("if (!reducedMotion && observers?.visibility) observers.visibility.observe(media);") ||
+      !thumbnail.includes("rootMargin: '-24px 0px -24px 0px'") ||
+      !styles.includes('.card-thumbnail .project-thumb-media[data-viewport-reveal="pending"].is-media-ready') ||
+      !mediaRenderer.includes("rootMargin: '-24px 0px -24px 0px'") ||
+      !smoke.includes('Project thumbnail reveal must wait until it enters the viewport from the top/bottom') ||
+      !thumbnail.includes("matchMedia?.('(prefers-reduced-motion: reduce)')") ||
+      !thumbnail.includes('media.autoplay = false;') ||
+      !thumbnail.includes('media.loop = !reducedMotion;') ||
+      !thumbnail.includes("if (!reducedMotion) media.setAttribute('loop', '');") ||
+      !thumbnail.includes('Lottie starts only after its source is ready') ||
+      !thumbnail.includes("type === 'model'") ||
+      !thumbnail.includes('mountModelViewer') ||
+      !styles.includes('.card-thumbnail .project-thumb-foil.is-foil-ready') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-state="loading"]::before') ||
+      !styles.includes('background:rgba(0,0,0,.5)') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-state="loading"]::after') ||
+      !styles.includes('mix-blend-mode:difference') ||
+      !smoke.includes('thumbnail-loading-fixtures') ||
+      !smoke.includes('overlayBackground') ||
+      !thumbnail.includes("media.preload = reducedMotion || priority ? 'metadata' : 'none';") ||
+      !thumbnail.includes("rootMargin: '640px 0px'") ||
+      !thumbnail.includes("const shouldDeferStillImage = !['video', 'lottie', 'model'].includes(type);") ||
+      !thumbnail.includes(".then(() => ensureLottiePlayer())") ||
+      thumbnail.includes('playerLoadTimer') ||
+      !thumbnail.includes('const MEDIA_SLOW_LOAD_TIMEOUT_MS = 12000;') ||
+      !thumbnail.includes('const armSlowLoadFallback =') ||
+      !thumbnail.includes('const showSlowLoadFallback =') ||
+      thumbnail.includes("armSlowLoadFallback(() => generation === lottieGeneration)") ||
+      !thumbnail.includes("showMediaFallback('loading');\n        media.dataset.mediaState = 'loading';") ||
+      !thumbnail.includes("media.dataset.mediaState !== 'loading'") ||
+      !thumbnail.includes('}, MEDIA_SLOW_LOAD_TIMEOUT_MS);') ||
+      thumbnail.includes('playerLoadTimeout') ||
+      !thumbnail.includes('clearLoadTimers();') ||
+      !thumbnail.includes('disposeProjectThumbnailMedia(root)') ||
+      !mediaRenderer.includes('if (!embedSrc) return renderUnsupported(item, project);') ||
+      !assetPreview.includes('MAX_PREVIEW_CACHE_ENTRIES') ||
+      !assetPreview.includes('MAX_PREVIEW_DATA_URL_LENGTH') ||
+      !assetPreview.includes('canvas.toDataURL') ||
+      !assetPreview.includes('export function installAssetPreviewOnFallback') ||
+      !thumbnail.includes('installAssetPreviewOnFallback(mediaFallback, src') ||
+      !mediaRenderer.includes('installAssetPreviewOnFallback(') ||
+      !smoke.includes('asset-preview handoff must only install the cached frame') ||
+      !thumbnail.includes('getAssetPreview(src)') ||
+      !thumbnail.includes('captureAssetPreview(src, media') ||
+      !mediaRenderer.includes('getAssetPreview(resolvedFailedSrc || failedRaw)') ||
+      !mediaRenderer.includes('sourceIdentity(explicitSrc) !== projectThumbnailIdentity') ||
+      !mediaRenderer.includes('cachedAssetPreview || explicitCandidate') ||
+      !mediaRenderer.includes("image.loading = isLoading && /^data:image\\/(?:webp|jpeg);base64,/i.test(imageSrc) ? 'eager' : 'lazy';") ||
+      !mediaRenderer.includes('observeArtworkVisibility(artwork)') ||
+      !mediaRenderer.includes("artwork.classList.add('is-media-awaiting-viewport')") ||
+      !smoke.includes("img:not(.lightbox-media-fallback-image)") ||
+      !smoke.includes(".lightbox-artwork img:not(.lightbox-media-fallback-image)") ||
+      !mediaRenderer.includes('captureAssetPreview(sourceUrl, image') ||
+      !mediaRenderer.includes("const previewSource = `https://stream.mux.com/${playbackId}.m3u8`;") ||
+      !mediaRenderer.includes("showLightboxMediaFallback(artwork, project, previewSource, 'video', 'loading', safePoster)") ||
+      !mediaRenderer.includes("captureAssetPreview(previewSource, player, { documentRef, type: 'video' })") ||
+      !mediaRenderer.includes("mediaSourceIdentity(resolvedPoster) !== projectThumbnailIdentity") ||
+      !mediaRenderer.includes("captureAssetPreview(url, image, { documentRef, type: 'image' })") ||
+      !mediaRenderer.includes("captureAssetPreview(url, video, { documentRef, type: 'video' })") ||
+      !smoke.includes('asset-preview-cache') ||
+      !hasVersionedReference(smoke, 'asset-preview.js') ||
+      !styles.includes('.card-thumbnail .project-thumb-media-fallback[data-preview="true"]') ||
+      !styles.includes('#lightboxMediaContainer .lightbox-media-fallback[data-preview="true"]') ||
+      !styles.includes('.lightbox-modal.active .modal-interior') ||
+      !styles.includes('.card-thumbnail .project-thumb-media.is-media-ready') ||
+      !styles.includes('transform: scale(calc(var(--thumb-zoom) * .985)) rotate(var(--thumb-rotate));') ||
+      !styles.includes('transform: scale(var(--thumb-zoom, 1)) rotate(var(--thumb-rotate, 0deg)) !important;') ||
+      !styles.includes('.card-thumbnail .project-thumb-model,') ||
+      !styles.includes('opacity:.22!important;') ||
+      !styles.includes('.card-thumbnail .project-thumb-media.is-media-error') ||
+      !styles.includes('transition: none !important;') ||
+      !styles.includes('filter: blur(8px);') ||
+      !styles.includes('filter: blur(0);') ||
+      !styles.includes('@keyframes lightbox-artwork-arrive') ||
+      !styles.includes('@keyframes lightbox-artwork-arrive-compact') ||
+      !styles.includes('@media(max-width:767px)') ||
+      !styles.includes('#lightboxMediaContainer .lightbox-artwork.is-media-reveal-ready') ||
+      !styles.includes('#lightboxMediaContainer .lightbox-artwork.is-media-awaiting-viewport') ||
+      !styles.includes('filter:none!important;transition:none!important;') ||
+      !styles.includes('video.project-thumb-media.is-media-loading {\n    filter:none!important;') ||
+      !styles.includes('.lightbox-artwork.is-media-reveal-ready') ||
+      !styles.includes('[data-media-reveal="ready"]') ||
+      !mediaRenderer.includes('function markArtworkReady(artwork)') ||
+      !mediaRenderer.includes("entry.dataset.mediaReveal = 'ready'") ||
+      !hasVersionedReference(lightboxIndex, 'media-renderer.js') ||
+      !smoke.includes('Lightbox artwork reveal did not wait for successful media readiness') ||
+      !smoke.includes('Grouped Lightbox artwork reveal must wait for readiness and stagger as a coordinated group') ||
+      smoke.split("page.locator('#thumbnail-loading-model').scrollIntoViewIfNeeded()").length - 1 < 2 ||
+      !smoke.includes("blurPx:Number.parseFloat(style.filter.match(/blur\\(([^)]+)\\)/)?.[1] || '0')") ||
+      !smoke.includes('item.blurPx > 0.01') ||
+      !smoke.includes('Project-card thumbnail reveal must fade, scale, and sharpen on ready') ||
+      !smoke.includes('Failed thumbnail media must not run the successful reveal transition') ||
+      !smoke.includes('Project thumbnail media must respect prefers-reduced-motion while keeping still-image priority hints') ||
+      !styles.includes('@media (prefers-reduced-motion: reduce)') ||
+      !smoke.includes('Project thumbnail media must respect prefers-reduced-motion') ||
+      !hasVersionedReference(projectCard, './project-thumbnail.js') ||
+      !smokeProjectThumbnailVersions.length ||
+      smokeProjectThumbnailVersions.some(version => version !== projectThumbnailVersion)) {
+    err('Project thumbnails: retain reduced-motion behavior, selected-source loading overlays, 50% veil/text layering, adaptive status contrast, responsive smoke coverage, and consistent module caching.');
+  }
+}
+
+validateCuratedViewRuntimeContract();
+validateCuratedViewPresentationContract();
+validateAboutFirstPaintContract();
+validateResponsiveHeroGalleryAndLogoContract();
+validateCmsRegressionContracts();
+validateFilterSoundAndFeedbackContract();
+validateReducedMotionThumbnailContract();
+validateRuntimeCacheGraph();
+
 function validatePageAwareFeatureLoading() {
   const composition = exists('js/app/page-composition.js')
     ? readText('js/app/page-composition.js')
