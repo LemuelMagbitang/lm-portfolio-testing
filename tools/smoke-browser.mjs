@@ -4989,6 +4989,77 @@ try {
           JSON.stringify({ faceAlignment, tiltedFaceMisalignment, tiltedPairDrift }));
       }
 
+      // Compact/mobile layouts must preserve front/back face centering too;
+      // desktop-only transform coverage is not enough for the responsive foil surface.
+      const faceViewportBeforeMobileCheck = page.viewportSize() || { width:1280, height:900 };
+      let mobileFaceAlignment;
+      try {
+        await page.setViewportSize({ width:390, height:844 });
+        await page.waitForTimeout(100);
+        mobileFaceAlignment = await funkoHolo.evaluate(async el => {
+          const front = el.querySelector('.lightbox-holographic-face.lightbox-holographic-front');
+          const back = el.querySelector('.lightbox-holographic-face.lightbox-holographic-back');
+          const flip = el.querySelector('.lightbox-holographic-flip');
+          if (!front || !back || !flip) return { missingFace:true };
+          const variables = ['--holo-rx', '--holo-ry', '--holo-rotation', '--holo-shift-x', '--holo-shift-y'];
+          const original = Object.fromEntries(variables.map(name => [name, el.style.getPropertyValue(name)]));
+          const wasFlipped = el.classList.contains('is-flipped');
+          const originalTransition = flip.style.transition;
+          const centerOffset = face => {
+            const rootRect = el.getBoundingClientRect();
+            const rect = face.getBoundingClientRect();
+            return {
+              x: rect.left + rect.width / 2 - (rootRect.left + rootRect.width / 2),
+              y: rect.top + rect.height / 2 - (rootRect.top + rootRect.height / 2)
+            };
+          };
+          const nextFrame = () => new Promise(resolve =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve))
+          );
+          const measure = async flipped => {
+            el.classList.toggle('is-flipped', flipped);
+            getComputedStyle(flip).transform;
+            await nextFrame();
+            return { front:centerOffset(front), back:centerOffset(back) };
+          };
+          try {
+            flip.style.transition = 'none';
+            el.style.setProperty('--holo-rx', '0deg');
+            el.style.setProperty('--holo-ry', '0deg');
+            el.style.setProperty('--holo-rotation', '0deg');
+            // Retain asymmetric parallax so the mobile counter-translation is exercised.
+            el.style.setProperty('--holo-shift-x', '18px');
+            el.style.setProperty('--holo-shift-y', '-11px');
+            const unflipped = await measure(false);
+            const flipped = await measure(true);
+            return { viewportWidth:window.innerWidth, unflipped, flipped };
+          } finally {
+            el.classList.toggle('is-flipped', wasFlipped);
+            flip.style.transition = originalTransition;
+            for (const name of variables) {
+              if (original[name]) el.style.setProperty(name, original[name]);
+              else el.style.removeProperty(name);
+            }
+          }
+        });
+      } finally {
+        await page.setViewportSize(faceViewportBeforeMobileCheck);
+        await page.waitForTimeout(100);
+      }
+      const mobileFaceOffsets = [
+        mobileFaceAlignment?.unflipped?.front,
+        mobileFaceAlignment?.unflipped?.back,
+        mobileFaceAlignment?.flipped?.front,
+        mobileFaceAlignment?.flipped?.back
+      ];
+      if (mobileFaceAlignment?.missingFace || mobileFaceAlignment?.viewportWidth !== 390 ||
+          mobileFaceOffsets.some(offset =>
+            !offset || Math.abs(offset.x) > 1.5 || Math.abs(offset.y) > 1.5
+          )) {
+        throw new Error('Mobile holographic front/back faces must remain centered through asymmetric parallax and flips: ' +
+          JSON.stringify({ mobileFaceAlignment }));
+      }
+
       const targetGroupIndex = groupBeforeInspect.children.findIndex(child => child.caption === 'Smooth Prism Foil');
       if (targetGroupIndex < 0 || groupBeforeInspect.children.length < 2) {
         throw new Error('Holographic Inspector regression fixture must have multiple grouped artwork items: ' +
