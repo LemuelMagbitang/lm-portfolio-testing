@@ -120,6 +120,10 @@ async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJs
     } catch (_) {}
   }
 
+  // Manual mode already has its complete source list. Resolving latest-project
+  // media here is unused work and can trigger an unnecessary Projects feed read.
+  if (loopMode === 'manual') return manual.slice(0, 5);
+
   let latest = [];
   if (Array.isArray(projects)) {
     latest = projects.map(project => sourceFromProject(project, resolveAssetUrl)).filter(Boolean);
@@ -130,8 +134,6 @@ async function resolveHeroSources({ heroLoopUrl, projectsUrl, heroTiming, loadJs
       latest = normalized.map(project => sourceFromProject(project, resolveAssetUrl)).filter(Boolean);
     } catch (_) {}
   }
-
-  if (loopMode === 'manual') return manual.slice(0, 5);
   if (loopMode === 'mixed') {
     const result = [];
     const seen = new Set();

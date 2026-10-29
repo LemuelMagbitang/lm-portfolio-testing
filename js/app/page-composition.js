@@ -12,7 +12,7 @@ import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
 import { initHeroBannerV2 } from '../features/hero/index.js?v=20261028-04';
-import { initFooterAnimation } from '../features/footer/index.js?v=20261028-01';
+import { initFooterAnimation } from '../features/footer/index.js?v=20261029-02';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261023-01';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
 
@@ -109,21 +109,18 @@ export async function createPortfolioApp({
 
   const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
   const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
+  const isAboutPage = Boolean(root.body?.classList.contains('about-page'));
   const hasProjectGallery = !!root.getElementById('portfolioGrid');
   const hasProjectArtworkFeature = Boolean(
     root.querySelector('.hero-section, #heroBanner, #heroBannerAbout') ||
     root.getElementById('footerAnimation')
   );
-  const shouldLoadProjectModels = hasProjectGallery || hasProjectArtworkFeature;
 
   // The Projects, Gallery, and Lightbox graphs exist only for the Work grid.
   // Load their public APIs in parallel on Works; About keeps the shared app
   // shell but skips the project card/media implementation entirely.
   const projectsModulePromise = hasProjectGallery
     ? import('../features/projects/index.js?v=20261028-07')
-    : Promise.resolve(null);
-  const projectNormalizerModulePromise = shouldLoadProjectModels
-    ? import('../data/project-normalizer.js?v=20261028-01')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
     ? import('../features/gallery/index.js?v=20261027-01').catch(error => {
@@ -165,24 +162,40 @@ export async function createPortfolioApp({
     getSiteRootUrl
   });
 
-  const mainProjectsPayloadPromise = shouldLoadProjectModels && config.urls.projects
-    ? loadCmsJson(config.urls.projects, null, { resolveUrl: siteAssetUrl })
-    : Promise.resolve(null);
-  const projectModelsPromise = shouldLoadProjectModels && config.urls.projects
-    ? Promise.all([mainProjectsPayloadPromise, projectNormalizerModulePromise])
-        .then(([payload, projectNormalizer]) => {
-          if (!projectNormalizer?.normalizeProjects) {
-            throw new Error('Project normalizer did not expose normalizeProjects().');
-          }
-          mainProjectModels = projectNormalizer.normalizeProjects(payload);
-          return mainProjectModels;
-        })
-        .catch(error => {
-          console.warn('Project model warm-up failed:', error);
-          mainProjectModels = [];
-          return mainProjectModels;
-        })
-    : Promise.resolve([]);
+  // Works always needs normalized Projects. About only needs that feed when
+  // Hero/Footer use latest or mixed artwork; the manual CMS loop is self-contained.
+  const projectModelsRequiredPromise = hasProjectGallery
+    ? Promise.resolve(true)
+    : (isAboutPage && hasProjectArtworkFeature
+      ? settingsPromise.then(settingsFeature => settingsFeature.getState()?.heroTiming?.loopMode !== 'manual')
+      : Promise.resolve(hasProjectArtworkFeature));
+  const projectNormalizerModulePromise = projectModelsRequiredPromise.then(shouldLoadProjectModels =>
+    shouldLoadProjectModels ? import('../data/project-normalizer.js?v=20261028-01') : null
+  );
+  const mainProjectsPayloadPromise = projectModelsRequiredPromise.then(shouldLoadProjectModels =>
+    shouldLoadProjectModels && config.urls.projects
+      ? loadCmsJson(config.urls.projects, null, { resolveUrl: siteAssetUrl })
+      : null
+  );
+  const projectModelsPromise = projectModelsRequiredPromise.then(async shouldLoadProjectModels => {
+    if (!shouldLoadProjectModels || !config.urls.projects) {
+      mainProjectModels = [];
+      return mainProjectModels;
+    }
+    const [payload, projectNormalizer] = await Promise.all([
+      mainProjectsPayloadPromise,
+      projectNormalizerModulePromise
+    ]);
+    if (typeof projectNormalizer?.normalizeProjects !== 'function') {
+      throw new Error('Project normalizer did not expose normalizeProjects().');
+    }
+    mainProjectModels = projectNormalizer.normalizeProjects(payload);
+    return mainProjectModels;
+  }).catch(error => {
+    console.warn('Project model warm-up failed:', error);
+    mainProjectModels = [];
+    return mainProjectModels;
+  });
   const projectsPromise = hasProjectGallery && config.urls.projects
     ? Promise.all([
         mainProjectsPayloadPromise,
@@ -257,7 +270,6 @@ export async function createPortfolioApp({
     }
   });
 
-  const isAboutPage = Boolean(root.body?.classList.contains('about-page'));
   const aboutDataPromise = isAboutPage && config.urls.about
     ? loadCmsJson(config.urls.about, null, { resolveUrl: siteAssetUrl })
         .catch(error => {

@@ -2630,17 +2630,20 @@ function validatePageAwareFeatureLoading() {
   if (staticFeatureImport.test(composition) || staticNormalizerImport.test(composition)) {
     err('Route-aware loading: Projects, Gallery, Lightbox, and project normalization must not be static page-composition imports.');
   }
+  const footer = exists('js/features/footer/index.js') ? readText('js/features/footer/index.js') : '';
   if (!/const projectsModulePromise = hasProjectGallery\s*\?\s*import\(['"]\.\.\/features\/projects\/index\.js\?v=/.test(composition) ||
-      !/const projectNormalizerModulePromise = shouldLoadProjectModels\s*\?\s*import\(['"]\.\.\/data\/project-normalizer\.js\?v=/.test(composition) ||
-      !/const mainProjectsPayloadPromise = shouldLoadProjectModels/.test(composition) ||
-      !/const projectModelsPromise = shouldLoadProjectModels/.test(composition) ||
+      !/const projectModelsRequiredPromise = hasProjectGallery\s*\?\s*Promise\.resolve\(true\)[\s\S]*?settingsPromise\.then\(settingsFeature => settingsFeature\.getState\(\)\?\.heroTiming\?\.loopMode !== 'manual'/.test(composition) ||
+      !/const projectNormalizerModulePromise = projectModelsRequiredPromise\.then\(shouldLoadProjectModels =>\s*shouldLoadProjectModels\s*\?\s*import\(['"]\.\.\/data\/project-normalizer\.js\?v=/.test(composition) ||
+      !/const mainProjectsPayloadPromise = projectModelsRequiredPromise\.then\(shouldLoadProjectModels =>/.test(composition) ||
+      !/const projectModelsPromise = projectModelsRequiredPromise\.then\(async shouldLoadProjectModels =>/.test(composition) ||
       !/Promise\.all\(\[\s*mainProjectsPayloadPromise,\s*curatedViewsPromise,\s*projectsModulePromise,\s*projectModelsPromise\s*\]\)/.test(composition) ||
       !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition) ||
       !/const aboutDataPromise = isAboutPage && config\.urls\.about/.test(composition) ||
       !/const aboutPromise = isAboutPage\s*\?\s*aboutDataPromise\.then\(data => initAbout/.test(composition) ||
       !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*aboutDataPromise\.then\(data => preloadAboutAssets/.test(composition) ||
       !/const reviewsPromise = settingsPromise\.then\(async settingsFeature/.test(composition) ||
-      !/if \(!currentSettings\.showReviews\) \{[\s\S]*?return null;[\s\S]*?import\(['"]\.\.\/features\/reviews\/index\.js['"]\)/.test(composition)) {
+      !/if \(!currentSettings\.showReviews\) \{[\s\S]*?return null;[\s\S]*?import\(['"]\.\.\/features\/reviews\/index\.js['"]\)/.test(composition) ||
+      !/if \(loopMode === 'manual'\) return manual\.slice\(0, 5\);\s*let latest = \[\];/.test(footer)) {
     err('Route-aware loading: Projects, Gallery, and Lightbox graphs must load only when the project grid exists.');
   }
 }
