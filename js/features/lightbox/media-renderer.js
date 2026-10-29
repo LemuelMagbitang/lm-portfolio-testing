@@ -2917,17 +2917,18 @@ export function createLightboxMediaRenderer({
     back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>';
     back.setAttribute('aria-label','Close Inspect Mode and return to the artwork group');
     back.addEventListener('click',event=>closeArtworkInspect({viaKeyboard:event.detail===0}));
-    const previousButton=createInspectNavigationButton(-1);
-    const nextButton=createInspectNavigationButton(1);
+    const previousButton=groupEntries.length>1?createInspectNavigationButton(-1):null;
+    const nextButton=groupEntries.length>1?createInspectNavigationButton(1):null;
     const onPreviousClick=event=>{event.preventDefault();event.stopPropagation();navigateArtworkInspect(-1);};
     const onNextClick=event=>{event.preventDefault();event.stopPropagation();navigateArtworkInspect(1);};
-    previousButton.addEventListener('click',onPreviousClick);
-    nextButton.addEventListener('click',onNextClick);
+    previousButton?.addEventListener('click',onPreviousClick);
+    nextButton?.addEventListener('click',onNextClick);
     stage.appendChild(frame);
     if(foilHint)footer.appendChild(foilHint);
     footer.append(description,back);
     panel.append(stage,footer);
-    overlay.append(panel,previousButton,nextButton);
+    overlay.appendChild(panel);
+    if(previousButton&&nextButton)overlay.append(previousButton,nextButton);
     let inspectSwipeStart=null;
     const inspectSwipeDisabledTarget=target=>Boolean(target?.closest?.('button,a,input,select,textarea,video,mux-player,iframe,.model-viewer-shell,.lightbox-inspect-footer'));
     const onInspectPointerDown=event=>{
