@@ -12,7 +12,7 @@ check(cmsHtml.includes('data-section="designSystem"')&&cmsHtml.includes('dirty-d
 check(cmsJs.includes("designSystem: { file: 'css/tokens.css', label: 'Design System', rawText: true }"),'CMS router must register the token section.');
 check(cmsJs.includes('RENDERERS.designSystem=async function')&&cmsJs.includes("if(section === 'designSystem')"),'CMS router must render the raw token editor.');
 check(guard.includes("'css/tokens.css'"),'CMS allowlist must explicitly include the token source.');
-check(cmsJs.includes("GH.commitFiles([{path:filePath,content:obj.text,encoding:'utf-8',expectedSha:obj.sha}]"),'Save must use the guarded atomic commit path.');
+check(cmsJs.includes("GH.commitFiles([{path:filePath,content:obj.text,encoding:'utf-8',expectedSha:obj.sha,textFile:true}]"),'Save must use the guarded atomic commit path.');
 check(cmsJs.includes('data-ds-token')&&cmsJs.includes('dsReplaceToken'),'Controls must replace approved token declarations only.');
 check(cmsCss.includes('.ds-shell')&&cmsCss.includes('@media(max-width:600px)'),'Design System layout must be responsive.');
 check(workflow.includes('node tools/validate-design-system.mjs'),'CI must run the Design System contract test.');

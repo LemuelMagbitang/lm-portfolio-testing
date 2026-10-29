@@ -811,7 +811,9 @@ const GH = {
     // branch name here would allow a concurrent update to slip between checks.
     for (const file of safeFiles) {
       if (!Object.prototype.hasOwnProperty.call(file, 'expectedSha')) continue;
-      const current = await GH.getFile(file.path, parentSha);
+      const current = file.textFile
+        ? await GH.getTextFile(file.path, parentSha)
+        : await GH.getFile(file.path, parentSha);
       if ((current.sha ?? null) !== (file.expectedSha ?? null)) {
         throw new Error(`The repository changed since this editor loaded ${file.path}. Reload the CMS and review the current content before saving again.`);
       }
@@ -1404,7 +1406,7 @@ document.getElementById('btnSaveTop').addEventListener('click', async () => {
       toast(`Saved — hero loop and transition settings committed to ${conn.branch}.`);
     }else if(name === 'designSystem'){
       if(!obj || typeof obj.text !== 'string' || typeof obj.sha !== 'string') throw new Error('Design System save snapshot is invalid. Reload the panel and try again.');
-      commitSha=await GH.commitFiles([{path:filePath,content:obj.text,encoding:'utf-8',expectedSha:obj.sha}], 'CMS: update shared design tokens');
+      commitSha=await GH.commitFiles([{path:filePath,content:obj.text,encoding:'utf-8',expectedSha:obj.sha,textFile:true}], 'CMS: update shared design tokens');
       const latest=await GH.getTextFile(filePath);
       saveContext.onSaved?.(latest,obj);
       dirty[name]=getEditRevision(name)!==(editRevisionAtStart[name]||0);
