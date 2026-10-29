@@ -14,15 +14,23 @@ const REVEAL_TARGET_GROUPS = [
     // React Bits AnimatedContent-inspired profile, mapped to the site's native
     // IntersectionObserver/CSS system. Keep the hero entrance editorial, not
     // the generic demo's full 100px travel, and stagger each direct child.
-    motion: { distance: 40, durationMs: 800, staggerStepMs: 80, staggerMaxMs: 240 }
+    motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }
   },
   {
-    selector: '.about-page main .resume-skills-row > .resume-block > h3, ' +
-      '.about-page main .resume-skills-row .skill-list > li'
+    selector: '.about-page main .resume-skills-row > .resume-block > h3',
+    motion: { distance: 16, durationMs: 460, staggerStepMs: 44, staggerMaxMs: 44 }
   },
   {
-    selector: '.about-page main .resume-main > .resume-block > h3, ' +
-      '.about-page main .resume-main > .resume-block [id$="List"] > *'
+    selector: '.about-page main .resume-skills-row .skill-list > li',
+    motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
+  },
+  {
+    selector: '.about-page main .resume-main > .resume-block > h3',
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 44, staggerMaxMs: 88 }
+  },
+  {
+    selector: '#experienceList > *, #educationList > *, #awardsList > *',
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
   { selector: 'main.works-main > .filter-nav-wrapper' },
   { selector: '.curated-view-heading' },
@@ -38,8 +46,8 @@ const REVEAL_TARGET_GROUPS = [
   { selector: '.footer-content > .social-icons, .footer-content > p' }
 ];
 
-const STAGGER_STEP_MS = 70;
-const STAGGER_MAX_MS = 280;
+const STAGGER_STEP_MS = 44;
+const STAGGER_MAX_MS = 160;
 const NOOP_FEATURE = Object.freeze({
   refresh() { return 0; },
   destroy() {}
@@ -101,8 +109,8 @@ export function initContentReveal({
       });
     }, {
       root: null,
-      rootMargin: '0px 0px -40px 0px',
-      threshold: 0.1
+      rootMargin: '0px 0px 96px 0px',
+      threshold: 0.01
     });
     return observer;
   };
@@ -136,12 +144,12 @@ export function initContentReveal({
           target.dataset.lmContentRevealMotion = 'position-only';
         }
 
-        // Profiles are scoped to selector groups. Existing targets retain
-        // the default 24px / 720ms behavior; the About hero uses the
-        // AnimatedContent-inspired 40px / 800ms / 80ms stagger profile.
+        // Profiles are scoped to selector groups. Use a shorter default reveal so
+        // scroll-triggered elements respond promptly; About sections have
+        // separate stagger groups so each block sequences independently.
         const motion = group.motion || {};
-        const distance = Number.isFinite(motion.distance) ? Math.max(0, motion.distance) : 24;
-        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 720;
+        const distance = Number.isFinite(motion.distance) ? Math.max(0, motion.distance) : 18;
+        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 480;
         const staggerStepMs = Number.isFinite(motion.staggerStepMs)
           ? Math.max(0, motion.staggerStepMs)
           : STAGGER_STEP_MS;
