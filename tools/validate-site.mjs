@@ -1420,8 +1420,7 @@ function validateBootstrapHardening() {
       /messageAutoRotateMs:\s*settings\.heroTiming\.autoRotateMs/.test(composition) ||
       !/showHeroMessage:\s*settings\.showHeroMessage/.test(composition) ||
       !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition) ||
-      !/const initializeFooter = \(\) => initFooterAnimation\(\{[\s\S]*?heroTiming:\s*settings\.heroTiming[\s\S]*?\}\);/.test(composition) ||
-      !/const footerPromise = root\.getElementById\('footerAnimation'\)\s*\?\s*\(isAboutPage\s*\?\s*projectModelsPromise\.then\(initializeFooter\)\s*:\s*initializeFooter\(\)\)/.test(composition)) {
+      !/const footerPromise = root\.getElementById\('footerAnimation'\)\s*\?\s*initFooterAnimation\(/.test(composition)) {
     err('Composition: artwork timing and message toggles must be passed through while footer animation remains independent.');
   }
 
