@@ -2641,6 +2641,137 @@ export function createLightboxMediaRenderer({
     return renderUnsupported(item, project);
   }
 
+  function createArtworkInspectPlaceholder(entry) {
+    const placeholder=documentRef.createElement('div');
+    placeholder.className='lightbox-inspect-placeholder';
+    const entryStyle=windowRef?.getComputedStyle?.(entry);
+    const layoutWidth=Number(entry.offsetWidth)||Number.parseFloat(entryStyle?.width)||entry.getBoundingClientRect?.().width||0;
+    const layoutHeight=Number(entry.offsetHeight)||Number.parseFloat(entryStyle?.height)||entry.getBoundingClientRect?.().height||0;
+    placeholder.style.boxSizing='border-box';
+    if(layoutWidth>0)placeholder.style.width=layoutWidth+'px';
+    if(layoutHeight>0)placeholder.style.height=layoutHeight+'px';
+    if(entryStyle){
+      placeholder.style.flex=entryStyle.flex;
+      placeholder.style.order=entryStyle.order;
+      placeholder.style.alignSelf=entryStyle.alignSelf;
+      placeholder.style.justifySelf=entryStyle.justifySelf;
+      placeholder.style.minWidth=entryStyle.minWidth;
+      placeholder.style.maxWidth=entryStyle.maxWidth;
+      placeholder.style.minHeight=entryStyle.minHeight;
+      placeholder.style.maxHeight=entryStyle.maxHeight;
+      placeholder.style.marginBlockStart=entryStyle.marginBlockStart;
+      placeholder.style.marginBlockEnd=entryStyle.marginBlockEnd;
+      placeholder.style.marginInlineStart=entryStyle.marginInlineStart;
+      placeholder.style.marginInlineEnd=entryStyle.marginInlineEnd;
+      placeholder.style.transform=entryStyle.transform;
+      placeholder.style.transformOrigin=entryStyle.transformOrigin;
+    }
+    placeholder.setAttribute('aria-hidden','true');
+    return placeholder;
+  }
+
+  function resetArtworkForInspection(entry) {
+    const foilSurface=entry?.querySelector?.('.lightbox-holographic');
+    if(foilSurface){
+      foilSurface.classList.remove('is-flipped');
+      foilSurface.setAttribute('aria-pressed','false');
+      resetFoilMotionImmediately(foilSurface);
+    }
+    const faceLabel=entry?.querySelector?.('.lightbox-holographic-hint [data-holo-face-label]');
+    if(faceLabel)faceLabel.textContent='FRONT';
+  }
+
+  function createInspectNavigationButton(direction) {
+    const button=documentRef.createElement('button');
+    const isPrevious=direction<0;
+    button.type='button';
+    button.className='lightbox-nav lightbox-inspect-nav '+(isPrevious?'lightbox-inspect-prev':'lightbox-inspect-next');
+    button.setAttribute('aria-label',isPrevious?'Previous artwork':'Next artwork');
+    button.innerHTML='<i class="fa-solid '+(isPrevious?'fa-chevron-left':'fa-chevron-right')+'" aria-hidden="true"></i>';
+    return button;
+  }
+
+  function animateInspectBoundary(active, direction) {
+    if(!active?.frame||prefersReducedInspectMotion()||typeof active.frame.animate!=='function')return;
+    try{active.edgeAnimation?.cancel?.();}catch(_){}
+    try{active.navigationAnimation?.cancel?.();}catch(_){}
+    const offset=direction>0?-8:8;
+    active.edgeAnimation=active.frame.animate([
+      {transform:'translate3d(0,0,0)'},
+      {transform:'translate3d('+offset+'px,0,0)'},
+      {transform:'translate3d('+(-offset*.25)+'px,0,0)'},
+      {transform:'translate3d(0,0,0)'}
+    ],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});
+  }
+
+  function navigateArtworkInspect(direction) {
+    const active=activeInspector;
+    const delta=direction<0?-1:1;
+    if(!active||active.isClosing||!active.groupEntries?.length)return;
+    const nextIndex=active.currentIndex+delta;
+    if(nextIndex<0||nextIndex>=active.groupEntries.length){
+      animateInspectBoundary(active,delta);
+      return;
+    }
+    const nextEntry=active.groupEntries[nextIndex];
+    if(!nextEntry||nextEntry===active.entry||nextEntry.parentElement!==active.groupItems)return;
+
+    try{active.openAnimation?.cancel?.();}catch(_){}
+    try{active.edgeAnimation?.cancel?.();}catch(_){}
+    try{active.navigationAnimation?.cancel?.();}catch(_){}
+    active.openAnimation=null;
+    active.edgeAnimation=null;
+    active.navigationAnimation=null;
+
+    const previousEntry=active.entry;
+    pauseOtherPlayback(previousEntry);
+    resetArtworkForInspection(previousEntry);
+    if(active.foilHint&&active.foilHintPlaceholder?.parentNode){
+      active.foilHintPlaceholder.replaceWith(active.foilHint);
+    }
+    if(!active.placeholder?.parentNode)return;
+    active.placeholder.replaceWith(previousEntry);
+
+    const nextPlaceholder=createArtworkInspectPlaceholder(nextEntry);
+    active.groupItems.insertBefore(nextPlaceholder,nextEntry);
+    const nextHint=nextEntry.querySelector('.lightbox-holographic-hint');
+    let nextHintPlaceholder=null;
+    if(nextHint?.parentNode){
+      nextHintPlaceholder=documentRef.createElement('span');
+      nextHintPlaceholder.className='lightbox-inspect-hint-placeholder';
+      nextHintPlaceholder.hidden=true;
+      nextHintPlaceholder.setAttribute('aria-hidden','true');
+      nextHint.parentNode.insertBefore(nextHintPlaceholder,nextHint);
+    }
+
+    resetArtworkForInspection(nextEntry);
+    active.frame.replaceChildren(nextEntry);
+    if(nextHint)active.footer.insertBefore(nextHint,active.description);
+    const caption=String(nextEntry.querySelector('.media-caption')?.textContent||'').trim();
+    active.description.textContent=caption;
+    active.description.hidden=!caption;
+    active.entry=nextEntry;
+    active.placeholder=nextPlaceholder;
+    active.foilHint=nextHint||null;
+    active.foilHintPlaceholder=nextHintPlaceholder;
+    active.foilSurface=nextEntry.querySelector('.lightbox-holographic');
+    active.focusTarget=nextEntry;
+    active.currentIndex=nextIndex;
+    selectGroupedArtworkEntry(nextEntry,active.groupSection);
+
+    pauseOtherPlayback(active.container,nextEntry.querySelector('video, mux-player, iframe[data-lm-youtube]'));
+
+    if(!prefersReducedInspectMotion()&&typeof active.frame.animate==='function'){
+      const offset=delta>0?14:-14;
+      try{
+        active.navigationAnimation=active.frame.animate([
+          {opacity:.82,transform:'translate3d('+offset+'px,0,0)'},
+          {opacity:1,transform:'translate3d(0,0,0)'}
+        ],{duration:240,easing:'cubic-bezier(.16,1,.3,1)'});
+      }catch(_){}
+    }
+  }
+
   function buildInspectTransform(fromRect, toRect) {
     const from=fromRect||{},to=toRect||{};
     const fw=Number(from.width)||0,fh=Number(from.height)||0,tw=Number(to.width)||0,th=Number(to.height)||0;
@@ -2729,6 +2860,10 @@ export function createLightboxMediaRenderer({
     // Inspector or contaminate the opening FLIP geometry. Start face-on.
     if(foilSurface)resetFoilMotionImmediately(foilSurface);
     const parent=entry.parentNode,originRect=entry.getBoundingClientRect?.();
+    const groupItems=parent;
+    const groupSection=entry.closest?.('.lightbox-artwork-group')||parent.closest?.('.lightbox-artwork-group');
+    const groupEntries=Array.from(groupItems.children||[]).filter(node=>node.classList?.contains('lightbox-media-item'));
+    const currentIndex=groupEntries.indexOf(entry);
     const lightbox=container.closest?.('#lightbox')||documentRef.getElementById('lightbox');
     const lightboxScrollTop=Number(lightbox?.scrollTop)||0;
     const restoreLightboxScroll=()=>{if(lightbox&&lightbox.isConnected)lightbox.scrollTop=lightboxScrollTop;};
@@ -2741,39 +2876,7 @@ export function createLightboxMediaRenderer({
       foilHintPlaceholder.setAttribute('aria-hidden','true');
       foilHint.parentNode.insertBefore(foilHintPlaceholder,foilHint);
     }
-    const placeholder=documentRef.createElement('div');
-    placeholder.className='lightbox-inspect-placeholder';
-
-    // The Inspector moves the original media item out of its flex/grid group.
-    // Keep the placeholder's *layout box* (not the transformed visual bounds)
-    // and the layout properties that determine wrapping/overlap. getBoundingClientRect
-    // includes rotation and hover transforms, so using it as width/height makes
-    // a layered foil card consume extra flex space and can wrap the last sibling.
-    const entryStyle=windowRef?.getComputedStyle?.(entry);
-    const layoutWidth=Number(entry.offsetWidth)||Number.parseFloat(entryStyle?.width)||originRect?.width||0;
-    const layoutHeight=Number(entry.offsetHeight)||Number.parseFloat(entryStyle?.height)||originRect?.height||0;
-    placeholder.style.boxSizing='border-box';
-    if(layoutWidth>0)placeholder.style.width=layoutWidth+'px';
-    if(layoutHeight>0)placeholder.style.height=layoutHeight+'px';
-    if(entryStyle){
-      placeholder.style.flex=entryStyle.flex;
-      placeholder.style.order=entryStyle.order;
-      placeholder.style.alignSelf=entryStyle.alignSelf;
-      placeholder.style.justifySelf=entryStyle.justifySelf;
-      placeholder.style.minWidth=entryStyle.minWidth;
-      placeholder.style.maxWidth=entryStyle.maxWidth;
-      placeholder.style.minHeight=entryStyle.minHeight;
-      placeholder.style.maxHeight=entryStyle.maxHeight;
-      placeholder.style.marginBlockStart=entryStyle.marginBlockStart;
-      placeholder.style.marginBlockEnd=entryStyle.marginBlockEnd;
-      placeholder.style.marginInlineStart=entryStyle.marginInlineStart;
-      placeholder.style.marginInlineEnd=entryStyle.marginInlineEnd;
-      // Transform doesn't affect flex sizing, but keeps the invisible placeholder's
-      // visual rectangle aligned with the card for the closing transition.
-      placeholder.style.transform=entryStyle.transform;
-      placeholder.style.transformOrigin=entryStyle.transformOrigin;
-    }
-    placeholder.setAttribute('aria-hidden','true');
+    const placeholder=createArtworkInspectPlaceholder(entry);
     parent.insertBefore(placeholder,entry);
 
     const overlay=documentRef.createElement('div');
@@ -2805,11 +2908,50 @@ export function createLightboxMediaRenderer({
     back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>';
     back.setAttribute('aria-label','Close Inspect Mode and return to the artwork group');
     back.addEventListener('click',event=>closeArtworkInspect({viaKeyboard:event.detail===0}));
+    const previousButton=createInspectNavigationButton(-1);
+    const nextButton=createInspectNavigationButton(1);
+    const onPreviousClick=event=>{event.preventDefault();event.stopPropagation();navigateArtworkInspect(-1);};
+    const onNextClick=event=>{event.preventDefault();event.stopPropagation();navigateArtworkInspect(1);};
+    previousButton.addEventListener('click',onPreviousClick);
+    nextButton.addEventListener('click',onNextClick);
     stage.appendChild(frame);
     if(foilHint)footer.appendChild(foilHint);
     footer.append(description,back);
     panel.append(stage,footer);
-    overlay.appendChild(panel);
+    overlay.append(panel,previousButton,nextButton);
+    let inspectSwipeStart=null;
+    const inspectSwipeDisabledTarget=target=>Boolean(target?.closest?.('button,a,input,select,textarea,video,mux-player,iframe,.model-viewer-shell,.lightbox-inspect-footer'));
+    const onInspectPointerDown=event=>{
+      if(!windowRef?.matchMedia?.('(max-width:767px)')?.matches||event.pointerType==='mouse'||event.isPrimary===false)return;
+      if(inspectSwipeDisabledTarget(event.target))return;
+      inspectSwipeStart={x:Number(event.clientX)||0,y:Number(event.clientY)||0,pointerId:event.pointerId};
+    };
+    const onInspectPointerMove=event=>{
+      if(!inspectSwipeStart||event.pointerId!==inspectSwipeStart.pointerId)return;
+      const dx=(Number(event.clientX)||0)-inspectSwipeStart.x;
+      const dy=(Number(event.clientY)||0)-inspectSwipeStart.y;
+      if(Math.abs(dy)>=16&&Math.abs(dy)>Math.abs(dx)*1.2)inspectSwipeStart=null;
+    };
+    const onInspectPointerUp=event=>{
+      if(!inspectSwipeStart||event.pointerType==='mouse'||event.isPrimary===false)return;
+      if(event.pointerId!==undefined&&event.pointerId!==inspectSwipeStart.pointerId)return;
+      const start=inspectSwipeStart;
+      inspectSwipeStart=null;
+      const dx=(Number(event.clientX)||0)-start.x;
+      const dy=(Number(event.clientY)||0)-start.y;
+      if(Math.abs(dx)<52||Math.abs(dx)<=Math.abs(dy)*1.25)return;
+      event.preventDefault();
+      navigateArtworkInspect(dx<0?1:-1);
+    };
+    const onInspectPointerCancel=event=>{
+      if(!inspectSwipeStart)return;
+      if(event.pointerId!==undefined&&event.pointerId!==inspectSwipeStart.pointerId)return;
+      inspectSwipeStart=null;
+    };
+    overlay.addEventListener('pointerdown',onInspectPointerDown,{passive:true});
+    overlay.addEventListener('pointermove',onInspectPointerMove,{passive:true});
+    overlay.addEventListener('pointerup',onInspectPointerUp);
+    overlay.addEventListener('pointercancel',onInspectPointerCancel);
     const onBackdropClick=event=>{if(event.target===overlay)closeArtworkInspect();};
     const onKeyDown=event=>{
       if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtworkInspect({viaKeyboard:true});return;}
@@ -2824,7 +2966,7 @@ export function createLightboxMediaRenderer({
     };
     overlay.addEventListener('click',onBackdropClick);
     overlay.addEventListener('keydown',onKeyDown);
-    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,overlay,frame,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,openAnimation:null,overlayAnimation:null,closeAnimation:null,isClosing:false};
+    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,overlay,frame,footer,description,back,previousButton,nextButton,groupItems,groupSection,groupEntries,currentIndex,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,onPreviousClick,onNextClick,onInspectPointerDown,onInspectPointerMove,onInspectPointerUp,onInspectPointerCancel,openAnimation:null,overlayAnimation:null,closeAnimation:null,navigationAnimation:null,edgeAnimation:null,isClosing:false};
     activeInspector=active;
     documentRef.body.appendChild(overlay);
     restoreLightboxScroll();
