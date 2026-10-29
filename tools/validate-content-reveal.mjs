@@ -20,8 +20,8 @@ assert.match(revealSource, /target\.matches\?\.\('\.form-container, a, button, i
 assert.match(revealCss, /data-lm-content-reveal-motion="position-only"[^}]*opacity:\s*1;/,
   'Form-containing reveal targets must never fade their controls to opacity zero.');
 const revealGroupsSource = revealSource.match(/const REVEAL_TARGET_GROUPS = \[([\s\S]*?)\n\];/)?.[1] || '';
-assert.match(revealGroupsSource, /#softwareSkillsList > \*/);
-assert.match(revealGroupsSource, /#multimediaSkillsList > \*/);
+assert.match(revealGroupsSource, /#softwareSkillsList > li/);
+assert.match(revealGroupsSource, /#multimediaSkillsList > li/);
 assert.match(revealGroupsSource, /#experienceList > \*/);
 assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
