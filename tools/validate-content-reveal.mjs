@@ -19,11 +19,11 @@ assert.match(revealSource, /target\.matches\?\.\('\.form-container, a, button, i
   'Interactive targets must use position-only entrance motion.');
 assert.match(revealCss, /data-lm-content-reveal-motion="position-only"[^}]*opacity:\s*1;/,
   'Form-containing reveal targets must never fade their controls to opacity zero.');
+const revealGroupsSource = revealSource.match(/const REVEAL_TARGET_GROUPS = \[([\s\S]*?)\n\];/)?.[1] || '';
 assert.match(revealSource, /resume-skills-row[\s\S]*?skill-list > li/);
 assert.match(revealGroupsSource, /#experienceList > \*/);
 assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
-const revealGroupsSource = revealSource.match(/const REVEAL_TARGET_GROUPS = \[([\s\S]*?)\n\];/)?.[1] || '';
 assert.ok(revealGroupsSource.includes("motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }"),
   'About hero content must use the scoped staggered entrance profile without changing unrelated sections.');
 assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
