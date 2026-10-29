@@ -336,7 +336,7 @@
   flex-flow:row wrap;
   align-items:stretch;
   align-content:flex-start;
-  justify-content:flex-start;
+  justify-content:center;
   gap:var(--artwork-stack-gap);
   padding:8px;
 }
