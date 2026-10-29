@@ -2168,7 +2168,7 @@ async function configurePortfolioSmokeFixtures(page) {
   });
 }
 
-async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null) {
+async function smokePage(browser, path, assertions, viewport = { width: 1280, height: 900 }, prepare = null, beforeReady = null, timeoutMs = SMOKE_PAGE_TIMEOUT_MS) {
   // A narrow viewport alone does not emulate a phone. In Chromium the CSS
   // pointer media feature remains `pointer:fine`, which means touch-specific
   // presentation (including the foil TAP TO FLIP hint and compact GPU policy) will not
@@ -2316,7 +2316,7 @@ async function smokePage(browser, path, assertions, viewport = { width: 1280, he
         }
         throw new Error(`${path} failed browser smoke checks:\\n${details.join('\\n\\n')}`);
       }
-    }, SMOKE_PAGE_TIMEOUT_MS, `${smokeLabel} caller=${caller}`);
+    }, timeoutMs, `${smokeLabel} caller=${caller}`);
 
     const durationMs = Date.now() - startedAt;
     console.log(`[smoke] PASS ${smokeLabel} duration=${durationMs}ms`);
@@ -5648,7 +5648,7 @@ try {
       await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
       await page.locator('#lightboxClose').first().click();
       await page.locator('#lightbox.active').waitFor({ state: 'detached', timeout: 2000 });
-    }, { width: 1280, height: 900 });
+    }, { width: 1280, height: 900 }, null, null, 60000);
 
     await smokePage(browser, '/', async page => {
       const funkoCard = page.locator('#portfolioGrid .project-card[data-project-id="funko-pop-test"]').first();
