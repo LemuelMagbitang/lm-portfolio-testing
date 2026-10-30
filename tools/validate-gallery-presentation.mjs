@@ -246,6 +246,8 @@ assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), true,
 assert.equal(expansionFixture.showMoreButton.getAttribute('aria-expanded'), 'false',
   'Show More must retain its collapsed semantic state while the viewport is expanding.');
 assert.equal(expansionFixture.showMoreButton.classList.contains('expanded'), false);
+assert.equal(expansionFixture.showMoreWrapper.classList.contains('expanded'), true,
+  'Wrapper spacing must enter the expanded layout as the viewport transition begins.');
 assert.equal(expansionFixture.buttonLabel.textContent, 'SHOW MORE');
 assert.equal(expansionFixture.settledCalls(), 0,
   'The button settlement callback must wait for the viewport transitionend event.');
@@ -292,6 +294,8 @@ assert.equal(collapseFixture.showMoreWrapper.classList.contains('is-collapsing')
 assert.equal(collapseFixture.showMoreButton.getAttribute('aria-expanded'), 'true',
   'Show Less must retain its expanded semantic state while the viewport is collapsing.');
 assert.equal(collapseFixture.showMoreButton.classList.contains('expanded'), true);
+assert.equal(collapseFixture.showMoreWrapper.classList.contains('expanded'), false,
+  'Wrapper spacing must enter the collapsed layout as the viewport transition begins.');
 assert.equal(collapseFixture.buttonLabel.textContent, 'SHOW LESS');
 assert.equal(collapseFixture.settledCalls(), 0);
 while (collapseFixture.frames.length) collapseFixture.frames.shift()();

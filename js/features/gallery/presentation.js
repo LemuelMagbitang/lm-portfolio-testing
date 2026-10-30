@@ -627,7 +627,6 @@ export function applyGalleryReveal({
   const syncShowMoreButtonState = () => {
     showMoreButton.setAttribute('aria-expanded', String(expanded));
     showMoreWrapper.setAttribute('data-expanded', String(expanded));
-    showMoreWrapper.classList.toggle('expanded', expanded);
     showMoreButton.classList.toggle('expanded', expanded);
     if (label) label.textContent = expanded ? 'SHOW LESS' : 'SHOW MORE';
     notifyShowMoreSettled();
@@ -635,6 +634,10 @@ export function applyGalleryReveal({
 
   if (filteredCards.length > visibleCount) {
     showMoreWrapper.style.display = 'flex';
+    // This class owns the wrapper's layout spacing, so change it when the
+    // viewport transition starts. The button's own visual/semantic state stays
+    // unchanged until the viewport reaches its final height.
+    showMoreWrapper.classList.toggle('expanded', expanded);
     if (viewportTransitionActive && viewportTransitionCompletion) {
       const completeViewportTransition = viewportTransitionCompletion;
       viewportTransitionCompletion = () => {
