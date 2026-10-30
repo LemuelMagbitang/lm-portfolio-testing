@@ -2536,13 +2536,19 @@ function validateCmsRegressionContracts() {
     err('Gallery: row-aware Show More state/presentation contract is missing.');
   }
   if (!gallery.includes('const isDirectActivation = event?.isTrusted !== false;') ||
-      !gallery.includes('render({ animateExpand: nextExpanded && isDirectActivation });') ||
+      !gallery.includes('animateExpand: nextExpanded && isDirectActivation') ||
+      !gallery.includes('animateCollapse: !nextExpanded && isDirectActivation') ||
       !gallery.includes('playShowMoreBounce();') ||
       !presentation.includes('const startExpansion = () => {') ||
-      !presentation.includes('viewport.classList?.add(\'is-expanding\')') ||
+      !presentation.includes('const startCollapse = () => {') ||
+      !presentation.includes("const transitionClass = direction === 'collapse' ? 'is-collapsing' : 'is-expanding';") ||
+      !presentation.includes('viewport.classList?.add(transitionClass)') ||
+      !css.includes('.portfolio-grid-viewport.is-expanding,\n.portfolio-grid-viewport.is-collapsing') ||
+      !css.includes('.show-more-wrapper.is-expanding,\n.show-more-wrapper.is-collapsing') ||
       !css.includes('.btn-show-more.is-interacting{') ||
-      !css.includes('.btn-show-more.expanded:hover{\n  background:#fff !important;')) {
-    err('Gallery: Show More/Show Less must use direct-interaction-only bounce, reduced-motion-aware expansion, and stable white Show Less hover material.');
+      !css.includes('.btn-show-more.expanded:hover{\n  background:#fff !important;') ||
+      !css.includes('.portfolio-grid-viewport.is-collapsing,\n  .show-more-wrapper.is-expanding,\n  .show-more-wrapper.is-collapsing{transition:none!important;}')) {
+    err('Gallery: Show More/Show Less must retain direct-interaction bounce and reduced-motion support while sharing animated expand/collapse presentation and stable white Show Less hover material.');
   }
 
   if (!gallery.includes('getFilteredProjects') ||
