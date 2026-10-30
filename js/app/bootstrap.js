@@ -154,7 +154,7 @@ export async function bootstrapPortfolioApp({
       target = root.getElementById('contact-start') || root.getElementById('contact-section') || target;
     }
     if (!target) {
-      if (hasInitialHash && windowRef?.history) {
+      if (showPageTransition && hasInitialHash && windowRef?.history) {
         try { windowRef.history.scrollRestoration = 'auto'; } catch (_) {}
       }
       return;
@@ -203,7 +203,7 @@ export async function bootstrapPortfolioApp({
         const reducedMotion = Boolean(windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
         windowRef.scrollTo({ left: 0, top: targetY, behavior: reducedMotion ? 'auto' : 'smooth' });
       }
-      if (hasInitialHash && windowRef?.history) {
+      if (showPageTransition && hasInitialHash && windowRef?.history) {
         try { windowRef.history.scrollRestoration = 'auto'; } catch (_) {}
       }
     };

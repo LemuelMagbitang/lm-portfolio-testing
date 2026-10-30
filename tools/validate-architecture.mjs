@@ -25,9 +25,10 @@ const legacyRootModules = new Set([
 // strings create separate ES module instances and can split singleton state or
 // cause a preload and the eventual import to download the same module twice.
 const canonicalModuleQueries = new Map([
-  ['script.js', '?v=20261030-08'],
-  ['app/bootstrap.js', '?v=20261030-08'],
-  ['app/page-composition.js', '?v=20261030-08'],
+  ['script.js', '?v=20261031-01'],
+  ['app/bootstrap.js', '?v=20261031-01'],
+  ['app/page-composition.js', '?v=20261031-01'],
+  ['app/page-navigation.js', '?v=20261031-01'],
   ['infrastructure/three/model-viewer.js', '?v=20261024-02'],
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261027-05'],
@@ -46,7 +47,7 @@ const canonicalModuleQueries = new Map([
   ['features/gallery/presentation.js', '?v=20261030-02'],
   ['features/hero/index.js', '?v=20261029-01'],
   ['features/footer/index.js', '?v=20261029-03'],
-  ['features/content-reveal/index.js', '?v=20261029-10'],
+  ['features/content-reveal/index.js', '?v=20261031-01'],
   ['features/lightbox/index.js', '?v=20261030-07'],
   ['features/lightbox/media-renderer.js', '?v=20261030-06'],
   ['features/lightbox/inspect-controller.js', '?v=20261030-01'],

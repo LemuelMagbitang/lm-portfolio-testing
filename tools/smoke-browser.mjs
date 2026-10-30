@@ -11842,6 +11842,83 @@ try {
       await logRuntimeProfile(page, 'Works 390x844', requestedUrls);
     }, { width: 390, height: 844 });
 
+
+    await smokePage(browser, '/', async page => {
+      await page.waitForFunction(() => {
+        const gate = document.querySelector('#pageTransition');
+        return gate?.dataset.loading === 'ready' && gate.getAttribute('aria-hidden') === 'true';
+      }, null, { timeout: 7000 });
+
+      const initialTimeOrigin = await page.evaluate(() => performance.timeOrigin);
+      const aboutLink = page.locator('.nav-links a[href="about/"]').first();
+      await aboutLink.focus();
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() =>
+        document.body.classList.contains('about-page') &&
+        (location.pathname.endsWith('/about/') || location.pathname.endsWith('/about')) &&
+        document.querySelector('#aboutHeadline'),
+      null, { timeout: 7000 });
+      await page.waitForFunction(() => {
+        const gate = document.querySelector('#pageTransition');
+        return !gate || (gate.dataset.loading === 'ready' &&
+          gate.getAttribute('aria-hidden') === 'true' &&
+          getComputedStyle(gate).visibility === 'hidden');
+      }, null, { timeout: 3000 });
+
+      const aboutState = await page.evaluate(() => ({
+        timeOrigin: performance.timeOrigin,
+        navigationEntries: performance.getEntriesByType('navigation').length,
+        title: document.title,
+        gateVisibility: getComputedStyle(document.querySelector('#pageTransition')).visibility,
+        gateAriaHidden: document.querySelector('#pageTransition').getAttribute('aria-hidden'),
+        activeLink: document.querySelector('.nav-links a.active-link')?.textContent.trim(),
+        focusTag: document.activeElement?.tagName
+      }));
+      if (aboutState.timeOrigin !== initialTimeOrigin || aboutState.navigationEntries !== 1 ||
+          !aboutState.title.includes('About') || aboutState.gateVisibility !== 'hidden' ||
+          aboutState.gateAriaHidden !== 'true' || aboutState.activeLink !== 'About Me' ||
+          aboutState.focusTag !== 'H1') {
+        throw new Error('Design-to-About navigation must be client-side, loader-free, and move focus to the destination heading: ' +
+          JSON.stringify(aboutState));
+      }
+
+      await page.locator('.nav-links a[href="../"]').first().click();
+      await page.waitForFunction(() =>
+        !document.body.classList.contains('about-page') &&
+        (location.pathname === '/' || location.pathname.endsWith('/index.html')) &&
+        document.querySelectorAll('#portfolioGrid .project-card').length > 0,
+      null, { timeout: 7000 });
+      const designState = await page.evaluate(() => ({
+        timeOrigin: performance.timeOrigin,
+        navigationEntries: performance.getEntriesByType('navigation').length,
+        gateVisibility: getComputedStyle(document.querySelector('#pageTransition')).visibility,
+        activeLink: document.querySelector('.nav-links a.active-link')?.textContent.trim()
+      }));
+      if (designState.timeOrigin !== initialTimeOrigin || designState.navigationEntries !== 1 ||
+          designState.gateVisibility !== 'hidden' || designState.activeLink !== 'Designs') {
+        throw new Error('About-to-Design navigation must reuse the document and keep the logo loader hidden: ' +
+          JSON.stringify(designState));
+      }
+
+      await page.goBack();
+      await page.waitForFunction(() =>
+        document.body.classList.contains('about-page') && document.querySelector('#aboutHeadline'),
+      null, { timeout: 7000 });
+      await page.goForward();
+      await page.waitForFunction(() =>
+        !document.body.classList.contains('about-page') &&
+        document.querySelectorAll('#portfolioGrid .project-card').length > 0,
+      null, { timeout: 7000 });
+      const historyState = await page.evaluate(() => ({
+        timeOrigin: performance.timeOrigin,
+        navigationEntries: performance.getEntriesByType('navigation').length
+      }));
+      if (historyState.timeOrigin !== initialTimeOrigin || historyState.navigationEntries !== 1) {
+        throw new Error('Browser back/forward between Design and About must remain within the same document: ' +
+          JSON.stringify(historyState));
+      }
+    }, { width: 1280, height: 900 });
+
     await smokePage(browser, '/', async page => {
       await page.waitForFunction(() => {
         const transition = document.querySelector('#pageTransition');

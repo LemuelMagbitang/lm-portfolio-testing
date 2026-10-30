@@ -1449,8 +1449,8 @@ function validateBootstrapHardening() {
     err('Bootstrap: initial page transition is missing its fail-safe timeout.');
   }
 
-  if (!/await\s+createPortfolioApp\(\{\s*root,\s*runtime,\s*cms,\s*config\s*\}\)/.test(bootstrap)) {
-    err('Bootstrap: composition root must receive normalized app configuration.');
+  if (!/await\s+createPortfolioApp\(\{[\s\S]*?root,\s*runtime,\s*cms,\s*config,[\s\S]*?awaitProjectMedia,[\s\S]*?immediateContentReveal[\s\S]*?\}\)/.test(bootstrap)) {
+    err('Bootstrap: composition root must receive normalized route configuration and navigation performance options.');
   }
 
   if (!/catch \(error\) \{\s*console\.error\('Portfolio runtime failed to initialize'/.test(bootstrap)) {
@@ -1896,19 +1896,15 @@ function validateAboutFirstPaintContract() {
   const composition = exists('js/app/page-composition.js')
     ? readText('js/app/page-composition.js')
     : '';
-  const waitStart = composition.search(/await projectMediaPreloadPromise;/);
-  const waitEnd = composition.indexOf('// About-page prefetching and image/logo warm-up', waitStart);
-  if (waitStart < 0 || waitEnd <= waitStart) {
-    err('About first paint: startup media-warm-up boundary could not be verified.');
-    return;
+  if (!composition.includes('if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;')) {
+    err('About first paint: project media preloading must remain route-aware and optional during client navigation.');
   }
   if (composition.includes('projectLottiePlayerPreloadPromise') ||
       !composition.includes('applyMediaBackground,\n          ensureLottiePlayer,\n          waitForThumbnailReadiness')) {
     err('Project Lottie thumbnails must request the player on demand instead of warming it during startup.');
   }
-  const criticalWait = composition.slice(waitStart, waitEnd);
-  if (criticalWait.includes('aboutAssetPreloadPromise')) {
-    err('About first paint: optional profile/software-logo image preloads must not block the initial transition.');
+  if (!composition.includes('void aboutAssetPreloadPromise;')) {
+    err('About first paint: optional profile/software-logo image preloads must remain non-blocking.');
   }
 }
 
@@ -2750,6 +2746,53 @@ function validateReducedMotionThumbnailContract() {
   }
 }
 
+function validateClientSidePageNavigation() {
+  const router = exists('js/app/page-navigation.js') ? readText('js/app/page-navigation.js') : '';
+  const bootstrap = exists('js/app/bootstrap.js') ? readText('js/app/bootstrap.js') : '';
+  const composition = exists('js/app/page-composition.js') ? readText('js/app/page-composition.js') : '';
+  const entry = exists('js/script.js') ? readText('js/script.js') : '';
+  const works = exists('index.html') ? readText('index.html') : '';
+  const about = exists('about/index.html') ? readText('about/index.html') : '';
+  const css = exists('css/style.css') ? readText('css/style.css') : '';
+
+  if (!router.includes('export function resolvePortfolioRoute(') ||
+      !router.includes('windowRef.fetch(key') ||
+      !router.includes('new windowRef.DOMParser()') ||
+      !router.includes('windowRef.history.pushState') ||
+      !router.includes("windowRef.addEventListener('popstate', handlePopState)") ||
+      !router.includes('event.metaKey || event.ctrlKey || event.shiftKey || event.altKey') ||
+      !router.includes("link.hasAttribute('download')") ||
+      !router.includes('windowRef.location.assign(targetUrl.href)') ||
+      !router.includes('windowRef.location.reload()') ||
+      !router.includes('root.startViewTransition(update)')) {
+    err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
+  }
+  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261031-01'") ||
+      !entry.includes('mountPage: options => bootstrapPortfolioApp({ root: document, ...options })')) {
+    err('Client navigation: the long-lived router must own route remounts from the public entrypoint.');
+  }
+  if (!bootstrap.includes('showPageTransition = true') ||
+      !bootstrap.includes('if (showPageTransition)') ||
+      !bootstrap.includes('awaitProjectMedia') ||
+      !bootstrap.includes('immediateContentReveal') ||
+      !bootstrap.includes("root.getElementById('pageConfig')")) {
+    err('Client navigation: soft mounts must bypass the initial logo gate and optional media wait while reading the destination URL config.');
+  }
+  if (!composition.includes('if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;') ||
+      !composition.includes('immediateVisible: immediateContentReveal')) {
+    err('Client navigation: media warm-up and first-viewport reveals must be route-aware.');
+  }
+  if (!works.includes('id="pageConfig"') || !about.includes('id="pageConfig"') ||
+      !works.includes('data-page-style="lightbox"') ||
+      !about.includes('features/projects/index.js?v=20261029-01') ||
+      !about.includes('features/gallery/index.js?v=20261030-03') ||
+      !about.includes('features/lightbox/index.js?v=20261030-07') ||
+      !css.includes('::view-transition-old(root)')) {
+    err('Client navigation: route documents must carry config, warm destination code, and use an instant view handoff.');
+  }
+}
+
+validateClientSidePageNavigation();
 validateCuratedViewRuntimeContract();
 validateCuratedViewPresentationContract();
 validateAboutFirstPaintContract();
