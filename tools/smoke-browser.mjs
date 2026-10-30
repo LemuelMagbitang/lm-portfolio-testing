@@ -4633,6 +4633,8 @@ try {
                 const rect = el.getBoundingClientRect();
                 return rect.top - itemsRect.top;
               })(),
+              layoutLeft:el.offsetLeft - items.offsetLeft,
+              layoutRight:el.offsetLeft - items.offsetLeft + el.offsetWidth,
               artworkWidthFillRatio: artwork && el.offsetWidth > 0 ? artwork.offsetWidth / el.offsetWidth : 0,
               visualCenterX: (() => {
                 const rect = el.getBoundingClientRect();
@@ -4878,8 +4880,11 @@ try {
                 media: Number.parseFloat(child.roundedSurfaceRadius),
                 padding: Number.parseFloat(child.artworkPadding)
               }));
+              // Use untransformed layout boxes here. Foil tilt intentionally
+              // moves the painted card surface a few pixels beyond its tile;
+              // that visual motion must not be mistaken for a grid/flex width error.
               const hasHorizontalOverflow = layout.children.some(child =>
-                child.visualLeft < -2 || child.visualRight > layout.itemsWidth + 2
+                child.layoutLeft < -2 || child.layoutRight > layout.itemsWidth + 2
               );
               if (Math.abs(layout.layoutWidthScaleRatio - 1) > 0.02 ||
                   Math.abs(layout.layoutCenterOffset) > 2 ||
