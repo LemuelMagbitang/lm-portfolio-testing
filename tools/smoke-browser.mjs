@@ -12856,9 +12856,18 @@ try {
         await holographicMedia.locator('[data-mact="toggle"]').click();
       }
       const holoStyleSelect = holographicMedia.locator('[data-holo-style]').first();
-      if (await holoStyleSelect.count() !== 1 || !(await holoStyleSelect.isVisible())) {
-        throw new Error('CMS foil style selector is not visible in the image editor.');
+      if (await holoStyleSelect.count() !== 1) {
+        throw new Error('CMS foil style selector is missing from the image editor.');
       }
+      // Opening a different artwork editor first animates the current panel
+      // closed, then rebuilds the list with the newly selected panel open.
+      // Wait for that exclusive-editor handoff before checking selector
+      // visibility; otherwise the test races the intentional 300ms collapse.
+      await holographicMedia.locator('[data-mbody][aria-hidden="false"]').waitFor({
+        state: 'visible',
+        timeout: 1800
+      });
+      await holoStyleSelect.waitFor({ state: 'visible', timeout: 1800 });
       const holoEnabledInput = holographicMedia.locator('[data-holo-enabled]').first();
       if (!(await holoEnabledInput.isChecked())) {
         throw new Error('CMS foil fixture loaded with its holographic effect disabled.');
