@@ -5534,8 +5534,8 @@ try {
           inspectorPresentation.centerOffsetY > 2 ||
           inspectorPresentation.artworkRatioDelta > .025 ||
           inspectorPresentation.entryLayout !== 'grid' ||
-          Number.parseFloat(inspectorPresentation.artworkRadius) < 10 ||
-          Number.parseFloat(inspectorPresentation.roundedFaceRadius) < 10 ||
+          Math.abs(Number.parseFloat(inspectorPresentation.artworkRadius)) > 0.5 ||
+          Math.abs(Number.parseFloat(inspectorPresentation.roundedFaceRadius)) > 0.5 ||
           inspectorPresentation.face !== 'FRONT' ||
           inspectorPresentation.action !== 'HOVER EDGE / CLICK' ||
           !inspectorPresentation.backIcon ||
@@ -5543,7 +5543,7 @@ try {
           inspectorPresentation.backWidth < 44 ||
           inspectorPresentation.backHeight < 44 ||
           inspectorPresentation.backRadius !== '50%') {
-        throw new Error('Inspector safe-fit/layer/caption/hint/back-button contract failed: ' + JSON.stringify(inspectorPresentation));
+        throw new Error('Inspector safe-fit/layer/caption/hint/back-button and square Grid-edge contract failed: ' + JSON.stringify(inspectorPresentation));
       }
       if (await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
