@@ -4762,21 +4762,23 @@ try {
         const lastRowCenter = lastRow.length
           ? lastRow.reduce((sum, child) => sum + child.visualCenterX, 0) / lastRow.length
           : Number.POSITIVE_INFINITY;
+        // Foil tilt can extend the painted surface slightly; the layout
+        // contract is about the flex tile boxes, not their transformed pixels.
         const hasHorizontalOverflow = layout.children.some(child =>
-          child.visualLeft < -2 || child.visualRight > layout.itemsWidth + 2
+          child.layoutLeft < -2 || child.layoutRight > layout.itemsWidth + 2
         );
         if (layout.itemsDisplay !== 'flex' || layout.itemsFlexWrap !== 'wrap' ||
             layout.trackCount !== expectedTracks || metrics.widthSpread > 2 ||
             metrics.dividerSpacingSpread > 2 || metrics.centeredArtworkCount < 1 ||
             metrics.maxArtworkCenterOffset > 2 || metrics.maxArtworkAspectRatioDelta > 0.06 ||
-            malformedRows || Math.abs(layout.columnGap - 6) > 0.5 || Math.abs(layout.rowGap - 6) > 0.5 ||
+            malformedRows || Math.abs(layout.columnGap) > 0.5 || Math.abs(layout.rowGap) > 0.5 ||
             Math.abs(layout.layoutWidthScaleRatio - 1) > 0.02 ||
             Math.abs(layout.layoutCenterOffset) > 2 ||
             layout.groupWidth > layout.parentContentWidth + 2 ||
             layout.itemsWidth > layout.groupWidth + 2 ||
             Object.values(layout.itemsPadding).some(value => Math.abs(value) > 0.5) ||
             hasHorizontalOverflow || Math.abs(lastRowCenter - layout.width / 2) > 18) {
-          throw new Error('Horizontal Stack must use centered 3/2-column flex rows with 6px gaps and no horizontal overflow (' + context + '): ' +
+          throw new Error('Horizontal Stack must use centered 3/2-column flex rows with zero gaps and no horizontal overflow (' + context + '): ' +
             JSON.stringify({ metrics, expectedTracks, lastRowCenter, hasHorizontalOverflow, layout }));
         }
         return metrics;
