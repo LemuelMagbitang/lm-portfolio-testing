@@ -933,6 +933,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   overflow-anchor: none;
   transition: none;
 }
+.portfolio-grid-viewport.is-expanding {
+  transition: max-height 560ms cubic-bezier(.22,1,.36,1);
+}
 
 .seamless-grid {
   display: grid;
@@ -2694,6 +2697,12 @@ body.center-page {
   min-height: 0;
   padding-bottom: 32px;
 }
+.show-more-wrapper.is-expanding {
+  transition:
+    margin-top 560ms cubic-bezier(.22,1,.36,1),
+    min-height 560ms cubic-bezier(.22,1,.36,1),
+    padding-bottom 560ms cubic-bezier(.22,1,.36,1);
+}
 .btn-show-more {
   display: inline-flex;
   align-items: center;
@@ -2720,9 +2729,7 @@ body.center-page {
 }
 
 .btn-show-more:hover {
-  background: #fff;
-  color: #000;
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .btn-show-more .btn-icon {
@@ -5065,9 +5072,15 @@ footer > .footer-content p{
   backdrop-filter:blur(14px) saturate(1.08) !important;
   -webkit-backdrop-filter:blur(14px) saturate(1.08) !important;
 }
-.btn-show-more:not(.expanded):hover{
-  background:rgba(255,255,255,.13) !important;
-  background-color:rgba(255,255,255,.13) !important;
+@media(hover:hover) and (pointer:fine){
+  .btn-show-more:not(.expanded):hover{
+    background:#fff !important;
+    background-color:#fff !important;
+    color:#000 !important;
+    box-shadow:0 8px 24px rgba(0,0,0,.16) !important;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
 }
 .btn-show-more.expanded{
   background:#fff !important;
@@ -5081,14 +5094,14 @@ footer > .footer-content p{
   -webkit-backdrop-filter:none !important;
 }
 .btn-show-more.expanded:hover{
-  background:#f2f2f2 !important;
-  background-color:#f2f2f2 !important;
+  background:#fff !important;
+  background-color:#fff !important;
   color:#000 !important;
 }
 .btn-show-more:active{
-  transform:scale(.985);
+  transform:none;
 }
-.btn-show-more:not(.expanded):focus{
+.btn-show-more:not(.expanded):focus:not(:hover){
   background:rgba(255,255,255,.08) !important;
   background-color:rgba(255,255,255,.08) !important;
   color:#fff !important;
@@ -5097,6 +5110,15 @@ footer > .footer-content p{
   background:#fff !important;
   background-color:#fff !important;
   color:#000 !important;
+}
+.btn-show-more.is-interacting{
+  animation:show-more-interaction-bounce 420ms cubic-bezier(.22,1,.36,1) both;
+  transform-origin:center;
+}
+@keyframes show-more-interaction-bounce{
+  0%,100%{transform:scale(1);}
+  34%{transform:scale(1.055);}
+  68%{transform:scale(.99);}
 }
 .btn-show-more:focus-visible{
   box-shadow:0 0 0 2px rgba(255,255,255,.78) !important;
@@ -6560,12 +6582,18 @@ body.menu-open .hamburger-icon span {
 }
 
 
-/* FINAL UI PASS 5 — keep Show More stationary in both states. */
+/* Keep the resting control stationary. Only the direct-interaction class
+   applies a transform animation; hover and re-render never trigger it. */
 .btn-show-more:hover,
 .btn-show-more:active,
 .btn-show-more.expanded:hover,
 .btn-show-more.expanded:active {
-  transform: none !important;
+  transform: none;
+}
+@media(prefers-reduced-motion:reduce){
+  .btn-show-more.is-interacting{animation:none!important;}
+  .portfolio-grid-viewport.is-expanding,
+  .show-more-wrapper.is-expanding{transition:none!important;}
 }
 
 

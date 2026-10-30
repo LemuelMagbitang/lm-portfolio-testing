@@ -234,6 +234,7 @@ export function applyGalleryReveal({
   mobilePeek = 40,
   desktopPeek = 70,
   animateTransition = false,
+  animateExpand = false,
   transitionFromRects = null,
   renderToken = 0,
   isCurrentRender = () => true
@@ -248,6 +249,80 @@ export function applyGalleryReveal({
   const filterTransitionDuration = reducedMotion ? '0ms' : '360ms';
   let transitionStartFrame = null;
   let transitionFrame = null;
+  let expansionFrame = null;
+  let expansionFrameIsTimer = false;
+  let expansionTimer = null;
+  let expansionListener = null;
+  let expansionActive = false;
+
+  const cancelExpansion = () => {
+    if (expansionFrame !== null) {
+      if (expansionFrameIsTimer) windowRef.clearTimeout(expansionFrame);
+      else windowRef.cancelAnimationFrame?.(expansionFrame);
+      expansionFrame = null;
+    }
+    if (expansionTimer !== null) {
+      windowRef.clearTimeout(expansionTimer);
+      expansionTimer = null;
+    }
+    if (expansionListener) {
+      viewport.removeEventListener?.('transitionend', expansionListener);
+      expansionListener = null;
+    }
+    expansionActive = false;
+    viewport.classList?.remove('is-expanding');
+    showMoreWrapper?.classList?.remove('is-expanding');
+  };
+
+  const finishExpansion = () => {
+    if (!expansionActive) return;
+    cancelExpansion();
+    if (!isCurrentRender(renderToken)) return;
+    // Release the explicit pixel ceiling after the measured full height is reached.
+    viewport.style.maxHeight = 'none';
+    fadeOverlay?.classList.add('is-hidden');
+  };
+
+  const startExpansion = () => {
+    if (!animateExpand || !expanded || reducedMotion) return false;
+    const startHeight = Number(viewport.getBoundingClientRect?.().height) || 0;
+    const gridHeight = Math.max(
+      Number(grid.scrollHeight) || 0,
+      Number(grid.getBoundingClientRect?.().height) || 0
+    );
+    if (!(startHeight > 0) || !(gridHeight > startHeight + 1)) return false;
+
+    // Start from the current clipped height, then reveal the laid-out rows below it.
+    viewport.style.maxHeight = String(Math.ceil(startHeight)) + 'px';
+    void viewport.getBoundingClientRect?.().height;
+    expansionActive = true;
+    // Enable both transitions before the expanded classes and target height change.
+    viewport.classList?.add('is-expanding');
+    showMoreWrapper?.classList?.add('is-expanding');
+    expansionListener = event => {
+      if (event?.target === viewport && event.propertyName === 'max-height') finishExpansion();
+    };
+    viewport.addEventListener?.('transitionend', expansionListener);
+
+    const beginExpansion = () => {
+      expansionFrame = null;
+      expansionFrameIsTimer = false;
+      if (!isCurrentRender(renderToken)) {
+        cancelExpansion();
+        return;
+      }
+      viewport.style.maxHeight = String(Math.ceil(gridHeight)) + 'px';
+    };
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      expansionFrame = windowRef.requestAnimationFrame(beginExpansion);
+    } else {
+      expansionFrameIsTimer = true;
+      expansionFrame = windowRef.setTimeout(beginExpansion, 0);
+    }
+    // Safety net if a backgrounded tab does not emit transitionend.
+    expansionTimer = windowRef.setTimeout(finishExpansion, 700);
+    return true;
+  };
 
   hiddenCards.forEach(card => {
     if (card.dataset?.galleryRevealState === 'pending') card.removeAttribute?.('data-gallery-reveal-state');
@@ -373,8 +448,10 @@ export function applyGalleryReveal({
         measureCollapsedHeight();
       });
     } else if (expanded || filteredCards.length <= visibleCount || visibleCount <= 0) {
-      viewport.style.maxHeight = 'none';
-      fadeOverlay?.classList.add('is-hidden');
+      if (!expansionActive) {
+        viewport.style.maxHeight = 'none';
+        fadeOverlay?.classList.add('is-hidden');
+      }
     }
   }, Math.max(0, Number(fadeMs) || 0));
 
@@ -415,8 +492,10 @@ export function applyGalleryReveal({
     measureCollapsedHeight();
     windowRef.requestAnimationFrame(measureCollapsedHeight);
   } else if (!animateTransition && (expanded || filteredCards.length <= visibleCount || visibleCount <= 0)) {
-    viewport.style.maxHeight = 'none';
-    fadeOverlay?.classList.add('is-hidden');
+    if (!startExpansion()) {
+      viewport.style.maxHeight = 'none';
+      fadeOverlay?.classList.add('is-hidden');
+    }
   }
 
   // The timer belongs to the current render. Returning a cancel function lets
@@ -446,6 +525,7 @@ export function applyGalleryReveal({
 
   const cleanup = () => {
     windowRef.clearTimeout(hideTimer);
+    cancelExpansion();
     cleanupTransition();
     cleanupViewportReveal();
   };

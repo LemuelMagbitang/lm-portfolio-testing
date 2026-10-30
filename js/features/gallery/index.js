@@ -9,7 +9,7 @@ import {
   applyGalleryReveal,
   resetGalleryPresentation,
   captureGalleryCardRects
-} from './presentation.js?v=20261027-01';
+} from './presentation.js?v=20261030-01';
 export async function initGallery(options = {}) {
   const documentRef = options.root?.getElementById ? options.root : globalThis.document;
   const windowRef = documentRef?.defaultView || globalThis.window;
@@ -634,7 +634,7 @@ export async function initGallery(options = {}) {
     return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
-  function render({ animateTransition = false, transitionFromRects = null } = {}) {
+  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false } = {}) {
     // A pending Show Less follow-scroll belongs to the layout that existed
     // when the button was collapsed. If a filter/resize/pageshow render starts
     // first, that old timer must not scroll the visitor into the new layout.
@@ -666,6 +666,7 @@ export async function initGallery(options = {}) {
       visibleCount: effectiveBaseCount,
       expanded: isExpanded,
       animateTransition,
+      animateExpand,
       transitionFromRects,
       windowRef,
       fadeMs,
@@ -886,13 +887,36 @@ export async function initGallery(options = {}) {
     windowRef.clearTimeout(collapseScrollTimer);
   });
 
+  let showMoreBounceTimer = null;
+  const playShowMoreBounce = () => {
+    if (!showMoreBtn || windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    if (showMoreBounceTimer !== null) windowRef.clearTimeout(showMoreBounceTimer);
+    showMoreBtn.classList.remove('is-interacting');
+    // Restart only after a real activation; loading and render paths never call
+    // this helper. The forced style read lets rapid repeated taps restart it.
+    void showMoreBtn.offsetWidth;
+    showMoreBtn.classList.add('is-interacting');
+    showMoreBounceTimer = windowRef.setTimeout(() => {
+      showMoreBtn.classList.remove('is-interacting');
+      showMoreBounceTimer = null;
+    }, 460);
+  };
+  lifecycle.add(() => {
+    if (showMoreBounceTimer !== null) windowRef.clearTimeout(showMoreBounceTimer);
+    showMoreBtn?.classList.remove('is-interacting');
+  });
+
   bind(showMoreBtn, 'click', event => {
     event.preventDefault();
+    // Keyboard activation and real pointer/touch clicks are trusted events.
+    // Synthetic/programmatic clicks still toggle state, but do not animate.
+    const isDirectActivation = event?.isTrusted !== false;
+    if (isDirectActivation) playShowMoreBounce();
     const nextExpanded = !isExpanded;
     const shouldFollowCollapsedControl = !nextExpanded;
 
     isExpanded = nextExpanded;
-    render();
+    render({ animateExpand: nextExpanded && isDirectActivation });
 
     // Keep the button's semantic state synchronized immediately. The visual
     // reveal may animate, but its state must never depend on a later scroll,

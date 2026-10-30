@@ -2495,6 +2495,15 @@ function validateCmsRegressionContracts() {
       !presentation.includes('applyGalleryReveal')) {
     err('Gallery: row-aware Show More state/presentation contract is missing.');
   }
+  if (!gallery.includes('const isDirectActivation = event?.isTrusted !== false;') ||
+      !gallery.includes('render({ animateExpand: nextExpanded && isDirectActivation });') ||
+      !gallery.includes('playShowMoreBounce();') ||
+      !presentation.includes('const startExpansion = () => {') ||
+      !presentation.includes('viewport.classList?.add(\'is-expanding\')') ||
+      !css.includes('.btn-show-more.is-interacting{') ||
+      !css.includes('.btn-show-more.expanded:hover{\n  background:#fff !important;')) {
+    err('Gallery: Show More/Show Less must use direct-interaction-only bounce, reduced-motion-aware expansion, and stable white Show Less hover material.');
+  }
 
   if (!gallery.includes('getFilteredProjects') ||
       !gallery.includes('projectMatchesFilter') ||

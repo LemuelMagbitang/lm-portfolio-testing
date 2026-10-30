@@ -3758,6 +3758,181 @@ try {
       await assertContentRevealReducedMotion(page, 'Works', 'main.works-main > .filter-nav-wrapper');
     }, { width: 1440, height: 900 });
 
+    await smokePage(
+      browser,
+      '/?show-more-interaction-smoke=1',
+      async page => {
+        await page.waitForFunction(() => {
+          const transition = document.querySelector('#pageTransition');
+          return transition?.dataset.loading === 'ready' &&
+            transition.getAttribute('aria-hidden') === 'true';
+        }, null, { timeout: 6000 });
+
+        const button = page.locator('#showMoreBtn').first();
+        await button.waitFor({ state: 'visible', timeout: 3000 });
+        const initial = await button.evaluate(el => {
+          const style = getComputedStyle(el);
+          return {
+            background: style.backgroundColor,
+            color: style.color,
+            backdropFilter: style.backdropFilter,
+            animationName: style.animationName,
+            interacting: el.classList.contains('is-interacting'),
+            expanded: el.getAttribute('aria-expanded')
+          };
+        });
+        if (initial.background !== 'rgba(255, 255, 255, 0.08)' ||
+            initial.color !== 'rgb(255, 255, 255)' ||
+            initial.backdropFilter === 'none' ||
+            initial.animationName !== 'none' ||
+            initial.interacting || initial.expanded !== 'false') {
+          throw new Error('Initial Show More state must remain glass and animation-free: ' + JSON.stringify(initial));
+        }
+
+        await button.hover();
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#showMoreBtn');
+          if (!el) return false;
+          const style = getComputedStyle(el);
+          return style.backgroundColor === 'rgb(255, 255, 255)' &&
+            style.color === 'rgb(0, 0, 0)' && style.backdropFilter === 'none';
+        }, null, { timeout: 1200 });
+        const hoveredShowMore = await button.evaluate(el => ({
+          background: getComputedStyle(el).backgroundColor,
+          color: getComputedStyle(el).color,
+          animationName: getComputedStyle(el).animationName,
+          interacting: el.classList.contains('is-interacting')
+        }));
+        if (hoveredShowMore.background !== 'rgb(255, 255, 255)' ||
+            hoveredShowMore.color !== 'rgb(0, 0, 0)' ||
+            hoveredShowMore.animationName !== 'none' || hoveredShowMore.interacting) {
+          throw new Error('Hover must invert Show More material without triggering the click bounce: ' + JSON.stringify(hoveredShowMore));
+        }
+
+        await page.mouse.move(4, 4);
+        await button.evaluate(el => el.click());
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#showMoreBtn');
+          return el?.getAttribute('aria-expanded') === 'true' &&
+            getComputedStyle(document.querySelector('#portfolioGridViewport')).maxHeight === 'none';
+        }, null, { timeout: 2000 });
+        const syntheticActivation = await button.evaluate(el => ({
+          animationName: getComputedStyle(el).animationName,
+          interacting: el.classList.contains('is-interacting')
+        }));
+        if (syntheticActivation.animationName !== 'none' || syntheticActivation.interacting) {
+          throw new Error('Programmatic clicks must not trigger the interaction bounce: ' + JSON.stringify(syntheticActivation));
+        }
+
+        // Return to the collapsed state, then exercise the actual pointer path.
+        await button.evaluate(el => el.click());
+        await page.waitForFunction(() =>
+          document.querySelector('#showMoreBtn')?.getAttribute('aria-expanded') === 'false' &&
+          getComputedStyle(document.querySelector('#portfolioGridViewport')).maxHeight !== 'none'
+        , null, { timeout: 2000 });
+
+        await button.hover();
+        await button.click();
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#showMoreBtn');
+          return el?.classList.contains('is-interacting') &&
+            getComputedStyle(el).animationName === 'show-more-interaction-bounce' &&
+            document.querySelector('#portfolioGridViewport')?.classList.contains('is-expanding');
+        }, null, { timeout: 1500 });
+
+        const firstExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          height: el.getBoundingClientRect().height,
+          maxHeight: getComputedStyle(el).maxHeight,
+          transitionDuration: getComputedStyle(el).transitionDuration
+        }));
+        await page.waitForTimeout(150);
+        const secondExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          height: el.getBoundingClientRect().height,
+          maxHeight: getComputedStyle(el).maxHeight
+        }));
+        if (!(secondExpansionFrame.height > firstExpansionFrame.height + 4) ||
+            !firstExpansionFrame.transitionDuration.includes('0.56s')) {
+          throw new Error('Show More content must expand progressively through the measured viewport height: ' +
+            JSON.stringify({ firstExpansionFrame, secondExpansionFrame }));
+        }
+        await page.waitForFunction(() => {
+          const viewport = document.querySelector('#portfolioGridViewport');
+          return getComputedStyle(viewport).maxHeight === 'none' &&
+            !viewport.classList.contains('is-expanding');
+        }, null, { timeout: 1800 });
+
+        await button.hover();
+        const showLessHover = await button.evaluate(el => {
+          const style = getComputedStyle(el);
+          return {
+            background: style.backgroundColor,
+            color: style.color,
+            backdropFilter: style.backdropFilter,
+            animationName: style.animationName
+          };
+        });
+        if (showLessHover.background !== 'rgb(255, 255, 255)' ||
+            showLessHover.color !== 'rgb(0, 0, 0)' ||
+            showLessHover.backdropFilter !== 'none') {
+          throw new Error('Show Less must retain its white/black material on hover: ' + JSON.stringify(showLessHover));
+        }
+
+        await button.focus();
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => {
+          const el = document.querySelector('#showMoreBtn');
+          return el?.getAttribute('aria-expanded') === 'false' &&
+            el.classList.contains('is-interacting') &&
+            getComputedStyle(el).animationName === 'show-more-interaction-bounce';
+        }, null, { timeout: 1500 });
+
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.waitForTimeout(480);
+        const reducedMotionBefore = await button.evaluate(el => ({
+          animationName: getComputedStyle(el).animationName,
+          interacting: el.classList.contains('is-interacting')
+        }));
+        if (reducedMotionBefore.interacting || reducedMotionBefore.animationName !== 'none') {
+          throw new Error('The Show More interaction animation must finish cleanly before reduced-motion verification.');
+        }
+        await button.click();
+        const reducedMotionState = await button.evaluate(el => ({
+          animationName: getComputedStyle(el).animationName,
+          interacting: el.classList.contains('is-interacting'),
+          expanded: el.getAttribute('aria-expanded')
+        }));
+        if (reducedMotionState.interacting || reducedMotionState.animationName !== 'none' ||
+            reducedMotionState.expanded !== 'true') {
+          throw new Error('Reduced-motion activation must preserve functionality without the bounce: ' + JSON.stringify(reducedMotionState));
+        }
+      },
+      { width: 1280, height: 900 },
+      async page => {
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#ccc"/></svg>';
+        const fixture = Array.from({ length: 16 }, (_, index) => ({
+          id: 'show-more-smoke-' + (index + 1),
+          title: 'Show More Fixture ' + (index + 1),
+          subtitle: '',
+          badge: '',
+          filters: [],
+          description: '',
+          thumbnail: { type: 'image', src: 'assets/projects/show-more-smoke/card.svg', focus: '50% 50%', zoom: 1 },
+          media: [{
+            type: 'image',
+            src: 'assets/projects/show-more-smoke/card.svg',
+            caption: 'Show More Fixture ' + (index + 1),
+            orientation: 'square'
+          }]
+        }));
+        await page.route('**/data/projects.json*', async route => {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
+        });
+        await page.route('**/assets/projects/show-more-smoke/card.svg', async route => {
+          await route.fulfill({ status: 200, contentType: 'image/svg+xml', body: svg });
+        });
+      }
+    );
+
     await smokePage(browser, '/about/', async page => {
       await page.waitForFunction(() => {
         const transition = document.querySelector('#pageTransition');

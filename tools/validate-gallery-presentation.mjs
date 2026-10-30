@@ -115,8 +115,115 @@ applyGalleryReveal({
 });
 assert.equal(revealViewportLate.style.maxHeight, '490px');
 
+function makeExpansionFixture({ reducedMotion = false } = {}) {
+  const frames = [];
+  const timers = new Map();
+  const listeners = new Map();
+  const classes = new Set();
+  const fadeClasses = new Set();
+  let nextTimer = 0;
+  const cardClasses = new Set();
+  const card = {
+    dataset: {},
+    style: { setProperty() {}, removeProperty() {} },
+    classList: {
+      add(name) { cardClasses.add(name); },
+      remove(name) { cardClasses.delete(name); }
+    },
+    getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 100, bottom: 100 }; },
+    removeAttribute(name) { delete this.dataset[name]; }
+  };
+  const viewport = {
+    style: { maxHeight: '180px' },
+    offsetHeight: 180,
+    classList: {
+      add(name) { classes.add(name); },
+      remove(name) { classes.delete(name); },
+      contains(name) { return classes.has(name); }
+    },
+    getBoundingClientRect() { return { top: 0, left: 0, width: 500, height: 180 }; },
+    addEventListener(name, handler) {
+      if (!listeners.has(name)) listeners.set(name, new Set());
+      listeners.get(name).add(handler);
+    },
+    removeEventListener(name, handler) { listeners.get(name)?.delete(handler); },
+    dispatch(name, event) {
+      for (const handler of [...(listeners.get(name) || [])]) handler({ type: name, target: this, ...event });
+    }
+  };
+  const fadeOverlay = { classList: {
+    add(name) { fadeClasses.add(name); },
+    remove(name) { fadeClasses.delete(name); },
+    contains(name) { return fadeClasses.has(name); }
+  } };
+  const wrapperClasses = new Set();
+  const showMoreWrapper = { classList: {
+    add(name) { wrapperClasses.add(name); },
+    remove(name) { wrapperClasses.delete(name); },
+    contains(name) { return wrapperClasses.has(name); }
+  } };
+  const grid = {
+    scrollHeight: 720,
+    querySelectorAll() { return [card]; },
+    getBoundingClientRect() { return { top: 0, left: 0, width: 500, height: 720 }; }
+  };
+  const windowRef = {
+    innerWidth: 1280,
+    innerHeight: 900,
+    matchMedia() { return { matches: reducedMotion }; },
+    requestAnimationFrame(callback) { frames.push(callback); return frames.length; },
+    cancelAnimationFrame() {},
+    setTimeout(callback, delay) {
+      const id = ++nextTimer;
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    clearTimeout(id) { timers.delete(id); }
+  };
+  const cleanup = applyGalleryReveal({
+    grid,
+    gridViewport: viewport,
+    fadeOverlay,
+    showMoreWrapper,
+    filteredCards: [card],
+    visibleCount: 1,
+    expanded: true,
+    animateExpand: true,
+    windowRef,
+    fadeMs: 300
+  });
+  return { frames, timers, viewport, fadeOverlay, showMoreWrapper, cleanup };
+}
+
+const expansionFixture = makeExpansionFixture();
+assert.equal(expansionFixture.viewport.style.maxHeight, '180px',
+  'Show More must begin at the measured collapsed viewport height.');
+assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), true,
+  'The viewport transition must be enabled before its target height changes.');
+assert.equal(expansionFixture.showMoreWrapper.classList.contains('is-expanding'), true,
+  'The Show More wrapper spacing transition must be enabled before expanded spacing changes.');
+while (expansionFixture.frames.length) expansionFixture.frames.shift()();
+assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), true);
+assert.equal(expansionFixture.viewport.style.maxHeight, '720px',
+  'The viewport must expand to the measured natural grid height.');
+expansionFixture.viewport.dispatch('transitionend', { propertyName: 'max-height' });
+assert.equal(expansionFixture.viewport.style.maxHeight, 'none',
+  'After expansion, natural height must be restored.');
+assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), false);
+assert.equal(expansionFixture.showMoreWrapper.classList.contains('is-expanding'), false);
+assert.equal(expansionFixture.fadeOverlay.classList.contains('is-hidden'), true);
+expansionFixture.cleanup?.();
+
+const reducedExpansionFixture = makeExpansionFixture({ reducedMotion: true });
+assert.equal(reducedExpansionFixture.viewport.style.maxHeight, 'none',
+  'Reduced-motion users must receive the expanded layout without a max-height animation.');
+assert.equal(reducedExpansionFixture.viewport.classList.contains('is-expanding'), false);
+assert.equal(reducedExpansionFixture.showMoreWrapper.classList.contains('is-expanding'), false);
+reducedExpansionFixture.cleanup?.();
+
 const styleSource = await (await import('node:fs/promises')).readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const galleryControllerForFilters = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/index.js', import.meta.url), 'utf8');
+const galleryPresentationSource = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/presentation.js', import.meta.url), 'utf8');
 const worksMarkup = await (await import('node:fs/promises')).readFile(new URL('../index.html', import.meta.url), 'utf8');
 const mediaRendererForDensity = await (await import('node:fs/promises')).readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 assert.match(galleryControllerForFilters, /function setFilterButtonLabel\(button, value\)/);
@@ -125,6 +232,17 @@ assert.match(galleryControllerForFilters, /setFilterButtonLabel\(button, filter\
 assert.match(worksMarkup, /class="filter-tab-label">ALL<\/span>/);
 assert.match(styleSource, /\.filter-tabs \.tab-btn \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/);
 assert.match(styleSource, /\.filter-tabs \.filter-tab-label \{[\s\S]*?width: max-content;[\s\S]*?margin-inline: auto;[\s\S]*?line-height: inherit;[\s\S]*?text-align: center;/);
+assert.match(galleryControllerForFilters, /const isDirectActivation = event\?\.isTrusted !== false;/);
+assert.match(galleryControllerForFilters, /if \(isDirectActivation\) playShowMoreBounce\(\)/);
+assert.match(galleryControllerForFilters, /render\(\{ animateExpand: nextExpanded && isDirectActivation \}\)/);
+assert.match(styleSource, /\.btn-show-more:not\(\.expanded\):hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
+assert.match(styleSource, /\.btn-show-more\.expanded:hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
+assert.match(styleSource, /\.btn-show-more\.is-interacting\{[\s\S]*?animation:show-more-interaction-bounce 420ms/);
+assert.match(styleSource, /\.portfolio-grid-viewport\.is-expanding\s*\{\s*transition:\s*max-height 560ms/);
+assert.match(styleSource, /\.show-more-wrapper\.is-expanding\s*\{[\s\S]*?margin-top 560ms[\s\S]*?min-height 560ms[\s\S]*?padding-bottom 560ms/);
+assert.match(styleSource, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.btn-show-more\.is-interacting\{animation:none!important;\}[\s\S]*?\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-expanding\{transition:none!important;\}/);
+assert.match(galleryPresentationSource, /const startExpansion = \(\) => \{[\s\S]*?grid\.scrollHeight[\s\S]*?viewport\.style\.maxHeight/);
+assert.match(galleryPresentationSource, /if \(!animateExpand \|\| !expanded \|\| reducedMotion\) return false/);
 assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaList\.length > 2 \? 'multi' : 'single'/);
 assert.match(mediaRendererForDensity, /container\.setAttribute\(\s*'data-has-youtube'/);
 assert.match(styleSource, /data-media-density="multi"\]\[data-has-youtube="true"\]/);
