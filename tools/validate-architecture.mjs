@@ -25,9 +25,9 @@ const legacyRootModules = new Set([
 // strings create separate ES module instances and can split singleton state or
 // cause a preload and the eventual import to download the same module twice.
 const canonicalModuleQueries = new Map([
-  ['script.js', '?v=20261030-07'],
-  ['app/bootstrap.js', '?v=20261030-07'],
-  ['app/page-composition.js', '?v=20261030-07'],
+  ['script.js', '?v=20261030-08'],
+  ['app/bootstrap.js', '?v=20261030-08'],
+  ['app/page-composition.js', '?v=20261030-08'],
   ['infrastructure/three/model-viewer.js', '?v=20261024-02'],
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261027-05'],
@@ -47,10 +47,10 @@ const canonicalModuleQueries = new Map([
   ['features/hero/index.js', '?v=20261029-01'],
   ['features/footer/index.js', '?v=20261029-03'],
   ['features/content-reveal/index.js', '?v=20261029-10'],
-  ['features/lightbox/index.js', '?v=20261030-06'],
-  ['features/lightbox/media-renderer.js', '?v=20261030-05'],
+  ['features/lightbox/index.js', '?v=20261030-07'],
+  ['features/lightbox/media-renderer.js', '?v=20261030-06'],
   ['features/lightbox/inspect-controller.js', '?v=20261030-01'],
-  ['features/lightbox/foil-normal-renderer.js', '?v=20261030-01'],
+  ['features/lightbox/foil-normal-renderer.js', '?v=20261030-02'],
   ['features/lightbox/foil-interaction.js', '?v=20261028-03'],
   ['data/project-normalizer.js', '?v=20261029-01']
 ]);

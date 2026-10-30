@@ -160,7 +160,7 @@ export function createFoilNormalRenderer(canvas,patternUrls,{intensity=0.8,phase
     const largestSide=Math.max(w,h);
     if(largestSide>maxSide){const scale=maxSide/largestSide;w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));}
     if(w!==width||h!==height){width=w;height=h;canvas.width=w;canvas.height=h;}
-    gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(program);
+    gl.viewport(0,0,width,height);gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);gl.enableVertexAttribArray(uniform.position);gl.vertexAttribPointer(uniform.position,2,gl.FLOAT,false,16,0);
     gl.enableVertexAttribArray(uniform.uv);gl.vertexAttribPointer(uniform.uv,2,gl.FLOAT,false,16,8);
     gl.uniform1f(uniform.mapCount,loadedImages.length);gl.uniform1f(uniform.intensity,level);gl.uniform1f(uniform.phase,Number(phase)||0);gl.uniform1f(uniform.uvScale,Math.max(1,Math.min(2,Number(uvScale)||1)));gl.uniform2f(uniform.light,lightX,lightY);

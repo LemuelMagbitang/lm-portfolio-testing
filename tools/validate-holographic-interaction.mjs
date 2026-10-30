@@ -170,6 +170,20 @@ assert.match(normalRenderer, /let compactTarget = isCompactFoilTarget\(view\)/);
 assert.match(normalRenderer, /level=resolveFoilIntensity\(intensity,compactTarget\)/);
 assert.match(normalRenderer, /mediaQuery\.addEventListener\('change',handleResize\)/);
 assert.match(normalRenderer, /drawTimer/);
+const foilDrawStart = normalRenderer.indexOf('function drawNow(){');
+const foilDrawEnd = normalRenderer.indexOf('  const scheduleDrawTimer', foilDrawStart);
+assert.ok(foilDrawStart >= 0 && foilDrawEnd > foilDrawStart,
+  'Foil renderer must keep a bounded drawNow routine.');
+const foilDrawSource = normalRenderer.slice(foilDrawStart, foilDrawEnd);
+assert.ok(foilDrawSource.includes('gl.drawArrays(gl.TRIANGLE_STRIP,0,4)'),
+  'The foil pass must redraw its full-screen quad on every frame.');
+assert.doesNotMatch(foilDrawSource, /gl\.clear(?:Color)?\s*\(/,
+  'A full-screen quad that writes transparent output for uncovered pixels must not clear the entire drawing buffer first.');
+assert.ok(normalRenderer.includes('new Float32Array([-1,-1,0,0,1,-1,1,0,-1,1,0,1,1,1,1,1])'),
+  'The foil quad must continue to cover the full viewport.');
+assert.ok(normalRenderer.includes('if(coverage<0.008||u_intensity<=0.001){gl_FragColor=vec4(0.0);return;}') &&
+  normalRenderer.includes('gl_FragColor=vec4(color,alpha);'),
+  'Every fragment path must write a color so the redundant clear can stay removed.');
 assert.match(styles, /rotateZ\(var\(--holo-rotation,0deg\)\)/);
 assert.match(styles, /translate3d\(var\(--holo-shift-x,0px\),var\(--holo-shift-y,0px\),9px\)/);
 assert.match(styles, /@media\s*\(max-width:760px\),\s*\(hover:none\) and \(pointer:coarse\)/);
