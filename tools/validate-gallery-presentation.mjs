@@ -331,7 +331,7 @@ const styleSource = await (await import('node:fs/promises')).readFile(new URL('.
 const galleryControllerForFilters = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/index.js', import.meta.url), 'utf8');
 const galleryPresentationSource = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/presentation.js', import.meta.url), 'utf8');
 const galleryTransitionBlurValues = Array.from(
-  galleryPresentationSource.matchAll(/card\\.style\\.filter = 'blur\\(([\\d.]+)px\\)'/g),
+  galleryPresentationSource.matchAll(/card\.style\.filter = 'blur\(([\d.]+)px\)'/g),
   match => Number(match[1])
 );
 assert.equal(galleryTransitionBlurValues.length, 2,
