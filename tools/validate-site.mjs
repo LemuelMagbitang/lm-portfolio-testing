@@ -468,24 +468,13 @@ function validateHeroMediaPreconnects(heroLoop) {
   if (!muxItems.length || !exists('index.html')) return;
 
   const html = readText('index.html');
-  const links = [...html.matchAll(/<link\\b[^>]*>/gi)].map(match => match[0]);
   const hasPreconnect = (origin, requireCors = false) => {
-    const escapedOrigin = String(origin).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\function validateHeroLoop(heroLoop) {
-  if (!Array.isArray(heroLoop)) return;
-  heroLoop.forEach((item, i) => {
-    const where = `data/hero-loop.json item ${i + 1}`;
-    validateMedia(item, where);
-    if (item?.fadeInMs !== undefined && (!Number.isFinite(Number(item.fadeInMs)) || Number(item.fadeInMs) < 0)) err(`${where}: fadeInMs must be non-negative.`);
-    if (item?.fadeOutMs !== undefined && (!Number.isFinite(Number(item.fadeOutMs)) || Number(item.fadeOutMs) < 0)) err(`${where}: fadeOutMs must be non-negative.`);
-  });
-}
-');
-    return links.some(tag => {
-      if (!/\\brel=['"]preconnect['"]/i.test(tag)) return false;
-      const href = tag.match(/\\bhref=['"]([^'"]+)['"]/i)?.[1] || '';
-      if (href.replace(/\\/$/, '') !== origin) return false;
-      return !requireCors || /\\bcrossorigin(?:=['"][^'"]*['"])?/i.test(tag);
-    });
+    const marker = `<link rel="preconnect" href="${origin}"`;
+    const matchingTag = html.split('<link').slice(1)
+      .map(part => '<link' + (part.split('>')[0] || '') + '>')
+      .find(tag => tag.includes(marker));
+    if (!matchingTag) return false;
+    return !requireCors || /\bcrossorigin(?:=["'][^"']*["'])?/i.test(matchingTag);
   };
 
   const usesMuxPoster = muxItems.some(item => {
@@ -505,17 +494,11 @@ function validateHeroMediaPreconnects(heroLoop) {
   const muxLoader = exists('js/infrastructure/mux/player.js')
     ? readText('js/infrastructure/mux/player.js')
     : '';
-  const moduleOrigins = [...muxLoader.matchAll(/import\\(\\s*['"](https?:\\/\\/[^'"]+)['"]\\s*\\)/g)]
-    .map(match => {
-      try { return new URL(match[1]).origin; }
-      catch (_) { return ''; }
-    })
-    .filter(Boolean);
-  moduleOrigins.forEach(origin => {
-    if (!hasPreconnect(origin, true)) {
-      err('Hero media: the dynamically imported Mux player module must have a CORS-enabled preconnect hint for ' + origin + '.');
-    }
-  });
+  const usesMuxPlayerCdn = muxLoader.includes('https://cdn.jsdelivr.net/npm/@mux/mux-video@') ||
+    muxLoader.includes('https://cdn.jsdelivr.net/npm/@mux/mux-player@');
+  if (usesMuxPlayerCdn && !hasPreconnect('https://cdn.jsdelivr.net', true)) {
+    err('Hero media: the dynamically imported Mux player module must have a CORS-enabled cdn.jsdelivr.net preconnect hint.');
+  }
 }
 
 function validateAbout(about) {
