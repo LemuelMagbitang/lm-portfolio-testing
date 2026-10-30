@@ -5301,6 +5301,7 @@ try {
           JSON.stringify(groupBeforeInspectorOpen));
       }
       const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
+      const lightboxOverflowAnchorBeforeInspect = await lightboxScrollHost.evaluate(el => el.style.overflowAnchor);
       // A tap on grouped artwork opens the full-screen Inspector without
       // consuming the same tap as a foil flip. The following real pointer click
       // inside Inspect must still flip the foil to its mirrored reverse.
@@ -5352,6 +5353,14 @@ try {
       if (Math.abs(lightboxScrollAfterInspect - lightboxScrollBeforeInspect) > 1) {
         throw new Error('Opening foil Inspect changed the Lightbox scroll position: ' +
           JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterInspect }));
+      }
+      const inspectOverflowAnchor = await lightboxScrollHost.evaluate(el => ({
+        inline: el.style.overflowAnchor,
+        computed: getComputedStyle(el).overflowAnchor
+      }));
+      if (inspectOverflowAnchor.inline !== 'none' || inspectOverflowAnchor.computed !== 'none') {
+        throw new Error('Inspect must temporarily disable Lightbox scroll anchoring: ' +
+          JSON.stringify(inspectOverflowAnchor));
       }
       const inspectorFoilLayers = await inspectedHolo.evaluate(el => {
         const positionOf = selector => {
@@ -5543,6 +5552,11 @@ try {
         throw new Error('Escape from foil Inspect changed Lightbox scroll: ' +
           JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterEscape }));
       }
+      const overflowAnchorAfterEscape = await lightboxScrollHost.evaluate(el => el.style.overflowAnchor);
+      if (overflowAnchorAfterEscape !== lightboxOverflowAnchorBeforeInspect) {
+        throw new Error('Escape did not restore the Lightbox scroll-anchor setting: ' +
+          JSON.stringify({ before: lightboxOverflowAnchorBeforeInspect, after: overflowAnchorAfterEscape }));
+      }
 
       // Reopen from the group, flip again, then activate Inspect Back with
       // the keyboard. Both keyboard exit paths must reset to FRONT.
@@ -5597,6 +5611,11 @@ try {
         throw new Error('Keyboard Back changed Lightbox scroll: ' +
           JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterBack }));
       }
+      const overflowAnchorAfterKeyboardBack = await lightboxScrollHost.evaluate(el => el.style.overflowAnchor);
+      if (overflowAnchorAfterKeyboardBack !== lightboxOverflowAnchorBeforeInspect) {
+        throw new Error('Keyboard Back did not restore the Lightbox scroll-anchor setting: ' +
+          JSON.stringify({ before: lightboxOverflowAnchorBeforeInspect, after: overflowAnchorAfterKeyboardBack }));
+      }
 
       await setRequestedLayout('stack');
       await page.waitForTimeout(100);
@@ -5619,6 +5638,12 @@ try {
       }
       await inspectMode.locator('.lightbox-inspect-back').click();
       await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
+      await page.waitForTimeout(50);
+      const overflowAnchorAfterStackBack = await lightboxScrollHost.evaluate(el => el.style.overflowAnchor);
+      if (overflowAnchorAfterStackBack !== lightboxOverflowAnchorBeforeInspect) {
+        throw new Error('Horizontal Stack Inspect Back did not restore the Lightbox scroll-anchor setting: ' +
+          JSON.stringify({ before: lightboxOverflowAnchorBeforeInspect, after: overflowAnchorAfterStackBack }));
+      }
 
       // The Lightbox must remain closable after either keyboard Inspector exit.
       await page.locator('#lightboxClose').first().click();
