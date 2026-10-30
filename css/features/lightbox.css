@@ -290,26 +290,20 @@
   justify-self:center;
   box-sizing:border-box;
 }
-/* Grid and Horizontal Stack get a larger shared artwork envelope.
-   This raises the allowed artwork height from 320px to 480px (1.5x) on desktop,
-   while each item still respects its cell width, aspect ratio, and image fit. */
-#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork.has-holographic,
-#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork.has-holographic.is-media-reveal-ready{
-  width:min(100%,calc(clamp(324px,57svh,480px) * var(--lightbox-artwork-ratio,1)));
-  max-width:100%;
-  max-height:clamp(324px,57svh,480px);
-  margin:auto;
-  align-self:center;
-  justify-self:center;
-  box-sizing:border-box;
-}
-#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork:not(.has-holographic){
-  width:100%;
-  max-width:100%;
-  height:auto;
-  max-height:clamp(324px,57svh,480px);
+/* Grid and Horizontal Stack expand every artwork frame to its full tile width.
+   The media's resolved aspect ratio controls height naturally; no height cap can
+   shrink portrait artwork below the available cell width. The Lightbox scrolls
+   vertically for tall media, while max-width and visible overflow protect the row. */
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork.is-media-reveal-ready{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;max-width:100%;min-width:0;height:auto;max-height:none;
   aspect-ratio:var(--lightbox-artwork-ratio,auto);
-  margin-inline:auto;
+  margin:0 auto;
+  align-self:stretch;
+  justify-self:stretch;
   overflow:visible;
   box-sizing:border-box;
 }
@@ -333,7 +327,7 @@
 /* Horizontal Stack: Figma-style horizontal auto-layout. Flex rows wrap naturally;
    each row shares equal item widths without the card rotations/overlap of Card Stack. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
-  --artwork-stack-gap:12px;
+  --artwork-stack-gap:6px;
   display:flex;
   flex-flow:row wrap;
   grid-template-columns:none;
@@ -344,19 +338,10 @@
   padding:8px;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-  flex:0 0 calc(33.333333% - 8px);
+  flex:0 0 calc(33.333333% - 4px);
   width:auto;
   max-width:none;
   min-width:0;
-}
-@media (min-width:761px) and (max-width:1000px){
-  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
-    --artwork-stack-gap:10px;
-    padding:8px;
-  }
-  #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-    flex-basis:calc(33.333333% - 6.6667px);
-  }
 }
 @media (max-width:760px){
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
@@ -365,11 +350,10 @@
     padding:6px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
-    --artwork-stack-gap:8px;
     padding:6px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-    flex-basis:calc(50% - 4px);
+    flex-basis:calc(50% - 3px);
   }
 }
 /* Horizontal Card Stack — five cards across on desktop, four on tablet,

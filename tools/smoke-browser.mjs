@@ -4597,7 +4597,7 @@ try {
                 const rect = el.getBoundingClientRect();
                 return rect.top - itemsRect.top;
               })(),
-              artworkMaxHeight: artwork ? (Number.parseFloat(getComputedStyle(artwork).maxHeight) || 0) : 0,
+              artworkWidthFillRatio: artwork && el.offsetWidth > 0 ? artwork.offsetWidth / el.offsetWidth : 0,
               visualCenterX: (() => {
                 const rect = el.getBoundingClientRect();
                 return rect.left + rect.width / 2 - itemsRect.left;
@@ -4718,8 +4718,8 @@ try {
             layout.trackCount !== expectedTracks || metrics.widthSpread > 2 ||
             metrics.dividerSpacingSpread > 2 || metrics.centeredArtworkCount < 1 ||
             metrics.maxArtworkCenterOffset > 2 || metrics.maxArtworkAspectRatioDelta > 0.06 ||
-            malformedRows) {
-          throw new Error('Horizontal Stack must use a wrapping flex row with equal-width items and aligned rows (' + context + '): ' +
+            malformedRows || Math.abs(layout.columnGap - 6) > 0.5) {
+          throw new Error('Horizontal Stack must use a wrapping flex row with equal-width items, aligned rows, and a 6px gap (' + context + '): ' +
             JSON.stringify({ metrics, expectedTracks, layout }));
         }
         return metrics;
@@ -4804,11 +4804,12 @@ try {
                 JSON.stringify({ mode, viewport, expectedTrackCount, layout }));
             }
             if (mode === 'grid' || mode === 'stack') {
-              const expectedMaxHeight = viewport.height <= 600 ? 324 : 480;
-              const actualMaxHeights = layout.children.map(child => child.artworkMaxHeight).filter(height => height > 0);
-              if (!actualMaxHeights.length || actualMaxHeights.some(height => Math.abs(height - expectedMaxHeight) > 2)) {
-                throw new Error('Grid and Horizontal Stack must use the 1.5x expanded artwork height envelope: ' +
-                  JSON.stringify({ mode, viewport, expectedMaxHeight, actualMaxHeights, layout }));
+              const widthFillRatios = layout.children.map(child => child.artworkWidthFillRatio);
+              if (!widthFillRatios.length || widthFillRatios.some(ratio =>
+                !Number.isFinite(ratio) || ratio < 0.98 || ratio > 1.02
+              )) {
+                throw new Error('Grid and Horizontal Stack artwork must fill the available width of each ready artwork tile without overflow: ' +
+                  JSON.stringify({ mode, viewport, widthFillRatios, layout }));
               }
             }
             if (mode === 'cards' || mode === 'sticker') {

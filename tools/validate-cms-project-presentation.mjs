@@ -476,6 +476,10 @@ assert.ok(
   lightboxCss.includes('grid-template-columns:repeat(4,minmax(0,1fr))') &&
   lightboxCss.includes('grid-template-columns:repeat(3,minmax(0,1fr))') &&
   lightboxCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
+  lightboxCss.includes('width:100%;max-width:100%;min-width:0;height:auto;max-height:none;') &&
+  lightboxCss.includes('--artwork-stack-gap:6px;') &&
+  lightboxCss.includes('flex:0 0 calc(33.333333% - 4px);') &&
+  lightboxCss.includes('flex-basis:calc(50% - 3px);') &&
   lightboxCss.includes('translate:var(--artwork-row-center-shift,0px) 0;') &&
   lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&
   lightboxCss.includes('--artwork-shared-width:min(calc(clamp(222px,33svh,294px) * var(--lightbox-artwork-ratio,1)),36vw,330px)') &&
