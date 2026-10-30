@@ -197,7 +197,8 @@ function makeExpansionFixture({
     }
   };
   let settledCalls = 0;
-  const fixtureCards = animateCollapse ? [card, card] : [card];
+  // Both transition directions require an overflowing result set so the button remains visible.
+  const fixtureCards = [card, card];
   const grid = {
     scrollHeight: 720,
     querySelectorAll() { return fixtureCards; },
