@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261029-10';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261031-01';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
