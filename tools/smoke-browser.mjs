@@ -4603,14 +4603,31 @@ try {
               } catch (_) {}
             }
             const itemStyle = getComputedStyle(el);
+            const itemTransform = itemStyle.transform;
+            const itemMatrix = itemTransform && itemTransform !== 'none'
+              ? (() => { try { const matrix = new DOMMatrixReadOnly(itemTransform); return {
+                  x:matrix.m41,y:matrix.m42,a:matrix.a,b:matrix.b,c:matrix.c,d:matrix.d
+                }; } catch (_) { return null; } })()
+              : null;
+            const itemRect = el.getBoundingClientRect();
             return {
               index,
               placeholder: el.classList.contains('lightbox-inspect-placeholder'),
               caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
+              className: el.className,
+              effectiveLayoutMarker: el.dataset.artworkEffectiveLayout || '',
+              stickerX: itemStyle.getPropertyValue('--artwork-sticker-x').trim(),
+              stickerY: itemStyle.getPropertyValue('--artwork-sticker-y').trim(),
+              stickerRotation: itemStyle.getPropertyValue('--artwork-effective-sticker-rotation').trim(),
+              cardOffsetX: itemStyle.getPropertyValue('--artwork-card-offset-x').trim(),
+              cardRotation: itemStyle.getPropertyValue('--artwork-card-rotation').trim(),
               gridColumnStart: itemStyle.gridColumnStart,
               rowCenterShift: el.style.getPropertyValue('--artwork-row-center-shift'),
               computedRowCenterShift: itemStyle.getPropertyValue('--artwork-row-center-shift'),
               computedTranslate: itemStyle.translate,
+              computedTransform: itemTransform,
+              transformMatrix: itemMatrix,
+              rect:{left:itemRect.left,right:itemRect.right,width:itemRect.width,centerX:itemRect.left+itemRect.width/2},
               left: el.offsetLeft,
               top: el.offsetTop,
               visualTop: (() => {
