@@ -1775,6 +1775,7 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('.lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
     artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
     artworkGroupCss.includes('border-radius:inherit!important;') &&
+    artworkGroupCss.includes('.lightbox-artwork .lightbox-holographic-face{\n  border-radius:var(--lm-shape-shared-lg)!important;') &&
     artworkGroupCss.includes('border-radius:0!important;') &&
     artworkGroupRuntime.includes("entry.classList.add('is-artwork-interactive');") &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&

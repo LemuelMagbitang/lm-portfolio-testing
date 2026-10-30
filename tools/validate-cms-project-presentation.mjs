@@ -491,6 +491,7 @@ assert.ok(
   lightboxCss.includes('.lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
   lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
   lightboxCss.includes('border-radius:inherit!important;') &&
+  lightboxCss.includes('.lightbox-artwork .lightbox-holographic-face{\n  border-radius:var(--lm-shape-shared-lg)!important;') &&
   lightboxCss.includes('border-radius:0!important;') &&
   renderer.includes("entry.classList.add('is-artwork-interactive');") &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&

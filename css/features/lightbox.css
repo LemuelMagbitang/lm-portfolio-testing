@@ -382,9 +382,11 @@
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{
   border-radius:var(--lm-shape-shared-lg)!important;
 }
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic),
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork .lightbox-holographic-face{
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
   border-radius:inherit!important;
+}
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork .lightbox-holographic-face{
+  border-radius:var(--lm-shape-shared-lg)!important;
 }
 
 /* Horizontal Card Stack — five cards across on desktop, four on tablet,
