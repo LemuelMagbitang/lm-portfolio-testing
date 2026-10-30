@@ -2824,7 +2824,16 @@ export function createLightboxMediaRenderer({
       documentRef.documentElement?.classList?.remove('lm-artwork-inspect-open');
       documentRef.body?.classList?.remove('lm-artwork-inspect-open');
       active.restoreLightboxScroll?.();
-      windowRef.requestAnimationFrame(()=>{active.restoreLightboxScroll?.();windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());});
+      // Keep anchoring disabled through the DOM restoration and both layout
+      // frames. Restore the caller's original inline setting only after the
+      // Lightbox has settled back at its captured scroll position.
+      windowRef.requestAnimationFrame(()=>{
+        active.restoreLightboxScroll?.();
+        windowRef.requestAnimationFrame(()=>{
+          active.restoreLightboxScroll?.();
+          active.restoreLightboxOverflowAnchor?.();
+        });
+      });
 
       // Keyboard closure returns focus to the originating group item. Avoid a
       // persistent card-sized ring at that handoff, but restore normal focus
@@ -2880,7 +2889,15 @@ export function createLightboxMediaRenderer({
     const currentIndex=groupEntries.indexOf(entry);
     const lightbox=container.closest?.('#lightbox')||documentRef.getElementById('lightbox');
     const lightboxScrollTop=Number(lightbox?.scrollTop)||0;
+    // Moving a grouped item into the body-level Inspect overlay changes the
+    // Lightbox subtree. Disable anchoring before the first DOM mutation so the
+    // browser cannot compensate for that move by shifting the Lightbox scroll.
+    const previousLightboxOverflowAnchor=lightbox?.style?.overflowAnchor??'';
+    if(lightbox)lightbox.style.overflowAnchor='none';
     const restoreLightboxScroll=()=>{if(lightbox&&lightbox.isConnected)lightbox.scrollTop=lightboxScrollTop;};
+    const restoreLightboxOverflowAnchor=()=>{
+      if(lightbox&&lightbox.isConnected)lightbox.style.overflowAnchor=previousLightboxOverflowAnchor;
+    };
     const foilHint=entry.querySelector('.lightbox-holographic-hint');
     let foilHintPlaceholder=null;
     if(foilHint?.parentNode){
@@ -3002,7 +3019,7 @@ export function createLightboxMediaRenderer({
     };
     overlay.addEventListener('click',onBackdropClick);
     overlay.addEventListener('keydown',onKeyDown);
-    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,overlay,frame,footer,description,back,previousButton,nextButton,groupItems,groupSection,groupEntries,currentIndex,lightbox,lightboxScrollTop,restoreLightboxScroll,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,onPreviousClick,onNextClick,onInspectPointerDown,onInspectPointerMove,onInspectPointerUp,onInspectPointerCancel,openAnimation:null,overlayAnimation:null,closeAnimation:null,navigationAnimation:null,edgeAnimation:null,isClosing:false};
+    const active={container,entry,placeholder,foilHint,foilHintPlaceholder,foilSurface,overlay,frame,footer,description,back,previousButton,nextButton,groupItems,groupSection,groupEntries,currentIndex,lightbox,lightboxScrollTop,restoreLightboxScroll,restoreLightboxOverflowAnchor,focusTarget:focusTarget||back,onBackdropClick,onKeyDown,onPreviousClick,onNextClick,onInspectPointerDown,onInspectPointerMove,onInspectPointerUp,onInspectPointerCancel,openAnimation:null,overlayAnimation:null,closeAnimation:null,navigationAnimation:null,edgeAnimation:null,isClosing:false};
     activeInspector=active;
     documentRef.documentElement?.classList?.add('lm-artwork-inspect-open');
     documentRef.body?.classList?.add('lm-artwork-inspect-open');
