@@ -235,6 +235,7 @@ export function applyGalleryReveal({
   desktopPeek = 70,
   animateTransition = false,
   animateExpand = false,
+  animateCollapse = false,
   transitionFromRects = null,
   renderToken = 0,
   isCurrentRender = () => true
@@ -249,38 +250,77 @@ export function applyGalleryReveal({
   const filterTransitionDuration = reducedMotion ? '0ms' : '360ms';
   let transitionStartFrame = null;
   let transitionFrame = null;
-  let expansionFrame = null;
-  let expansionFrameIsTimer = false;
-  let expansionTimer = null;
-  let expansionListener = null;
-  let expansionActive = false;
+  let viewportTransitionFallbackTimer = null;
+  let viewportTransitionListener = null;
+  let viewportTransitionActive = false;
+  let viewportTransitionCompletion = null;
 
-  const cancelExpansion = () => {
-    if (expansionFrame !== null) {
-      if (expansionFrameIsTimer) windowRef.clearTimeout(expansionFrame);
-      else windowRef.cancelAnimationFrame?.(expansionFrame);
-      expansionFrame = null;
+  const cancelViewportTransition = () => {
+    const wasActive = viewportTransitionActive;
+    const currentHeight = wasActive
+      ? Number(viewport.getBoundingClientRect?.().height) || 0
+      : 0;
+    if (viewportTransitionFallbackTimer !== null) {
+      windowRef.clearTimeout(viewportTransitionFallbackTimer);
+      viewportTransitionFallbackTimer = null;
     }
-    if (expansionTimer !== null) {
-      windowRef.clearTimeout(expansionTimer);
-      expansionTimer = null;
+    if (viewportTransitionListener) {
+      viewport.removeEventListener?.('transitionend', viewportTransitionListener);
+      viewportTransitionListener = null;
     }
-    if (expansionListener) {
-      viewport.removeEventListener?.('transitionend', expansionListener);
-      expansionListener = null;
+    // Preserve the in-flight visual height if a second activation reverses
+    // direction before the first transition finishes.
+    if (wasActive && currentHeight > 0) {
+      viewport.style.maxHeight = `${Math.ceil(currentHeight)}px`;
     }
-    expansionActive = false;
-    viewport.classList?.remove('is-expanding');
-    showMoreWrapper?.classList?.remove('is-expanding');
+    viewportTransitionActive = false;
+    viewportTransitionCompletion = null;
+    viewport.classList?.remove('is-expanding', 'is-collapsing');
+    showMoreWrapper?.classList?.remove('is-expanding', 'is-collapsing');
   };
 
-  const finishExpansion = () => {
-    if (!expansionActive) return;
-    cancelExpansion();
+  const finishViewportTransition = () => {
+    if (!viewportTransitionActive) return;
+    const complete = viewportTransitionCompletion;
+    cancelViewportTransition();
     if (!isCurrentRender(renderToken)) return;
-    // Release the explicit pixel ceiling after the measured full height is reached.
-    viewport.style.maxHeight = 'none';
-    fadeOverlay?.classList.add('is-hidden');
+    complete?.();
+  };
+
+  const startViewportTransition = ({ startHeight, targetHeight, direction, onComplete } = {}) => {
+    const fromHeight = Math.ceil(Number(startHeight) || 0);
+    const toHeight = Math.ceil(Number(targetHeight) || 0);
+    if (!(fromHeight > 0) || !(toHeight > 0) || Math.abs(fromHeight - toHeight) <= 1) return false;
+
+    // Freeze the current visual height before enabling the transition. This
+    // also makes a rapid direction change continue from the in-flight frame.
+    viewport.style.maxHeight = `${fromHeight}px`;
+    void viewport.getBoundingClientRect?.().height;
+
+    const transitionClass = direction === 'collapse' ? 'is-collapsing' : 'is-expanding';
+    viewportTransitionActive = true;
+    viewportTransitionCompletion = onComplete;
+    viewport.classList?.add(transitionClass);
+    showMoreWrapper?.classList?.add(transitionClass);
+
+    // Commit the transition-enabled starting styles before changing the target.
+    // CSS applies the same short 70ms handoff in both directions.
+    void windowRef.getComputedStyle?.(viewport)?.transitionDuration;
+    if (showMoreWrapper) {
+      void windowRef.getComputedStyle?.(showMoreWrapper)?.transitionDuration;
+    }
+
+    viewportTransitionListener = event => {
+      if (event?.target === viewport && event.propertyName === 'max-height') {
+        finishViewportTransition();
+      }
+    };
+    viewport.addEventListener?.('transitionend', viewportTransitionListener);
+    viewport.style.maxHeight = `${toHeight}px`;
+
+    // Backgrounded tabs can throttle transitions or omit transitionend.
+    viewportTransitionFallbackTimer = windowRef.setTimeout(finishViewportTransition, 900);
+    return true;
   };
 
   const startExpansion = () => {
@@ -292,36 +332,16 @@ export function applyGalleryReveal({
     );
     if (!(startHeight > 0) || !(gridHeight > startHeight + 1)) return false;
 
-    // Start from the current clipped height, then reveal the laid-out rows below it.
-    viewport.style.maxHeight = String(Math.ceil(startHeight)) + 'px';
-    void viewport.getBoundingClientRect?.().height;
-    expansionActive = true;
-    // Enable both transitions before the expanded classes and target height change.
-    viewport.classList?.add('is-expanding');
-    showMoreWrapper?.classList?.add('is-expanding');
-    expansionListener = event => {
-      if (event?.target === viewport && event.propertyName === 'max-height') finishExpansion();
-    };
-    viewport.addEventListener?.('transitionend', expansionListener);
-
-    const beginExpansion = () => {
-      expansionFrame = null;
-      expansionFrameIsTimer = false;
-      if (!isCurrentRender(renderToken)) {
-        cancelExpansion();
-        return;
+    return startViewportTransition({
+      startHeight,
+      targetHeight: gridHeight,
+      direction: 'expand',
+      onComplete: () => {
+        // Release the explicit pixel ceiling after the measured full height is reached.
+        viewport.style.maxHeight = 'none';
+        fadeOverlay?.classList.add('is-hidden');
       }
-      viewport.style.maxHeight = String(Math.ceil(gridHeight)) + 'px';
-    };
-    if (typeof windowRef.requestAnimationFrame === 'function') {
-      expansionFrame = windowRef.requestAnimationFrame(beginExpansion);
-    } else {
-      expansionFrameIsTimer = true;
-      expansionFrame = windowRef.setTimeout(beginExpansion, 0);
-    }
-    // Safety net if a backgrounded tab does not emit transitionend.
-    expansionTimer = windowRef.setTimeout(finishExpansion, 700);
-    return true;
+    });
   };
 
   hiddenCards.forEach(card => {
@@ -336,15 +356,15 @@ export function applyGalleryReveal({
     }
   });
 
-  const measureCollapsedHeight = () => {
-    if (!isCurrentRender(renderToken) || expanded) return;
-    if (filteredCards.length <= visibleCount || visibleCount <= 0) return;
+  const getCollapsedHeight = () => {
+    if (!isCurrentRender(renderToken) || expanded) return null;
+    if (filteredCards.length <= visibleCount || visibleCount <= 0) return null;
 
     const viewportRect = viewport.getBoundingClientRect();
     const gridRect = typeof grid?.getBoundingClientRect === 'function'
       ? grid.getBoundingClientRect()
       : viewportRect;
-    if (!Number.isFinite(viewportRect.top) || !Number.isFinite(gridRect.top)) return;
+    if (!Number.isFinite(viewportRect.top) || !Number.isFinite(gridRect.top)) return null;
 
     // Collapse geometry must use layout metrics, not transformed visual
     // bounds. Filter transitions translate cards visually, but that transform
@@ -364,15 +384,46 @@ export function applyGalleryReveal({
       return Number.isFinite(bottom) ? Math.max(maxBottom, bottom) : maxBottom;
     }, Number.NEGATIVE_INFINITY);
 
-    if (!Number.isFinite(furthestBottom)) return;
+    if (!Number.isFinite(furthestBottom)) return null;
 
     // Clip the dedicated viewport, never the grid itself. The grid keeps its
     // natural height, so lazy media/layout changes cannot rewrite the
     // gallery's interaction state while the visitor is scrolling.
     const peek = windowRef.innerWidth < 768 ? mobilePeek : desktopPeek;
     const height = Math.max(1, furthestBottom - viewportRect.top + peek);
-    viewport.style.maxHeight = `${Math.round(height)}px`;
+    return Math.round(height);
+  };
+
+  const measureCollapsedHeight = () => {
+    const height = getCollapsedHeight();
+    if (!Number.isFinite(height)) return false;
+    viewport.style.maxHeight = `${height}px`;
     fadeOverlay?.classList.remove('is-hidden');
+    return true;
+  };
+
+  const startCollapse = () => {
+    if (!animateCollapse || expanded || reducedMotion) return false;
+    const targetHeight = getCollapsedHeight();
+    if (!Number.isFinite(targetHeight)) return false;
+
+    const startHeight = Number(viewport.getBoundingClientRect?.().height) || 0;
+    if (!(startHeight > targetHeight + 1)) {
+      viewport.style.maxHeight = `${targetHeight}px`;
+      fadeOverlay?.classList.remove('is-hidden');
+      return false;
+    }
+
+    fadeOverlay?.classList.remove('is-hidden');
+    return startViewportTransition({
+      startHeight,
+      targetHeight,
+      direction: 'collapse',
+      onComplete: () => {
+        viewport.style.maxHeight = `${targetHeight}px`;
+        fadeOverlay?.classList.remove('is-hidden');
+      }
+    });
   };
 
   // Project-card geometry is presentation-locked by the CSS card contract
@@ -442,13 +493,15 @@ export function applyGalleryReveal({
     settleFilterLayout();
 
     if (!expanded && filteredCards.length > visibleCount && visibleCount > 0) {
-      measureCollapsedHeight();
-      windowRef.requestAnimationFrame(() => {
-        if (!isCurrentRender(renderToken)) return;
+      if (!viewportTransitionActive) {
         measureCollapsedHeight();
-      });
+        windowRef.requestAnimationFrame(() => {
+          if (!isCurrentRender(renderToken) || viewportTransitionActive) return;
+          measureCollapsedHeight();
+        });
+      }
     } else if (expanded || filteredCards.length <= visibleCount || visibleCount <= 0) {
-      if (!expansionActive) {
+      if (!viewportTransitionActive) {
         viewport.style.maxHeight = 'none';
         fadeOverlay?.classList.add('is-hidden');
       }
@@ -486,11 +539,14 @@ export function applyGalleryReveal({
   });
 
   if (!animateTransition && !expanded && filteredCards.length > visibleCount && visibleCount > 0) {
-    // Non-transition renders can measure immediately because no outgoing result
-    // is occupying the grid. Filter transitions defer measurement until their
-    // outgoing cards have left layout.
-    measureCollapsedHeight();
-    windowRef.requestAnimationFrame(measureCollapsedHeight);
+    // Direct Show Less activations animate from the current viewport height.
+    // Other renders keep the existing immediate measurement behavior.
+    if (!startCollapse()) {
+      measureCollapsedHeight();
+      windowRef.requestAnimationFrame(() => {
+        if (isCurrentRender(renderToken) && !viewportTransitionActive) measureCollapsedHeight();
+      });
+    }
   } else if (!animateTransition && (expanded || filteredCards.length <= visibleCount || visibleCount <= 0)) {
     if (!startExpansion()) {
       viewport.style.maxHeight = 'none';
@@ -525,7 +581,7 @@ export function applyGalleryReveal({
 
   const cleanup = () => {
     windowRef.clearTimeout(hideTimer);
-    cancelExpansion();
+    cancelViewportTransition();
     cleanupTransition();
     cleanupViewportReveal();
   };

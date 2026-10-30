@@ -634,7 +634,7 @@ export async function initGallery(options = {}) {
     return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
-  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false } = {}) {
+  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false, animateCollapse = false } = {}) {
     // A pending Show Less follow-scroll belongs to the layout that existed
     // when the button was collapsed. If a filter/resize/pageshow render starts
     // first, that old timer must not scroll the visitor into the new layout.
@@ -667,6 +667,7 @@ export async function initGallery(options = {}) {
       expanded: isExpanded,
       animateTransition,
       animateExpand,
+      animateCollapse,
       transitionFromRects,
       windowRef,
       fadeMs,
@@ -916,7 +917,10 @@ export async function initGallery(options = {}) {
     const shouldFollowCollapsedControl = !nextExpanded;
 
     isExpanded = nextExpanded;
-    render({ animateExpand: nextExpanded && isDirectActivation });
+    render({
+      animateExpand: nextExpanded && isDirectActivation,
+      animateCollapse: !nextExpanded && isDirectActivation
+    });
 
     // Keep the button's semantic state synchronized immediately. The visual
     // reveal may animate, but its state must never depend on a later scroll,

@@ -933,8 +933,9 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   overflow-anchor: none;
   transition: none;
 }
-.portfolio-grid-viewport.is-expanding {
-  transition: max-height 560ms cubic-bezier(.22,1,.36,1);
+.portfolio-grid-viewport.is-expanding,
+.portfolio-grid-viewport.is-collapsing {
+  transition: max-height 560ms cubic-bezier(.4,0,.2,1) 70ms;
 }
 
 .seamless-grid {
@@ -2697,11 +2698,12 @@ body.center-page {
   min-height: 0;
   padding-bottom: 32px;
 }
-.show-more-wrapper.is-expanding {
+.show-more-wrapper.is-expanding,
+.show-more-wrapper.is-collapsing {
   transition:
-    margin-top 560ms cubic-bezier(.22,1,.36,1),
-    min-height 560ms cubic-bezier(.22,1,.36,1),
-    padding-bottom 560ms cubic-bezier(.22,1,.36,1);
+    margin-top 560ms cubic-bezier(.4,0,.2,1) 70ms,
+    min-height 560ms cubic-bezier(.4,0,.2,1) 70ms,
+    padding-bottom 560ms cubic-bezier(.4,0,.2,1) 70ms;
 }
 .btn-show-more {
   display: inline-flex;
@@ -5054,12 +5056,12 @@ footer > .footer-content p{
   min-width:148px;
   max-width:148px;
   transition:
-    background-color .28s ease,
-    color .28s ease,
-    border-color .28s ease,
-    box-shadow .28s ease,
-    backdrop-filter .28s ease,
-    -webkit-backdrop-filter .28s ease !important;
+    background-color 360ms cubic-bezier(.4,0,.2,1),
+    color 360ms cubic-bezier(.4,0,.2,1),
+    border-color 360ms cubic-bezier(.4,0,.2,1),
+    box-shadow 360ms cubic-bezier(.4,0,.2,1),
+    backdrop-filter 360ms cubic-bezier(.4,0,.2,1),
+    -webkit-backdrop-filter 360ms cubic-bezier(.4,0,.2,1) !important;
 }
 .btn-show-more:not(.expanded){
   background:rgba(255,255,255,.08) !important;
@@ -6593,7 +6595,9 @@ body.menu-open .hamburger-icon span {
 @media(prefers-reduced-motion:reduce){
   .btn-show-more.is-interacting{animation:none!important;}
   .portfolio-grid-viewport.is-expanding,
-  .show-more-wrapper.is-expanding{transition:none!important;}
+  .portfolio-grid-viewport.is-collapsing,
+  .show-more-wrapper.is-expanding,
+  .show-more-wrapper.is-collapsing{transition:none!important;}
 }
 
 

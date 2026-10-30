@@ -3843,7 +3843,9 @@ try {
         const firstExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
           height: el.getBoundingClientRect().height,
           maxHeight: getComputedStyle(el).maxHeight,
-          transitionDuration: getComputedStyle(el).transitionDuration
+          transitionDuration: getComputedStyle(el).transitionDuration,
+          transitionDelay: getComputedStyle(el).transitionDelay,
+          transitionTimingFunction: getComputedStyle(el).transitionTimingFunction
         }));
         await page.waitForTimeout(150);
         const secondExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
@@ -3851,7 +3853,9 @@ try {
           maxHeight: getComputedStyle(el).maxHeight
         }));
         if (!(secondExpansionFrame.height > firstExpansionFrame.height + 4) ||
-            !firstExpansionFrame.transitionDuration.includes('0.56s')) {
+            !firstExpansionFrame.transitionDuration.includes('0.56s') ||
+            !firstExpansionFrame.transitionDelay.includes('0.07s') ||
+            !firstExpansionFrame.transitionTimingFunction.includes('cubic-bezier(0.4, 0, 0.2, 1)')) {
           throw new Error('Show More content must expand progressively through the measured viewport height: ' +
             JSON.stringify({ firstExpansionFrame, secondExpansionFrame }));
         }
@@ -3880,11 +3884,36 @@ try {
         await button.focus();
         await page.keyboard.press('Enter');
         await page.waitForFunction(() => {
-          const el = document.querySelector('#showMoreBtn');
-          return el?.getAttribute('aria-expanded') === 'false' &&
-            el.classList.contains('is-interacting') &&
-            getComputedStyle(el).animationName === 'show-more-interaction-bounce';
+          const button = document.querySelector('#showMoreBtn');
+          const viewport = document.querySelector('#portfolioGridViewport');
+          return button?.getAttribute('aria-expanded') === 'false' &&
+            button.classList.contains('is-interacting') &&
+            getComputedStyle(button).animationName === 'show-more-interaction-bounce' &&
+            viewport?.classList.contains('is-collapsing');
         }, null, { timeout: 1500 });
+
+        const firstCollapseFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          height: el.getBoundingClientRect().height,
+          transitionDuration: getComputedStyle(el).transitionDuration,
+          transitionDelay: getComputedStyle(el).transitionDelay,
+          transitionTimingFunction: getComputedStyle(el).transitionTimingFunction
+        }));
+        await page.waitForTimeout(150);
+        const secondCollapseFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          height: el.getBoundingClientRect().height
+        }));
+        if (!(firstCollapseFrame.height > secondCollapseFrame.height + 4) ||
+            !firstCollapseFrame.transitionDuration.includes('0.56s') ||
+            !firstCollapseFrame.transitionDelay.includes('0.07s') ||
+            !firstCollapseFrame.transitionTimingFunction.includes('cubic-bezier(0.4, 0, 0.2, 1)')) {
+          throw new Error('Show Less content must collapse progressively with the shared ease-in/ease-out transition: ' +
+            JSON.stringify({ firstCollapseFrame, secondCollapseFrame }));
+        }
+        await page.waitForFunction(() => {
+          const viewport = document.querySelector('#portfolioGridViewport');
+          return !viewport?.classList.contains('is-collapsing') &&
+            getComputedStyle(viewport).maxHeight !== 'none';
+        }, null, { timeout: 1800 });
 
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.waitForTimeout(480);
