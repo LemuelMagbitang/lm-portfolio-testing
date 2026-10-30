@@ -482,14 +482,17 @@ assert.ok(
   lightboxCss.includes('width:100%;max-width:100%;min-width:0;height:auto;max-height:none;') &&
   lightboxCss.includes('padding:0;') &&
   !lightboxCss.includes('width:125%;max-width:none;min-width:0;margin-inline:-12.5%;') &&
-  lightboxCss.includes('--artwork-grid-gap:6px;') &&
-  lightboxCss.includes('--artwork-grid-gap-half:3px;') &&
-  lightboxCss.includes('--artwork-stack-gap:6px;') &&
-  lightboxCss.includes('gap:var(--artwork-grid-gap);\n  padding:0;') &&
-  lightboxCss.includes('gap:var(--artwork-stack-gap);\n  padding:0;') &&
-  lightboxCss.includes('flex:0 0 calc((100% - 12px) / 3);') &&
-  lightboxCss.includes('flex-basis:calc((100% - 6px) / 2);') &&
+  !lightboxCss.includes('--artwork-grid-gap:6px;') &&
+  !lightboxCss.includes('--artwork-grid-gap-half:3px;') &&
+  !lightboxCss.includes('--artwork-stack-gap:6px;') &&
+  lightboxCss.includes('gap:0;\n  padding:0;') &&
+  lightboxCss.includes('flex:0 0 calc(100% / 3);') &&
+  lightboxCss.includes('flex-basis:50%;') &&
+  lightboxCss.includes('.lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
+  lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+  lightboxCss.includes('border-radius:inherit!important;') &&
   lightboxCss.includes('border-radius:0!important;') &&
+  renderer.includes("entry.classList.add('is-artwork-interactive');") &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
@@ -520,7 +523,7 @@ assert.ok(
   renderer.includes('selectGroupedArtworkEntry(entry, section)') &&
   admin.includes('<option value="cards">Horizontal Card Stack</option>') &&
   admin.includes('<option value="sticker">Sticker Card Layout</option>'),
-  'Grid/Stack must use 100% sizing, 6px spacing and square edges; Card Stack and Sticker layouts retain their existing responsive sizing, collage and focus behavior.');
+  'Grid/Stack must use 100% sizing and zero spacing with shared rounded interactive artwork; Card Stack and Sticker layouts retain their existing responsive sizing, collage and focus behavior.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
   'Grouped artwork presentation must not use horizontal gallery scrolling.');

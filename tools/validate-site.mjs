@@ -1766,14 +1766,17 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('aspect-ratio:var(--lightbox-artwork-ratio,auto);') &&
     artworkGroupCss.includes('padding:0;') &&
     !artworkGroupCss.includes('width:125%;max-width:none;min-width:0;margin-inline:-12.5%;') &&
-    artworkGroupCss.includes('--artwork-grid-gap:6px;') &&
-    artworkGroupCss.includes('--artwork-grid-gap-half:3px;') &&
-    artworkGroupCss.includes('--artwork-stack-gap:6px;') &&
-    artworkGroupCss.includes('gap:var(--artwork-grid-gap);\n  padding:0;') &&
-    artworkGroupCss.includes('gap:var(--artwork-stack-gap);\n  padding:0;') &&
-    artworkGroupCss.includes('flex:0 0 calc((100% - 12px) / 3);') &&
-    artworkGroupCss.includes('flex-basis:calc((100% - 6px) / 2);') &&
+    !artworkGroupCss.includes('--artwork-grid-gap:6px;') &&
+    !artworkGroupCss.includes('--artwork-grid-gap-half:3px;') &&
+    !artworkGroupCss.includes('--artwork-stack-gap:6px;') &&
+    artworkGroupCss.includes('gap:0;\n  padding:0;') &&
+    artworkGroupCss.includes('flex:0 0 calc(100% / 3);') &&
+    artworkGroupCss.includes('flex-basis:50%;') &&
+    artworkGroupCss.includes('.lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
+    artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+    artworkGroupCss.includes('border-radius:inherit!important;') &&
     artworkGroupCss.includes('border-radius:0!important;') &&
+    artworkGroupRuntime.includes("entry.classList.add('is-artwork-interactive');") &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
@@ -1786,7 +1789,7 @@ function validateResponsiveUiContracts() {
     artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)') &&
     artworkGroupNormalizer.includes('gridColumns:normalizeArtworkGridColumns(group.gridColumns)');
   if (!independentGridStackContract) {
-    err('Artwork groups: Grid/Tiling and Horizontal Stack must use the default 100% footprint, 6px gaps, square artwork edges, and responsive overflow-free rows.');
+    err('Artwork groups: Grid/Tiling and Horizontal Stack must use the default 100% footprint, zero gaps, shared rounded interactive artwork, and responsive overflow-free rows.');
   }
 
   const groupedInspectorNavigationContract =

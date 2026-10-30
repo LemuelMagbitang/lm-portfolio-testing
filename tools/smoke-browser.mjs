@@ -4558,6 +4558,7 @@ try {
         const groupRect = group?.getBoundingClientRect();
         const itemsRect = items.getBoundingClientRect();
         const itemsStyle = getComputedStyle(items);
+        const sharedArtworkRadius = Number.parseFloat(itemsStyle.getPropertyValue('--lm-shape-shared-lg'));
         const parent = group?.parentElement || null;
         const parentRect = parent?.getBoundingClientRect();
         const parentStyle = parent ? getComputedStyle(parent) : null;
@@ -4595,6 +4596,7 @@ try {
               })(),
           columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
           rowGap: Number.parseFloat(itemsStyle.rowGap) || 0,
+          sharedArtworkRadius,
           layoutWidthScaleRatio: groupRect && parentContentWidth > 0 ? groupRect.width / parentContentWidth : 0,
           layoutCenterOffset: groupRect && parentRect
             ? (groupRect.left + groupRect.width / 2) - (parentRect.left + parentRect.width / 2)
@@ -4617,6 +4619,8 @@ try {
             const itemStyle = getComputedStyle(el);
             return {
               index,
+              interactive:el.classList.contains('is-grouped-artwork-interactive') &&
+                el.classList.contains('is-artwork-interactive'),
               placeholder: el.classList.contains('lightbox-inspect-placeholder'),
               caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
               gridColumnStart: itemStyle.gridColumnStart,
@@ -4881,13 +4885,15 @@ try {
                   layout.groupWidth > layout.parentContentWidth + 2 ||
                   layout.itemsWidth > layout.groupWidth + 2 ||
                   Object.values(layout.itemsPadding).some(value => Math.abs(value) > 0.5) ||
-                  Math.abs(layout.columnGap - 6) > 0.5 ||
-                  Math.abs(layout.rowGap - 6) > 0.5 ||
+                  Math.abs(layout.columnGap) > 0.5 ||
+                  Math.abs(layout.rowGap) > 0.5 ||
+                  !Number.isFinite(layout.sharedArtworkRadius) || layout.sharedArtworkRadius <= 0 ||
                   hasHorizontalOverflow ||
-                  cornerRadii.some(radius => !Number.isFinite(radius.artwork) || Math.abs(radius.artwork) > 0.5 ||
-                    !Number.isFinite(radius.media) || Math.abs(radius.media) > 0.5 ||
+                  cornerRadii.some(radius => !radius.interactive ||
+                    !Number.isFinite(radius.artwork) || Math.abs(radius.artwork - layout.sharedArtworkRadius) > 0.5 ||
+                    !Number.isFinite(radius.media) || Math.abs(radius.media - layout.sharedArtworkRadius) > 0.5 ||
                     !Number.isFinite(radius.padding) || radius.padding > 0.5)) {
-                throw new Error('Grid and Horizontal Stack must retain default 100% sizing, 6px gaps, square artwork edges, and overflow-free tiles: ' +
+                throw new Error('Grid and Horizontal Stack must retain default 100% sizing, zero gaps, shared rounded interactive artwork, and overflow-free tiles: ' +
                   JSON.stringify({ mode, viewport, layoutWidthScaleRatio:layout.layoutWidthScaleRatio,
                     layoutCenterOffset:layout.layoutCenterOffset, columnGap:layout.columnGap, rowGap:layout.rowGap,
                     hasHorizontalOverflow, cornerRadii, layout }));

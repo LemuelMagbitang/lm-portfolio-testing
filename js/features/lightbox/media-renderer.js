@@ -2766,6 +2766,7 @@ export function createLightboxMediaRenderer({
 
   function bindGroupedArtworkInteractions(container, entry, project, section) {
     entry.classList.add('is-grouped-artwork-interactive');
+    entry.classList.add('is-artwork-interactive');
     entry.tabIndex=0;
     const label=String(entry.querySelector('img')?.alt||entry.querySelector('iframe')?.title||entry.querySelector('.media-caption')?.textContent||project.title||'Artwork');
     entry.setAttribute('aria-label',label+'. Activate to view artwork details.');
