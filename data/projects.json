@@ -529,7 +529,11 @@
           "intensity": 0.7,
           "textureMode": "fill",
           "glitterLayer": false,
-          "grainLayer": true
+          "grainLayer": true,
+          "backTextureMode": "fill",
+          "back": "assets/projects/funko-pop-sticker/miles-morales-back-1.webp",
+          "backFoilEnabled": false,
+          "backIntensity": 0.7
         }
       },
       {
