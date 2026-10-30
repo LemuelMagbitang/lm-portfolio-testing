@@ -143,7 +143,7 @@ function makeExpansionFixture({
     offsetHeight: 180,
     classList: {
       add(name) { classes.add(name); },
-      remove(name) { classes.delete(name); },
+      remove(...names) { names.forEach(name => classes.delete(name)); },
       contains(name) { return classes.has(name); }
     },
     getBoundingClientRect() { return { top: 0, left: 0, width: 500, height: viewportHeight }; },
