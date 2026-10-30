@@ -1407,10 +1407,16 @@ textarea { resize: vertical; }
   transform:translateY(12px) scale(.992);
   filter:blur(3px);
   transition:opacity 300ms var(--lm-motion-ease),transform 300ms cubic-bezier(.22,1,.36,1),filter 300ms cubic-bezier(.22,1,.36,1);
-  will-change:opacity,transform,filter;
   transform-origin:center center;
 }
-.lightbox-modal.active .modal-interior{opacity:1;transform:translateY(0) scale(1);filter:blur(0);}
+.lightbox-modal.active .modal-interior{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  filter:blur(0);
+  /* Only promote the animated interior while the Lightbox is open. Keeping
+     will-change on the hidden modal reserves a compositor layer for no benefit. */
+  will-change:opacity,transform,filter;
+}
 
 .modal-header, .modal-full-desc {
   text-align: center;
