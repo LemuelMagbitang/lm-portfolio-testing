@@ -4873,6 +4873,7 @@ try {
                   JSON.stringify({ mode, viewport, widthFillRatios, layout }));
               }
               const cornerRadii = layout.children.map(child => ({
+                interactive:child.interactive,
                 artwork: Number.parseFloat(child.artworkCornerRadius),
                 media: Number.parseFloat(child.roundedSurfaceRadius),
                 padding: Number.parseFloat(child.artworkPadding)
