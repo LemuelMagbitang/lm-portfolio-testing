@@ -4558,6 +4558,7 @@ try {
         const groupRect = group?.getBoundingClientRect();
         const itemsRect = items.getBoundingClientRect();
         const itemsStyle = getComputedStyle(items);
+        const sharedArtworkRadius = Number.parseFloat(itemsStyle.getPropertyValue('--lm-shape-shared-lg'));
         const parent = group?.parentElement || null;
         const parentRect = parent?.getBoundingClientRect();
         const parentStyle = parent ? getComputedStyle(parent) : null;
@@ -4595,6 +4596,7 @@ try {
               })(),
           columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
           rowGap: Number.parseFloat(itemsStyle.rowGap) || 0,
+          sharedArtworkRadius,
           layoutWidthScaleRatio: groupRect && parentContentWidth > 0 ? groupRect.width / parentContentWidth : 0,
           layoutCenterOffset: groupRect && parentRect
             ? (groupRect.left + groupRect.width / 2) - (parentRect.left + parentRect.width / 2)
@@ -4921,6 +4923,18 @@ try {
               }
             }
             if (mode === 'cards' || mode === 'sticker') {
+              const cornerRadii = layout.children.map(child => ({
+                artwork:Number.parseFloat(child.artworkCornerRadius),
+                media:Number.parseFloat(child.roundedSurfaceRadius)
+              }));
+              if (!Number.isFinite(layout.sharedArtworkRadius) || layout.sharedArtworkRadius <= 0 ||
+                  !cornerRadii.length || cornerRadii.some(radius =>
+                    !Number.isFinite(radius.artwork) || Math.abs(radius.artwork - layout.sharedArtworkRadius) > 0.5 ||
+                    !Number.isFinite(radius.media) || Math.abs(radius.media - layout.sharedArtworkRadius) > 0.5
+                  )) {
+                throw new Error('Horizontal Card Stack and Sticker must retain their original grouped shared-radius treatment: ' +
+                  JSON.stringify({ mode, viewport, sharedArtworkRadius:layout.sharedArtworkRadius, cornerRadii }));
+              }
               const lastRowTop = Math.max(...layout.children.map(child => child.top));
               const lastRow = layout.children.filter(child => Math.abs(child.top - lastRowTop) < 2);
               if (layout.children.length > expectedTrackCount && lastRow.length) {

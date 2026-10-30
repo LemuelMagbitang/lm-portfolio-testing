@@ -488,14 +488,18 @@ assert.ok(
   lightboxCss.includes('gap:0;\n  padding:0;') &&
   lightboxCss.includes('flex:0 0 calc(100% / 3);') &&
   lightboxCss.includes('flex-basis:50%;') &&
-  lightboxCss.includes('#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork,') &&
-  lightboxCss.includes('border-radius:0!important;') &&
-  !lightboxCss.includes('.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
-  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{') &&
-  lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
-  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork > :is(') &&
-  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork .lightbox-holographic-face{') &&
-  lightboxCss.includes('border-radius:inherit!important;') &&
+  lightboxCss.includes('.is-grouped-artwork-interactive:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&
+    lightboxCss.includes('border-radius:0!important;') &&
+    lightboxCss.includes('.is-grouped-artwork-interactive.is-artwork-interactive:is([data-artwork-effective-layout="cards"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork{') &&
+    lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+    lightboxCss.includes('.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){') &&
+    lightboxCss.includes('border-radius:12px;') &&
+    lightboxCss.includes('.lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-media-item.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){') &&
+    lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&
+    lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
+    !lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{') &&
+    lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork .lightbox-holographic-face,') &&
+    lightboxCss.includes('border-radius:inherit!important;') &&
   renderer.includes("entry.classList.add('is-artwork-interactive');") &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&

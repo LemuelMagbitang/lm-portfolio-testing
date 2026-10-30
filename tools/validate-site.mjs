@@ -1772,13 +1772,17 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('gap:0;\n  padding:0;') &&
     artworkGroupCss.includes('flex:0 0 calc(100% / 3);') &&
     artworkGroupCss.includes('flex-basis:50%;') &&
-    artworkGroupCss.includes('#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork,') &&
+    artworkGroupCss.includes('.is-grouped-artwork-interactive:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&
     artworkGroupCss.includes('border-radius:0!important;') &&
-    !artworkGroupCss.includes('.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
-    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{') &&
+    artworkGroupCss.includes('.is-grouped-artwork-interactive.is-artwork-interactive:is([data-artwork-effective-layout="cards"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork{') &&
     artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
-    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork > :is(') &&
-    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork .lightbox-holographic-face{') &&
+    artworkGroupCss.includes('.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){') &&
+    artworkGroupCss.includes('border-radius:12px;') &&
+    artworkGroupCss.includes('.lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-media-item.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
+    !artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork .lightbox-holographic-face,') &&
     artworkGroupCss.includes('border-radius:inherit!important;') &&
     artworkGroupRuntime.includes("entry.classList.add('is-artwork-interactive');") &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
@@ -1793,7 +1797,7 @@ function validateResponsiveUiContracts() {
     artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)') &&
     artworkGroupNormalizer.includes('gridColumns:normalizeArtworkGridColumns(group.gridColumns)');
   if (!independentGridStackContract) {
-    err('Artwork groups: Grid/Tiling and Horizontal Stack must use the default 100% footprint, zero gaps, square grouped corners, and rounded solo Inspect artwork.');
+    err('Artwork groups: Grid/Stack alone use square grouped corners and rounded solo Inspect; Card Stack and Sticker preserve their original radius behavior.');
   }
 
   const groupedInspectorNavigationContract =

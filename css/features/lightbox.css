@@ -363,13 +363,23 @@
   }
 }
 
-/* Grouped artwork keeps plain, square corners in the visible Lightbox layout.
-   The selected item is moved into the body-level Inspect overlay before the
-   solo-view radius is applied, so Grid/Stack/Card/Sticker tiles remain flush. */
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork,
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic),
-#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork .lightbox-holographic-face{
+/* Grid/Tiling and Horizontal Stack use straight corners in the visible group.
+   The individual artwork receives its rounded treatment only after entering Inspect. */
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic),
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork .lightbox-holographic-face{
   border-radius:0!important;
+}
+
+/* Horizontal Card Stack and Sticker retain their original grouped radius. */
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive:is([data-artwork-effective-layout="cards"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork{
+  border-radius:var(--lm-shape-shared-lg)!important;
+}
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive:is([data-artwork-effective-layout="cards"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
+  border-radius:inherit!important;
+}
+#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive:is([data-artwork-effective-layout="cards"],[data-artwork-effective-layout="sticker"]) .lightbox-artwork .lightbox-holographic-face{
+  border-radius:var(--lm-shape-shared-lg)!important;
 }
 
 /* Horizontal Card Stack — five cards across on desktop, four on tablet,
@@ -506,7 +516,10 @@
   filter:drop-shadow(0 12px 16px rgba(0,0,0,.38));
 }
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){
-  outline:2px solid rgba(255,255,255,.9);outline-offset:2px;border-radius:0;
+  outline:2px solid rgba(255,255,255,.9);outline-offset:2px;border-radius:12px;
+}
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-media-item.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){
+  border-radius:0;
 }
 @media (hover:hover) and (pointer:fine){
   #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:hover,
@@ -666,16 +679,20 @@
   object-fit:contain;
   object-position:center;
 }
-/* Solo Inspect presents one artwork at a time, regardless of its source group
-   layout. Put the shared corner treatment here rather than on the visible tiles. */
-.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{
+/* Solo Inspect rounds Grid/Tiling and Horizontal Stack artwork only.
+   Standalone artwork retains its pre-existing rounded Inspect treatment.
+   Card Stack and Sticker are intentionally excluded from these new rules. */
+.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,
+.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{
   border-radius:var(--lm-shape-shared-lg)!important;
   overflow:hidden;
 }
-.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
+.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic),
+.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
   border-radius:inherit!important;
 }
-.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork .lightbox-holographic-face{
+.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork .lightbox-holographic-face,
+.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork .lightbox-holographic-face{
   border-radius:var(--lm-shape-shared-lg)!important;
 }
 /* Keep the existing full-bounds treatment for Grid/Stack and standalone media.
