@@ -3846,7 +3846,8 @@ try {
         }, null, { timeout: 1500 });
 
         // A second activation during expansion must not reverse the in-flight transition.
-        await button.click();
+        // Use a synchronous DOM activation here: Playwright's pointer click waits for the moving button to settle.
+        await button.evaluate(el => el.click());
         const expansionButtonDuringMotion = await button.evaluate(el => ({
           expanded: el.getAttribute('aria-expanded'),
           disabled: el.getAttribute('aria-disabled'),
