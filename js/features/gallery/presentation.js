@@ -383,7 +383,7 @@ export function applyGalleryReveal({
       card.style.transitionDuration = filterTransitionDuration;
       card.style.transitionDelay = '0ms';
       card.style.transform = 'translate3d(0, 5px, 0)';
-      card.style.filter = 'blur(5px)';
+      card.style.filter = 'blur(3px)';
       card.style.willChange = reducedMotion ? '' : 'opacity, transform, filter';
     }
   });
@@ -551,7 +551,7 @@ export function applyGalleryReveal({
       card.style.willChange = reducedMotion ? '' : 'opacity, transform, filter';
       card.style.opacity = '0.18';
       card.style.transform = 'translate3d(0, 8px, 0)';
-      card.style.filter = 'blur(5px)';
+      card.style.filter = 'blur(3px)';
     } else {
       setGalleryEntryDelay(card);
       card.style.willChange = '';
