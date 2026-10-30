@@ -164,7 +164,7 @@ function makeExpansionFixture({
   const wrapperClasses = new Set();
   const showMoreWrapper = { classList: {
     add(name) { wrapperClasses.add(name); },
-    remove(name) { wrapperClasses.delete(name); },
+    remove(...names) { names.forEach(name => wrapperClasses.delete(name)); },
     contains(name) { return wrapperClasses.has(name); }
   } };
   const fixtureCards = animateCollapse ? [card, card] : [card];
@@ -307,7 +307,7 @@ function makeGalleryRevealCard({ left = 0, top = 900, width = 100, height = 100 
     },
     classList: {
       add(name) { classes.add(name); },
-      remove(name) { classes.delete(name); },
+      remove(...names) { names.forEach(name => classes.delete(name)); },
       contains(name) { return classes.has(name); }
     },
     getBoundingClientRect() { return { left, top, width, height, right: left + width, bottom: top + height }; },
