@@ -6976,7 +6976,14 @@ try {
       const showMore = page.locator('#showMoreBtn').first();
       if (await showMore.isVisible().catch(() => false)) {
         await showMore.click();
-        await page.waitForTimeout(450);
+        await page.waitForFunction(() => {
+          const button = document.querySelector('#showMoreBtn');
+          const viewport = document.querySelector('#portfolioGridViewport');
+          return button?.getAttribute('aria-expanded') === 'true' &&
+            viewport &&
+            getComputedStyle(viewport).maxHeight === 'none' &&
+            !viewport.classList.contains('is-expanding');
+        }, null, { timeout: 2200 });
       }
 
       const modelCard = page.locator('#portfolioGrid .project-card[data-project-id="test-project"]').first();
@@ -11869,11 +11876,14 @@ try {
             await showMore.isVisible().catch(() => false) &&
             (await showMore.getAttribute('aria-expanded')) !== 'true') {
           await showMore.click();
-          await page.waitForFunction(
-            () => document.querySelector('#showMoreBtn')?.getAttribute('aria-expanded') === 'true',
-            null,
-            { timeout: 3500 }
-          );
+          await page.waitForFunction(() => {
+            const button = document.querySelector('#showMoreBtn');
+            const viewport = document.querySelector('#portfolioGridViewport');
+            return button?.getAttribute('aria-expanded') === 'true' &&
+              viewport &&
+              getComputedStyle(viewport).maxHeight === 'none' &&
+              !viewport.classList.contains('is-expanding');
+          }, null, { timeout: 3500 });
         }
         await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
         await page.waitForFunction(() => window.scrollY <= 8, null, { timeout: 1500 });
