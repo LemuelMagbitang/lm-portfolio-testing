@@ -13,6 +13,7 @@ const css = fs.readFileSync(path.join(root, 'admin/admin.css'), 'utf8');
 const siteCss = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 const lightboxCss = fs.readFileSync(path.join(root, 'css/features/lightbox.css'), 'utf8');
 const renderer = fs.readFileSync(path.join(root, 'js/features/lightbox/media-renderer.js'), 'utf8');
+const inspectController = fs.readFileSync(path.join(root, 'js/features/lightbox/inspect-controller.js'), 'utf8');
 const foilNormalRendererSource = fs.readFileSync(path.join(root, 'js/features/lightbox/foil-normal-renderer.js'), 'utf8');
 const previewRuntime = fs.readFileSync(path.join(root, 'admin/project-preview-runtime.js'), 'utf8');
 const modelViewer = fs.readFileSync(path.join(root, 'js/infrastructure/three/model-viewer.js'), 'utf8');
@@ -425,23 +426,25 @@ assert.equal(groupedProject.media[0].groupId,'studies',
   'Artwork membership must survive normalization.');
 assert.equal(groupedProject.media[1].groupId,undefined,
   'Unknown group references must fall back to the default ungrouped presentation.');
-assert.ok(renderer.includes('function openArtworkInspect') &&
+assert.ok(inspectController.includes('function openArtworkInspect') &&
   renderer.includes('lightbox-artwork-group-items') &&
   renderer.includes("entry.addEventListener('click',onEntryClick,true)") &&
-  renderer.includes('activeInspector?.entry===entry') &&
-  renderer.includes("description.textContent=caption") &&
-  renderer.includes('description.hidden=!caption') &&
+  renderer.includes('inspectController.isInspectingEntry(entry)') &&
+  inspectController.includes("description.textContent=caption") &&
+  inspectController.includes('description.hidden=!caption') &&
   renderer.includes("desktopAction.textContent = 'HOVER EDGE / CLICK'") &&
   renderer.includes("touchAction.textContent = 'TAP TO FLIP'") &&
   renderer.includes("desktopRecommendation.textContent = 'Switch to desktop for the full effect.'") &&
   !renderer.includes('Best viewed on desktop for full effect.') &&
   renderer.includes("faceLabel.textContent = isBack ? 'BACK' : 'FRONT'") &&
-  renderer.includes("footer.append(description,back)") &&
-  renderer.includes("if(foilHint)footer.appendChild(foilHint)") &&
+  inspectController.includes("footer.append(description,back)") &&
+  inspectController.includes("if(foilHint)footer.appendChild(foilHint)") &&
   !renderer.includes('Tap to flip · Move to explore the light.') &&
-  renderer.includes(`back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>'`) &&
+  inspectController.includes(`back.innerHTML='<i class="fa-solid fa-arrow-left" aria-hidden="true"></i>'`) &&
   !renderer.includes('inspectTrigger') &&
-  !renderer.includes('holdOpened = true'),
+  !inspectController.includes('inspectTrigger') &&
+  !renderer.includes('holdOpened = true') &&
+  !inspectController.includes('holdOpened = true'),
   'Grouped artwork opens Inspect by direct selection without a chip or hold gesture; foil tap-to-flip remains available inside Inspect.');
 const focused3dActivation = renderer.match(/onActivate:\s*\(\)\s*=>\s*\{([\s\S]*?)\},\s*onDeactivate:/)?.[1] || '';
 assert.ok(focused3dActivation && !/lightbox\.scrollTop|pre3dScrollTop/.test(focused3dActivation),
@@ -457,13 +460,13 @@ assert.ok(lightboxCss.includes('data-artwork-effective-layout="grid"') &&
 assert.ok(!admin.includes('value="flow"') &&
   !renderer.includes('inspectTrigger') &&
   !siteCss.includes('.lightbox-artwork-inspect-trigger') &&
-  renderer.includes('lightbox-inspect-footer') &&
-  renderer.includes('documentRef.body.appendChild(overlay)') &&
+  inspectController.includes('lightbox-inspect-footer') &&
+  inspectController.includes('documentRef.body.appendChild(overlay)') &&
   renderer.includes('modelFocusPlaceholder.replaceWith(modelEntry)') &&
   renderer.includes('modelFocusOverlay.appendChild(modelEntry)') &&
   renderer.includes('lightbox-3d-scroll-preservation-spacer') &&
   renderer.includes('restoreModelFocusScroll(scrollTarget)') &&
-  renderer.includes('buildInspectTransform') &&
+  inspectController.includes('buildInspectTransform') &&
   siteCss.includes('.lightbox-inspect-mode::before') &&
   siteCss.includes('.lightbox-3d-focus-overlay::before') &&
   siteCss.includes('.lightbox-inspect-footer') &&
