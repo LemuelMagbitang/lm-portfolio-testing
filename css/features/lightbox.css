@@ -290,6 +290,14 @@
   justify-self:center;
   box-sizing:border-box;
 }
+/* Grid/Tiling and Horizontal Stack use a centered 125% group footprint.
+   Keeping each item frame at 100% of its tile preserves media proportions and
+   responsive alignment while enlarging the complete layout by exactly 25%. */
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]){
+  width:125%;max-width:none;min-width:0;margin-inline:-12.5%;
+  box-sizing:border-box;
+}
+
 /* Grid and Horizontal Stack expand every artwork frame to its full tile width.
    The media's resolved aspect ratio controls height naturally; no height cap can
    shrink portrait artwork below the available cell width. The Lightbox scrolls
@@ -301,6 +309,7 @@
   justify-content:center;
   width:100%;max-width:100%;min-width:0;height:auto;max-height:none;
   aspect-ratio:var(--lightbox-artwork-ratio,auto);
+  padding:0;
   margin:0 auto;
   align-self:stretch;
   justify-self:stretch;
@@ -311,8 +320,8 @@
 /* Grid / Tiling: an explicit, configurable desktop grid with equal-width tracks.
    The renderer supplies --artwork-grid-columns (2–5); mobile always uses two. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
-  --artwork-grid-gap:clamp(8px,.9vw,12px);
-  --artwork-grid-gap-half:clamp(4px,.45vw,6px);
+  --artwork-grid-gap:0px;
+  --artwork-grid-gap-half:0px;
   display:grid;
   grid-template-columns:repeat(var(--artwork-grid-columns,3),minmax(0,1fr));
   gap:var(--artwork-grid-gap);
@@ -327,7 +336,7 @@
 /* Horizontal Stack: Figma-style horizontal auto-layout. Flex rows wrap naturally;
    each row shares equal item widths without the card rotations/overlap of Card Stack. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
-  --artwork-stack-gap:6px;
+  --artwork-stack-gap:0px;
   display:flex;
   flex-flow:row wrap;
   grid-template-columns:none;
@@ -338,7 +347,7 @@
   padding:8px;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-  flex:0 0 calc(33.333333% - 4px);
+  flex:0 0 33.333333%;
   width:auto;
   max-width:none;
   min-width:0;
@@ -346,16 +355,30 @@
 @media (max-width:760px){
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:8px;
+    gap:0;
     padding:6px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
     padding:6px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-    flex-basis:calc(50% - 3px);
+    flex-basis:50%;
   }
 }
+
+/* Grid/Tiling and Horizontal Stack retain the same corner radius in the
+   grouped layout and after an item is moved into the full-screen Inspector.
+   The item-level layout marker travels with the artwork during that move. */
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{
+  border-radius:12px;
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
+  border-radius:12px;
+}
+:is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-holographic-face{
+  border-radius:12px;
+}
+
 /* Horizontal Card Stack — five cards across on desktop, four on tablet,
    and three on mobile. Overflow flows row-by-row, and an incomplete final row
    is centered by the renderer so small sets stay visually balanced. */

@@ -1763,15 +1763,20 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('flex-flow:row wrap;') &&
     artworkGroupCss.includes('width:100%;max-width:100%;min-width:0;height:auto;max-height:none;') &&
     artworkGroupCss.includes('aspect-ratio:var(--lightbox-artwork-ratio,auto);') &&
-    artworkGroupCss.includes('--artwork-stack-gap:6px;') &&
-    !artworkGroupCss.includes('--artwork-stack-gap:8px;') &&
-    !artworkGroupCss.includes('--artwork-stack-gap:10px;') &&
+    artworkGroupCss.includes('padding:0;') &&
+    artworkGroupCss.includes('width:125%;max-width:none;min-width:0;margin-inline:-12.5%;') &&
+    artworkGroupCss.includes('--artwork-grid-gap:0px;') &&
+    artworkGroupCss.includes('--artwork-stack-gap:0px;') &&
+    artworkGroupCss.includes('flex:0 0 33.333333%;') &&
+    artworkGroupCss.includes('flex-basis:50%;') &&
+    artworkGroupCss.includes('border-radius:12px;') &&
+    artworkGroupRuntime.includes('entry.dataset.artworkEffectiveLayout = effectiveLayout') &&
     artworkGroupRuntime.includes("section.style.setProperty('--artwork-grid-columns', String(gridColumns))") &&
     artworkGroupAdmin.includes('data-edit-grid-columns') &&
     artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)') &&
     artworkGroupNormalizer.includes('gridColumns:normalizeArtworkGridColumns(group.gridColumns)');
   if (!independentGridStackContract) {
-    err('Artwork groups: Grid/Tiling must use configurable equal-width columns and full-width ratio-preserving artwork; Horizontal Stack must wrap with a consistent 6px gap.');
+    err('Artwork groups: Grid/Tiling and Horizontal Stack must preserve responsive equal-width layouts at 125% size, with no item gaps and persistent rounded corners.');
   }
 
   const groupedInspectorNavigationContract =

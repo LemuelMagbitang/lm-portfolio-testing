@@ -3131,6 +3131,9 @@ export function createLightboxMediaRenderer({
       effectiveLayout = 'grid';
     }
     section.dataset.artworkEffectiveLayout = effectiveLayout;
+    entries.forEach(entry => {
+      entry.dataset.artworkEffectiveLayout = effectiveLayout;
+    });
     centerArtworkGroupRows(record, effectiveLayout, narrowViewport, tabletViewport, gridColumns);
   }
 

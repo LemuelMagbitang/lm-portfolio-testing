@@ -4553,6 +4553,14 @@ try {
         const groupRect = group?.getBoundingClientRect();
         const itemsRect = items.getBoundingClientRect();
         const itemsStyle = getComputedStyle(items);
+        const parent = group?.parentElement || null;
+        const parentRect = parent?.getBoundingClientRect();
+        const parentStyle = parent ? getComputedStyle(parent) : null;
+        const parentContentWidth = parent
+          ? Math.max(0, parent.clientWidth -
+              (Number.parseFloat(parentStyle.paddingLeft) || 0) -
+              (Number.parseFloat(parentStyle.paddingRight) || 0))
+          : 0;
         return {
           requestedLayout: group?.dataset.artworkLayout || '',
           layout: group?.dataset.artworkEffectiveLayout || '',
@@ -4574,11 +4582,18 @@ try {
                 ).length;
               })(),
           columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
+          rowGap: Number.parseFloat(itemsStyle.rowGap) || 0,
+          layoutWidthScaleRatio: groupRect && parentContentWidth > 0 ? groupRect.width / parentContentWidth : 0,
+          layoutCenterOffset: groupRect && parentRect
+            ? (groupRect.left + groupRect.width / 2) - (parentRect.left + parentRect.width / 2)
+            : Number.POSITIVE_INFINITY,
           centerOffset: groupRect && itemsRect
             ? (itemsRect.left + itemsRect.width / 2) - (groupRect.left + groupRect.width / 2)
             : Number.POSITIVE_INFINITY,
           children: Array.from(items.children).map((el, index) => {
             const artwork = el.querySelector('.lightbox-artwork.has-holographic.is-media-reveal-ready');
+            const roundedSurface = artwork?.querySelector('.lightbox-holographic-face') ||
+              artwork?.querySelector(':scope > img, :scope > video, :scope > iframe, :scope > lottie-player');
             const transform = getComputedStyle(el).transform;
             let rotationDegrees = 0;
             if (transform && transform !== 'none') {
@@ -4609,6 +4624,9 @@ try {
               mobileStickerRotationValue: Number.parseFloat(el.style.getPropertyValue('--artwork-sticker-rotation-mobile')),
               artworkWidth: artwork?.offsetWidth || 0,
               artworkHeight: artwork?.offsetHeight || 0,
+              artworkPadding: artwork ? getComputedStyle(artwork).padding : '',
+              artworkCornerRadius: artwork ? getComputedStyle(artwork).borderTopLeftRadius : '',
+              roundedSurfaceRadius: roundedSurface ? getComputedStyle(roundedSurface).borderTopLeftRadius : '',
               stickerAppearance: artwork ? (() => {
                 const frameStyle = getComputedStyle(artwork);
                 const foil = artwork.querySelector('.lightbox-holographic');
@@ -4718,8 +4736,8 @@ try {
             layout.trackCount !== expectedTracks || metrics.widthSpread > 2 ||
             metrics.dividerSpacingSpread > 2 || metrics.centeredArtworkCount < 1 ||
             metrics.maxArtworkCenterOffset > 2 || metrics.maxArtworkAspectRatioDelta > 0.06 ||
-            malformedRows || Math.abs(layout.columnGap - 6) > 0.5) {
-          throw new Error('Horizontal Stack must use a wrapping flex row with equal-width items, aligned rows, and a 6px gap (' + context + '): ' +
+            malformedRows || Math.abs(layout.columnGap) > 0.5 || Math.abs(layout.rowGap) > 0.5) {
+          throw new Error('Horizontal Stack must use a wrapping flex row with equal-width items, aligned rows, and no item gap (' + context + '): ' +
             JSON.stringify({ metrics, expectedTracks, layout }));
         }
         return metrics;
@@ -4810,6 +4828,22 @@ try {
               )) {
                 throw new Error('Grid and Horizontal Stack artwork must fill the available width of each ready artwork tile without overflow: ' +
                   JSON.stringify({ mode, viewport, widthFillRatios, layout }));
+              }
+              const cornerRadii = layout.children.map(child => ({
+                artwork: Number.parseFloat(child.artworkCornerRadius),
+                media: Number.parseFloat(child.roundedSurfaceRadius),
+                padding: Number.parseFloat(child.artworkPadding)
+              }));
+              if (Math.abs(layout.layoutWidthScaleRatio - 1.25) > 0.02 ||
+                  Math.abs(layout.layoutCenterOffset) > 2 ||
+                  Math.abs(layout.columnGap) > 0.5 ||
+                  Math.abs(layout.rowGap) > 0.5 ||
+                  cornerRadii.some(radius => !Number.isFinite(radius.artwork) || radius.artwork < 10 ||
+                    !Number.isFinite(radius.media) || radius.media < 10 ||
+                    !Number.isFinite(radius.padding) || radius.padding > 0.5)) {
+                throw new Error('Grid and Horizontal Stack must be centered at 125% width, have no item gaps, and retain rounded artwork/media corners: ' +
+                  JSON.stringify({ mode, viewport, layoutWidthScaleRatio:layout.layoutWidthScaleRatio,
+                    layoutCenterOffset:layout.layoutCenterOffset, columnGap:layout.columnGap, rowGap:layout.rowGap, cornerRadii, layout }));
               }
             }
             if (mode === 'cards' || mode === 'sticker') {
@@ -5258,10 +5292,13 @@ try {
           JSON.stringify({ mobileFaceAlignment }));
       }
 
-      const targetGroupIndex = groupBeforeInspect.children.findIndex(child => child.caption === 'Smooth Prism Foil');
-      if (targetGroupIndex < 0 || groupBeforeInspect.children.length < 2) {
+      await setRequestedLayout('grid');
+      await page.waitForTimeout(100);
+      const groupBeforeInspectorOpen = await readArtworkGroupLayout();
+      const targetGroupIndex = groupBeforeInspectorOpen.children.findIndex(child => child.caption === 'Smooth Prism Foil');
+      if (targetGroupIndex < 0 || groupBeforeInspectorOpen.children.length < 2) {
         throw new Error('Holographic Inspector regression fixture must have multiple grouped artwork items: ' +
-          JSON.stringify(groupBeforeInspect));
+          JSON.stringify(groupBeforeInspectorOpen));
       }
       const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       // A tap on grouped artwork opens the full-screen Inspector without
@@ -5290,14 +5327,14 @@ try {
         requestAnimationFrame(() => requestAnimationFrame(resolve))
       ));
       const groupDuringInspect = await readArtworkGroupLayout();
-      if (groupDuringInspect.layout !== groupBeforeInspect.layout ||
-          groupDuringInspect.width !== groupBeforeInspect.width ||
-          groupDuringInspect.children.length !== groupBeforeInspect.children.length) {
+      if (groupDuringInspect.layout !== groupBeforeInspectorOpen.layout ||
+          groupDuringInspect.width !== groupBeforeInspectorOpen.width ||
+          groupDuringInspect.children.length !== groupBeforeInspectorOpen.children.length) {
         throw new Error('Opening Inspect changed the artwork group layout or child count: ' +
-          JSON.stringify({ before: groupBeforeInspect, during: groupDuringInspect }));
+          JSON.stringify({ before: groupBeforeInspectorOpen, during: groupDuringInspect }));
       }
-      for (let i = 0; i < groupBeforeInspect.children.length; i += 1) {
-        const before = groupBeforeInspect.children[i];
+      for (let i = 0; i < groupBeforeInspectorOpen.children.length; i += 1) {
+        const before = groupBeforeInspectorOpen.children[i];
         const during = groupDuringInspect.children[i];
         const target = i === targetGroupIndex;
         if (target ? !during.placeholder : (during.placeholder || during.caption !== before.caption)) {
@@ -5307,7 +5344,7 @@ try {
         for (const coordinate of ['left', 'top', 'width', 'height']) {
           if (Math.abs(before[coordinate] - during[coordinate]) > 2) {
             throw new Error('Opening Inspect reflowed grouped artwork (' + coordinate + ' changed): ' +
-              JSON.stringify({ index: i, before, during, groupLayout: groupBeforeInspect.layout }));
+              JSON.stringify({ index: i, before, during, groupLayout: groupBeforeInspectorOpen.layout }));
           }
         }
       }
@@ -5364,6 +5401,10 @@ try {
         const recommendation = hint?.querySelector('.lightbox-holographic-desktop-recommendation');
         const backStyle = back ? getComputedStyle(back) : null;
         const frontImage = artwork?.querySelector('.lightbox-holographic-front img');
+        const roundedFace = artwork?.querySelector('.lightbox-holographic-face');
+        const artworkRadius = artwork ? getComputedStyle(artwork).borderTopLeftRadius : '';
+        const roundedFaceRadius = roundedFace ? getComputedStyle(roundedFace).borderTopLeftRadius : '';
+        const entryLayout = entry?.dataset.artworkEffectiveLayout || '';
         const touchActionFontSize = touchAction ? getComputedStyle(touchAction).fontSize : '';
         const recommendationFontSize = recommendation ? getComputedStyle(recommendation).fontSize : '';
         const naturalRatio = frontImage?.naturalWidth > 0 && frontImage?.naturalHeight > 0
@@ -5409,6 +5450,7 @@ try {
           centerOffsetY,
           stageRect: stageRect ? { left:stageRect.left, top:stageRect.top, width:stageRect.width, height:stageRect.height } : null,
           artworkRect: artworkRect ? { left:artworkRect.left, top:artworkRect.top, width:artworkRect.width, height:artworkRect.height } : null,
+          artworkRadius,roundedFaceRadius,entryLayout,
           artworkRatioDelta: naturalRatio > 0 && renderedRatio > 0 ? Math.abs(renderedRatio - naturalRatio) : Infinity,
           face,
           action,
@@ -5440,6 +5482,9 @@ try {
           inspectorPresentation.centerOffsetX > 2 ||
           inspectorPresentation.centerOffsetY > 2 ||
           inspectorPresentation.artworkRatioDelta > .025 ||
+          inspectorPresentation.entryLayout !== 'grid' ||
+          Number.parseFloat(inspectorPresentation.artworkRadius) < 10 ||
+          Number.parseFloat(inspectorPresentation.roundedFaceRadius) < 10 ||
           inspectorPresentation.face !== 'FRONT' ||
           inspectorPresentation.action !== 'HOVER EDGE / CLICK' ||
           !inspectorPresentation.backIcon ||
@@ -5552,6 +5597,28 @@ try {
         throw new Error('Keyboard Back changed Lightbox scroll: ' +
           JSON.stringify({ before: lightboxScrollBeforeInspect, after: lightboxScrollAfterBack }));
       }
+
+      await setRequestedLayout('stack');
+      await page.waitForTimeout(100);
+      await funkoHolo.click({ force: true });
+      await inspectMode.waitFor({ state: 'visible', timeout: 2000 });
+      const stackInspectorCorners = await inspectMode.locator('.lightbox-inspect-frame .lightbox-artwork').first().evaluate(artwork => {
+        const entry = artwork.closest('.lightbox-media-item');
+        const face = artwork.querySelector('.lightbox-holographic-face');
+        return {
+          layout:entry?.dataset.artworkEffectiveLayout || '',
+          artworkRadius:getComputedStyle(artwork).borderTopLeftRadius,
+          faceRadius:face ? getComputedStyle(face).borderTopLeftRadius : ''
+        };
+      });
+      if (stackInspectorCorners.layout !== 'stack' ||
+          Number.parseFloat(stackInspectorCorners.artworkRadius) < 10 ||
+          Number.parseFloat(stackInspectorCorners.faceRadius) < 10) {
+        throw new Error('Horizontal Stack Inspect must preserve the grouped artwork corner styling: ' +
+          JSON.stringify(stackInspectorCorners));
+      }
+      await inspectMode.locator('.lightbox-inspect-back').click();
+      await inspectMode.waitFor({ state: 'detached', timeout: 2000 });
 
       // The Lightbox must remain closable after either keyboard Inspector exit.
       await page.locator('#lightboxClose').first().click();
