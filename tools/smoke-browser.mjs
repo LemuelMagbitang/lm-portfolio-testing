@@ -4848,6 +4848,22 @@ try {
             await page.setViewportSize(viewport);
             await setRequestedLayout(mode);
             await page.waitForTimeout(520);
+            // Layout mode changes can start a fresh card/sticker transform
+            // transition after the resize observer applies responsive rows.
+            // Await those transitions instead of sampling an intermediate pose.
+            await artworkGroupItems.evaluate(async items => {
+              await new Promise(resolve =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve))
+              );
+              const transformTransitions = Array.from(items.children).flatMap(item =>
+                item.getAnimations().filter(animation =>
+                  animation.transitionProperty === 'transform' && animation.playState === 'running'
+                )
+              );
+              await Promise.all(transformTransitions.map(animation =>
+                animation.finished.catch(() => {})
+              ));
+            });
             const layout = await readArtworkGroupLayout();
             const shouldFallbackToGrid =
               ((mode === 'cards' || mode === 'sticker') && layout.children.length < 2);
