@@ -253,14 +253,16 @@ export function initPageNavigation({
       if (source.crossOrigin) link.crossOrigin = source.crossOrigin;
       waits.push(new Promise(resolve => {
         let settled = false;
+        let timer = null;
         const finish = () => {
           if (settled) return;
           settled = true;
+          if (timer !== null) windowRef.clearTimeout(timer);
           resolve();
         };
         link.addEventListener('load', finish, { once: true });
         link.addEventListener('error', finish, { once: true });
-        windowRef.setTimeout(finish, 3500);
+        timer = windowRef.setTimeout(finish, 3500);
       }));
       root.head.appendChild(link);
     }
@@ -314,7 +316,6 @@ export function initPageNavigation({
       currentConfig.textContent = nextConfig.textContent || '{}';
     }
     applyPageConfigToWindow(windowRef, readPageConfig(root));
-    warmDocumentResources(page);
   }
 
   function updateRouteStyles(page) {
@@ -362,6 +363,12 @@ export function initPageNavigation({
     });
   }
 
+  function prefetchCurrentLinks() {
+    root.querySelectorAll(NAV_LINK_SELECTOR).forEach(link => {
+      void prefetch(link.getAttribute('href') || '');
+    });
+  }
+
   async function commitPage(page, destinationUrl, options) {
     const oldApp = getApp?.();
     try { oldApp?.destroy?.(); } catch (error) {
@@ -379,6 +386,7 @@ export function initPageNavigation({
     updateRouteStyles(page);
     currentRoute = page.route;
     root.body.dataset.pageNavigationReady = 'true';
+    prefetchCurrentLinks();
 
     const hash = new URL(destinationUrl, windowRef.location.href).hash;
     await focusAfterNavigation({
@@ -494,9 +502,7 @@ export function initPageNavigation({
   windowRef.addEventListener('scroll', handleScroll, { passive: true });
   windowRef.addEventListener('pagehide', handlePageHide, { once: true });
 
-  root.querySelectorAll(NAV_LINK_SELECTOR).forEach(link => {
-    void prefetch(link.getAttribute('href') || '');
-  });
+  prefetchCurrentLinks();
 
   return {
     prefetch,
