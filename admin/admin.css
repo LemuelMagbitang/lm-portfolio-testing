@@ -181,6 +181,21 @@
 .project-card-actions .project-delete-action:hover{color:#ffaaa2;border-color:rgba(224,88,79,.24);background:rgba(224,88,79,.1);}
 .project-list-item.is-open{background:var(--panel-2);overflow:visible;}
 .project-editor-body{position:relative;z-index:2;}
+.project-editor-body.is-disclosure-closing,
+.media-editor-body.is-disclosure-closing{
+  box-sizing:border-box;
+  overflow:hidden;
+  padding-block:0!important;
+  transition:
+    height 300ms cubic-bezier(.4,0,.2,1),
+    opacity 220ms cubic-bezier(.4,0,.2,1),
+    margin-top 300ms cubic-bezier(.4,0,.2,1);
+}
+.project-editor-body.is-disclosure-closing{margin-top:0!important;}
+@media(prefers-reduced-motion:reduce){
+  .project-editor-body.is-disclosure-closing,
+  .media-editor-body.is-disclosure-closing{transition:none!important;}
+}
 .project-list-item.is-collapsed .project-preview-text{max-width:54ch;}
 @media (max-width:720px){
   .project-card-head{grid-template-columns:auto minmax(0,1fr) minmax(92px,120px) auto;gap:8px;min-height:66px;}

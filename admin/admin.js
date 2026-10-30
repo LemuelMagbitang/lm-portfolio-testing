@@ -3351,6 +3351,7 @@ function buildProjectBody(el, p, options = {}){
   // Only one artwork editor stays expanded at a time. This keeps projects
   // with long galleries compact and gives the selected artwork clear focus.
   let openMediaUid = null;
+  let mediaDisclosureClosing = false;
   el.innerHTML = `
     <div class="row">
       <div class="field"><label class="field-label">Title</label><input data-f="title" value="${attr(p.title)}"></div>
@@ -3869,6 +3870,8 @@ function buildProjectBody(el, p, options = {}){
       row.style.background = '#191919';
       row.dataset.uid = m._uid;
       const groupOptionMarkup = artworkGroupOptionMarkup(m);
+      const mediaDisclosureId = 'media-editor-body-' + attr(m._uid);
+      const mediaToggleId = 'media-editor-toggle-' + attr(m._uid);
       row.innerHTML = `
         <div class="card-item-head collapsible-head" data-toggle-open>
           <span class="drag-handle" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
@@ -3877,7 +3880,7 @@ function buildProjectBody(el, p, options = {}){
             <button class="icon-btn" data-mact="up" title="Move up"><i class="fa-solid fa-arrow-up"></i></button>
             <button class="icon-btn" data-mact="down" title="Move down"><i class="fa-solid fa-arrow-down"></i></button>
             <button class="icon-btn" data-mact="del" title="Delete" style="color:#e0584f"><i class="fa-solid fa-trash"></i></button>
-            <button class="icon-btn" data-mact="toggle"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}"></i></button>
+            <button class="icon-btn" type="button" id="${mediaToggleId}" data-mact="toggle" aria-label="${isOpen ? 'Collapse artwork editor' : 'Expand artwork editor'}" aria-controls="${mediaDisclosureId}" aria-expanded="${isOpen ? 'true' : 'false'}"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}" aria-hidden="true"></i></button>
           </div>
         </div>
         <div class="artwork-card-group-controls">
@@ -3906,7 +3909,7 @@ function buildProjectBody(el, p, options = {}){
             <button type="button" data-inline-group-cancel>Cancel</button>
           </div>
         </form>
-        <div class="collapsible-body media-editor-body" style="display:${isOpen?'block':'none'};" data-mbody>
+        <div id="${mediaDisclosureId}" class="collapsible-body media-editor-body" role="region" aria-labelledby="${mediaToggleId}" aria-hidden="${isOpen ? 'false' : 'true'}" ${isOpen ? '' : 'inert'} style="display:${isOpen?'block':'none'};" data-mbody>
           <div class="row media-editor-row">
             <div class="field" style="max-width:140px"><label class="field-label">Type</label>
               <select data-mf="type">
@@ -3944,7 +3947,41 @@ function buildProjectBody(el, p, options = {}){
       `;
       row.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if (e.target.closest('[data-mact]') && e.target.closest('[data-mact]').dataset.mact !== 'toggle') return;
+        if (mediaDisclosureClosing) return;
         const willOpen = !isOpen;
+        const currentOpenRow = Array.from(medWrap.querySelectorAll('.card-item[data-uid]'))
+          .find(candidate => candidate.dataset.uid === openMediaUid);
+
+        if (currentOpenRow) {
+          const currentBody = currentOpenRow.querySelector('[data-mbody]');
+          const currentToggle = currentOpenRow.querySelector('[data-mact="toggle"]');
+          const nextOpenUid = willOpen ? m._uid : null;
+          const restoreToggleFocus = !!e.target.closest('[data-mact="toggle"]') ||
+            !!currentBody?.contains(document.activeElement);
+          mediaDisclosureClosing = true;
+          currentToggle?.setAttribute('aria-expanded', 'false');
+          currentToggle?.setAttribute('aria-disabled', 'true');
+          if (currentBody) {
+            currentBody.setAttribute('aria-hidden', 'true');
+            currentBody.inert = true;
+            if (currentBody.contains(document.activeElement)) {
+              currentToggle?.focus({preventScroll:true});
+            }
+          }
+
+          animateDisclosureClose(currentBody, () => {
+            mediaDisclosureClosing = false;
+            openMediaUid = nextOpenUid;
+            paintMedia();
+            if (nextOpenUid) snapCmsCardToStart(nextOpenUid);
+            if (restoreToggleFocus) {
+              const focusUid = nextOpenUid || currentOpenRow.dataset.uid;
+              document.getElementById('media-editor-toggle-' + focusUid)?.focus({preventScroll:true});
+            }
+          });
+          return;
+        }
+
         openMediaUid = toggleExclusiveOpenUid(openMediaUid, m._uid);
         paintMedia();
         if (willOpen) snapCmsCardToStart(m._uid);
@@ -4599,6 +4636,7 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
   // Projects opens as a list by default. A project only enters its
   // expanded editing state after the visitor explicitly opens that row.
   let openUid = null;
+  let projectDisclosureClosing = false;
 
   function paint(){
     disposeProjectListPreviews();
@@ -4617,6 +4655,8 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
       wrap.className = 'card-item project-list-item' + (isOpen ? ' is-open' : ' is-collapsed');
       wrap.dataset.uid = p._uid;
       const projectPreview = buildProjectListPreviewHtml(p);
+      const projectDisclosureId = 'project-editor-' + attr(p._uid);
+      const projectToggleId = 'project-toggle-' + attr(p._uid);
       wrap.innerHTML = `
         <div class="card-item-head project-card-head" data-toggle-open>
           <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
@@ -4629,18 +4669,51 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
             <button class="icon-btn" data-act="up" type="button" title="Move project up" aria-label="Move project up" ${projectIndex===0?'disabled':''}><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
             <button class="icon-btn" data-act="down" type="button" title="Move project down" aria-label="Move project down" ${projectIndex===items.length-1?'disabled':''}><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
             <button class="icon-btn project-delete-action" data-act="del" type="button" title="Delete project" aria-label="Delete project"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-            <button class="icon-btn project-toggle-action" data-act="toggle" type="button" title="${isOpen ? 'Collapse project' : 'Expand project'}" aria-label="${isOpen ? 'Collapse project' : 'Expand project'}" aria-expanded="${isOpen ? 'true' : 'false'}"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}" aria-hidden="true"></i></button>
+            <button class="icon-btn project-toggle-action" id="${projectToggleId}" data-act="toggle" type="button" title="${isOpen ? 'Collapse project' : 'Expand project'}" aria-label="${isOpen ? 'Collapse project' : 'Expand project'}" aria-controls="${projectDisclosureId}" aria-expanded="${isOpen ? 'true' : 'false'}"><i class="fa-solid fa-chevron-${isOpen?'up':'down'}" aria-hidden="true"></i></button>
           </div>
         </div>
-        <div data-body class="project-editor-body" style="display:${isOpen?'block':'none'};margin-top:16px;"></div>
+        <div id="${projectDisclosureId}" data-body class="project-editor-body" role="region" aria-labelledby="${projectToggleId}" aria-hidden="${isOpen ? 'false' : 'true'}" ${isOpen ? '' : 'inert'} style="display:${isOpen?'block':'none'};margin-top:16px;"></div>
       `;
       wrap.querySelector('[data-toggle-open]').addEventListener('click', (e)=>{
         if(e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act !== 'toggle') return;
+        if (projectDisclosureClosing) return;
         const impactId=String(p.id||slugify(p.title||''));
         if(!isOpen && lastMediaImpact.projectIds.includes(impactId)){
           lastMediaImpact.projectIds=lastMediaImpact.projectIds.filter(id=>id!==impactId);
         }
         const willOpen = !isOpen;
+        const currentOpenRow = list.querySelector('.project-list-item.is-open');
+
+        if (currentOpenRow) {
+          const currentBody = currentOpenRow.querySelector('[data-body]');
+          const currentToggle = currentOpenRow.querySelector('.project-toggle-action');
+          const nextOpenUid = willOpen ? p._uid : null;
+          const restoreToggleFocus = !!e.target.closest('[data-act="toggle"]') ||
+            !!currentBody?.contains(document.activeElement);
+          projectDisclosureClosing = true;
+          currentToggle?.setAttribute('aria-expanded', 'false');
+          currentToggle?.setAttribute('aria-disabled', 'true');
+          if (currentBody) {
+            currentBody.setAttribute('aria-hidden', 'true');
+            currentBody.inert = true;
+            if (currentBody.contains(document.activeElement)) {
+              currentToggle?.focus({preventScroll:true});
+            }
+          }
+
+          animateDisclosureClose(currentBody, () => {
+            projectDisclosureClosing = false;
+            openUid = nextOpenUid;
+            paint();
+            if (nextOpenUid) snapCmsCardToStart(nextOpenUid);
+            if (restoreToggleFocus) {
+              const focusUid = nextOpenUid || currentOpenRow.dataset.uid;
+              document.getElementById('project-toggle-' + focusUid)?.focus({preventScroll:true});
+            }
+          });
+          return;
+        }
+
         openUid = toggleExclusiveOpenUid(openUid, p._uid); paint();
         if (willOpen) snapCmsCardToStart(p._uid);
       });
@@ -6816,6 +6889,62 @@ function numVal(id){ return parseFloat(document.getElementById(id).value)||0; }
 function slugify(s){ return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function toggleExclusiveOpenUid(currentUid, selectedUid){
   return currentUid === selectedUid ? null : selectedUid;
+}
+
+// Keep disclosure content connected until its measured height and opacity
+// finish transitioning. The caller repaints the owning list in onComplete.
+function animateDisclosureClose(panel, onComplete = () => {}) {
+  if (!panel?.isConnected || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+    onComplete();
+    return;
+  }
+
+  const height = Math.ceil(
+    Number(panel.getBoundingClientRect?.().height) ||
+    Number(panel.scrollHeight) ||
+    0
+  );
+  if (!(height > 1)) {
+    onComplete();
+    return;
+  }
+
+  let frame = null;
+  let fallbackTimer = null;
+  let completed = false;
+  const finish = () => {
+    if (completed) return;
+    completed = true;
+    if (frame !== null) window.cancelAnimationFrame?.(frame);
+    if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+    panel.removeEventListener('transitionend', onTransitionEnd);
+    onComplete();
+  };
+  const onTransitionEnd = event => {
+    if (event?.target === panel && event.propertyName === 'height') finish();
+  };
+
+  panel.style.setProperty('transition', 'none');
+  panel.style.boxSizing = 'border-box';
+  panel.style.height = height + 'px';
+  panel.style.opacity = '1';
+  panel.style.overflow = 'hidden';
+  panel.style.willChange = 'height, opacity';
+  void panel.offsetHeight;
+  panel.style.removeProperty('transition');
+  panel.addEventListener('transitionend', onTransitionEnd);
+
+  frame = window.requestAnimationFrame(() => {
+    frame = null;
+    if (!panel.isConnected) {
+      finish();
+      return;
+    }
+    panel.classList.add('is-disclosure-closing');
+    panel.style.height = '0px';
+    panel.style.opacity = '0';
+  });
+  fallbackTimer = window.setTimeout(finish, 460);
 }
 
 // Align the opened card beneath the fixed CMS top bar after its list re-renders.

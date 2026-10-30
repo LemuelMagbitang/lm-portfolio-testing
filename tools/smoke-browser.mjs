@@ -12714,7 +12714,37 @@ try {
           getComputedStyle(preview).display !== 'none' &&
           player.dataset.previewState === 'ready' && player.hasAttribute('src');
       }, null, { timeout: 8000 });
-      await lottieThumbProject.locator('[data-toggle-open]').click();
+      const projectDisclosureToggle = lottieThumbProject.locator('[data-act="toggle"]').first();
+      await projectDisclosureToggle.focus();
+      await page.keyboard.press('Space');
+      await page.waitForFunction(() => {
+        const row = Array.from(document.querySelectorAll('#projList .project-list-item'))
+          .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
+        const body = row?.querySelector('[data-body]');
+        const toggle = row?.querySelector('[data-act="toggle"]');
+        return !!body?.classList.contains('is-disclosure-closing') &&
+          body.isConnected &&
+          body.getAttribute('aria-hidden') === 'true' &&
+          body.inert === true &&
+          toggle?.getAttribute('aria-expanded') === 'false';
+      }, null, { timeout: 1200 });
+      const projectCloseStartHeight = await lottieThumbProject.locator('[data-body]').evaluate(el => el.getBoundingClientRect().height);
+      await page.waitForTimeout(90);
+      const projectCloseMidHeight = await lottieThumbProject.locator('[data-body]').evaluate(el => el.getBoundingClientRect().height);
+      if (!(projectCloseMidHeight < projectCloseStartHeight - 2)) {
+        throw new Error('CMS Project disclosure did not animate its height down before the editor was hidden: ' +
+          JSON.stringify({ projectCloseStartHeight, projectCloseMidHeight }));
+      }
+      await page.waitForFunction(() => {
+        const row = Array.from(document.querySelectorAll('#projList .project-list-item'))
+          .find(candidate => candidate.querySelector('.item-title')?.textContent.includes('Lottie Thumbnail Fixture'));
+        const body = row?.querySelector('[data-body]');
+        const toggle = row?.querySelector('[data-act="toggle"]');
+        return row?.classList.contains('is-collapsed') &&
+          getComputedStyle(body).display === 'none' &&
+          body.getAttribute('aria-hidden') === 'true' &&
+          toggle?.getAttribute('aria-expanded') === 'false';
+      }, null, { timeout: 1800 });
 
       const testBody = testProject.locator('[data-body]').first();
       const bodyStyle = await testBody.getAttribute('style');
@@ -12734,6 +12764,34 @@ try {
         const mediaBody = lottieMedia.locator('[data-mbody]').first();
         const mediaStyle = await mediaBody.getAttribute('style');
         if (!mediaStyle?.includes('display:block')) await mediaToggle.click();
+        await page.waitForFunction(() =>
+          document.querySelector('#projList [data-mbody][aria-hidden="false"]') !== null,
+        null, { timeout: 1500 });
+
+        await mediaToggle.focus();
+        await page.keyboard.press('Space');
+        await page.waitForFunction(() => {
+          const body = document.querySelector('#projList [data-mbody].is-disclosure-closing');
+          const button = body?.closest('.card-item')?.querySelector('[data-mact="toggle"]');
+          return !!body?.isConnected && body.getAttribute('aria-hidden') === 'true' &&
+            body.inert === true && button?.getAttribute('aria-expanded') === 'false';
+        }, null, { timeout: 1200 });
+        const mediaCloseStartHeight = await lottieMedia.locator('[data-mbody]').evaluate(el => el.getBoundingClientRect().height);
+        await page.waitForTimeout(90);
+        const mediaCloseMidHeight = await lottieMedia.locator('[data-mbody]').evaluate(el => el.getBoundingClientRect().height);
+        if (!(mediaCloseMidHeight < mediaCloseStartHeight - 2)) {
+          throw new Error('CMS artwork disclosure did not animate its height down before the editor was hidden: ' +
+            JSON.stringify({ mediaCloseStartHeight, mediaCloseMidHeight }));
+        }
+        await page.waitForFunction(() => {
+          const body = Array.from(document.querySelectorAll('#projList [data-mbody]'))
+            .find(node => node.getAttribute('aria-hidden') === 'true' && getComputedStyle(node).display === 'none');
+          return !!body;
+        }, null, { timeout: 1800 });
+        await lottieMedia.locator('[data-mact="toggle"]').click();
+        await page.waitForFunction(() =>
+          document.querySelector('#projList [data-mbody][aria-hidden="false"]') !== null,
+        null, { timeout: 1500 });
       }
 
       const bgControl = lottieMedia.locator('[data-bg-control]');

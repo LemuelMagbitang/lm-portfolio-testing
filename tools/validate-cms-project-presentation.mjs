@@ -557,7 +557,11 @@ for (const marker of [
   "project-collapsed-preview",
   "buildProjectListPreviewHtml(p)",
   "project-card-actions",
-  "project-editor-body"
+  "project-editor-body",
+  "animateDisclosureClose(panel, onComplete",
+  "is-disclosure-closing",
+  "aria-controls",
+  "currentOpenRow"
 ]) {
   assert.ok(admin.includes(marker), `admin.js is missing Projects presentation marker: ${marker}`);
 }
@@ -705,12 +709,26 @@ const projectsRendererSource = admin.match(/RENDERERS\.projects = async function
 assert.ok(projectsRendererSource, 'CMS Projects renderer should remain a distinct section.');
 assert.match(projectsRendererSource[0], /openUid = toggleExclusiveOpenUid\(openUid, p\._uid\); paint\(\);/,
   'Opening a project must collapse the previously open project.');
+assert.match(projectsRendererSource[0], /animateDisclosureClose\(currentBody, \(\) => \{[\s\S]*?openUid = nextOpenUid;[\s\S]*?paint\(\);/,
+  'An open project must remain mounted until its closing animation finishes.');
+assert.match(projectsRendererSource[0], /aria-controls=.*?projectDisclosureId[\s\S]*?aria-expanded=.*?isOpen/s,
+  'Project disclosures must expose their expanded state and controlled content.');
+assert.match(admin, /panel\.style\.height = height \+ 'px'[\s\S]*?panel\.classList\.add\('is-disclosure-closing'\)[\s\S]*?panel\.style\.height = '0px'/,
+  'Disclosure close must animate from its measured height to zero before unmounting.');
+assert.match(admin, /currentBody\.inert = true/,
+  'Closing disclosure content must become inert while it animates away.');
 assert.match(admin, /let openMediaUid = null/,
   'Artwork should keep exactly one active editor ID instead of a multi-open set.');
 assert.match(admin, /const isOpen = openMediaUid === m\._uid;/,
   'Artwork expansion should derive from the single active artwork ID.');
 assert.match(admin, /openMediaUid = toggleExclusiveOpenUid\(openMediaUid, m\._uid\);[\s\S]*?paintMedia\(\);/,
   'Opening artwork must collapse the previously expanded artwork.');
+assert.match(admin, /animateDisclosureClose\(currentBody, \(\) => \{[\s\S]*?openMediaUid = nextOpenUid;[\s\S]*?paintMedia\(\);/,
+  'An expanded artwork editor must stay mounted until its closing animation finishes.');
+assert.match(admin, /aria-controls=.*?mediaDisclosureId[\s\S]*?aria-expanded=.*?isOpen/s,
+  'Artwork disclosures must expose their expanded state and controlled content.');
+assert.match(css, /\.project-editor-body\.is-disclosure-closing,[\s\S]*?\.media-editor-body\.is-disclosure-closing[\s\S]*?height 300ms[\s\S]*?opacity 220ms/,
+  'Project and artwork disclosure panels must share the height/opacity closing transition.');
 assert.match(admin, /if \(openMediaUid === m\._uid\) openMediaUid = null;/,
   'Deleting the active artwork should clear its disclosure state.');
 assert.match(admin, /openMediaUid = fresh\._uid; \/\/ new artwork becomes the sole open editor/,
