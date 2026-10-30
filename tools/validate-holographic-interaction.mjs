@@ -152,6 +152,19 @@ assert.match(mediaRenderer, /const onPointerLeave = event => \{[\s\S]*?clientX >
 assert.match(mediaRenderer, /surface\.addEventListener\('click', toggleFlip\)/);
 assert.doesNotMatch(mediaRenderer, /Math\.random\(\)|rotationDirection|getFoilEdgeRotation/);
 assert.doesNotMatch(mediaRenderer, /HOLOGRAPHIC_TOUCH_HOLD_MS|is-holo-touch-engaged|HOLD \+ MOVE|onTouchMove|setPointerCapture/);
+// Tile-mode normal maps use shader-side repeat addressing; retain clamp sampler
+// state for WebGL 1 compatibility with non-power-of-two pattern uploads.
+assert.match(normalRenderer, /vec2 addressPatternUV\(vec2 p\)\s*\{\s*return u_uvScale>1\.0\?fract\(p\):clamp\(p,vec2\(0\.0\),vec2\(1\.0\)\);\s*\}/);
+for (let mapIndex = 0; mapIndex < 4; mapIndex += 1) {
+  assert.ok(normalRenderer.includes(
+    `float heightAt${mapIndex}(vec2 p){return luminance(texture2D(u_map${mapIndex},addressPatternUV(p)));}`
+  ), `Height map ${mapIndex} must use repeat-aware UV addressing.`);
+}
+assert.ok(
+  normalRenderer.includes('gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE)') &&
+  normalRenderer.includes('gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE)'),
+  'WebGL 1 non-power-of-two maps must retain CLAMP_TO_EDGE sampler state.'
+);
 assert.match(normalRenderer, /resolveFoilIntensity\(intensity,\s*compactTarget\)/);
 assert.match(normalRenderer, /let compactTarget = isCompactFoilTarget\(view\)/);
 assert.match(normalRenderer, /level=resolveFoilIntensity\(intensity,compactTarget\)/);

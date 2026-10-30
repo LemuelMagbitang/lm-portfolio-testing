@@ -22,10 +22,15 @@ uniform float u_mapCount; uniform float u_intensity; uniform float u_phase; unif
 uniform vec2 u_light;
 varying vec2 v_uv;
 float luminance(vec4 c){return dot(c.rgb,vec3(0.2126,0.7152,0.0722))*c.a;}
-float heightAt0(vec2 p){return luminance(texture2D(u_map0,clamp(p,vec2(0.0),vec2(1.0))));}
-float heightAt1(vec2 p){return luminance(texture2D(u_map1,clamp(p,vec2(0.0),vec2(1.0))));}
-float heightAt2(vec2 p){return luminance(texture2D(u_map2,clamp(p,vec2(0.0),vec2(1.0))));}
-float heightAt3(vec2 p){return luminance(texture2D(u_map3,clamp(p,vec2(0.0),vec2(1.0))));}
+// Tile-mode relief wraps in shader space; keeping CLAMP_TO_EDGE preserves
+// WebGL 1 completeness for non-power-of-two uploads such as 250x250 patterns.
+vec2 addressPatternUV(vec2 p){
+  return u_uvScale>1.0?fract(p):clamp(p,vec2(0.0),vec2(1.0));
+}
+float heightAt0(vec2 p){return luminance(texture2D(u_map0,addressPatternUV(p)));}
+float heightAt1(vec2 p){return luminance(texture2D(u_map1,addressPatternUV(p)));}
+float heightAt2(vec2 p){return luminance(texture2D(u_map2,addressPatternUV(p)));}
+float heightAt3(vec2 p){return luminance(texture2D(u_map3,addressPatternUV(p)));}
 vec3 foilSpectrum(float h){
   vec3 band=abs(fract(h+vec3(0.0,0.6666667,0.3333333))*6.0-3.0);
   vec3 c=clamp(band-1.0,0.0,1.0);

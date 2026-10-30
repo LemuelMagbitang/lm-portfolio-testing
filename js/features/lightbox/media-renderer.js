@@ -5,7 +5,7 @@
  * and project selection remain in the Lightbox controller.
  */
 
-import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261028-08';
+import { createFoilNormalRenderer } from './foil-normal-renderer.js?v=20261030-01';
 import { createArtworkInspectController } from './inspect-controller.js?v=20261030-01';
 import { getFoilPointerPose, isCompactFoilTarget, prefersReducedFoilMotion, resolveFoilIntensity, supportsFoilHover } from './foil-interaction.js?v=20261028-03';
 
