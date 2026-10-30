@@ -290,11 +290,10 @@
   justify-self:center;
   box-sizing:border-box;
 }
-/* Grid/Tiling and Horizontal Stack use a centered 125% group footprint.
-   Keeping each item frame at 100% of its tile preserves media proportions and
-   responsive alignment while enlarging the complete layout by exactly 25%. */
+/* Grid/Tiling and Horizontal Stack use the normal full-width group footprint.
+   Artwork stays at its configured tile size without scaling the complete group. */
 #lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]){
-  width:125%;max-width:none;min-width:0;margin-inline:-12.5%;
+  width:100%;max-width:100%;min-width:0;margin-inline:0;
   box-sizing:border-box;
 }
 
@@ -320,8 +319,8 @@
 /* Grid / Tiling: an explicit, configurable desktop grid with equal-width tracks.
    The renderer supplies --artwork-grid-columns (2–5); mobile always uses two. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
-  --artwork-grid-gap:0px;
-  --artwork-grid-gap-half:0px;
+  --artwork-grid-gap:6px;
+  --artwork-grid-gap-half:3px;
   display:grid;
   grid-template-columns:repeat(var(--artwork-grid-columns,3),minmax(0,1fr));
   gap:var(--artwork-grid-gap);
@@ -336,7 +335,7 @@
 /* Horizontal Stack: Figma-style horizontal auto-layout. Flex rows wrap naturally;
    each row shares equal item widths without the card rotations/overlap of Card Stack. */
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
-  --artwork-stack-gap:0px;
+  --artwork-stack-gap:6px;
   display:flex;
   flex-flow:row wrap;
   grid-template-columns:none;
@@ -347,38 +346,37 @@
   padding:8px;
 }
 #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-  flex:0 0 33.333333%;
+  flex:0 0 calc((100% - 12px) / 3);
   width:auto;
   max-width:none;
   min-width:0;
+  box-sizing:border-box;
 }
 @media (max-width:760px){
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="grid"] .lightbox-artwork-group-items{
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:0;
+    gap:var(--artwork-grid-gap);
     padding:6px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-artwork-group-items{
     padding:6px;
   }
   #lightboxMediaContainer .lightbox-artwork-group[data-artwork-effective-layout="stack"] .lightbox-media-item{
-    flex-basis:50%;
+    flex-basis:calc((100% - 6px) / 2);
   }
 }
 
-/* Grid/Tiling and Horizontal Stack retain the same corner radius in the
-   grouped layout and after an item is moved into the full-screen Inspector.
-   The item-level layout marker travels with the artwork during that move. */
+/* Grid/Tiling and Horizontal Stack use square artwork edges in both the
+   grouped layout and full-screen Inspect. The item-level marker travels with
+   the artwork when the Inspect controller temporarily moves it into the overlay. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{
-  /* The legacy Inspect frame resets artwork radii with !important. Preserve
-     the grouped Grid/Stack 12px shape when an item is portaled into Inspect. */
-  border-radius:12px !important;
+  border-radius:0!important;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
-  border-radius:12px;
+  border-radius:0!important;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-holographic-face{
-  border-radius:12px;
+  border-radius:0!important;
 }
 
 /* Horizontal Card Stack — five cards across on desktop, four on tablet,
@@ -516,6 +514,9 @@
 }
 #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){
   outline:2px solid rgba(255,255,255,.9);outline-offset:2px;border-radius:12px;
+}
+#lightboxMediaContainer .lightbox-artwork-group:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-media-item.is-grouped-artwork-interactive:focus-visible:not(.is-inspect-focus-return){
+  border-radius:0;
 }
 @media (hover:hover) and (pointer:fine){
   #lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive:hover,

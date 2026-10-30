@@ -481,12 +481,13 @@ assert.ok(
   lightboxCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))') &&
   lightboxCss.includes('width:100%;max-width:100%;min-width:0;height:auto;max-height:none;') &&
   lightboxCss.includes('padding:0;') &&
-  lightboxCss.includes('width:125%;max-width:none;min-width:0;margin-inline:-12.5%;') &&
-  lightboxCss.includes('--artwork-grid-gap:0px;') &&
-  lightboxCss.includes('--artwork-stack-gap:0px;') &&
-  lightboxCss.includes('flex:0 0 33.333333%;') &&
-  lightboxCss.includes('flex-basis:50%;') &&
-  lightboxCss.includes('border-radius:12px;') &&
+  !lightboxCss.includes('width:125%;max-width:none;min-width:0;margin-inline:-12.5%;') &&
+  lightboxCss.includes('--artwork-grid-gap:6px;') &&
+  lightboxCss.includes('--artwork-grid-gap-half:3px;') &&
+  lightboxCss.includes('--artwork-stack-gap:6px;') &&
+  lightboxCss.includes('flex:0 0 calc((100% - 12px) / 3);') &&
+  lightboxCss.includes('flex-basis:calc((100% - 6px) / 2);') &&
+  lightboxCss.includes('border-radius:0!important;') &&
   renderer.includes('entry.dataset.artworkEffectiveLayout = effectiveLayout') &&
   lightboxCss.includes('translate:var(--artwork-row-center-shift,0px) 0;') &&
   lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&
@@ -512,7 +513,7 @@ assert.ok(
   renderer.includes('selectGroupedArtworkEntry(entry, section)') &&
   admin.includes('<option value="cards">Horizontal Card Stack</option>') &&
   admin.includes('<option value="sticker">Sticker Card Layout</option>'),
-  'Card stacks must wrap 5/4/3 across desktop/tablet/mobile, stickers must collage 3/2 across, incomplete rows must center, and selection/focus must rise above neighboring art.');
+  'Grid/Stack must use 100% sizing, 6px spacing and square edges; Card Stack and Sticker layouts retain their existing responsive sizing, collage and focus behavior.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
   'Grouped artwork presentation must not use horizontal gallery scrolling.');

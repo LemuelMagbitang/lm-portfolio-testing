@@ -4567,6 +4567,7 @@ try {
           width: items.clientWidth,
           groupWidth: groupRect?.width || 0,
           itemsWidth: itemsRect.width,
+          parentContentWidth,
           itemsBoxSizing: itemsStyle.boxSizing,
           itemsDisplay: itemsStyle.display,
           itemsFlexWrap: itemsStyle.flexWrap,
@@ -4622,6 +4623,8 @@ try {
                 const rect = el.getBoundingClientRect();
                 return rect.left + rect.width / 2 - itemsRect.left;
               })(),
+              visualLeft: el.getBoundingClientRect().left - itemsRect.left,
+              visualRight: el.getBoundingClientRect().right - itemsRect.left,
               width: el.offsetWidth,
               height: el.offsetHeight,
               rotationDegrees,
@@ -4737,13 +4740,26 @@ try {
           const tops = row.map(child => child.visualTop);
           return widthSpread > 2 || (tops.length && Math.max(...tops) - Math.min(...tops) > 2);
         });
+        const lastRowTop = Math.max(...layout.children.map(child => child.top));
+        const lastRow = layout.children.filter(child => Math.abs(child.top - lastRowTop) < 2);
+        const lastRowCenter = lastRow.length
+          ? lastRow.reduce((sum, child) => sum + child.visualCenterX, 0) / lastRow.length
+          : Number.POSITIVE_INFINITY;
+        const hasHorizontalOverflow = layout.children.some(child =>
+          child.visualLeft < -2 || child.visualRight > layout.itemsWidth + 2
+        );
         if (layout.itemsDisplay !== 'flex' || layout.itemsFlexWrap !== 'wrap' ||
             layout.trackCount !== expectedTracks || metrics.widthSpread > 2 ||
             metrics.dividerSpacingSpread > 2 || metrics.centeredArtworkCount < 1 ||
             metrics.maxArtworkCenterOffset > 2 || metrics.maxArtworkAspectRatioDelta > 0.06 ||
-            malformedRows || Math.abs(layout.columnGap) > 0.5 || Math.abs(layout.rowGap) > 0.5) {
-          throw new Error('Horizontal Stack must use a wrapping flex row with equal-width items, aligned rows, and no item gap (' + context + '): ' +
-            JSON.stringify({ metrics, expectedTracks, layout }));
+            malformedRows || Math.abs(layout.columnGap - 6) > 0.5 || Math.abs(layout.rowGap - 6) > 0.5 ||
+            Math.abs(layout.layoutWidthScaleRatio - 1) > 0.02 ||
+            Math.abs(layout.layoutCenterOffset) > 2 ||
+            layout.groupWidth > layout.parentContentWidth + 2 ||
+            layout.itemsWidth > layout.groupWidth + 2 ||
+            hasHorizontalOverflow || Math.abs(lastRowCenter - layout.width / 2) > 18) {
+          throw new Error('Horizontal Stack must use centered 3/2-column flex rows with 6px gaps and no horizontal overflow (' + context + '): ' +
+            JSON.stringify({ metrics, expectedTracks, lastRowCenter, hasHorizontalOverflow, layout }));
         }
         return metrics;
       };
@@ -4845,16 +4861,23 @@ try {
                 media: Number.parseFloat(child.roundedSurfaceRadius),
                 padding: Number.parseFloat(child.artworkPadding)
               }));
-              if (Math.abs(layout.layoutWidthScaleRatio - 1.25) > 0.02 ||
+              const hasHorizontalOverflow = layout.children.some(child =>
+                child.visualLeft < -2 || child.visualRight > layout.itemsWidth + 2
+              );
+              if (Math.abs(layout.layoutWidthScaleRatio - 1) > 0.02 ||
                   Math.abs(layout.layoutCenterOffset) > 2 ||
-                  Math.abs(layout.columnGap) > 0.5 ||
-                  Math.abs(layout.rowGap) > 0.5 ||
-                  cornerRadii.some(radius => !Number.isFinite(radius.artwork) || radius.artwork < 10 ||
-                    !Number.isFinite(radius.media) || radius.media < 10 ||
+                  layout.groupWidth > layout.parentContentWidth + 2 ||
+                  layout.itemsWidth > layout.groupWidth + 2 ||
+                  Math.abs(layout.columnGap - 6) > 0.5 ||
+                  Math.abs(layout.rowGap - 6) > 0.5 ||
+                  hasHorizontalOverflow ||
+                  cornerRadii.some(radius => !Number.isFinite(radius.artwork) || Math.abs(radius.artwork) > 0.5 ||
+                    !Number.isFinite(radius.media) || Math.abs(radius.media) > 0.5 ||
                     !Number.isFinite(radius.padding) || radius.padding > 0.5)) {
-                throw new Error('Grid and Horizontal Stack must be centered at 125% width, have no item gaps, and retain rounded artwork/media corners: ' +
+                throw new Error('Grid and Horizontal Stack must retain default 100% sizing, 6px gaps, square artwork edges, and overflow-free tiles: ' +
                   JSON.stringify({ mode, viewport, layoutWidthScaleRatio:layout.layoutWidthScaleRatio,
-                    layoutCenterOffset:layout.layoutCenterOffset, columnGap:layout.columnGap, rowGap:layout.rowGap, cornerRadii, layout }));
+                    layoutCenterOffset:layout.layoutCenterOffset, columnGap:layout.columnGap, rowGap:layout.rowGap,
+                    hasHorizontalOverflow, cornerRadii, layout }));
               }
             }
             if (mode === 'cards' || mode === 'sticker') {
