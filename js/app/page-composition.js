@@ -123,7 +123,7 @@ export async function createPortfolioApp({
     ? import('../features/projects/index.js?v=20261029-01')
     : Promise.resolve(null);
   const galleryModulePromise = hasProjectGallery
-    ? import('../features/gallery/index.js?v=20261030-02').catch(error => {
+    ? import('../features/gallery/index.js?v=20261030-03').catch(error => {
         console.warn('Gallery module failed to load:', error);
         return null;
       })

@@ -9,7 +9,7 @@ import {
   applyGalleryReveal,
   resetGalleryPresentation,
   captureGalleryCardRects
-} from './presentation.js?v=20261030-01';
+} from './presentation.js?v=20261030-02';
 export async function initGallery(options = {}) {
   const documentRef = options.root?.getElementById ? options.root : globalThis.document;
   const windowRef = documentRef?.defaultView || globalThis.window;

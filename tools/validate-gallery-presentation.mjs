@@ -4,7 +4,7 @@ import {
   getRowAlignedCount,
   applyGalleryReveal,
   applyGalleryViewportReveal
-} from '../js/features/gallery/presentation.js?v=20261030-01';
+} from '../js/features/gallery/presentation.js?v=20261030-02';
 
 assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 6 }), 6);
 assert.equal(getResponsiveBaseCount({ width: 390, height: 844, total: 8 }), 8);
