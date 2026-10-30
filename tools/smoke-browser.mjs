@@ -4767,6 +4767,12 @@ try {
         if (layout === 'grid') group.dataset.artworkGridColumns = '3';
         window.dispatchEvent(new Event('resize'));
       }, mode);
+      // The preceding foil-input checks deliberately hover an artwork. Move
+      // the pointer clear of all artwork before viewport changes so the
+      // responsive geometry assertions measure resting card transforms,
+      // not a newly-entered hover transition at the next breakpoint.
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(450);
       try {
         for (const viewport of responsiveViewports) {
           await page.setViewportSize(viewport);
