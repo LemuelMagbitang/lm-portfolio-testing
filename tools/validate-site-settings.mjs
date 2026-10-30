@@ -77,7 +77,7 @@ assert.ok(adminSource.includes('id="s_default_video_poster"'), 'The CMS settings
 assert.ok(adminSource.includes("attachMediaBrowseButton(defaultVideoPosterInput, null, { kind: 'image', title: 'Choose default video poster' })"), 'The CMS poster field must provide the image Media Library picker.');
 assert.ok(compositionSource.includes('settings.interactionFeedback?.enabled === true'));
 assert.ok(compositionSource.includes("import('../features/interaction-feedback/index.js?v=20261018-03')"));
-assert.ok(compositionSource.includes("import('../features/gallery/index.js?v=20261030-02')"));
+assert.ok(compositionSource.includes("import('../features/gallery/index.js?v=20261030-03')"));
 
 const explicitMessageToggles = normalizeSiteSettings({ showHeroMessage: false, showFooterMessage: true });
 assert.equal(explicitMessageToggles.showHeroMessage, false, 'CMS can disable the hero message.');
