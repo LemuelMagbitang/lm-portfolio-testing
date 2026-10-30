@@ -19,7 +19,10 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261030-08'
+  cacheVersion = '20261031-01',
+  showPageTransition = true,
+  awaitProjectMedia = true,
+  immediateContentReveal = false
 } = {}) {
   const pageTransition = root?.getElementById('pageTransition');
   const windowRef = root?.defaultView || globalThis.window;
@@ -210,21 +213,41 @@ export async function bootstrapPortfolioApp({
     });
   }
 
-  showInitialPageTransition();
+  if (showPageTransition) {
+    showInitialPageTransition();
+  } else {
+    if (pageTransition) {
+      pageTransition.classList.add('is-hidden');
+      pageTransition.classList.remove('is-entering', 'is-steady', 'is-error');
+      pageTransition.setAttribute('aria-hidden', 'true');
+      pageTransition.dataset.loading = 'ready';
+    }
+    root.body?.setAttribute('aria-busy', 'false');
+  }
   // Initial hash navigation is settled once the composed page has its final layout.
 
   try {
     const { createPortfolioApp } = await import(`./page-composition.js?v=${cacheVersion}`);
 
+    let pageConfig = {};
+    try {
+      pageConfig = JSON.parse(root.getElementById('pageConfig')?.textContent || '{}');
+    } catch (configError) {
+      console.warn('Page configuration could not be parsed; using URL defaults.', configError);
+    }
+    const configuredUrls = pageConfig?.urls && typeof pageConfig.urls === 'object'
+      ? pageConfig.urls
+      : {};
     const config = normalizeAppConfig({
       urls: {
-        settings: globalThis.SETTINGS_URL,
-        projects: globalThis.PROJECTS_URL,
-        reviews: globalThis.REVIEWS_URL,
-        about: globalThis.ABOUT_URL,
-        filters: globalThis.FILTERS_URL,
-        heroLoop: globalThis.HERO_LOOP_URL,
-        heroMessages: globalThis.HERO_MESSAGES_URL
+        settings: configuredUrls.settings || globalThis.SETTINGS_URL,
+        projects: configuredUrls.projects || globalThis.PROJECTS_URL,
+        reviews: configuredUrls.reviews || globalThis.REVIEWS_URL,
+        about: configuredUrls.about || globalThis.ABOUT_URL,
+        filters: configuredUrls.filters || globalThis.FILTERS_URL,
+        heroLoop: configuredUrls.heroLoop || globalThis.HERO_LOOP_URL,
+        footerLoop: configuredUrls.footerLoop || globalThis.FOOTER_LOOP_URL,
+        heroMessages: configuredUrls.heroMessages || globalThis.HERO_MESSAGES_URL
       }
     });
 
@@ -247,10 +270,12 @@ export async function bootstrapPortfolioApp({
       root,
       runtime,
       cms,
-      config
+      config,
+      awaitProjectMedia,
+      immediateContentReveal
     });
 
-    await waitForReadyPaint();
+    if (showPageTransition) await waitForReadyPaint();
     settleInitialHashTarget();
     hideInitialPageTransition();
     // Start first-viewport reveals only after the branded gate is gone; otherwise
@@ -261,14 +286,19 @@ export async function bootstrapPortfolioApp({
       console.warn('Content reveal could not start.', revealError);
     }
     if (initialTransitionFrame) windowRef.cancelAnimationFrame?.(initialTransitionFrame);
+    return app;
   } catch (error) {
     console.error('Portfolio runtime failed to initialize', error);
-    if (pageTransition) {
-      pageTransition.classList.remove('is-hidden');
-      pageTransition.classList.add('is-error', 'is-entering');
-      pageTransition.dataset.loading = 'error';
-      pageTransition.setAttribute('aria-hidden', 'false');
+    if (showPageTransition) {
+      if (pageTransition) {
+        pageTransition.classList.remove('is-hidden');
+        pageTransition.classList.add('is-error', 'is-entering');
+        pageTransition.dataset.loading = 'error';
+        pageTransition.setAttribute('aria-hidden', 'false');
+      }
+      root.body?.setAttribute('aria-busy', 'true');
+      return null;
     }
-    root.body?.setAttribute('aria-busy', 'true');
+    throw error;
   }
 }

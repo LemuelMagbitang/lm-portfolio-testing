@@ -79,7 +79,8 @@ function isReducedMotion(view) {
  */
 export function initContentReveal({
   root = globalThis.document,
-  windowRef = root?.defaultView || globalThis.window
+  windowRef = root?.defaultView || globalThis.window,
+  immediateVisible = false
 } = {}) {
   if (!root?.querySelectorAll || !windowRef) return NOOP_FEATURE;
 
@@ -176,8 +177,19 @@ export function initContentReveal({
         target.dataset.lmContentRevealState = 'pending';
         target.classList.add('lm-content-reveal-target');
         targets.add(target);
-        pendingTargets.add(target);
-        activeObserver.observe(target);
+
+        const rect = target.getBoundingClientRect?.();
+        const inViewport = immediateVisible && rect &&
+          rect.bottom > 0 && rect.top < (Number(windowRef.innerHeight) || 0);
+        if (inViewport) {
+          // Do not show an empty first viewport during route remounts.
+          // Offscreen content continues to use the normal observer reveal.
+          target.dataset.lmContentRevealState = 'shown';
+          target.classList.add('is-lm-content-revealed');
+        } else {
+          pendingTargets.add(target);
+          activeObserver.observe(target);
+        }
         added += 1;
       });
     });

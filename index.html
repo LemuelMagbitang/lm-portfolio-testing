@@ -56,7 +56,7 @@
 
   <link rel="stylesheet" href="css/style.css?v=20261030-03">
   <link rel="stylesheet" href="css/features/content-reveal.css?v=20261029-04">
-  <link rel="stylesheet" href="css/features/lightbox.css?v=20261030-13">
+  <link rel="stylesheet" href="css/features/lightbox.css?v=20261030-13" data-page-style="lightbox">
   <script type="importmap">
   {
     "imports": {
@@ -65,9 +65,9 @@
     }
   }
   </script>
-  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261030-08">
-  <link rel="modulepreload" href="js/app/page-composition.js?v=20261030-08">
-  <link rel="prefetch" href="about/" as="document">
+  <link rel="modulepreload" href="js/app/bootstrap.js?v=20261031-01">
+  <link rel="modulepreload" href="js/app/page-composition.js?v=20261031-01">
+  <script type="application/json" id="pageConfig">{"urls":{"settings":"data/settings.json","projects":"data/projects.json","reviews":"data/reviews.json","about":"data/about.json","filters":"data/filters.json","heroLoop":"data/hero-loop.json","footerLoop":"data/footer-loop.json","heroMessages":"data/hero.json"}}</script>
 
 </head>
 <body>
@@ -294,20 +294,6 @@
     </div>
   </footer>
 
-  <!-- APP CONFIG HOOK — public-page startup receives these CMS source
-       locations through the composition/bootstrap layer. The features
-       own their own loading and presentation behavior; keep these values
-       limited to source configuration rather than embedding feature logic
-       in the HTML. -->
-  <script>
-    window.HERO_MESSAGES_URL = 'data/hero.json';
-    window.SETTINGS_URL = 'data/settings.json';
-    window.PROJECTS_URL = 'data/projects.json';
-    window.REVIEWS_URL = 'data/reviews.json';
-    window.FILTERS_URL = 'data/filters.json';
-    window.HERO_LOOP_URL = 'data/hero-loop.json';
-    window.FOOTER_LOOP_URL = 'data/footer-loop.json';
-  </script>
-  <script type="module" src="js/script.js?v=20261030-08"></script>
+  <script type="module" src="js/script.js?v=20261031-01"></script>
 </body>
 </html>

@@ -67,7 +67,9 @@ export async function createPortfolioApp({
   root = globalThis.document,
   runtime,
   cms,
-  config
+  config,
+  awaitProjectMedia = true,
+  immediateContentReveal = false
 } = {}) {
   if (!root || !runtime || !cms || !config?.urls) throw new Error('Portfolio app dependencies are incomplete.');
 
@@ -98,7 +100,7 @@ export async function createPortfolioApp({
   let activeCuratedViewSlug = '';
   let lightboxFeature = null;
   let contentRevealFeature = null;
-  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261029-10')
+  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261031-01')
     .catch(error => {
       console.warn('Content reveal: optional feature could not load.', error);
       return null;
@@ -552,35 +554,6 @@ export async function createPortfolioApp({
   // from its safe DOM fallback to filtered project navigation.
   galleryFeatureRef = galleryFeature;
 
-  const ABOUT_PAGE_PREFETCH_TIMEOUT_MS = 5000;
-  const aboutPagePrefetchPromise = !isAboutPage
-    ? Promise.resolve().then(() => {
-        const aboutPageUrl = siteAssetUrl('about/');
-        if (!aboutPageUrl || typeof globalThis.fetch !== 'function') return false;
-
-        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-        let timer = null;
-        if (controller && typeof root.defaultView?.setTimeout === 'function') {
-          timer = root.defaultView.setTimeout(
-            () => controller.abort(),
-            ABOUT_PAGE_PREFETCH_TIMEOUT_MS
-          );
-        }
-
-        return globalThis.fetch(aboutPageUrl, {
-          method: 'GET',
-          credentials: 'omit',
-          cache: 'force-cache',
-          signal: controller?.signal
-        })
-          .then(response => response.ok)
-          .catch(() => false)
-          .finally(() => {
-            if (timer !== null) root.defaultView.clearTimeout(timer);
-          });
-      })
-    : Promise.resolve(true);
-
   // Wait for all local project media before removing the branded loading
   // screen. A Contact hash changes the final scroll target, not which assets
   // are warmed. Each individual preload has its own timeout/error handling.
@@ -588,23 +561,22 @@ export async function createPortfolioApp({
   // renders text and visible fallback frames from CMS data; never keep the
   // first-paint transition open while optional images load from local or remote
   // sources. The warm-up continues in the background below.
-  if (!isAboutPage) await projectMediaPreloadPromise;
+  if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;
   else void projectMediaPreloadPromise;
 
-  // About-page prefetching and image/logo warm-up are non-critical navigation
-  // optimizations. Run them in the background so they cannot delay the initial
-  // page transition or Lightbox interactivity.
-  void Promise.all([
-    aboutPagePrefetchPromise,
-    aboutAssetPreloadPromise
-  ]);
+  // Profile/software-logo image warm-up is opportunistic and never blocks
+  // first paint or a client-side route handoff.
+  void aboutAssetPreloadPromise;
 
   // Content reveal is an optional presentation feature. It is initialized after
   // CMS-backed content has rendered and while the page-transition gate is still up.
   try {
     const contentRevealModule = await contentRevealModulePromise;
     if (typeof contentRevealModule?.initContentReveal === 'function') {
-      contentRevealFeature = contentRevealModule.initContentReveal({ root });
+      contentRevealFeature = contentRevealModule.initContentReveal({
+        root,
+        immediateVisible: immediateContentReveal
+      });
     }
   } catch (error) {
     console.warn('Content reveal: initialization failed.', error);
