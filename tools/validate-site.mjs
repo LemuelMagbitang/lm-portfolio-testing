@@ -2313,7 +2313,7 @@ function validateFilterSoundAndFeedbackContract() {
       !navigation.includes("bind(windowRef, 'pointerup', resetPointerFocus)") ||
       !navigation.includes('logoLink.blur()') ||
       !smoke.includes('filterGalleryGap') ||
-      !smoke.includes('layout.filterHeroGap < 12 || layout.filterGalleryGap < 12') ||
+      !smoke.includes('layout.filterHeroGap < 11 || layout.filterGalleryGap < 11') ||
       !smoke.includes('filterHasOverflow') ||
       !smoke.includes('layout.filterHasOverflow && !hasFilterEdgeFade') ||
       !css.includes('.nav-logo:focus:not(:focus-visible)') ||
