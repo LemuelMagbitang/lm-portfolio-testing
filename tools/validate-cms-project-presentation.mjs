@@ -485,9 +485,13 @@ assert.ok(
   lightboxCss.includes('--artwork-grid-gap:6px;') &&
   lightboxCss.includes('--artwork-grid-gap-half:3px;') &&
   lightboxCss.includes('--artwork-stack-gap:6px;') &&
+  lightboxCss.includes('gap:var(--artwork-grid-gap);\n  padding:0;') &&
+  lightboxCss.includes('gap:var(--artwork-stack-gap);\n  padding:0;') &&
   lightboxCss.includes('flex:0 0 calc((100% - 12px) / 3);') &&
   lightboxCss.includes('flex-basis:calc((100% - 6px) / 2);') &&
   lightboxCss.includes('border-radius:0!important;') &&
+  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
+  lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
   renderer.includes('entry.dataset.artworkEffectiveLayout = effectiveLayout') &&
   lightboxCss.includes('translate:var(--artwork-row-center-shift,0px) 0;') &&
   lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&

@@ -4568,6 +4568,12 @@ try {
           groupWidth: groupRect?.width || 0,
           itemsWidth: itemsRect.width,
           parentContentWidth,
+          itemsPadding:{
+            top:Number.parseFloat(itemsStyle.paddingTop)||0,
+            right:Number.parseFloat(itemsStyle.paddingRight)||0,
+            bottom:Number.parseFloat(itemsStyle.paddingBottom)||0,
+            left:Number.parseFloat(itemsStyle.paddingLeft)||0
+          },
           itemsBoxSizing: itemsStyle.boxSizing,
           itemsDisplay: itemsStyle.display,
           itemsFlexWrap: itemsStyle.flexWrap,
@@ -4757,6 +4763,7 @@ try {
             Math.abs(layout.layoutCenterOffset) > 2 ||
             layout.groupWidth > layout.parentContentWidth + 2 ||
             layout.itemsWidth > layout.groupWidth + 2 ||
+            Object.values(layout.itemsPadding).some(value => Math.abs(value) > 0.5) ||
             hasHorizontalOverflow || Math.abs(lastRowCenter - layout.width / 2) > 18) {
           throw new Error('Horizontal Stack must use centered 3/2-column flex rows with 6px gaps and no horizontal overflow (' + context + '): ' +
             JSON.stringify({ metrics, expectedTracks, lastRowCenter, hasHorizontalOverflow, layout }));
@@ -4868,6 +4875,7 @@ try {
                   Math.abs(layout.layoutCenterOffset) > 2 ||
                   layout.groupWidth > layout.parentContentWidth + 2 ||
                   layout.itemsWidth > layout.groupWidth + 2 ||
+                  Object.values(layout.itemsPadding).some(value => Math.abs(value) > 0.5) ||
                   Math.abs(layout.columnGap - 6) > 0.5 ||
                   Math.abs(layout.rowGap - 6) > 0.5 ||
                   hasHorizontalOverflow ||
@@ -5687,6 +5695,56 @@ try {
       if (overflowAnchorAfterStackBack !== lightboxOverflowAnchorBeforeInspect) {
         throw new Error('Horizontal Stack Inspect Back did not restore the Lightbox scroll-anchor setting: ' +
           JSON.stringify({ before: lightboxOverflowAnchorBeforeInspect, after: overflowAnchorAfterStackBack }));
+      }
+
+      const inspectArtworkShapeProbe = await page.evaluate(() => {
+        const overlay = document.createElement('div');
+        overlay.className = 'lightbox-inspect-mode';
+        const panel = document.createElement('div');
+        panel.className = 'lightbox-inspect-panel';
+        const stage = document.createElement('div');
+        stage.className = 'lightbox-inspect-stage';
+        const frame = document.createElement('div');
+        frame.className = 'lightbox-inspect-frame';
+        const entry = document.createElement('div');
+        entry.className = 'lightbox-media-item';
+        const artwork = document.createElement('div');
+        artwork.className = 'lightbox-artwork';
+        entry.appendChild(artwork);
+        frame.appendChild(entry);
+        stage.appendChild(frame);
+        const footer = document.createElement('div');
+        footer.className = 'lightbox-inspect-footer';
+        panel.append(stage,footer);
+        overlay.appendChild(panel);
+        const standardArtwork = document.createElement('div');
+        standardArtwork.className = 'lightbox-artwork';
+        document.body.append(overlay,standardArtwork);
+        const result = {
+          inspectArtworkRadius:getComputedStyle(artwork).borderTopLeftRadius,
+          standardArtworkRadius:getComputedStyle(standardArtwork).borderTopLeftRadius,
+          artworkOverflow:getComputedStyle(artwork).overflow,
+          panelRadius:getComputedStyle(panel).borderTopLeftRadius,
+          stageRadius:getComputedStyle(stage).borderTopLeftRadius,
+          frameRadius:getComputedStyle(frame).borderTopLeftRadius,
+          footerRadius:getComputedStyle(footer).borderTopLeftRadius
+        };
+        overlay.remove();
+        standardArtwork.remove();
+        return result;
+      });
+      const panelRadii = [
+        inspectArtworkShapeProbe.panelRadius,
+        inspectArtworkShapeProbe.stageRadius,
+        inspectArtworkShapeProbe.frameRadius,
+        inspectArtworkShapeProbe.footerRadius
+      ].map(value => Number.parseFloat(value));
+      if (!inspectArtworkShapeProbe.inspectArtworkRadius ||
+          inspectArtworkShapeProbe.inspectArtworkRadius !== inspectArtworkShapeProbe.standardArtworkRadius ||
+          inspectArtworkShapeProbe.artworkOverflow !== 'hidden' ||
+          panelRadii.some(value => !Number.isFinite(value) || Math.abs(value) > 0.5)) {
+        throw new Error('Ungrouped Inspect must match the standard artwork curve without rounding the panel, stage, frame or footer: ' +
+          JSON.stringify(inspectArtworkShapeProbe));
       }
 
       // The Lightbox must remain closable after either keyboard Inspector exit.

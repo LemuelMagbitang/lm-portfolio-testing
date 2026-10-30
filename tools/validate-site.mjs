@@ -1769,9 +1769,14 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('--artwork-grid-gap:6px;') &&
     artworkGroupCss.includes('--artwork-grid-gap-half:3px;') &&
     artworkGroupCss.includes('--artwork-stack-gap:6px;') &&
+    artworkGroupCss.includes('gap:var(--artwork-grid-gap);\n  padding:0;') &&
+    artworkGroupCss.includes('gap:var(--artwork-stack-gap);\n  padding:0;') &&
     artworkGroupCss.includes('flex:0 0 calc((100% - 12px) / 3);') &&
     artworkGroupCss.includes('flex-basis:calc((100% - 6px) / 2);') &&
     artworkGroupCss.includes('border-radius:0!important;') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
+    artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+    artworkGroupCss.includes('overflow:hidden;') &&
     artworkGroupRuntime.includes('entry.dataset.artworkEffectiveLayout = effectiveLayout') &&
     artworkGroupRuntime.includes("section.style.setProperty('--artwork-grid-columns', String(gridColumns))") &&
     artworkGroupAdmin.includes('data-edit-grid-columns') &&
