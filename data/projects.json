@@ -117,7 +117,7 @@
         "id": "h2oh",
         "name": "h2oh",
         "layout": "grid",
-        "gridColumns": 2,
+        "gridColumns": 3,
         "color": "#849573"
       },
       {
