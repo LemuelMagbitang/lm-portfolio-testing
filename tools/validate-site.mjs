@@ -462,6 +462,62 @@ function validateHeroLoop(heroLoop) {
   });
 }
 
+function validateHeroMediaPreconnects(heroLoop) {
+  const muxItems = (Array.isArray(heroLoop) ? heroLoop : [])
+    .filter(item => String(item?.type || '').trim().toLowerCase() === 'mux');
+  if (!muxItems.length || !exists('index.html')) return;
+
+  const html = readText('index.html');
+  const links = [...html.matchAll(/<link\\b[^>]*>/gi)].map(match => match[0]);
+  const hasPreconnect = (origin, requireCors = false) => {
+    const escapedOrigin = String(origin).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\function validateHeroLoop(heroLoop) {
+  if (!Array.isArray(heroLoop)) return;
+  heroLoop.forEach((item, i) => {
+    const where = `data/hero-loop.json item ${i + 1}`;
+    validateMedia(item, where);
+    if (item?.fadeInMs !== undefined && (!Number.isFinite(Number(item.fadeInMs)) || Number(item.fadeInMs) < 0)) err(`${where}: fadeInMs must be non-negative.`);
+    if (item?.fadeOutMs !== undefined && (!Number.isFinite(Number(item.fadeOutMs)) || Number(item.fadeOutMs) < 0)) err(`${where}: fadeOutMs must be non-negative.`);
+  });
+}
+');
+    return links.some(tag => {
+      if (!/\\brel=['"]preconnect['"]/i.test(tag)) return false;
+      const href = tag.match(/\\bhref=['"]([^'"]+)['"]/i)?.[1] || '';
+      if (href.replace(/\\/$/, '') !== origin) return false;
+      return !requireCors || /\\bcrossorigin(?:=['"][^'"]*['"])?/i.test(tag);
+    });
+  };
+
+  const usesMuxPoster = muxItems.some(item => {
+    const source = String(item?.poster || item?.src || '').trim();
+    try { return new URL(source).origin === 'https://image.mux.com'; }
+    catch (_) { return false; }
+  });
+  const usesMuxPlayback = muxItems.some(item => Boolean(String(item?.playbackId || '').trim()));
+
+  if (usesMuxPoster && !hasPreconnect('https://image.mux.com')) {
+    err('Hero media: an active Mux poster must have a matching image.mux.com preconnect hint.');
+  }
+  if (usesMuxPlayback && !hasPreconnect('https://stream.mux.com', true)) {
+    err('Hero media: active Mux playback must have a CORS-enabled stream.mux.com preconnect hint.');
+  }
+
+  const muxLoader = exists('js/infrastructure/mux/player.js')
+    ? readText('js/infrastructure/mux/player.js')
+    : '';
+  const moduleOrigins = [...muxLoader.matchAll(/import\\(\\s*['"](https?:\\/\\/[^'"]+)['"]\\s*\\)/g)]
+    .map(match => {
+      try { return new URL(match[1]).origin; }
+      catch (_) { return ''; }
+    })
+    .filter(Boolean);
+  moduleOrigins.forEach(origin => {
+    if (!hasPreconnect(origin, true)) {
+      err('Hero media: the dynamically imported Mux player module must have a CORS-enabled preconnect hint for ' + origin + '.');
+    }
+  });
+}
+
 function validateAbout(about) {
   if (!about || typeof about !== 'object') return;
   const photo = typeof about.photo === 'string' ? about.photo : about.photo?.src;
@@ -718,6 +774,7 @@ validateFilters(filters);
 validateProjects(projects, filters);
 validateCuratedViews(curatedViews, projects, filters);
 validateHeroLoop(heroLoop);
+validateHeroMediaPreconnects(heroLoop);
 validateDefaultVideoPosterSetting(settings);
 validateAbout(about);
 validateCssDeclarations();
