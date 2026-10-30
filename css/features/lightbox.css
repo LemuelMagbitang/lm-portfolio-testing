@@ -653,10 +653,11 @@
   transform:none!important;
 }
 .lightbox-inspect-frame .lightbox-artwork{
-  width:min(100%,calc(100vw - 48px),calc((100dvh - 220px) * var(--lightbox-artwork-ratio,1)));
-  max-width:min(100%,calc(100vw - 48px));
-  max-height:max(1px,calc(100dvh - 220px));
-  height:auto;
+  width:auto;
+  max-width:100%;
+  height:100%;
+  max-height:100%;
+  min-height:0;
   aspect-ratio:var(--lightbox-artwork-ratio,1);
   margin-inline:auto;
   align-self:center;
@@ -693,9 +694,10 @@
 }
 @media(max-width:760px){
   .lightbox-inspect-frame .lightbox-artwork{
-    width:min(100%,calc(100vw - 32px),calc((100dvh - 190px) * var(--lightbox-artwork-ratio,1)));
+    width:auto;
     max-width:min(100%,calc(100vw - 32px));
-    max-height:max(1px,calc(100dvh - 190px));
+    height:100%;
+    max-height:100%;
   }
 }
 /* Preserve the desktop's original single-row affordance. Compact/touch layouts
