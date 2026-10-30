@@ -4606,8 +4606,9 @@ try {
             : Number.POSITIVE_INFINITY,
           children: Array.from(items.children).map((el, index) => {
             const artwork = el.querySelector('.lightbox-artwork.has-holographic.is-media-reveal-ready');
-            const roundedSurface = artwork?.querySelector('.lightbox-holographic-face') ||
-              artwork?.querySelector(':scope > img, :scope > video, :scope > iframe, :scope > lottie-player');
+            const cornerArtwork = el.querySelector('.lightbox-artwork');
+            const roundedSurface = cornerArtwork?.querySelector('.lightbox-holographic-face') ||
+              cornerArtwork?.querySelector(':scope > img, :scope > video, :scope > iframe, :scope > lottie-player, :scope > .lightbox-holographic');
             const transform = getComputedStyle(el).transform;
             let rotationDegrees = 0;
             if (transform && transform !== 'none') {
@@ -4649,8 +4650,8 @@ try {
               mobileStickerRotationValue: Number.parseFloat(el.style.getPropertyValue('--artwork-sticker-rotation-mobile')),
               artworkWidth: artwork?.offsetWidth || 0,
               artworkHeight: artwork?.offsetHeight || 0,
-              artworkPadding: artwork ? getComputedStyle(artwork).padding : '',
-              artworkCornerRadius: artwork ? getComputedStyle(artwork).borderTopLeftRadius : '',
+              artworkPadding: cornerArtwork ? getComputedStyle(cornerArtwork).padding : '',
+              artworkCornerRadius: cornerArtwork ? getComputedStyle(cornerArtwork).borderTopLeftRadius : '',
               roundedSurfaceRadius: roundedSurface ? getComputedStyle(roundedSurface).borderTopLeftRadius : '',
               stickerAppearance: artwork ? (() => {
                 const frameStyle = getComputedStyle(artwork);
