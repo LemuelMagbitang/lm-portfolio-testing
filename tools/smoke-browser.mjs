@@ -11919,7 +11919,10 @@ try {
         if (await showMore.count() &&
             await showMore.isVisible().catch(() => false) &&
             (await showMore.getAttribute('aria-expanded')) !== 'true') {
-          await showMore.click();
+          // Do not let Playwright auto-scroll the offscreen control into view.
+          // That scroll itself intersects every Gallery card and consumes the
+          // pending reveal state before this test can inspect it at page top.
+          await showMore.evaluate(button => button.click());
           await page.waitForFunction(() => {
             const button = document.querySelector('#showMoreBtn');
             const viewport = document.querySelector('#portfolioGridViewport');
