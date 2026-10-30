@@ -3826,6 +3826,14 @@ try {
           throw new Error('Programmatic clicks must not start a direct-input transition: ' + JSON.stringify(syntheticActivation));
         }
 
+        // Restore the collapsed baseline after the synthetic-click contract
+        // before testing a trusted pointer activation.
+        await button.evaluate(el => el.click());
+        await page.waitForFunction(() =>
+          document.querySelector('#showMoreBtn')?.getAttribute('aria-expanded') === 'false' &&
+          getComputedStyle(document.querySelector('#portfolioGridViewport')).maxHeight !== 'none'
+        , null, { timeout: 2000 });
+
         // Real pointer/keyboard activations update button semantics immediately,
         // while the gallery height uses one reversible, measured transition.
         await button.hover();
