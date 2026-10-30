@@ -5672,10 +5672,12 @@ try {
           faceRadius:face ? getComputedStyle(face).borderTopLeftRadius : ''
         };
       });
+      const stackArtworkRadius = Number.parseFloat(stackInspectorCorners.artworkRadius);
+      const stackFaceRadius = Number.parseFloat(stackInspectorCorners.faceRadius);
       if (stackInspectorCorners.layout !== 'stack' ||
-          Number.parseFloat(stackInspectorCorners.artworkRadius) < 10 ||
-          Number.parseFloat(stackInspectorCorners.faceRadius) < 10) {
-        throw new Error('Horizontal Stack Inspect must preserve the grouped artwork corner styling: ' +
+          !Number.isFinite(stackArtworkRadius) || Math.abs(stackArtworkRadius) > 0.5 ||
+          !Number.isFinite(stackFaceRadius) || Math.abs(stackFaceRadius) > 0.5) {
+        throw new Error('Horizontal Stack Inspect must preserve square grouped artwork edges: ' +
           JSON.stringify(stackInspectorCorners));
       }
       await inspectMode.locator('.lightbox-inspect-back').click();
