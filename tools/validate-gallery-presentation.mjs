@@ -196,7 +196,6 @@ function makeExpansionFixture({
       contains(name) { return buttonClasses.has(name); }
     }
   };
-  let settledCalls = 0;
   // Both transition directions require an overflowing result set so the button remains visible.
   const fixtureCards = [card, card];
   const grid = {
@@ -229,12 +228,11 @@ function makeExpansionFixture({
     animateExpand: startExpanded,
     animateCollapse,
     windowRef,
-    fadeMs: 300,
-    onShowMoreSettled() { settledCalls += 1; }
+    fadeMs: 300
   });
   return {
     frames, timers, viewport, fadeOverlay, showMoreButton, showMoreWrapper,
-    buttonLabel, settledCalls: () => settledCalls, cleanup
+    buttonLabel, cleanup
   };
 }
 
@@ -243,14 +241,13 @@ assert.equal(expansionFixture.viewport.style.maxHeight, '180px',
   'Show More must begin at the measured collapsed viewport height.');
 assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), true,
   'The viewport transition must be enabled before its target height changes.');
-assert.equal(expansionFixture.showMoreButton.getAttribute('aria-expanded'), 'false',
-  'Show More must retain its collapsed semantic state while the viewport is expanding.');
-assert.equal(expansionFixture.showMoreButton.classList.contains('expanded'), false);
+assert.equal(expansionFixture.showMoreButton.getAttribute('aria-expanded'), 'true',
+  'Show More must update its expanded semantic state as soon as activation is accepted.');
+assert.equal(expansionFixture.showMoreButton.classList.contains('expanded'), true);
 assert.equal(expansionFixture.showMoreWrapper.classList.contains('expanded'), true,
   'Wrapper spacing must enter the expanded layout as the viewport transition begins.');
-assert.equal(expansionFixture.buttonLabel.textContent, 'SHOW MORE');
-assert.equal(expansionFixture.settledCalls(), 0,
-  'The button settlement callback must wait for the viewport transitionend event.');
+assert.equal(expansionFixture.buttonLabel.textContent, 'SHOW LESS',
+  'The visible button label must follow the expanded semantic state immediately.');
 assert.equal(expansionFixture.showMoreWrapper.classList.contains('is-expanding'), true,
   'The Show More wrapper spacing transition must be enabled before expanded spacing changes.');
 while (expansionFixture.frames.length) expansionFixture.frames.shift()();
@@ -268,7 +265,6 @@ assert.equal(expansionFixture.showMoreButton.classList.contains('expanded'), tru
 assert.equal(expansionFixture.showMoreWrapper.classList.contains('expanded'), true);
 assert.equal(expansionFixture.showMoreWrapper.getAttribute('data-expanded'), 'true');
 assert.equal(expansionFixture.buttonLabel.textContent, 'SHOW LESS');
-assert.equal(expansionFixture.settledCalls(), 1);
 expansionFixture.cleanup?.();
 
 const reducedExpansionFixture = makeExpansionFixture({ reducedMotion: true });
@@ -291,13 +287,13 @@ assert.equal(collapseFixture.viewport.classList.contains('is-collapsing'), true,
   'The collapse transition must be enabled before applying the collapsed target.');
 assert.equal(collapseFixture.showMoreWrapper.classList.contains('is-collapsing'), true,
   'The Show Less wrapper spacing transition must be enabled with the viewport.');
-assert.equal(collapseFixture.showMoreButton.getAttribute('aria-expanded'), 'true',
-  'Show Less must retain its expanded semantic state while the viewport is collapsing.');
-assert.equal(collapseFixture.showMoreButton.classList.contains('expanded'), true);
+assert.equal(collapseFixture.showMoreButton.getAttribute('aria-expanded'), 'false',
+  'Show Less must update its collapsed semantic state as soon as activation is accepted.');
+assert.equal(collapseFixture.showMoreButton.classList.contains('expanded'), false);
 assert.equal(collapseFixture.showMoreWrapper.classList.contains('expanded'), false,
   'Wrapper spacing must enter the collapsed layout as the viewport transition begins.');
-assert.equal(collapseFixture.buttonLabel.textContent, 'SHOW LESS');
-assert.equal(collapseFixture.settledCalls(), 0);
+assert.equal(collapseFixture.buttonLabel.textContent, 'SHOW MORE',
+  'The visible button label must follow the collapsed semantic state immediately.');
 while (collapseFixture.frames.length) collapseFixture.frames.shift()();
 assert.equal(collapseFixture.viewport.style.maxHeight, '170px',
   'Show Less must animate toward the measured collapsed viewport height.');
@@ -312,7 +308,6 @@ assert.equal(collapseFixture.showMoreButton.classList.contains('expanded'), fals
 assert.equal(collapseFixture.showMoreWrapper.classList.contains('expanded'), false);
 assert.equal(collapseFixture.showMoreWrapper.getAttribute('data-expanded'), 'false');
 assert.equal(collapseFixture.buttonLabel.textContent, 'SHOW MORE');
-assert.equal(collapseFixture.settledCalls(), 1);
 collapseFixture.cleanup?.();
 
 const reducedCollapseFixture = makeExpansionFixture({
@@ -347,19 +342,19 @@ assert.match(worksMarkup, /class="filter-tab-label">ALL<\/span>/);
 assert.match(styleSource, /\.filter-tabs \.tab-btn \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/);
 assert.match(styleSource, /\.filter-tabs \.filter-tab-label \{[\s\S]*?width: max-content;[\s\S]*?margin-inline: auto;[\s\S]*?line-height: inherit;[\s\S]*?text-align: center;/);
 assert.match(galleryControllerForFilters, /const isDirectActivation = event\?\.isTrusted !== false;/);
-assert.match(galleryControllerForFilters, /if \(isDirectActivation\) playShowMoreBounce\(\)/);
 assert.match(galleryControllerForFilters, /animateExpand: nextExpanded && isDirectActivation[\s\S]*?animateCollapse: !nextExpanded && isDirectActivation/);
-assert.match(galleryControllerForFilters, /if \(showMoreTransitionPending\) return;/);
-assert.match(galleryControllerForFilters, /setAttribute\('aria-disabled', 'true'\)/);
-assert.match(galleryControllerForFilters, /onShowMoreSettled: settleShowMoreToggle/);
-assert.match(galleryPresentationSource, /viewportTransitionCompletion = \(\) => \{[\s\S]*?syncShowMoreButtonState\(\)/);
+assert.doesNotMatch(galleryControllerForFilters, /playShowMoreBounce|showMoreTransitionPending|aria-disabled/);
+assert.match(galleryControllerForFilters, /windowRef\.scrollTo\(\{ top: destination, behavior: 'smooth' \}\)/);
+assert.match(galleryPresentationSource, /if \(wasActive && currentHeight > 0\)/);
 assert.match(galleryPresentationSource, /const syncShowMoreButtonState = \(\) => \{[\s\S]*?setAttribute\('aria-expanded', String\(expanded\)\)/);
+assert.doesNotMatch(galleryPresentationSource, /onShowMoreSettled|notifyShowMoreSettled/);
 assert.match(styleSource, /\.btn-show-more:not\(\.expanded\):hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
 assert.match(styleSource, /\.btn-show-more\.expanded:hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
-assert.match(styleSource, /\.btn-show-more\.is-interacting\{[\s\S]*?animation:show-more-interaction-bounce 420ms/);
-assert.match(styleSource, /\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.portfolio-grid-viewport\.is-collapsing\s*\{\s*transition:\s*max-height 560ms/);
-assert.match(styleSource, /\.show-more-wrapper\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-collapsing\s*\{[\s\S]*?margin-top 560ms[\s\S]*?min-height 560ms[\s\S]*?padding-bottom 560ms/);
-assert.match(styleSource, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.btn-show-more\.is-interacting\{animation:none!important;\}[\s\S]*?\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.portfolio-grid-viewport\.is-collapsing,[\s\S]*?\.show-more-wrapper\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-collapsing\{transition:none!important;\}/);
+assert.doesNotMatch(styleSource, /show-more-interaction-bounce|\.btn-show-more\.is-interacting/);
+assert.match(styleSource, /\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.portfolio-grid-viewport\.is-collapsing\s*\{\s*transition:\s*max-height 440ms/);
+assert.match(styleSource, /\.show-more-wrapper\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-collapsing\s*\{[\s\S]*?margin-top 440ms[\s\S]*?min-height 440ms[\s\S]*?padding-bottom 440ms/);
+assert.match(styleSource, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.portfolio-grid-viewport\.is-collapsing,[\s\S]*?\.show-more-wrapper\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-collapsing\{transition:none!important;\}/);
+assert.match(worksMarkup, /id="showMoreBtn"[^>]*aria-controls="portfolioGridViewport"[^>]*aria-expanded="false"/);
 assert.match(galleryPresentationSource, /const startExpansion = \(\) => \{[\s\S]*?grid\.scrollHeight[\s\S]*?viewport\.style\.maxHeight/);
 assert.match(galleryPresentationSource, /if \(!animateExpand \|\| !expanded \|\| reducedMotion\) return false/);
 assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaList\.length > 2 \? 'multi' : 'single'/);

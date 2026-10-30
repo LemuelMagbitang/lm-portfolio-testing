@@ -3778,14 +3778,16 @@ try {
             backdropFilter: style.backdropFilter,
             animationName: style.animationName,
             interacting: el.classList.contains('is-interacting'),
-            expanded: el.getAttribute('aria-expanded')
+            expanded: el.getAttribute('aria-expanded'),
+            controls: el.getAttribute('aria-controls')
           };
         });
         if (initial.background !== 'rgba(255, 255, 255, 0.08)' ||
             initial.color !== 'rgb(255, 255, 255)' ||
             initial.backdropFilter === 'none' ||
             initial.animationName !== 'none' ||
-            initial.interacting || initial.expanded !== 'false') {
+            initial.interacting || initial.expanded !== 'false' ||
+            initial.controls !== 'portfolioGridViewport') {
           throw new Error('Initial Show More state must remain glass and animation-free: ' + JSON.stringify(initial));
         }
 
@@ -3821,45 +3823,32 @@ try {
           interacting: el.classList.contains('is-interacting')
         }));
         if (syntheticActivation.animationName !== 'none' || syntheticActivation.interacting) {
-          throw new Error('Programmatic clicks must not trigger the interaction bounce: ' + JSON.stringify(syntheticActivation));
+          throw new Error('Programmatic clicks must not start a direct-input transition: ' + JSON.stringify(syntheticActivation));
         }
 
-        // Return to the collapsed state, then exercise the actual pointer path.
-        await button.evaluate(el => el.click());
-        await page.waitForFunction(() =>
-          document.querySelector('#showMoreBtn')?.getAttribute('aria-expanded') === 'false' &&
-          getComputedStyle(document.querySelector('#portfolioGridViewport')).maxHeight !== 'none'
-        , null, { timeout: 2000 });
-
+        // Real pointer/keyboard activations update button semantics immediately,
+        // while the gallery height uses one reversible, measured transition.
         await button.hover();
         await button.click();
-        await page.waitForFunction(() => {
-          const el = document.querySelector('#showMoreBtn');
+        const directExpansionStart = await button.evaluate(el => {
           const viewport = document.querySelector('#portfolioGridViewport');
-          return el?.classList.contains('is-interacting') &&
-            getComputedStyle(el).animationName === 'show-more-interaction-bounce' &&
-            viewport?.classList.contains('is-expanding') &&
-            el.getAttribute('aria-expanded') === 'false' &&
-            el.getAttribute('aria-disabled') === 'true' &&
-            !el.classList.contains('expanded') &&
-            el.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW MORE';
-        }, null, { timeout: 1500 });
-
-        // A second activation during expansion must not reverse the in-flight transition.
-        // Use a synchronous DOM activation here: Playwright's pointer click waits for the moving button to settle.
-        await button.evaluate(el => el.click());
-        const expansionButtonDuringMotion = await button.evaluate(el => ({
-          expanded: el.getAttribute('aria-expanded'),
-          disabled: el.getAttribute('aria-disabled'),
-          styledExpanded: el.classList.contains('expanded'),
-          label: el.querySelector('.btn-text')?.textContent.trim().toUpperCase()
-        }));
-        if (expansionButtonDuringMotion.expanded !== 'false' ||
-            expansionButtonDuringMotion.disabled !== 'true' ||
-            expansionButtonDuringMotion.styledExpanded ||
-            expansionButtonDuringMotion.label !== 'SHOW MORE') {
-          throw new Error('Show More button state changed before the expansion settled: ' +
-            JSON.stringify(expansionButtonDuringMotion));
+          return {
+            expanded: el.getAttribute('aria-expanded'),
+            disabled: el.getAttribute('aria-disabled'),
+            styledExpanded: el.classList.contains('expanded'),
+            label: el.querySelector('.btn-text')?.textContent.trim().toUpperCase(),
+            animationName: getComputedStyle(el).animationName,
+            viewportExpanding: viewport?.classList.contains('is-expanding')
+          };
+        });
+        if (directExpansionStart.expanded !== 'true' ||
+            directExpansionStart.disabled !== null ||
+            !directExpansionStart.styledExpanded ||
+            directExpansionStart.label !== 'SHOW LESS' ||
+            directExpansionStart.animationName !== 'none' ||
+            !directExpansionStart.viewportExpanding) {
+          throw new Error('Show More must update its button/ARIA state immediately without a scale bounce: ' +
+            JSON.stringify(directExpansionStart));
         }
 
         const firstExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
@@ -3869,18 +3858,73 @@ try {
           transitionDelay: getComputedStyle(el).transitionDelay,
           transitionTimingFunction: getComputedStyle(el).transitionTimingFunction
         }));
-        await page.waitForTimeout(150);
+        await page.waitForTimeout(120);
         const secondExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
-          height: el.getBoundingClientRect().height,
-          maxHeight: getComputedStyle(el).maxHeight
+          height: el.getBoundingClientRect().height
         }));
         if (!(secondExpansionFrame.height > firstExpansionFrame.height + 4) ||
-            !firstExpansionFrame.transitionDuration.includes('0.56s') ||
-            !firstExpansionFrame.transitionDelay.includes('0.07s') ||
+            !firstExpansionFrame.transitionDuration.includes('0.44s') ||
+            !firstExpansionFrame.transitionDelay.includes('0s') ||
             !firstExpansionFrame.transitionTimingFunction.includes('cubic-bezier(0.4, 0, 0.2, 1)')) {
-          throw new Error('Show More content must expand progressively through the measured viewport height: ' +
+          throw new Error('Show More must expand progressively with one undelayed height transition: ' +
             JSON.stringify({ firstExpansionFrame, secondExpansionFrame }));
         }
+
+        // Reverse while expansion is in flight. The height must continue from
+        // its current rendered value, not jump to either endpoint.
+        await button.focus();
+        const beforeCollapseReverse = await page.locator('#portfolioGridViewport').evaluate(el => el.getBoundingClientRect().height);
+        await page.keyboard.press('Enter');
+        const afterCollapseReverse = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          height: el.getBoundingClientRect().height,
+          collapsing: el.classList.contains('is-collapsing'),
+          expanding: el.classList.contains('is-expanding')
+        }));
+        const collapsedButtonDuringReverse = await button.evaluate(el => ({
+          expanded: el.getAttribute('aria-expanded'),
+          disabled: el.getAttribute('aria-disabled'),
+          styledExpanded: el.classList.contains('expanded'),
+          label: el.querySelector('.btn-text')?.textContent.trim().toUpperCase()
+        }));
+        if (Math.abs(afterCollapseReverse.height - beforeCollapseReverse) > 28 ||
+            !afterCollapseReverse.collapsing || afterCollapseReverse.expanding ||
+            collapsedButtonDuringReverse.expanded !== 'false' ||
+            collapsedButtonDuringReverse.disabled !== null ||
+            collapsedButtonDuringReverse.styledExpanded ||
+            collapsedButtonDuringReverse.label !== 'SHOW MORE') {
+          throw new Error('A rapid Show Less activation must reverse smoothly and update state immediately: ' +
+            JSON.stringify({ beforeCollapseReverse, afterCollapseReverse, collapsedButtonDuringReverse }));
+        }
+
+        await page.waitForTimeout(100);
+        const reversingCollapseFrame = await page.locator('#portfolioGridViewport').evaluate(el => el.getBoundingClientRect().height);
+        if (!(reversingCollapseFrame < afterCollapseReverse.height - 2)) {
+          throw new Error('A reversed Show Less transition did not continue toward the collapsed height.');
+        }
+
+        const beforeExpansionReverse = await page.locator('#portfolioGridViewport').evaluate(el => el.getBoundingClientRect().height);
+        await page.keyboard.press('Enter');
+        const afterExpansionReverse = await page.locator('#portfolioGridViewport').evaluate(el => ({
+          height: el.getBoundingClientRect().height,
+          expanding: el.classList.contains('is-expanding'),
+          collapsing: el.classList.contains('is-collapsing')
+        }));
+        const expandedButtonDuringReverse = await button.evaluate(el => ({
+          expanded: el.getAttribute('aria-expanded'),
+          disabled: el.getAttribute('aria-disabled'),
+          styledExpanded: el.classList.contains('expanded'),
+          label: el.querySelector('.btn-text')?.textContent.trim().toUpperCase()
+        }));
+        if (Math.abs(afterExpansionReverse.height - beforeExpansionReverse) > 28 ||
+            !afterExpansionReverse.expanding || afterExpansionReverse.collapsing ||
+            expandedButtonDuringReverse.expanded !== 'true' ||
+            expandedButtonDuringReverse.disabled !== null ||
+            !expandedButtonDuringReverse.styledExpanded ||
+            expandedButtonDuringReverse.label !== 'SHOW LESS') {
+          throw new Error('A rapid Show More activation must reverse the collapse without a height snap: ' +
+            JSON.stringify({ beforeExpansionReverse, afterExpansionReverse, expandedButtonDuringReverse }));
+        }
+
         await page.waitForFunction(() => {
           const button = document.querySelector('#showMoreBtn');
           const viewport = document.querySelector('#portfolioGridViewport');
@@ -3892,44 +3936,29 @@ try {
             button.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW LESS';
         }, null, { timeout: 1800 });
 
-        await button.hover();
-        // The button material intentionally begins its 360ms transition only
-        // after the viewport settles; wait for that delayed visual state.
-        await page.waitForFunction(() => {
-          const button = document.querySelector('#showMoreBtn');
-          const style = button && getComputedStyle(button);
-          return style?.backgroundColor === 'rgb(255, 255, 255)' &&
-            style.color === 'rgb(0, 0, 0)' &&
-            style.backdropFilter === 'none';
-        }, null, { timeout: 1200 });
-        const showLessHover = await button.evaluate(el => {
-          const style = getComputedStyle(el);
+        // Keyboard activation remains a normal button click and begins the
+        // reverse content transition without shifting the label/ARIA contract.
+        await page.keyboard.press('Enter');
+        const directCollapseStart = await button.evaluate(el => {
+          const viewport = document.querySelector('#portfolioGridViewport');
           return {
-            background: style.backgroundColor,
-            color: style.color,
-            backdropFilter: style.backdropFilter,
-            animationName: style.animationName
+            expanded: el.getAttribute('aria-expanded'),
+            disabled: el.getAttribute('aria-disabled'),
+            styledExpanded: el.classList.contains('expanded'),
+            label: el.querySelector('.btn-text')?.textContent.trim().toUpperCase(),
+            animationName: getComputedStyle(el).animationName,
+            viewportCollapsing: viewport?.classList.contains('is-collapsing')
           };
         });
-        if (showLessHover.background !== 'rgb(255, 255, 255)' ||
-            showLessHover.color !== 'rgb(0, 0, 0)' ||
-            showLessHover.backdropFilter !== 'none') {
-          throw new Error('Show Less must retain its white/black material on hover: ' + JSON.stringify(showLessHover));
+        if (directCollapseStart.expanded !== 'false' ||
+            directCollapseStart.disabled !== null ||
+            directCollapseStart.styledExpanded ||
+            directCollapseStart.label !== 'SHOW MORE' ||
+            directCollapseStart.animationName !== 'none' ||
+            !directCollapseStart.viewportCollapsing) {
+          throw new Error('Show Less must update button/ARIA state immediately without a click bounce: ' +
+            JSON.stringify(directCollapseStart));
         }
-
-        await button.focus();
-        await page.keyboard.press('Enter');
-        await page.waitForFunction(() => {
-          const button = document.querySelector('#showMoreBtn');
-          const viewport = document.querySelector('#portfolioGridViewport');
-          return button?.getAttribute('aria-expanded') === 'true' &&
-            button.getAttribute('aria-disabled') === 'true' &&
-            button.classList.contains('expanded') &&
-            button.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW LESS' &&
-            button.classList.contains('is-interacting') &&
-            getComputedStyle(button).animationName === 'show-more-interaction-bounce' &&
-            viewport?.classList.contains('is-collapsing');
-        }, null, { timeout: 1500 });
 
         const firstCollapseFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
           height: el.getBoundingClientRect().height,
@@ -3942,10 +3971,10 @@ try {
           height: el.getBoundingClientRect().height
         }));
         if (!(firstCollapseFrame.height > secondCollapseFrame.height + 4) ||
-            !firstCollapseFrame.transitionDuration.includes('0.56s') ||
-            !firstCollapseFrame.transitionDelay.includes('0.07s') ||
+            !firstCollapseFrame.transitionDuration.includes('0.44s') ||
+            !firstCollapseFrame.transitionDelay.includes('0s') ||
             !firstCollapseFrame.transitionTimingFunction.includes('cubic-bezier(0.4, 0, 0.2, 1)')) {
-          throw new Error('Show Less content must collapse progressively with the shared ease-in/ease-out transition: ' +
+          throw new Error('Show Less must collapse progressively with the same undelayed height transition: ' +
             JSON.stringify({ firstCollapseFrame, secondCollapseFrame }));
         }
         await page.waitForFunction(() => {

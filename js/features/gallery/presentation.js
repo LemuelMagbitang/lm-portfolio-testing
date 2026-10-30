@@ -238,8 +238,7 @@ export function applyGalleryReveal({
   animateCollapse = false,
   transitionFromRects = null,
   renderToken = 0,
-  isCurrentRender = () => true,
-  onShowMoreSettled = null
+  isCurrentRender = () => true
 } = {}) {
   const viewport = gridViewport || grid;
   if (!grid || !viewport) return;
@@ -257,12 +256,6 @@ export function applyGalleryReveal({
   let viewportTransitionListener = null;
   let viewportTransitionActive = false;
   let viewportTransitionCompletion = null;
-  let showMoreSettledNotified = false;
-  const notifyShowMoreSettled = () => {
-    if (showMoreSettledNotified) return;
-    showMoreSettledNotified = true;
-    onShowMoreSettled?.();
-  };
 
   const cancelViewportTransition = () => {
     const wasActive = viewportTransitionActive;
@@ -613,11 +606,7 @@ export function applyGalleryReveal({
 
   const cleanup = () => {
     windowRef.clearTimeout(hideTimer);
-    const transitionWasActive = viewportTransitionActive;
     cancelViewportTransition();
-    // A filter change, resize, or teardown can cancel this reveal. Release the
-    // controller's click guard even when a transitionend event will not fire.
-    if (transitionWasActive) notifyShowMoreSettled();
     cleanupTransition();
     cleanupViewportReveal();
   };
@@ -629,7 +618,6 @@ export function applyGalleryReveal({
     showMoreWrapper.setAttribute('data-expanded', String(expanded));
     showMoreButton.classList.toggle('expanded', expanded);
     if (label) label.textContent = expanded ? 'SHOW LESS' : 'SHOW MORE';
-    notifyShowMoreSettled();
   };
 
   if (filteredCards.length > visibleCount) {
@@ -638,15 +626,9 @@ export function applyGalleryReveal({
     // viewport transition starts. The button's own visual/semantic state stays
     // unchanged until the viewport reaches its final height.
     showMoreWrapper.classList.toggle('expanded', expanded);
-    if (viewportTransitionActive && viewportTransitionCompletion) {
-      const completeViewportTransition = viewportTransitionCompletion;
-      viewportTransitionCompletion = () => {
-        completeViewportTransition?.();
-        syncShowMoreButtonState();
-      };
-    } else {
-      syncShowMoreButtonState();
-    }
+    // The button and ARIA state follow the requested state immediately.
+    // Only the content geometry remains in the measured height transition.
+    syncShowMoreButtonState();
   } else {
     showMoreWrapper.style.display = 'none';
     syncShowMoreButtonState();

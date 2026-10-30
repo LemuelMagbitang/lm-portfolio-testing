@@ -118,7 +118,6 @@ export async function initGallery(options = {}) {
   let currentFilter = 'all';
   let lastCenteredFilterId = null;
   let isExpanded = false;
-  let showMoreTransitionPending = false;
   let filterPager = null;
   let filterPageDots = [];
   let filterScrollTimer = null;
@@ -635,14 +634,7 @@ export async function initGallery(options = {}) {
     return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
-  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false, animateCollapse = false, onShowMoreSettled = null } = {}) {
-    // A pending Show Less follow-scroll belongs to the layout that existed
-    // when the button was collapsed. If a filter/resize/pageshow render starts
-    // first, that old timer must not scroll the visitor into the new layout.
-    if (collapseScrollTimer !== null) {
-      windowRef.clearTimeout(collapseScrollTimer);
-      collapseScrollTimer = null;
-    }
+  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false, animateCollapse = false } = {}) {
     const filteredProjects = getFilteredProjects();
     const filtered = getCardsForProjects(filteredProjects);
     renderToken += 1;
@@ -673,8 +665,7 @@ export async function initGallery(options = {}) {
       windowRef,
       fadeMs,
       renderToken: token,
-      isCurrentRender: value => value === renderToken,
-      onShowMoreSettled
+      isCurrentRender: value => value === renderToken
     });
   }
 
@@ -858,8 +849,6 @@ export async function initGallery(options = {}) {
     }
   });
 
-  let collapseScrollTimer = null;
-
   function scrollWindowToGalleryStart() {
     const galleryRoot = portfolioWrapper || documentRef.getElementById('portfolioGrid');
     const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
@@ -879,85 +868,36 @@ export async function initGallery(options = {}) {
     const maxY = Math.max(0, documentHeight - viewportHeight);
     const destination = Math.max(0, Math.min(maxY, targetY));
 
-    // Direct scrollTop is intentional here. Show Less is a state-changing
-    // control, and the visitor asked for an immediate return to the gallery.
-    // Two paint-pass corrections absorb the synchronous collapse geometry
-    // without adding a visible timeout or a second animation system.
-    scrollingElement.scrollTop = destination;
+    // Keep the established return-to-gallery destination, but use native
+    // scrolling so the page does not snap while the gallery height contracts.
+    // Reduced-motion users retain an immediate, non-animated return.
+    const prefersReducedMotion = Boolean(
+      windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    );
+    if (!prefersReducedMotion && typeof windowRef.scrollTo === 'function') {
+      windowRef.scrollTo({ top: destination, behavior: 'smooth' });
+    } else {
+      scrollingElement.scrollTop = destination;
+    }
   }
-
-  lifecycle.add(() => {
-    windowRef.clearTimeout(collapseScrollTimer);
-  });
-
-  let showMoreBounceTimer = null;
-  const playShowMoreBounce = () => {
-    if (!showMoreBtn || windowRef.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
-    if (showMoreBounceTimer !== null) windowRef.clearTimeout(showMoreBounceTimer);
-    showMoreBtn.classList.remove('is-interacting');
-    // Restart only after a real activation; loading and render paths never call
-    // this helper. The forced style read lets rapid repeated taps restart it.
-    void showMoreBtn.offsetWidth;
-    showMoreBtn.classList.add('is-interacting');
-    showMoreBounceTimer = windowRef.setTimeout(() => {
-      showMoreBtn.classList.remove('is-interacting');
-      showMoreBounceTimer = null;
-    }, 460);
-  };
-  lifecycle.add(() => {
-    if (showMoreBounceTimer !== null) windowRef.clearTimeout(showMoreBounceTimer);
-    showMoreBtn?.classList.remove('is-interacting');
-  });
 
   bind(showMoreBtn, 'click', event => {
     event.preventDefault();
-    // Keep the control focusable, but ignore repeated activations until the
-    // viewport and its button state have both settled.
-    if (showMoreTransitionPending) return;
 
-    // Keyboard activation and real pointer/touch clicks are trusted events.
-    // Synthetic/programmatic clicks still toggle state, but do not animate.
+    // Only real user activations animate the measured viewport. A rapid
+    // follow-up activation starts a new render from the current visual height,
+    // allowing the transition to reverse instead of ignoring the input.
     const isDirectActivation = event?.isTrusted !== false;
-    if (isDirectActivation) playShowMoreBounce();
     const nextExpanded = !isExpanded;
-    const shouldFollowCollapsedControl = !nextExpanded;
-    const settleShowMoreToggle = () => {
-      showMoreTransitionPending = false;
-      showMoreBtn?.removeAttribute('aria-disabled');
-    };
-
-    showMoreTransitionPending = true;
-    showMoreBtn?.setAttribute('aria-disabled', 'true');
     isExpanded = nextExpanded;
+
     render({
       animateExpand: nextExpanded && isDirectActivation,
-      animateCollapse: !nextExpanded && isDirectActivation,
-      onShowMoreSettled: settleShowMoreToggle
+      animateCollapse: !nextExpanded && isDirectActivation
     });
 
-    // When Show Less collapses the gallery, return to the top of the project
-    // gallery rather than centering the Show More control. This matches the
-    // legacy behavior and keeps the expanded rows from leaving the visitor
-    // stranded at a stale document position.
-    if (shouldFollowCollapsedControl) {
-      // Start immediately on click. The collapse itself is already applied
-      // synchronously by render(); correct again on the next two paint passes
-      // so the button never waits for a timeout before returning to the
-      // gallery start.
-      collapseScrollTimer = null;
-      if (!isExpanded && showMoreWrapper) {
-        scrollWindowToGalleryStart();
-        if (typeof windowRef.requestAnimationFrame === 'function') {
-          windowRef.requestAnimationFrame(() => {
-            if (isExpanded) return;
-            scrollWindowToGalleryStart();
-            windowRef.requestAnimationFrame(() => {
-              if (!isExpanded) scrollWindowToGalleryStart();
-            });
-          });
-        }
-      }
-    }
+    // Preserve the established Show Less destination without an abrupt jump.
+    if (!nextExpanded && showMoreWrapper) scrollWindowToGalleryStart();
   });
 
   let resizeTimer = null;

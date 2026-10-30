@@ -2538,17 +2538,23 @@ function validateCmsRegressionContracts() {
   if (!gallery.includes('const isDirectActivation = event?.isTrusted !== false;') ||
       !gallery.includes('animateExpand: nextExpanded && isDirectActivation') ||
       !gallery.includes('animateCollapse: !nextExpanded && isDirectActivation') ||
-      !gallery.includes('playShowMoreBounce();') ||
+      gallery.includes('playShowMoreBounce') ||
+      gallery.includes('showMoreTransitionPending') ||
+      gallery.includes('aria-disabled') ||
+      !gallery.includes("windowRef.scrollTo({ top: destination, behavior: 'smooth' })") ||
       !presentation.includes('const startExpansion = () => {') ||
       !presentation.includes('const startCollapse = () => {') ||
-      !presentation.includes("const transitionClass = direction === 'collapse' ? 'is-collapsing' : 'is-expanding';") ||
-      !presentation.includes('viewport.classList?.add(transitionClass)') ||
-      !css.includes('.portfolio-grid-viewport.is-expanding,\n.portfolio-grid-viewport.is-collapsing') ||
-      !css.includes('.show-more-wrapper.is-expanding,\n.show-more-wrapper.is-collapsing') ||
-      !css.includes('.btn-show-more.is-interacting{') ||
+      !presentation.includes('if (wasActive && currentHeight > 0)') ||
+      !presentation.includes('syncShowMoreButtonState();') ||
+      !presentation.includes("showMoreButton.setAttribute('aria-expanded', String(expanded));") ||
+      !presentation.includes("showMoreWrapper.classList.toggle('expanded', expanded);") ||
+      !css.includes('max-height 440ms cubic-bezier(.4,0,.2,1)') ||
+      !css.includes('margin-top 440ms cubic-bezier(.4,0,.2,1)') ||
       !css.includes('.btn-show-more.expanded:hover{\n  background:#fff !important;') ||
+      css.includes('show-more-interaction-bounce') ||
+      css.includes('.btn-show-more.is-interacting') ||
       !css.includes('.portfolio-grid-viewport.is-collapsing,\n  .show-more-wrapper.is-expanding,\n  .show-more-wrapper.is-collapsing{transition:none!important;}')) {
-    err('Gallery: Show More/Show Less must retain direct-interaction bounce and reduced-motion support while sharing animated expand/collapse presentation and stable white Show Less hover material.');
+    err('Gallery: Show More/Show Less must use immediate accessible button state, reversible measured-height motion, smooth return scrolling, no activation bounce, and reduced-motion support.');
   }
 
   if (!gallery.includes('getFilteredProjects') ||

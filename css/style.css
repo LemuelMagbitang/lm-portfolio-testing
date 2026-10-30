@@ -935,7 +935,7 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 .portfolio-grid-viewport.is-expanding,
 .portfolio-grid-viewport.is-collapsing {
-  transition: max-height 560ms cubic-bezier(.4,0,.2,1) 70ms;
+  transition: max-height 440ms cubic-bezier(.4,0,.2,1);
 }
 
 .seamless-grid {
@@ -2707,9 +2707,9 @@ body.center-page {
 .show-more-wrapper.is-expanding,
 .show-more-wrapper.is-collapsing {
   transition:
-    margin-top 560ms cubic-bezier(.4,0,.2,1) 70ms,
-    min-height 560ms cubic-bezier(.4,0,.2,1) 70ms,
-    padding-bottom 560ms cubic-bezier(.4,0,.2,1) 70ms;
+    margin-top 440ms cubic-bezier(.4,0,.2,1),
+    min-height 440ms cubic-bezier(.4,0,.2,1),
+    padding-bottom 440ms cubic-bezier(.4,0,.2,1);
 }
 .btn-show-more {
   display: inline-flex;
@@ -2742,7 +2742,7 @@ body.center-page {
 
 .btn-show-more .btn-icon {
   font-size: 0.75rem;
-  transition: transform 0.3s ease;
+  transition: transform 260ms cubic-bezier(.4,0,.2,1);
 }
 
 /* Flips the chevron when the grid is expanded (SHOW LESS state) */
@@ -5062,12 +5062,12 @@ footer > .footer-content p{
   min-width:148px;
   max-width:148px;
   transition:
-    background-color 360ms cubic-bezier(.4,0,.2,1),
-    color 360ms cubic-bezier(.4,0,.2,1),
-    border-color 360ms cubic-bezier(.4,0,.2,1),
-    box-shadow 360ms cubic-bezier(.4,0,.2,1),
-    backdrop-filter 360ms cubic-bezier(.4,0,.2,1),
-    -webkit-backdrop-filter 360ms cubic-bezier(.4,0,.2,1) !important;
+    background-color 300ms cubic-bezier(.4,0,.2,1),
+    color 300ms cubic-bezier(.4,0,.2,1),
+    border-color 300ms cubic-bezier(.4,0,.2,1),
+    box-shadow 300ms cubic-bezier(.4,0,.2,1),
+    backdrop-filter 300ms cubic-bezier(.4,0,.2,1),
+    -webkit-backdrop-filter 300ms cubic-bezier(.4,0,.2,1) !important;
 }
 .btn-show-more:not(.expanded){
   background:rgba(255,255,255,.08) !important;
@@ -5118,15 +5118,6 @@ footer > .footer-content p{
   background:#fff !important;
   background-color:#fff !important;
   color:#000 !important;
-}
-.btn-show-more.is-interacting{
-  animation:show-more-interaction-bounce 420ms cubic-bezier(.22,1,.36,1) both;
-  transform-origin:center;
-}
-@keyframes show-more-interaction-bounce{
-  0%,100%{transform:scale(1);}
-  34%{transform:scale(1.055);}
-  68%{transform:scale(.99);}
 }
 .btn-show-more:focus-visible{
   box-shadow:0 0 0 2px rgba(255,255,255,.78) !important;
@@ -6590,8 +6581,8 @@ body.menu-open .hamburger-icon span {
 }
 
 
-/* Keep the resting control stationary. Only the direct-interaction class
-   applies a transform animation; hover and re-render never trigger it. */
+/* The control stays stationary during activation; its material and chevron
+   use short transitions while the gallery animates its measured height. */
 .btn-show-more:hover,
 .btn-show-more:active,
 .btn-show-more.expanded:hover,
@@ -6599,7 +6590,6 @@ body.menu-open .hamburger-icon span {
   transform: none;
 }
 @media(prefers-reduced-motion:reduce){
-  .btn-show-more.is-interacting{animation:none!important;}
   .portfolio-grid-viewport.is-expanding,
   .portfolio-grid-viewport.is-collapsing,
   .show-more-wrapper.is-expanding,
