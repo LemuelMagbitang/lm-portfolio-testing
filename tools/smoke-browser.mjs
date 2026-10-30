@@ -3835,10 +3835,31 @@ try {
         await button.click();
         await page.waitForFunction(() => {
           const el = document.querySelector('#showMoreBtn');
+          const viewport = document.querySelector('#portfolioGridViewport');
           return el?.classList.contains('is-interacting') &&
             getComputedStyle(el).animationName === 'show-more-interaction-bounce' &&
-            document.querySelector('#portfolioGridViewport')?.classList.contains('is-expanding');
+            viewport?.classList.contains('is-expanding') &&
+            el.getAttribute('aria-expanded') === 'false' &&
+            el.getAttribute('aria-disabled') === 'true' &&
+            !el.classList.contains('expanded') &&
+            el.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW MORE';
         }, null, { timeout: 1500 });
+
+        // A second activation during expansion must not reverse the in-flight transition.
+        await button.click();
+        const expansionButtonDuringMotion = await button.evaluate(el => ({
+          expanded: el.getAttribute('aria-expanded'),
+          disabled: el.getAttribute('aria-disabled'),
+          styledExpanded: el.classList.contains('expanded'),
+          label: el.querySelector('.btn-text')?.textContent.trim().toUpperCase()
+        }));
+        if (expansionButtonDuringMotion.expanded !== 'false' ||
+            expansionButtonDuringMotion.disabled !== 'true' ||
+            expansionButtonDuringMotion.styledExpanded ||
+            expansionButtonDuringMotion.label !== 'SHOW MORE') {
+          throw new Error('Show More button state changed before the expansion settled: ' +
+            JSON.stringify(expansionButtonDuringMotion));
+        }
 
         const firstExpansionFrame = await page.locator('#portfolioGridViewport').evaluate(el => ({
           height: el.getBoundingClientRect().height,
@@ -3860,9 +3881,14 @@ try {
             JSON.stringify({ firstExpansionFrame, secondExpansionFrame }));
         }
         await page.waitForFunction(() => {
+          const button = document.querySelector('#showMoreBtn');
           const viewport = document.querySelector('#portfolioGridViewport');
           return getComputedStyle(viewport).maxHeight === 'none' &&
-            !viewport.classList.contains('is-expanding');
+            !viewport.classList.contains('is-expanding') &&
+            button?.getAttribute('aria-expanded') === 'true' &&
+            button.getAttribute('aria-disabled') !== 'true' &&
+            button.classList.contains('expanded') &&
+            button.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW LESS';
         }, null, { timeout: 1800 });
 
         await button.hover();
@@ -3886,7 +3912,10 @@ try {
         await page.waitForFunction(() => {
           const button = document.querySelector('#showMoreBtn');
           const viewport = document.querySelector('#portfolioGridViewport');
-          return button?.getAttribute('aria-expanded') === 'false' &&
+          return button?.getAttribute('aria-expanded') === 'true' &&
+            button.getAttribute('aria-disabled') === 'true' &&
+            button.classList.contains('expanded') &&
+            button.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW LESS' &&
             button.classList.contains('is-interacting') &&
             getComputedStyle(button).animationName === 'show-more-interaction-bounce' &&
             viewport?.classList.contains('is-collapsing');
@@ -3910,9 +3939,14 @@ try {
             JSON.stringify({ firstCollapseFrame, secondCollapseFrame }));
         }
         await page.waitForFunction(() => {
+          const button = document.querySelector('#showMoreBtn');
           const viewport = document.querySelector('#portfolioGridViewport');
           return !viewport?.classList.contains('is-collapsing') &&
-            getComputedStyle(viewport).maxHeight !== 'none';
+            getComputedStyle(viewport).maxHeight !== 'none' &&
+            button?.getAttribute('aria-expanded') === 'false' &&
+            button.getAttribute('aria-disabled') !== 'true' &&
+            !button.classList.contains('expanded') &&
+            button.querySelector('.btn-text')?.textContent.trim().toUpperCase() === 'SHOW MORE';
         }, null, { timeout: 1800 });
 
         await page.emulateMedia({ reducedMotion: 'reduce' });

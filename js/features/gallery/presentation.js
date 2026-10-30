@@ -238,7 +238,8 @@ export function applyGalleryReveal({
   animateCollapse = false,
   transitionFromRects = null,
   renderToken = 0,
-  isCurrentRender = () => true
+  isCurrentRender = () => true,
+  onShowMoreSettled = null
 } = {}) {
   const viewport = gridViewport || grid;
   if (!grid || !viewport) return;
@@ -256,6 +257,12 @@ export function applyGalleryReveal({
   let viewportTransitionListener = null;
   let viewportTransitionActive = false;
   let viewportTransitionCompletion = null;
+  let showMoreSettledNotified = false;
+  const notifyShowMoreSettled = () => {
+    if (showMoreSettledNotified) return;
+    showMoreSettledNotified = true;
+    onShowMoreSettled?.();
+  };
 
   const cancelViewportTransition = () => {
     const wasActive = viewportTransitionActive;
@@ -606,23 +613,40 @@ export function applyGalleryReveal({
 
   const cleanup = () => {
     windowRef.clearTimeout(hideTimer);
+    const transitionWasActive = viewportTransitionActive;
     cancelViewportTransition();
+    // A filter change, resize, or teardown can cancel this reveal. Release the
+    // controller's click guard even when a transitionend event will not fire.
+    if (transitionWasActive) notifyShowMoreSettled();
     cleanupTransition();
     cleanupViewportReveal();
   };
   if (!showMoreButton || !showMoreWrapper) return cleanup;
 
   const label = showMoreButton.querySelector('.btn-text');
-  showMoreButton.setAttribute('aria-expanded', String(expanded));
-  showMoreWrapper.setAttribute('data-expanded', String(expanded));
-
-  if (filteredCards.length > visibleCount) {
-    showMoreWrapper.style.display = 'flex';
+  const syncShowMoreButtonState = () => {
+    showMoreButton.setAttribute('aria-expanded', String(expanded));
+    showMoreWrapper.setAttribute('data-expanded', String(expanded));
     showMoreWrapper.classList.toggle('expanded', expanded);
     showMoreButton.classList.toggle('expanded', expanded);
     if (label) label.textContent = expanded ? 'SHOW LESS' : 'SHOW MORE';
+    notifyShowMoreSettled();
+  };
+
+  if (filteredCards.length > visibleCount) {
+    showMoreWrapper.style.display = 'flex';
+    if (viewportTransitionActive && viewportTransitionCompletion) {
+      const completeViewportTransition = viewportTransitionCompletion;
+      viewportTransitionCompletion = () => {
+        completeViewportTransition?.();
+        syncShowMoreButtonState();
+      };
+    } else {
+      syncShowMoreButtonState();
+    }
   } else {
     showMoreWrapper.style.display = 'none';
+    syncShowMoreButtonState();
   }
 
   return cleanup;

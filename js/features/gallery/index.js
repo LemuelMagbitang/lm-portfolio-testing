@@ -118,6 +118,7 @@ export async function initGallery(options = {}) {
   let currentFilter = 'all';
   let lastCenteredFilterId = null;
   let isExpanded = false;
+  let showMoreTransitionPending = false;
   let filterPager = null;
   let filterPageDots = [];
   let filterScrollTimer = null;
@@ -634,7 +635,7 @@ export async function initGallery(options = {}) {
     return getRowAlignedCount(filtered, getBaseCount(), windowRef, portfolioGrid);
   }
 
-  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false, animateCollapse = false } = {}) {
+  function render({ animateTransition = false, transitionFromRects = null, animateExpand = false, animateCollapse = false, onShowMoreSettled = null } = {}) {
     // A pending Show Less follow-scroll belongs to the layout that existed
     // when the button was collapsed. If a filter/resize/pageshow render starts
     // first, that old timer must not scroll the visitor into the new layout.
@@ -672,7 +673,8 @@ export async function initGallery(options = {}) {
       windowRef,
       fadeMs,
       renderToken: token,
-      isCurrentRender: value => value === renderToken
+      isCurrentRender: value => value === renderToken,
+      onShowMoreSettled
     });
   }
 
@@ -909,24 +911,29 @@ export async function initGallery(options = {}) {
 
   bind(showMoreBtn, 'click', event => {
     event.preventDefault();
+    // Keep the control focusable, but ignore repeated activations until the
+    // viewport and its button state have both settled.
+    if (showMoreTransitionPending) return;
+
     // Keyboard activation and real pointer/touch clicks are trusted events.
     // Synthetic/programmatic clicks still toggle state, but do not animate.
     const isDirectActivation = event?.isTrusted !== false;
     if (isDirectActivation) playShowMoreBounce();
     const nextExpanded = !isExpanded;
     const shouldFollowCollapsedControl = !nextExpanded;
+    const settleShowMoreToggle = () => {
+      showMoreTransitionPending = false;
+      showMoreBtn?.removeAttribute('aria-disabled');
+    };
 
+    showMoreTransitionPending = true;
+    showMoreBtn?.setAttribute('aria-disabled', 'true');
     isExpanded = nextExpanded;
     render({
       animateExpand: nextExpanded && isDirectActivation,
-      animateCollapse: !nextExpanded && isDirectActivation
+      animateCollapse: !nextExpanded && isDirectActivation,
+      onShowMoreSettled: settleShowMoreToggle
     });
-
-    // Keep the button's semantic state synchronized immediately. The visual
-    // reveal may animate, but its state must never depend on a later scroll,
-    // resize, or media-load callback.
-    showMoreBtn?.setAttribute('aria-expanded', String(isExpanded));
-    showMoreWrapper?.setAttribute('data-expanded', String(isExpanded));
 
     // When Show Less collapses the gallery, return to the top of the project
     // gallery rather than centering the Show More control. This matches the

@@ -161,12 +161,42 @@ function makeExpansionFixture({
     remove(name) { fadeClasses.delete(name); },
     contains(name) { return fadeClasses.has(name); }
   } };
-  const wrapperClasses = new Set();
-  const showMoreWrapper = { classList: {
-    add(name) { wrapperClasses.add(name); },
-    remove(...names) { names.forEach(name => wrapperClasses.delete(name)); },
-    contains(name) { return wrapperClasses.has(name); }
-  } };
+  const wrapperClasses = new Set(!startExpanded ? ['expanded'] : []);
+  const wrapperAttributes = new Map([['data-expanded', String(!startExpanded)]]);
+  const showMoreWrapper = {
+    style: {},
+    setAttribute(name, value) { wrapperAttributes.set(name, String(value)); },
+    getAttribute(name) { return wrapperAttributes.get(name) ?? null; },
+    classList: {
+      add(name) { wrapperClasses.add(name); },
+      remove(...names) { names.forEach(name => wrapperClasses.delete(name)); },
+      toggle(name, force) {
+        const enabled = force === undefined ? !wrapperClasses.has(name) : Boolean(force);
+        if (enabled) wrapperClasses.add(name);
+        else wrapperClasses.delete(name);
+        return enabled;
+      },
+      contains(name) { return wrapperClasses.has(name); }
+    }
+  };
+  const buttonClasses = new Set(!startExpanded ? ['expanded'] : []);
+  const buttonAttributes = new Map([['aria-expanded', String(!startExpanded)]]);
+  const buttonLabel = { textContent: startExpanded ? 'SHOW MORE' : 'SHOW LESS' };
+  const showMoreButton = {
+    setAttribute(name, value) { buttonAttributes.set(name, String(value)); },
+    getAttribute(name) { return buttonAttributes.get(name) ?? null; },
+    querySelector(selector) { return selector === '.btn-text' ? buttonLabel : null; },
+    classList: {
+      toggle(name, force) {
+        const enabled = force === undefined ? !buttonClasses.has(name) : Boolean(force);
+        if (enabled) buttonClasses.add(name);
+        else buttonClasses.delete(name);
+        return enabled;
+      },
+      contains(name) { return buttonClasses.has(name); }
+    }
+  };
+  let settledCalls = 0;
   const fixtureCards = animateCollapse ? [card, card] : [card];
   const grid = {
     scrollHeight: 720,
@@ -190,6 +220,7 @@ function makeExpansionFixture({
     grid,
     gridViewport: viewport,
     fadeOverlay,
+    showMoreButton,
     showMoreWrapper,
     filteredCards: fixtureCards,
     visibleCount: 1,
@@ -197,9 +228,13 @@ function makeExpansionFixture({
     animateExpand: startExpanded,
     animateCollapse,
     windowRef,
-    fadeMs: 300
+    fadeMs: 300,
+    onShowMoreSettled() { settledCalls += 1; }
   });
-  return { frames, timers, viewport, fadeOverlay, showMoreWrapper, cleanup };
+  return {
+    frames, timers, viewport, fadeOverlay, showMoreButton, showMoreWrapper,
+    buttonLabel, settledCalls: () => settledCalls, cleanup
+  };
 }
 
 const expansionFixture = makeExpansionFixture();
@@ -207,6 +242,12 @@ assert.equal(expansionFixture.viewport.style.maxHeight, '180px',
   'Show More must begin at the measured collapsed viewport height.');
 assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), true,
   'The viewport transition must be enabled before its target height changes.');
+assert.equal(expansionFixture.showMoreButton.getAttribute('aria-expanded'), 'false',
+  'Show More must retain its collapsed semantic state while the viewport is expanding.');
+assert.equal(expansionFixture.showMoreButton.classList.contains('expanded'), false);
+assert.equal(expansionFixture.buttonLabel.textContent, 'SHOW MORE');
+assert.equal(expansionFixture.settledCalls(), 0,
+  'The button settlement callback must wait for the viewport transitionend event.');
 assert.equal(expansionFixture.showMoreWrapper.classList.contains('is-expanding'), true,
   'The Show More wrapper spacing transition must be enabled before expanded spacing changes.');
 while (expansionFixture.frames.length) expansionFixture.frames.shift()();
@@ -219,6 +260,12 @@ assert.equal(expansionFixture.viewport.style.maxHeight, 'none',
 assert.equal(expansionFixture.viewport.classList.contains('is-expanding'), false);
 assert.equal(expansionFixture.showMoreWrapper.classList.contains('is-expanding'), false);
 assert.equal(expansionFixture.fadeOverlay.classList.contains('is-hidden'), true);
+assert.equal(expansionFixture.showMoreButton.getAttribute('aria-expanded'), 'true');
+assert.equal(expansionFixture.showMoreButton.classList.contains('expanded'), true);
+assert.equal(expansionFixture.showMoreWrapper.classList.contains('expanded'), true);
+assert.equal(expansionFixture.showMoreWrapper.getAttribute('data-expanded'), 'true');
+assert.equal(expansionFixture.buttonLabel.textContent, 'SHOW LESS');
+assert.equal(expansionFixture.settledCalls(), 1);
 expansionFixture.cleanup?.();
 
 const reducedExpansionFixture = makeExpansionFixture({ reducedMotion: true });
@@ -241,6 +288,11 @@ assert.equal(collapseFixture.viewport.classList.contains('is-collapsing'), true,
   'The collapse transition must be enabled before applying the collapsed target.');
 assert.equal(collapseFixture.showMoreWrapper.classList.contains('is-collapsing'), true,
   'The Show Less wrapper spacing transition must be enabled with the viewport.');
+assert.equal(collapseFixture.showMoreButton.getAttribute('aria-expanded'), 'true',
+  'Show Less must retain its expanded semantic state while the viewport is collapsing.');
+assert.equal(collapseFixture.showMoreButton.classList.contains('expanded'), true);
+assert.equal(collapseFixture.buttonLabel.textContent, 'SHOW LESS');
+assert.equal(collapseFixture.settledCalls(), 0);
 while (collapseFixture.frames.length) collapseFixture.frames.shift()();
 assert.equal(collapseFixture.viewport.style.maxHeight, '170px',
   'Show Less must animate toward the measured collapsed viewport height.');
@@ -250,6 +302,12 @@ assert.equal(collapseFixture.viewport.style.maxHeight, '170px',
 assert.equal(collapseFixture.viewport.classList.contains('is-collapsing'), false);
 assert.equal(collapseFixture.showMoreWrapper.classList.contains('is-collapsing'), false);
 assert.equal(collapseFixture.fadeOverlay.classList.contains('is-hidden'), false);
+assert.equal(collapseFixture.showMoreButton.getAttribute('aria-expanded'), 'false');
+assert.equal(collapseFixture.showMoreButton.classList.contains('expanded'), false);
+assert.equal(collapseFixture.showMoreWrapper.classList.contains('expanded'), false);
+assert.equal(collapseFixture.showMoreWrapper.getAttribute('data-expanded'), 'false');
+assert.equal(collapseFixture.buttonLabel.textContent, 'SHOW MORE');
+assert.equal(collapseFixture.settledCalls(), 1);
 collapseFixture.cleanup?.();
 
 const reducedCollapseFixture = makeExpansionFixture({
@@ -278,6 +336,11 @@ assert.match(styleSource, /\.filter-tabs \.filter-tab-label \{[\s\S]*?width: max
 assert.match(galleryControllerForFilters, /const isDirectActivation = event\?\.isTrusted !== false;/);
 assert.match(galleryControllerForFilters, /if \(isDirectActivation\) playShowMoreBounce\(\)/);
 assert.match(galleryControllerForFilters, /animateExpand: nextExpanded && isDirectActivation[\s\S]*?animateCollapse: !nextExpanded && isDirectActivation/);
+assert.match(galleryControllerForFilters, /if \(showMoreTransitionPending\) return;/);
+assert.match(galleryControllerForFilters, /setAttribute\('aria-disabled', 'true'\)/);
+assert.match(galleryControllerForFilters, /onShowMoreSettled: settleShowMoreToggle/);
+assert.match(galleryPresentationSource, /viewportTransitionCompletion = \(\) => \{[\s\S]*?syncShowMoreButtonState\(\)/);
+assert.match(galleryPresentationSource, /const syncShowMoreButtonState = \(\) => \{[\s\S]*?setAttribute\('aria-expanded', String\(expanded\)\)/);
 assert.match(styleSource, /\.btn-show-more:not\(\.expanded\):hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
 assert.match(styleSource, /\.btn-show-more\.expanded:hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
 assert.match(styleSource, /\.btn-show-more\.is-interacting\{[\s\S]*?animation:show-more-interaction-bounce 420ms/);
