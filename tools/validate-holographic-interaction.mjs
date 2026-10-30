@@ -114,6 +114,10 @@ const normalRenderer = await readFile(new URL('../js/features/lightbox/foil-norm
 const styles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const lightboxStyles = await readFile(new URL('../css/features/lightbox.css', import.meta.url), 'utf8');
 assert.match(mediaRenderer, /getFoilPointerPose\(x, y\)/);
+assert.match(mediaRenderer, /const onPointerMove = event => \{[\s\S]*?setHolographicReflection\(surface, event\);/,
+  'Desktop pointer events must update the latest foil target directly and use the existing eased RAF loop.');
+assert.doesNotMatch(mediaRenderer, /pointerFrame|pendingPointer|cancelQueuedPointer/,
+  'Foil input must not stack a second animation-frame queue before its eased pose loop.');
 assert.doesNotMatch(mediaRenderer, /getFoilAutoPose\(\(timestamp - motion\.autoStartTime\) \/ 1000, motion\.autoMotion\)/,
   'Grouped lightbox artwork must not run a continuous per-surface auto-motion loop.');
 assert.doesNotMatch(mediaRenderer, /autoMotion:\s*createFoilAutoMotionProfile\(\)/,

@@ -4450,7 +4450,12 @@ try {
       await page.mouse.move(0, 0);
       await page.waitForTimeout(40);
       await page.mouse.move(pointerProbe.x, pointerProbe.y, { steps: 4 });
-      await page.waitForTimeout(160);
+      await page.waitForFunction(el => {
+        const x = Number.parseFloat(el.style.getPropertyValue('--holo-x'));
+        const y = Number.parseFloat(el.style.getPropertyValue('--holo-y'));
+        return Number.isFinite(x) && Number.isFinite(y) &&
+          Math.abs(x - 50) >= 5 && Math.abs(y - 50) >= 5;
+      }, await funkoHolo.elementHandle(), { timeout: 1200 }).catch(() => {});
       const desktopTiltState = await funkoHolo.evaluate(el => {
         const read = name => Number.parseFloat(el.style.getPropertyValue(name));
         return {

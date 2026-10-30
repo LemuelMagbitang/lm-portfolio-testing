@@ -1293,8 +1293,6 @@ export function createLightboxMediaRenderer({
     inner.appendChild(flip);
     surface.appendChild(inner);
 
-    let pointerFrame = null;
-    let pendingPointer = null;
     const responsiveFoilCleanups = [];
     const syncResponsiveFoilIntensity = () => {
       const nextCompactTarget = isCompactFoilTarget(windowRef);
@@ -1318,7 +1316,6 @@ export function createLightboxMediaRenderer({
           // input/interpolation and reset both the active 3D pose and hidden
           // reflection coordinates in one resize-time pass. Do not keep easing
           // toward center after hover interaction has been disabled.
-          cancelQueuedPointer();
           if (motion.frame !== null && motion.frame !== undefined) {
             try { windowRef?.cancelAnimationFrame?.(motion.frame); } catch (_) {}
             motion.frame = null;
@@ -1349,16 +1346,7 @@ export function createLightboxMediaRenderer({
         responsiveFoilCleanups.push(() => mediaQuery.removeListener?.(handler));
       }
     };
-    const cancelQueuedPointer = () => {
-      if (pointerFrame !== null) {
-        try { windowRef?.cancelAnimationFrame?.(pointerFrame); } catch (_) {}
-        pointerFrame = null;
-      }
-      pendingPointer = null;
-    };
-
     const cleanup = () => {
-      cancelQueuedPointer();
       surface.classList.remove('is-flipped');
       surface.setAttribute('aria-pressed', 'false');
       const faceLabel = surface.__lightboxHoloHint?.querySelector('[data-holo-face-label]');
@@ -1382,29 +1370,11 @@ export function createLightboxMediaRenderer({
     };
 
     const onPointerMove = event => {
-      // Only fine hover pointers can drive the optical response. Touch never
-      // enters a hold/drag mode, preserving native scrolling and tap-to-flip.
-      if (!hoverAvailable || event.pointerType !== 'mouse') return;
-      pendingPointer = {
-        clientX: Number(event.clientX) || 0,
-        clientY: Number(event.clientY) || 0,
-        pointerType: 'mouse'
-      };
-      if (pointerFrame !== null) return;
-      const requestFrame = windowRef?.requestAnimationFrame;
-      if (typeof requestFrame !== 'function') {
-        const latest = pendingPointer;
-        pendingPointer = null;
-        setHolographicReflection(surface, latest);
-        return;
-      }
-      pointerFrame = requestFrame.call(windowRef, () => {
-        pointerFrame = null;
-        const latest = pendingPointer;
-        pendingPointer = null;
-        if (!latest || destroyed) return;
-        setHolographicReflection(surface, latest);
-      });
+      // The eased pose loop already coalesces writes to one animation frame.
+      // Update its latest target directly instead of adding a second RAF hop.
+      // Touch never enters a hold/drag mode, preserving native scrolling and tap-to-flip.
+      if (!hoverAvailable || event.pointerType !== 'mouse' || destroyed) return;
+      setHolographicReflection(surface, event);
     };
 
     const onPointerLeave = event => {
@@ -1421,7 +1391,6 @@ export function createLightboxMediaRenderer({
           clientY >= rect.top && clientY < rect.bottom) {
         return;
       }
-      cancelQueuedPointer();
       setHolographicTarget(surface, 50, 50, 0);
     };
 
@@ -1442,7 +1411,6 @@ export function createLightboxMediaRenderer({
       } else {
         surface.removeEventListener('pointermove', onPointerMove);
         surface.removeEventListener('pointerleave', onPointerLeave);
-        cancelQueuedPointer();
         if (reducedMotion) resetFoilMotionImmediately(surface);
         else setHolographicTarget(surface, 50, 50, 0);
       }
