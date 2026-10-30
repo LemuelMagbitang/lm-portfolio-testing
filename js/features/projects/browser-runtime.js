@@ -14,7 +14,7 @@
 
 import { loadProjects } from './project-loader.js?v=20261029-01';
 import { buildProjectCardElement } from './project-card.js?v=20261027-05';
-import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261027-06';
+import { waitForProjectThumbnailReadiness, disposeProjectThumbnailMedia } from './project-thumbnail.js?v=20261030-01';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261027-05';
 

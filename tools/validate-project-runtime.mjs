@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mountProjects } from '../js/features/projects/browser-runtime.js?v=20261029-01';
 import { getProjectForCard, getCardForProject, getProjects } from '../js/features/projects/project-loader.js?v=20261029-01';
 import { buildProjectCardElement } from '../js/features/projects/project-card.js?v=20261027-05';
-import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261027-06';
+import { buildProjectThumbnailMedia, disposeProjectThumbnailMedia, waitForProjectThumbnailReadiness, mediaTypeFromSrc } from '../js/features/projects/project-thumbnail.js?v=20261030-01';
 import { getLightboxSwipeDirection, isLightboxSwipeControlEvent } from '../js/features/lightbox/index.js?v=20261030-06';
 import {
   applyProjectCardOrientation,
@@ -436,8 +436,13 @@ assert.equal(videoThumbnail.preload, 'metadata');
 visibilityObserver.trigger(videoThumbnail, true);
 assert.equal(videoThumbnail.playCount, 1);
 assert.equal(videoThumbnail.preload, 'auto');
+let videoReadyEvents = 0;
+videoThumbnail.addEventListener('project-thumbnail-ready', () => { videoReadyEvents += 1; });
 videoThumbnail.dispatch('loadeddata');
 assert.equal(videoThumbnail.classList.values.has('is-media-ready'), true);
+videoThumbnail.dispatch('canplay');
+assert.equal(videoReadyEvents, 1,
+  'Video loadeddata and canplay must emit one thumbnail-ready lifecycle event.');
 visibilityObserver.trigger(videoThumbnail, false);
 assert.ok(videoThumbnail.pauseCount > 0);
 assert.equal(videoThumbnail.src, '/assets/media/lazy.mp4');

@@ -114,6 +114,8 @@ function registerThumbnailMediaState(media, {
   let activationScheduled = false;
   let viewportRevealFrameId = null;
   let lottieGeneration = 0;
+  let readinessGeneration = 0;
+  let readinessPending = false;
 
   const clearLoadTimers = () => {
     if (mediaReadyTimer !== null) { clearTimer?.(mediaReadyTimer); mediaReadyTimer = null; }
@@ -358,10 +360,16 @@ function registerThumbnailMediaState(media, {
     Promise.resolve(media.play?.()).catch(() => {});
   };
   const setReady = () => {
-    if (disposed || (type === 'lottie' && !hasSource())) return;
+    // Several media events can represent the same first decoded frame
+    // (notably video loadeddata followed by canplay). Run the handoff once.
+    if (disposed || media.dataset.mediaState === 'ready' || readinessPending ||
+        (type === 'lottie' && !hasSource())) return;
+    readinessPending = true;
+    const generation = ++readinessGeneration;
     clearLoadTimers();
     const reveal = () => {
-      if (disposed) return;
+      if (disposed || generation !== readinessGeneration) return;
+      readinessPending = false;
       // Capture only a tiny snapshot of the ready media; this never fetches or
       // mounts anything and quietly fails for tainted/unsupported surfaces.
       captureAssetPreview(src, media, { documentRef: mediaDocument(), type });
@@ -391,6 +399,10 @@ function registerThumbnailMediaState(media, {
   };
   const setFailed = () => {
     if (disposed || (type === 'lottie' && media.dataset.mediaState === 'error' && !activated)) return;
+    // Invalidate a pending image decode if an error wins the race. A later
+    // successful load may start a fresh readiness generation.
+    readinessGeneration += 1;
+    readinessPending = false;
     clearLoadTimers();
     if (type === 'lottie') {
       lottieGeneration += 1;
