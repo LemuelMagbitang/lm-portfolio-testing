@@ -5844,6 +5844,26 @@ try {
         const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
         return frame && Array.from(frame.getAnimations()).every(animation => animation.playState !== 'running');
       }, null, { timeout: 2000 });
+      const clickInspectorBoundary = async button => {
+        await button.evaluate(element => {
+          const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
+          const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          window.__lmInspectorBoundaryProbe = { reducedMotion, started:false };
+          element.addEventListener('click', () => {
+            const started = Array.from(frame?.getAnimations() || []).some(animation =>
+              animation.playState === 'running' &&
+              Number(animation.effect?.getTiming?.().duration) === 260
+            );
+            window.__lmInspectorBoundaryProbe = { reducedMotion, started };
+          }, { once:true });
+        });
+        await button.click();
+        const state = await page.evaluate(() => window.__lmInspectorBoundaryProbe || null);
+        if (!state || (!state.reducedMotion && !state.started)) {
+          throw new Error('Inspector boundary navigation must trigger its 260ms edge response unless reduced motion is preferred: ' +
+            JSON.stringify(state));
+        }
+      };
       const assertGroupSlotStable = async expectedIndex => {
         const state = await navigationGroupItems.evaluate(items => ({
           childCount: items.children.length,
@@ -5866,11 +5886,7 @@ try {
         currentGroupIndex = index;
       }
       await waitForInspectorMotion();
-      await inspectorPrevious.click();
-      await page.waitForFunction(() => Array.from(
-        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
-      ).some(animation => animation.playState === 'running' &&
-        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await clickInspectorBoundary(inspectorPrevious);
       await waitForInspectorCaption(navigationCaptions[0]);
       await assertGroupSlotStable(0);
 
@@ -5881,11 +5897,7 @@ try {
         await assertGroupSlotStable(currentGroupIndex);
       }
       await waitForInspectorMotion();
-      await inspectorNext.click();
-      await page.waitForFunction(() => Array.from(
-        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
-      ).some(animation => animation.playState === 'running' &&
-        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await clickInspectorBoundary(inspectorNext);
       await waitForInspectorCaption(navigationCaptions[navigationCaptions.length - 1]);
       await assertGroupSlotStable(navigationCaptions.length - 1);
 
@@ -5957,27 +5969,42 @@ try {
         const frame = document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame');
         return frame && Array.from(frame.getAnimations()).every(animation => animation.playState !== 'running');
       }, null, { timeout: 2000 });
+      const armMobileBoundaryProbe = async () => inspect.evaluate(overlay => {
+        const frame = overlay.querySelector('.lightbox-inspect-frame');
+        const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.__lmMobileInspectorBoundaryProbe = { reducedMotion, started:false };
+        overlay.addEventListener('pointerup', () => {
+          const started = Array.from(frame?.getAnimations() || []).some(animation =>
+            animation.playState === 'running' &&
+            Number(animation.effect?.getTiming?.().duration) === 260
+          );
+          window.__lmMobileInspectorBoundaryProbe = { reducedMotion, started };
+        }, { once:true });
+      });
+      const assertMobileBoundaryProbe = async () => {
+        const state = await page.evaluate(() => window.__lmMobileInspectorBoundaryProbe || null);
+        if (!state || (!state.reducedMotion && !state.started)) {
+          throw new Error('Mobile Inspector boundary swipe must trigger its 260ms edge response unless reduced motion is preferred: ' +
+            JSON.stringify(state));
+        }
+      };
       await dispatchSwipe(-96, 71);
       await waitForMobileCaption(captions[1]);
       await dispatchSwipe(96, 72);
       await waitForMobileCaption(captions[0]);
       await waitForMobileInspectorMotion();
+      await armMobileBoundaryProbe();
       await dispatchSwipe(96, 73);
-      await page.waitForFunction(() => Array.from(
-        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
-      ).some(animation => animation.playState === 'running' &&
-        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await assertMobileBoundaryProbe();
       await waitForMobileCaption(captions[0]);
       for (let index = 1; index < captions.length; index += 1) {
         await dispatchSwipe(-96, 80 + index);
         await waitForMobileCaption(captions[index]);
       }
       await waitForMobileInspectorMotion();
+      await armMobileBoundaryProbe();
       await dispatchSwipe(-96, 90);
-      await page.waitForFunction(() => Array.from(
-        document.querySelector('.lightbox-inspect-mode .lightbox-inspect-frame')?.getAnimations() || []
-      ).some(animation => animation.playState === 'running' &&
-        Number(animation.effect?.getTiming?.().duration) === 260), null, { timeout: 1200 });
+      await assertMobileBoundaryProbe();
       await waitForMobileCaption(captions[captions.length - 1]);
       await swipeSession.detach();
       await inspect.locator('.lightbox-inspect-back').click();
