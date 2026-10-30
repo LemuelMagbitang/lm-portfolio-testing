@@ -5322,6 +5322,10 @@ try {
         throw new Error('Holographic Inspector regression fixture must have multiple grouped artwork items: ' +
           JSON.stringify(groupBeforeInspectorOpen));
       }
+      // Playwright may scroll a locator into the scrollable Lightbox before
+      // dispatching click. Resolve that actionability scroll first so the
+      // baseline measures only the Inspect transition, not test-driver setup.
+      await funkoHolo.scrollIntoViewIfNeeded();
       const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       const lightboxOverflowAnchorBeforeInspect = await lightboxScrollHost.evaluate(el => el.style.overflowAnchor);
       // A tap on grouped artwork opens the full-screen Inspector without
