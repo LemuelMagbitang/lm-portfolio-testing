@@ -8202,6 +8202,24 @@ try {
         throw new Error('Mobile Show Less did not retain the requested white/black solid material: ' + JSON.stringify(expandedShowLessMaterial));
       }
 
+      // Expansion is intentionally staged: the Gallery applies its measured
+      // target height after the render handoff, then runs a 560ms max-height
+      // transition. Wait for the actual presentation completion instead of a
+      // fixed short delay, so this Lightbox regression test cannot race the
+      // animation on slower CI runners.
+      await page.waitForFunction(() => {
+        const button = document.querySelector('#showMoreBtn');
+        const wrapper = document.querySelector('#showMoreWrapper');
+        const viewport = document.querySelector('#portfolioGridViewport');
+        return Boolean(
+          button?.classList.contains('expanded') &&
+          wrapper?.getAttribute('data-expanded') === 'true' &&
+          viewport &&
+          getComputedStyle(viewport).maxHeight === 'none' &&
+          !viewport.classList.contains('is-expanding')
+        );
+      }, null, { timeout: 4000 });
+
       // Critical regression path: once the gallery is expanded, opening and
       // closing a Lightbox must not collapse the Gallery or move the visitor to
       // an unrelated position. The Lightbox close event is allowed to rebuild
