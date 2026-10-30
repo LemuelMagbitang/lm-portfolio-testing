@@ -4485,7 +4485,7 @@ try {
         throw new Error('Desktop holographic pointer movement did not drive the inverse foil reflection: ' + JSON.stringify({ pointerProbe, desktopTiltState }));
       }
 
-      await funkoHolo.evaluate(el => { el.style.removeProperty('animation-play-state'); });
+      // Keep the ambient foil float paused during responsive geometry checks.
 
       // Inspect must be layered over the existing Lightbox scroll position,
       // not trigger anchor reconciliation when the foil card is moved to body.
@@ -5315,6 +5315,10 @@ try {
       // dispatching click. Resolve that actionability scroll first so the
       // baseline measures only the Inspect transition, not test-driver setup.
       await funkoHolo.scrollIntoViewIfNeeded();
+      // Resume the ambient foil float only after all stable-layout scrolling
+      // is complete; its CSS animation is asserted above, and scrolling a
+      // continuously transformed target is not a meaningful smoke contract.
+      await funkoHolo.evaluate(el => { el.style.removeProperty('animation-play-state'); });
       const lightboxScrollBeforeInspect = await lightboxScrollHost.evaluate(el => el.scrollTop);
       const lightboxOverflowAnchorBeforeInspect = await lightboxScrollHost.evaluate(el => el.style.overflowAnchor);
       // A tap on grouped artwork opens the full-screen Inspector without
