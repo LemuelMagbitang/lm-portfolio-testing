@@ -115,7 +115,12 @@ applyGalleryReveal({
 });
 assert.equal(revealViewportLate.style.maxHeight, '490px');
 
-function makeExpansionFixture({ reducedMotion = false } = {}) {
+function makeExpansionFixture({
+  reducedMotion = false,
+  startExpanded = true,
+  animateCollapse = false,
+  viewportHeight = 180
+} = {}) {
   const frames = [];
   const timers = new Map();
   const listeners = new Map();
@@ -134,14 +139,14 @@ function makeExpansionFixture({ reducedMotion = false } = {}) {
     removeAttribute(name) { delete this.dataset[name]; }
   };
   const viewport = {
-    style: { maxHeight: '180px' },
+    style: { maxHeight: `${viewportHeight}px` },
     offsetHeight: 180,
     classList: {
       add(name) { classes.add(name); },
       remove(name) { classes.delete(name); },
       contains(name) { return classes.has(name); }
     },
-    getBoundingClientRect() { return { top: 0, left: 0, width: 500, height: 180 }; },
+    getBoundingClientRect() { return { top: 0, left: 0, width: 500, height: viewportHeight }; },
     addEventListener(name, handler) {
       if (!listeners.has(name)) listeners.set(name, new Set());
       listeners.get(name).add(handler);
@@ -162,9 +167,10 @@ function makeExpansionFixture({ reducedMotion = false } = {}) {
     remove(name) { wrapperClasses.delete(name); },
     contains(name) { return wrapperClasses.has(name); }
   } };
+  const fixtureCards = animateCollapse ? [card, card] : [card];
   const grid = {
     scrollHeight: 720,
-    querySelectorAll() { return [card]; },
+    querySelectorAll() { return fixtureCards; },
     getBoundingClientRect() { return { top: 0, left: 0, width: 500, height: 720 }; }
   };
   const windowRef = {
@@ -185,10 +191,11 @@ function makeExpansionFixture({ reducedMotion = false } = {}) {
     gridViewport: viewport,
     fadeOverlay,
     showMoreWrapper,
-    filteredCards: [card],
+    filteredCards: fixtureCards,
     visibleCount: 1,
-    expanded: true,
-    animateExpand: true,
+    expanded: startExpanded,
+    animateExpand: startExpanded,
+    animateCollapse,
     windowRef,
     fadeMs: 300
   });
@@ -221,6 +228,42 @@ assert.equal(reducedExpansionFixture.viewport.classList.contains('is-expanding')
 assert.equal(reducedExpansionFixture.showMoreWrapper.classList.contains('is-expanding'), false);
 reducedExpansionFixture.cleanup?.();
 
+// Show Less regression: keep the expanded viewport height for the first paint,
+// then transition to the measured collapsed height.
+const collapseFixture = makeExpansionFixture({
+  startExpanded: false,
+  animateCollapse: true,
+  viewportHeight: 720
+});
+assert.equal(collapseFixture.viewport.style.maxHeight, '720px',
+  'Show Less must begin at the current expanded viewport height.');
+assert.equal(collapseFixture.viewport.classList.contains('is-collapsing'), true,
+  'The collapse transition must be enabled before applying the collapsed target.');
+assert.equal(collapseFixture.showMoreWrapper.classList.contains('is-collapsing'), true,
+  'The Show Less wrapper spacing transition must be enabled with the viewport.');
+while (collapseFixture.frames.length) collapseFixture.frames.shift()();
+assert.equal(collapseFixture.viewport.style.maxHeight, '170px',
+  'Show Less must animate toward the measured collapsed viewport height.');
+collapseFixture.viewport.dispatch('transitionend', { propertyName: 'max-height' });
+assert.equal(collapseFixture.viewport.style.maxHeight, '170px',
+  'After collapse, the measured collapsed viewport height must remain set.');
+assert.equal(collapseFixture.viewport.classList.contains('is-collapsing'), false);
+assert.equal(collapseFixture.showMoreWrapper.classList.contains('is-collapsing'), false);
+assert.equal(collapseFixture.fadeOverlay.classList.contains('is-hidden'), false);
+collapseFixture.cleanup?.();
+
+const reducedCollapseFixture = makeExpansionFixture({
+  reducedMotion: true,
+  startExpanded: false,
+  animateCollapse: true,
+  viewportHeight: 720
+});
+assert.equal(reducedCollapseFixture.viewport.style.maxHeight, '170px',
+  'Reduced-motion Show Less must apply the collapsed layout without animating.');
+assert.equal(reducedCollapseFixture.viewport.classList.contains('is-collapsing'), false);
+assert.equal(reducedCollapseFixture.showMoreWrapper.classList.contains('is-collapsing'), false);
+reducedCollapseFixture.cleanup?.();
+
 const styleSource = await (await import('node:fs/promises')).readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const galleryControllerForFilters = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/index.js', import.meta.url), 'utf8');
 const galleryPresentationSource = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/presentation.js', import.meta.url), 'utf8');
@@ -234,13 +277,13 @@ assert.match(styleSource, /\.filter-tabs \.tab-btn \{[\s\S]*?display: inline-fle
 assert.match(styleSource, /\.filter-tabs \.filter-tab-label \{[\s\S]*?width: max-content;[\s\S]*?margin-inline: auto;[\s\S]*?line-height: inherit;[\s\S]*?text-align: center;/);
 assert.match(galleryControllerForFilters, /const isDirectActivation = event\?\.isTrusted !== false;/);
 assert.match(galleryControllerForFilters, /if \(isDirectActivation\) playShowMoreBounce\(\)/);
-assert.match(galleryControllerForFilters, /render\(\{ animateExpand: nextExpanded && isDirectActivation \}\)/);
+assert.match(galleryControllerForFilters, /animateExpand: nextExpanded && isDirectActivation[\s\S]*?animateCollapse: !nextExpanded && isDirectActivation/);
 assert.match(styleSource, /\.btn-show-more:not\(\.expanded\):hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
 assert.match(styleSource, /\.btn-show-more\.expanded:hover\{[\s\S]*?background:#fff !important;[\s\S]*?color:#000 !important;/);
 assert.match(styleSource, /\.btn-show-more\.is-interacting\{[\s\S]*?animation:show-more-interaction-bounce 420ms/);
-assert.match(styleSource, /\.portfolio-grid-viewport\.is-expanding\s*\{\s*transition:\s*max-height 560ms/);
-assert.match(styleSource, /\.show-more-wrapper\.is-expanding\s*\{[\s\S]*?margin-top 560ms[\s\S]*?min-height 560ms[\s\S]*?padding-bottom 560ms/);
-assert.match(styleSource, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.btn-show-more\.is-interacting\{animation:none!important;\}[\s\S]*?\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-expanding\{transition:none!important;\}/);
+assert.match(styleSource, /\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.portfolio-grid-viewport\.is-collapsing\s*\{\s*transition:\s*max-height 560ms/);
+assert.match(styleSource, /\.show-more-wrapper\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-collapsing\s*\{[\s\S]*?margin-top 560ms[\s\S]*?min-height 560ms[\s\S]*?padding-bottom 560ms/);
+assert.match(styleSource, /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.btn-show-more\.is-interacting\{animation:none!important;\}[\s\S]*?\.portfolio-grid-viewport\.is-expanding,[\s\S]*?\.portfolio-grid-viewport\.is-collapsing,[\s\S]*?\.show-more-wrapper\.is-expanding,[\s\S]*?\.show-more-wrapper\.is-collapsing\{transition:none!important;\}/);
 assert.match(galleryPresentationSource, /const startExpansion = \(\) => \{[\s\S]*?grid\.scrollHeight[\s\S]*?viewport\.style\.maxHeight/);
 assert.match(galleryPresentationSource, /if \(!animateExpand \|\| !expanded \|\| reducedMotion\) return false/);
 assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaList\.length > 2 \? 'multi' : 'single'/);

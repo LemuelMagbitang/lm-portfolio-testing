@@ -250,6 +250,8 @@ export function applyGalleryReveal({
   const filterTransitionDuration = reducedMotion ? '0ms' : '360ms';
   let transitionStartFrame = null;
   let transitionFrame = null;
+  let viewportTransitionFrame = null;
+  let viewportTransitionFrameIsTimer = false;
   let viewportTransitionFallbackTimer = null;
   let viewportTransitionListener = null;
   let viewportTransitionActive = false;
@@ -260,6 +262,12 @@ export function applyGalleryReveal({
     const currentHeight = wasActive
       ? Number(viewport.getBoundingClientRect?.().height) || 0
       : 0;
+    if (viewportTransitionFrame !== null) {
+      if (viewportTransitionFrameIsTimer) windowRef.clearTimeout(viewportTransitionFrame);
+      else windowRef.cancelAnimationFrame?.(viewportTransitionFrame);
+      viewportTransitionFrame = null;
+    }
+    viewportTransitionFrameIsTimer = false;
     if (viewportTransitionFallbackTimer !== null) {
       windowRef.clearTimeout(viewportTransitionFallbackTimer);
       viewportTransitionFallbackTimer = null;
@@ -316,7 +324,24 @@ export function applyGalleryReveal({
       }
     };
     viewport.addEventListener?.('transitionend', viewportTransitionListener);
-    viewport.style.maxHeight = `${toHeight}px`;
+
+    const applyTargetHeight = () => {
+      viewportTransitionFrame = null;
+      viewportTransitionFrameIsTimer = false;
+      if (!isCurrentRender(renderToken)) {
+        cancelViewportTransition();
+        return;
+      }
+      viewport.style.maxHeight = `${toHeight}px`;
+    };
+    // Keep the measured starting height visible for one paint before applying
+    // the target. The shared CSS transition delay then creates the short handoff.
+    if (typeof windowRef.requestAnimationFrame === 'function') {
+      viewportTransitionFrame = windowRef.requestAnimationFrame(applyTargetHeight);
+    } else {
+      viewportTransitionFrameIsTimer = true;
+      viewportTransitionFrame = windowRef.setTimeout(applyTargetHeight, 0);
+    }
 
     // Backgrounded tabs can throttle transitions or omit transitionend.
     viewportTransitionFallbackTimer = windowRef.setTimeout(finishViewportTransition, 900);
