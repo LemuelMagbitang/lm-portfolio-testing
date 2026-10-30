@@ -1746,6 +1746,7 @@ function validateResponsiveUiContracts() {
   const artworkGroupLayoutModes = ['grid','stack','cards','sticker'];
   const artworkGroupCss = fs.readFileSync(path.join(ROOT, 'css/features/lightbox.css'), 'utf8');
   const artworkGroupRuntime = fs.readFileSync(path.join(ROOT, 'js/features/lightbox/media-renderer.js'), 'utf8');
+  const artworkGroupInspect = fs.readFileSync(path.join(ROOT, 'js/features/lightbox/inspect-controller.js'), 'utf8');
   const artworkGroupAdmin = fs.readFileSync(path.join(ROOT, 'admin/admin.js'), 'utf8');
   const artworkGroupNormalizer = fs.readFileSync(path.join(ROOT, 'js/data/project-normalizer.js'), 'utf8');
   const groupedLayoutContract = artworkGroupLayoutModes.every(mode =>
@@ -1780,13 +1781,13 @@ function validateResponsiveUiContracts() {
   }
 
   const groupedInspectorNavigationContract =
-    artworkGroupRuntime.includes('function navigateArtworkInspect(direction)') &&
-    artworkGroupRuntime.includes('active.groupEntries.length') &&
-    artworkGroupRuntime.includes('animateInspectBoundary(active,delta)') &&
-    artworkGroupRuntime.includes('createArtworkInspectPlaceholder(nextEntry)') &&
-    artworkGroupRuntime.includes('onInspectPointerUp') &&
-    artworkGroupRuntime.includes("classList?.add('lm-artwork-inspect-open')") &&
-    artworkGroupRuntime.includes("classList?.remove('lm-artwork-inspect-open')") &&
+    artworkGroupInspect.includes('function navigateArtworkInspect(direction)') &&
+    artworkGroupInspect.includes('active.groupEntries.length') &&
+    artworkGroupInspect.includes('animateInspectBoundary(active,delta)') &&
+    artworkGroupInspect.includes('createArtworkInspectPlaceholder(nextEntry)') &&
+    artworkGroupInspect.includes('onInspectPointerUp') &&
+    artworkGroupInspect.includes("classList?.add('lm-artwork-inspect-open')") &&
+    artworkGroupInspect.includes("classList?.remove('lm-artwork-inspect-open')") &&
     artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-prev') &&
     artworkGroupCss.includes('.lightbox-inspect-mode .lightbox-inspect-next') &&
     artworkGroupCss.includes('.lightbox-inspect-mode{touch-action:pan-y;}') &&
