@@ -717,6 +717,10 @@ assert.match(admin, /panel\.style\.height = height \+ 'px'[\s\S]*?panel\.classLi
   'Disclosure close must animate from its measured height to zero before unmounting.');
 assert.match(admin, /currentBody\.inert = true/,
   'Closing disclosure content must become inert while it animates away.');
+assert.match(admin, /if \(focusWasInPanel\) currentToggle\?\.focus\(\{preventScroll:true\}\)/,
+  'Collapsing a focused disclosure must return focus to its toggle.');
+assert.match(admin, /if \(!currentOpenRow\.isConnected\) return;/,
+  'A disclosure completion callback must not repaint a section after it has been detached.');
 assert.match(admin, /let openMediaUid = null/,
   'Artwork should keep exactly one active editor ID instead of a multi-open set.');
 assert.match(admin, /const isOpen = openMediaUid === m\._uid;/,

@@ -3956,21 +3956,20 @@ function buildProjectBody(el, p, options = {}){
           const currentBody = currentOpenRow.querySelector('[data-mbody]');
           const currentToggle = currentOpenRow.querySelector('[data-mact="toggle"]');
           const nextOpenUid = willOpen ? m._uid : null;
-          const restoreToggleFocus = !!e.target.closest('[data-mact="toggle"]') ||
-            !!currentBody?.contains(document.activeElement);
+          const focusWasInPanel = !!currentBody?.contains(document.activeElement);
+          const restoreToggleFocus = !!e.target.closest('[data-mact="toggle"]') || focusWasInPanel;
           mediaDisclosureClosing = true;
           currentToggle?.setAttribute('aria-expanded', 'false');
           currentToggle?.setAttribute('aria-disabled', 'true');
           if (currentBody) {
             currentBody.setAttribute('aria-hidden', 'true');
             currentBody.inert = true;
-            if (currentBody.contains(document.activeElement)) {
-              currentToggle?.focus({preventScroll:true});
-            }
+            if (focusWasInPanel) currentToggle?.focus({preventScroll:true});
           }
 
           animateDisclosureClose(currentBody, () => {
             mediaDisclosureClosing = false;
+            if (!currentOpenRow.isConnected) return;
             openMediaUid = nextOpenUid;
             paintMedia();
             if (nextOpenUid) snapCmsCardToStart(nextOpenUid);
@@ -4688,21 +4687,20 @@ RENDERERS.projects = async function(data, isCurrent=()=>true){
           const currentBody = currentOpenRow.querySelector('[data-body]');
           const currentToggle = currentOpenRow.querySelector('.project-toggle-action');
           const nextOpenUid = willOpen ? p._uid : null;
-          const restoreToggleFocus = !!e.target.closest('[data-act="toggle"]') ||
-            !!currentBody?.contains(document.activeElement);
+          const focusWasInPanel = !!currentBody?.contains(document.activeElement);
+          const restoreToggleFocus = !!e.target.closest('[data-act="toggle"]') || focusWasInPanel;
           projectDisclosureClosing = true;
           currentToggle?.setAttribute('aria-expanded', 'false');
           currentToggle?.setAttribute('aria-disabled', 'true');
           if (currentBody) {
             currentBody.setAttribute('aria-hidden', 'true');
             currentBody.inert = true;
-            if (currentBody.contains(document.activeElement)) {
-              currentToggle?.focus({preventScroll:true});
-            }
+            if (focusWasInPanel) currentToggle?.focus({preventScroll:true});
           }
 
           animateDisclosureClose(currentBody, () => {
             projectDisclosureClosing = false;
+            if (!currentOpenRow.isConnected) return;
             openUid = nextOpenUid;
             paint();
             if (nextOpenUid) snapCmsCardToStart(nextOpenUid);
