@@ -1782,7 +1782,7 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('border-radius:inherit!important;') &&
     artworkGroupRuntime.includes("entry.classList.add('is-artwork-interactive');") &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
-    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
     artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
     artworkGroupCss.includes('padding:0!important;') &&

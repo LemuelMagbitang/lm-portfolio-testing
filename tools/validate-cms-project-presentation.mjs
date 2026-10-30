@@ -498,7 +498,7 @@ assert.ok(
   lightboxCss.includes('border-radius:inherit!important;') &&
   renderer.includes("entry.classList.add('is-artwork-interactive');") &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
-  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
+  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork,') &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
   lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
   lightboxCss.includes('padding:0!important;') &&
