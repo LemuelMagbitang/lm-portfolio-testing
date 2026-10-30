@@ -2823,16 +2823,15 @@ export function createLightboxMediaRenderer({
       active.overlay.remove();
       documentRef.documentElement?.classList?.remove('lm-artwork-inspect-open');
       documentRef.body?.classList?.remove('lm-artwork-inspect-open');
+      // The group item and its placeholder are back in the Lightbox now.
+      // Restore the caller's anchoring policy immediately, then reassert the
+      // captured scroll offset through the next two layout frames so browser
+      // anchoring cannot leave the viewer at a different position.
       active.restoreLightboxScroll?.();
-      // Keep anchoring disabled through the DOM restoration and both layout
-      // frames. Restore the caller's original inline setting only after the
-      // Lightbox has settled back at its captured scroll position.
+      active.restoreLightboxOverflowAnchor?.();
       windowRef.requestAnimationFrame(()=>{
         active.restoreLightboxScroll?.();
-        windowRef.requestAnimationFrame(()=>{
-          active.restoreLightboxScroll?.();
-          active.restoreLightboxOverflowAnchor?.();
-        });
+        windowRef.requestAnimationFrame(()=>active.restoreLightboxScroll?.());
       });
 
       // Keyboard closure returns focus to the originating group item. Avoid a
