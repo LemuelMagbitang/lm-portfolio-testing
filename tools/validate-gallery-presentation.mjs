@@ -330,6 +330,14 @@ reducedCollapseFixture.cleanup?.();
 const styleSource = await (await import('node:fs/promises')).readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const galleryControllerForFilters = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/index.js', import.meta.url), 'utf8');
 const galleryPresentationSource = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/presentation.js', import.meta.url), 'utf8');
+const galleryTransitionBlurValues = Array.from(
+  galleryPresentationSource.matchAll(/card\\.style\\.filter = 'blur\\(([\\d.]+)px\\)'/g),
+  match => Number(match[1])
+);
+assert.equal(galleryTransitionBlurValues.length, 2,
+  'Incoming and outgoing Gallery cards must share one bounded transition-blur treatment.');
+assert.ok(galleryTransitionBlurValues.every(radius => radius > 0 && radius <= 3),
+  'Gallery filter changes must keep card blur at or below 3px to limit filter work across the grid.');
 const worksMarkup = await (await import('node:fs/promises')).readFile(new URL('../index.html', import.meta.url), 'utf8');
 const mediaRendererForDensity = await (await import('node:fs/promises')).readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
 assert.match(galleryControllerForFilters, /function setFilterButtonLabel\(button, value\)/);
