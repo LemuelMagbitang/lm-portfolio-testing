@@ -3881,11 +3881,23 @@ try {
             JSON.stringify({ firstExpansionFrame, secondExpansionFrame }));
         }
 
-        // Reverse while expansion is in flight. The height must continue from
-        // its current rendered value, not jump to either endpoint.
+        // Capture the rendered height in the button's click event, after
+        // the application handler has frozen the in-flight transition height.
+        // A separate Playwright query before keyboard activation can become
+        // stale while the 440ms transition continues to advance.
+        const captureViewportHeightAtNextActivation = async () => {
+          await button.evaluate(el => {
+            el.__smokeViewportHeightAtActivation = null;
+            el.addEventListener('click', () => {
+              const viewport = document.querySelector('#portfolioGridViewport');
+              el.__smokeViewportHeightAtActivation = viewport?.getBoundingClientRect().height ?? null;
+            }, { once: true });
+          });
+        };
         await button.focus();
-        const beforeCollapseReverse = await page.locator('#portfolioGridViewport').evaluate(el => el.getBoundingClientRect().height);
+        await captureViewportHeightAtNextActivation();
         await page.keyboard.press('Enter');
+        const beforeCollapseReverse = await button.evaluate(el => el.__smokeViewportHeightAtActivation);
         const afterCollapseReverse = await page.locator('#portfolioGridViewport').evaluate(el => ({
           height: el.getBoundingClientRect().height,
           collapsing: el.classList.contains('is-collapsing'),
@@ -3913,8 +3925,9 @@ try {
           throw new Error('A reversed Show Less transition did not continue toward the collapsed height.');
         }
 
-        const beforeExpansionReverse = await page.locator('#portfolioGridViewport').evaluate(el => el.getBoundingClientRect().height);
+        await captureViewportHeightAtNextActivation();
         await page.keyboard.press('Enter');
+        const beforeExpansionReverse = await button.evaluate(el => el.__smokeViewportHeightAtActivation);
         const afterExpansionReverse = await page.locator('#portfolioGridViewport').evaluate(el => ({
           height: el.getBoundingClientRect().height,
           expanding: el.classList.contains('is-expanding'),
