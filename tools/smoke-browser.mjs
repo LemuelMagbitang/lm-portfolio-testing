@@ -4602,10 +4602,15 @@ try {
                 rotationDegrees = Math.atan2(matrix.b, matrix.a) * 180 / Math.PI;
               } catch (_) {}
             }
+            const itemStyle = getComputedStyle(el);
             return {
               index,
               placeholder: el.classList.contains('lightbox-inspect-placeholder'),
               caption: el.querySelector('.media-caption')?.textContent?.trim() || '',
+              gridColumnStart: itemStyle.gridColumnStart,
+              rowCenterShift: el.style.getPropertyValue('--artwork-row-center-shift'),
+              computedRowCenterShift: itemStyle.getPropertyValue('--artwork-row-center-shift'),
+              computedTranslate: itemStyle.translate,
               left: el.offsetLeft,
               top: el.offsetTop,
               visualTop: (() => {
