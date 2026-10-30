@@ -133,6 +133,13 @@ assert.ok(
   'Lightbox focus-restoration handlers must be initialized before being registered.'
 );
 const mainStyleSource = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
+const modalInteriorBaseRule = mainStyleSource.match(/\\.modal-interior\\s*\\{([^}]*)\\}/)?.[1] || '';
+assert.ok(modalInteriorBaseRule, 'The Lightbox modal interior base rule must remain present.');
+assert.doesNotMatch(modalInteriorBaseRule, /will-change\\s*:/,
+  'The closed Lightbox must not reserve an unnecessary compositor layer.');
+assert.match(mainStyleSource,
+  /\\.lightbox-modal\\.active\\s+\\.modal-interior\\s*\\{[^}]*will-change:\\s*opacity\\s*,\\s*transform\\s*,\\s*filter\\s*;/,
+  'The active Lightbox must retain its compositor hint during the entrance/navigation lifecycle.');
 assert.match(mainStyleSource, /\.project-card\.is-pointer-focus-return:focus-visible/);
 assert.match(mainStyleSource, /box-shadow:none!important/);
 assert.match(mainStyleSource, /\.card-thumbnail \.project-thumb-media-fallback-image[\s\S]*?opacity:1!important/);
