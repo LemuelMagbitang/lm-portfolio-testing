@@ -1761,13 +1761,17 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('grid-template-columns:repeat(2,minmax(0,1fr));') &&
     artworkGroupCss.includes('display:flex;') &&
     artworkGroupCss.includes('flex-flow:row wrap;') &&
-    artworkGroupCss.includes('clamp(324px,57svh,480px)') &&
+    artworkGroupCss.includes('width:100%;max-width:100%;min-width:0;height:auto;max-height:none;') &&
+    artworkGroupCss.includes('aspect-ratio:var(--lightbox-artwork-ratio,auto);') &&
+    artworkGroupCss.includes('--artwork-stack-gap:6px;') &&
+    !artworkGroupCss.includes('--artwork-stack-gap:8px;') &&
+    !artworkGroupCss.includes('--artwork-stack-gap:10px;') &&
     artworkGroupRuntime.includes("section.style.setProperty('--artwork-grid-columns', String(gridColumns))") &&
     artworkGroupAdmin.includes('data-edit-grid-columns') &&
     artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)') &&
     artworkGroupNormalizer.includes('gridColumns:normalizeArtworkGridColumns(group.gridColumns)');
   if (!independentGridStackContract) {
-    err('Artwork groups: Grid/Tiling must expose 2–5 configurable desktop columns and two mobile columns, while Horizontal Stack must use wrapping flex rows and the expanded size envelope.');
+    err('Artwork groups: Grid/Tiling must use configurable equal-width columns and full-width ratio-preserving artwork; Horizontal Stack must wrap with a consistent 6px gap.');
   }
 
   const groupedInspectorNavigationContract =
