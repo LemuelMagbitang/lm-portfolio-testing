@@ -370,7 +370,9 @@
    grouped layout and after an item is moved into the full-screen Inspector.
    The item-level layout marker travels with the artwork during that move. */
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{
-  border-radius:12px;
+  /* The legacy Inspect frame resets artwork radii with !important. Preserve
+     the grouped Grid/Stack 12px shape when an item is portaled into Inspect. */
+  border-radius:12px !important;
 }
 :is(#lightboxMediaContainer,.lightbox-inspect-mode) .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
   border-radius:12px;
