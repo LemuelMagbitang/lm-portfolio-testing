@@ -116,7 +116,15 @@ applyGalleryReveal({
 assert.equal(revealViewportLate.style.maxHeight, '490px');
 
 const styleSource = await (await import('node:fs/promises')).readFile(new URL('../css/style.css', import.meta.url), 'utf8');
+const galleryControllerForFilters = await (await import('node:fs/promises')).readFile(new URL('../js/features/gallery/index.js', import.meta.url), 'utf8');
+const worksMarkup = await (await import('node:fs/promises')).readFile(new URL('../index.html', import.meta.url), 'utf8');
 const mediaRendererForDensity = await (await import('node:fs/promises')).readFile(new URL('../js/features/lightbox/media-renderer.js', import.meta.url), 'utf8');
+assert.match(galleryControllerForFilters, /function setFilterButtonLabel\(button, value\)/);
+assert.match(galleryControllerForFilters, /setFilterButtonLabel\(allButton, 'ALL'\)/);
+assert.match(galleryControllerForFilters, /setFilterButtonLabel\(button, filter\.label \|\| filter\.name \|\| filter\.id\)/);
+assert.match(worksMarkup, /class="filter-tab-label">ALL<\/span>/);
+assert.match(styleSource, /\.filter-tabs \.tab-btn \{[\s\S]*?display: inline-flex;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/);
+assert.match(styleSource, /\.filter-tabs \.filter-tab-label \{[\s\S]*?width: max-content;[\s\S]*?margin-inline: auto;[\s\S]*?line-height: inherit;[\s\S]*?text-align: center;/);
 assert.match(mediaRendererForDensity, /container\.dataset\.mediaDensity = mediaList\.length > 2 \? 'multi' : 'single'/);
 assert.match(mediaRendererForDensity, /container\.setAttribute\(\s*'data-has-youtube'/);
 assert.match(styleSource, /data-media-density="multi"\]\[data-has-youtube="true"\]/);

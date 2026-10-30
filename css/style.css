@@ -711,10 +711,30 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 .filter-tabs .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
   scroll-snap-align: center;
+}
+
+/* Give each filter label a real layout box instead of relying on an anonymous
+   flex item generated from the button's bare text node. Its intrinsic width
+   preserves the pill's existing content sizing; the button centers it. */
+.filter-tabs .filter-tab-label {
+  display: block;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 0;
+  line-height: inherit;
+  text-align: center;
+  text-indent: 0;
+  white-space: inherit;
+  transform: none;
 }
 
 @media (hover: hover) and (pointer: fine) {

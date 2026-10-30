@@ -29,6 +29,14 @@ export async function initGallery(options = {}) {
   portfolioGrid.dataset.component = 'project-gallery';
   filterTabs?.setAttribute('data-component', 'project-filters');
 
+  function setFilterButtonLabel(button, value) {
+    const label = documentRef.createElement('span');
+    label.className = 'filter-tab-label';
+    label.textContent = String(value ?? '');
+    button.replaceChildren(label);
+    return label;
+  }
+
   async function loadFilterButtons() {
     if (!filterTabs || !options.filterUrl || typeof options.loadJson !== 'function') return;
 
@@ -54,7 +62,7 @@ export async function initGallery(options = {}) {
       allButton.className = 'tab-btn filter-btn active';
       allButton.dataset.filter = 'all';
       allButton.setAttribute('aria-pressed', 'true');
-      allButton.textContent = 'ALL';
+      setFilterButtonLabel(allButton, 'ALL');
       fragment.appendChild(allButton);
 
       list.forEach(filter => {
@@ -64,12 +72,12 @@ export async function initGallery(options = {}) {
         button.className = 'tab-btn filter-btn';
         button.dataset.filter = String(filter.id);
         button.setAttribute('aria-pressed', 'false');
-        button.textContent = filter.label || filter.name || filter.id;
+        const label = setFilterButtonLabel(button, filter.label || filter.name || filter.id);
         button.disabled = !availableProjects.some(project =>
           Array.isArray(project.filters) && project.filters.includes(button.dataset.filter)
         );
         if (button.disabled) {
-          button.setAttribute('aria-label', button.textContent.trim() + ' — no projects currently available');
+          button.setAttribute('aria-label', label.textContent.trim() + ' — no projects currently available');
         }
         fragment.appendChild(button);
       });

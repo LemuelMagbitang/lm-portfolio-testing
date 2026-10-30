@@ -2521,6 +2521,26 @@ async function assertFilterNavigationResponsive(page, label) {
       const scroller = wrapper?.querySelector('.filter-nav-scroller');
       const content = scroller?.querySelector('.filter-nav-content');
       const buttons = Array.from(content?.querySelectorAll('.filter-btn, .tab-btn') || []);
+      const labelMetrics = buttons.map(button => {
+        const label = button.querySelector(':scope > .filter-tab-label');
+        const buttonRect = button.getBoundingClientRect();
+        const labelRect = label?.getBoundingClientRect();
+        const range = document.createRange();
+        if (label) range.selectNodeContents(label);
+        const textRect = label ? range.getBoundingClientRect() : null;
+        const buttonStyle = getComputedStyle(button);
+        const labelStyle = label ? getComputedStyle(label) : null;
+        const buttonCenter = buttonRect.left + buttonRect.width / 2;
+        return {
+          valid: !!label && label.parentElement === button &&
+            labelStyle?.display === 'block' &&
+            labelStyle?.whiteSpace === 'nowrap' &&
+            labelStyle?.transform === 'none',
+          labelCenterDelta: labelRect ? Math.abs(labelRect.left + labelRect.width / 2 - buttonCenter) : Infinity,
+          textCenterDelta: textRect ? Math.abs(textRect.left + textRect.width / 2 - buttonCenter) : Infinity,
+          lineHeightMatches: !!labelStyle && labelStyle.lineHeight === buttonStyle.lineHeight
+        };
+      });
       const gap = Number.parseFloat(content ? getComputedStyle(content).columnGap : '0') || 0;
       const naturalWidth = buttons.reduce((total, button) => total + button.getBoundingClientRect().width, 0) +
         gap * Math.max(0, buttons.length - 1);
@@ -2540,6 +2560,10 @@ async function assertFilterNavigationResponsive(page, label) {
         wrapperExists: !!wrapper, role: wrapper?.getAttribute('role') || '',
         label: wrapper?.getAttribute('aria-label') || '', viewportExists: !!viewport,
         scrollerExists: !!scroller, contentExists: !!content, count: buttons.length,
+        filterLabelsHaveWrappers: labelMetrics.length === buttons.length && labelMetrics.every(item => item.valid),
+        filterLabelCenterDelta: labelMetrics.length ? Math.max(...labelMetrics.map(item => item.labelCenterDelta)) : Infinity,
+        filterTextCenterDelta: labelMetrics.length ? Math.max(...labelMetrics.map(item => item.textCenterDelta)) : Infinity,
+        filterLabelsMatchLineHeight: labelMetrics.length > 0 && labelMetrics.every(item => item.lineHeightMatches),
         clientWidth: scroller?.clientWidth || 0, scrollWidth: scroller?.scrollWidth || 0,
         dataOverflow: scroller?.dataset.overflow === 'true',
         actualOverflow: (scroller?.scrollWidth || 0) > (scroller?.clientWidth || 0) + 1,
@@ -2601,6 +2625,10 @@ async function assertFilterNavigationResponsive(page, label) {
     }
     if (state.activeCenterDelta > 2) {
       throw new Error(label + ' active filter must remain centered at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (!state.filterLabelsHaveWrappers || state.filterLabelCenterDelta > 1.5 ||
+        state.filterTextCenterDelta > 2 || !state.filterLabelsMatchLineHeight) {
+      throw new Error(label + ' filter text must remain centered inside each pill at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.minButtonHeight < 44 || !state.labelsStayOneLine || state.verticalOverflow ||
         state.paddingTop !== 12 || state.paddingBottom !== 12) {
