@@ -1772,11 +1772,14 @@ function validateResponsiveUiContracts() {
     artworkGroupCss.includes('gap:0;\n  padding:0;') &&
     artworkGroupCss.includes('flex:0 0 calc(100% / 3);') &&
     artworkGroupCss.includes('flex-basis:50%;') &&
-    artworkGroupCss.includes('.lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
-    artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
-    artworkGroupCss.includes('border-radius:inherit!important;') &&
-    artworkGroupCss.includes('.lightbox-artwork .lightbox-holographic-face{\n  border-radius:var(--lm-shape-shared-lg)!important;') &&
+    artworkGroupCss.includes('#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork,') &&
     artworkGroupCss.includes('border-radius:0!important;') &&
+    !artworkGroupCss.includes('.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{') &&
+    artworkGroupCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork > :is(') &&
+    artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork .lightbox-holographic-face{') &&
+    artworkGroupCss.includes('border-radius:inherit!important;') &&
     artworkGroupRuntime.includes("entry.classList.add('is-artwork-interactive');") &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
     artworkGroupCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
@@ -1790,7 +1793,7 @@ function validateResponsiveUiContracts() {
     artworkGroupAdmin.includes('normalizeArtworkGridColumns(group.gridColumns)') &&
     artworkGroupNormalizer.includes('gridColumns:normalizeArtworkGridColumns(group.gridColumns)');
   if (!independentGridStackContract) {
-    err('Artwork groups: Grid/Tiling and Horizontal Stack must use the default 100% footprint, zero gaps, shared rounded interactive artwork, and responsive overflow-free rows.');
+    err('Artwork groups: Grid/Tiling and Horizontal Stack must use the default 100% footprint, zero gaps, square grouped corners, and rounded solo Inspect artwork.');
   }
 
   const groupedInspectorNavigationContract =

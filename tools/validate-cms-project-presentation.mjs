@@ -488,11 +488,14 @@ assert.ok(
   lightboxCss.includes('gap:0;\n  padding:0;') &&
   lightboxCss.includes('flex:0 0 calc(100% / 3);') &&
   lightboxCss.includes('flex-basis:50%;') &&
-  lightboxCss.includes('.lightbox-media-item.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
-  lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
-  lightboxCss.includes('border-radius:inherit!important;') &&
-  lightboxCss.includes('.lightbox-artwork .lightbox-holographic-face{\n  border-radius:var(--lm-shape-shared-lg)!important;') &&
+  lightboxCss.includes('#lightboxMediaContainer .lightbox-artwork-group .lightbox-media-item.is-grouped-artwork-interactive .lightbox-artwork,') &&
   lightboxCss.includes('border-radius:0!important;') &&
+  !lightboxCss.includes('.is-grouped-artwork-interactive.is-artwork-interactive .lightbox-artwork{') &&
+  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork{') &&
+  lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork > :is(') &&
+  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item .lightbox-artwork .lightbox-holographic-face{') &&
+  lightboxCss.includes('border-radius:inherit!important;') &&
   renderer.includes("entry.classList.add('is-artwork-interactive');") &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-artwork{\n  width:auto;\n  max-width:100%;\n  height:100%;\n  max-height:100%;') &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
@@ -524,7 +527,7 @@ assert.ok(
   renderer.includes('selectGroupedArtworkEntry(entry, section)') &&
   admin.includes('<option value="cards">Horizontal Card Stack</option>') &&
   admin.includes('<option value="sticker">Sticker Card Layout</option>'),
-  'Grid/Stack must use 100% sizing and zero spacing with shared rounded interactive artwork; Card Stack and Sticker layouts retain their existing responsive sizing, collage and focus behavior.');
+  'Grouped Lightbox layouts must keep square artwork corners while solo Inspect uses the shared radius; Card Stack and Sticker retain their responsive sizing and collage behavior.');
 assert.ok(!siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('overflow-x:auto') &&
   !siteCss.slice(siteCss.indexOf('/* Calm, clean artwork groups')).includes('scroll-snap-type'),
   'Grouped artwork presentation must not use horizontal gallery scrolling.');

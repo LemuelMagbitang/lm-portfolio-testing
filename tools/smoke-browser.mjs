@@ -4558,7 +4558,6 @@ try {
         const groupRect = group?.getBoundingClientRect();
         const itemsRect = items.getBoundingClientRect();
         const itemsStyle = getComputedStyle(items);
-        const sharedArtworkRadius = Number.parseFloat(itemsStyle.getPropertyValue('--lm-shape-shared-lg'));
         const parent = group?.parentElement || null;
         const parentRect = parent?.getBoundingClientRect();
         const parentStyle = parent ? getComputedStyle(parent) : null;
@@ -4596,7 +4595,6 @@ try {
               })(),
           columnGap: Number.parseFloat(itemsStyle.columnGap) || 0,
           rowGap: Number.parseFloat(itemsStyle.rowGap) || 0,
-          sharedArtworkRadius,
           layoutWidthScaleRatio: groupRect && parentContentWidth > 0 ? groupRect.width / parentContentWidth : 0,
           layoutCenterOffset: groupRect && parentRect
             ? (groupRect.left + groupRect.width / 2) - (parentRect.left + parentRect.width / 2)
@@ -4911,13 +4909,12 @@ try {
                   Object.values(layout.itemsPadding).some(value => Math.abs(value) > 0.5) ||
                   Math.abs(layout.columnGap) > 0.5 ||
                   Math.abs(layout.rowGap) > 0.5 ||
-                  !Number.isFinite(layout.sharedArtworkRadius) || layout.sharedArtworkRadius <= 0 ||
                   hasHorizontalOverflow ||
                   cornerRadii.some(radius => !radius.interactive ||
-                    !Number.isFinite(radius.artwork) || Math.abs(radius.artwork - layout.sharedArtworkRadius) > 0.5 ||
-                    !Number.isFinite(radius.media) || Math.abs(radius.media - layout.sharedArtworkRadius) > 0.5 ||
+                    !Number.isFinite(radius.artwork) || Math.abs(radius.artwork) > 0.5 ||
+                    !Number.isFinite(radius.media) || Math.abs(radius.media) > 0.5 ||
                     !Number.isFinite(radius.padding) || radius.padding > 0.5)) {
-                throw new Error('Grid and Horizontal Stack must retain default 100% sizing, zero gaps, shared rounded interactive artwork, and overflow-free tiles: ' +
+                throw new Error('Grid and Horizontal Stack must retain default 100% sizing, zero gaps, square grouped artwork corners, and overflow-free tiles: ' +
                   JSON.stringify({ mode, viewport, layoutWidthScaleRatio:layout.layoutWidthScaleRatio,
                     layoutCenterOffset:layout.layoutCenterOffset, columnGap:layout.columnGap, rowGap:layout.rowGap,
                     hasHorizontalOverflow, cornerRadii, layout }));
@@ -5500,6 +5497,9 @@ try {
         const artworkRadius = artworkStyle?.borderTopLeftRadius || '';
         const artworkPadding = artworkStyle?.padding || '';
         const artworkOverflow = artworkStyle?.overflow || '';
+        const mediaSurface = artwork?.querySelector(':scope > img, :scope > video, :scope > iframe, :scope > lottie-player, :scope > .lightbox-holographic');
+        const mediaSurfaceRadius = mediaSurface ? getComputedStyle(mediaSurface).borderTopLeftRadius : '';
+        const expectedArtworkRadius = Number.parseFloat(artworkStyle?.getPropertyValue('--lm-shape-shared-lg'));
         const roundedFaceRadius = roundedFace ? getComputedStyle(roundedFace).borderTopLeftRadius : '';
         const entryLayout = entry?.dataset.artworkEffectiveLayout || '';
         const touchActionFontSize = touchAction ? getComputedStyle(touchAction).fontSize : '';
@@ -5547,7 +5547,7 @@ try {
           centerOffsetY,
           stageRect: stageRect ? { left:stageRect.left, top:stageRect.top, width:stageRect.width, height:stageRect.height } : null,
           artworkRect: artworkRect ? { left:artworkRect.left, top:artworkRect.top, width:artworkRect.width, height:artworkRect.height } : null,
-          artworkRadius,artworkPadding,artworkOverflow,roundedFaceRadius,entryLayout,
+          artworkRadius,artworkPadding,artworkOverflow,mediaSurfaceRadius,expectedArtworkRadius,roundedFaceRadius,entryLayout,
           naturalRatio,renderedRatio,
           artworkAspectRatio:artworkStyle?.aspectRatio || '',
           artworkRatioToken:artworkStyle?.getPropertyValue('--lightbox-artwork-ratio')?.trim() || '',
@@ -5584,10 +5584,12 @@ try {
           inspectorPresentation.centerOffsetY > 2 ||
           inspectorPresentation.artworkRatioDelta > .025 ||
           inspectorPresentation.entryLayout !== 'grid' ||
-          Math.abs(Number.parseFloat(inspectorPresentation.artworkRadius)) > 0.5 ||
+          !Number.isFinite(inspectorPresentation.expectedArtworkRadius) || inspectorPresentation.expectedArtworkRadius <= 0 ||
+          Math.abs(Number.parseFloat(inspectorPresentation.artworkRadius) - inspectorPresentation.expectedArtworkRadius) > 0.5 ||
+          Math.abs(Number.parseFloat(inspectorPresentation.mediaSurfaceRadius) - inspectorPresentation.expectedArtworkRadius) > 0.5 ||
           Math.abs(Number.parseFloat(inspectorPresentation.artworkPadding)) > 0.5 ||
           inspectorPresentation.artworkOverflow !== 'hidden' ||
-          Math.abs(Number.parseFloat(inspectorPresentation.roundedFaceRadius)) > 0.5 ||
+          Math.abs(Number.parseFloat(inspectorPresentation.roundedFaceRadius) - inspectorPresentation.expectedArtworkRadius) > 0.5 ||
           inspectorPresentation.face !== 'FRONT' ||
           inspectorPresentation.action !== 'HOVER EDGE / CLICK' ||
           !inspectorPresentation.backIcon ||
@@ -5595,7 +5597,7 @@ try {
           inspectorPresentation.backWidth < 44 ||
           inspectorPresentation.backHeight < 44 ||
           inspectorPresentation.backRadius !== '50%') {
-        throw new Error('Inspector safe-fit/layer/caption/hint/back-button and square Grid-edge contract failed: ' + JSON.stringify(inspectorPresentation));
+        throw new Error('Inspector safe-fit/layer/caption/hint/back-button and rounded solo Grid-artwork contract failed: ' + JSON.stringify(inspectorPresentation));
       }
       if (await inspectedHolo.evaluate(el => el.classList.contains('is-flipped'))) {
         throw new Error('Opening grouped Inspect should not also flip the foil on the same click.');
@@ -5718,22 +5720,29 @@ try {
       const stackInspectorCorners = await inspectMode.locator('.lightbox-inspect-frame .lightbox-artwork').first().evaluate(artwork => {
         const entry = artwork.closest('.lightbox-media-item');
         const face = artwork.querySelector('.lightbox-holographic-face');
+        const mediaSurface = artwork.querySelector(':scope > .lightbox-holographic');
+        const sharedArtworkRadius = Number.parseFloat(getComputedStyle(artwork).getPropertyValue('--lm-shape-shared-lg'));
         return {
           layout:entry?.dataset.artworkEffectiveLayout || '',
           artworkRadius:getComputedStyle(artwork).borderTopLeftRadius,
           artworkPadding:getComputedStyle(artwork).padding,
           artworkOverflow:getComputedStyle(artwork).overflow,
+          mediaSurfaceRadius:mediaSurface ? getComputedStyle(mediaSurface).borderTopLeftRadius : '',
+          sharedArtworkRadius,
           faceRadius:face ? getComputedStyle(face).borderTopLeftRadius : ''
         };
       });
       const stackArtworkRadius = Number.parseFloat(stackInspectorCorners.artworkRadius);
+      const stackMediaRadius = Number.parseFloat(stackInspectorCorners.mediaSurfaceRadius);
       const stackFaceRadius = Number.parseFloat(stackInspectorCorners.faceRadius);
       if (stackInspectorCorners.layout !== 'stack' ||
-          !Number.isFinite(stackArtworkRadius) || Math.abs(stackArtworkRadius) > 0.5 ||
+          !Number.isFinite(stackInspectorCorners.sharedArtworkRadius) || stackInspectorCorners.sharedArtworkRadius <= 0 ||
+          !Number.isFinite(stackArtworkRadius) || Math.abs(stackArtworkRadius - stackInspectorCorners.sharedArtworkRadius) > 0.5 ||
+          !Number.isFinite(stackMediaRadius) || Math.abs(stackMediaRadius - stackInspectorCorners.sharedArtworkRadius) > 0.5 ||
           Math.abs(Number.parseFloat(stackInspectorCorners.artworkPadding)) > 0.5 ||
           stackInspectorCorners.artworkOverflow !== 'hidden' ||
-          !Number.isFinite(stackFaceRadius) || Math.abs(stackFaceRadius) > 0.5) {
-        throw new Error('Horizontal Stack Inspect must preserve square grouped artwork edges: ' +
+          !Number.isFinite(stackFaceRadius) || Math.abs(stackFaceRadius - stackInspectorCorners.sharedArtworkRadius) > 0.5) {
+        throw new Error('Horizontal Stack solo Inspect must use the shared rounded artwork, media and foil-face corners: ' +
           JSON.stringify(stackInspectorCorners));
       }
       await inspectMode.locator('.lightbox-inspect-back').click();
