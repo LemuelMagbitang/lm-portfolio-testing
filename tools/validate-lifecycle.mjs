@@ -133,12 +133,20 @@ assert.ok(
   'Lightbox focus-restoration handlers must be initialized before being registered.'
 );
 const mainStyleSource = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
-const modalInteriorBaseRule = mainStyleSource.match(/\\.modal-interior\\s*\\{([^}]*)\\}/)?.[1] || '';
+const modalInteriorBaseStart = mainStyleSource.indexOf('.modal-interior {');
+const modalInteriorBaseEnd = mainStyleSource.indexOf('}', modalInteriorBaseStart);
+const modalInteriorBaseRule = modalInteriorBaseStart >= 0 && modalInteriorBaseEnd > modalInteriorBaseStart
+  ? mainStyleSource.slice(modalInteriorBaseStart, modalInteriorBaseEnd)
+  : '';
 assert.ok(modalInteriorBaseRule, 'The Lightbox modal interior base rule must remain present.');
-assert.doesNotMatch(modalInteriorBaseRule, /will-change\\s*:/,
+assert.equal(modalInteriorBaseRule.includes('will-change:'), false,
   'The closed Lightbox must not reserve an unnecessary compositor layer.');
-assert.match(mainStyleSource,
-  /\\.lightbox-modal\\.active\\s+\\.modal-interior\\s*\\{[^}]*will-change:\\s*opacity\\s*,\\s*transform\\s*,\\s*filter\\s*;/,
+const activeModalInteriorStart = mainStyleSource.indexOf('.lightbox-modal.active .modal-interior{');
+const activeModalInteriorEnd = mainStyleSource.indexOf('}', activeModalInteriorStart);
+const activeModalInteriorRule = activeModalInteriorStart >= 0 && activeModalInteriorEnd > activeModalInteriorStart
+  ? mainStyleSource.slice(activeModalInteriorStart, activeModalInteriorEnd)
+  : '';
+assert.ok(activeModalInteriorRule.includes('will-change:opacity,transform,filter;'),
   'The active Lightbox must retain its compositor hint during the entrance/navigation lifecycle.');
 assert.match(mainStyleSource, /\.project-card\.is-pointer-focus-return:focus-visible/);
 assert.match(mainStyleSource, /box-shadow:none!important/);
