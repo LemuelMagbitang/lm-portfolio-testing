@@ -238,6 +238,19 @@ export async function bootstrapPortfolioApp({
     const configuredUrls = pageConfig?.urls && typeof pageConfig.urls === 'object'
       ? pageConfig.urls
       : {};
+    const legacyUrlGlobals = {
+      settings: 'SETTINGS_URL',
+      projects: 'PROJECTS_URL',
+      reviews: 'REVIEWS_URL',
+      about: 'ABOUT_URL',
+      filters: 'FILTERS_URL',
+      heroLoop: 'HERO_LOOP_URL',
+      footerLoop: 'FOOTER_LOOP_URL',
+      heroMessages: 'HERO_MESSAGES_URL'
+    };
+    Object.entries(legacyUrlGlobals).forEach(([key, globalName]) => {
+      if (configuredUrls[key]) globalThis[globalName] = configuredUrls[key];
+    });
     const config = normalizeAppConfig({
       urls: {
         settings: configuredUrls.settings || globalThis.SETTINGS_URL,

@@ -72,10 +72,8 @@
 </head>
 <body>
 
-  <!-- PAGE TRANSITION — brief branded flourish on real page navigation
-       (Works <-> About). Startup/transition state is owned by the
-       application bootstrap/composition layer; keep this element as the
-       presentation hook only. -->
+  <!-- PAGE TRANSITION — branded first-paint gate for direct document loads.
+       Client-side Design/About navigation keeps this layer hidden. -->
   <div class="page-transition" id="pageTransition" aria-hidden="false">
     <div class="page-transition-inner">
       <img src="assets/projects/site/portfolio-logo.webp" alt="" class="page-transition-logo">

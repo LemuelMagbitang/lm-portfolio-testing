@@ -11855,8 +11855,10 @@ try {
       await page.keyboard.press('Enter');
       await page.waitForFunction(() =>
         document.body.classList.contains('about-page') &&
+        document.body.dataset.pageNavigationReady === 'true' &&
         (location.pathname.endsWith('/about/') || location.pathname.endsWith('/about')) &&
-        document.querySelector('#aboutHeadline'),
+        document.querySelector('#aboutHeadline') &&
+        document.activeElement?.tagName === 'H1',
       null, { timeout: 7000 });
       await page.waitForFunction(() => {
         const gate = document.querySelector('#pageTransition');
@@ -11885,6 +11887,7 @@ try {
       await page.locator('.nav-links a[href="../"]').first().click();
       await page.waitForFunction(() =>
         !document.body.classList.contains('about-page') &&
+        document.body.dataset.pageNavigationReady === 'true' &&
         (location.pathname === '/' || location.pathname.endsWith('/index.html')) &&
         document.querySelectorAll('#portfolioGrid .project-card').length > 0,
       null, { timeout: 7000 });
@@ -11902,11 +11905,14 @@ try {
 
       await page.goBack();
       await page.waitForFunction(() =>
-        document.body.classList.contains('about-page') && document.querySelector('#aboutHeadline'),
+        document.body.classList.contains('about-page') &&
+        document.body.dataset.pageNavigationReady === 'true' &&
+        document.querySelector('#aboutHeadline'),
       null, { timeout: 7000 });
       await page.goForward();
       await page.waitForFunction(() =>
         !document.body.classList.contains('about-page') &&
+        document.body.dataset.pageNavigationReady === 'true' &&
         document.querySelectorAll('#portfolioGrid .project-card').length > 0,
       null, { timeout: 7000 });
       const historyState = await page.evaluate(() => ({
