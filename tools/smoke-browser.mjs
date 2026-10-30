@@ -3893,6 +3893,15 @@ try {
         }, null, { timeout: 1800 });
 
         await button.hover();
+        // The button material intentionally begins its 360ms transition only
+        // after the viewport settles; wait for that delayed visual state.
+        await page.waitForFunction(() => {
+          const button = document.querySelector('#showMoreBtn');
+          const style = button && getComputedStyle(button);
+          return style?.backgroundColor === 'rgb(255, 255, 255)' &&
+            style.color === 'rgb(0, 0, 0)' &&
+            style.backdropFilter === 'none';
+        }, null, { timeout: 1200 });
         const showLessHover = await button.evaluate(el => {
           const style = getComputedStyle(el);
           return {
