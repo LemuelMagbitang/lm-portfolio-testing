@@ -8930,6 +8930,12 @@ try {
             `Mobile Show Less did not return to the top of the project gallery: y=${galleryAfterShowLess?.y}, expected=${galleryScrollMargin}`
           );
         }
+        await page.waitForFunction(() => {
+          const viewport = document.querySelector('#portfolioGridViewport');
+          return viewport &&
+            !viewport.classList.contains('is-collapsing') &&
+            getComputedStyle(viewport).maxHeight !== 'none';
+        }, null, { timeout: 1800 });
 
         // Regression: a pending Show Less follow-scroll must be cancelled when
         // a filter change starts a new Gallery render. Without this guard the
@@ -8956,7 +8962,14 @@ try {
         await page.waitForTimeout(250);
 
         await mobileShowMore.click();
-        await page.waitForTimeout(350);
+        await page.waitForFunction(() => {
+          const button = document.querySelector('#showMoreBtn');
+          const viewport = document.querySelector('#portfolioGridViewport');
+          return button?.getAttribute('aria-expanded') === 'true' &&
+            viewport &&
+            getComputedStyle(viewport).maxHeight === 'none' &&
+            !viewport.classList.contains('is-expanding');
+        }, null, { timeout: 2200 });
         if ((await mobileShowMore.locator('.btn-text').textContent()).trim().toUpperCase() !== 'SHOW LESS') {
           throw new Error('Show More did not enter the stable expanded state before Lightbox regression test.');
         }
