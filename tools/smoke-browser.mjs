@@ -5461,7 +5461,10 @@ try {
         const backStyle = back ? getComputedStyle(back) : null;
         const frontImage = artwork?.querySelector('.lightbox-holographic-front img');
         const roundedFace = artwork?.querySelector('.lightbox-holographic-face');
-        const artworkRadius = artwork ? getComputedStyle(artwork).borderTopLeftRadius : '';
+        const artworkStyle = artwork ? getComputedStyle(artwork) : null;
+        const artworkRadius = artworkStyle?.borderTopLeftRadius || '';
+        const artworkPadding = artworkStyle?.padding || '';
+        const artworkOverflow = artworkStyle?.overflow || '';
         const roundedFaceRadius = roundedFace ? getComputedStyle(roundedFace).borderTopLeftRadius : '';
         const entryLayout = entry?.dataset.artworkEffectiveLayout || '';
         const touchActionFontSize = touchAction ? getComputedStyle(touchAction).fontSize : '';
@@ -5509,7 +5512,7 @@ try {
           centerOffsetY,
           stageRect: stageRect ? { left:stageRect.left, top:stageRect.top, width:stageRect.width, height:stageRect.height } : null,
           artworkRect: artworkRect ? { left:artworkRect.left, top:artworkRect.top, width:artworkRect.width, height:artworkRect.height } : null,
-          artworkRadius,roundedFaceRadius,entryLayout,
+          artworkRadius,artworkPadding,artworkOverflow,roundedFaceRadius,entryLayout,
           artworkRatioDelta: naturalRatio > 0 && renderedRatio > 0 ? Math.abs(renderedRatio - naturalRatio) : Infinity,
           face,
           action,
@@ -5543,6 +5546,8 @@ try {
           inspectorPresentation.artworkRatioDelta > .025 ||
           inspectorPresentation.entryLayout !== 'grid' ||
           Math.abs(Number.parseFloat(inspectorPresentation.artworkRadius)) > 0.5 ||
+          Math.abs(Number.parseFloat(inspectorPresentation.artworkPadding)) > 0.5 ||
+          inspectorPresentation.artworkOverflow !== 'hidden' ||
           Math.abs(Number.parseFloat(inspectorPresentation.roundedFaceRadius)) > 0.5 ||
           inspectorPresentation.face !== 'FRONT' ||
           inspectorPresentation.action !== 'HOVER EDGE / CLICK' ||
@@ -5677,6 +5682,8 @@ try {
         return {
           layout:entry?.dataset.artworkEffectiveLayout || '',
           artworkRadius:getComputedStyle(artwork).borderTopLeftRadius,
+          artworkPadding:getComputedStyle(artwork).padding,
+          artworkOverflow:getComputedStyle(artwork).overflow,
           faceRadius:face ? getComputedStyle(face).borderTopLeftRadius : ''
         };
       });
@@ -5684,6 +5691,8 @@ try {
       const stackFaceRadius = Number.parseFloat(stackInspectorCorners.faceRadius);
       if (stackInspectorCorners.layout !== 'stack' ||
           !Number.isFinite(stackArtworkRadius) || Math.abs(stackArtworkRadius) > 0.5 ||
+          Math.abs(Number.parseFloat(stackInspectorCorners.artworkPadding)) > 0.5 ||
+          stackInspectorCorners.artworkOverflow !== 'hidden' ||
           !Number.isFinite(stackFaceRadius) || Math.abs(stackFaceRadius) > 0.5) {
         throw new Error('Horizontal Stack Inspect must preserve square grouped artwork edges: ' +
           JSON.stringify(stackInspectorCorners));
@@ -5710,6 +5719,9 @@ try {
         entry.className = 'lightbox-media-item';
         const artwork = document.createElement('div');
         artwork.className = 'lightbox-artwork';
+        const mediaSurface = document.createElement('img');
+        mediaSurface.alt = '';
+        artwork.appendChild(mediaSurface);
         entry.appendChild(artwork);
         frame.appendChild(entry);
         stage.appendChild(frame);
@@ -5723,6 +5735,8 @@ try {
         const result = {
           inspectArtworkRadius:getComputedStyle(artwork).borderTopLeftRadius,
           standardArtworkRadius:getComputedStyle(standardArtwork).borderTopLeftRadius,
+          artworkPadding:getComputedStyle(artwork).padding,
+          mediaSurfaceRadius:getComputedStyle(mediaSurface).borderTopLeftRadius,
           artworkOverflow:getComputedStyle(artwork).overflow,
           panelRadius:getComputedStyle(panel).borderTopLeftRadius,
           stageRadius:getComputedStyle(stage).borderTopLeftRadius,
@@ -5741,6 +5755,8 @@ try {
       ].map(value => Number.parseFloat(value));
       if (!inspectArtworkShapeProbe.inspectArtworkRadius ||
           inspectArtworkShapeProbe.inspectArtworkRadius !== inspectArtworkShapeProbe.standardArtworkRadius ||
+          Math.abs(Number.parseFloat(inspectArtworkShapeProbe.artworkPadding)) > 0.5 ||
+          inspectArtworkShapeProbe.mediaSurfaceRadius !== inspectArtworkShapeProbe.standardArtworkRadius ||
           inspectArtworkShapeProbe.artworkOverflow !== 'hidden' ||
           panelRadii.some(value => !Number.isFinite(value) || Math.abs(value) > 0.5)) {
         throw new Error('Ungrouped Inspect must match the standard artwork curve without rounding the panel, stage, frame or footer: ' +

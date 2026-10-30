@@ -490,8 +490,10 @@ assert.ok(
   lightboxCss.includes('flex:0 0 calc((100% - 12px) / 3);') &&
   lightboxCss.includes('flex-basis:calc((100% - 6px) / 2);') &&
   lightboxCss.includes('border-radius:0!important;') &&
+  lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{') &&
   lightboxCss.includes('.lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{') &&
   lightboxCss.includes('border-radius:var(--lm-shape-shared-lg)!important;') &&
+  lightboxCss.includes('padding:0!important;') &&
   renderer.includes('entry.dataset.artworkEffectiveLayout = effectiveLayout') &&
   lightboxCss.includes('translate:var(--artwork-row-center-shift,0px) 0;') &&
   lightboxCss.includes('z-index:var(--artwork-layout-layer,1)') &&

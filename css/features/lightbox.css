@@ -675,14 +675,21 @@
   object-fit:contain;
   object-position:center;
 }
+/* Inspect uses the full artwork bounds for Grid/Stack and standalone media.
+   Keep Card Stack and Sticker spacing unchanged; their separate presentation remains intact. */
+.lightbox-inspect-frame .lightbox-media-item:is([data-artwork-effective-layout="grid"],[data-artwork-effective-layout="stack"]) .lightbox-artwork{
+  padding:0!important;
+  overflow:hidden;
+}
 /* Only standalone artwork receives the shared Lightbox curve in Inspect.
    Grouped entries carry data-artwork-effective-layout and deliberately stay square. */
 .lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork{
   border-radius:var(--lm-shape-shared-lg)!important;
   overflow:hidden;
+  padding:0!important;
 }
 .lightbox-inspect-frame .lightbox-media-item:not([data-artwork-effective-layout]) .lightbox-artwork > :is(img,video,iframe,lottie-player,.lightbox-holographic){
-  border-radius:inherit;
+  border-radius:inherit!important;
 }
 @media(max-width:760px){
   .lightbox-inspect-frame .lightbox-artwork{
