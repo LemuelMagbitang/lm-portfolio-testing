@@ -2787,7 +2787,7 @@ function validateClientSidePageNavigation() {
   if (!works.includes('id="pageConfig"') || !about.includes('id="pageConfig"') ||
       !works.includes('data-page-style="lightbox"') ||
       !about.includes('../js/app/bootstrap.js?v=20261031-02') ||
-      !about.includes('../js/app/page-composition.js?v=20261031-01') ||
+      !about.includes('../js/app/page-composition.js?v=20261031-02') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
