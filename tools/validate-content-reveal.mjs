@@ -278,7 +278,7 @@ assert.equal(mediaListeners.size, 0);
 windowRef.innerWidth = 390;
 const mobileFeature = initContentReveal({ root, windowRef });
 assert.equal(mobileFeature.refresh(), 18);
-assert.equal(designHero.properties.get('--lm-content-reveal-distance'), '10px',
+assert.equal(designHero.properties.get('--lm-content-reveal-distance'), '8px',
   'The Works hero entrance must use a shorter travel distance on narrow viewports.');
 assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '18px',
   'Design movement must be reduced on narrow viewports.');
