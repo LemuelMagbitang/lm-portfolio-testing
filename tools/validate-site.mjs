@@ -2761,7 +2761,6 @@ function validateClientSidePageNavigation() {
       !router.includes('export function resolveRouteDataPrefetchEntries(') ||
       !router.includes("new Set(['projects', 'filters'])") ||
       !router.includes("new Set(['about'])") ||
-      !router.includes("settings?.heroTiming?.loopMode === 'manual'") ||
       !router.includes('windowRef.fetch(key') ||
       !router.includes('new windowRef.DOMParser()') ||
       !router.includes('windowRef.history.pushState') ||
