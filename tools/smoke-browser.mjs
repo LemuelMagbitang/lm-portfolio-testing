@@ -11763,19 +11763,24 @@ try {
 
       await logRuntimeProfile(page, 'About 390x844', requestedUrls);
 
-      const expectedBundledAdobe = [
-        'After Effects',
-        'Illustrator',
-        'Photoshop',
-        'Premier Pro',
-        'Figma'
-      ];
-      for (const name of expectedBundledAdobe) {
-        const entry = adobeAssetChecks.find(item => item.alt === name);
-        if (!entry) throw new Error('About page missing expected software logo entry: ' + name);
-        if (entry.broken || entry.naturalWidth <= 0) {
-          throw new Error('About page expected software logo is broken: ' + JSON.stringify(entry));
+      if (showSoftwareLogos) {
+        const expectedBundledAdobe = [
+          'After Effects',
+          'Illustrator',
+          'Photoshop',
+          'Premier Pro',
+          'Figma'
+        ];
+        for (const name of expectedBundledAdobe) {
+          const entry = adobeAssetChecks.find(item => item.alt === name);
+          if (!entry) throw new Error('About page missing expected software logo entry: ' + name);
+          if (entry.broken || entry.naturalWidth <= 0) {
+            throw new Error('About page expected software logo is broken: ' + JSON.stringify(entry));
+          }
         }
+      } else if (adobeAssetChecks.length !== 0) {
+        throw new Error('About page requested bundled software-logo assets while logo mode is disabled: ' +
+          JSON.stringify(adobeAssetChecks));
       }
 
       const aboutContact = page.locator('.nav-links a[href="../#contact-start"]').first();
