@@ -1144,99 +1144,55 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         throw new Error(label + ' mobile: overflowing filters must preserve the edge fade, horizontal scrolling, and natural vertical gestures: ' + JSON.stringify(layout));
       }
       if (viewport.name === 'mobile' && layout.filterHasOverflow) {
-        const preview = await page.evaluate(async () => {
+        const compactPill = await page.evaluate(async () => {
           const rail = document.querySelector('.filter-tabs');
-          const indicator = document.querySelector('.filter-active-indicator');
           const content = rail?.querySelector('.filter-nav-content');
-          const buttons = Array.from(rail?.querySelectorAll('.tab-btn') || []).filter(button => !button.disabled);
+          const buttons = Array.from(content?.querySelectorAll('.tab-btn, .filter-btn') || []).filter(button => !button.disabled);
           const active = buttons.find(button => button.classList.contains('active'));
-          if (!rail || !indicator || !content || !active || buttons.length < 2) return { available: false };
-          const activeId = active.dataset.filter || 'all';
-          const centerX = element => {
-            const rect = element.getBoundingClientRect();
-            return rect.left + rect.width / 2;
-          };
-          const centerY = element => {
-            const rect = element.getBoundingClientRect();
-            return rect.top + rect.height / 2;
-          };
-          const startX = centerX(rail);
-          const startY = centerY(rail);
-          const initialIndicatorWidth = indicator.getBoundingClientRect().width;
-          const pointer = (type, x, y) => new PointerEvent(type, {
+          if (!rail || !content || !active || buttons.length < 2) return { available: false };
+          const initialFilter = active.dataset.filter || 'all';
+          const rect = rail.getBoundingClientRect();
+          const startX = rect.left + rect.width / 2;
+          const startY = rect.top + rect.height / 2;
+          const dispatch = (type, x, y) => rail.dispatchEvent(new PointerEvent(type, {
             pointerId: 47, pointerType: 'touch', isPrimary: true, button: 0,
             clientX: x, clientY: y, bubbles: true, cancelable: true
-          });
-          // Use the actual rail pointer contract so category settlement is
-          // intentionally suspended while a horizontal swipe is in progress.
-          rail.dispatchEvent(pointer('pointerdown', startX, startY));
-          rail.dispatchEvent(pointer('pointermove', startX - Math.min(150, rail.clientWidth * 0.44), startY));
-          // Sample mid-flight, not immediately after the pointer frame: the pill
-          // should visibly interpolate toward the preview label using the same
-          // timing as click/tap while the scroll position itself remains direct.
+          }));
+          dispatch('pointerdown', startX, startY);
+          dispatch('pointermove', startX - Math.min(150, rail.clientWidth * 0.44), startY);
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          await new Promise(resolve => setTimeout(resolve, 80));
-          const railCenter = centerX(rail);
-          const nearest = buttons.reduce((best, item) =>
-            Math.abs(centerX(item) - railCenter) < Math.abs(centerX(best) - railCenter) ? item : best
-          );
-          const indicatorRect = indicator.getBoundingClientRect();
-          const nearestRect = nearest.getBoundingClientRect();
-          const indicatorWidthWithinTransitionBounds =
-            indicatorRect.width >= Math.min(initialIndicatorWidth, nearestRect.width) - 1 &&
-            indicatorRect.width <= Math.max(initialIndicatorWidth, nearestRect.width) + 1;
-          const indicatorStyle = getComputedStyle(indicator);
-          const backgroundChannels = (indicatorStyle.backgroundColor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
-          const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const style = getComputedStyle(active);
           const state = {
             available: true,
-            activeId,
-            previewId: nearest.dataset.filter || 'all',
-            isPreview: nearest.classList.contains('is-centered-preview'),
-            indicatorCenterDelta: Math.abs(centerX(indicator) - railCenter),
-            indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
-            indicatorWidthDeltaFromStart: Math.abs(indicatorRect.width - initialIndicatorWidth),
-            indicatorWidthWithinTransitionBounds,
-            indicatorTransition: indicatorStyle.transitionProperty,
-            indicatorTransitionDuration: indicatorStyle.transitionDuration,
-            indicatorTransitionTiming: indicatorStyle.transitionTimingFunction,
-            reducedMotion,
-            indicatorBackgroundProgressed: backgroundChannels.length >= 3 &&
-              backgroundChannels.every(channel => channel >= 144 && channel < 255),
-            previewColor: getComputedStyle(nearest).color,
-            previewBlendMode: getComputedStyle(nearest).mixBlendMode,
-            indicatorBackground: getComputedStyle(indicator).backgroundColor,
-            contentIsolation: getComputedStyle(content).isolation,
-            previewTransition: getComputedStyle(nearest).transitionProperty,
-            snapType: getComputedStyle(rail).scrollSnapType,
-            hasForcedWidths: buttons.some(button => Boolean(button.style.width))
+            activeFilter: active.dataset.filter || 'all',
+            initialFilter,
+            indicatorExists: !!document.querySelector('.filter-active-indicator'),
+            contentHasActiveIndicator: content.classList.contains('has-active-indicator'),
+            contentFollowing: content.classList.contains('is-following-filter-scroll'),
+            previewCount: content.querySelectorAll('.is-centered-preview').length,
+            activeColor: style.color,
+            activeBackground: style.backgroundColor,
+            activeBlendMode: style.mixBlendMode,
+            scrollBehavior: getComputedStyle(rail).scrollBehavior,
+            snapType: getComputedStyle(rail).scrollSnapType
           };
-          // Reverse the gesture before pointer-up; this preserves the original
-          // active category while still testing the pill during a real drag phase.
-          rail.dispatchEvent(pointer('pointermove', startX, startY));
-          rail.dispatchEvent(pointer('pointerup', startX, startY));
-          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          // Return the synthetic gesture to its origin so this probe cannot
+          // alter the page's committed filter state.
+          dispatch('pointermove', startX, startY);
+          dispatch('pointerup', startX, startY);
           return state;
         });
-        const previewWidthMotionFailed = preview.available && (preview.reducedMotion
-          ? preview.indicatorWidthDelta > 2
-          : (!preview.indicatorTransition.includes('width') ||
-             !preview.indicatorTransitionDuration.includes('0.36s') ||
-             !preview.indicatorTransitionTiming.includes('cubic-bezier(0.22, 1, 0.36, 1)') ||
-             preview.indicatorWidthDeltaFromStart <= 2 ||
-             preview.indicatorWidthDelta <= 2 ||
-             !preview.indicatorWidthWithinTransitionBounds));
-        if (preview.available &&
-            (preview.indicatorCenterDelta > 2 || previewWidthMotionFailed ||
-             !preview.isPreview || preview.previewColor !== 'rgb(255, 255, 255)' ||
-             preview.previewBlendMode !== 'normal' ||
-             !preview.indicatorBackgroundProgressed ||
-             preview.contentIsolation !== 'auto' ||
-             preview.previewTransition !== 'none' || preview.snapType !== 'none' ||
-             preview.hasForcedWidths)) {
-          throw new Error(label + ' mobile: active filter pill must stay centered and smoothly morph toward the swiped preview label: ' + JSON.stringify(preview));
+        if (compactPill.available &&
+            (compactPill.indicatorExists || compactPill.contentHasActiveIndicator ||
+             compactPill.contentFollowing || compactPill.previewCount !== 0 ||
+             compactPill.activeFilter !== compactPill.initialFilter ||
+             compactPill.activeColor !== 'rgb(17, 17, 17)' ||
+             compactPill.activeBackground !== 'rgb(242, 242, 242)' ||
+             compactPill.activeBlendMode !== 'normal' ||
+             compactPill.scrollBehavior !== 'auto' || compactPill.snapType !== 'none')) {
+          throw new Error(label + ' mobile: filter pill must stay attached to the selected button without a floating indicator or swipe-preview movement: ' + JSON.stringify(compactPill));
         }
-      }
+      }}
       if (layout.logoBlendMode !== 'normal' ||
           !['light', 'dark'].includes(layout.logoForeground) ||
           !layout.logoTransitionProperties.includes('transform') ||
@@ -2424,21 +2380,7 @@ async function assertFilterInitialContrast(page, label) {
     document.querySelectorAll('.filter-nav-scroller .filter-btn, .filter-nav-scroller .tab-btn').length >= 2
   );
   await page.evaluate(() => document.fonts?.ready ?? Promise.resolve());
-  // Let any legitimate desktop pill movement finish, but don't interact with
-  // the rail: this probes the resting state exactly as a visitor first sees it.
   await page.waitForTimeout(180);
-  await page.waitForFunction(() => {
-    const scroller = document.querySelector('.filter-nav-scroller');
-    const content = scroller?.querySelector('.filter-nav-content');
-    const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
-    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
-    if (!scroller || !active || !indicator?.classList.contains('is-ready')) return false;
-    const a = active.getBoundingClientRect();
-    const b = indicator.getBoundingClientRect();
-    return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
-      Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
-      Math.abs(a.width - b.width) <= 1;
-  }, null, { timeout: 1800 }).catch(() => {});
   const state = await page.evaluate(() => {
     const scroller = document.querySelector('.filter-nav-scroller');
     const content = scroller?.querySelector('.filter-nav-content');
@@ -2449,11 +2391,14 @@ async function assertFilterInitialContrast(page, label) {
     const style = active ? getComputedStyle(active) : null;
     const pillStyle = indicator ? getComputedStyle(indicator) : null;
     return {
+      viewportWidth: innerWidth,
       activeFilter: active?.getAttribute('data-filter') || '',
       activePressed: active?.getAttribute('aria-pressed') || '',
       activeColor: style?.color || '',
+      activeBackground: style?.backgroundColor || '',
       activeBlendMode: style?.mixBlendMode || '',
       contentIsolation: content ? getComputedStyle(content).isolation : '',
+      contentHasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
       indicatorExists: !!indicator,
       indicatorInsideContent: !!content?.contains(indicator),
       indicatorReady: indicator?.classList.contains('is-ready') || false,
@@ -2468,15 +2413,27 @@ async function assertFilterInitialContrast(page, label) {
       pressedCount: content?.querySelectorAll('[aria-pressed="true"]').length || 0
     };
   });
+  const compact = state.viewportWidth <= 1023;
   if (!state.activeFilter || state.activePressed !== 'true' ||
-      state.activeColor !== 'rgb(255, 255, 255)' ||
+      state.contentFollowing || state.indicatorFollowing || state.previewCount !== 0 ||
+      state.pressedCount !== 1) {
+    throw new Error(label + ' initial-load active filter state failed: ' + JSON.stringify(state));
+  }
+  if (compact) {
+    if (state.indicatorExists || state.contentHasActiveIndicator ||
+        state.activeColor !== 'rgb(17, 17, 17)' ||
+        state.activeBackground !== 'rgb(242, 242, 242)' ||
+        state.activeBlendMode !== 'normal') {
+      throw new Error(label + ' compact initial-load filter must use its static selected pill: ' + JSON.stringify(state));
+    }
+    return;
+  }
+  if (state.activeColor !== 'rgb(255, 255, 255)' ||
       state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
       !state.indicatorExists || !state.indicatorInsideContent || !state.indicatorReady || state.indicatorOpacity < 0.99 ||
       state.indicatorBackground !== 'rgb(255, 255, 255)' ||
-      state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1 ||
-      state.contentFollowing || state.indicatorFollowing || state.previewCount !== 0 ||
-      state.pressedCount !== 1) {
-    throw new Error(label + ' initial-load active filter contrast failed: ' + JSON.stringify(state));
+      state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1) {
+    throw new Error(label + ' desktop initial-load active filter contrast failed: ' + JSON.stringify(state));
   }
 }
 
@@ -2496,37 +2453,39 @@ async function assertFilterNavigationResponsive(page, label) {
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.waitForTimeout(160);
-    // Viewport re-centering intentionally disables the indicator transition
-    // while it tracks the moving rail. Let the resize debounce and settlement
-    // finish before asserting the resting-state transition contract.
+    // Let responsive state cleanup finish. Compact rails must not create
+    // a floating indicator at all; desktop keeps the animated indicator.
     await page.waitForFunction(() => {
-      const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
+      const compact = innerWidth <= 1023;
       const content = document.querySelector('.filter-nav-scroller .filter-nav-content');
-      return !indicator?.classList.contains('is-following-scroll') &&
-        !content?.classList.contains('is-following-filter-scroll') &&
-        !content?.querySelector('.is-centered-preview');
-    }, null, { timeout: 1800 });
-    // Resize is debounced by Gallery; at desktop widths the pill then animates
-    // to the newly measured active button. Waiting only for preview classes to
-    // clear can sample that transition mid-flight (especially at 1024px after a
-    // compact viewport), producing a false alignment failure. Wait for measured
-    // geometry to settle, but retain the detailed assertion below as the oracle.
-    await page.waitForFunction(() => {
-      const scroller = document.querySelector('.filter-nav-scroller');
-      const content = scroller?.querySelector('.filter-nav-content');
-      const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
       const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
-      if (!scroller || !indicator?.classList.contains('is-ready') || !active) return false;
-      const a = active.getBoundingClientRect();
-      const b = indicator.getBoundingClientRect();
-      return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
-        Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
-        Math.abs(a.width - b.width) <= 1;
-    }, null, { timeout: 2200 }).catch(() => {});
-    const expectedIndicatorDuration = viewport.width <= 1023 ? '0.36s' : '0.42s';
-    const expectedIndicatorTiming = viewport.width <= 1023
-      ? 'cubic-bezier(0.22, 1, 0.36, 1)'
-      : 'cubic-bezier(0.34, 1.45, 0.64, 1)';
+      return !!active &&
+        !content?.classList.contains('is-following-filter-scroll') &&
+        !content?.querySelector('.is-centered-preview') &&
+        (compact
+          ? !indicator && !content?.classList.contains('has-active-indicator')
+          : !!indicator && !indicator.classList.contains('is-following-scroll'));
+    }, null, { timeout: 1800 });
+    // Only desktop needs an indicator geometry settle check. Compact pages
+    // use the selected button as the pill, so measuring a second surface there
+    // would hide the exact regression this responsive split is meant to catch.
+    if (viewport.width > 1023) {
+      await page.waitForFunction(() => {
+        const scroller = document.querySelector('.filter-nav-scroller');
+        const content = scroller?.querySelector('.filter-nav-content');
+        const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+        const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+        if (!scroller || !indicator?.classList.contains('is-ready') || !active) return false;
+        const a = active.getBoundingClientRect();
+        const b = indicator.getBoundingClientRect();
+        return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
+          Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
+          Math.abs(a.width - b.width) <= 1;
+      }, null, { timeout: 2200 });
+    }
+    const expectedIndicatorDuration = '0.42s';
+    const expectedIndicatorTiming = 'cubic-bezier(0.34, 1.45, 0.64, 1)';
     const state = await page.evaluate(() => {
       const wrapper = document.querySelector('.filter-nav-wrapper');
       const viewport = wrapper?.querySelector('.filter-nav-viewport');
@@ -2603,6 +2562,7 @@ async function assertFilterNavigationResponsive(page, label) {
         activeColor: activeStyle?.color || '',
         activeBlendMode: activeStyle?.mixBlendMode || '',
         contentIsolation: content ? getComputedStyle(content).isolation : '',
+        contentHasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
         previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
         ariaPressedCount: buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length,
         activeRadius: Number.parseFloat(activeStyle?.borderTopLeftRadius || '0') || 0,
@@ -2646,33 +2606,37 @@ async function assertFilterNavigationResponsive(page, label) {
         state.paddingTop !== 12 || state.paddingBottom !== 12) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    if (state.ariaPressedCount !== 1 || state.activeColor !== 'rgb(255, 255, 255)' ||
-        state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
-        state.contentFollowingFilterScroll || state.indicatorFollowingScroll || state.previewCount > 0 ||
-        !state.indicatorExists || !state.indicatorReady ||
-        state.indicatorBackground !== 'rgb(255, 255, 255)' || state.indicatorRadius < 20 ||
-        state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
-        state.indicatorFollowingScroll || state.contentFollowingFilterScroll ||
-        (state.prefersReducedMotion && state.indicatorTransition !== 'none') ||
-        (!state.prefersReducedMotion && !state.indicatorFollowingScroll &&
-          (!state.indicatorTransition.includes('width') ||
-           state.indicatorTransition.includes('transform') ||
-           !state.indicatorTransitionDuration.includes(expectedIndicatorDuration) ||
-           !state.indicatorTransitionTiming.includes(expectedIndicatorTiming))) ||
-        (state.indicatorFollowingScroll && !state.prefersReducedMotion &&
-          (!state.indicatorTransition.includes('width') ||
-           !state.indicatorTransitionDuration.includes(expectedIndicatorDuration) ||
-           !state.indicatorTransitionTiming.includes(expectedIndicatorTiming))) ||
-        (viewport.width <= 1023 && (
-          state.indicatorAnimation !== 'none' ||
-          state.scrollBehavior !== 'auto' ||
-          state.snapType !== 'none' ||
+    const compactViewport = viewport.width <= 1023;
+    const compactPillFailed = compactViewport && (
+      state.indicatorExists || state.indicatorReady || state.contentHasActiveIndicator ||
+      state.activeColor !== 'rgb(17, 17, 17)' ||
+      state.activeBlendMode !== 'normal' ||
+      state.activeBackground !== 'rgb(242, 242, 242)' ||
+      state.previewCount !== 0 || state.indicatorFollowingScroll || state.contentFollowingFilterScroll
+    );
+    const desktopPillFailed = !compactViewport && (
+      state.activeColor !== 'rgb(255, 255, 255)' ||
+      state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
+      !state.indicatorExists || !state.indicatorReady ||
+      state.indicatorBackground !== 'rgb(255, 255, 255)' || state.indicatorRadius < 20 ||
+      state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
+      (state.prefersReducedMotion && state.indicatorTransition !== 'none') ||
+      (!state.prefersReducedMotion &&
+        (!state.indicatorTransition.includes('width') ||
+         state.indicatorTransition.includes('transform') ||
+         !state.indicatorTransitionDuration.includes(expectedIndicatorDuration) ||
+         !state.indicatorTransitionTiming.includes(expectedIndicatorTiming))) ||
+      state.activeBackground !== 'rgba(0, 0, 0, 0)' && state.activeBackground !== 'transparent'
+    );
+    if (state.ariaPressedCount !== 1 || state.contentFollowingFilterScroll ||
+        state.indicatorFollowingScroll || state.previewCount > 0 ||
+        (compactViewport && (
+          state.scrollBehavior !== 'auto' || state.snapType !== 'none' ||
           state.overscrollBehaviorX !== 'none'
-        )) ||
-        state.activeBackground !== 'rgba(0, 0, 0, 0)' &&
-        state.activeBackground !== 'transparent') {
-      throw new Error(label + ' accessible sliding-pill state or marker-free button contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
+        )) || compactPillFailed || desktopPillFailed) {
+      throw new Error(label + ' responsive filter pill contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
+
     if (state.documentWidth > state.viewportWidth + 1) {
       throw new Error(label + ' filter navigation introduced document-level horizontal overflow at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
@@ -2790,7 +2754,7 @@ async function assertFilterNavigationResponsive(page, label) {
 
       // A fast swipe must stop tracking the pointer immediately on release.
       // Gallery settles the closest label without inertia or native snapping.
-      const fastGesture = await rail.evaluate(async el => {
+      const compactGesture = await rail.evaluate(async el => {
         const rect = el.getBoundingClientRect();
         const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
         const before = el.scrollLeft;
@@ -2811,117 +2775,60 @@ async function assertFilterNavigationResponsive(page, label) {
         dispatch('pointermove', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const direct = el.scrollLeft;
-        const preview = el.querySelector('.tab-btn.is-centered-preview');
-        const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
-        const previewColor = preview ? getComputedStyle(preview).color : '';
-        const committed = el.querySelector('.tab-btn.active, .filter-btn.active');
-        const committedColor = committed ? getComputedStyle(committed).color : '';
-        const previewBlendMode = preview ? getComputedStyle(preview).mixBlendMode : '';
-        const indicatorBackground = indicator ? getComputedStyle(indicator).backgroundColor : '';
         const contentDuring = el.querySelector('.filter-nav-content');
-        const contentIsolation = contentDuring ? getComputedStyle(contentDuring).isolation : '';
-        const indicatorInsideContent = !!contentDuring?.contains(indicator);
-        const previewZIndex = preview ? Number.parseInt(getComputedStyle(preview).zIndex, 10) : -1;
-        const indicatorZIndex = indicator ? Number.parseInt(getComputedStyle(indicator).zIndex, 10) : -1;
-        const indicatorRect = indicator?.getBoundingClientRect();
-        const pillHit = indicatorRect
-          ? document.elementFromPoint(indicatorRect.left + indicatorRect.width / 2, indicatorRect.top + indicatorRect.height / 2)
-          : null;
-        const previewAtPill = Boolean(preview && pillHit?.closest?.('.tab-btn') === preview);
-        const committedBlendMode = committed ? getComputedStyle(committed).mixBlendMode : '';
-        const previewTransition = preview ? getComputedStyle(preview).transitionProperty : '';
-        const previewFontWeight = preview ? getComputedStyle(preview).fontWeight : '';
-        const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
-        const indicatorTransition = indicatorStyle?.transitionProperty || '';
-        const indicatorTransitionDuration = indicatorStyle?.transitionDuration || '';
-        const indicatorTransitionTiming = indicatorStyle?.transitionTimingFunction || '';
-        const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const activeDuring = el.querySelector('.tab-btn.active, .filter-btn.active');
+        const activeStyleDuring = activeDuring ? getComputedStyle(activeDuring) : null;
+        const during = {
+          indicatorExists: !!el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator'),
+          hasActiveIndicator: contentDuring?.classList.contains('has-active-indicator') || false,
+          following: contentDuring?.classList.contains('is-following-filter-scroll') || false,
+          previewCount: contentDuring?.querySelectorAll('.is-centered-preview').length || 0,
+          activeColor: activeStyleDuring?.color || '',
+          activeBackground: activeStyleDuring?.backgroundColor || '',
+          activeBlendMode: activeStyleDuring?.mixBlendMode || ''
+        };
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const afterRelease = el.scrollLeft;
-        // A compact rail must settle synchronously on release, not jump again
-        // when the old 220ms debounce fires.
         await new Promise(resolve => setTimeout(resolve, 320));
         const afterSettle = el.scrollLeft;
         const active = el.querySelector('.tab-btn.active, .filter-btn.active');
         const activeRect = active?.getBoundingClientRect();
         const scrollerRect = el.getBoundingClientRect();
         const content = el.querySelector('.filter-nav-content');
-        const settledIndicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
-        const settledIndicatorRect = settledIndicator?.getBoundingClientRect();
-        const settledPillHit = settledIndicatorRect
-          ? document.elementFromPoint(settledIndicatorRect.left + settledIndicatorRect.width / 2, settledIndicatorRect.top + settledIndicatorRect.height / 2)
-          : null;
-        const activeAtPill = Boolean(active && settledPillHit?.closest?.('.tab-btn') === active);
-        const activeBlendMode = active ? getComputedStyle(active).mixBlendMode : '';
-        const settledIndicatorBackground = settledIndicator ? getComputedStyle(settledIndicator).backgroundColor : '';
-        const settledContentIsolation = content ? getComputedStyle(content).isolation : '';
-        const activeZIndex = active ? Number.parseInt(getComputedStyle(active).zIndex, 10) : -1;
-        const settledIndicatorZIndex = settledIndicator ? Number.parseInt(getComputedStyle(settledIndicator).zIndex, 10) : -1;
+        const activeStyle = active ? getComputedStyle(active) : null;
         return {
-          before, direct, afterRelease, afterSettle,
-          requestedDistance: distance, snapType: getComputedStyle(el).scrollSnapType,
-          previewColor, committedColor, previewBlendMode, committedBlendMode,
-          indicatorBackground, contentIsolation, indicatorInsideContent, previewZIndex, indicatorZIndex,
-          previewAtPill, activeAtPill, activeBlendMode, settledIndicatorBackground,
-          settledContentIsolation, activeZIndex, settledIndicatorZIndex,
-          previewTransition, previewFontWeight, indicatorTransition,
-          indicatorTransitionDuration, indicatorTransitionTiming, prefersReducedMotion,
-          activeColor: active ? getComputedStyle(active).color : '',
-          activeFontWeight: active ? getComputedStyle(active).fontWeight : '',
+          before, direct, afterRelease, afterSettle, requestedDistance: distance,
+          snapType: getComputedStyle(el).scrollSnapType,
+          indicatorExists: !!el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator'),
+          hasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
+          following: content?.classList.contains('is-following-filter-scroll') || false,
+          previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
+          activeColor: activeStyle?.color || '',
+          activeBackground: activeStyle?.backgroundColor || '',
+          activeBlendMode: activeStyle?.mixBlendMode || '',
           activeCenterDelta: activeRect
             ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + el.clientWidth / 2))
             : Infinity,
-          contentFollowing: content?.classList.contains('is-following-filter-scroll') || false,
-          indicatorFollowing: settledIndicator?.classList.contains('is-following-scroll') || false,
-          previewCount: content?.querySelectorAll('.is-centered-preview').length || 0
+          during
         };
       });
-      if (fastGesture.snapType !== 'none' ||
-          Math.abs(fastGesture.afterSettle - fastGesture.afterRelease) > 1) {
-        throw new Error(label + ' compact swipe moved again after its release settlement: ' +
-          JSON.stringify(fastGesture));
-      }
-      const indicatorBackgroundChannels = (fastGesture.indicatorBackground.match(/[\d.]+/g) || [])
-        .slice(0, 3).map(Number);
-      const indicatorMorphFailed = fastGesture.prefersReducedMotion
-        ? (fastGesture.indicatorTransition !== 'none' ||
-           fastGesture.indicatorBackground !== 'rgb(144, 144, 144)')
-        : (!fastGesture.indicatorTransition.includes('width') ||
-           !fastGesture.indicatorTransition.includes('height') ||
-           !fastGesture.indicatorTransition.includes('background-color') ||
-           !fastGesture.indicatorTransitionDuration.includes('0.36s') ||
-           !fastGesture.indicatorTransitionDuration.includes('0.14s') ||
-           !fastGesture.indicatorTransitionTiming.includes('cubic-bezier(0.22, 1, 0.36, 1)') ||
-           !fastGesture.indicatorTransitionTiming.includes('ease-out') ||
-           indicatorBackgroundChannels.length !== 3 ||
-           indicatorBackgroundChannels.some(channel => channel < 144 || channel >= 255));
-      if (fastGesture.previewColor !== 'rgb(255, 255, 255)' ||
-          fastGesture.committedColor !== 'rgb(255, 255, 255)' ||
-          fastGesture.previewBlendMode !== 'normal' ||
-          fastGesture.committedBlendMode !== 'normal' ||
-          fastGesture.contentIsolation !== 'auto' ||
-          fastGesture.indicatorInsideContent !== true ||
-          fastGesture.previewZIndex <= fastGesture.indicatorZIndex ||
-          fastGesture.previewAtPill !== true ||
-          fastGesture.previewTransition !== 'none' ||
-          indicatorMorphFailed) {
-        throw new Error(label + ' swipe preview must keep the label motion-free while the active pill uses the selection morph: ' +
-          JSON.stringify(fastGesture));
-      }
-      if (fastGesture.activeColor !== 'rgb(255, 255, 255)' ||
-          fastGesture.activeBlendMode !== 'exclusion' ||
-          fastGesture.settledIndicatorBackground !== 'rgb(255, 255, 255)' ||
-          fastGesture.settledContentIsolation !== 'auto' ||
-          fastGesture.activeZIndex <= fastGesture.settledIndicatorZIndex ||
-          fastGesture.activeAtPill !== true ||
-          fastGesture.previewFontWeight !== fastGesture.activeFontWeight ||
-          fastGesture.activeCenterDelta > 2 ||
-          fastGesture.contentFollowing ||
-          fastGesture.indicatorFollowing ||
-          fastGesture.previewCount !== 0) {
-        throw new Error(label + ' completed compact swipe must leave a centered, dark active label with no stale preview state: ' +
-          JSON.stringify(fastGesture));
+      if (compactGesture.snapType !== 'none' ||
+          Math.abs(compactGesture.afterSettle - compactGesture.afterRelease) > 1 ||
+          !compactGesture.indicatorExists === false ||
+          compactGesture.indicatorExists || compactGesture.hasActiveIndicator ||
+          compactGesture.following || compactGesture.previewCount !== 0 ||
+          compactGesture.activeColor !== 'rgb(17, 17, 17)' ||
+          compactGesture.activeBackground !== 'rgb(242, 242, 242)' ||
+          compactGesture.activeBlendMode !== 'normal' ||
+          compactGesture.activeCenterDelta > 2 ||
+          compactGesture.during.indicatorExists || compactGesture.during.hasActiveIndicator ||
+          compactGesture.during.following || compactGesture.during.previewCount !== 0 ||
+          compactGesture.during.activeColor !== 'rgb(17, 17, 17)' ||
+          compactGesture.during.activeBackground !== 'rgb(242, 242, 242)' ||
+          compactGesture.during.activeBlendMode !== 'normal') {
+        throw new Error(label + ' compact filter rail must use a static active pill without floating-indicator motion during or after swipe: ' +
+          JSON.stringify(compactGesture));
       }
       await page.waitForFunction(() => {
         const scroller = document.querySelector('.filter-nav-scroller');
