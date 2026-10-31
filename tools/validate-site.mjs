@@ -1439,7 +1439,7 @@ function validateBootstrapHardening() {
   }
 
   const transitionPos = bootstrap.indexOf("const pageTransition = root?.getElementById('pageTransition');");
-  const importPos = bootstrap.indexOf('const { createPortfolioApp } = await import(');
+  const importPos = bootstrap.indexOf('const pageModule = await import(');
   const transitionCallPos = bootstrap.indexOf('showInitialPageTransition();');
   if (transitionPos < 0 || transitionCallPos < 0 || importPos < 0 || transitionCallPos > importPos) {
     err('Bootstrap: page transition must initialize before application module loading.');
@@ -1449,7 +1449,7 @@ function validateBootstrapHardening() {
     err('Bootstrap: initial page transition is missing its fail-safe timeout.');
   }
 
-  if (!/await\s+createPortfolioApp\(\{[\s\S]*?root,\s*runtime,\s*cms,\s*config,[\s\S]*?awaitProjectMedia,[\s\S]*?immediateContentReveal[\s\S]*?\}\)/.test(bootstrap)) {
+  if (!/await\s+pageModule\.mount\(\{[\s\S]*?root,\s*runtime,\s*cms,\s*config,[\s\S]*?awaitProjectMedia,[\s\S]*?immediateContentReveal[\s\S]*?\}\)/.test(bootstrap)) {
     err('Bootstrap: composition root must receive normalized route configuration and navigation performance options.');
   }
 
@@ -1584,8 +1584,8 @@ function validateBootstrapHardening() {
       !publicAbout.includes('class="active-link" aria-current="page"><span class="nav-link-label">About Me</span></a>') ||
       !publicWorks.includes('<span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>') ||
       !publicAbout.includes('<span class="hamburger-icon" aria-hidden="true"><span></span><span></span><span></span></span>') ||
-      !publicWorks.includes('<li><a href="#contact-start"><span class="nav-link-label">Contacts</span></a></li>') ||
-      !publicAbout.includes('<li><a href="../#contact-start"><span class="nav-link-label">Contacts</span></a></li>') ||
+      !publicWorks.includes('<li><a href="#contact-start" data-route-anchor="contact"><span class="nav-link-label">Contacts</span></a></li>') ||
+      !publicAbout.includes('<li><a href="../#contact-start" data-route-anchor="contact"><span class="nav-link-label">Contacts</span></a></li>') ||
       /class="nav-(?:item-dropdown|dropdown-menu|dropdown-toggle)/.test(publicWorks + publicAbout)) {
     err('Navigation: Works/About must use direct Designs, About Me, and Contacts links without nested dropdown markup.');
   }
@@ -1900,7 +1900,9 @@ function validateAboutFirstPaintContract() {
     err('About first paint: project media preloading must remain route-aware and optional during client navigation.');
   }
   if (composition.includes('projectLottiePlayerPreloadPromise') ||
-      !composition.includes('applyMediaBackground,\n          ensureLottiePlayer,\n          waitForThumbnailReadiness')) {
+      !composition.includes('applyMediaBackground,') ||
+      !composition.includes('ensureLottiePlayer,') ||
+      !composition.includes('waitForThumbnailReadiness: awaitProjectMedia && !initialContactNavigation')) {
     err('Project Lottie thumbnails must request the player on demand instead of warming it during startup.');
   }
   if (!composition.includes('void aboutAssetPreloadPromise;')) {
