@@ -2777,7 +2777,7 @@ function validateClientSidePageNavigation() {
       !router.includes('function warmRouteModules(route)') ||
       !router.includes('if (intent) warmRouteModules(destinationRoute)') ||
       !router.includes('warmRouteModules(targetRoute)') ||
-      !router.includes("if (route === 'design')") ||
+      !router.includes("const routeKeys = route === 'design'") ||
       !router.includes('return entries.filter(([key]) => routeKeys.has(key))') ||
       router.includes('root.body.replaceWith(')) {
     err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
