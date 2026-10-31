@@ -14,48 +14,51 @@ const REVEAL_TARGET_GROUPS = [
     // React Bits AnimatedContent-inspired profile, mapped to the site's native
     // IntersectionObserver/CSS system. Keep the hero entrance editorial, not
     // the generic demo's full 100px travel, and stagger each direct child.
-    motion: { distance: 16, durationMs: 520, staggerStepMs: 36, staggerMaxMs: 108 }
+    motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }
   },
   {
     selector: '.about-page main .resume-skills-row > .resume-block > h3',
-    motion: { distance: 12, durationMs: 440, staggerStepMs: 32, staggerMaxMs: 32 }
+    motion: { distance: 16, durationMs: 460, staggerStepMs: 44, staggerMaxMs: 44 }
   },
   {
     selector: '#softwareSkillsList > li',
-    motion: { distance: 12, durationMs: 440, staggerStepMs: 28, staggerMaxMs: 84 }
+    motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
   },
   {
     selector: '#multimediaSkillsList > li',
-    motion: { distance: 12, durationMs: 440, staggerStepMs: 28, staggerMaxMs: 84 }
+    motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
   },
   {
     selector: '.about-page main .resume-main > .resume-block > h3',
-    motion: { distance: 12, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 64 }
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 44, staggerMaxMs: 88 }
   },
   {
     selector: '#experienceList > *',
-    motion: { distance: 12, durationMs: 460, staggerStepMs: 28, staggerMaxMs: 84 }
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
   {
     selector: '#educationList > *',
-    motion: { distance: 12, durationMs: 460, staggerStepMs: 28, staggerMaxMs: 84 }
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
   {
     selector: '#awardsList > *',
-    motion: { distance: 12, durationMs: 460, staggerStepMs: 28, staggerMaxMs: 84 }
+    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
   {
-    selector: 'main.works-main > .filter-nav-wrapper',
-    // Design is the one route where the visible filter/grid entrance is part
-    // of the page handoff. Other visible targets remain immediate on soft nav.
-    animateOnSoftNavigation: true
-  },
-  {
-    selector: '#portfolioGridViewport',
-    // Move the grid viewport as one composition; individual cards retain
-    // Gallery-owned opacity, scroll reveal, and interaction transforms.
+    selector: 'main.works-main > .filter-nav-wrapper, #portfolioGridViewport',
+    // Design-only AnimatedContent-inspired entrance: filter rail first,
+    // then grid viewport. Gallery continues to own individual card motion.
     animateOnSoftNavigation: true,
-    motion: { distance: 10, durationMs: 480, startDelayMs: 64, staggerStepMs: 0, staggerMaxMs: 0 }
+    profile: 'animated-content',
+    motion: {
+      distance: 40,
+      mobileDistance: 28,
+      durationMs: 800,
+      ease: 'cubic-bezier(.215,.61,.355,1)',
+      threshold: 0.1,
+      staggerStepMs: 80,
+      staggerMaxMs: 80
+    }
   },
   { selector: '.curated-view-heading' },
   // The Contact tabs own a live segmented-control pill and drag state. Keep
@@ -70,8 +73,16 @@ const REVEAL_TARGET_GROUPS = [
   { selector: '.footer-content > .social-icons, .footer-content > p' }
 ];
 
-const STAGGER_STEP_MS = 32;
-const STAGGER_MAX_MS = 112;
+const STAGGER_STEP_MS = 44;
+const STAGGER_MAX_MS = 160;
+const DEFAULT_INTERSECTION_THRESHOLD = 0.01;
+const DEFAULT_REVEAL_EASE = 'cubic-bezier(.16,1,.3,1)';
+const REVEAL_OBSERVER_THRESHOLDS = Array.from(new Set([
+  DEFAULT_INTERSECTION_THRESHOLD,
+  ...REVEAL_TARGET_GROUPS
+    .map(group => group.motion?.threshold)
+    .filter(value => Number.isFinite(value) && value >= 0 && value <= 1)
+])).sort((a, b) => a - b);
 const NOOP_FEATURE = Object.freeze({
   refresh() { return 0; },
   destroy() {}
@@ -104,6 +115,7 @@ export function initContentReveal({
   let reducedMotionQuery = null;
   const targets = new Set();
   const pendingTargets = new Set();
+  const targetThresholds = new WeakMap();
 
   try {
     reducedMotionQuery = windowRef.matchMedia?.('(prefers-reduced-motion: reduce)') || null;
@@ -128,14 +140,15 @@ export function initContentReveal({
         return;
       }
       entries.forEach(entry => {
-        if (entry?.isIntersecting && Number(entry.intersectionRatio) > 0) {
+        const targetThreshold = targetThresholds.get(entry?.target) ?? DEFAULT_INTERSECTION_THRESHOLD;
+        if (entry?.isIntersecting && Number(entry.intersectionRatio) >= targetThreshold) {
           revealTarget(entry.target);
         }
       });
     }, {
       root: null,
       rootMargin: '0px 0px 96px 0px',
-      threshold: 0.01
+      threshold: REVEAL_OBSERVER_THRESHOLDS
     });
     return observer;
   };
@@ -173,8 +186,17 @@ export function initContentReveal({
         // scroll-triggered elements respond promptly; About sections have
         // separate stagger groups so each block sequences independently.
         const motion = group.motion || {};
-        const distance = Number.isFinite(motion.distance) ? Math.max(0, motion.distance) : 14;
-        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 460;
+        const configuredDistance = Number.isFinite(motion.distance)
+          ? Math.max(0, motion.distance)
+          : 18;
+        const mobileDistance = Number.isFinite(motion.mobileDistance)
+          ? Math.max(0, motion.mobileDistance)
+          : configuredDistance;
+        const viewportWidth = Number(windowRef.innerWidth) || 0;
+        const distance = viewportWidth > 0 && viewportWidth <= 640
+          ? mobileDistance
+          : configuredDistance;
+        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 480;
         const staggerStepMs = Number.isFinite(motion.staggerStepMs)
           ? Math.max(0, motion.staggerStepMs)
           : STAGGER_STEP_MS;
@@ -185,9 +207,18 @@ export function initContentReveal({
           ? Math.max(0, motion.startDelayMs)
           : 0;
         const delay = startDelayMs + Math.min(index * staggerStepMs, staggerMaxMs);
+        const threshold = Number.isFinite(motion.threshold)
+          ? Math.min(1, Math.max(0, motion.threshold))
+          : DEFAULT_INTERSECTION_THRESHOLD;
+        const easing = typeof motion.ease === 'string' && motion.ease.trim()
+          ? motion.ease.trim()
+          : DEFAULT_REVEAL_EASE;
+        targetThresholds.set(target, threshold);
+        target.dataset.lmContentRevealThreshold = String(threshold);
+        if (group.profile) target.dataset.lmContentRevealProfile = group.profile;
         target.style.setProperty('--lm-content-reveal-distance', distance + 'px');
         target.style.setProperty('--lm-content-reveal-duration', durationMs + 'ms');
-        target.style.setProperty('--lm-content-reveal-ease', 'cubic-bezier(.22,1,.36,1)');
+        target.style.setProperty('--lm-content-reveal-ease', easing);
         target.style.setProperty('--lm-content-reveal-delay', delay + 'ms');
         target.dataset.lmContentRevealState = 'pending';
         target.classList.add('lm-content-reveal-target');
@@ -248,6 +279,8 @@ export function initContentReveal({
         if (target.dataset) {
           delete target.dataset.lmContentRevealState;
           delete target.dataset.lmContentRevealMotion;
+          delete target.dataset.lmContentRevealThreshold;
+          delete target.dataset.lmContentRevealProfile;
         }
         target.style?.removeProperty?.('--lm-content-reveal-delay');
         target.style?.removeProperty?.('--lm-content-reveal-distance');

@@ -3759,12 +3759,12 @@ try {
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'Works desktop initial view');
       await assertContentRevealTarget(page, 'Works filter rail', 'main.works-main > .filter-nav-wrapper', {
-        duration: '460ms',
+        duration: '800ms',
         delay: '0ms'
       });
       await assertContentRevealTarget(page, 'Works project grid', '#portfolioGridViewport', {
-        duration: '480ms',
-        delay: '64ms',
+        duration: '800ms',
+        delay: '80ms',
         motion: 'position-only',
         opacity: '1'
       });
@@ -4076,19 +4076,19 @@ try {
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'About desktop initial view');
       await assertContentRevealTarget(page, 'About hero', '.about-hero .about-bio-text > *', {
-        duration: '520ms',
+        duration: '560ms',
         delay: '0ms'
       });
       await assertContentRevealTarget(page, 'About skills', '#softwareSkillsList > li:nth-child(1)', {
-        duration: '440ms',
+        duration: '460ms',
         delay: '0ms'
       });
       await assertContentRevealTarget(page, 'About skills stagger', '#softwareSkillsList > li:nth-child(5)', {
-        duration: '440ms',
-        delay: '84ms'
+        duration: '460ms',
+        delay: '128ms'
       });
       await assertContentRevealTarget(page, 'About multimedia column timing', '#multimediaSkillsList > li:nth-child(1)', {
-        duration: '440ms',
+        duration: '460ms',
         delay: '0ms'
       });
       await assertContentRevealReducedMotion(page, 'About', '#softwareSkillsList > li:nth-child(5)');
@@ -11957,8 +11957,8 @@ try {
           JSON.stringify(designState));
       }
       await assertContentRevealTarget(page, 'Works soft-navigation grid', '#portfolioGridViewport', {
-        duration: '480ms',
-        delay: '64ms',
+        duration: '800ms',
+        delay: '80ms',
         motion: 'position-only',
         opacity: '1'
       });
