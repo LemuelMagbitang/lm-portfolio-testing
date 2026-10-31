@@ -31,6 +31,20 @@ export function resolvePortfolioRoute(urlValue, siteRootUrl) {
   }
 }
 
+/**
+ * Select data endpoints worth warming for a destination route.
+ * About's manual Hero/Footer loops are self-contained and must not fetch the
+ * main Projects feed. Other About modes still use project models for artwork.
+ */
+export function resolveRouteDataPrefetchEntries(urls, route, settings = {}) {
+  const entries = Object.entries(urls && typeof urls === 'object' ? urls : {})
+    .filter(([, value]) => typeof value === 'string' && value.trim());
+  if (route === 'about' && settings?.heroTiming?.loopMode === 'manual') {
+    return entries.filter(([key]) => key !== 'projects');
+  }
+  return entries;
+}
+
 function isPlainPrimaryClick(event, link) {
   if (!event || event.defaultPrevented || event.button !== 0) return false;
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
@@ -180,20 +194,45 @@ export function initPageNavigation({
     });
 
     const urls = readPageConfig(page.document).urls || {};
-    const dataRequests = Object.values(urls).filter(value => typeof value === 'string' && value.trim())
-      .map(value => {
-        try {
-          const url = new URL(value, siteRootUrl);
-          if (url.origin !== windowRef.location.origin) return null;
-          return windowRef.fetch(url.href, {
-            method: 'GET',
-            credentials: 'same-origin',
-            cache: 'force-cache',
-            headers: { Accept: 'application/json' }
-          }).then(() => true).catch(() => false);
-        } catch (_) { return null; }
-      }).filter(Boolean);
-    void Promise.allSettled(dataRequests);
+    const fetchJsonResource = value => {
+      try {
+        const url = new URL(value, siteRootUrl);
+        if (url.origin !== windowRef.location.origin) return null;
+        return windowRef.fetch(url.href, {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'force-cache',
+          headers: { Accept: 'application/json' }
+        }).catch(() => null);
+      } catch (_) {
+        return null;
+      }
+    };
+    const warmDataEntries = (settings, alreadyWarmed = new Set()) => {
+      const entries = resolveRouteDataPrefetchEntries(urls, page.route, settings);
+      const requests = entries
+        .filter(([key]) => !alreadyWarmed.has(key))
+        .map(([, value]) => fetchJsonResource(value))
+        .filter(Boolean);
+      void Promise.allSettled(requests);
+    };
+
+    // Read About settings before deciding whether the Projects feed is useful.
+    // If settings cannot be read, retain the safe default and warm all endpoints.
+    const settingsRequest = page.route === 'about'
+      ? fetchJsonResource(urls.settings)
+      : null;
+    if (settingsRequest) {
+      void settingsRequest.then(async response => {
+        let settings = null;
+        if (response?.ok) {
+          try { settings = await response.clone().json(); } catch (_) {}
+        }
+        warmDataEntries(settings, new Set(['settings']));
+      });
+    } else {
+      warmDataEntries(null);
+    }
   }
 
   function loadPageDocument(value) {
