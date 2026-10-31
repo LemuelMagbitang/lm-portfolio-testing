@@ -2773,6 +2773,9 @@ function validateClientSidePageNavigation() {
       !router.includes('function cloneRouteOutlet(page)') ||
       !router.includes('function setNavigationProgress(active') ||
       !router.includes('function destroyActivePage()') ||
+      !router.includes('function warmRouteModules(route)') ||
+      !router.includes('if (intent) warmRouteModules(destinationRoute)') ||
+      !router.includes('warmRouteModules(targetRoute)') ||
       router.includes('root.body.replaceWith(')) {
     err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
   }
