@@ -4085,7 +4085,7 @@ try {
       });
       await assertContentRevealTarget(page, 'About skills stagger', '#softwareSkillsList > li:nth-child(5)', {
         duration: '440ms',
-        delay: '112ms'
+        delay: '84ms'
       });
       await assertContentRevealTarget(page, 'About multimedia column timing', '#multimediaSkillsList > li:nth-child(1)', {
         duration: '440ms',
