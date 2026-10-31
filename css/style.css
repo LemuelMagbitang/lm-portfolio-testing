@@ -670,20 +670,6 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     background-color 140ms ease-out;
 }
 
-/* The desktop spring intentionally overshoots its target width. On compact
-   touch layouts that reads as a bounce, so keep the centered pill morph but
-   use a monotonic ease-out. The absolute indicator does not affect layout. */
-@media (max-width: 1023px) {
-  .filter-active-indicator.is-animated,
-  .filter-active-indicator.is-following-scroll {
-    transition:
-      width 360ms cubic-bezier(.22, 1, .36, 1),
-      height 140ms ease-out,
-      background-color 140ms ease-out;
-    animation: none !important;
-  }
-}
-
 .filter-tabs .tab-btn {
   position: relative;
   z-index: 1;
