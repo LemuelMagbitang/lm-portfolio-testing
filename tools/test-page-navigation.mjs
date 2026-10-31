@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
-import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries } from '../js/app/page-navigation.js?v=20261031-08';
+import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries, resolveRouteWarmHintRel } from '../js/app/page-navigation.js?v=20261101-01';
 
 const siteRoot = 'https://example.test/portfolio/';
+assert.equal(resolveRouteWarmHintRel('modulepreload'), 'modulepreload');
+assert.equal(resolveRouteWarmHintRel('prefetch'), 'prefetch');
+assert.equal(resolveRouteWarmHintRel('preconnect'), 'preconnect');
+assert.equal(resolveRouteWarmHintRel('preload'), '');
+assert.equal(resolveRouteWarmHintRel('preload as image'), '');
+assert.equal(resolveRouteWarmHintRel('preload prefetch'), '', 'A preload token must never be propagated from an uncommitted route.');
 assert.equal(resolvePortfolioRoute('https://example.test/portfolio/', siteRoot), 'design');
 assert.equal(resolvePortfolioRoute('https://example.test/portfolio/index.html', siteRoot), 'design');
 assert.equal(resolvePortfolioRoute('https://example.test/portfolio/about/', siteRoot), 'about');

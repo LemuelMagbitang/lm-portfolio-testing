@@ -1899,7 +1899,7 @@ function validateAboutFirstPaintContract() {
   const aboutFeature = exists('js/features/about/index.js')
     ? readText('js/features/about/index.js')
     : '';
-  if (!composition.includes('if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;')) {
+  if (!composition.includes('if (!isAboutPage && awaitProjectMedia && !initialContactNavigation) await projectMediaPreloadPromise;')) {
     err('About first paint: project media preloading must remain route-aware and optional during client navigation.');
   }
   if (composition.includes('projectLottiePlayerPreloadPromise') ||
@@ -2110,6 +2110,13 @@ function validateResponsiveHeroGalleryAndLogoContract() {
       !navigation.includes("bind(windowRef, 'scroll', scheduleLogoContrast") ||
       !navigation.includes("bind(root, 'loadeddata', scheduleLogoContrast")) {
     err('Adaptive logo runtime: active-media sampling, fallback surface, state updates, and DOM-state observation must remain connected.');
+  }
+
+  if (!hero.includes("media.loading = i === 0 ? 'eager' : 'lazy';") ||
+      !hero.includes("media.fetchPriority = i === 0 ? 'high' : 'low';") ||
+      !hero.includes("(i === 0 ? 900 : 1500);") ||
+      !hero.includes("if (source.type === 'lottie') await ensureLottie();")) {
+    err('Hero first paint: prioritize the first still/poster and keep optional slide setup behind it.');
   }
 
   if (!hero.includes('if (!slides.length) return () => {};') ||
@@ -2782,6 +2789,7 @@ function validateClientSidePageNavigation() {
       !router.includes('function cloneRouteOutlet(page)') ||
       !router.includes('function setNavigationProgress(active') ||
       !router.includes('function destroyActivePage()') ||
+      !router.includes('resolveRouteWarmHintRel(hint.rel)') ||
       !router.includes('function warmRouteModules(route)') ||
       !router.includes('if (intent) warmRouteModules(destinationRoute)') ||
       !router.includes('warmRouteModules(targetRoute)') ||
@@ -2790,7 +2798,7 @@ function validateClientSidePageNavigation() {
       router.includes('root.body.replaceWith(')) {
     err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
   }
-  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261031-08'") ||
+  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261101-01'") ||
       !entry.includes('mountPage: options => bootstrapPortfolioApp({ root: document, ...options })') ||
       !bootstrap.includes('./pages/\u0024{pageId}.js?v=\u0024{cacheVersion}')) {
     err('Client navigation: the long-lived router must own route remounts from the public entrypoint.');
@@ -2813,10 +2821,10 @@ function validateClientSidePageNavigation() {
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('../js/app/bootstrap.js?v=20261031-09') ||
-      !about.includes('../js/app/page-composition.js?v=20261031-09') ||
-      !about.includes('../js/app/pages/design.js?v=20261031-09') ||
-      !about.includes('../js/app/pages/about.js?v=20261031-09') ||
+      !about.includes('../js/app/bootstrap.js?v=20261101-01') ||
+      !about.includes('../js/app/page-composition.js?v=20261101-01') ||
+      !about.includes('../js/app/pages/design.js?v=20261101-01') ||
+      !about.includes('../js/app/pages/about.js?v=20261101-01') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||

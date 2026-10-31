@@ -11,7 +11,7 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261031-08';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261101-01';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261031-10';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261031-05';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
@@ -105,7 +105,7 @@ export async function createPortfolioApp({
   let activeCuratedViewSlug = '';
   let lightboxFeature = null;
   let contentRevealFeature = null;
-  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261031-04')
+  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261101-01')
     .catch(error => {
       console.warn('Content reveal: optional feature could not load.', error);
       return null;
@@ -327,7 +327,7 @@ export async function createPortfolioApp({
   // optional Hero/Footer artwork and can initialize in the background.
   const startupDependencies = isAboutPage
     ? [settingsPromise]
-    : [settingsPromise, projectsPromise, projectModelsPromise];
+    : [settingsPromise, projectModelsPromise];
   const [settingsFeature] = await Promise.all(startupDependencies);
 
   const settings = settingsFeature.getState();
@@ -348,7 +348,7 @@ export async function createPortfolioApp({
     }
   }
 
-  const projectModels = getProjects();
+  const projectModels = mainProjectModels.slice();
   const hasModelMedia = projectModels.some(project => project?.capabilities?.hasModel);
   const preloadModelModule = hasModelMedia
     ? async () => {
@@ -362,43 +362,6 @@ export async function createPortfolioApp({
         return true;
       }
     : null;
-
-  // Initialize the Lightbox before the remaining page features finish. It can
-  // safely wait for the Gallery's active-card API at interaction time while
-  // exposing its media renderer immediately for startup warm-up.
-  if (hasProjectGallery) {
-    try {
-      const lightboxModule = await lightboxModulePromise;
-      if (typeof lightboxModule?.initLightbox === 'function') {
-        lightboxFeature = await lightboxModule.initLightbox({
-          root,
-          protectionEnabled: () => settings.protectionEnabled,
-          ensureMediaBackgroundHelper,
-          applyMediaBackground,
-          parseYouTubeUrl,
-          resolveAssetUrl: siteAssetUrl,
-          mountModelViewer,
-          getActiveCards: () =>
-            galleryFeatureRef?.getActiveCards?.() ||
-            Array.from(root.querySelectorAll('.project-card')),
-          getProjectForCard
-        });
-      }
-    } catch (error) {
-      console.warn('Lightbox: initialization failed', error);
-    }
-  }
-
-  // Start project-media warm-up as soon as project data and the Lightbox
-  // renderer exist. This is deliberately before Hero/Gallery completion.
-  const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
-    ? lightboxFeature.preloadProjectsMedia(projectModels, {
-        preloadModelModule
-      }).catch(error => {
-        console.warn('Lightbox media preload failed:', error);
-        return { total: 0, ready: 0 };
-      })
-    : Promise.resolve({ total: 0, ready: 0 });
 
   const hero = root.querySelector('.hero-section, #heroBanner, #heroBannerAbout');
   // Project-card Lottie thumbnails load the player only as they approach the viewport.
@@ -453,8 +416,49 @@ export async function createPortfolioApp({
       })
     : Promise.resolve(null);
 
+  // Initialize the Lightbox before the remaining page features finish. It can
+  // safely wait for the Gallery's active-card API at interaction time while
+  // exposing its media renderer immediately for startup warm-up.
+  if (hasProjectGallery) {
+    try {
+      const lightboxModule = await lightboxModulePromise;
+      if (typeof lightboxModule?.initLightbox === 'function') {
+        lightboxFeature = await lightboxModule.initLightbox({
+          root,
+          protectionEnabled: () => settings.protectionEnabled,
+          ensureMediaBackgroundHelper,
+          applyMediaBackground,
+          parseYouTubeUrl,
+          resolveAssetUrl: siteAssetUrl,
+          mountModelViewer,
+          getActiveCards: () =>
+            galleryFeatureRef?.getActiveCards?.() ||
+            Array.from(root.querySelectorAll('.project-card')),
+          getProjectForCard
+        });
+      }
+    } catch (error) {
+      console.warn('Lightbox: initialization failed', error);
+    }
+  }
+
+  // Start project-media warm-up as soon as project data and the Lightbox
+  // renderer exist. This is deliberately before Hero/Gallery completion.
+  const projectMediaPreloadPromise = lightboxFeature?.preloadProjectsMedia
+    ? lightboxFeature.preloadProjectsMedia(projectModels, {
+        preloadModelModule
+      }).catch(error => {
+        console.warn('Lightbox media preload failed:', error);
+        return { total: 0, ready: 0 };
+      })
+    : Promise.resolve({ total: 0, ready: 0 });
+
   forms.setProjectEnabled(settings.formsEnabled.project);
   forms.setReviewEnabled(settings.formsEnabled.review);
+
+  // Hero is already initializing while Projects and card markup settle.
+  // Gallery still receives its complete initial card set.
+  if (hasProjectGallery) await projectsPromise;
 
   const galleryPromise = hasProjectGallery
     ? galleryModulePromise.then(module => {
@@ -563,7 +567,7 @@ export async function createPortfolioApp({
   // renders text and visible fallback frames from CMS data; never keep the
   // first-paint transition open while optional images load from local or remote
   // sources. The warm-up continues in the background below.
-  if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;
+  if (!isAboutPage && awaitProjectMedia && !initialContactNavigation) await projectMediaPreloadPromise;
   else void projectMediaPreloadPromise;
 
   // Profile/software-logo image warm-up is opportunistic and never blocks

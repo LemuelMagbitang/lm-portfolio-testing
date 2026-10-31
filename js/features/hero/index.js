@@ -525,13 +525,12 @@ async function ensureMuxVideo(...args) {
     if (!sources.length) return;
     const hasMuxSources = !reducedMotion && sources.some(source => source.type === 'mux');
 
-    if (sources.some(source => source.type === 'lottie')) await ensureLottie();
-    if (sources.some(source => source.background)) await ensureMediaBackground();
-
     heroContainer.classList.remove('transition-kenburns', 'transition-fade', 'transition-none');
     heroContainer.classList.add('transition-' + config.transitionStyle);
 
     for (const [i, source] of sources.entries()) {
+      // A later Lottie slide must not delay the first still image's request.
+      if (source.type === 'lottie') await ensureLottie();
       const wrap = documentRef.createElement('div');
       wrap.className = 'slide' + (i === 0 ? ' active' : '');
 
@@ -612,10 +611,15 @@ async function ensureMuxVideo(...args) {
         media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       } else {
         media = documentRef.createElement('img');
-        media.src = resolveAssetUrl(source.src);
+        media.decoding = 'async';
+        media.loading = i === 0 ? 'eager' : 'lazy';
+        media.fetchPriority = i === 0 ? 'high' : 'low';
         media.alt = source.alt;
+        media.src = resolveAssetUrl(source.src);
       }
-      const fadeInMs = Number.isFinite(Number(source.fadeInMs)) ? Math.max(0, Number(source.fadeInMs)) : 1500;
+      const fadeInMs = Number.isFinite(Number(source.fadeInMs))
+        ? Math.max(0, Number(source.fadeInMs))
+        : (i === 0 ? 900 : 1500);
       const fadeOutMs = Number.isFinite(Number(source.fadeOutMs)) ? Math.max(0, Number(source.fadeOutMs)) : 1500;
       const zoomTransition = typeof source.zoomTransition === 'boolean' ? source.zoomTransition : config.transitionStyle === 'kenburns';
       const fadeTransition = typeof source.fadeTransition === 'boolean' ? source.fadeTransition : config.transitionStyle !== 'none';
@@ -646,10 +650,12 @@ async function ensureMuxVideo(...args) {
       if (source.type === 'mux' && !reducedMotion && muxPosterUrl) {
         const poster = documentRef.createElement('img');
         poster.className = 'hero-mux-poster';
-        poster.src = muxPosterUrl;
         poster.alt = '';
         poster.setAttribute('aria-hidden', 'true');
         poster.decoding = 'async';
+        poster.loading = i === 0 ? 'eager' : 'lazy';
+        poster.fetchPriority = i === 0 ? 'high' : 'low';
+        poster.src = muxPosterUrl;
         poster.style.objectPosition = source.focus || '50% 50%';
         poster.style.transformOrigin = source.focus || '50% 50%';
         poster.style.setProperty('--thumb-zoom', source.zoom || 1);
@@ -661,6 +667,7 @@ async function ensureMuxVideo(...args) {
         }, { once: true });
       }
       heroContainer.appendChild(wrap);
+      if (source.background) await ensureMediaBackground();
       if (applyMediaBackground && source.background) await applyMediaBackground(wrap, source.background, resolveAssetUrl);
 
       if (source.focus) { media.style.objectPosition = source.focus; media.style.transformOrigin = source.focus; }

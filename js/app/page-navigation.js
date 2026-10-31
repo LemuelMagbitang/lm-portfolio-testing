@@ -11,6 +11,12 @@ import { getSiteRootUrl } from '../infrastructure/browser/site-paths.js?v=202610
 const NAV_LINK_SELECTOR = '.nav-links a[href], .nav-logo[href]';
 const ROUTE_CONFIG_ID = 'pageConfig';
 
+export function resolveRouteWarmHintRel(value) {
+  const tokens = String(value || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.includes('preload')) return '';
+  return ['modulepreload', 'prefetch', 'preconnect'].find(rel => tokens.includes(rel)) || '';
+}
+
 function normalizedPath(pathname) {
   return String(pathname || '').replace(/\/index\.html$/i, '').replace(/\/+$/, '') || '/';
 }
@@ -187,11 +193,11 @@ export function initPageNavigation({
     ) || []);
     hints.forEach(hint => {
       const rawHref = hint.getAttribute('href') || '';
-      if (!rawHref) return;
+      const rel = resolveRouteWarmHintRel(hint.rel);
+      if (!rawHref || !rel) return;
       let absolute;
       try { absolute = new URL(rawHref, page.url); } catch (_) { return; }
       if (absolute.origin !== windowRef.location.origin) return;
-      const rel = String(hint.rel || '').split(/\s+/)[0];
       const attributes = {};
       ['as', 'crossorigin', 'type', 'fetchpriority'].forEach(name => {
         if (hint.hasAttribute(name)) attributes[name] = hint.getAttribute(name);

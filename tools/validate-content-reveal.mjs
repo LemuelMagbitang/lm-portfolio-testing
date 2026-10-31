@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261031-04';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261101-01';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -27,7 +27,9 @@ assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
 assert.ok(revealGroupsSource.includes("motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }"),
   'About hero must retain its established reveal profile.');
-assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper, #portfolioGridViewport'[\s\S]*?profile: 'animated-content'[\s\S]*?distance: 40,[\s\S]*?mobileDistance: 28,[\s\S]*?durationMs: 800,[\s\S]*?threshold: 0\.1,[\s\S]*?staggerStepMs: 80,[\s\S]*?staggerMaxMs: 80/,
+assert.match(revealGroupsSource, /selector: '\.hero-section:not\(\.about-hero\)'[\s\S]*?distance: 14,[\s\S]*?mobileDistance: 10,[\s\S]*?durationMs: 520,[\s\S]*?threshold: 0\.05/,
+  'The Works hero must use a short, layout-safe entrance without changing About.');
+assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper, #portfolioGridViewport'[\s\S]*?profile: 'animated-content'[\s\S]*?distance: 26,[\s\S]*?mobileDistance: 18,[\s\S]*?durationMs: 620,[\s\S]*?threshold: 0\.05,[\s\S]*?staggerStepMs: 64,[\s\S]*?staggerMaxMs: 64/,
   'The AnimatedContent-inspired profile must be confined to Design.');
 assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
 assert.doesNotMatch(revealGroupsSource, /\.contact-mobile-tab/,
@@ -52,7 +54,7 @@ assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\
   'The review heading must keep a high-contrast, non-blended foreground.');
 assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
   'The review submit button must use its own high-contrast surface even if rendered outside its original panel.');
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261031-04/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261101-01/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
 assert.ok(
@@ -99,6 +101,7 @@ const experienceA = makeTarget('experience-a');
 const experienceB = makeTarget('experience-b');
 const educationA = makeTarget('education-a');
 const awardsA = makeTarget('awards-a');
+const designHero = makeTarget('design-hero');
 const filterRail = makeTarget('filter-rail');
 const projectGridViewport = makeTarget('project-grid-viewport');
 const reviewHeading = makeTarget('review-heading');
@@ -110,6 +113,7 @@ selectorTargets.set('.about-page main .resume-main > .resume-block > h3', [resum
 selectorTargets.set('#experienceList > *', [experienceA, experienceB]);
 selectorTargets.set('#educationList > *', [educationA]);
 selectorTargets.set('#awardsList > *', [awardsA]);
+selectorTargets.set('.hero-section:not(.about-hero)', [designHero]);
 selectorTargets.set('main.works-main > .filter-nav-wrapper, #portfolioGridViewport', [filterRail, projectGridViewport]);
 selectorTargets.set(
   '#contact-section #web3-forms-container > .contact-block > h2',
@@ -144,11 +148,11 @@ const root = {
   querySelectorAll(selector) { return selectorTargets.get(selector) || []; }
 };
 const feature = initContentReveal({ root, windowRef });
-assert.equal(feature.refresh(), 17, 'The first explicit refresh must attach About and Works reveal targets.');
+assert.equal(feature.refresh(), 18, 'The first explicit refresh must attach About and Works reveal targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
-assert.equal(observer.observed.size, 17);
+assert.equal(observer.observed.size, 18);
 assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers to an existing target.');
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
@@ -171,20 +175,24 @@ assert.equal(educationA.properties.get('--lm-content-reveal-delay'), '0ms',
   'Each About timeline section must restart its own stagger.');
 assert.equal(awardsA.properties.get('--lm-content-reveal-delay'), '0ms',
   'Award entries must not inherit delay from earlier resume sections.');
-assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '40px');
-assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '800ms');
+assert.equal(designHero.properties.get('--lm-content-reveal-distance'), '14px');
+assert.equal(designHero.properties.get('--lm-content-reveal-duration'), '520ms');
+assert.equal(designHero.dataset.lmContentRevealThreshold, '0.05');
+assert.equal(designHero.dataset.lmContentRevealMotion, 'position-only');
+assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '26px');
+assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '620ms');
 assert.equal(filterRail.properties.get('--lm-content-reveal-delay'), '0ms');
-assert.equal(filterRail.properties.get('--lm-content-reveal-ease'), 'cubic-bezier(.215,.61,.355,1)');
-assert.equal(filterRail.dataset.lmContentRevealThreshold, '0.1');
+assert.equal(filterRail.properties.get('--lm-content-reveal-ease'), 'cubic-bezier(.22,1,.36,1)');
+assert.equal(filterRail.dataset.lmContentRevealThreshold, '0.05');
 assert.equal(filterRail.dataset.lmContentRevealProfile, 'animated-content');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '40px');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '800ms');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '80ms');
-assert.equal(projectGridViewport.dataset.lmContentRevealThreshold, '0.1');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '26px');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '620ms');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '64ms');
+assert.equal(projectGridViewport.dataset.lmContentRevealThreshold, '0.05');
 assert.equal(projectGridViewport.dataset.lmContentRevealMotion, 'position-only',
   'The grid viewport must move as a unit without fading or hiding readable project content.');
-assert.deepEqual(observer.options.threshold, [0.01, 0.1],
-  'Observer supports default and Design-specific visibility thresholds.');
+assert.deepEqual(observer.options.threshold, [0.01, 0.05],
+  'Observer supports the default and Design entrance visibility thresholds.');
 assert.equal(observer.options.rootMargin, '0px 0px 96px 0px',
   'Scroll reveals should trigger slightly before each target enters the viewport.');
 assert.equal(reviewHeading.dataset.lmContentRevealMotion, 'position-only',
@@ -192,11 +200,12 @@ assert.equal(reviewHeading.dataset.lmContentRevealMotion, 'position-only',
 assert.equal(bioHeading.dataset.lmContentRevealMotion, 'position-only',
   'Text-bearing content must remain opaque while its translate reveal is pending.');
 
-observer.callback([{ target: projectGridViewport, isIntersecting: true, intersectionRatio: 0.05 }]);
-assert.equal(projectGridViewport.dataset.lmContentRevealState, 'pending', 'Design must wait for 10% visibility.');
+observer.callback([{ target: projectGridViewport, isIntersecting: true, intersectionRatio: 0.03 }]);
+assert.equal(projectGridViewport.dataset.lmContentRevealState, 'pending', 'Design must wait for its visibility threshold.');
 observer.callback([
   { target: bioHeading, isIntersecting: true, intersectionRatio: 0.5 },
-  { target: projectGridViewport, isIntersecting: true, intersectionRatio: 0.1 }
+  { target: designHero, isIntersecting: true, intersectionRatio: 0.05 },
+  { target: projectGridViewport, isIntersecting: true, intersectionRatio: 0.05 }
 ]);
 assert.ok(projectGridViewport.classes.has('is-lm-content-revealed'));
 assert.equal(projectGridViewport.dataset.lmContentRevealState, 'shown');
@@ -212,7 +221,7 @@ assert.ok(filterRail.classes.has('is-lm-content-revealed'));
 assert.ok(observer.disconnected);
 
 feature.destroy();
-for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, skillItemC, skillItemD, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, filterRail, projectGridViewport, reviewHeading]) {
+for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, skillItemC, skillItemD, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, designHero, filterRail, projectGridViewport, reviewHeading]) {
   assert.ok(!target.classes.has('lm-content-reveal-target'));
   assert.ok(!target.classes.has('is-lm-content-revealed'));
   assert.equal(target.dataset.lmContentRevealState, undefined);
@@ -231,6 +240,7 @@ assert.equal(mediaListeners.size, 0);
 motionQuery.matches = false;
 windowRef.innerHeight = 900;
 bioHeading.getBoundingClientRect = () => ({ bottom: 120, top: 40 });
+designHero.getBoundingClientRect = () => ({ bottom: 520, top: 40 });
 filterRail.getBoundingClientRect = () => ({ bottom: 360, top: 280 });
 projectGridViewport.getBoundingClientRect = () => ({ bottom: 760, top: 420 });
 const softNavigationFeature = initContentReveal({
@@ -238,9 +248,11 @@ const softNavigationFeature = initContentReveal({
   windowRef,
   immediateVisible: true
 });
-assert.equal(softNavigationFeature.refresh(), 17);
+assert.equal(softNavigationFeature.refresh(), 18);
 assert.equal(bioHeading.dataset.lmContentRevealState, 'shown',
   'Ordinary visible About content must remain immediate during soft navigation.');
+assert.equal(designHero.dataset.lmContentRevealState, 'pending',
+  'The Design hero must still animate during an SPA route handoff.');
 assert.equal(filterRail.dataset.lmContentRevealState, 'pending',
   'The Design filter rail must still animate during an SPA route handoff.');
 assert.equal(projectGridViewport.dataset.lmContentRevealState, 'pending',
@@ -250,8 +262,10 @@ softNavigationFeature.destroy();
 assert.equal(mediaListeners.size, 0);
 windowRef.innerWidth = 390;
 const mobileFeature = initContentReveal({ root, windowRef });
-assert.equal(mobileFeature.refresh(), 17);
-assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '28px',
+assert.equal(mobileFeature.refresh(), 18);
+assert.equal(designHero.properties.get('--lm-content-reveal-distance'), '10px',
+  'The Works hero entrance must use a shorter travel distance on narrow viewports.');
+assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '18px',
   'Design movement must be reduced on narrow viewports.');
 mobileFeature.destroy();
 

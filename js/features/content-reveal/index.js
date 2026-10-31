@@ -45,19 +45,32 @@ const REVEAL_TARGET_GROUPS = [
     motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
   {
+    selector: '.hero-section:not(.about-hero)',
+    // The Works hero moves as one stable stage; slide/player motion remains
+    // owned by Hero, while text stays readable throughout the entrance.
+    animateOnSoftNavigation: true,
+    motion: {
+      distance: 14,
+      mobileDistance: 10,
+      durationMs: 520,
+      ease: 'cubic-bezier(.22,1,.36,1)',
+      threshold: 0.05
+    }
+  },
+  {
     selector: 'main.works-main > .filter-nav-wrapper, #portfolioGridViewport',
-    // Design-only AnimatedContent-inspired entrance: filter rail first,
-    // then grid viewport. Gallery continues to own individual card motion.
+    // Design-only entrance: filter rail first, then grid viewport. Gallery
+    // continues to own individual card timing and interaction transforms.
     animateOnSoftNavigation: true,
     profile: 'animated-content',
     motion: {
-      distance: 40,
-      mobileDistance: 28,
-      durationMs: 800,
-      ease: 'cubic-bezier(.215,.61,.355,1)',
-      threshold: 0.1,
-      staggerStepMs: 80,
-      staggerMaxMs: 80
+      distance: 26,
+      mobileDistance: 18,
+      durationMs: 620,
+      ease: 'cubic-bezier(.22,1,.36,1)',
+      threshold: 0.05,
+      staggerStepMs: 64,
+      staggerMaxMs: 64
     }
   },
   { selector: '.curated-view-heading' },
