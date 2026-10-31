@@ -1173,6 +1173,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             activeColor: style.color,
             activeBackground: style.backgroundColor,
             activeBlendMode: style.mixBlendMode,
+            activeTransition: style.transitionProperty,
             scrollBehavior: getComputedStyle(rail).scrollBehavior,
             snapType: getComputedStyle(rail).scrollSnapType
           };
@@ -1189,6 +1190,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
              compactPill.activeColor !== 'rgb(17, 17, 17)' ||
              compactPill.activeBackground !== 'rgb(242, 242, 242)' ||
              compactPill.activeBlendMode !== 'normal' ||
+             compactPill.activeTransition !== 'none' ||
              compactPill.scrollBehavior !== 'auto' || compactPill.snapType !== 'none')) {
           throw new Error(label + ' mobile: filter pill must stay attached to the selected button without a floating indicator or swipe-preview movement: ' + JSON.stringify(compactPill));
         }
@@ -2397,6 +2399,7 @@ async function assertFilterInitialContrast(page, label) {
       activeColor: style?.color || '',
       activeBackground: style?.backgroundColor || '',
       activeBlendMode: style?.mixBlendMode || '',
+      activeTransition: style?.transitionProperty || '',
       contentIsolation: content ? getComputedStyle(content).isolation : '',
       contentHasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
       indicatorExists: !!indicator,
@@ -2423,7 +2426,7 @@ async function assertFilterInitialContrast(page, label) {
     if (state.indicatorExists || state.contentHasActiveIndicator ||
         state.activeColor !== 'rgb(17, 17, 17)' ||
         state.activeBackground !== 'rgb(242, 242, 242)' ||
-        state.activeBlendMode !== 'normal') {
+        state.activeBlendMode !== 'normal' || state.activeTransition !== 'none') {
       throw new Error(label + ' compact initial-load filter must use its static selected pill: ' + JSON.stringify(state));
     }
     return;
@@ -2561,6 +2564,7 @@ async function assertFilterNavigationResponsive(page, label) {
         activePressed: active?.getAttribute('aria-pressed') || '',
         activeColor: activeStyle?.color || '',
         activeBlendMode: activeStyle?.mixBlendMode || '',
+        activeTransition: activeStyle?.transitionProperty || '',
         contentIsolation: content ? getComputedStyle(content).isolation : '',
         contentHasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
         previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
@@ -2612,6 +2616,7 @@ async function assertFilterNavigationResponsive(page, label) {
       state.activeColor !== 'rgb(17, 17, 17)' ||
       state.activeBlendMode !== 'normal' ||
       state.activeBackground !== 'rgb(242, 242, 242)' ||
+      state.activeTransition !== 'none' ||
       state.previewCount !== 0 || state.indicatorFollowingScroll || state.contentFollowingFilterScroll
     );
     const desktopPillFailed = !compactViewport && (
@@ -2794,7 +2799,8 @@ async function assertFilterNavigationResponsive(page, label) {
           previewCount: contentDuring?.querySelectorAll('.is-centered-preview').length || 0,
           activeColor: activeStyleDuring?.color || '',
           activeBackground: activeStyleDuring?.backgroundColor || '',
-          activeBlendMode: activeStyleDuring?.mixBlendMode || ''
+          activeBlendMode: activeStyleDuring?.mixBlendMode || '',
+          activeTransition: activeStyleDuring?.transitionProperty || ''
         };
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -2816,6 +2822,7 @@ async function assertFilterNavigationResponsive(page, label) {
           activeColor: activeStyle?.color || '',
           activeBackground: activeStyle?.backgroundColor || '',
           activeBlendMode: activeStyle?.mixBlendMode || '',
+          activeTransition: activeStyle?.transitionProperty || '',
           activeCenterDelta: activeRect
             ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + el.clientWidth / 2))
             : Infinity,
@@ -2829,12 +2836,14 @@ async function assertFilterNavigationResponsive(page, label) {
           compactGesture.activeColor !== 'rgb(17, 17, 17)' ||
           compactGesture.activeBackground !== 'rgb(242, 242, 242)' ||
           compactGesture.activeBlendMode !== 'normal' ||
+          compactGesture.activeTransition !== 'none' ||
           compactGesture.activeCenterDelta > 2 ||
           compactGesture.during.indicatorExists || compactGesture.during.hasActiveIndicator ||
           compactGesture.during.following || compactGesture.during.previewCount !== 0 ||
           compactGesture.during.activeColor !== 'rgb(17, 17, 17)' ||
           compactGesture.during.activeBackground !== 'rgb(242, 242, 242)' ||
-          compactGesture.during.activeBlendMode !== 'normal') {
+          compactGesture.during.activeBlendMode !== 'normal' ||
+          compactGesture.during.activeTransition !== 'none') {
         throw new Error(label + ' compact filter rail must use a static active pill without floating-indicator motion during or after swipe: ' +
           JSON.stringify(compactGesture));
       }
