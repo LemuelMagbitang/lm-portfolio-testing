@@ -213,6 +213,17 @@ check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footer.includes("setMediaPlaybackEnabled(getActiveMedia(), false)") &&
   footer.includes("if (!playbackVisible || disposed) return"),
   "Footer video slides must remain idle outside the viewport prefetch band and only pause/resume the active slide.");
+
+const foregroundInitializationContract = footer.indexOf("applyForeground(0);");
+const footerVisibilityGateContract = footer.indexOf("const visibility = observeFooterPlaybackVisibility");
+check(
+  footer.includes("media?.addEventListener('load', refresh)") &&
+  footer.includes("media?.addEventListener('loadeddata', refresh)") &&
+  foregroundInitializationContract >= 0 &&
+  footerVisibilityGateContract >= 0 &&
+  foregroundInitializationContract < footerVisibilityGateContract,
+  "Footer foreground contrast must initialize before visibility gating and refresh when media becomes available."
+);
 check(cms.includes('href="videos.html"') &&
   page.includes("mux-uploader") &&
   page.includes("https://cdn.jsdelivr.net/npm/@mux/mux-uploader@1.6.0") &&

@@ -341,6 +341,22 @@ export async function initFooterAnimation(options = {}) {
     footerElement?.style.setProperty('--footer-foreground', color);
   };
 
+  slides.forEach((slide, index) => {
+    const media = slide.firstElementChild;
+    const refresh = () => applyForeground(index);
+    media?.addEventListener('load', refresh);
+    media?.addEventListener('loadeddata', refresh);
+    lifecycle.add(() => {
+      media?.removeEventListener('load', refresh);
+      media?.removeEventListener('loadeddata', refresh);
+    });
+  });
+
+  // Keep the foreground token available before the Footer enters the
+  // playback prefetch band. Media sampling is refreshed when its first
+  // usable frame or image becomes available.
+  applyForeground(0);
+
   const getActiveMedia = () => slides[activeIndex]?.firstElementChild || null;
 
   const setMediaPlaybackEnabled = (media, enabled) => {
@@ -481,8 +497,6 @@ export async function initFooterAnimation(options = {}) {
       onChange: handlePlaybackVisibility
     });
     lifecycle.add(() => visibility.destroy());
-  } else {
-    applyForeground(0);
   }
 
   lifecycle.add(() => {
