@@ -39,6 +39,11 @@ export function resolvePortfolioRoute(urlValue, siteRootUrl) {
 export function resolveRouteDataPrefetchEntries(urls, route, settings = {}) {
   const entries = Object.entries(urls && typeof urls === 'object' ? urls : {})
     .filter(([, value]) => typeof value === 'string' && value.trim());
+  // The Design route has no About profile surface. Do not warm about.json
+  // when prefetching Design from About; the About page owns that endpoint.
+  if (route === 'design') {
+    return entries.filter(([key]) => key !== 'about');
+  }
   if (route === 'about' && settings?.heroTiming?.loopMode === 'manual') {
     return entries.filter(([key]) => key !== 'projects');
   }
