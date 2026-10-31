@@ -6,7 +6,7 @@
  * HTML and route styles are ready, reuses the ES-module runtime, and falls back
  * to native navigation whenever the handoff cannot be completed safely.
  */
-import { getSiteRootUrl } from '../infrastructure/browser/site-paths.js?v=20261027-05';
+import { getSiteRootUrl } from '../infrastructure/browser/site-paths.js?v=20261031-05';
 
 const NAV_LINK_SELECTOR = '.nav-links a[href], .nav-logo[href]';
 const ROUTE_CONFIG_ID = 'pageConfig';
