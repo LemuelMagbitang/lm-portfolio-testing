@@ -564,20 +564,29 @@ export async function createPortfolioApp({
       feature => feature?.cleanup?.(),
       'About'
     );
-    settleInBackground(
-      galleryPromise,
-      feature => {
-        galleryFeature = feature;
-        galleryFeatureRef = feature;
-      },
-      feature => feature?.destroy?.(),
-      'Gallery',
-      () => {
-        try { contentRevealFeature?.refresh?.(); } catch (error) {
-          console.warn('Content reveal could not refresh after Gallery hydration.', error);
+    if (initialContactNavigation) {
+      // The Contact anchor is positioned after composition returns. Mount card
+      // markup first so the late Gallery cannot change the document height
+      // above the requested anchor after the scroll has settled. Thumbnail
+      // readiness remains disabled for this path.
+      galleryFeature = await galleryPromise;
+      galleryFeatureRef = galleryFeature;
+    } else {
+      settleInBackground(
+        galleryPromise,
+        feature => {
+          galleryFeature = feature;
+          galleryFeatureRef = feature;
+        },
+        feature => feature?.destroy?.(),
+        'Gallery',
+        () => {
+          try { contentRevealFeature?.refresh?.(); } catch (error) {
+            console.warn('Content reveal could not refresh after Gallery hydration.', error);
+          }
         }
-      }
-    );
+      );
+    }
   }
 
   // Wait for all local project media before removing the branded loading

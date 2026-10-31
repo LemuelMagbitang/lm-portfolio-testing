@@ -92,6 +92,8 @@ assert.match(pageCompositionSource, /const settleInBackground = \(promise, assig
 assert.match(pageCompositionSource, /settleInBackground\(heroPromise,/);
 assert.match(pageCompositionSource, /settleInBackground\(footerPromise,/);
 assert.match(pageCompositionSource, /settleInBackground\([\s\S]*?galleryPromise,[\s\S]*?galleryFeature = feature;[\s\S]*?galleryFeatureRef = feature;[\s\S]*?feature => feature\?\.destroy\?\.\(\),[\s\S]*?'Gallery',[\s\S]*?contentRevealFeature\?\.refresh\?\.\(\)/);
+assert.match(pageCompositionSource, /if \(initialContactNavigation\) \{[\s\S]*?galleryFeature = await galleryPromise;[\s\S]*?galleryFeatureRef = galleryFeature;/,
+  'Contact-anchor startup must settle Gallery geometry without waiting for thumbnail readiness.');
 assert.match(pageCompositionSource, /\} else \{\s*\/\/ The first usable Hero poster\/image is the visual startup priority\.[\s\S]*?heroFeature = await heroPromise;[\s\S]*?settleInBackground\(footerPromise,/);
 assert.match(pageCompositionSource, /get gallery\(\) \{ return galleryFeature; \}/,
   'The Gallery feature remains available through its public app contract after background initialization.');
