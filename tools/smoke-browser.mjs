@@ -3693,8 +3693,12 @@ async function assertContentRevealTarget(page, label, selector, expected) {
     state: element.dataset.lmContentRevealState || '',
     motion: element.dataset.lmContentRevealMotion || ''
   }));
-  if (timing.duration !== expected.duration || timing.delay !== expected.delay) {
-    throw new Error(label + ' reveal timing mismatch: ' + JSON.stringify({ selector, expected, timing }));
+  const opacity = await target.evaluate(element => getComputedStyle(element).opacity);
+  if (timing.duration !== expected.duration || timing.delay !== expected.delay ||
+      (expected.motion && timing.motion !== expected.motion) ||
+      (expected.opacity && opacity !== expected.opacity)) {
+    throw new Error(label + ' reveal timing/presentation mismatch: ' +
+      JSON.stringify({ selector, expected, timing, opacity }));
   }
 
   await target.scrollIntoViewIfNeeded();
@@ -3754,11 +3758,17 @@ try {
         return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'Works desktop initial view');
-      await assertContentRevealTarget(page, 'Works', 'main.works-main > .filter-nav-wrapper', {
+      await assertContentRevealTarget(page, 'Works filter rail', 'main.works-main > .filter-nav-wrapper', {
         duration: '480ms',
         delay: '0ms'
       });
-      await assertContentRevealReducedMotion(page, 'Works', 'main.works-main > .filter-nav-wrapper');
+      await assertContentRevealTarget(page, 'Works project grid', '#portfolioGridViewport', {
+        duration: '520ms',
+        delay: '96ms',
+        motion: 'position-only',
+        opacity: '1'
+      });
+      await assertContentRevealReducedMotion(page, 'Works', '#portfolioGridViewport');
     }, { width: 1440, height: 900 });
 
     await smokePage(
@@ -11926,6 +11936,12 @@ try {
         throw new Error('About-to-Design navigation must reuse the document and keep the logo loader hidden: ' +
           JSON.stringify(designState));
       }
+      await assertContentRevealTarget(page, 'Works soft-navigation grid', '#portfolioGridViewport', {
+        duration: '520ms',
+        delay: '96ms',
+        motion: 'position-only',
+        opacity: '1'
+      });
 
       await page.goBack();
       await page.waitForFunction(() =>

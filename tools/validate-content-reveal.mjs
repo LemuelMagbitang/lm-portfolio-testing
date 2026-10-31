@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261031-01';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261031-02';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -27,6 +27,10 @@ assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
 assert.ok(revealGroupsSource.includes("motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }"),
   'About hero content must use the scoped staggered entrance profile without changing unrelated sections.');
+assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper'[\s\S]*?animateOnSoftNavigation: true/,
+  'The Design filter rail must retain its entrance motion during SPA route handoffs.');
+assert.match(revealGroupsSource, /selector: '#portfolioGridViewport'[\s\S]*?animateOnSoftNavigation: true[\s\S]*?motion: \{ distance: 14, durationMs: 520, startDelayMs: 96, staggerStepMs: 0, staggerMaxMs: 0 \}/,
+  'The Design grid viewport must follow the filter rail with a restrained position-only entrance.');
 assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
 assert.doesNotMatch(revealGroupsSource, /\.contact-mobile-tab/,
   'Contact tabs already have their own moving pill and drag state; they must not receive generic reveal transforms.');
@@ -46,7 +50,7 @@ assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\
   'The review heading must keep a high-contrast, non-blended foreground.');
 assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
   'The review submit button must use its own high-contrast surface even if rendered outside its original panel.');
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261031-01/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261031-02/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
 assert.ok(
@@ -94,6 +98,7 @@ const experienceB = makeTarget('experience-b');
 const educationA = makeTarget('education-a');
 const awardsA = makeTarget('awards-a');
 const filterRail = makeTarget('filter-rail');
+const projectGridViewport = makeTarget('project-grid-viewport');
 const reviewHeading = makeTarget('review-heading');
 selectorTargets.set('.about-hero .about-bio-text > *', [bioHeading, bioCopy]);
 selectorTargets.set('.about-page main .resume-skills-row > .resume-block > h3', [skillHeadingA, skillHeadingB]);
@@ -104,6 +109,7 @@ selectorTargets.set('#experienceList > *', [experienceA, experienceB]);
 selectorTargets.set('#educationList > *', [educationA]);
 selectorTargets.set('#awardsList > *', [awardsA]);
 selectorTargets.set('main.works-main > .filter-nav-wrapper', [filterRail]);
+selectorTargets.set('#portfolioGridViewport', [projectGridViewport]);
 selectorTargets.set(
   '#contact-section #web3-forms-container > .contact-block > h2',
   [reviewHeading]
@@ -137,11 +143,11 @@ const root = {
   querySelectorAll(selector) { return selectorTargets.get(selector) || []; }
 };
 const feature = initContentReveal({ root, windowRef });
-assert.equal(feature.refresh(), 16, 'The first explicit refresh must attach About and Works reveal targets.');
+assert.equal(feature.refresh(), 17, 'The first explicit refresh must attach About and Works reveal targets.');
 const observer = observers[0];
 
 assert.ok(observer, 'A single observer must be created for the feature.');
-assert.equal(observer.observed.size, 16);
+assert.equal(observer.observed.size, 17);
 assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers to an existing target.');
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
@@ -166,6 +172,11 @@ assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '18px',
   'Untuned targets must retain the existing short movement distance.');
 assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '480ms',
   'The profile must not change unrelated page targets.');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '14px');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '520ms');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '96ms');
+assert.equal(projectGridViewport.dataset.lmContentRevealMotion, 'position-only',
+  'The grid viewport must move as a unit without fading or hiding readable project content.');
 assert.equal(observer.options.threshold, 0.01,
   'Content reveal should start close to viewport entry without waiting for 10% of each target.');
 assert.equal(observer.options.rootMargin, '0px 0px 96px 0px',
@@ -175,7 +186,12 @@ assert.equal(reviewHeading.dataset.lmContentRevealMotion, 'position-only',
 assert.equal(bioHeading.dataset.lmContentRevealMotion, 'position-only',
   'Text-bearing content must remain opaque while its translate reveal is pending.');
 
-observer.callback([{ target: bioHeading, isIntersecting: true, intersectionRatio: 0.5 }]);
+observer.callback([
+  { target: bioHeading, isIntersecting: true, intersectionRatio: 0.5 },
+  { target: projectGridViewport, isIntersecting: true, intersectionRatio: 0.5 }
+]);
+assert.ok(projectGridViewport.classes.has('is-lm-content-revealed'));
+assert.equal(projectGridViewport.dataset.lmContentRevealState, 'shown');
 assert.ok(bioHeading.classes.has('is-lm-content-revealed'));
 assert.equal(bioHeading.dataset.lmContentRevealState, 'shown');
 assert.ok(!observer.observed.has(bioHeading), 'A completed item must be unobserved.');
@@ -188,7 +204,7 @@ assert.ok(filterRail.classes.has('is-lm-content-revealed'));
 assert.ok(observer.disconnected);
 
 feature.destroy();
-for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, skillItemC, skillItemD, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, filterRail, reviewHeading]) {
+for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillItemA, skillItemB, skillItemC, skillItemD, resumeHeadingA, resumeHeadingB, experienceA, experienceB, educationA, awardsA, filterRail, projectGridViewport, reviewHeading]) {
   assert.ok(!target.classes.has('lm-content-reveal-target'));
   assert.ok(!target.classes.has('is-lm-content-revealed'));
   assert.equal(target.dataset.lmContentRevealState, undefined);
@@ -200,4 +216,27 @@ for (const target of [bioHeading, bioCopy, skillHeadingA, skillHeadingB, skillIt
 }
 assert.equal(mediaListeners.size, 0);
 
-console.log('Content reveal interaction, reduced-motion, decoupling, and cleanup contracts validated.');
+// Soft-navigation policy: About's ordinary first-viewport targets are mounted
+// immediately, while the Design filter/grid targets opt into their own entrance.
+motionQuery.matches = false;
+windowRef.innerHeight = 900;
+bioHeading.getBoundingClientRect = () => ({ bottom: 120, top: 40 });
+filterRail.getBoundingClientRect = () => ({ bottom: 360, top: 280 });
+projectGridViewport.getBoundingClientRect = () => ({ bottom: 760, top: 420 });
+const softNavigationFeature = initContentReveal({
+  root,
+  windowRef,
+  immediateVisible: true
+});
+assert.equal(softNavigationFeature.refresh(), 17);
+assert.equal(bioHeading.dataset.lmContentRevealState, 'shown',
+  'Ordinary visible About content must remain immediate during soft navigation.');
+assert.equal(filterRail.dataset.lmContentRevealState, 'pending',
+  'The Design filter rail must still animate during an SPA route handoff.');
+assert.equal(projectGridViewport.dataset.lmContentRevealState, 'pending',
+  'The Design grid must still animate during an SPA route handoff.');
+assert.equal(projectGridViewport.dataset.lmContentRevealMotion, 'position-only');
+softNavigationFeature.destroy();
+assert.equal(mediaListeners.size, 0);
+
+console.log('Content reveal interaction, soft-navigation choreography, reduced-motion, decoupling, and cleanup contracts validated.');

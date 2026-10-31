@@ -44,7 +44,19 @@ const REVEAL_TARGET_GROUPS = [
     selector: '#awardsList > *',
     motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
   },
-  { selector: 'main.works-main > .filter-nav-wrapper' },
+  {
+    selector: 'main.works-main > .filter-nav-wrapper',
+    // Design is the one route where the visible filter/grid entrance is part
+    // of the page handoff. Other visible targets remain immediate on soft nav.
+    animateOnSoftNavigation: true
+  },
+  {
+    selector: '#portfolioGridViewport',
+    // Move the grid viewport as one composition; individual cards retain
+    // Gallery-owned opacity, scroll reveal, and interaction transforms.
+    animateOnSoftNavigation: true,
+    motion: { distance: 14, durationMs: 520, startDelayMs: 96, staggerStepMs: 0, staggerMaxMs: 0 }
+  },
   { selector: '.curated-view-heading' },
   // The Contact tabs own a live segmented-control pill and drag state. Keep
   // those buttons out of generic reveal transforms so the hit areas and pill
@@ -169,7 +181,10 @@ export function initContentReveal({
         const staggerMaxMs = Number.isFinite(motion.staggerMaxMs)
           ? Math.max(0, motion.staggerMaxMs)
           : STAGGER_MAX_MS;
-        const delay = Math.min(index * staggerStepMs, staggerMaxMs);
+        const startDelayMs = Number.isFinite(motion.startDelayMs)
+          ? Math.max(0, motion.startDelayMs)
+          : 0;
+        const delay = startDelayMs + Math.min(index * staggerStepMs, staggerMaxMs);
         target.style.setProperty('--lm-content-reveal-distance', distance + 'px');
         target.style.setProperty('--lm-content-reveal-duration', durationMs + 'ms');
         target.style.setProperty('--lm-content-reveal-ease', 'cubic-bezier(.16,1,.3,1)');
@@ -179,7 +194,7 @@ export function initContentReveal({
         targets.add(target);
 
         const rect = target.getBoundingClientRect?.();
-        const inViewport = immediateVisible && rect &&
+        const inViewport = immediateVisible && !group.animateOnSoftNavigation && rect &&
           rect.bottom > 0 && rect.top < (Number(windowRef.innerHeight) || 0);
         if (inViewport) {
           // Do not show an empty first viewport during route remounts.
