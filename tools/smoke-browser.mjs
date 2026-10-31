@@ -1192,7 +1192,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
              compactPill.scrollBehavior !== 'auto' || compactPill.snapType !== 'none')) {
           throw new Error(label + ' mobile: filter pill must stay attached to the selected button without a floating indicator or swipe-preview movement: ' + JSON.stringify(compactPill));
         }
-      }}
+      }
       if (layout.logoBlendMode !== 'normal' ||
           !['light', 'dark'].includes(layout.logoForeground) ||
           !layout.logoTransitionProperties.includes('transform') ||
@@ -2815,7 +2815,6 @@ async function assertFilterNavigationResponsive(page, label) {
       });
       if (compactGesture.snapType !== 'none' ||
           Math.abs(compactGesture.afterSettle - compactGesture.afterRelease) > 1 ||
-          !compactGesture.indicatorExists === false ||
           compactGesture.indicatorExists || compactGesture.hasActiveIndicator ||
           compactGesture.following || compactGesture.previewCount !== 0 ||
           compactGesture.activeColor !== 'rgb(17, 17, 17)' ||
