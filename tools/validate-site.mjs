@@ -1177,6 +1177,9 @@ function validateGalleryContract() {
       !source.includes('return windowRef.innerWidth > 1023;') ||
       !source.includes('function removeFilterActiveIndicator()') ||
       !source.includes('if (!supportsFloatingFilterIndicator())') ||
+      !source.includes("const selectionScrollBehavior = windowRef.innerWidth <= 1023 ? 'auto' : 'smooth';") ||
+      !source.includes('centerFilterButton(button, selectionScrollBehavior);') ||
+      !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide') ||
       !source.includes('function clearFilterScrollPreview()') ||
       !source.includes("bind(documentRef, 'pointerdown'") ||
       !source.includes("bind(documentRef, 'click', event => {") ||
