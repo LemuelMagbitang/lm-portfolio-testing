@@ -510,7 +510,12 @@ export async function initGallery(options = {}) {
     // briefly shrinks the rail and can clamp scrollLeft before smooth scrolling
     // starts. Geometry changes still rebuild cushions through resize/font hooks.
     // Reduced-motion users receive instant centering from centerFilterButton().
-    if (center && isFilterScroller()) centerFilterButton(button, 'smooth');
+    if (center && isFilterScroller()) {
+      // Compact filter rails should settle without a second glide after a tap.
+      // Desktop retains its existing smooth centering behavior.
+      const selectionScrollBehavior = windowRef.innerWidth <= 1023 ? 'auto' : 'smooth';
+      centerFilterButton(button, selectionScrollBehavior);
+    }
     syncFilterActiveIndicator(button);
 
     // Only a real filter change starts a new result set. Centering the
