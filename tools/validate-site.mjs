@@ -2816,16 +2816,23 @@ function validateClientSidePageNavigation() {
       !composition.includes('immediateVisible: immediateContentReveal')) {
     err('Client navigation: media warm-up and first-viewport reveals must be route-aware.');
   }
+  const runtimeVersion = bootstrap.match(/cacheVersion\\s*=\\s*'([^']+)'/)?.[1] || '';
+  const hasRuntimePreloads = (html, prefix) => [
+    'bootstrap.js',
+    'page-composition.js',
+    'pages/design.js',
+    'pages/about.js'
+  ].every(modulePath => html.includes(`${prefix}js/app/${modulePath}?v=${runtimeVersion}`));
+
   if (!works.includes('id="pageConfig"') || !about.includes('id="pageConfig"') ||
       !works.includes('id="routeOutlet"') || !about.includes('id="routeOutlet"') ||
       !works.includes('id="routeContent"') || !about.includes('id="routeContent"') ||
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('../js/app/bootstrap.js?v=20261101-04') ||
-      !about.includes('../js/app/page-composition.js?v=20261101-04') ||
-      !about.includes('../js/app/pages/design.js?v=20261101-04') ||
-      !about.includes('../js/app/pages/about.js?v=20261101-04') ||
+      !runtimeVersion ||
+      !hasRuntimePreloads(works, '') ||
+      !hasRuntimePreloads(about, '../') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
