@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries, resolveRouteWarmHintRel } from '../js/app/page-navigation.js?v=20261101-01';
+import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries, resolveRouteWarmHintRel } from '../js/app/page-navigation.js?v=20261101-02';
 
 const siteRoot = 'https://example.test/portfolio/';
 assert.equal(resolveRouteWarmHintRel('modulepreload'), 'modulepreload');

@@ -2798,7 +2798,7 @@ function validateClientSidePageNavigation() {
       router.includes('root.body.replaceWith(')) {
     err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
   }
-  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261101-01'") ||
+  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261101-02'") ||
       !entry.includes('mountPage: options => bootstrapPortfolioApp({ root: document, ...options })') ||
       !bootstrap.includes('./pages/\u0024{pageId}.js?v=\u0024{cacheVersion}')) {
     err('Client navigation: the long-lived router must own route remounts from the public entrypoint.');
@@ -2810,7 +2810,7 @@ function validateClientSidePageNavigation() {
       !bootstrap.includes("root.getElementById('pageConfig')")) {
     err('Client navigation: soft mounts must bypass the initial logo gate and optional media wait while reading the destination URL config.');
   }
-  if (!composition.includes('if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;') ||
+  if (!composition.includes('if (!isAboutPage && awaitProjectMedia && !initialContactNavigation) await projectMediaPreloadPromise;') ||
       !composition.includes('waitForThumbnailReadiness: awaitProjectMedia && !initialContactNavigation') ||
       !composition.includes('immediateVisible: immediateContentReveal')) {
     err('Client navigation: media warm-up and first-viewport reveals must be route-aware.');
@@ -2821,10 +2821,10 @@ function validateClientSidePageNavigation() {
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('../js/app/bootstrap.js?v=20261101-01') ||
-      !about.includes('../js/app/page-composition.js?v=20261101-01') ||
-      !about.includes('../js/app/pages/design.js?v=20261101-01') ||
-      !about.includes('../js/app/pages/about.js?v=20261101-01') ||
+      !about.includes('../js/app/bootstrap.js?v=20261101-02') ||
+      !about.includes('../js/app/page-composition.js?v=20261101-02') ||
+      !about.includes('../js/app/pages/design.js?v=20261101-02') ||
+      !about.includes('../js/app/pages/about.js?v=20261101-02') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
