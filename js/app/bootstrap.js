@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261031-02',
+  cacheVersion = '20261031-03',
   showPageTransition = true,
   awaitProjectMedia = true,
   immediateContentReveal = false
@@ -227,7 +227,13 @@ export async function bootstrapPortfolioApp({
   // Initial hash navigation is settled once the composed page has its final layout.
 
   try {
-    const { createPortfolioApp } = await import(`./page-composition.js?v=${cacheVersion}`);
+    // Route entrypoints are independent modules. Both can be preloaded by
+    // the document, while only the active page is mounted into the shared shell.
+    const pageId = root.body?.classList.contains('about-page') ? 'about' : 'design';
+    const pageModule = await import(`./pages/${pageId}.js?v=${cacheVersion}`);
+    if (pageModule?.pageId !== pageId || typeof pageModule?.mount !== 'function') {
+      throw new Error(`The ${pageId} page module is unavailable or has an invalid public API.`);
+    }
 
     let pageConfig = {};
     try {
@@ -279,7 +285,7 @@ export async function bootstrapPortfolioApp({
       parseYouTubeUrl
     };
 
-    const app = await createPortfolioApp({
+    const app = await pageModule.mount({
       root,
       runtime,
       cms,
