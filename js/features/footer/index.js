@@ -260,7 +260,9 @@ export async function initFooterAnimation(options = {}) {
     return null;
   }
 
-  if (sources.some(source => source.type === 'lottie')) {
+  // In reduced-motion mode, register Lottie only to render its static first
+  // frame. Normal playback waits until the Footer enters the prefetch band.
+  if (reduceMotionNow && sources.some(source => source.type === 'lottie')) {
     try { await (options.ensureLottiePlayer || ensureLottiePlayer)(); } catch (_) {}
   }
   const lifecycle = createLifecycle();
@@ -296,6 +298,7 @@ export async function initFooterAnimation(options = {}) {
   let contrastIntervalId = null;
   let muxEnsurePromise = null;
   let muxDefinitionPromise = null;
+  let lottieEnsurePromise = null;
   const slides = [];
 
   sources.forEach((source, index) => {
@@ -384,7 +387,6 @@ export async function initFooterAnimation(options = {}) {
     if (media.localName === 'lottie-player') {
       if (enabled) {
         media.setAttribute('autoplay', '');
-        try { media.play?.(); } catch (_) {}
       } else {
         media.removeAttribute('autoplay');
         try { media.pause?.(); media.stop?.(); } catch (_) {}
@@ -401,6 +403,10 @@ export async function initFooterAnimation(options = {}) {
     const isMux = media.localName === 'mux-video' || media.localName === 'mux-player';
     if (isMux && typeof media.play !== 'function') {
       requestMuxPlayer();
+      return false;
+    }
+    if (media.localName === 'lottie-player' && typeof media.play !== 'function') {
+      requestLottiePlayer();
       return false;
     }
     if (typeof media.play !== 'function') return false;
@@ -438,6 +444,20 @@ export async function initFooterAnimation(options = {}) {
         return false;
       });
     }
+  };
+
+  const requestLottiePlayer = () => {
+    if (disposed || !playbackVisible || lottieEnsurePromise) return;
+    const ensureLottie = options.ensureLottiePlayer || ensureLottiePlayer;
+    lottieEnsurePromise = Promise.resolve().then(() => ensureLottie()).then(ready => {
+      if (!ready) lottieEnsurePromise = null;
+      if (ready && playbackVisible) playActiveMedia();
+      return Boolean(ready);
+    }).catch(error => {
+      lottieEnsurePromise = null;
+      console.warn('[Footer Lottie] Background player initialization failed; keeping the static frame visible.', error);
+      return false;
+    });
   };
 
   const stopVisibleTimers = () => {

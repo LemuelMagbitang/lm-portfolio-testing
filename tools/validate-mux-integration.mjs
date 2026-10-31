@@ -224,6 +224,17 @@ check(
   foregroundInitializationContract < footerVisibilityGateContract,
   "Footer foreground contrast must initialize before visibility gating and refresh when media becomes available."
 );
+
+const lottieReducedMotionPath = footer.indexOf("if (reduceMotionNow && sources.some(source => source.type === 'lottie'))");
+const lottieDeferredLoader = footer.indexOf("const requestLottiePlayer = () =>");
+const lottiePlaybackGuard = footer.indexOf("requestLottiePlayer();");
+check(
+  lottieReducedMotionPath >= 0 &&
+  lottieDeferredLoader >= 0 &&
+  lottiePlaybackGuard >= 0 &&
+  !footer.includes("if (sources.some(source => source.type === 'lottie')) {"),
+  "Footer Lottie registration must wait for viewport eligibility except when reduced motion needs a static first frame."
+);
 check(cms.includes('href="videos.html"') &&
   page.includes("mux-uploader") &&
   page.includes("https://cdn.jsdelivr.net/npm/@mux/mux-uploader@1.6.0") &&
