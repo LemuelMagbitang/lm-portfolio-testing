@@ -2756,6 +2756,8 @@ function validateClientSidePageNavigation() {
   const css = exists('css/style.css') ? readText('css/style.css') : '';
 
   if (!router.includes('export function resolvePortfolioRoute(') ||
+      !router.includes('export function resolveRouteDataPrefetchEntries(') ||
+      !router.includes("settings?.heroTiming?.loopMode === 'manual'") ||
       !router.includes('windowRef.fetch(key') ||
       !router.includes('new windowRef.DOMParser()') ||
       !router.includes('windowRef.history.pushState') ||
@@ -2767,7 +2769,7 @@ function validateClientSidePageNavigation() {
       !router.includes('root.startViewTransition(update)')) {
     err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
   }
-  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261031-01'") ||
+  if (!entry.includes("import { initPageNavigation } from './app/page-navigation.js?v=20261031-02'") ||
       !entry.includes('mountPage: options => bootstrapPortfolioApp({ root: document, ...options })')) {
     err('Client navigation: the long-lived router must own route remounts from the public entrypoint.');
   }
