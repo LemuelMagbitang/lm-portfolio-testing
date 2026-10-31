@@ -14,35 +14,35 @@ const REVEAL_TARGET_GROUPS = [
     // React Bits AnimatedContent-inspired profile, mapped to the site's native
     // IntersectionObserver/CSS system. Keep the hero entrance editorial, not
     // the generic demo's full 100px travel, and stagger each direct child.
-    motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }
+    motion: { distance: 16, durationMs: 520, staggerStepMs: 36, staggerMaxMs: 108 }
   },
   {
     selector: '.about-page main .resume-skills-row > .resume-block > h3',
-    motion: { distance: 16, durationMs: 460, staggerStepMs: 44, staggerMaxMs: 44 }
+    motion: { distance: 12, durationMs: 440, staggerStepMs: 32, staggerMaxMs: 32 }
   },
   {
     selector: '#softwareSkillsList > li',
-    motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
+    motion: { distance: 12, durationMs: 440, staggerStepMs: 28, staggerMaxMs: 84 }
   },
   {
     selector: '#multimediaSkillsList > li',
-    motion: { distance: 16, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 128 }
+    motion: { distance: 12, durationMs: 440, staggerStepMs: 28, staggerMaxMs: 84 }
   },
   {
     selector: '.about-page main .resume-main > .resume-block > h3',
-    motion: { distance: 16, durationMs: 480, staggerStepMs: 44, staggerMaxMs: 88 }
+    motion: { distance: 12, durationMs: 460, staggerStepMs: 32, staggerMaxMs: 64 }
   },
   {
     selector: '#experienceList > *',
-    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
+    motion: { distance: 12, durationMs: 460, staggerStepMs: 28, staggerMaxMs: 84 }
   },
   {
     selector: '#educationList > *',
-    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
+    motion: { distance: 12, durationMs: 460, staggerStepMs: 28, staggerMaxMs: 84 }
   },
   {
     selector: '#awardsList > *',
-    motion: { distance: 16, durationMs: 480, staggerStepMs: 30, staggerMaxMs: 120 }
+    motion: { distance: 12, durationMs: 460, staggerStepMs: 28, staggerMaxMs: 84 }
   },
   {
     selector: 'main.works-main > .filter-nav-wrapper',
@@ -55,7 +55,7 @@ const REVEAL_TARGET_GROUPS = [
     // Move the grid viewport as one composition; individual cards retain
     // Gallery-owned opacity, scroll reveal, and interaction transforms.
     animateOnSoftNavigation: true,
-    motion: { distance: 14, durationMs: 520, startDelayMs: 96, staggerStepMs: 0, staggerMaxMs: 0 }
+    motion: { distance: 10, durationMs: 480, startDelayMs: 64, staggerStepMs: 0, staggerMaxMs: 0 }
   },
   { selector: '.curated-view-heading' },
   // The Contact tabs own a live segmented-control pill and drag state. Keep
@@ -70,8 +70,8 @@ const REVEAL_TARGET_GROUPS = [
   { selector: '.footer-content > .social-icons, .footer-content > p' }
 ];
 
-const STAGGER_STEP_MS = 44;
-const STAGGER_MAX_MS = 160;
+const STAGGER_STEP_MS = 32;
+const STAGGER_MAX_MS = 112;
 const NOOP_FEATURE = Object.freeze({
   refresh() { return 0; },
   destroy() {}
@@ -173,8 +173,8 @@ export function initContentReveal({
         // scroll-triggered elements respond promptly; About sections have
         // separate stagger groups so each block sequences independently.
         const motion = group.motion || {};
-        const distance = Number.isFinite(motion.distance) ? Math.max(0, motion.distance) : 18;
-        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 480;
+        const distance = Number.isFinite(motion.distance) ? Math.max(0, motion.distance) : 14;
+        const durationMs = Number.isFinite(motion.durationMs) ? Math.max(0, motion.durationMs) : 460;
         const staggerStepMs = Number.isFinite(motion.staggerStepMs)
           ? Math.max(0, motion.staggerStepMs)
           : STAGGER_STEP_MS;
@@ -187,7 +187,7 @@ export function initContentReveal({
         const delay = startDelayMs + Math.min(index * staggerStepMs, staggerMaxMs);
         target.style.setProperty('--lm-content-reveal-distance', distance + 'px');
         target.style.setProperty('--lm-content-reveal-duration', durationMs + 'ms');
-        target.style.setProperty('--lm-content-reveal-ease', 'cubic-bezier(.16,1,.3,1)');
+        target.style.setProperty('--lm-content-reveal-ease', 'cubic-bezier(.22,1,.36,1)');
         target.style.setProperty('--lm-content-reveal-delay', delay + 'ms');
         target.dataset.lmContentRevealState = 'pending';
         target.classList.add('lm-content-reveal-target');

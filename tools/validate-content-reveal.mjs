@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261031-02';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261031-03';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -25,11 +25,11 @@ assert.match(revealGroupsSource, /#multimediaSkillsList > li/);
 assert.match(revealGroupsSource, /#experienceList > \*/);
 assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
-assert.ok(revealGroupsSource.includes("motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }"),
+assert.ok(revealGroupsSource.includes("motion: { distance: 16, durationMs: 520, staggerStepMs: 36, staggerMaxMs: 108 }"),
   'About hero content must use the scoped staggered entrance profile without changing unrelated sections.');
 assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper'[\s\S]*?animateOnSoftNavigation: true/,
   'The Design filter rail must retain its entrance motion during SPA route handoffs.');
-assert.match(revealGroupsSource, /selector: '#portfolioGridViewport'[\s\S]*?animateOnSoftNavigation: true[\s\S]*?motion: \{ distance: 14, durationMs: 520, startDelayMs: 96, staggerStepMs: 0, staggerMaxMs: 0 \}/,
+assert.match(revealGroupsSource, /selector: '#portfolioGridViewport'[\s\S]*?animateOnSoftNavigation: true[\s\S]*?motion: \{ distance: 10, durationMs: 480, startDelayMs: 64, staggerStepMs: 0, staggerMaxMs: 0 \}/,
   'The Design grid viewport must follow the filter rail with a restrained position-only entrance.');
 assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
 assert.doesNotMatch(revealGroupsSource, /\.contact-mobile-tab/,
@@ -37,28 +37,32 @@ assert.doesNotMatch(revealGroupsSource, /\.contact-mobile-tab/,
 assert.doesNotMatch(revealGroupsSource, /\.form-container/,
   'Interactive form containers must not be translated independently of their paired form rows.');
 assert.match(revealSource, /prefers-reduced-motion: reduce/);
+assert.match(revealSource, /const STAGGER_STEP_MS = 32;/);
+assert.match(revealSource, /const STAGGER_MAX_MS = 112;/);
+assert.match(revealSource, /'cubic-bezier\(.22,1,.36,1\)'/);
+assert.match(revealCss, /opacity 420ms/);
 assert.match(revealSource, /pendingTargets\.forEach\(revealTarget\)/,
   'A live reduced-motion preference change must reveal pending content immediately.');
 assert.match(revealSource, /observer\?\.disconnect\?\.\(\)/);
 assert.match(revealSource, /target\.style\?\.removeProperty\?\.\('--lm-content-reveal-delay'\)/);
 assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero-banner/,
   'Gallery cards, Lightbox media, and animated hero artwork remain owned by their existing features.');
-assert.match(revealCss, /opacity var\(--lm-content-reveal-duration, 480ms\)[\s\S]*?translate var\(--lm-content-reveal-duration, 480ms\)/);
+assert.match(revealCss, /opacity 420ms[\s\S]*?translate var\(--lm-content-reveal-duration, 460ms\)/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
 assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\s*#bdbdbd\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
   'The review heading must keep a high-contrast, non-blended foreground.');
 assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
   'The review submit button must use its own high-contrast surface even if rendered outside its original panel.');
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261031-02/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261031-03/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
 assert.ok(
   bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
   'Initial content reveal must start after the branded page-transition gate closes.'
 );
-assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261029-04"/);
-assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261029-04"/);
+assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261031-05"/);
+assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261031-05"/);
 
 // Exercise the observer and lifecycle with small DOM-shaped fakes.
 const selectorTargets = new Map();
@@ -151,30 +155,31 @@ assert.equal(observer.observed.size, 17);
 assert.equal(feature.refresh(), 0, 'Refresh must not attach duplicate observers to an existing target.');
 assert.ok(bioHeading.classes.has('lm-content-reveal-target'));
 assert.equal(bioHeading.properties.get('--lm-content-reveal-delay'), '0ms');
-assert.equal(bioCopy.properties.get('--lm-content-reveal-delay'), '48ms');
-assert.equal(bioHeading.properties.get('--lm-content-reveal-distance'), '24px');
-assert.equal(bioHeading.properties.get('--lm-content-reveal-duration'), '560ms');
+assert.equal(bioCopy.properties.get('--lm-content-reveal-delay'), '36ms');
+assert.equal(bioHeading.properties.get('--lm-content-reveal-distance'), '16px');
+assert.equal(bioHeading.properties.get('--lm-content-reveal-duration'), '520ms');
+assert.equal(bioHeading.properties.get('--lm-content-reveal-ease'), 'cubic-bezier(.22,1,.36,1)');
 assert.equal(skillHeadingA.properties.get('--lm-content-reveal-delay'), '0ms');
-assert.equal(skillHeadingB.properties.get('--lm-content-reveal-delay'), '44ms');
-assert.equal(skillItemA.properties.get('--lm-content-reveal-duration'), '460ms');
+assert.equal(skillHeadingB.properties.get('--lm-content-reveal-delay'), '32ms');
+assert.equal(skillItemA.properties.get('--lm-content-reveal-duration'), '440ms');
 assert.equal(skillItemA.properties.get('--lm-content-reveal-delay'), '0ms');
-assert.equal(skillItemB.properties.get('--lm-content-reveal-delay'), '32ms');
+assert.equal(skillItemB.properties.get('--lm-content-reveal-delay'), '28ms');
 assert.equal(skillItemC.properties.get('--lm-content-reveal-delay'), '0ms');
-assert.equal(skillItemD.properties.get('--lm-content-reveal-delay'), '32ms',
+assert.equal(skillItemD.properties.get('--lm-content-reveal-delay'), '28ms',
   'The Multimedia Skills column must restart its own stagger instead of inheriting the Software Skills delay.');
 assert.equal(experienceA.properties.get('--lm-content-reveal-delay'), '0ms');
-assert.equal(experienceB.properties.get('--lm-content-reveal-delay'), '30ms');
+assert.equal(experienceB.properties.get('--lm-content-reveal-delay'), '28ms');
 assert.equal(educationA.properties.get('--lm-content-reveal-delay'), '0ms',
   'Each About timeline section must restart its own stagger.');
 assert.equal(awardsA.properties.get('--lm-content-reveal-delay'), '0ms',
   'Award entries must not inherit delay from earlier resume sections.');
-assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '18px',
+assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '14px',
   'Untuned targets must retain the existing short movement distance.');
-assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '480ms',
+assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '460ms',
   'The profile must not change unrelated page targets.');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '14px');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '520ms');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '96ms');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '10px');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '480ms');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '64ms');
 assert.equal(projectGridViewport.dataset.lmContentRevealMotion, 'position-only',
   'The grid viewport must move as a unit without fading or hiding readable project content.');
 assert.equal(observer.options.threshold, 0.01,
