@@ -324,6 +324,7 @@ async function ensureMuxVideo(...args) {
 
     const siteRootUrl = getSiteRoot();
     const lifecycle = createLifecycle();
+    let disposed = false;
     let latestSources = [];
     let manualSources = [];
     let sources = [];
@@ -523,21 +524,8 @@ async function ensureMuxVideo(...args) {
 
     if (!sources.length) return;
 
-    if (!reducedMotion && sources.some(source => source.type === 'mux')) {
-      let muxReady = false;
-      try { muxReady = await ensureMuxVideo(undefined, 15000); } catch (error) {
-        console.warn('[Hero Mux] Mux Video loader threw before registration.', error);
-      }
-      if (!muxReady) {
-        console.warn('[Hero Mux] Mux Video did not register within 15 seconds; retaining the poster instead of substituting unrelated video.');
-        sources = sources.map(source => source.type === 'mux'
-          ? (source.fallbackSrc
-            ? { ...source, type: 'video', src: source.fallbackSrc, muxFallbackReason: 'module-load-failed' }
-            : { ...source, type: 'image', src: source.poster || source.src, muxFallbackReason: 'module-load-failed', muxPlaybackError: 'module-load-failed' })
-          : source).filter(source => source.src);
-      }
-    }
     if (!sources.length) return;
+    const hasMuxSources = !reducedMotion && sources.some(source => source.type === 'mux');
 
     if (sources.some(source => source.type === 'lottie')) await ensureLottie();
     if (sources.some(source => source.background)) await ensureMediaBackground();
@@ -551,9 +539,11 @@ async function ensureMuxVideo(...args) {
 
       let media;
       let hasVideoPoster = false;
+      let muxPosterUrl = '';
       const isVideoSource = source.type === 'video' || source.type === 'mux';
       if (source.type === 'mux') {
         const posterSource = source.poster || config.defaultVideoPoster || source.src;
+        muxPosterUrl = posterSource ? resolveAssetUrl(posterSource) : '';
         if (reducedMotion) {
           // Preserve the visual poster without creating a streaming source.
           // A source-less native video keeps its poster while avoiding Mux's
@@ -565,8 +555,8 @@ async function ensureMuxVideo(...args) {
           media.controls = false;
           media.loop = false;
           media.preload = 'none';
-          if (posterSource) {
-            media.poster = resolveAssetUrl(posterSource);
+          if (muxPosterUrl) {
+            media.poster = muxPosterUrl;
             hasVideoPoster = true;
           }
         } else {
@@ -586,9 +576,10 @@ async function ensureMuxVideo(...args) {
           media.setAttribute('disable-tracking', '');
           media.style.setProperty('--media-object-fit', 'cover');
           media.preload = i === 0 ? 'auto' : 'metadata';
-          media.setAttribute('autoplay', '');
-          if (posterSource) {
-            media.setAttribute('poster', posterSource);
+          if (i === 0) media.setAttribute('autoplay', '');
+          else media.removeAttribute('autoplay');
+          if (muxPosterUrl) {
+            media.setAttribute('poster', muxPosterUrl);
             hasVideoPoster = true;
           }
         }
@@ -654,6 +645,20 @@ async function ensureMuxVideo(...args) {
       wrap.style.setProperty('--hero-fade-in-ms', `${fadeInMs}ms`);
       wrap.style.setProperty('--hero-fade-out-ms', `${fadeOutMs}ms`);
       wrap.appendChild(media);
+      if (source.type === 'mux' && !reducedMotion && muxPosterUrl) {
+        const poster = documentRef.createElement('img');
+        poster.className = 'hero-mux-poster';
+        poster.src = muxPosterUrl;
+        poster.alt = '';
+        poster.setAttribute('aria-hidden', 'true');
+        poster.decoding = 'async';
+        poster.style.objectPosition = source.focus || '50% 50%';
+        wrap.classList.add('has-mux-poster');
+        wrap.appendChild(poster);
+        media.addEventListener('playing', () => {
+          if (wrap.isConnected) wrap.classList.add('is-mux-playing');
+        }, { once: true });
+      }
       heroContainer.appendChild(wrap);
       if (applyMediaBackground && source.background) await applyMediaBackground(wrap, source.background, resolveAssetUrl);
 
@@ -682,8 +687,27 @@ async function ensureMuxVideo(...args) {
     const stopCrossfade = startHeroCrossfade(heroContainer, config.crossfadeMs, windowRef, () => reducedMotion);
     lifecycle.add(stopCrossfade);
 
+    if (hasMuxSources) {
+      const customElementsRef = windowRef.customElements || globalThis.customElements;
+      const activateRegisteredMux = () => {
+        if (disposed || !heroContainer.isConnected) return;
+        stopCrossfade.activateCurrent?.();
+      };
+      if (typeof customElementsRef?.whenDefined === 'function') {
+        void customElementsRef.whenDefined('mux-video').then(activateRegisteredMux).catch(error => {
+          console.warn('[Hero Mux] Custom element registration could not be observed.', error);
+        });
+      }
+      void ensureMuxVideo(undefined, 15000).then(ready => {
+        if (ready) activateRegisteredMux();
+      }).catch(error => {
+        console.warn('[Hero Mux] Background player initialization failed; keeping the poster visible.', error);
+      });
+    }
+
     return {
       destroy() {
+        disposed = true;
         lifecycle.cleanup();
         heroContainer.querySelectorAll('.slide').forEach(slide => {
           slide.querySelectorAll('video, mux-player, mux-video').forEach(video => video.pause?.());
@@ -909,6 +933,9 @@ async function ensureMuxVideo(...args) {
       video.style.cssText = media.style.cssText;
       video.dataset.playbackState = 'fallback';
       video.src = fallbackSrc;
+      video.addEventListener('playing', () => {
+        if (slide.isConnected) slide.classList.add('is-mux-playing');
+      }, { once: true });
       media.replaceWith(video);
       slide.dataset.heroType = 'video';
       slide.dataset.heroSourceType = 'video';
@@ -923,6 +950,10 @@ async function ensureMuxVideo(...args) {
       if (!media || reducedMotion || disposed) return;
 
       if (slide.dataset.heroType === 'video') {
+        if (media.localName === 'mux-video' && typeof media.play !== 'function') {
+          media.dataset.playbackState = 'awaiting-upgrade';
+          return;
+        }
         media.muted = true;
         media.defaultMuted = true;
         // Mux Player is inline by default and its playsInline setter is unsupported.
@@ -1121,6 +1152,7 @@ async function ensureMuxVideo(...args) {
       const media = slide.firstElementChild;
       if (slide.dataset.heroType !== 'video' || !media) return;
       bind(media, 'playing', () => {
+        if (slide.classList.contains('has-mux-poster')) slide.classList.add('is-mux-playing');
         if (!disposed && slides[currentIndex] === slide) media.dataset.playbackState = 'playing';
       });
       bind(media, 'error', event => {
@@ -1175,7 +1207,7 @@ async function ensureMuxVideo(...args) {
       activateMedia(slides[currentIndex]);
     }
 
-    return () => {
+    const cleanup = () => {
       disposed = true;
       clearTimer();
       if (networkRetryTimer !== null) {
@@ -1195,5 +1227,17 @@ async function ensureMuxVideo(...args) {
         }
       });
     };
+    cleanup.activateCurrent = () => {
+      if (disposed) return false;
+      const slide = slides[currentIndex];
+      const media = slide?.firstElementChild;
+      if (slide?.dataset?.heroType !== 'video' || media?.localName !== 'mux-video' ||
+          typeof media.play !== 'function') return false;
+      const state = String(media.dataset.playbackState || '');
+      if (state === 'starting' || state === 'playing') return true;
+      activateMedia(slide);
+      return true;
+    };
+    return cleanup;
   }
 export { initHeroBanner as initHeroBannerV2 };
