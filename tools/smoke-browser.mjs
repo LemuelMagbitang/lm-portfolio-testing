@@ -2882,25 +2882,30 @@ async function assertFilterNavigationResponsive(page, label) {
     const previewText = await page.evaluate(() => {
       const preview = document.querySelector('.filter-nav-scroller .tab-btn.is-centered-preview');
       if (!preview) return null;
+      const active = document.querySelector('.filter-nav-scroller .tab-btn.active');
       const style = getComputedStyle(preview);
+      const activeStyle = active ? getComputedStyle(active) : null;
       const indicator = preview.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
       const pillColor = indicator ? getComputedStyle(indicator).backgroundColor : '';
       const pillColorChannels = (pillColor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
       return {
-         label: preview.textContent.trim(),
-         color: style.color,
-         blendMode: style.mixBlendMode,
-         pillColor,
-         pillColorChannels,
-         transitionProperty: style.transitionProperty
-       };
+        label: preview.textContent.trim(),
+        color: style.color,
+        blendMode: style.mixBlendMode,
+        pillColor,
+        pillColorChannels,
+        transitionProperty: style.transitionProperty,
+        previewFontWeight: style.fontWeight,
+        activeFontWeight: activeStyle?.fontWeight || ''
+      };
     });
     if (previewText && (
          previewText.color !== 'rgb(255, 255, 255)' ||
          previewText.blendMode !== 'normal' ||
          previewText.pillColorChannels.length !== 3 ||
          previewText.pillColorChannels.some(channel => channel < 144 || channel >= 255) ||
-         previewText.transitionProperty !== 'none'
+         previewText.transitionProperty !== 'none' ||
+         previewText.previewFontWeight !== previewText.activeFontWeight
      )) {
       await page.mouse.up();
       throw new Error(label + ' desktop swipe preview text must stay legible while the pill transitions to gray: ' + JSON.stringify(previewText));
