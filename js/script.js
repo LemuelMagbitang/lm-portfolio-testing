@@ -4,7 +4,7 @@
  */
 
 import { bootstrapPortfolioApp } from './app/bootstrap.js?v=20261101-04';
-import { initPageNavigation } from './app/page-navigation.js?v=20261101-04';
+import { initPageNavigation } from './app/page-navigation.js?v=20261101-03';
 
 let activeApp = null;
 

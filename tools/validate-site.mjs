@@ -1470,6 +1470,7 @@ function validateBootstrapHardening() {
   }
 
   if (!/loopMode:\s*settings\.heroTiming\.loopMode/.test(composition) ||
+      !/settings\.heroTiming\.loopMode === 'manual'\s*\?\s*initializeHero\(\)\s*:\s*projectModelsPromise\.then\(initializeHero\)/.test(composition) ||
       !/transitionStyle:\s*settings\.heroTiming\.transitionStyle/.test(composition) ||
       !/crossfadeMs:\s*settings\.heroTiming\.crossfadeMs/.test(composition) ||
       !/messageFadeMs:\s*settings\.heroTiming\.fadeMs/.test(composition) ||
@@ -1477,7 +1478,7 @@ function validateBootstrapHardening() {
       !/showHeroMessage:\s*settings\.showHeroMessage/.test(composition) ||
       !/showFooterMessage:\s*settings\.showFooterMessage/.test(composition) ||
       !/const initializeFooter = \(\) => initFooterAnimation\(\{[\s\S]*?heroTiming:\s*settings\.heroTiming[\s\S]*?\}\);/.test(composition) ||
-      !/const footerPromise = root\.getElementById\('footerAnimation'\)\s*\?\s*\(isAboutPage\s*\?\s*projectModelsPromise\.then\(initializeFooter\)\s*:\s*initializeFooter\(\)\)/.test(composition)) {
+      !/const footerPromise = root\.getElementById\('footerAnimation'\)\s*\?\s*projectModelsPromise\.then\(initializeFooter\)/.test(composition)) {
     err('Composition: artwork timing and message toggles must be passed through while footer animation remains independent.');
   }
 
@@ -2821,10 +2822,10 @@ function validateClientSidePageNavigation() {
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('../js/app/bootstrap.js?v=20261101-03') ||
-      !about.includes('../js/app/page-composition.js?v=20261101-03') ||
-      !about.includes('../js/app/pages/design.js?v=20261101-03') ||
-      !about.includes('../js/app/pages/about.js?v=20261101-03') ||
+      !about.includes('../js/app/bootstrap.js?v=20261101-04') ||
+      !about.includes('../js/app/page-composition.js?v=20261101-04') ||
+      !about.includes('../js/app/pages/design.js?v=20261101-04') ||
+      !about.includes('../js/app/pages/about.js?v=20261101-04') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
