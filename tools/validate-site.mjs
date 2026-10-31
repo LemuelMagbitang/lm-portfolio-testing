@@ -1896,6 +1896,9 @@ function validateAboutFirstPaintContract() {
   const composition = exists('js/app/page-composition.js')
     ? readText('js/app/page-composition.js')
     : '';
+  const aboutFeature = exists('js/features/about/index.js')
+    ? readText('js/features/about/index.js')
+    : '';
   if (!composition.includes('if (!isAboutPage && awaitProjectMedia) await projectMediaPreloadPromise;')) {
     err('About first paint: project media preloading must remain route-aware and optional during client navigation.');
   }
@@ -1907,6 +1910,11 @@ function validateAboutFirstPaintContract() {
   }
   if (!composition.includes('void aboutAssetPreloadPromise;')) {
     err('About first paint: optional profile/software-logo image preloads must remain non-blocking.');
+  }
+  if (!aboutFeature.includes('includeSoftwareLogos = false') ||
+      !/if \(includeSoftwareLogos === true\) \{[\s\S]*?const skills = Array\.isArray\(about\.softwareSkills\)/.test(aboutFeature) ||
+      !composition.includes('includeSoftwareLogos: settingsFeature.getState()?.showSoftwareLogos === true')) {
+    err('About preload: software-logo assets must only warm when the CMS software-logo setting is enabled.');
   }
 }
 
@@ -2805,10 +2813,10 @@ function validateClientSidePageNavigation() {
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('../js/app/bootstrap.js?v=20261031-08') ||
-      !about.includes('../js/app/page-composition.js?v=20261031-08') ||
-      !about.includes('../js/app/pages/design.js?v=20261031-08') ||
-      !about.includes('../js/app/pages/about.js?v=20261031-08') ||
+      !about.includes('../js/app/bootstrap.js?v=20261031-09') ||
+      !about.includes('../js/app/page-composition.js?v=20261031-09') ||
+      !about.includes('../js/app/pages/design.js?v=20261031-09') ||
+      !about.includes('../js/app/pages/about.js?v=20261031-09') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
@@ -2848,7 +2856,7 @@ function validatePageAwareFeatureLoading() {
       !/if \(hasProjectGallery\) \{[\s\S]*?lightboxModulePromise/.test(composition) ||
       !/const aboutDataPromise = isAboutPage && config\.urls\.about/.test(composition) ||
       !/const aboutPromise = isAboutPage\s*\?\s*aboutDataPromise\.then\(data => initAbout/.test(composition) ||
-      !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*aboutDataPromise\.then\(data => preloadAboutAssets/.test(composition) ||
+      !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*Promise\.all\(\[aboutDataPromise,\s*settingsPromise\]\)\.then\(\(\[data,\s*settingsFeature\]\) => preloadAboutAssets/.test(composition) ||
       !composition.includes(': Promise.resolve({ total: 0, ready: 0 })') ||
       !/const reviewsPromise = settingsPromise\.then\(async settingsFeature/.test(composition) ||
       !/if \(!currentSettings\.showReviews\) \{[\s\S]*?return null;[\s\S]*?import\(['"]\.\.\/features\/reviews\/index\.js['"]\)/.test(composition) ||

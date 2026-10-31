@@ -7,7 +7,7 @@
  */
 
 import { initNavigation } from '../features/navigation/index.js?v=20261026-04';
-import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261024-01';
+import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=20261031-01';
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
@@ -301,17 +301,18 @@ export async function createPortfolioApp({
       }))
     : Promise.resolve(null);
 
-  // Start About asset warm-up as soon as the data endpoint is known. The
-  // browser can populate its HTTP/image cache while the branded loading gate
-  // and the rest of the composed features initialize.
+  // About data and settings already load in parallel. Use the resolved CMS
+  // visibility toggle to skip logo requests when those logos are not rendered;
+  // this optional warm-up remains detached from the startup dependency list.
   const aboutAssetPreloadPromise = (isAboutPage
-    ? aboutDataPromise.then(data => preloadAboutAssets({
+    ? Promise.all([aboutDataPromise, settingsPromise]).then(([data, settingsFeature]) => preloadAboutAssets({
         url: config.urls.about,
         data,
         root,
         documentRef: root,
         loadJson: loadCmsJson,
-        resolveAssetUrl: siteAssetUrl
+        resolveAssetUrl: siteAssetUrl,
+        includeSoftwareLogos: settingsFeature.getState()?.showSoftwareLogos === true
       }))
     : Promise.resolve({ total: 0, ready: 0 })
   ).catch(error => {

@@ -4,7 +4,7 @@
  * This page has its own route lifecycle while reusing the persistent site
  * shell and common composition services.
  */
-import { createPortfolioApp } from '../page-composition.js?v=20261031-08';
+import { createPortfolioApp } from '../page-composition.js?v=20261031-09';
 
 export const pageId = 'about';
 

@@ -25,12 +25,12 @@ const legacyRootModules = new Set([
 // strings create separate ES module instances and can split singleton state or
 // cause a preload and the eventual import to download the same module twice.
 const canonicalModuleQueries = new Map([
-  ['script.js', '?v=20261031-08'],
-  ['app/bootstrap.js', '?v=20261031-08'],
-  ['app/page-composition.js', '?v=20261031-08'],
+  ['script.js', '?v=20261031-09'],
+  ['app/bootstrap.js', '?v=20261031-09'],
+  ['app/page-composition.js', '?v=20261031-09'],
   ['app/page-navigation.js', '?v=20261031-08'],
-  ['app/pages/about.js', '?v=20261031-08'],
-  ['app/pages/design.js', '?v=20261031-08'],
+  ['app/pages/about.js', '?v=20261031-09'],
+  ['app/pages/design.js', '?v=20261031-09'],
   ['infrastructure/three/model-viewer.js', '?v=20261024-02'],
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261031-05'],

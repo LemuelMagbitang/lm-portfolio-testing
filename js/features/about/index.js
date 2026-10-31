@@ -5,7 +5,8 @@ export async function preloadAboutAssets({
   data = undefined,
   loadJson,
   resolveAssetUrl,
-  documentRef = globalThis.document
+  documentRef = globalThis.document,
+  includeSoftwareLogos = false
 } = {}) {
   if (!documentRef || (data === undefined && (!url || typeof loadJson !== 'function'))) {
     return { total: 0, ready: 0 };
@@ -57,37 +58,39 @@ export async function preloadAboutAssets({
       }
     }
 
-    const skills = Array.isArray(about.softwareSkills) ? about.softwareSkills : [];
-    const skillNames = skills
-      .map(skill => typeof skill === 'string' ? skill.trim() : String(skill?.name || '').trim())
-      .filter(Boolean);
-
-    for (const name of [...new Set(skillNames)]) {
-      const skillEntry = skills.find(skill => (
-        typeof skill === 'string'
-          ? skill.trim() === name
-          : String(skill?.name || '').trim() === name
-      ));
-      const manualIcon = typeof skillEntry === 'object' ? String(skillEntry?.icon || skillEntry?.logo || '').trim() : '';
-      const manualCandidates = manualIcon
-        ? [typeof resolveAssetUrl === 'function' ? resolveAssetUrl(manualIcon) : manualIcon]
-        : [];
-      const candidates = findSoftwareLogoCandidates(name);
-      const discovered = candidates.length
-        ? []
-        : await findSoftwareLogoDiscoveryCandidates(name);
-      const logoCandidates = [...new Set([...manualCandidates, ...candidates, ...discovered])];
-      if (logoCandidates.length) {
-        jobs.push(
-          logoCandidates.reduce(
-            (chain, candidate) => chain.then(done => done || preloadImage(
-              /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
-                ? candidate
-                : (typeof resolveAssetUrl === 'function' ? resolveAssetUrl(candidate) : candidate)
-            )),
-            Promise.resolve(false)
-          )
-        );
+    if (includeSoftwareLogos === true) {
+      const skills = Array.isArray(about.softwareSkills) ? about.softwareSkills : [];
+      const skillNames = skills
+        .map(skill => typeof skill === 'string' ? skill.trim() : String(skill?.name || '').trim())
+        .filter(Boolean);
+  
+      for (const name of [...new Set(skillNames)]) {
+        const skillEntry = skills.find(skill => (
+          typeof skill === 'string'
+            ? skill.trim() === name
+            : String(skill?.name || '').trim() === name
+        ));
+        const manualIcon = typeof skillEntry === 'object' ? String(skillEntry?.icon || skillEntry?.logo || '').trim() : '';
+        const manualCandidates = manualIcon
+          ? [typeof resolveAssetUrl === 'function' ? resolveAssetUrl(manualIcon) : manualIcon]
+          : [];
+        const candidates = findSoftwareLogoCandidates(name);
+        const discovered = candidates.length
+          ? []
+          : await findSoftwareLogoDiscoveryCandidates(name);
+        const logoCandidates = [...new Set([...manualCandidates, ...candidates, ...discovered])];
+        if (logoCandidates.length) {
+          jobs.push(
+            logoCandidates.reduce(
+              (chain, candidate) => chain.then(done => done || preloadImage(
+                /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(candidate) || candidate.startsWith('data:') || candidate.startsWith('blob:')
+                  ? candidate
+                  : (typeof resolveAssetUrl === 'function' ? resolveAssetUrl(candidate) : candidate)
+              )),
+              Promise.resolve(false)
+            )
+          );
+        }
       }
     }
 

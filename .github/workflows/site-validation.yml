@@ -61,6 +61,9 @@ jobs:
       - name: Test Footer playback visibility lifecycle
         run: node tools/test-footer-playback-visibility.mjs
 
+      - name: Test About asset preload settings
+        run: node tools/test-about-asset-preload.mjs
+
       - name: Test Mux webhook request-body limit
         run: node tools/test-mux-webhook-body-limit.mjs
 
