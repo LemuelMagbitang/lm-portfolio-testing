@@ -6,7 +6,7 @@
     "review": true
   },
   "showReviews": false,
-  "showSoftwareLogos": true,
+  "showSoftwareLogos": false,
   "showHeroMessage": false,
   "showFooterMessage": true,
   "interactionFeedback": {
