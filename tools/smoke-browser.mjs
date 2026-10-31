@@ -2523,6 +2523,10 @@ async function assertFilterNavigationResponsive(page, label) {
         Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
         Math.abs(a.width - b.width) <= 1;
     }, null, { timeout: 2200 }).catch(() => {});
+    const expectedIndicatorDuration = viewport.width <= 1023 ? '0.36s' : '0.42s';
+    const expectedIndicatorTiming = viewport.width <= 1023
+      ? 'cubic-bezier(0.22, 1, 0.36, 1)'
+      : 'cubic-bezier(0.34, 1.45, 0.64, 1)';
     const state = await page.evaluate(() => {
       const wrapper = document.querySelector('.filter-nav-wrapper');
       const viewport = wrapper?.querySelector('.filter-nav-viewport');
@@ -2653,12 +2657,12 @@ async function assertFilterNavigationResponsive(page, label) {
         (!state.prefersReducedMotion && !state.indicatorFollowingScroll &&
           (!state.indicatorTransition.includes('width') ||
            state.indicatorTransition.includes('transform') ||
-           !state.indicatorTransitionDuration.includes('0.42s') ||
-           !state.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) ||
+           !state.indicatorTransitionDuration.includes(expectedIndicatorDuration) ||
+           !state.indicatorTransitionTiming.includes(expectedIndicatorTiming))) ||
         (state.indicatorFollowingScroll && !state.prefersReducedMotion &&
           (!state.indicatorTransition.includes('width') ||
-           !state.indicatorTransitionDuration.includes('0.42s') ||
-           !state.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) ||
+           !state.indicatorTransitionDuration.includes(expectedIndicatorDuration) ||
+           !state.indicatorTransitionTiming.includes(expectedIndicatorTiming))) ||
         (viewport.width <= 1023 && (
           state.indicatorAnimation !== 'none' ||
           state.scrollBehavior !== 'auto' ||
@@ -2886,9 +2890,9 @@ async function assertFilterNavigationResponsive(page, label) {
         : (!fastGesture.indicatorTransition.includes('width') ||
            !fastGesture.indicatorTransition.includes('height') ||
            !fastGesture.indicatorTransition.includes('background-color') ||
-           !fastGesture.indicatorTransitionDuration.includes('0.42s') ||
+           !fastGesture.indicatorTransitionDuration.includes('0.36s') ||
            !fastGesture.indicatorTransitionDuration.includes('0.14s') ||
-           !fastGesture.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
+           !fastGesture.indicatorTransitionTiming.includes('cubic-bezier(0.22, 1, 0.36, 1)') ||
            !fastGesture.indicatorTransitionTiming.includes('ease-out') ||
            indicatorBackgroundChannels.length !== 3 ||
            indicatorBackgroundChannels.some(channel => channel < 144 || channel >= 255));
@@ -3210,10 +3214,15 @@ async function assertFilterNavigationResponsive(page, label) {
     if (!stalePreviewProbe.available) {
       throw new Error(label + ' could not prepare an outside-click filter-preview regression state.');
     }
+    const stalePreviewIsCompact = (page.viewportSize()?.width || 1280) <= 1023;
     if (!stalePreviewProbe.reducedMotion &&
         (!stalePreviewProbe.transitionProperty.includes('width') ||
-         !stalePreviewProbe.transitionDuration.includes('0.42s') ||
-         !stalePreviewProbe.transitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) {
+         !stalePreviewProbe.transitionDuration.includes(stalePreviewIsCompact ? '0.36s' : '0.42s') ||
+         !stalePreviewProbe.transitionTiming.includes(
+           stalePreviewIsCompact
+             ? 'cubic-bezier(0.22, 1, 0.36, 1)'
+             : 'cubic-bezier(0.34, 1.45, 0.64, 1)'
+         ))) {
       throw new Error(label + ' swipe-preview pill must use the same width morph as click/tap: ' +
         JSON.stringify(stalePreviewProbe));
     }
