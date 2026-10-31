@@ -3758,13 +3758,19 @@ try {
         return transition?.dataset.loading === 'ready' && transition.getAttribute('aria-hidden') === 'true';
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'Works desktop initial view');
+      await assertContentRevealTarget(page, 'Works hero', '.hero-section:not(.about-hero)', {
+        duration: '520ms',
+        delay: '0ms',
+        motion: 'position-only',
+        opacity: '1'
+      });
       await assertContentRevealTarget(page, 'Works filter rail', 'main.works-main > .filter-nav-wrapper', {
-        duration: '800ms',
+        duration: '620ms',
         delay: '0ms'
       });
       await assertContentRevealTarget(page, 'Works project grid', '#portfolioGridViewport', {
-        duration: '800ms',
-        delay: '80ms',
+        duration: '620ms',
+        delay: '64ms',
         motion: 'position-only',
         opacity: '1'
       });
@@ -11956,9 +11962,15 @@ try {
         throw new Error('About-to-Design navigation must reuse the document and keep the logo loader hidden: ' +
           JSON.stringify(designState));
       }
+      await assertContentRevealTarget(page, 'Works soft-navigation hero', '.hero-section:not(.about-hero)', {
+        duration: '520ms',
+        delay: '0ms',
+        motion: 'position-only',
+        opacity: '1'
+      });
       await assertContentRevealTarget(page, 'Works soft-navigation grid', '#portfolioGridViewport', {
-        duration: '800ms',
-        delay: '80ms',
+        duration: '620ms',
+        delay: '64ms',
         motion: 'position-only',
         opacity: '1'
       });
