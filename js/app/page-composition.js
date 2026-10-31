@@ -540,7 +540,11 @@ export async function createPortfolioApp({
     // The first usable Hero poster/image is the visual startup priority.
     // Footer media, Reviews, About extras, and the project grid settle without
     // delaying the first viewport.
-    heroFeature = await heroPromise;
+    if (initialContactNavigation) {
+      settleInBackground(heroPromise, feature => { heroFeature = feature; }, feature => feature?.destroy?.(), 'Hero');
+    } else {
+      heroFeature = await heroPromise;
+    }
     settleInBackground(footerPromise, feature => { footerFeature = feature; }, feature => feature?.destroy?.(), 'Footer');
     settleInBackground(
       reviewsPromise.then(feature => {

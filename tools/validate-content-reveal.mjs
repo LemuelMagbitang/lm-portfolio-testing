@@ -64,6 +64,8 @@ assert.match(heroSource, /firstSlidePoster[\s\S]*?waitForHeroMedia\(firstSlidePo
   'The first hero poster should settle before the loading gate closes, without waiting for video playback.');
 assert.match(compositionSource, /const \[settingsFeature\] = await Promise\.all\(\[settingsPromise\]\)/,
   'The Works first viewport must not wait for normalized project data.');
+assert.match(compositionSource, /if \(initialContactNavigation\) \{[\s\S]*?settleInBackground\(heroPromise,/,
+  'Direct Contact-anchor loads must not wait for the off-screen Hero poster.');
 assert.doesNotMatch(compositionSource, /if \(hasProjectGallery\) await projectsPromise/,
   'Gallery hydration must not hold the initial first viewport.');
 assert.match(compositionSource, /settleInBackground\(\s*galleryPromise/,

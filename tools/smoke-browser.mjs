@@ -3759,18 +3759,17 @@ try {
       }, null, { timeout: 6000 });
       await assertAxeAccessibility(page, 'Works desktop initial view');
       await assertContentRevealTarget(page, 'Works hero', '.hero-section:not(.about-hero)', {
-        duration: '520ms',
+        duration: '460ms',
         delay: '0ms',
-        motion: 'position-only',
         opacity: '1'
       });
       await assertContentRevealTarget(page, 'Works filter rail', 'main.works-main > .filter-nav-wrapper', {
-        duration: '620ms',
+        duration: '480ms',
         delay: '0ms'
       });
       await assertContentRevealTarget(page, 'Works project grid', '#portfolioGridViewport', {
-        duration: '620ms',
-        delay: '64ms',
+        duration: '480ms',
+        delay: '48ms',
         motion: 'position-only',
         opacity: '1'
       });
@@ -11963,14 +11962,13 @@ try {
           JSON.stringify(designState));
       }
       await assertContentRevealTarget(page, 'Works soft-navigation hero', '.hero-section:not(.about-hero)', {
-        duration: '520ms',
+        duration: '460ms',
         delay: '0ms',
-        motion: 'position-only',
         opacity: '1'
       });
       await assertContentRevealTarget(page, 'Works soft-navigation grid', '#portfolioGridViewport', {
-        duration: '620ms',
-        delay: '64ms',
+        duration: '480ms',
+        delay: '48ms',
         motion: 'position-only',
         opacity: '1'
       });
