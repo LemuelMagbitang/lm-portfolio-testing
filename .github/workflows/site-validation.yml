@@ -58,6 +58,9 @@ jobs:
       - name: Test Mux player loader retry lifecycle
         run: node tools/test-mux-player-loader.mjs
 
+      - name: Test Footer playback visibility lifecycle
+        run: node tools/test-footer-playback-visibility.mjs
+
       - name: Test Mux webhook request-body limit
         run: node tools/test-mux-webhook-body-limit.mjs
 

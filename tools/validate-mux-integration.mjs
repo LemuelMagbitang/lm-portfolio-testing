@@ -191,7 +191,13 @@ check(footer.includes("documentRef.createElement('mux-video')") &&
   footer.includes("let disposed = false") &&
   footer.includes("media.setAttribute('autoplay', '')") &&
   footer.includes("media.setAttribute('disable-tracking', '')") &&
-  footer.includes("!reducedMotion() && index === 0") &&
+  footer.includes("observeFooterPlaybackVisibility") &&
+  footer.includes("rootMargin: '480px 0px'") &&
+  footer.includes("buildMedia(documentRef, source, false)") &&
+  footer.includes("setMediaPlaybackEnabled(previousMedia, false)") &&
+  footer.includes("stopVisibleTimers()") &&
+  footer.includes("visibility.destroy()") &&
+  footer.includes("poster.loading = 'lazy'") &&
   footer.includes("const reduceMotionNow = Boolean(reducedMotion())") &&
   footer.includes("source.type !== 'mux'") &&
   footer.includes("type: 'image', src: poster") &&
@@ -200,13 +206,13 @@ check(footer.includes("documentRef.createElement('mux-video')") &&
   styles.includes(".footer-animation-slide.has-mux-poster.is-mux-playing .footer-mux-poster") &&
   styles.includes(".hero-banner .slide.has-mux-poster.is-mux-playing .hero-mux-poster"),
   "Hero and Footer must paint posters before Mux registers, and only fade them out after a real playing event.");
-const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie') {")[0] || "";
+const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie-player') {")[0] || "";
 check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footerNativeVideo.includes("media.preload = autoplayAllowed ? 'auto' : 'none'") &&
-  footer.includes("const previousVideo = previous?.querySelector('video')") &&
-  footer.includes("const currentVideo = slides[index]?.querySelector('video')") &&
-  footer.includes("currentVideo.play?.()"),
-  "Footer native video slides must not autoplay while inactive and must pause/resume only the active slide.");
+  footer.includes("playActiveMedia()") &&
+  footer.includes("setMediaPlaybackEnabled(getActiveMedia(), false)") &&
+  footer.includes("if (!playbackVisible || disposed) return"),
+  "Footer video slides must remain idle outside the viewport prefetch band and only pause/resume the active slide.");
 check(cms.includes('href="videos.html"') &&
   page.includes("mux-uploader") &&
   page.includes("https://cdn.jsdelivr.net/npm/@mux/mux-uploader@1.6.0") &&

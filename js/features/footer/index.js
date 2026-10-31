@@ -13,6 +13,7 @@ import { normalizeProjects } from '../../data/project-normalizer.js?v=20261029-0
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { createLifecycle } from '../../core/lifecycle.js';
 import { chooseForeground } from '../../infrastructure/browser/media-contrast.js?v=20261026-02';
+import { observeFooterPlaybackVisibility } from './playback-visibility.js?v=20261031-01';
 
 const MUX_PLAYER_MODULE_URL = '../../infrastructure/mux/player.js?v=20261027-02';
 let muxPlayerModulePromise = null;
@@ -182,7 +183,8 @@ function buildMedia(documentRef, source, autoplayAllowed = true) {
   } else if (source.type === 'lottie') {
     media = documentRef.createElement('lottie-player');
     media.setAttribute('src', source.src);
-    media.setAttribute('autoplay', '');
+    if (autoplayAllowed) media.setAttribute('autoplay', '');
+    else media.removeAttribute('autoplay');
     media.setAttribute('loop', '');
     media.setAttribute('background', 'transparent');
     media.setAttribute('preserveAspectRatio', 'xMidYMid slice');
@@ -288,11 +290,21 @@ export async function initFooterAnimation(options = {}) {
   container.style.setProperty('--footer-kenburns-duration', kenBurnsDurationS + 's');
   container.replaceChildren();
 
+  let activeIndex = 0;
+  let playbackVisible = false;
+  let intervalId = null;
+  let contrastIntervalId = null;
+  let muxEnsurePromise = null;
+  let muxDefinitionPromise = null;
+  const slides = [];
+
   sources.forEach((source, index) => {
     const slide = documentRef.createElement('div');
     slide.className = 'footer-animation-slide' + (index === 0 ? ' active' : '');
     slide.dataset.index = String(index);
-    const media = buildMedia(documentRef, source, !reducedMotion() && index === 0);
+    // Animated media starts with autoplay/preload disabled. The visibility gate
+    // enables it shortly before the Footer reaches the viewport.
+    const media = buildMedia(documentRef, source, false);
     slide.appendChild(media);
     if (source.type === 'mux' && !reducedMotion()) {
       const posterUrl = String(source.poster || source.src || '').trim();
@@ -303,6 +315,8 @@ export async function initFooterAnimation(options = {}) {
         poster.alt = '';
         poster.setAttribute('aria-hidden', 'true');
         poster.decoding = 'async';
+        poster.loading = 'lazy';
+        poster.fetchPriority = 'low';
         poster.style.objectPosition = source.focus || '50% 50%';
         poster.style.transformOrigin = source.focus || '50% 50%';
         poster.style.setProperty('--footer-zoom', source.zoom || 1);
@@ -315,37 +329,67 @@ export async function initFooterAnimation(options = {}) {
       }, { once: true });
     }
     container.appendChild(slide);
+    slides.push(slide);
   });
 
   const footerElement = container.closest('footer');
   const applyForeground = index => {
     const source = sources[index];
-    const slide = container.querySelectorAll('.footer-animation-slide')[index];
+    const slide = slides[index];
     const media = slide?.firstElementChild;
     const color = chooseForeground(documentRef, source, media);
     footerElement?.style.setProperty('--footer-foreground', color);
   };
 
-  Array.from(container.querySelectorAll('.footer-animation-slide')).forEach((slide, index) => {
-    const media = slide.firstElementChild;
-    const refresh = () => applyForeground(index);
-    media?.addEventListener('load', refresh);
-    media?.addEventListener('loadeddata', refresh);
-    lifecycle.add(() => {
-      media?.removeEventListener('load', refresh);
-      media?.removeEventListener('loadeddata', refresh);
-    });
-  });
+  const getActiveMedia = () => slides[activeIndex]?.firstElementChild || null;
 
-  applyForeground(0);
+  const setMediaPlaybackEnabled = (media, enabled) => {
+    if (!media) return;
+    const isMux = media.localName === 'mux-video' || media.localName === 'mux-player';
+    if (isMux) {
+      if (enabled) {
+        media.setAttribute('preload', 'auto');
+        media.setAttribute('autoplay', '');
+      } else {
+        try { media.pause?.(); } catch (_) {}
+        media.removeAttribute('autoplay');
+        media.setAttribute('preload', 'none');
+      }
+      return;
+    }
+    if (media.localName === 'video') {
+      media.autoplay = Boolean(enabled);
+      media.preload = enabled ? 'auto' : 'none';
+      if (!enabled) {
+        try { media.pause?.(); } catch (_) {}
+      }
+      return;
+    }
+    if (media.localName === 'lottie-player') {
+      if (enabled) {
+        media.setAttribute('autoplay', '');
+        try { media.play?.(); } catch (_) {}
+      } else {
+        media.removeAttribute('autoplay');
+        try { media.pause?.(); media.stop?.(); } catch (_) {}
+      }
+    }
+  };
 
-  const playActiveMux = () => {
-    if (disposed || !container.isConnected) return false;
-    const activeSlide = container.querySelector('.footer-animation-slide.active');
-    const activeMux = activeSlide?.querySelector('mux-video, mux-player');
-    if (!activeMux || typeof activeMux.play !== 'function') return false;
+  const playActiveMedia = () => {
+    if (disposed || !playbackVisible || !container.isConnected) return false;
+    const media = getActiveMedia();
+    if (!media) return false;
+    setMediaPlaybackEnabled(media, true);
+
+    const isMux = media.localName === 'mux-video' || media.localName === 'mux-player';
+    if (isMux && typeof media.play !== 'function') {
+      requestMuxPlayer();
+      return false;
+    }
+    if (typeof media.play !== 'function') return false;
     try {
-      const playback = activeMux.play();
+      const playback = media.play();
       playback?.catch?.(() => {});
       return true;
     } catch (_) {
@@ -353,51 +397,92 @@ export async function initFooterAnimation(options = {}) {
     }
   };
 
-  if (!reducedMotion() && sources.some(source => source.type === 'mux')) {
+  const requestMuxPlayer = () => {
+    if (disposed || !playbackVisible) return;
     const customElementsRef = windowRef.customElements || globalThis.customElements;
-    if (typeof customElementsRef?.whenDefined === 'function') {
-      void customElementsRef.whenDefined('mux-video').then(playActiveMux).catch(error => {
+    if (!muxDefinitionPromise && typeof customElementsRef?.whenDefined === 'function') {
+      muxDefinitionPromise = customElementsRef.whenDefined('mux-video').then(() => {
+        if (playbackVisible) playActiveMedia();
+      }).catch(error => {
         console.warn('[Footer Mux] Custom element registration could not be observed; keeping the poster visible.', error);
       });
     }
-    const ensureMux = options.ensureMuxVideo || ensureMuxVideo;
-    void Promise.resolve().then(() => ensureMux()).then(ready => {
-      if (ready) playActiveMux();
-    }).catch(error => {
-      console.warn('[Footer Mux] Background player initialization failed; keeping the poster visible.', error);
+    if (!muxEnsurePromise) {
+      const ensureMux = options.ensureMuxVideo || ensureMuxVideo;
+      muxEnsurePromise = Promise.resolve().then(() => ensureMux()).then(ready => {
+        if (!ready) muxEnsurePromise = null;
+        if (ready && playbackVisible &&
+            (typeof customElementsRef?.get !== 'function' || customElementsRef.get('mux-video'))) {
+          playActiveMedia();
+        }
+        return Boolean(ready);
+      }).catch(error => {
+        muxEnsurePromise = null;
+        console.warn('[Footer Mux] Background player initialization failed; keeping the poster visible.', error);
+        return false;
+      });
+    }
+  };
+
+  const stopVisibleTimers = () => {
+    if (intervalId !== null) {
+      windowRef.clearInterval(intervalId);
+      intervalId = null;
+    }
+    if (contrastIntervalId !== null) {
+      windowRef.clearInterval(contrastIntervalId);
+      contrastIntervalId = null;
+    }
+  };
+
+  const startVisibleTimers = () => {
+    if (sources.some(source => source.type === 'video' || source.type === 'mux') &&
+        contrastIntervalId === null) {
+      contrastIntervalId = windowRef.setInterval(() => {
+        if (playbackVisible) applyForeground(activeIndex);
+      }, 900);
+    }
+    if (sources.length > 1 && !reducedMotion() && intervalId === null) {
+      intervalId = windowRef.setInterval(() => {
+        if (!playbackVisible || disposed) return;
+        const previous = slides[activeIndex];
+        const previousMedia = previous?.firstElementChild;
+        setMediaPlaybackEnabled(previousMedia, false);
+        previous?.classList.remove('active');
+        activeIndex = (activeIndex + 1) % slides.length;
+        const current = slides[activeIndex];
+        current?.classList.add('active');
+        applyForeground(activeIndex);
+        playActiveMedia();
+      }, crossfadeMs);
+    }
+  };
+
+  const handlePlaybackVisibility = visible => {
+    if (disposed) return;
+    playbackVisible = Boolean(visible);
+    if (!playbackVisible) {
+      stopVisibleTimers();
+      setMediaPlaybackEnabled(getActiveMedia(), false);
+      return;
+    }
+    applyForeground(activeIndex);
+    if (sources.some(source => source.type === 'mux')) requestMuxPlayer();
+    startVisibleTimers();
+    playActiveMedia();
+  };
+
+  if (!reducedMotion()) {
+    const visibility = observeFooterPlaybackVisibility({
+      target: footerElement || container,
+      windowRef,
+      documentRef,
+      rootMargin: '480px 0px',
+      onChange: handlePlaybackVisibility
     });
-  }
-
-  let contrastIntervalId = null;
-  if (sources.some(source => source.type === 'video' || source.type === 'mux')) {
-    contrastIntervalId = windowRef.setInterval(() => {
-      const activeIndex = Number(container.querySelector('.footer-animation-slide.active')?.dataset?.index || 0);
-      applyForeground(activeIndex);
-    }, 900);
-    lifecycle.add(() => windowRef.clearInterval(contrastIntervalId));
-  }
-
-  let intervalId = null;
-  if (sources.length > 1 && !reducedMotion()) {
-    let index = 0;
-    intervalId = windowRef.setInterval(() => {
-      const slides = Array.from(container.querySelectorAll('.footer-animation-slide'));
-      if (!slides.length) return;
-      const previous = slides[index];
-      previous?.classList.remove('active');
-      const previousMux = previous?.querySelector('mux-video, mux-player');
-      if (previousMux) { try { previousMux.pause?.(); } catch (_) {} }
-      const previousVideo = previous?.querySelector('video');
-      if (previousVideo) { try { previousVideo.pause?.(); } catch (_) {} }
-      index = (index + 1) % slides.length;
-      slides[index]?.classList.add('active');
-      const currentMux = slides[index]?.querySelector('mux-video, mux-player');
-      if (currentMux) { try { const playback = currentMux.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
-      const currentVideo = slides[index]?.querySelector('video');
-      if (currentVideo) { try { const playback = currentVideo.play?.(); playback?.catch?.(() => {}); } catch (_) {} }
-      applyForeground(index);
-    }, crossfadeMs);
-    lifecycle.add(() => windowRef.clearInterval(intervalId));
+    lifecycle.add(() => visibility.destroy());
+  } else {
+    applyForeground(0);
   }
 
   lifecycle.add(() => {
