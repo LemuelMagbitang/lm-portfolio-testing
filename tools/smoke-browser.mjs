@@ -2652,8 +2652,18 @@ async function assertFilterNavigationResponsive(page, label) {
 
     // Test active-pill centering once at the narrowest phone width.
     if (viewport.width === 320 && state.dataOverflow) {
-      const nonAll = page.locator('.filter-nav-scroller [data-filter]:not([data-filter="all"])').first();
+      const rail = page.locator('.filter-nav-scroller');
+      const nonAll = page.locator('.filter-nav-scroller [data-filter]:not([data-filter="all"]):not(:disabled)').last();
+      const scrollBeforeTap = await rail.evaluate(el => el.scrollLeft);
       await nonAll.click();
+      const scrollAfterTap = await rail.evaluate(el => el.scrollLeft);
+      await page.waitForTimeout(360);
+      const scrollAfterTapSettles = await rail.evaluate(el => el.scrollLeft);
+      if (Math.abs(scrollAfterTap - scrollBeforeTap) < 20 ||
+          Math.abs(scrollAfterTapSettles - scrollAfterTap) > 1) {
+        throw new Error(label + ' compact filter tap must center immediately without a second smooth-scroll glide: ' +
+          JSON.stringify({ scrollBeforeTap, scrollAfterTap, scrollAfterTapSettles }));
+      }
       await page.waitForFunction(() => {
         const scroller = document.querySelector('.filter-nav-scroller');
         const active = scroller?.querySelector('.filter-btn.active, .tab-btn.active');
