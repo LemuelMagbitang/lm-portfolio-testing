@@ -3296,6 +3296,91 @@ body[aria-busy="true"] {
   animation-delay: 0s;
 }
 
+/* Shared-shell route handoff. The browser snapshots only the page outlet;
+   the navbar, footer, and initial logo gate remain mounted and stationary. */
+#routeOutlet {
+  view-transition-name: lm-route-content;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(lm-route-content) {
+    animation-duration: 220ms;
+  }
+
+  ::view-transition-old(lm-route-content) {
+    animation: lm-route-out 120ms ease-out both;
+  }
+
+  ::view-transition-new(lm-route-content) {
+    animation: lm-route-in 200ms cubic-bezier(.2, .8, .2, 1) both;
+  }
+}
+
+@keyframes lm-route-out {
+  to { opacity: 0; }
+}
+
+@keyframes lm-route-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* A quiet, determinate-free indicator appears only while the destination
+   document or its essential interactions are being prepared. */
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 19999;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+}
+
+.navigation-progress[hidden] {
+  display: none !important;
+}
+
+.navigation-progress::before {
+  content: "";
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: rgba(255, 255, 255, .92);
+  opacity: 0;
+  transform: translateX(-110%);
+}
+
+.navigation-progress.is-active::before {
+  opacity: 1;
+  animation: lm-navigation-progress 1.1s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+@keyframes lm-navigation-progress {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(430%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress::before {
+    animation: none !important;
+    width: 100%;
+    transform: none;
+  }
+
+  ::view-transition-group(lm-route-content),
+  ::view-transition-old(lm-route-content),
+  ::view-transition-new(lm-route-content) {
+    animation: none !important;
+  }
+}
+
 /* =========================================
    HOMEPAGE HERO SHELL (holds the message block)
    =========================================
