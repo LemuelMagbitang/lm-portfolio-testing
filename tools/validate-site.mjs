@@ -1321,7 +1321,6 @@ function validateRuntimeCacheGraph() {
   if (!/\.\/pages\/\$\{pageId\}\.js\?v=\$\{cacheVersion\}/.test(bootstrap)) {
     err('Bootstrap cache graph: the active page module must use the same runtime cacheVersion.');
   }
-  }
 
   // The HTML entrypoints are the final cache owners. Matching each other is
   // not enough: they must also match the canonical runtime version declared
