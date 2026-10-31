@@ -451,6 +451,7 @@ export function initPageNavigation({
     if (!currentOutlet) throw new Error('Current document is missing its shared-shell route outlet.');
     currentOutlet.replaceWith(cloneRouteOutlet(page));
     root.body.className = page.document.body.className || '';
+    if (root.body.dataset) delete root.body.dataset.curatedViewSlug;
     syncNavigationState(page.route);
     currentRoute = page.route;
     root.body.dataset.pageNavigationReady = 'true';
