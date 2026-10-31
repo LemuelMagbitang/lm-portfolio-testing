@@ -5,21 +5,21 @@
  * application has no dependency on legacy root facades.
  */
 
-import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js?v=20261027-05';
+import { getSiteRootUrl, siteAssetUrl } from '../infrastructure/browser/site-paths.js?v=20261031-05';
 import { prefersReducedMotion } from '../infrastructure/browser/reduced-motion.js';
 import { loadScriptOnce } from '../infrastructure/browser/script-loader.js?v=20261008-01';
 import { ensureLottiePlayer } from '../infrastructure/lottie/player.js';
 import {
   ensureMediaBackgroundHelper,
   applyMediaBackground
-} from '../infrastructure/media-background/loader.js?v=20261023-01';
+} from '../infrastructure/media-background/loader.js?v=20261031-05';
 import { loadCmsJson } from '../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../infrastructure/youtube/url.js';
 import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261031-04',
+  cacheVersion = '20261031-05',
   showPageTransition = true,
   awaitProjectMedia = true,
   immediateContentReveal = false
