@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261101-02';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261101-03';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
@@ -27,7 +27,7 @@ assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
 assert.ok(revealGroupsSource.includes("motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }"),
   'About hero must retain its established reveal profile.');
-assert.match(revealGroupsSource, /selector: '\.hero-section:not\(\.about-hero\)'[\s\S]*?distance: 14,[\s\S]*?mobileDistance: 10,[\s\S]*?durationMs: 520,[\s\S]*?threshold: 0\.05/,
+assert.match(revealGroupsSource, /selector: '\.hero-section:not\(\.about-hero\)'[\s\S]*?positionOnly: true,[\s\S]*?distance: 14,[\s\S]*?mobileDistance: 10,[\s\S]*?durationMs: 520,[\s\S]*?threshold: 0\.05/,
   'The Works hero must use a short, layout-safe entrance without changing About.');
 assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper, #portfolioGridViewport'[\s\S]*?profile: 'animated-content'[\s\S]*?distance: 26,[\s\S]*?mobileDistance: 18,[\s\S]*?durationMs: 620,[\s\S]*?threshold: 0\.05,[\s\S]*?staggerStepMs: 64,[\s\S]*?staggerMaxMs: 64/,
   'The AnimatedContent-inspired profile must be confined to Design.');
@@ -54,7 +54,7 @@ assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\
   'The review heading must keep a high-contrast, non-blended foreground.');
 assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
   'The review submit button must use its own high-contrast surface even if rendered outside its original panel.');
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261101-02/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261101-03/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
 assert.ok(

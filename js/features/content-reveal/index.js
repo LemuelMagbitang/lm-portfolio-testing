@@ -46,6 +46,7 @@ const REVEAL_TARGET_GROUPS = [
   },
   {
     selector: '.hero-section:not(.about-hero)',
+    positionOnly: true,
     // The Works hero moves as one stable stage; slide/player motion remains
     // owned by Hero, while text stays readable throughout the entrance.
     animateOnSoftNavigation: true,
@@ -191,7 +192,7 @@ export function initContentReveal({
           target.matches?.('.form-container, a, button, input, textarea, select, [role="button"]') ||
           target.querySelector?.('form, a[href], button, input, textarea, select, [role="button"]')
         );
-        if (hasReadableText || hasInteractiveContent) {
+        if (group.positionOnly === true || hasReadableText || hasInteractiveContent) {
           target.dataset.lmContentRevealMotion = 'position-only';
         }
 
