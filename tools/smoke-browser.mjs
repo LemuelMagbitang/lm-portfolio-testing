@@ -1217,10 +1217,11 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         const previewWidthMotionFailed = preview.available && (preview.reducedMotion
           ? preview.indicatorWidthDelta > 2
           : (!preview.indicatorTransition.includes('width') ||
-             !preview.indicatorTransitionDuration.includes('0.42s') ||
-             !preview.indicatorTransitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
+             !preview.indicatorTransitionDuration.includes('0.36s') ||
+             !preview.indicatorTransitionTiming.includes('cubic-bezier(0.22, 1, 0.36, 1)') ||
              preview.indicatorWidthDeltaFromStart <= 2 ||
-             preview.indicatorWidthDelta <= 2));
+             preview.indicatorWidthDelta <= 2 ||
+             preview.indicatorWidthDelta > preview.indicatorWidthDeltaFromStart + 1));
         if (preview.available &&
             (preview.indicatorCenterDelta > 2 || previewWidthMotionFailed ||
              !preview.isPreview || preview.previewColor !== 'rgb(255, 255, 255)' ||
