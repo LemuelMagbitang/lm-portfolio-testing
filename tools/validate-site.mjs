@@ -2816,7 +2816,7 @@ function validateClientSidePageNavigation() {
       !composition.includes('immediateVisible: immediateContentReveal')) {
     err('Client navigation: media warm-up and first-viewport reveals must be route-aware.');
   }
-  const runtimeVersion = bootstrap.match(/cacheVersion\\s*=\\s*'([^']+)'/)?.[1] || '';
+  const runtimeVersion = bootstrap.match(/cacheVersion\s*=\s*'([^']+)'/)?.[1] || '';
   const hasRuntimePreloads = (html, prefix) => [
     'bootstrap.js',
     'page-composition.js',
