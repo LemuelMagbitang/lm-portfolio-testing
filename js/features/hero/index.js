@@ -523,8 +523,6 @@ async function ensureMuxVideo(...args) {
     }
 
     if (!sources.length) return;
-
-    if (!sources.length) return;
     const hasMuxSources = !reducedMotion && sources.some(source => source.type === 'mux');
 
     if (sources.some(source => source.type === 'lottie')) await ensureLottie();
@@ -653,6 +651,9 @@ async function ensureMuxVideo(...args) {
         poster.setAttribute('aria-hidden', 'true');
         poster.decoding = 'async';
         poster.style.objectPosition = source.focus || '50% 50%';
+        poster.style.transformOrigin = source.focus || '50% 50%';
+        poster.style.setProperty('--thumb-zoom', source.zoom || 1);
+        poster.style.setProperty('--thumb-rotate', (source.rotate || 0) + 'deg');
         wrap.classList.add('has-mux-poster');
         wrap.appendChild(poster);
         media.addEventListener('playing', () => {
