@@ -11499,15 +11499,20 @@ try {
         throw new Error('About rendering and asset preloading should share one about.json request; observed ' +
           aboutDataRequestCount + ' requests.');
       }
-      const showReviews = await page.evaluate(async () => {
+      const aboutSettings = await page.evaluate(async () => {
         try {
           const response = await fetch('/data/settings.json');
           const settings = response.ok ? await response.json() : {};
-          return settings.showReviews === true;
+          return {
+            showReviews: settings.showReviews === true,
+            showSoftwareLogos: settings.showSoftwareLogos === true
+          };
         } catch (_) {
-          return false;
+          return { showReviews: false, showSoftwareLogos: false };
         }
       });
+      const showReviews = aboutSettings.showReviews;
+      const showSoftwareLogos = aboutSettings.showSoftwareLogos;
       const reviewsModuleLoaded = loadedPaths.includes('/js/features/reviews/index.js');
       const reviewsDataLoaded = loadedPaths.includes('/data/reviews.json');
       if (!showReviews && (reviewsModuleLoaded || reviewsDataLoaded)) {
@@ -11638,6 +11643,10 @@ try {
       const softwareSkills = await page.locator('#softwareSkillsList li').count();
       await page.locator('#softwareSkillsList li.has-logo img.skill-logo').first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
       const softwareImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').count();
+      const softwareLogoItems = await page.locator('#softwareSkillsList li.has-logo').count();
+      const softwareTextItems = await page.locator('#softwareSkillsList li:not(.has-logo)').evaluateAll(items =>
+        items.filter(item => item.textContent.trim()).length
+      );
       const brokenImages = await page.locator('#softwareSkillsList li.has-logo img.skill-logo').evaluateAll(images => images.filter(img => !img.complete || !img.naturalWidth).length);
       const kritaImage = page.locator('#softwareSkillsList li.has-logo img[alt="Krita"]').first();
       const afterEffectsImage = page.locator('#softwareSkillsList li.has-logo img[alt="After Effects"], #softwareSkillsList li.has-logo img[alt="Adobe After Effects"]').first();
@@ -11654,7 +11663,13 @@ try {
       if (education < 1) throw new Error('About page rendered no education entries.');
       if (awards < 1) throw new Error('About page rendered no awards entries.');
       if (softwareSkills < 1) throw new Error('About page rendered no software skills.');
-      if (softwareImages < 1) throw new Error('About page software-logo mode is enabled but no software logo rendered.');
+      if (showSoftwareLogos && (softwareImages < 1 || softwareLogoItems < 1)) {
+        throw new Error('About page software-logo mode is enabled but no software logo rendered.');
+      }
+      if (!showSoftwareLogos && (softwareImages !== 0 || softwareLogoItems !== 0 || softwareTextItems !== softwareSkills)) {
+        throw new Error('About page must retain every software skill as text and omit logo images when software-logo mode is disabled: ' +
+          JSON.stringify({ softwareSkills, softwareImages, softwareLogoItems, softwareTextItems }));
+      }
       const publicSoftwareLogoFilters=await page.locator('#softwareSkillsList li.has-logo img.skill-logo').evaluateAll(images=>images.map(img=>getComputedStyle(img).filter));
       publicSoftwareLogoFilters.forEach(filter=>{
         if(filter!=='none') throw new Error('About software logo retained a color filter: '+filter);
