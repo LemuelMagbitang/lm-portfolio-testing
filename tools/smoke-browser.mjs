@@ -2684,7 +2684,6 @@ async function assertFilterNavigationResponsive(page, label) {
       testedCenteredSelection = true;
 
       // Primary-button mouse drag uses the same settle-to-nearest contract as touch scrolling.
-      const rail = page.locator('.filter-nav-scroller');
       const rect = await rail.boundingBox();
       if (rect) {
         await page.mouse.move(rect.x + rect.width * .78, rect.y + rect.height / 2);
