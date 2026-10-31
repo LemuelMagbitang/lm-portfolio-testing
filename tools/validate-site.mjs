@@ -2784,11 +2784,13 @@ function validateClientSidePageNavigation() {
   }
   if (!works.includes('id="pageConfig"') || !about.includes('id="pageConfig"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('features/projects/index.js?v=20261029-01') ||
-      !about.includes('features/gallery/index.js?v=20261030-03') ||
-      !about.includes('features/lightbox/index.js?v=20261030-07') ||
+      !about.includes('../js/app/bootstrap.js?v=20261031-01') ||
+      !about.includes('../js/app/page-composition.js?v=20261031-01') ||
+      about.includes('features/projects/index.js?v=20261029-01') ||
+      about.includes('features/gallery/index.js?v=20261030-03') ||
+      about.includes('features/lightbox/index.js?v=20261030-07') ||
       !css.includes('::view-transition-old(root)')) {
-    err('Client navigation: route documents must carry config, warm destination code, and use an instant view handoff.');
+    err('Client navigation: route documents must preload the shared destination runtime without eagerly loading unused feature graphs, carry config, and use an instant view handoff.');
   }
 }
 
