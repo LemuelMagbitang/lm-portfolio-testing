@@ -153,6 +153,7 @@ function buildMedia(documentRef, source, autoplayAllowed = true) {
   let media;
   if (source.type === 'mux') {
     media = documentRef.createElement('mux-video');
+    media.setAttribute('prefer-playback', 'mse');
     media.setAttribute('playback-id', source.playbackId);
     media.setAttribute('stream-type', 'on-demand');
     media.muted = true;
@@ -260,17 +261,8 @@ export async function initFooterAnimation(options = {}) {
   if (sources.some(source => source.type === 'lottie')) {
     try { await (options.ensureLottiePlayer || ensureLottiePlayer)(); } catch (_) {}
   }
-  if (sources.some(source => source.type === 'mux')) {
-    let muxReady = false;
-    try { muxReady = await (options.ensureMuxVideo || ensureMuxVideo)(); } catch (_) {}
-    if (!muxReady) {
-      sources = sources.map(source => source.type === 'mux'
-        ? { ...source, type: 'image', src: source.poster || source.src }
-        : source).filter(source => source.src);
-    }
-  }
-
   const lifecycle = createLifecycle();
+  let disposed = false;
 
   const transitionStyle = ['kenburns', 'fade', 'none'].includes(heroTiming.transitionStyle)
     ? heroTiming.transitionStyle
@@ -302,6 +294,23 @@ export async function initFooterAnimation(options = {}) {
     slide.dataset.index = String(index);
     const media = buildMedia(documentRef, source, !reducedMotion() && index === 0);
     slide.appendChild(media);
+    if (source.type === 'mux' && !reducedMotion()) {
+      const posterUrl = String(source.poster || source.src || '').trim();
+      if (posterUrl) {
+        const poster = documentRef.createElement('img');
+        poster.className = 'footer-mux-poster';
+        poster.src = posterUrl;
+        poster.alt = '';
+        poster.setAttribute('aria-hidden', 'true');
+        poster.decoding = 'async';
+        poster.style.objectPosition = source.focus || '50% 50%';
+        slide.classList.add('has-mux-poster');
+        slide.appendChild(poster);
+      }
+      media.addEventListener('playing', () => {
+        if (slide.isConnected) slide.classList.add('is-mux-playing');
+      }, { once: true });
+    }
     container.appendChild(slide);
   });
 
@@ -326,9 +335,34 @@ export async function initFooterAnimation(options = {}) {
   });
 
   applyForeground(0);
-  const firstMuxVideo = container.querySelector('.footer-animation-slide.active mux-video, .footer-animation-slide.active mux-player');
-  if (firstMuxVideo && !reducedMotion()) {
-    try { const playback = firstMuxVideo.play?.(); playback?.catch?.(() => {}); } catch (_) {}
+
+  const playActiveMux = () => {
+    if (disposed || !container.isConnected) return false;
+    const activeSlide = container.querySelector('.footer-animation-slide.active');
+    const activeMux = activeSlide?.querySelector('mux-video, mux-player');
+    if (!activeMux || typeof activeMux.play !== 'function') return false;
+    try {
+      const playback = activeMux.play();
+      playback?.catch?.(() => {});
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  if (!reducedMotion() && sources.some(source => source.type === 'mux')) {
+    const customElementsRef = windowRef.customElements || globalThis.customElements;
+    if (typeof customElementsRef?.whenDefined === 'function') {
+      void customElementsRef.whenDefined('mux-video').then(playActiveMux).catch(error => {
+        console.warn('[Footer Mux] Custom element registration could not be observed; keeping the poster visible.', error);
+      });
+    }
+    const ensureMux = options.ensureMuxVideo || ensureMuxVideo;
+    void Promise.resolve().then(() => ensureMux()).then(ready => {
+      if (ready) playActiveMux();
+    }).catch(error => {
+      console.warn('[Footer Mux] Background player initialization failed; keeping the poster visible.', error);
+    });
   }
 
   let contrastIntervalId = null;
@@ -364,6 +398,7 @@ export async function initFooterAnimation(options = {}) {
   }
 
   lifecycle.add(() => {
+    disposed = true;
     container.querySelectorAll('video,mux-player,mux-video').forEach(video => {
       try { video.pause?.(); } catch (_) {}
       if (video.matches('mux-player,mux-video')) video.removeAttribute('playback-id');
