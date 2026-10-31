@@ -3045,8 +3045,13 @@ async function assertFilterNavigationResponsive(page, label) {
     const intermediateActiveCenterDelta = Math.abs(
       intermediateActiveRect.left + intermediateActiveRect.width / 2 - centerX()
     );
+    const intermediateWidthWithinBounds =
+      intermediateWidth >= Math.min(beforeWidth, targetWidth) - 1 &&
+      intermediateWidth <= Math.max(beforeWidth, targetWidth) + 1;
     return {
       ready: true,
+      viewportWidth: window.innerWidth,
+      intermediateWidthWithinBounds,
       targetFilter: target.getAttribute('data-filter') || '',
       immediateScrollDelta,
       scrollDelta: Math.abs(rail.scrollLeft - beforeScroll),
@@ -3081,8 +3086,15 @@ async function assertFilterNavigationResponsive(page, label) {
         stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) ||
       (!stationaryPillProbe.prefersReducedMotion &&
         (!stationaryPillProbe.transitionProperty.includes('width') ||
-          !stationaryPillProbe.transitionDuration.includes('0.42s') ||
-          !stationaryPillProbe.transitionTimingFunction.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
+          !stationaryPillProbe.transitionDuration.includes(stationaryPillProbe.viewportWidth <= 1023 ? '0.36s' : '0.42s') ||
+          !stationaryPillProbe.transitionTimingFunction.includes(
+            stationaryPillProbe.viewportWidth <= 1023
+              ? 'cubic-bezier(0.22, 1, 0.36, 1)'
+              : 'cubic-bezier(0.34, 1.45, 0.64, 1)'
+          ) ||
+          (stationaryPillProbe.viewportWidth <= 1023 &&
+            Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
+            !stationaryPillProbe.intermediateWidthWithinBounds) ||
           (Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
             (Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.beforeWidth) < 1 ||
               Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.targetWidth) < 1))))) {

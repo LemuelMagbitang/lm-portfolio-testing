@@ -648,21 +648,12 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 }
 
 @media (max-width: 1023px) {
-  /* Direct manipulation only: no native momentum, snap, or smooth settle on compact viewports. */
+  /* Compact rails use direct manipulation: no native momentum, snap, or CSS smooth settle. */
   .filter-tabs.filter-nav-scroller {
     scroll-behavior: auto !important;
     scroll-snap-type: none !important;
     -webkit-overflow-scrolling: auto !important;
     overscroll-behavior-x: none !important;
-  }
-  /* Match click/tap width morphing while previewing labels during a swipe.
-     The rail itself stays directly manipulated; the pill only eases its width. */
-  .filter-active-indicator.is-following-scroll {
-    transition:
-      width 420ms cubic-bezier(.34, 1.45, .64, 1),
-      height 140ms ease-out,
-      background-color 140ms ease-out;
-    animation: none !important;
   }
 }
 
@@ -677,6 +668,20 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
     width 420ms cubic-bezier(.34, 1.45, .64, 1),
     height 140ms ease-out,
     background-color 140ms ease-out;
+}
+
+/* The desktop spring intentionally overshoots its target width. On compact
+   touch layouts that reads as a bounce, so keep the centered pill morph but
+   use a monotonic ease-out. The absolute indicator does not affect layout. */
+@media (max-width: 1023px) {
+  .filter-active-indicator.is-animated,
+  .filter-active-indicator.is-following-scroll {
+    transition:
+      width 360ms cubic-bezier(.22, 1, .36, 1),
+      height 140ms ease-out,
+      background-color 140ms ease-out;
+    animation: none !important;
+  }
 }
 
 .filter-tabs .tab-btn {
