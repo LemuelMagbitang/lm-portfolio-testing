@@ -411,18 +411,20 @@ export function initPageNavigation({
   }
 
   function syncNavigationState(route) {
-    const rootHref = new URL(siteRootUrl).href;
-    const aboutHref = new URL('about/', rootHref).href;
-    const contactHref = new URL('#contact-start', rootHref).href;
+    const isAbout = route === 'about';
+    // Keep relative hrefs so the DOM retains its original URL contract on
+    // both the repository root and GitHub Pages project-path deployments.
+    const designHref = isAbout ? '../' : './';
+    const aboutHref = isAbout ? './' : 'about/';
+    const contactHref = isAbout ? '../#contact-start' : '#contact-start';
+
     const logo = root.querySelector('.nav-logo[href]');
-    if (logo) logo.href = rootHref;
+    if (logo) logo.setAttribute('href', designHref);
 
     root.querySelectorAll('.nav-links a[data-route]').forEach(link => {
       const targetRoute = link.dataset.route;
-      const href = targetRoute === 'about'
-        ? aboutHref
-        : (targetRoute === 'design' ? rootHref : link.href);
-      if (targetRoute === 'about' || targetRoute === 'design') link.href = href;
+      if (targetRoute === 'about') link.setAttribute('href', aboutHref);
+      else if (targetRoute === 'design') link.setAttribute('href', designHref);
       const active = targetRoute === route;
       link.classList.toggle('active-link', active);
       if (active) link.setAttribute('aria-current', 'page');
@@ -430,7 +432,7 @@ export function initPageNavigation({
     });
 
     const contactLink = root.querySelector('.nav-links a[data-route-anchor="contact"]');
-    if (contactLink) contactLink.href = contactHref;
+    if (contactLink) contactLink.setAttribute('href', contactHref);
   }
 
   function setNavigationProgress(active, message = 'Loading page') {
