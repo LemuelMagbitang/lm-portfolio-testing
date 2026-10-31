@@ -1,8 +1,8 @@
 /** Architecture V2 — complete hero banner controller. */
-import { getSiteRootUrl, siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261027-05';
+import { getSiteRootUrl, siteAssetUrl } from '../../infrastructure/browser/site-paths.js?v=20261031-05';
 import { prefersReducedMotion } from '../../infrastructure/browser/reduced-motion.js';
 import { ensureLottiePlayer } from '../../infrastructure/lottie/player.js';
-import { ensureMediaBackgroundHelper } from '../../infrastructure/media-background/loader.js?v=20261023-01';
+import { ensureMediaBackgroundHelper } from '../../infrastructure/media-background/loader.js?v=20261031-05';
 import { loadCmsJson } from '../../infrastructure/cms/loader.js';
 import { parseYouTubeUrl } from '../../infrastructure/youtube/url.js';
 import { normalizeProjects } from '../../data/project-normalizer.js?v=20261029-01';
