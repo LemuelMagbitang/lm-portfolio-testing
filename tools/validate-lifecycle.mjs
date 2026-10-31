@@ -77,19 +77,24 @@ assert.match(pageCompositionSource, /destroyProjects\(\);/);
 assert.match(pageCompositionSource, /activationInput/);
 assert.match(pageCompositionSource, /details\.event\?\.type === 'keydown'/);
 assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
-assert.match(pageCompositionSource, /const startupDependencies = isAboutPage\s*\?\s*\[settingsPromise\]\s*:\s*\[settingsPromise, projectModelsPromise\]/);
+assert.match(pageCompositionSource, /const \[settingsFeature\] = await Promise\.all\(\[settingsPromise\]\)/,
+  'The first viewport must not wait for normalized project data.');
+assert.match(pageCompositionSource, /settings\.heroTiming\.loopMode === 'manual'\s*\?\s*initializeHero\(\)\s*:\s*projectModelsPromise\.then\(initializeHero\)/,
+  'The manually curated Hero can initialize before project normalization completes.');
 assert.ok(
   pageCompositionSource.indexOf("const hero = root.querySelector") <
     pageCompositionSource.indexOf("// Initialize the Lightbox before the remaining page features finish."),
   'Hero/Footer initialization must begin before optional Lightbox warm-up.'
 );
-assert.match(pageCompositionSource, /if \(hasProjectGallery\) await projectsPromise;/,
-  'Projects card markup must still complete before Gallery initialization.');
-assert.match(pageCompositionSource, /const settleInBackground = \(promise, assign, dispose, label\) => \{[\s\S]*?if \(deferredMediaDestroyed\) \{[\s\S]*?dispose\?\.\(feature\);[\s\S]*?assign\(feature\);[\s\S]*?\}/);
+assert.match(pageCompositionSource, /const galleryPromise = hasProjectGallery\s*\?\s*projectsPromise\.then\(\(\) => galleryModulePromise\)\.then\(module =>/,
+  'The Gallery must mount after Projects are ready without becoming a startup dependency.');
+assert.match(pageCompositionSource, /const settleInBackground = \(promise, assign, dispose, label, onSettle\) => \{[\s\S]*?Promise\.resolve\(promise\)\.then\(feature => \{[\s\S]*?if \(deferredMediaDestroyed\) \{[\s\S]*?dispose\?\.\(feature\);[\s\S]*?assign\(feature\);[\s\S]*?onSettle\?\.\(feature\);[\s\S]*?\}/);
 assert.match(pageCompositionSource, /settleInBackground\(heroPromise,/);
 assert.match(pageCompositionSource, /settleInBackground\(footerPromise,/);
-assert.match(pageCompositionSource, /settleInBackground\([\s\S]*?galleryPromise,[\s\S]*?galleryFeature = feature;[\s\S]*?galleryFeatureRef = feature;[\s\S]*?feature => feature\?\.destroy\?\.\(\),[\s\S]*?'Gallery'\s*\);/);
-assert.match(pageCompositionSource, /\} else \{\s*\[heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature\] = await Promise\.all\(/);
+assert.match(pageCompositionSource, /settleInBackground\([\s\S]*?galleryPromise,[\s\S]*?galleryFeature = feature;[\s\S]*?galleryFeatureRef = feature;[\s\S]*?feature => feature\?\.destroy\?\.\(\),[\s\S]*?'Gallery',[\s\S]*?contentRevealFeature\?\.refresh\?\.\(\)/);
+assert.match(pageCompositionSource, /\} else \{\s*\/\/ The first usable Hero poster\/image is the visual startup priority\.[\s\S]*?heroFeature = await heroPromise;[\s\S]*?settleInBackground\(footerPromise,/);
+assert.match(pageCompositionSource, /get gallery\(\) \{ return galleryFeature; \}/,
+  'The Gallery feature remains available through its public app contract after background initialization.');
 assert.match(pageCompositionSource, /visibleReviewsPromise/);
 assert.doesNotMatch(pageCompositionSource, /projectLottiePlayerPreloadPromise/);
 assert.doesNotMatch(pageCompositionSource, /LOTTIE_PLAYER_STARTUP_WAIT_MS/);
