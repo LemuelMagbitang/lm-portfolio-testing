@@ -36,18 +36,19 @@ export function resolvePortfolioRoute(urlValue, siteRootUrl) {
  * About's manual Hero/Footer loops are self-contained and must not fetch the
  * main Projects feed. Other About modes still use project models for artwork.
  */
-export function resolveRouteDataPrefetchEntries(urls, route, settings = {}) {
+export function resolveRouteDataPrefetchEntries(urls, route) {
   const entries = Object.entries(urls && typeof urls === 'object' ? urls : {})
     .filter(([, value]) => typeof value === 'string' && value.trim());
-  // The Design route has no About profile surface. Do not warm about.json
-  // when prefetching Design from About; the About page owns that endpoint.
-  if (route === 'design') {
-    return entries.filter(([key]) => key !== 'about');
-  }
-  if (route === 'about' && settings?.heroTiming?.loopMode === 'manual') {
-    return entries.filter(([key]) => key !== 'projects');
-  }
-  return entries;
+
+  // Only warm route-specific data. Settings, reviews, and Hero/Footer feeds
+  // are shared by both page modules and are already requested by the active
+  // runtime; warming them again while prefetching a destination duplicates
+  // network work. The Design route owns projects/filters, while About owns
+  // the profile payload.
+  const routeKeys = route === 'design'
+    ? new Set(['projects', 'filters'])
+    : (route === 'about' ? new Set(['about']) : new Set());
+  return entries.filter(([key]) => routeKeys.has(key));
 }
 
 function isPlainPrimaryClick(event, link) {
@@ -230,31 +231,11 @@ export function initPageNavigation({
         return null;
       }
     };
-    const warmDataEntries = (settings, alreadyWarmed = new Set()) => {
-      const entries = resolveRouteDataPrefetchEntries(urls, page.route, settings);
-      const requests = entries
-        .filter(([key]) => !alreadyWarmed.has(key))
-        .map(([, value]) => fetchJsonResource(value))
-        .filter(Boolean);
-      void Promise.allSettled(requests);
-    };
-
-    // Read About settings before deciding whether the Projects feed is useful.
-    // If settings cannot be read, retain the safe default and warm all endpoints.
-    const settingsRequest = page.route === 'about'
-      ? fetchJsonResource(urls.settings)
-      : null;
-    if (settingsRequest) {
-      void settingsRequest.then(async response => {
-        let settings = null;
-        if (response?.ok) {
-          try { settings = await response.clone().json(); } catch (_) {}
-        }
-        warmDataEntries(settings, new Set(['settings']));
-      });
-    } else {
-      warmDataEntries(null);
-    }
+    const routeDataEntries = resolveRouteDataPrefetchEntries(urls, page.route);
+    const routeDataRequests = routeDataEntries
+      .map(([, value]) => fetchJsonResource(value))
+      .filter(Boolean);
+    void Promise.allSettled(routeDataRequests);
   }
 
   function loadPageDocument(value) {
