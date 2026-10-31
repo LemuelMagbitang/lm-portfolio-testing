@@ -2798,6 +2798,7 @@ function validateClientSidePageNavigation() {
   }
   if (!works.includes('id="pageConfig"') || !about.includes('id="pageConfig"') ||
       !works.includes('id="routeOutlet"') || !about.includes('id="routeOutlet"') ||
+      !works.includes('id="routeContent"') || !about.includes('id="routeContent"') ||
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
@@ -2808,6 +2809,7 @@ function validateClientSidePageNavigation() {
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
+      !css.includes('#routeContent') ||
       !css.includes('::view-transition-group(lm-route-content)') ||
       !css.includes('::view-transition-old(root)')) {
     err('Client navigation: route documents must preload the shared destination runtime without eagerly loading unused feature graphs, carry config, and use an instant view handoff.');
