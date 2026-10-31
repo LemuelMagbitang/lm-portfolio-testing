@@ -1190,7 +1190,7 @@ function validateGalleryContract() {
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
       css.includes('Small screens should settle directly; no animated easing/bounce.') ||
-      !css.includes('Match click/tap width morphing while previewing labels during a swipe.') ||
+      !css.includes('width 360ms cubic-bezier(.22, 1, .36, 1)') ||
       !css.includes('@media (max-width: 1023px)') ||
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
