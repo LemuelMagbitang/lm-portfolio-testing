@@ -1182,8 +1182,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           dispatch('pointerup', startX, startY);
           return state;
         });
-        if (compactPill.available &&
-            (compactPill.indicatorExists || compactPill.contentHasActiveIndicator ||
+        if (!compactPill.available || compactPill.indicatorExists ||
+            (compactPill.contentHasActiveIndicator ||
              compactPill.contentFollowing || compactPill.previewCount !== 0 ||
              compactPill.activeFilter !== compactPill.initialFilter ||
              compactPill.activeColor !== 'rgb(17, 17, 17)' ||
@@ -2999,17 +2999,11 @@ async function assertFilterNavigationResponsive(page, label) {
       !stationaryPillProbe.inlineLeft ||
       !(stationaryPillProbe.inlineTranslate.includes('-50%') ||
         stationaryPillProbe.inlineTransform.includes('translate3d(-50%')) ||
+      stationaryPillProbe.viewportWidth <= 1023 ||
       (!stationaryPillProbe.prefersReducedMotion &&
         (!stationaryPillProbe.transitionProperty.includes('width') ||
-          !stationaryPillProbe.transitionDuration.includes(stationaryPillProbe.viewportWidth <= 1023 ? '0.36s' : '0.42s') ||
-          !stationaryPillProbe.transitionTimingFunction.includes(
-            stationaryPillProbe.viewportWidth <= 1023
-              ? 'cubic-bezier(0.22, 1, 0.36, 1)'
-              : 'cubic-bezier(0.34, 1.45, 0.64, 1)'
-          ) ||
-          (stationaryPillProbe.viewportWidth <= 1023 &&
-            Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
-            !stationaryPillProbe.intermediateWidthWithinBounds) ||
+          !stationaryPillProbe.transitionDuration.includes('0.42s') ||
+          !stationaryPillProbe.transitionTimingFunction.includes('cubic-bezier(0.34, 1.45, 0.64, 1)') ||
           (Math.abs(stationaryPillProbe.targetWidth - stationaryPillProbe.beforeWidth) > 6 &&
             (Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.beforeWidth) < 1 ||
               Math.abs(stationaryPillProbe.intermediateWidth - stationaryPillProbe.targetWidth) < 1))))) {
@@ -3120,15 +3114,13 @@ async function assertFilterNavigationResponsive(page, label) {
     if (!stalePreviewProbe.available) {
       throw new Error(label + ' could not prepare an outside-click filter-preview regression state.');
     }
-    const stalePreviewIsCompact = (page.viewportSize()?.width || 1280) <= 1023;
+    if ((page.viewportSize()?.width || 1280) <= 1023) {
+      throw new Error(label + ' desktop indicator-preview regression unexpectedly ran in compact mode.');
+    }
     if (!stalePreviewProbe.reducedMotion &&
         (!stalePreviewProbe.transitionProperty.includes('width') ||
-         !stalePreviewProbe.transitionDuration.includes(stalePreviewIsCompact ? '0.36s' : '0.42s') ||
-         !stalePreviewProbe.transitionTiming.includes(
-           stalePreviewIsCompact
-             ? 'cubic-bezier(0.22, 1, 0.36, 1)'
-             : 'cubic-bezier(0.34, 1.45, 0.64, 1)'
-         ))) {
+         !stalePreviewProbe.transitionDuration.includes('0.42s') ||
+         !stalePreviewProbe.transitionTiming.includes('cubic-bezier(0.34, 1.45, 0.64, 1)'))) {
       throw new Error(label + ' swipe-preview pill must use the same width morph as click/tap: ' +
         JSON.stringify(stalePreviewProbe));
     }
