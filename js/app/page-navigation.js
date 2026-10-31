@@ -193,6 +193,23 @@ export function initPageNavigation({
       addWarmHint(absolute.href, rel, attributes);
     });
 
+    // Route-specific styles are fetched during prefetch, but not activated
+    // until that route is committed. This avoids a blocking stylesheet fetch
+    // at the moment the visitor changes pages.
+    const routeStyles = Array.from(page.document.head?.querySelectorAll?.(
+      'link[rel="stylesheet"][data-page-style]'
+    ) || []);
+    routeStyles.forEach(source => {
+      const rawHref = source.getAttribute('href') || '';
+      if (!rawHref) return;
+      try {
+        const absolute = new URL(rawHref, page.url);
+        if (absolute.origin === windowRef.location.origin) {
+          addWarmHint(absolute.href, 'preload', { as: 'style' });
+        }
+      } catch (_) {}
+    });
+
     const urls = readPageConfig(page.document).urls || {};
     const fetchJsonResource = value => {
       try {
@@ -366,19 +383,57 @@ export function initPageNavigation({
     });
   }
 
-  function clonePageBody(page) {
-    const body = root.importNode(page.document.body, true);
-    body.querySelectorAll('script').forEach(script => script.remove());
-    const gate = body.querySelector('#pageTransition');
-    if (gate) {
-      gate.classList.add('is-hidden');
-      gate.classList.remove('is-entering', 'is-steady', 'is-error');
-      gate.setAttribute('aria-hidden', 'true');
-      gate.dataset.loading = 'ready';
-    }
-    body.setAttribute('aria-busy', 'false');
-    delete body.dataset.pageNavigationReady;
-    return body;
+  function cloneRouteOutlet(page) {
+    const source = page.document.getElementById('routeOutlet');
+    if (!source) throw new Error('Destination page is missing its shared-shell route outlet.');
+    const outlet = root.importNode(source, true);
+    outlet.querySelectorAll('script').forEach(script => script.remove());
+    outlet.setAttribute('aria-busy', 'true');
+    return outlet;
+  }
+
+  function syncNavigationState(route) {
+    const rootHref = new URL(siteRootUrl).href;
+    const aboutHref = new URL('about/', rootHref).href;
+    const contactHref = new URL('#contact-start', rootHref).href;
+    const logo = root.querySelector('.nav-logo[href]');
+    if (logo) logo.href = rootHref;
+
+    root.querySelectorAll('.nav-links a[data-route]').forEach(link => {
+      const targetRoute = link.dataset.route;
+      const href = targetRoute === 'about'
+        ? aboutHref
+        : (targetRoute === 'design' ? rootHref : link.href);
+      if (targetRoute === 'about' || targetRoute === 'design') link.href = href;
+      const active = targetRoute === route;
+      link.classList.toggle('active-link', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+
+    const contactLink = root.querySelector('.nav-links a[data-route-anchor="contact"]');
+    if (contactLink) contactLink.href = contactHref;
+  }
+
+  function setNavigationProgress(active, message = 'Loading page') {
+    const outlet = root.getElementById('routeOutlet');
+    if (outlet) outlet.setAttribute('aria-busy', active ? 'true' : 'false');
+    const indicator = root.getElementById('navigationProgress');
+    if (!indicator) return;
+    indicator.hidden = !active;
+    indicator.classList.toggle('is-active', active);
+    indicator.textContent = active ? message : '';
+  }
+
+  function commitPageDOM(page) {
+    syncHead(page);
+    const currentOutlet = root.getElementById('routeOutlet');
+    if (!currentOutlet) throw new Error('Current document is missing its shared-shell route outlet.');
+    currentOutlet.replaceWith(cloneRouteOutlet(page));
+    root.body.className = page.document.body.className || '';
+    syncNavigationState(page.route);
+    currentRoute = page.route;
+    root.body.dataset.pageNavigationReady = 'true';
   }
 
   function focusAfterNavigation({ hash = '', scrollY = 0, restoreScroll = false } = {}) {
@@ -408,31 +463,12 @@ export function initPageNavigation({
     });
   }
 
-  async function commitPage(page, destinationUrl, options) {
+  function destroyActivePage() {
     const oldApp = getApp?.();
     try { oldApp?.destroy?.(); } catch (error) {
-      console.warn('Page navigation: previous app cleanup failed.', error);
+      console.warn('Page navigation: previous page cleanup failed.', error);
     }
-    syncHead(page);
-    root.body.replaceWith(clonePageBody(page));
-
-    const app = await mountPage({
-      showPageTransition: false,
-      awaitProjectMedia: false,
-      immediateContentReveal: true
-    });
-    setApp?.(app);
-    updateRouteStyles(page);
-    currentRoute = page.route;
-    root.body.dataset.pageNavigationReady = 'true';
-    prefetchCurrentLinks();
-
-    const hash = new URL(destinationUrl, windowRef.location.href).hash;
-    await focusAfterNavigation({
-      hash,
-      scrollY: options?.scrollY,
-      restoreScroll: Boolean(options?.restoreScroll && !hash)
-    });
+    setApp?.(null);
   }
 
   async function navigate(value, options = {}) {
@@ -442,7 +478,10 @@ export function initPageNavigation({
     const targetRoute = resolvePortfolioRoute(targetUrl, siteRootUrl);
     if (!targetRoute || targetRoute === currentRoute) return false;
 
+    setNavigationProgress(true);
     try {
+      // HTML, route styles, page modules, and eligible data are warmed before
+      // the visible route changes. The currently active page remains usable.
       const page = await loadPageDocument(targetUrl.href);
       if (sequence !== navigationSequence) return false;
       if (page.route !== targetRoute) throw new Error('Destination content did not match the requested route.');
@@ -458,16 +497,55 @@ export function initPageNavigation({
         }, '', targetUrl.href);
       }
 
-      const update = () => commitPage(page, targetUrl.href, options);
+      // Keep the View Transition callback synchronous: it only disposes the
+      // previous page controller and swaps the route outlet. No network, data,
+      // feature initialization, image readiness, or async mount work is awaited
+      // while the browser is holding the old snapshot.
+      const update = () => {
+        destroyActivePage();
+        commitPageDOM(page);
+      };
       if (typeof root.startViewTransition === 'function') {
         const transition = root.startViewTransition(update);
         await transition.updateCallbackDone;
         await transition.finished.catch(() => {});
       } else {
-        await update();
+        update();
       }
+      if (sequence !== navigationSequence) return false;
+
+      updateRouteStyles(page);
+      prefetchCurrentLinks();
+
+      const hash = new URL(targetUrl.href, windowRef.location.href).hash;
+      void focusAfterNavigation({
+        hash,
+        scrollY: options?.scrollY,
+        restoreScroll: Boolean(options?.restoreScroll && !hash)
+      }).catch(error => console.warn('Page navigation: focus restoration failed.', error));
+
+      // The destination HTML is already visible. Hydrate its independent page
+      // module after the visual handoff and keep the shared shell responsive.
+      let app = null;
+      try {
+        app = await mountPage({
+          showPageTransition: false,
+          awaitProjectMedia: false,
+          immediateContentReveal: true
+        });
+      } catch (error) {
+        console.warn('Page navigation: destination is visible but could not fully hydrate.', error);
+      }
+
+      if (sequence !== navigationSequence) {
+        try { app?.destroy?.(); } catch (_) {}
+        return false;
+      }
+      setApp?.(app);
+      setNavigationProgress(false);
       return true;
     } catch (error) {
+      if (sequence === navigationSequence) setNavigationProgress(false);
       console.warn('Page navigation: using native fallback after client route failure.', error);
       if (options.history === 'pop') windowRef.location.reload();
       else windowRef.location.assign(targetUrl.href);
