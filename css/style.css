@@ -3296,9 +3296,10 @@ body[aria-busy="true"] {
   animation-delay: 0s;
 }
 
-/* Shared-shell route handoff. The browser snapshots only the page outlet;
-   the navbar, footer, and initial logo gate remain mounted and stationary. */
-#routeOutlet {
+/* Shared-shell route handoff. Only page content receives a transition
+   layer; modal/Lightbox overlays remain route-outlet siblings so they can
+   preserve their established stacking above the persistent navbar. */
+#routeContent {
   view-transition-name: lm-route-content;
 }
 
