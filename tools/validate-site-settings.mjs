@@ -68,6 +68,8 @@ assert.ok(!feedbackSource.includes('interaction-feedback-toggle'), 'Feedback mus
 assert.ok(feedbackSource.includes("root.addEventListener('lm:filter-centered', handleCenteredFilter)"));
 assert.ok(feedbackSource.includes('typeof nav?.vibrate === \'function\''));
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
+assert.ok(compositionSource.includes("const routeDocumentTitle = String(root.title || '')"), 'The page composition must capture the route document title before applying shared CMS settings.');
+assert.ok(compositionSource.includes('if (isAboutPage && routeDocumentTitle) root.title = routeDocumentTitle;'), 'About must keep its route-specific title while Design may use the CMS site title.');
 const heroSource = await readFile(new URL('../js/features/hero/index.js', import.meta.url), 'utf8');
 const adminSource = await readFile(new URL('../admin/admin.js', import.meta.url), 'utf8');
 assert.ok(compositionSource.includes('defaultVideoPoster: settings.defaultVideoPoster'), 'The composition root must pass the normalized CMS poster setting into the hero.');
