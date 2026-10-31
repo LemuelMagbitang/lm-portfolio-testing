@@ -280,12 +280,30 @@ export function initPageNavigation({
     return request;
   }
 
-  function prefetch(value) {
+  function warmRouteModules(route) {
+    if (route !== 'design') return;
+    // Only warm the relatively heavy Design feature graph after navigation
+    // intent. This keeps About's initial runtime lean while making a deliberate
+    // return to the project grid much faster.
+    [
+      'js/features/projects/index.js?v=20261029-01',
+      'js/features/gallery/index.js?v=20261030-03',
+      'js/features/lightbox/index.js?v=20261030-07',
+      'js/data/project-normalizer.js?v=20261029-01'
+    ].forEach(path => {
+      try {
+        addWarmHint(new URL(path, siteRootUrl).href, 'modulepreload');
+      } catch (_) {}
+    });
+  }
+
+  function prefetch(value, { intent = false } = {}) {
     if (destroyed) return Promise.resolve(false);
     let url;
     try { url = documentUrl(value); } catch (_) { return Promise.resolve(false); }
     const destinationRoute = resolvePortfolioRoute(url, siteRootUrl);
     if (!destinationRoute || destinationRoute === currentRoute) return Promise.resolve(false);
+    if (intent) warmRouteModules(destinationRoute);
     return loadPageDocument(url.href).then(() => true).catch(() => false);
   }
 
@@ -479,6 +497,7 @@ export function initPageNavigation({
     if (!targetRoute || targetRoute === currentRoute) return false;
 
     setNavigationProgress(true);
+    warmRouteModules(targetRoute);
     try {
       // HTML, route styles, page modules, and eligible data are warmed before
       // the visible route changes. The currently active page remains usable.
@@ -569,7 +588,7 @@ export function initPageNavigation({
     const link = target?.closest?.(NAV_LINK_SELECTOR);
     if (!link || !root.contains(link)) return;
     const targetUrl = new URL(link.getAttribute('href') || '', windowRef.location.href);
-    void prefetch(targetUrl.href);
+    void prefetch(targetUrl.href, { intent: true });
   }
 
   function restoreSameRoutePopState(state) {
