@@ -295,12 +295,7 @@ export async function createPortfolioApp({
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl
       }))
-    : initAbout({
-        url: config.urls.about,
-        root,
-        loadJson: loadCmsJson,
-        resolveAssetUrl: siteAssetUrl
-      });
+    : Promise.resolve(null);
 
   // Start About asset warm-up as soon as the data endpoint is known. The
   // browser can populate its HTTP/image cache while the branded loading gate
@@ -314,13 +309,7 @@ export async function createPortfolioApp({
         loadJson: loadCmsJson,
         resolveAssetUrl: siteAssetUrl
       }))
-    : preloadAboutAssets({
-        url: config.urls.about,
-        root,
-        documentRef: root,
-        loadJson: loadCmsJson,
-        resolveAssetUrl: siteAssetUrl
-      })
+    : Promise.resolve({ total: 0, ready: 0 })
   ).catch(error => {
     console.warn('About asset preload failed:', error);
     return { total: 0, ready: 0 };
@@ -549,7 +538,7 @@ export async function createPortfolioApp({
         return feature;
       }),
       aboutPromise.then(feature => {
-        feature.setSoftwareLogosVisible(settings.showSoftwareLogos);
+        feature?.setSoftwareLogosVisible?.(settings.showSoftwareLogos);
         return feature;
       }),
       galleryPromise
