@@ -45,7 +45,7 @@
 /* Keep the Design entrance proportionate on narrow screens. */
 @media (max-width: 640px) {
   .route-outlet[data-route="design"] .lm-content-reveal-target[data-lm-content-reveal-profile="animated-content"] {
-    --lm-content-reveal-distance: 28px !important;
+    --lm-content-reveal-distance: 18px !important;
   }
 }
 

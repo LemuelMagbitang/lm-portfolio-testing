@@ -50,6 +50,8 @@ assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero
 assert.match(revealCss, /opacity var\(--lm-content-reveal-duration, 480ms\)[\s\S]*?translate var\(--lm-content-reveal-duration, 480ms\)/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
+assert.match(revealCss, /--lm-content-reveal-distance:\s*18px\s*!important;/,
+  "The narrow Design grid entrance must honor its reduced 18px travel distance.");
 assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\s*#bdbdbd\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
   'The review heading must keep a high-contrast, non-blended foreground.');
 assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
@@ -61,8 +63,8 @@ assert.ok(
   bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
   'Initial content reveal must start after the branded page-transition gate closes.'
 );
-assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261031-06"/);
-assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261031-06"/);
+assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261101-03"/);
+assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261101-03"/);
 
 // Exercise the observer and lifecycle with small DOM-shaped fakes.
 const selectorTargets = new Map();
