@@ -69,7 +69,8 @@ export async function createPortfolioApp({
   cms,
   config,
   awaitProjectMedia = true,
-  immediateContentReveal = false
+  immediateContentReveal = false,
+  pageId = null
 } = {}) {
   if (!root || !runtime || !cms || !config?.urls) throw new Error('Portfolio app dependencies are incomplete.');
 
@@ -111,8 +112,12 @@ export async function createPortfolioApp({
 
   const currentHash = String(root.defaultView?.location?.hash || '').toLowerCase();
   const initialContactNavigation = currentHash === '#contact-start' || currentHash === '#contact-section';
-  const isAboutPage = Boolean(root.body?.classList.contains('about-page'));
-  const hasProjectGallery = !!root.getElementById('portfolioGrid');
+  const isAboutPage = pageId
+    ? pageId === 'about'
+    : Boolean(root.body?.classList.contains('about-page'));
+  const hasProjectGallery = pageId
+    ? pageId === 'design' && Boolean(root.getElementById('portfolioGrid'))
+    : Boolean(root.getElementById('portfolioGrid'));
   const hasProjectArtworkFeature = Boolean(
     root.querySelector('.hero-section, #heroBanner, #heroBannerAbout') ||
     root.getElementById('footerAnimation')
@@ -223,7 +228,9 @@ export async function createPortfolioApp({
           getGrid: () => root.getElementById('portfolioGrid'),
           applyMediaBackground,
           ensureLottiePlayer,
-          waitForThumbnailReadiness: !initialContactNavigation,
+          // Initial document loads can wait for the first visible thumbnails;
+          // soft route changes must reveal the page without waiting on images.
+          waitForThumbnailReadiness: awaitProjectMedia && !initialContactNavigation,
           onCardActivate: details => {
             if (lightboxFeature?.openCard) {
               const activationInput = details.event?.type === 'keydown' ||
