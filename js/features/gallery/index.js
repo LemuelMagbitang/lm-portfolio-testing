@@ -226,6 +226,27 @@ export async function initGallery(options = {}) {
     return filterTabs ? Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn')) : [];
   }
 
+  // The floating indicator is a desktop presentation layer. Compact rails use
+  // the active button's own surface instead, avoiding per-frame layout reads
+  // and coordinate rewrites while the scroll container is being manipulated.
+  function supportsFloatingFilterIndicator() {
+    return windowRef.innerWidth > 1023;
+  }
+
+  function removeFilterActiveIndicator() {
+    const hasPresentation = filterActiveIndicator ||
+      filterContent?.classList.contains('has-active-indicator') ||
+      filterContent?.classList.contains('is-following-filter-scroll');
+    if (!hasPresentation) return;
+
+    filterActiveIndicator?.remove();
+    filterActiveIndicator = null;
+    filterContent?.classList.remove('has-active-indicator', 'is-following-filter-scroll');
+    filterContent?.querySelectorAll('.is-centered-preview').forEach(button => {
+      button.classList.remove('is-centered-preview');
+    });
+  }
+
   // Share one inner-viewport center between the rail's scroll target and the
   // indicator. Using client geometry avoids border-box/client-box drift.
   function getFilterViewportCenterX() {
@@ -246,6 +267,10 @@ export async function initGallery(options = {}) {
   }
 
   function ensureFilterActiveIndicator() {
+    if (!supportsFloatingFilterIndicator()) {
+      removeFilterActiveIndicator();
+      return null;
+    }
     const host = getFilterIndicatorHost();
     if (!host) return null;
     if (!filterActiveIndicator || filterActiveIndicator.parentElement !== host) {
@@ -258,6 +283,10 @@ export async function initGallery(options = {}) {
   }
 
   function syncFilterActiveIndicator(button, { followingScroll = false } = {}) {
+    if (!supportsFloatingFilterIndicator()) {
+      removeFilterActiveIndicator();
+      return;
+    }
     const buttons = getFilterButtons();
     const activeButton = button || buttons.find(item =>
       item.classList.contains('active') || item.getAttribute('aria-pressed') === 'true'
