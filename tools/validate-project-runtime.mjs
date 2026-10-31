@@ -12,7 +12,7 @@ import {
 } from '../js/features/projects/card-presentation.js';
 import { normalizeProjects } from '../js/data/project-normalizer.js?v=20261029-01';
 import { parseYouTubeUrl } from '../js/infrastructure/youtube/url.js';
-import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js?v=20261027-05';
+import { siteAssetUrl } from '../js/infrastructure/browser/site-paths.js?v=20261031-05';
 
 const calls = [];
 const children = [];
