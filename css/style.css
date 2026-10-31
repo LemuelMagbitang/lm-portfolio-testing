@@ -6806,3 +6806,12 @@ button.submit-btn.submit-btn-secondary {
   filter: none !important;
   text-shadow: none !important;
 }
+
+/* Compact filters use the button itself as the selected pill. Remove the
+   leftover surface fade too: a partially transparent active background can
+   read like a delayed settle even though the button geometry is stationary. */
+@media (max-width: 1023px) {
+  .filter-tabs .tab-btn {
+    transition: none !important;
+  }
+}
