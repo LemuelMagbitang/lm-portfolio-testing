@@ -1182,6 +1182,9 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           );
           const indicatorRect = indicator.getBoundingClientRect();
           const nearestRect = nearest.getBoundingClientRect();
+          const indicatorWidthWithinTransitionBounds =
+            indicatorRect.width >= Math.min(initialIndicatorWidth, nearestRect.width) - 1 &&
+            indicatorRect.width <= Math.max(initialIndicatorWidth, nearestRect.width) + 1;
           const indicatorStyle = getComputedStyle(indicator);
           const backgroundChannels = (indicatorStyle.backgroundColor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
           const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1193,6 +1196,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             indicatorCenterDelta: Math.abs(centerX(indicator) - railCenter),
             indicatorWidthDelta: Math.abs(indicatorRect.width - nearestRect.width),
             indicatorWidthDeltaFromStart: Math.abs(indicatorRect.width - initialIndicatorWidth),
+            indicatorWidthWithinTransitionBounds,
             indicatorTransition: indicatorStyle.transitionProperty,
             indicatorTransitionDuration: indicatorStyle.transitionDuration,
             indicatorTransitionTiming: indicatorStyle.transitionTimingFunction,
@@ -1221,7 +1225,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
              !preview.indicatorTransitionTiming.includes('cubic-bezier(0.22, 1, 0.36, 1)') ||
              preview.indicatorWidthDeltaFromStart <= 2 ||
              preview.indicatorWidthDelta <= 2 ||
-             preview.indicatorWidthDelta > preview.indicatorWidthDeltaFromStart + 1));
+             !preview.indicatorWidthWithinTransitionBounds));
         if (preview.available &&
             (preview.indicatorCenterDelta > 2 || previewWidthMotionFailed ||
              !preview.isPreview || preview.previewColor !== 'rgb(255, 255, 255)' ||
