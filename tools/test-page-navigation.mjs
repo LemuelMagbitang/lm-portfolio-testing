@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { resolvePortfolioRoute } from '../js/app/page-navigation.js?v=20261031-01';
+import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries } from '../js/app/page-navigation.js?v=20261031-02';
 
 const siteRoot = 'https://example.test/portfolio/';
 assert.equal(resolvePortfolioRoute('https://example.test/portfolio/', siteRoot), 'design');
@@ -11,5 +11,33 @@ assert.equal(resolvePortfolioRoute('https://example.test/portfolio/admin/', site
 assert.equal(resolvePortfolioRoute('https://example.test/other/', siteRoot), null);
 assert.equal(resolvePortfolioRoute('https://external.test/portfolio/about/', siteRoot), null);
 assert.equal(resolvePortfolioRoute('not a valid url', siteRoot), null);
+
+const routeDataUrls = {
+  settings: 'data/settings.json',
+  projects: 'data/projects.json',
+  reviews: 'data/reviews.json',
+  about: 'data/about.json',
+  heroLoop: 'data/hero-loop.json',
+  footerLoop: 'data/footer-loop.json'
+};
+const manualAboutWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'about', {
+  heroTiming: { loopMode: 'manual' }
+});
+assert.deepEqual(
+  manualAboutWarmup.map(([key]) => key),
+  ['settings', 'reviews', 'about', 'heroLoop', 'footerLoop']
+);
+const automaticAboutWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'about', {
+  heroTiming: { loopMode: 'latest' }
+});
+assert.ok(automaticAboutWarmup.some(([key]) => key === 'projects'));
+const designWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'design', {
+  heroTiming: { loopMode: 'manual' }
+});
+assert.ok(designWarmup.some(([key]) => key === 'projects'));
+assert.deepEqual(
+  resolveRouteDataPrefetchEntries({ settings: ' ', projects: '', about: 'data/about.json' }, 'about', {}),
+  [['about', 'data/about.json']]
+);
 
 console.log('Client-side page route contract passed.');
