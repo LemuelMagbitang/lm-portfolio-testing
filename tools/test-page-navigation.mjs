@@ -35,6 +35,8 @@ const designWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'design', {
   heroTiming: { loopMode: 'manual' }
 });
 assert.ok(designWarmup.some(([key]) => key === 'projects'));
+assert.ok(!designWarmup.some(([key]) => key === 'about'),
+  'Design route prefetch must not request About-only profile data.');
 assert.deepEqual(
   resolveRouteDataPrefetchEntries({ settings: ' ', projects: '', about: 'data/about.json' }, 'about', {}),
   [['about', 'data/about.json']]
