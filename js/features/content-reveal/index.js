@@ -46,16 +46,15 @@ const REVEAL_TARGET_GROUPS = [
   },
   {
     selector: '.hero-section:not(.about-hero)',
-    positionOnly: true,
-    // The Works hero moves as one stable stage; slide/player motion remains
-    // owned by Hero, while text stays readable throughout the entrance.
+    // The hero stage uses a short fade/translate; Hero retains control of
+    // the slide, player, and Ken Burns motion inside the stage.
     animateOnSoftNavigation: true,
     motion: {
-      distance: 14,
-      mobileDistance: 10,
-      durationMs: 520,
+      distance: 12,
+      mobileDistance: 8,
+      durationMs: 460,
       ease: 'cubic-bezier(.22,1,.36,1)',
-      threshold: 0.05
+      threshold: 0.01
     }
   },
   {
@@ -65,13 +64,13 @@ const REVEAL_TARGET_GROUPS = [
     animateOnSoftNavigation: true,
     profile: 'animated-content',
     motion: {
-      distance: 26,
-      mobileDistance: 18,
-      durationMs: 620,
+      distance: 20,
+      mobileDistance: 12,
+      durationMs: 480,
       ease: 'cubic-bezier(.22,1,.36,1)',
       threshold: 0.05,
-      staggerStepMs: 64,
-      staggerMaxMs: 64
+      staggerStepMs: 48,
+      staggerMaxMs: 48
     }
   },
   { selector: '.curated-view-heading' },

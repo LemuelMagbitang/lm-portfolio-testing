@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261101-03';
+import { initContentReveal } from '../js/features/content-reveal/index.js?v=20261101-04';
 
 const revealSource = await readFile(new URL('../js/features/content-reveal/index.js', import.meta.url), 'utf8');
 const revealCss = await readFile(new URL('../css/features/content-reveal.css', import.meta.url), 'utf8');
 const mainStyles = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
 const compositionSource = await readFile(new URL('../js/app/page-composition.js', import.meta.url), 'utf8');
 const bootstrapSource = await readFile(new URL('../js/app/bootstrap.js', import.meta.url), 'utf8');
+const heroSource = await readFile(new URL('../js/features/hero/index.js', import.meta.url), 'utf8');
 const rootHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const aboutHtml = await readFile(new URL('../about/index.html', import.meta.url), 'utf8');
 
@@ -27,10 +28,10 @@ assert.match(revealGroupsSource, /#educationList > \*/);
 assert.match(revealGroupsSource, /#awardsList > \*/);
 assert.ok(revealGroupsSource.includes("motion: { distance: 24, durationMs: 560, staggerStepMs: 48, staggerMaxMs: 144 }"),
   'About hero must retain its established reveal profile.');
-assert.match(revealGroupsSource, /selector: '\.hero-section:not\(\.about-hero\)'[\s\S]*?positionOnly: true,[\s\S]*?distance: 14,[\s\S]*?mobileDistance: 10,[\s\S]*?durationMs: 520,[\s\S]*?threshold: 0\.05/,
-  'The Works hero must use a short, layout-safe entrance without changing About.');
-assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper, #portfolioGridViewport'[\s\S]*?profile: 'animated-content'[\s\S]*?distance: 26,[\s\S]*?mobileDistance: 18,[\s\S]*?durationMs: 620,[\s\S]*?threshold: 0\.05,[\s\S]*?staggerStepMs: 64,[\s\S]*?staggerMaxMs: 64/,
-  'The AnimatedContent-inspired profile must be confined to Design.');
+assert.match(revealGroupsSource, /selector: '\.hero-section:not\(\.about-hero\)'[\s\S]*?distance: 12,[\s\S]*?mobileDistance: 8,[\s\S]*?durationMs: 460,[\s\S]*?threshold: 0\.01/,
+  'The Works hero must use a short fade/translate entrance without changing About.');
+assert.match(revealGroupsSource, /selector: 'main\.works-main > \.filter-nav-wrapper, #portfolioGridViewport'[\s\S]*?profile: 'animated-content'[\s\S]*?distance: 20,[\s\S]*?mobileDistance: 12,[\s\S]*?durationMs: 480,[\s\S]*?threshold: 0\.05,[\s\S]*?staggerStepMs: 48,[\s\S]*?staggerMaxMs: 48/,
+  'The AnimatedContent-inspired profile must be confined to Design and remain brief.');
 assert.match(revealGroupsSource, /#contact-section #web3-forms-container > \.contact-block > h2/);
 assert.doesNotMatch(revealGroupsSource, /\.contact-mobile-tab/,
   'Contact tabs already have their own moving pill and drag state; they must not receive generic reveal transforms.');
@@ -50,21 +51,33 @@ assert.doesNotMatch(revealSource, /\.project-card|#lightboxMediaContainer|\.hero
 assert.match(revealCss, /opacity var\(--lm-content-reveal-duration, 480ms\)[\s\S]*?translate var\(--lm-content-reveal-duration, 480ms\)/);
 assert.match(revealCss, /prefers-reduced-motion:\s*reduce/);
 assert.match(revealCss, /focus-within/);
-assert.match(revealCss, /--lm-content-reveal-distance:\s*18px\s*!important;/,
+assert.match(revealCss, /--lm-content-reveal-distance:\s*12px\s*!important;/,
   "The narrow Design grid entrance must honor its reduced 18px travel distance.");
 assert.match(mainStyles, /#contactReviewPanel > \.section-title\s*\{[^}]*color:\s*#bdbdbd\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;/,
   'The review heading must keep a high-contrast, non-blended foreground.');
 assert.match(mainStyles, /button\.submit-btn\.submit-btn-secondary\s*\{[^}]*color:\s*#fff\s*!important;[^}]*-webkit-text-fill-color:\s*#fff\s*!important;[^}]*background:\s*#242424\s*!important;[^}]*mix-blend-mode:\s*normal\s*!important;[^}]*isolation:\s*isolate\s*!important;/,
   'The review submit button must use its own high-contrast surface even if rendered outside its original panel.');
-assert.match(compositionSource, /content-reveal\/index\.js\?v=20261101-03/);
+assert.match(compositionSource, /content-reveal\/index\.js\?v=20261101-04/);
 assert.match(compositionSource, /contentRevealFeature\?\.destroy\?\.\(\)/);
 assert.match(bootstrapSource, /app\?\.contentReveal\?\.refresh\?\.\(\)/);
+assert.match(heroSource, /firstSlidePoster[\s\S]*?waitForHeroMedia\(firstSlidePoster, 'image', windowRef, 1500\)/,
+  'The first hero poster should settle before the loading gate closes, without waiting for video playback.');
+assert.match(compositionSource, /const \[settingsFeature\] = await Promise\.all\(\[settingsPromise\]\)/,
+  'The Works first viewport must not wait for normalized project data.');
+assert.doesNotMatch(compositionSource, /if \(hasProjectGallery\) await projectsPromise/,
+  'Gallery hydration must not hold the initial first viewport.');
+assert.match(compositionSource, /settleInBackground\(\s*galleryPromise/,
+  'The Gallery must settle in the background after the first Hero is available.');
 assert.ok(
   bootstrapSource.indexOf('hideInitialPageTransition();') < bootstrapSource.indexOf('app?.contentReveal?.refresh?.()'),
   'Initial content reveal must start after the branded page-transition gate closes.'
 );
-assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261101-03"/);
-assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261101-03"/);
+assert.match(rootHtml, /href="css\/features\/content-reveal\.css\?v=20261101-04"/);
+assert.match(aboutHtml, /href="\.\.\/css\/features\/content-reveal\.css\?v=20261101-04"/);
+assert.doesNotMatch(aboutHtml, /<link\b[^>]*rel=["']preload["'][^>]*profile\.jpg/i,
+  'The About profile image must not keep a redundant head preload that can become unused after a soft route handoff.');
+assert.match(aboutHtml, /id="aboutPhoto"[^>]*loading="eager"[^>]*fetchpriority="high"/,
+  'The visible About portrait must retain eager, high-priority loading.');
 
 // Exercise the observer and lifecycle with small DOM-shaped fakes.
 const selectorTargets = new Map();
@@ -177,19 +190,19 @@ assert.equal(educationA.properties.get('--lm-content-reveal-delay'), '0ms',
   'Each About timeline section must restart its own stagger.');
 assert.equal(awardsA.properties.get('--lm-content-reveal-delay'), '0ms',
   'Award entries must not inherit delay from earlier resume sections.');
-assert.equal(designHero.properties.get('--lm-content-reveal-distance'), '14px');
-assert.equal(designHero.properties.get('--lm-content-reveal-duration'), '520ms');
-assert.equal(designHero.dataset.lmContentRevealThreshold, '0.05');
+assert.equal(designHero.properties.get('--lm-content-reveal-distance'), '12px');
+assert.equal(designHero.properties.get('--lm-content-reveal-duration'), '460ms');
+assert.equal(designHero.dataset.lmContentRevealThreshold, '0.01');
 assert.equal(designHero.dataset.lmContentRevealMotion, 'position-only');
-assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '26px');
-assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '620ms');
+assert.equal(filterRail.properties.get('--lm-content-reveal-distance'), '20px');
+assert.equal(filterRail.properties.get('--lm-content-reveal-duration'), '480ms');
 assert.equal(filterRail.properties.get('--lm-content-reveal-delay'), '0ms');
 assert.equal(filterRail.properties.get('--lm-content-reveal-ease'), 'cubic-bezier(.22,1,.36,1)');
 assert.equal(filterRail.dataset.lmContentRevealThreshold, '0.05');
 assert.equal(filterRail.dataset.lmContentRevealProfile, 'animated-content');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '26px');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '620ms');
-assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '64ms');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-distance'), '20px');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-duration'), '480ms');
+assert.equal(projectGridViewport.properties.get('--lm-content-reveal-delay'), '48ms');
 assert.equal(projectGridViewport.dataset.lmContentRevealThreshold, '0.05');
 assert.equal(projectGridViewport.dataset.lmContentRevealMotion, 'position-only',
   'The grid viewport must move as a unit without fading or hiding readable project content.');

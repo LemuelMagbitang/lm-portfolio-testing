@@ -11,7 +11,7 @@ import { initAbout, preloadAboutAssets } from '../features/about/index.js?v=2026
 import { initForms } from '../features/forms/index.js?v=20261012-02';
 import { initSiteSettings } from '../features/settings/index.js?v=20261021-02';
 
-import { initHeroBannerV2 } from '../features/hero/index.js?v=20261101-03';
+import { initHeroBannerV2 } from '../features/hero/index.js?v=20261101-04';
 import { initFooterAnimation } from '../features/footer/index.js?v=20261031-10';
 import { applyMediaBackground } from '../infrastructure/media-background/loader.js?v=20261031-05';
 import { resolveCuratedView, resolveCuratedViewSlug } from '../features/curated-views/index.js?v=20261011-01';
@@ -105,7 +105,7 @@ export async function createPortfolioApp({
   let activeCuratedViewSlug = '';
   let lightboxFeature = null;
   let contentRevealFeature = null;
-  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261101-03')
+  const contentRevealModulePromise = import('../features/content-reveal/index.js?v=20261101-04')
     .catch(error => {
       console.warn('Content reveal: optional feature could not load.', error);
       return null;
@@ -322,13 +322,9 @@ export async function createPortfolioApp({
 
   const forms = initForms({ root });
 
-  // Settings configure the shared UI. About already has a useful static HTML
-  // first view, so project models are not a startup dependency there: they feed
-  // optional Hero/Footer artwork and can initialize in the background.
-  const startupDependencies = isAboutPage
-    ? [settingsPromise]
-    : [settingsPromise, projectModelsPromise];
-  const [settingsFeature] = await Promise.all(startupDependencies);
+  // Settings are the only startup dependency. Project models continue loading
+  // beside the Hero and are consumed by Gallery/Footer when their data is ready.
+  const [settingsFeature] = await Promise.all([settingsPromise]);
 
   const settings = settingsFeature.getState();
   settingsFeature.applyDom();
@@ -389,7 +385,9 @@ export async function createPortfolioApp({
         prefersReducedMotion: runtime.prefersReducedMotion
       });
   const heroPromise = hero
-    ? (isAboutPage ? projectModelsPromise.then(initializeHero) : initializeHero())
+    ? (settings.heroTiming.loopMode === 'manual'
+        ? initializeHero()
+        : projectModelsPromise.then(initializeHero))
       .catch(error => {
         console.warn('Hero: initialization failed', error);
         return null;
@@ -409,8 +407,7 @@ export async function createPortfolioApp({
         prefersReducedMotion: runtime.prefersReducedMotion
       });
   const footerPromise = root.getElementById('footerAnimation')
-    ? (isAboutPage ? projectModelsPromise.then(initializeFooter) : initializeFooter())
-      .catch(error => {
+    ? projectModelsPromise.then(initializeFooter).catch(error => {
         console.warn('Footer animation: initialization failed', error);
         return null;
       })
@@ -456,12 +453,11 @@ export async function createPortfolioApp({
   forms.setProjectEnabled(settings.formsEnabled.project);
   forms.setReviewEnabled(settings.formsEnabled.review);
 
-  // Hero is already initializing while Projects and card markup settle.
-  // Gallery still receives its complete initial card set.
-  if (hasProjectGallery) await projectsPromise;
-
+  // Project data and the Gallery module continue loading in parallel. Mount
+  // cards as soon as their data is ready, but do not hold the first viewport
+  // behind the below-the-fold project grid.
   const galleryPromise = hasProjectGallery
-    ? galleryModulePromise.then(module => {
+    ? projectsPromise.then(() => galleryModulePromise).then(module => {
         if (typeof module?.initGallery !== 'function') return null;
         return module.initGallery({
           root,
@@ -487,6 +483,19 @@ export async function createPortfolioApp({
   let galleryFeature = null;
   let deferredMediaDestroyed = false;
 
+  const settleInBackground = (promise, assign, dispose, label, onSettle) => {
+    void Promise.resolve(promise).then(feature => {
+      if (deferredMediaDestroyed) {
+        dispose?.(feature);
+        return;
+      }
+      assign(feature);
+      onSettle?.(feature);
+    }).catch(error => {
+      console.warn(`${label}: background initialization failed`, error);
+    });
+  };
+
   if (isAboutPage) {
     // The pre-rendered About shell is the first-paint fallback. Do not hold it
     // behind project-data, CMS-profile, review, or decorative-media hydration.
@@ -498,18 +507,6 @@ export async function createPortfolioApp({
           return feature;
         })
       : Promise.resolve(null);
-
-    const settleInBackground = (promise, assign, dispose, label) => {
-      void promise.then(feature => {
-        if (deferredMediaDestroyed) {
-          dispose?.(feature);
-          return;
-        }
-        assign(feature);
-      }).catch(error => {
-        console.warn(`${label}: background initialization failed`, error);
-      });
-    };
 
     settleInBackground(heroPromise, feature => { heroFeature = feature; }, feature => feature?.destroy?.(), 'Hero');
     settleInBackground(footerPromise, feature => { footerFeature = feature; }, feature => feature?.destroy?.(), 'Footer');
@@ -540,25 +537,44 @@ export async function createPortfolioApp({
       'Gallery'
     );
   } else {
-    [heroFeature, footerFeature, reviewsFeature, aboutFeature, galleryFeature] = await Promise.all([
-      heroPromise,
-      footerPromise,
+    // The first usable Hero poster/image is the visual startup priority.
+    // Footer media, Reviews, About extras, and the project grid settle without
+    // delaying the first viewport.
+    heroFeature = await heroPromise;
+    settleInBackground(footerPromise, feature => { footerFeature = feature; }, feature => feature?.destroy?.(), 'Footer');
+    settleInBackground(
       reviewsPromise.then(feature => {
         feature?.setVisible?.(settings.showReviews);
         return feature;
       }),
+      feature => { reviewsFeature = feature; },
+      feature => feature?.cleanup?.(),
+      'Reviews'
+    );
+    settleInBackground(
       aboutPromise.then(feature => {
         feature?.setSoftwareLogosVisible?.(settings.showSoftwareLogos);
         return feature;
       }),
-      galleryPromise
-    ]);
+      feature => { aboutFeature = feature; },
+      feature => feature?.cleanup?.(),
+      'About'
+    );
+    settleInBackground(
+      galleryPromise,
+      feature => {
+        galleryFeature = feature;
+        galleryFeatureRef = feature;
+      },
+      feature => feature?.destroy?.(),
+      'Gallery',
+      () => {
+        try { contentRevealFeature?.refresh?.(); } catch (error) {
+          console.warn('Content reveal could not refresh after Gallery hydration.', error);
+        }
+      }
+    );
   }
-
-  // The Gallery owns the active-card contract. Assign it as soon as the
-  // Gallery finishes initialization so the already-created Lightbox switches
-  // from its safe DOM fallback to filtered project navigation.
-  galleryFeatureRef = galleryFeature;
 
   // Wait for all local project media before removing the branded loading
   // screen. A Contact hash changes the final scroll target, not which assets
@@ -599,7 +615,7 @@ export async function createPortfolioApp({
   return {
     settings,
     navigation,
-    gallery: galleryFeature,
+    get gallery() { return galleryFeature; },
     get hero() { return heroFeature; },
     get footer() { return footerFeature; },
     lightbox: lightboxFeature,

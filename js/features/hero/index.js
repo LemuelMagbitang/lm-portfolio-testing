@@ -367,35 +367,43 @@ async function ensureMuxVideo(...args) {
       .map(target => ({ ...target, view: buildHeroMessageView(documentRef, target.root) }));
 
     if (messageTargets.length) {
-      let messages = [{ label: 'LM.', text: 'Open for freelance work.', author: '', source: '', weight: 1 }];
-      try {
-        const rawMessages = await loadJson(heroMessagesUrl, null, { resolveUrl: resolveAssetUrl });
-        const cmsMessages = normalizeHeroMessages(rawMessages);
-        if (cmsMessages.length) messages = cmsMessages;
-      } catch (err) {
-        console.warn('Hero messages: could not load', heroMessagesUrl, err);
-      }
+      // Copy is secondary to the hero artwork. Load it alongside the first
+      // visual instead of making a footer-only message part of Hero startup.
+      void (async () => {
+        let messages = [{ label: 'LM.', text: 'Open for freelance work.', author: '', source: '', weight: 1 }];
+        try {
+          const rawMessages = await loadJson(heroMessagesUrl, null, { resolveUrl: resolveAssetUrl });
+          const cmsMessages = normalizeHeroMessages(rawMessages);
+          if (cmsMessages.length) messages = cmsMessages;
+        } catch (err) {
+          console.warn('Hero messages: could not load', heroMessagesUrl, err);
+        }
+        if (disposed) return;
 
-      // Select once from the settled CMS list per page load. Artwork keeps
-      // looping independently; quote copy has no timer. Avoid repeating the
-      // last choice across refreshes when localStorage is available.
-      const usedIndices = new Set();
-      const selections = messageTargets.map(target => {
-        const storageKey = target.key === 'hero' ? 'lm:lastHeroMessage' : 'lm:lastFooterMessage';
-        const previousIndex = readLastMessageIndex(storageKey, windowRef);
-        const excluded = new Set(usedIndices);
-        if (messages.length > 1 && previousIndex >= 0 && previousIndex < messages.length) excluded.add(previousIndex);
-        const index = pickHeroMessage(messages, excluded);
-        usedIndices.add(index);
-        rememberMessageIndex(storageKey, index, windowRef);
-        target.view.root.style.transitionDuration = config.messageFadeMs + 'ms';
-        return { target, item: messages[index] };
-      });
+        // Select once from the settled CMS list per page load. Artwork keeps
+        // looping independently; quote copy has no timer. Avoid repeating the
+        // last choice across refreshes when localStorage is available.
+        const usedIndices = new Set();
+        const selections = messageTargets.map(target => {
+          const storageKey = target.key === 'hero' ? 'lm:lastHeroMessage' : 'lm:lastFooterMessage';
+          const previousIndex = readLastMessageIndex(storageKey, windowRef);
+          const excluded = new Set(usedIndices);
+          if (messages.length > 1 && previousIndex >= 0 && previousIndex < messages.length) excluded.add(previousIndex);
+          const index = pickHeroMessage(messages, excluded);
+          usedIndices.add(index);
+          rememberMessageIndex(storageKey, index, windowRef);
+          target.view.root.style.transitionDuration = config.messageFadeMs + 'ms';
+          return { target, item: messages[index] };
+        });
 
-      selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
-      windowRef.requestAnimationFrame(() => {
-        messageTargets.forEach(({ view }) => { view.root.style.opacity = '1'; });
-      });
+        selections.forEach(({ target, item }) => renderHeroMessage(target.view, item));
+        windowRef.requestAnimationFrame(() => {
+          if (disposed) return;
+          messageTargets.forEach(({ view }) => {
+            if (view.root.isConnected) view.root.style.opacity = '1';
+          });
+        });
+      })();
     }
 
     // Load the CMS-curated manual list from the configured URL. A file path
@@ -688,7 +696,13 @@ async function ensureMuxVideo(...args) {
     // video block page composition until its first frame arrives; start playback
     // and recovery immediately, leaving the neutral loading surface in place.
     const firstSlide = heroContainer.querySelector('.slide');
-    if (firstSlide && sources[0]?.type !== 'video' && sources[0]?.type !== 'mux') {
+    const firstSlidePoster = firstSlide?.querySelector?.('.hero-mux-poster');
+    if (firstSlidePoster) {
+      // Wait briefly for the eager, high-priority poster rather than the
+      // network video. This gives the first viewport a usable hero frame
+      // without letting an unavailable poster trap the page transition.
+      await waitForHeroMedia(firstSlidePoster, 'image', windowRef, 1500);
+    } else if (firstSlide && sources[0]?.type !== 'video' && sources[0]?.type !== 'mux') {
       try { await waitForHeroMedia(firstSlide.firstElementChild, sources[0]?.type, windowRef); }
       catch (_) { /* An unavailable visual must never trap startup. */ }
     }
@@ -726,13 +740,14 @@ async function ensureMuxVideo(...args) {
     };
   }
 
-  function waitForHeroMedia(media,type,windowRef){
+  function waitForHeroMedia(media,type,windowRef,timeoutMs=3200){
     if(!media)return Promise.resolve(false);
     return new Promise(resolve=>{
       let settled=false;
       const finish=value=>{if(settled)return;settled=true;windowRef.clearTimeout(timer);Object.entries(handlers).forEach(([name,fn])=>media.removeEventListener?.(name,fn));resolve(value);};
       const handlers={load:()=>finish(true),loadeddata:()=>finish(true),canplay:()=>finish(true),ready:()=>finish(true),error:()=>finish(false)};
-      const timer=windowRef.setTimeout(()=>finish(false),3200);
+      const boundedTimeout=Math.max(250,Number(timeoutMs)||3200);
+      const timer=windowRef.setTimeout(()=>finish(false),boundedTimeout);
       if(type==='image'){if(media.complete&&media.naturalWidth>0){finish(true);return;}media.addEventListener('load',handlers.load,{once:true});media.addEventListener('error',handlers.error,{once:true});}
       else if(type==='video'){if(media.readyState>=2){finish(true);return;}media.addEventListener('loadeddata',handlers.loadeddata,{once:true});media.addEventListener('canplay',handlers.canplay,{once:true});media.addEventListener('error',handlers.error,{once:true});}
       else{if(media.isReady||media.getLottie?.()){finish(true);return;}media.addEventListener('ready',handlers.ready,{once:true});media.addEventListener('error',handlers.error,{once:true});}
