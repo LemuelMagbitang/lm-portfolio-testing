@@ -17,5 +17,5 @@ check(cmsJs.includes('data-ds-token')&&cmsJs.includes('dsReplaceToken'),'Control
 check(cmsCss.includes('.ds-shell')&&cmsCss.includes('@media(max-width:600px)'),'Design System layout must be responsive.');
 check(workflow.includes('node tools/validate-design-system.mjs'),'CI must run the Design System contract test.');
 check(workflow.includes('node tools/smoke-design-system.mjs'),'CI must run the Design System browser smoke test.');
-for(const page of ['index.html','about/index.html','404.html','success/index.html'])check(read(page).includes('style.css?v=20261031-04'),page+' needs the latest stylesheet cache version.');
+for(const page of ['index.html','about/index.html','404.html','success/index.html'])check(read(page).includes('style.css?v=20261101-04'),page+' needs the latest stylesheet cache version.');
 if(errors.length){console.error('Design System validation failed:');errors.forEach(e=>console.error(' - '+e));process.exitCode=1;}else console.log('Design System contract passed.');
