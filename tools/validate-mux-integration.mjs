@@ -353,12 +353,13 @@ check(player.includes("timeoutMs = 15000") &&
   player.includes("Promise.race") &&
   player.includes("Keep the import promise alive"),
   "Mux Video loader must allow a realistic startup window without caching a timed-out wait as a permanent failure.");
-check(hero.includes("configTimeoutMs: 3000") &&
-  hero.includes("timeoutMs: 8000") &&
+check(hero.includes("configTimeoutMs: 500") &&
+  hero.includes("timeoutMs: 1000") &&
+  heroLoop.length > 0 &&
   hero.includes("startup-timeout") &&
   hero.includes("muxFallbackReason") &&
   hero.includes("Switching to the local MP4 fallback"),
-  "Hero must expose selected Mux source/fallback diagnostics and avoid the previous short silent startup fallback.");
+  "Optional Hero published-video discovery must have a 1.5s startup budget and retain the checked-in manual list as fallback.");
 check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),

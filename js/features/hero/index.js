@@ -428,11 +428,15 @@ async function ensureMuxVideo(...args) {
         if (!reducedMotion) {
           try {
             const muxPublicVideos = await import('../../infrastructure/mux/public-videos.js?v=20261027-01');
+            // Published placements remain authoritative when they respond,
+            // but optional discovery must not hold the first Hero frame.
+            // These sequential requests have a combined 1.5s startup budget;
+            // the checked-in manual list remains the immediate failure fallback.
             const remoteVideos = await muxPublicVideos.loadPublicMuxVideos('hero', {
               resolveUrl: resolveAssetUrl,
               fetchImpl: windowRef.fetch.bind(windowRef),
-              configTimeoutMs: 3000,
-              timeoutMs: 8000
+              configTimeoutMs: 500,
+              timeoutMs: 1000
             });
             if (remoteVideos.length) {
               // Published Video Library assets placed for Hero are the live

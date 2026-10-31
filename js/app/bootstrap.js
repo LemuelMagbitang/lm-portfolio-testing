@@ -19,7 +19,7 @@ import { normalizeAppConfig } from '../core/config.js';
 
 export async function bootstrapPortfolioApp({
   root = globalThis.document,
-  cacheVersion = '20261101-04',
+  cacheVersion = '20261101-05',
   showPageTransition = true,
   awaitProjectMedia = false,
   immediateContentReveal = false
