@@ -11853,6 +11853,17 @@ try {
       }, null, { timeout: 7000 });
 
       const initialTimeOrigin = await page.evaluate(() => performance.timeOrigin);
+      const shellSnapshot = await page.evaluate(() => {
+        window.__lmPersistentShellRefs = {
+          navbar: document.querySelector('.navbar'),
+          footer: document.querySelector('footer'),
+          gate: document.querySelector('#pageTransition'),
+          progress: document.querySelector('#navigationProgress'),
+          initialOutlet: document.querySelector('#routeOutlet')
+        };
+        return Object.values(window.__lmPersistentShellRefs).every(Boolean);
+      });
+      if (!shellSnapshot) throw new Error('Shared application shell fixture is incomplete.');
       const aboutLink = page.locator('.nav-links a[href="about/"]').first();
       await aboutLink.focus();
       await page.keyboard.press('Enter');
@@ -11877,12 +11888,17 @@ try {
         gateVisibility: getComputedStyle(document.querySelector('#pageTransition')).visibility,
         gateAriaHidden: document.querySelector('#pageTransition').getAttribute('aria-hidden'),
         activeLink: document.querySelector('.nav-links a.active-link')?.textContent.trim(),
-        focusTag: document.activeElement?.tagName
+        focusTag: document.activeElement?.tagName,
+        shellStable: window.__lmPersistentShellRefs.navbar === document.querySelector('.navbar') &&
+          window.__lmPersistentShellRefs.footer === document.querySelector('footer') &&
+          window.__lmPersistentShellRefs.gate === document.querySelector('#pageTransition') &&
+          window.__lmPersistentShellRefs.progress === document.querySelector('#navigationProgress'),
+        routeOutletReplaced: window.__lmPersistentShellRefs.initialOutlet !== document.querySelector('#routeOutlet')
       }));
       if (aboutState.timeOrigin !== initialTimeOrigin || aboutState.navigationEntries !== 1 ||
           !aboutState.title.includes('About') || aboutState.gateVisibility !== 'hidden' ||
           aboutState.gateAriaHidden !== 'true' || aboutState.activeLink !== 'About Me' ||
-          aboutState.focusTag !== 'H1') {
+          aboutState.focusTag !== 'H1' || !aboutState.shellStable || !aboutState.routeOutletReplaced) {
         throw new Error('Design-to-About navigation must be client-side, loader-free, and move focus to the destination heading: ' +
           JSON.stringify(aboutState));
       }
@@ -11898,10 +11914,15 @@ try {
         timeOrigin: performance.timeOrigin,
         navigationEntries: performance.getEntriesByType('navigation').length,
         gateVisibility: getComputedStyle(document.querySelector('#pageTransition')).visibility,
-        activeLink: document.querySelector('.nav-links a.active-link')?.textContent.trim()
+        activeLink: document.querySelector('.nav-links a.active-link')?.textContent.trim(),
+        shellStable: window.__lmPersistentShellRefs.navbar === document.querySelector('.navbar') &&
+          window.__lmPersistentShellRefs.footer === document.querySelector('footer') &&
+          window.__lmPersistentShellRefs.gate === document.querySelector('#pageTransition') &&
+          window.__lmPersistentShellRefs.progress === document.querySelector('#navigationProgress')
       }));
       if (designState.timeOrigin !== initialTimeOrigin || designState.navigationEntries !== 1 ||
-          designState.gateVisibility !== 'hidden' || designState.activeLink !== 'Designs') {
+          designState.gateVisibility !== 'hidden' || designState.activeLink !== 'Designs' ||
+          !designState.shellStable) {
         throw new Error('About-to-Design navigation must reuse the document and keep the logo loader hidden: ' +
           JSON.stringify(designState));
       }
