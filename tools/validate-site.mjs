@@ -1200,6 +1200,10 @@ function validateGalleryContract() {
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
       !css.includes('overscroll-behavior-x: none !important;') ||
+      !css.includes('/* Compact filters use the button itself as the selected pill.') ||
+      !css.includes('@media (max-width: 1023px) {\n  .filter-tabs .tab-btn {\n    transition: none !important;') ||
+      !smoke.includes('compactPill.activeTransition !== \'none\'') ||
+      !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide') ||
       !smoke.includes('mobile: filter pill must stay attached to the selected button') ||
       !smoke.includes('compact filter rail must use a static active pill without floating-indicator motion during or after swipe')) {
     err('Gallery: compact filters must use a static selected pill, avoid floating-indicator measurements, and settle without native snap or momentum.');
