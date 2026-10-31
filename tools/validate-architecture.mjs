@@ -25,12 +25,12 @@ const legacyRootModules = new Set([
 // strings create separate ES module instances and can split singleton state or
 // cause a preload and the eventual import to download the same module twice.
 const canonicalModuleQueries = new Map([
-  ['script.js', '?v=20261101-05'],
-  ['app/bootstrap.js', '?v=20261101-05'],
-  ['app/page-composition.js', '?v=20261101-05'],
+  ['script.js', '?v=20261101-06'],
+  ['app/bootstrap.js', '?v=20261101-06'],
+  ['app/page-composition.js', '?v=20261101-06'],
   ['app/page-navigation.js', '?v=20261101-03'],
-  ['app/pages/about.js', '?v=20261101-05'],
-  ['app/pages/design.js', '?v=20261101-05'],
+  ['app/pages/about.js', '?v=20261101-06'],
+  ['app/pages/design.js', '?v=20261101-06'],
   ['infrastructure/three/model-viewer.js', '?v=20261024-02'],
   ['infrastructure/browser/script-loader.js', '?v=20261008-01'],
   ['infrastructure/browser/site-paths.js', '?v=20261031-05'],
@@ -45,7 +45,7 @@ const canonicalModuleQueries = new Map([
   ['features/projects/project-loader.js', '?v=20261029-01'],
   ['features/projects/project-card.js', '?v=20261027-05'],
   ['features/projects/project-thumbnail.js', '?v=20261030-01'],
-  ['features/gallery/index.js', '?v=20261030-03'],
+  ['features/gallery/index.js', '?v=20261101-06'],
   ['features/gallery/presentation.js', '?v=20261030-02'],
   ['features/hero/index.js', '?v=20261101-05'],
   ['features/footer/index.js', '?v=20261031-10'],
