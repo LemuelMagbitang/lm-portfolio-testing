@@ -1211,7 +1211,7 @@ function validateGalleryContract() {
       source.includes("item.style.setProperty('color', '#111', 'important')") ||
       !smoke.includes('indicatorInsideContent') ||
       !smoke.includes("previewText.blendMode !== 'normal'") ||
-      !smoke.includes("settledIndicatorBackground !== 'rgb(255, 255, 255)'") ||
+      !smoke.includes("selectedAfterOtherSpaceClick.pillColor !== 'rgb(255, 255, 255)'") ||
       !smoke.includes('desktop initial-load active filter contrast failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
     err('Gallery: labels must use exclusion over the settled white pill and switch to white text on a #909090 pill while interacting.');
