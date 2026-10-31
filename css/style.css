@@ -376,6 +376,32 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
 .hero-banner .slide mux-video {
   --media-object-fit: cover;
 }
+
+.hero-banner .slide.has-mux-poster mux-video {
+  opacity: 0;
+  transition: opacity 520ms ease;
+}
+
+.hero-banner .slide.has-mux-poster.is-mux-playing mux-video {
+  opacity: 1;
+}
+
+.hero-banner .slide .hero-mux-poster {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 520ms ease;
+}
+
+.hero-banner .slide.has-mux-poster.is-mux-playing .hero-mux-poster {
+  opacity: 0;
+}
 .hero-banner .slide mux-player {
   --media-object-fit: cover;
   --controls: none;
@@ -3496,6 +3522,25 @@ footer{
   transform:scale(var(--footer-zoom,1)) rotate(var(--footer-rotate,0deg));
   transform-origin:center;
 }
+.footer-animation-slide.has-mux-poster mux-video{
+  opacity:0;
+  transition:opacity 520ms ease;
+}
+.footer-animation-slide.has-mux-poster.is-mux-playing mux-video{opacity:1;}
+.footer-animation-slide .footer-mux-poster{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  pointer-events:none;
+  opacity:1;
+  transition:opacity 520ms ease;
+}
+.footer-animation-slide.has-mux-poster.is-mux-playing .footer-mux-poster{opacity:0;}
+.footer-animation-slide mux-video{--media-object-fit:cover;}
 .footer-animation-slide mux-player{
   --media-object-fit:cover;
   --controls:none;
