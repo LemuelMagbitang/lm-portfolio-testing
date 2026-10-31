@@ -20,23 +20,20 @@ const routeDataUrls = {
   heroLoop: 'data/hero-loop.json',
   footerLoop: 'data/footer-loop.json'
 };
-const manualAboutWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'about', {
-  heroTiming: { loopMode: 'manual' }
-});
+const aboutWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'about');
 assert.deepEqual(
-  manualAboutWarmup.map(([key]) => key),
-  ['settings', 'reviews', 'about', 'heroLoop', 'footerLoop']
+  aboutWarmup.map(([key]) => key),
+  ['about'],
+  'About route prefetch should warm only its route-specific profile payload.'
 );
-const automaticAboutWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'about', {
-  heroTiming: { loopMode: 'latest' }
-});
-assert.ok(automaticAboutWarmup.some(([key]) => key === 'projects'));
-const designWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'design', {
-  heroTiming: { loopMode: 'manual' }
-});
-assert.ok(designWarmup.some(([key]) => key === 'projects'));
-assert.ok(!designWarmup.some(([key]) => key === 'about'),
-  'Design route prefetch must not request About-only profile data.');
+const designWarmup = resolveRouteDataPrefetchEntries(routeDataUrls, 'design');
+assert.deepEqual(
+  designWarmup.map(([key]) => key),
+  ['projects'],
+  'Design route prefetch should warm the project feed but not shared or About-only data.'
+);
+assert.ok(!designWarmup.some(([key]) => ['settings', 'reviews', 'about', 'heroLoop', 'footerLoop'].includes(key)));
+assert.deepEqual(resolveRouteDataPrefetchEntries(routeDataUrls, 'unsupported'), []);
 assert.deepEqual(
   resolveRouteDataPrefetchEntries({ settings: ' ', projects: '', about: 'data/about.json' }, 'about', {}),
   [['about', 'data/about.json']]
