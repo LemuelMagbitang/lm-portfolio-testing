@@ -201,12 +201,12 @@ check(footer.includes("documentRef.createElement('mux-video')") &&
   footer.includes("const reduceMotionNow = Boolean(reducedMotion())") &&
   footer.includes("source.type !== 'mux'") &&
   footer.includes("type: 'image', src: poster") &&
-  footer.includes("mux-video, mux-player") &&
+  footer.includes("media.localName === 'mux-video' || media.localName === 'mux-player'") &&
   styles.includes(".footer-animation-slide mux-video") &&
   styles.includes(".footer-animation-slide.has-mux-poster.is-mux-playing .footer-mux-poster") &&
   styles.includes(".hero-banner .slide.has-mux-poster.is-mux-playing .hero-mux-poster"),
   "Hero and Footer must paint posters before Mux registers, and only fade them out after a real playing event.");
-const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie-player') {")[0] || "";
+const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie') {")[0] || "";
 check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footerNativeVideo.includes("media.preload = autoplayAllowed ? 'auto' : 'none'") &&
   footer.includes("playActiveMedia()") &&
