@@ -219,6 +219,8 @@ export async function createPortfolioApp({
         const projectPayload = curatedResolution ? curatedResolution.projects : mainPayload;
         activeCuratedViewSlug = curatedResolution?.view?.slug || '';
         applyCuratedViewPresentation(root, curatedResolution);
+        // Direct document loads may wait for priority thumbnails. Soft route
+        // changes render immediately and let media settle after the handoff.
         return projectsModule.mountProjects({
           url: config.urls.projects,
           projectData: projectPayload,
@@ -228,8 +230,6 @@ export async function createPortfolioApp({
           getGrid: () => root.getElementById('portfolioGrid'),
           applyMediaBackground,
           ensureLottiePlayer,
-          // Initial document loads can wait for the first visible thumbnails;
-          // soft route changes must reveal the page without waiting on images.
           waitForThumbnailReadiness: awaitProjectMedia && !initialContactNavigation,
           onCardActivate: details => {
             if (lightboxFeature?.openCard) {
