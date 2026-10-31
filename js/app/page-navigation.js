@@ -32,9 +32,9 @@ export function resolvePortfolioRoute(urlValue, siteRootUrl) {
 }
 
 /**
- * Select data endpoints worth warming for a destination route.
- * About's manual Hero/Footer loops are self-contained and must not fetch the
- * main Projects feed. Other About modes still use project models for artwork.
+ * Select only destination-specific data endpoints for route prefetch.
+ * Shared settings/reviews/Hero/Footer data belongs to the active runtime and
+ * should not be fetched again just because the visitor may change pages.
  */
 export function resolveRouteDataPrefetchEntries(urls, route) {
   const entries = Object.entries(urls && typeof urls === 'object' ? urls : {})
