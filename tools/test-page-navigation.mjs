@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries } from '../js/app/page-navigation.js?v=20261031-02';
+import { resolvePortfolioRoute, resolveRouteDataPrefetchEntries } from '../js/app/page-navigation.js?v=20261031-03';
 
 const siteRoot = 'https://example.test/portfolio/';
 assert.equal(resolvePortfolioRoute('https://example.test/portfolio/', siteRoot), 'design');
