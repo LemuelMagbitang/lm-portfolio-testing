@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   getSiteRootUrl,
   siteAssetUrl
-} from '../js/infrastructure/browser/site-paths.js?v=20261027-05';
+} from '../js/infrastructure/browser/site-paths.js?v=20261031-05';
 
 function makeScript(documentUrl, src) {
   return {
@@ -73,6 +73,45 @@ for (const deployment of deployments) {
     deployment.name + ': leading-slash CMS paths must stay inside a project-site prefix'
   );
 }
+
+// The router snapshots the initial root before pushState(). A relative
+// script src can then appear to move under /about/ when its resolved src is
+// read again, so subsequent asset/data URLs must use the captured root.
+const routeWindow = {
+  location: { href: 'https://example.github.io/renamed-project/' },
+  SITE_ROOT_URL: ''
+};
+const routeDocument = {
+  get baseURI() { return routeWindow.location.href; },
+  scripts: [{
+    getAttribute(name) {
+      return name === 'src' ? 'js/script.js?v=preview' : null;
+    },
+    get src() {
+      return new URL(this.getAttribute('src'), routeDocument.baseURI).href;
+    }
+  }]
+};
+const routeOptions = { documentRef: routeDocument, windowRef: routeWindow };
+const stableRouteRoot = getSiteRootUrl(routeOptions);
+assert.equal(stableRouteRoot, 'https://example.github.io/renamed-project/');
+routeWindow.SITE_ROOT_URL = stableRouteRoot;
+routeWindow.location.href = new URL('about/', stableRouteRoot).href;
+assert.equal(
+  getSiteRootUrl(routeOptions),
+  stableRouteRoot,
+  'the site root must remain stable after client-side navigation changes the document URL'
+);
+assert.equal(
+  siteAssetUrl('data/settings.json', routeOptions),
+  new URL('data/settings.json', stableRouteRoot).href,
+  'CMS data must continue resolving from the original site root after navigating to About'
+);
+assert.equal(
+  siteAssetUrl('assets/projects/haeru/haeru-logo-design.webp', routeOptions),
+  new URL('assets/projects/haeru/haeru-logo-design.webp', stableRouteRoot).href,
+  'About media must continue resolving from the original site root after navigating to About'
+);
 
 const fallbackRoutes = [
   {
