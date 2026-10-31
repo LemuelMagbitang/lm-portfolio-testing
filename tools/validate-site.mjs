@@ -1210,7 +1210,7 @@ function validateGalleryContract() {
       !source.includes("return filterContent || filterTabs?.closest('.filter-nav-viewport') || filterTabs") ||
       source.includes("item.style.setProperty('color', '#111', 'important')") ||
       !smoke.includes('indicatorInsideContent') ||
-      !smoke.includes("previewBlendMode !== 'normal'") ||
+      !smoke.includes("previewText.blendMode !== 'normal'") ||
       !smoke.includes("settledIndicatorBackground !== 'rgb(255, 255, 255)'") ||
       !smoke.includes('desktop initial-load active filter contrast failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
