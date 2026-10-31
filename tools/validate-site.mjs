@@ -1173,7 +1173,11 @@ function validateGalleryContract() {
   if (!smoke.includes('stationary filter pill must remain centered and visibly resize during direct selection')) {
     err('Gallery: browser smoke must guard against horizontal pill travel on direct filter selection.');
   }
-  if (!source.includes('function clearFilterScrollPreview()') ||
+  if (!source.includes('function supportsFloatingFilterIndicator()') ||
+      !source.includes('return windowRef.innerWidth > 1023;') ||
+      !source.includes('function removeFilterActiveIndicator()') ||
+      !source.includes('if (!supportsFloatingFilterIndicator())') ||
+      !source.includes('function clearFilterScrollPreview()') ||
       !source.includes("bind(documentRef, 'pointerdown'") ||
       !source.includes("bind(documentRef, 'click', event => {") ||
       !source.includes('}, { capture: true });') ||
@@ -1189,15 +1193,13 @@ function validateGalleryContract() {
       !source.includes('signalCenteredFilter(next);') ||
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
-      css.includes('Small screens should settle directly; no animated easing/bounce.') ||
-      !css.includes('width 360ms cubic-bezier(.22, 1, .36, 1)') ||
       !css.includes('@media (max-width: 1023px)') ||
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
       !css.includes('overscroll-behavior-x: none !important;') ||
-      !css.includes('.filter-active-indicator.is-following-scroll') ||
-      !css.includes('animation: none !important;')) {
-    err('Gallery: compact filter navigation must settle without bounce, ignore programmatic scroll previews, and clear stale swipe styling.');
+      !smoke.includes('mobile: filter pill must stay attached to the selected button') ||
+      !smoke.includes('compact filter rail must use a static active pill without floating-indicator motion during or after swipe')) {
+    err('Gallery: compact filters must use a static selected pill, avoid floating-indicator measurements, and settle without native snap or momentum.');
   }
   if (!css.includes('.filter-nav-content.has-active-indicator .tab-btn') ||
       !css.includes('mix-blend-mode: exclusion;') ||
@@ -1210,7 +1212,7 @@ function validateGalleryContract() {
       !smoke.includes('indicatorInsideContent') ||
       !smoke.includes("previewBlendMode !== 'normal'") ||
       !smoke.includes("settledIndicatorBackground !== 'rgb(255, 255, 255)'") ||
-      !smoke.includes('initial-load active filter contrast failed') ||
+      !smoke.includes('desktop initial-load active filter contrast failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
     err('Gallery: labels must use exclusion over the settled white pill and switch to white text on a #909090 pill while interacting.');
   }
