@@ -27,14 +27,18 @@ export function getSiteRootUrl({
   windowRef = globalThis.window
 } = {}) {
   try {
-    const siteScriptUrl = findScriptUrl('script.js', documentRef);
-    if (siteScriptUrl) return new URL('../', siteScriptUrl).href;
-
+    // The router snapshots SITE_ROOT_URL before client-side navigation.
+    // Prefer that stable absolute value: after pushState(), a relative script
+    // src can be re-resolved against /about/ even though the script was loaded
+    // from the site root.
     const configured = windowRef?.SITE_ROOT_URL;
     if (configured) {
       return new URL(configured, documentRef?.baseURI || windowRef?.location?.href).href
         .replace(/\/$/, '') + '/';
     }
+
+    const siteScriptUrl = findScriptUrl('script.js', documentRef);
+    if (siteScriptUrl) return new URL('../', siteScriptUrl).href;
 
     const baseUri = documentRef?.baseURI || windowRef?.location?.href;
     const pageUrl = new URL(baseUri);
