@@ -1318,8 +1318,9 @@ function validateRuntimeCacheGraph() {
   if (!entryVersion || !bootstrapVersion || entryVersion !== bootstrapVersion) {
     err('Bootstrap cache graph: js/script.js and bootstrap cache versions differ.');
   }
-  if (!/page-composition\.js\?v=\$\{cacheVersion\}/.test(bootstrap)) {
-    err('Bootstrap cache graph: page-composition must use the same runtime cacheVersion.');
+  if (!/\.\/pages\/\$\{pageId\}\.js\?v=\$\{cacheVersion\}/.test(bootstrap)) {
+    err('Bootstrap cache graph: the active page module must use the same runtime cacheVersion.');
+  }
   }
 
   // The HTML entrypoints are the final cache owners. Matching each other is
