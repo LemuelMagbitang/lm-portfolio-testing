@@ -160,7 +160,11 @@ check(hero.includes("sourceOrigin: 'published-cms'") &&
   heroMuxSetup.includes("setAttribute('autoplay', '')") &&
   heroMuxSetup.includes("setAttribute('disable-tracking', '')") &&
   hero.includes("if (media.localName !== 'mux-player') media.playsInline = true;") &&
-  hero.includes("if (!reducedMotion && sources.some(source => source.type === 'mux'))") &&
+  hero.includes("const hasMuxSources = !reducedMotion && sources.some(source => source.type === 'mux')") &&
+  !hero.includes("await ensureMuxVideo(undefined, 15000)") &&
+  hero.includes("className = 'hero-mux-poster'") &&
+  hero.includes("customElementsRef.whenDefined('mux-video')") &&
+  hero.includes("stopCrossfade.activateCurrent?.()") &&
   hero.includes("const shouldLoop = slides.length === 1") &&
   hero.includes("if (media.localName === 'mux-video') {") &&
   hero.includes("}, 15000);") &&
@@ -181,6 +185,10 @@ check(
   hero.includes("media.setAttribute('playback-id', playbackId)"),
   "Hero must allow one bounded MSE-engine recovery for code-4/NO_SOURCE failures even after the generic retry budget is spent, and log query-safe source details.");
 check(footer.includes("documentRef.createElement('mux-video')") &&
+  !footer.includes("await (options.ensureMuxVideo || ensureMuxVideo)()") &&
+  footer.includes("className = 'footer-mux-poster'") &&
+  footer.includes("customElementsRef.whenDefined('mux-video')") &&
+  footer.includes("let disposed = false") &&
   footer.includes("media.setAttribute('autoplay', '')") &&
   footer.includes("media.setAttribute('disable-tracking', '')") &&
   footer.includes("!reducedMotion() && index === 0") &&
@@ -188,8 +196,10 @@ check(footer.includes("documentRef.createElement('mux-video')") &&
   footer.includes("source.type !== 'mux'") &&
   footer.includes("type: 'image', src: poster") &&
   footer.includes("mux-video, mux-player") &&
-  styles.includes(".footer-animation-slide mux-video"),
-  "Footer background must use UI-free Mux Video with tracking disabled; reduced-motion mode must use poster-only images.");
+  styles.includes(".footer-animation-slide mux-video") &&
+  styles.includes(".footer-animation-slide.has-mux-poster.is-mux-playing .footer-mux-poster") &&
+  styles.includes(".hero-banner .slide.has-mux-poster.is-mux-playing .hero-mux-poster"),
+  "Hero and Footer must paint posters before Mux registers, and only fade them out after a real playing event.");
 const footerNativeVideo = footer.split("} else if (source.type === 'video') {")[1]?.split("} else if (source.type === 'lottie') {")[0] || "";
 check(footerNativeVideo.includes("media.autoplay = Boolean(autoplayAllowed)") &&
   footerNativeVideo.includes("media.preload = autoplayAllowed ? 'auto' : 'none'") &&
