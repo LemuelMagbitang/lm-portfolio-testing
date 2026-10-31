@@ -77,7 +77,14 @@ assert.match(pageCompositionSource, /destroyProjects\(\);/);
 assert.match(pageCompositionSource, /activationInput/);
 assert.match(pageCompositionSource, /details\.event\?\.type === 'keydown'/);
 assert.match(pageCompositionSource, /aboutFeature\?\.cleanup\?\.\(\)/);
-assert.match(pageCompositionSource, /const startupDependencies = isAboutPage\s*\?\s*\[settingsPromise\]\s*:\s*\[settingsPromise, projectsPromise, projectModelsPromise\]/);
+assert.match(pageCompositionSource, /const startupDependencies = isAboutPage\s*\?\s*\[settingsPromise\]\s*:\s*\[settingsPromise, projectModelsPromise\]/);
+assert.ok(
+  pageCompositionSource.indexOf("const hero = root.querySelector") <
+    pageCompositionSource.indexOf("// Initialize the Lightbox before the remaining page features finish."),
+  'Hero/Footer initialization must begin before optional Lightbox warm-up.'
+);
+assert.match(pageCompositionSource, /if \(hasProjectGallery\) await projectsPromise;/,
+  'Projects card markup must still complete before Gallery initialization.');
 assert.match(pageCompositionSource, /const settleInBackground = \(promise, assign, dispose, label\) => \{[\s\S]*?if \(deferredMediaDestroyed\) \{[\s\S]*?dispose\?\.\(feature\);[\s\S]*?assign\(feature\);[\s\S]*?\}/);
 assert.match(pageCompositionSource, /settleInBackground\(heroPromise,/);
 assert.match(pageCompositionSource, /settleInBackground\(footerPromise,/);
