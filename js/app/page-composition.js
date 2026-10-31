@@ -74,6 +74,10 @@ export async function createPortfolioApp({
 } = {}) {
   if (!root || !runtime || !cms || !config?.urls) throw new Error('Portfolio app dependencies are incomplete.');
 
+  // The document entrypoint owns route-specific titles. CMS siteTitle remains
+  // the Design title, but must not overwrite the About page's own metadata.
+  const routeDocumentTitle = String(root.title || '');
+
   const {
     getSiteRootUrl,
     siteAssetUrl,
@@ -327,6 +331,7 @@ export async function createPortfolioApp({
 
   const settings = settingsFeature.getState();
   settingsFeature.applyDom();
+  if (isAboutPage && routeDocumentTitle) root.title = routeDocumentTitle;
 
   // Keep optional sounds/haptics out of the default route graph.
   let interactionFeedback = null;
