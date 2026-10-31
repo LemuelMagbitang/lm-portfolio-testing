@@ -304,6 +304,9 @@ export async function initFooterAnimation(options = {}) {
         poster.setAttribute('aria-hidden', 'true');
         poster.decoding = 'async';
         poster.style.objectPosition = source.focus || '50% 50%';
+        poster.style.transformOrigin = source.focus || '50% 50%';
+        poster.style.setProperty('--footer-zoom', source.zoom || 1);
+        poster.style.setProperty('--footer-rotate', (source.rotate || 0) + 'deg');
         slide.classList.add('has-mux-poster');
         slide.appendChild(poster);
       }
