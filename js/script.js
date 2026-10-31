@@ -3,8 +3,8 @@
  * Owns one long-lived client-side router and one active page app instance.
  */
 
-import { bootstrapPortfolioApp } from './app/bootstrap.js?v=20261031-04';
-import { initPageNavigation } from './app/page-navigation.js?v=20261031-04';
+import { bootstrapPortfolioApp } from './app/bootstrap.js?v=20261031-05';
+import { initPageNavigation } from './app/page-navigation.js?v=20261031-05';
 
 let activeApp = null;
 
