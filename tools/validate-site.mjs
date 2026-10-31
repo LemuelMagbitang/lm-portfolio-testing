@@ -2776,6 +2776,8 @@ function validateClientSidePageNavigation() {
       !router.includes('function warmRouteModules(route)') ||
       !router.includes('if (intent) warmRouteModules(destinationRoute)') ||
       !router.includes('warmRouteModules(targetRoute)') ||
+      !router.includes("if (route === 'design')") ||
+      !router.includes("return entries.filter(([key]) => key !== 'about')") ||
       router.includes('root.body.replaceWith(')) {
     err('Client navigation: route fetching, same-origin restrictions, modifier-click behavior, history restoration, and native fallback must remain connected.');
   }
@@ -2802,10 +2804,10 @@ function validateClientSidePageNavigation() {
       !works.includes('id="navigationProgress"') || !about.includes('id="navigationProgress"') ||
       !works.includes('data-route="design"') || !about.includes('data-route="about"') ||
       !works.includes('data-page-style="lightbox"') ||
-      !about.includes('../js/app/bootstrap.js?v=20261031-03') ||
-      !about.includes('../js/app/page-composition.js?v=20261031-03') ||
-      !about.includes('../js/app/pages/design.js?v=20261031-03') ||
-      !about.includes('../js/app/pages/about.js?v=20261031-03') ||
+      !about.includes('../js/app/bootstrap.js?v=20261031-04') ||
+      !about.includes('../js/app/page-composition.js?v=20261031-04') ||
+      !about.includes('../js/app/pages/design.js?v=20261031-04') ||
+      !about.includes('../js/app/pages/about.js?v=20261031-04') ||
       about.includes('features/projects/index.js?v=20261029-01') ||
       about.includes('features/gallery/index.js?v=20261030-03') ||
       about.includes('features/lightbox/index.js?v=20261030-07') ||
@@ -2846,6 +2848,7 @@ function validatePageAwareFeatureLoading() {
       !/const aboutDataPromise = isAboutPage && config\.urls\.about/.test(composition) ||
       !/const aboutPromise = isAboutPage\s*\?\s*aboutDataPromise\.then\(data => initAbout/.test(composition) ||
       !/const aboutAssetPreloadPromise = \(isAboutPage\s*\?\s*aboutDataPromise\.then\(data => preloadAboutAssets/.test(composition) ||
+      !composition.includes(': Promise.resolve({ total: 0, ready: 0 })') ||
       !/const reviewsPromise = settingsPromise\.then\(async settingsFeature/.test(composition) ||
       !/if \(!currentSettings\.showReviews\) \{[\s\S]*?return null;[\s\S]*?import\(['"]\.\.\/features\/reviews\/index\.js['"]\)/.test(composition) ||
       !/if \(loopMode === 'manual'\) return manual\.slice\(0, 5\);\s*let latest = \[\];/.test(footer)) {
