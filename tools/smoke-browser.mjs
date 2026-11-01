@@ -1063,6 +1063,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
         const fadeStyle = banner ? getComputedStyle(banner, '::before') : null;
         const filterRail = document.querySelector('.filter-tabs');
         const filterStyle = filterRail ? getComputedStyle(filterRail) : null;
+        const filterViewport = filterRail?.closest('.filter-nav-viewport');
+        const filterViewportStyle = filterViewport ? getComputedStyle(filterViewport) : null;
         const activeFilter = filterRail?.querySelector('.filter-btn.active, .tab-btn.active');
         const activeFilterRect = activeFilter?.getBoundingClientRect();
         const activeFilterRange = document.createRange();
@@ -1093,6 +1095,8 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           filterHasOverflow: filterRail ? filterRail.scrollWidth > filterRail.clientWidth + 1 : false,
           filterMaskImage: filterStyle?.maskImage || 'none',
           filterWebkitMaskImage: filterStyle?.webkitMaskImage || 'none',
+          filterViewportMaskImage: filterViewportStyle?.maskImage || 'none',
+          filterViewportWebkitMaskImage: filterViewportStyle?.webkitMaskImage || 'none',
           filterOverflowX: filterStyle?.overflowX || '',
           filterTouchAction: filterStyle?.touchAction || '',
           mainPaddingLeft: parseFloat(mainStyle?.paddingLeft || '0') || 0,
@@ -1136,8 +1140,12 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           layout.filterTabCenterDeltaX > 1.5 || layout.filterTabCenterDeltaY > 1.5) {
         throw new Error(label + ' ' + viewport.name + ': filters must preserve hero/gallery breathing room and centered 44–48px targets: ' + JSON.stringify(layout));
       }
-      const hasFilterEdgeFade = String(layout.filterMaskImage).includes('linear-gradient') ||
-        String(layout.filterWebkitMaskImage).includes('linear-gradient');
+      const hasFilterEdgeFade = [
+        layout.filterMaskImage,
+        layout.filterWebkitMaskImage,
+        layout.filterViewportMaskImage,
+        layout.filterViewportWebkitMaskImage
+      ].some(value => String(value).includes('linear-gradient'));
       if (viewport.name === 'mobile' &&
           ((layout.filterHasOverflow && !hasFilterEdgeFade) ||
            layout.filterOverflowX !== 'auto' || layout.filterTouchAction !== 'pan-y')) {
