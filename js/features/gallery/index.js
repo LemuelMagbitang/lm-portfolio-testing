@@ -260,6 +260,10 @@ export async function initGallery(options = {}) {
     const host = getFilterIndicatorHost();
     if (!host) return null;
     if (!filterActiveIndicator || filterActiveIndicator.parentElement !== host) {
+      // A breakpoint change switches the compact indicator between the viewport
+      // layer and the desktop content layer. Remove the previous node first so
+      // a resize can never leave two visible pills behind.
+      filterActiveIndicator?.remove?.();
       filterActiveIndicator = documentRef.createElement('span');
       filterActiveIndicator.className = 'filter-active-indicator';
       filterActiveIndicator.setAttribute('aria-hidden', 'true');
