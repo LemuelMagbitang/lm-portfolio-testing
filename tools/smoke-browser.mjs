@@ -2638,15 +2638,36 @@ async function assertFilterNavigationResponsive(page, label) {
     if (viewport.width === 320 && state.dataOverflow) {
       const rail = page.locator('.filter-nav-scroller');
       const nonAll = page.locator('.filter-nav-scroller [data-filter]:not([data-filter="all"]):not(:disabled)').last();
-      const scrollBeforeTap = await rail.evaluate(el => el.scrollLeft);
-      await nonAll.click();
-      const scrollAfterTap = await rail.evaluate(el => el.scrollLeft);
-      await page.waitForTimeout(360);
-      const scrollAfterTapSettles = await rail.evaluate(el => el.scrollLeft);
-      if (Math.abs(scrollAfterTap - scrollBeforeTap) < 20 ||
-          Math.abs(scrollAfterTapSettles - scrollAfterTap) > 1) {
-        throw new Error(label + ' compact filter tap must center immediately without a second smooth-scroll glide: ' +
-          JSON.stringify({ scrollBeforeTap, scrollAfterTap, scrollAfterTapSettles }));
+      const tapMotion = await nonAll.evaluate(button => {
+        const scroller = button.closest('.filter-nav-scroller');
+        const before = scroller?.scrollLeft ?? 0;
+        const samples = [];
+        const startedAt = performance.now();
+        button.click();
+
+        return new Promise(resolve => {
+          const sampleFrame = () => {
+            samples.push(scroller?.scrollLeft ?? 0);
+            if (performance.now() - startedAt >= 180) {
+              const distinctFrames = samples.filter((value, index) =>
+                index === 0 || Math.abs(value - samples[index - 1]) > 0.1
+              ).length;
+              resolve({
+                before,
+                during: scroller?.scrollLeft ?? 0,
+                sampleCount: samples.length,
+                distinctFrames
+              });
+              return;
+            }
+            requestAnimationFrame(sampleFrame);
+          };
+          requestAnimationFrame(sampleFrame);
+        });
+      });
+      if (Math.abs(tapMotion.during - tapMotion.before) < 1 || tapMotion.distinctFrames < 2) {
+        throw new Error(label + ' compact filter click must animate through multiple horizontal scroll frames: ' +
+          JSON.stringify(tapMotion));
       }
       await page.waitForFunction(() => {
         const scroller = document.querySelector('.filter-nav-scroller');
