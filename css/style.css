@@ -657,6 +657,25 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   }
 }
 
+/* Keep the desktop moving-pill presentation on compact screens without the
+   overshooting curve that previously made the pill feel springy. The rail
+   remains directly manipulated; only the pill's width/height are eased. */
+@media (max-width: 1023px) {
+  .filter-active-indicator.is-animated {
+    transition:
+      width 260ms cubic-bezier(.22, 1, .36, 1),
+      height 140ms ease-out,
+      background-color 140ms ease-out;
+  }
+
+  .filter-active-indicator.is-following-scroll {
+    transition:
+      width 120ms ease-out,
+      height 140ms ease-out,
+      background-color 140ms ease-out;
+  }
+}
+
 .filter-active-indicator.is-ready {
   opacity: 1;
 }
@@ -6810,8 +6829,3 @@ button.submit-btn.submit-btn-secondary {
 /* Compact filters use the button itself as the selected pill. Remove the
    leftover surface fade too: a partially transparent active background can
    read like a delayed settle even though the button geometry is stationary. */
-@media (max-width: 1023px) {
-  .filter-tabs .tab-btn {
-    transition: none !important;
-  }
-}
