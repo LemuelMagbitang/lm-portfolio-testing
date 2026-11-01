@@ -2771,15 +2771,33 @@ async function assertFilterNavigationResponsive(page, label) {
         const contentDuring = el.querySelector('.filter-nav-content');
         const activeDuring = el.querySelector('.tab-btn.active, .filter-btn.active');
         const activeStyleDuring = activeDuring ? getComputedStyle(activeDuring) : null;
+        const indicatorDuring = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+        const indicatorRectDuring = indicatorDuring?.getBoundingClientRect();
+        const previewDuring = contentDuring?.querySelector('.is-centered-preview');
+        const previewRectDuring = previewDuring?.getBoundingClientRect();
+        const duringScrollerRect = el.getBoundingClientRect();
         const during = {
-          indicatorExists: !!el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator'),
+          indicatorExists: !!indicatorDuring,
           hasActiveIndicator: contentDuring?.classList.contains('has-active-indicator') || false,
           following: contentDuring?.classList.contains('is-following-filter-scroll') || false,
           previewCount: contentDuring?.querySelectorAll('.is-centered-preview').length || 0,
           activeColor: activeStyleDuring?.color || '',
           activeBackground: activeStyleDuring?.backgroundColor || '',
           activeBlendMode: activeStyleDuring?.mixBlendMode || '',
-          activeTransition: activeStyleDuring?.transitionProperty || ''
+          activeTransition: activeStyleDuring?.transitionProperty || '',
+          indicatorBackground: indicatorDuring ? getComputedStyle(indicatorDuring).backgroundColor : '',
+          indicatorPreviewCenterDelta: indicatorRectDuring && previewRectDuring
+            ? Math.abs((indicatorRectDuring.left + indicatorRectDuring.width / 2) -
+              (previewRectDuring.left + previewRectDuring.width / 2))
+            : Infinity,
+          indicatorPreviewCenterDeltaY: indicatorRectDuring && previewRectDuring
+            ? Math.abs((indicatorRectDuring.top + indicatorRectDuring.height / 2) -
+              (previewRectDuring.top + previewRectDuring.height / 2))
+            : Infinity,
+          previewViewportCenterDelta: previewRectDuring
+            ? Math.abs(previewRectDuring.left + previewRectDuring.width / 2 -
+              (duringScrollerRect.left + el.clientWidth / 2))
+            : Infinity
         };
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -2791,10 +2809,12 @@ async function assertFilterNavigationResponsive(page, label) {
         const scrollerRect = el.getBoundingClientRect();
         const content = el.querySelector('.filter-nav-content');
         const activeStyle = active ? getComputedStyle(active) : null;
+        const indicator = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+        const indicatorRect = indicator?.getBoundingClientRect();
         return {
           before, direct, afterRelease, afterSettle, requestedDistance: distance,
           snapType: getComputedStyle(el).scrollSnapType,
-          indicatorExists: !!el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator'),
+          indicatorExists: !!indicator,
           hasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
           following: content?.classList.contains('is-following-filter-scroll') || false,
           previewCount: content?.querySelectorAll('.is-centered-preview').length || 0,
@@ -2802,28 +2822,47 @@ async function assertFilterNavigationResponsive(page, label) {
           activeBackground: activeStyle?.backgroundColor || '',
           activeBlendMode: activeStyle?.mixBlendMode || '',
           activeTransition: activeStyle?.transitionProperty || '',
+          indicatorBackground: indicator ? getComputedStyle(indicator).backgroundColor : '',
           activeCenterDelta: activeRect
             ? Math.abs(activeRect.left + activeRect.width / 2 - (scrollerRect.left + el.clientWidth / 2))
+            : Infinity,
+          indicatorCenterDelta: indicatorRect && activeRect
+            ? Math.abs((indicatorRect.left + indicatorRect.width / 2) -
+              (activeRect.left + activeRect.width / 2))
+            : Infinity,
+          indicatorCenterDeltaY: indicatorRect && activeRect
+            ? Math.abs((indicatorRect.top + indicatorRect.height / 2) -
+              (activeRect.top + activeRect.height / 2))
+            : Infinity,
+          indicatorWidthDelta: indicatorRect && activeRect
+            ? Math.abs(indicatorRect.width - activeRect.width)
             : Infinity,
           during
         };
       });
       if (compactGesture.snapType !== 'none' ||
           Math.abs(compactGesture.afterSettle - compactGesture.afterRelease) > 1 ||
-          compactGesture.indicatorExists || compactGesture.hasActiveIndicator ||
+          !compactGesture.indicatorExists || !compactGesture.hasActiveIndicator ||
           compactGesture.following || compactGesture.previewCount !== 0 ||
-          compactGesture.activeColor !== 'rgb(17, 17, 17)' ||
-          compactGesture.activeBackground !== 'rgb(242, 242, 242)' ||
-          compactGesture.activeBlendMode !== 'normal' ||
-          compactGesture.activeTransition !== 'none' ||
+          compactGesture.activeColor !== 'rgb(255, 255, 255)' ||
+          (compactGesture.activeBackground !== 'rgba(0, 0, 0, 0)' &&
+           compactGesture.activeBackground !== 'transparent') ||
+          compactGesture.activeBlendMode !== 'exclusion' ||
           compactGesture.activeCenterDelta > 2 ||
-          compactGesture.during.indicatorExists || compactGesture.during.hasActiveIndicator ||
-          compactGesture.during.following || compactGesture.during.previewCount !== 0 ||
-          compactGesture.during.activeColor !== 'rgb(17, 17, 17)' ||
-          compactGesture.during.activeBackground !== 'rgb(242, 242, 242)' ||
+          compactGesture.indicatorBackground !== 'rgb(255, 255, 255)' ||
+          compactGesture.indicatorCenterDelta > 1 ||
+          compactGesture.indicatorCenterDeltaY > 1 ||
+          compactGesture.indicatorWidthDelta > 1 ||
+          !compactGesture.during.indicatorExists || !compactGesture.during.hasActiveIndicator ||
+          !compactGesture.during.following || compactGesture.during.previewCount !== 1 ||
+          compactGesture.during.activeColor !== 'rgb(255, 255, 255)' ||
+          (compactGesture.during.activeBackground !== 'rgba(0, 0, 0, 0)' &&
+           compactGesture.during.activeBackground !== 'transparent') ||
           compactGesture.during.activeBlendMode !== 'normal' ||
-          compactGesture.during.activeTransition !== 'none') {
-        throw new Error(label + ' compact filter rail must use a static active pill without floating-indicator motion during or after swipe: ' +
+          compactGesture.during.indicatorPreviewCenterDelta > 1 ||
+          compactGesture.during.indicatorPreviewCenterDeltaY > 1 ||
+          compactGesture.during.previewViewportCenterDelta > 2) {
+        throw new Error(label + ' compact filter rail must keep the shared indicator aligned to the swipe preview and restore the committed pill without momentum: ' +
           JSON.stringify(compactGesture));
       }
       await page.waitForFunction(() => {
