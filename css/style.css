@@ -790,6 +790,21 @@ code, pre, kbd, samp { font-family: var(--lm-font-sans); }
   mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
 }
 
+/* On compact screens the indicator is a sibling of the scroll rail, not part
+   of its moving content. Move the edge fade to the shared viewport so the
+   stationary pill and scrolling labels remain in one compositing context. */
+@media (max-width: 1023px) {
+  .filter-tabs[data-overflow="true"] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .filter-nav-viewport[data-overflow="true"] {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  }
+}
+
 /* Lead-in line used on the targeted landing pages (3d-motion.html,
    illustration.html) in place of the filter tabs — sits in the same
    spot so the layout below doesn't shift. */
