@@ -2598,7 +2598,6 @@ async function assertFilterNavigationResponsive(page, label) {
         state.paddingTop !== 12 || state.paddingBottom !== 12) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
-    const compactViewport = viewport.width <= 1023;
     const sharedPillFailed = (
       state.activeColor !== 'rgb(255, 255, 255)' ||
       state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
