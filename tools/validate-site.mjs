@@ -1214,7 +1214,13 @@ function validateGalleryContract() {
       !css.includes('background-color: #909090 !important;') ||
       !css.includes('z-index: auto;\n  isolation: auto;') ||
       !source.includes("filterContent.classList.toggle('is-following-filter-scroll', isFollowingFilterScroll)") ||
-      !source.includes("return filterContent || filterTabs?.closest('.filter-nav-viewport') || filterTabs") ||
+      !source.includes("if (windowRef.innerWidth <= 1023)") ||
+      !source.includes("return filterTabs?.closest('.filter-nav-viewport') || filterContent || filterTabs;") ||
+      !source.includes('filterViewport.dataset.overflow = value;') ||
+      !css.includes('.filter-nav-viewport[data-overflow="true"]') ||
+      !css.includes('mask-image: none;') ||
+      !smoke.includes('indicatorInsideViewport') ||
+      !smoke.includes('compact click pill must remain viewport-anchored throughout horizontal centering') ||
       source.includes("item.style.setProperty('color', '#111', 'important')") ||
       !smoke.includes('indicatorInsideContent') ||
       !smoke.includes("previewText.blendMode !== 'normal'") ||
