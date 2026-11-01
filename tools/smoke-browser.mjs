@@ -2572,6 +2572,7 @@ async function assertFilterNavigationResponsive(page, label) {
         activeRadius: Number.parseFloat(activeStyle?.borderTopLeftRadius || '0') || 0,
         activeBackground: activeStyle?.backgroundColor || '',
         indicatorExists: !!indicator,
+        indicatorCount: viewport?.querySelectorAll('.filter-active-indicator').length || 0,
         indicatorReady: indicator?.classList.contains('is-ready') || false,
         indicatorBackground: indicatorStyle?.backgroundColor || '',
         indicatorRadius: Number.parseFloat(indicatorStyle?.borderTopLeftRadius || '0') || 0,
@@ -2595,6 +2596,9 @@ async function assertFilterNavigationResponsive(page, label) {
     if (!state.wrapperExists || state.role !== 'group' || state.label !== 'Project categories' ||
         !state.viewportExists || !state.scrollerExists || !state.contentExists || state.count < 2) {
       throw new Error(label + ' filter navigation structure is incomplete at ' + viewport.width + 'px: ' + JSON.stringify(state));
+    }
+    if (state.indicatorCount !== 1) {
+      throw new Error(label + ' responsive breakpoint changes must preserve exactly one active filter pill at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     if (state.dataOverflow !== state.expectedOverflow || state.actualOverflow !== state.expectedOverflow) {
       throw new Error(label + ' centered-carousel overflow state is inconsistent at ' + viewport.width + 'px: ' + JSON.stringify(state));
