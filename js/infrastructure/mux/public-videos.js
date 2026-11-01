@@ -3,7 +3,8 @@ const FEED_TIMEOUT_MS = 8000;
 
 async function fetchJsonWithTimeout(fetchImpl, url, init, timeoutMs, setTimer, clearTimer) {
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timer = setTimer(() => controller?.abort(), Math.max(300, Number(timeoutMs) || 1000));
+  const boundedTimeoutMs = Math.max(300, Number(timeoutMs) || 1000);
+  const timer = setTimer(() => controller?.abort(), boundedTimeoutMs);
   try {
     const response = await fetchImpl(url, {
       ...init,
@@ -12,7 +13,15 @@ async function fetchJsonWithTimeout(fetchImpl, url, init, timeoutMs, setTimer, c
     if (!response.ok) return { ok: false, status: response.status, data: null, error: null };
     return { ok: true, status: response.status, data: await response.json(), error: null };
   } catch (error) {
-    return { ok: false, status: 0, data: null, error };
+    const timedOut = Boolean(controller?.signal?.aborted);
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error,
+      timedOut,
+      timeoutMs: timedOut ? boundedTimeoutMs : null
+    };
   } finally {
     if (typeof clearTimer === "function") clearTimer(timer);
   }
@@ -46,10 +55,15 @@ export async function loadPublicMuxVideos(placement = "hero", options = {}) {
     clearTimer
   );
   if (!configResult.ok) {
-    warn("[Hero Mux] Could not load data/video-platform.json.", {
-      status: configResult.status || null,
-      reason: configResult.error?.name || configResult.error?.message || null
-    });
+    if (configResult.timedOut) {
+      warn("[Hero Mux] Public video configuration request timed out after " +
+        configResult.timeoutMs + "ms; keeping the configured Hero list as fallback.");
+    } else {
+      warn("[Hero Mux] Could not load data/video-platform.json.", {
+        status: configResult.status || null,
+        reason: configResult.error?.name || configResult.error?.message || null
+      });
+    }
     return [];
   }
 
@@ -67,10 +81,15 @@ export async function loadPublicMuxVideos(placement = "hero", options = {}) {
     clearTimer
   );
   if (!feedResult.ok) {
-    warn("[Hero Mux] Published video feed request failed; keeping the configured Hero list as fallback.", {
-      status: feedResult.status || null,
-      reason: feedResult.error?.name || feedResult.error?.message || null
-    });
+    if (feedResult.timedOut) {
+      warn("[Hero Mux] Published video feed request timed out after " +
+        feedResult.timeoutMs + "ms; keeping the configured Hero list as fallback.");
+    } else {
+      warn("[Hero Mux] Published video feed request failed; keeping the configured Hero list as fallback.", {
+        status: feedResult.status || null,
+        reason: feedResult.error?.name || feedResult.error?.message || null
+      });
+    }
     return [];
   }
 

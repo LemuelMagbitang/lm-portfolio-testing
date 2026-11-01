@@ -427,16 +427,17 @@ async function ensureMuxVideo(...args) {
         // to discover or initialize hosted video streams during startup.
         if (!reducedMotion) {
           try {
-            const muxPublicVideos = await import('../../infrastructure/mux/public-videos.js?v=20261027-01');
+            const muxPublicVideos = await import('../../infrastructure/mux/public-videos.js?v=20261101-01');
             // Published placements remain authoritative when they respond,
-            // but optional discovery must not hold the first Hero frame.
-            // These sequential requests have a combined 1.5s startup budget;
-            // the checked-in manual list remains the immediate failure fallback.
+            // but optional discovery must stay bounded so the first Hero frame
+            // can fall back to the checked-in manual list on slow connections.
+            // Allow 500ms for local config and 2.5s for the cross-origin feed,
+            // including its CORS preflight and possible cold-start response.
             const remoteVideos = await muxPublicVideos.loadPublicMuxVideos('hero', {
               resolveUrl: resolveAssetUrl,
               fetchImpl: windowRef.fetch.bind(windowRef),
               configTimeoutMs: 500,
-              timeoutMs: 1000
+              timeoutMs: 2500
             });
             if (remoteVideos.length) {
               // Published Video Library assets placed for Hero are the live

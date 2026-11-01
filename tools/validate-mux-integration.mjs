@@ -27,7 +27,7 @@ const webhookBody = read("supabase/functions/_shared/request-body.ts");
 const webhookBodyTest = read("tools/test-mux-webhook-body-limit.mjs");
 const supabaseConfig = read("supabase/config.toml");
 const muxFeatureSources = [hero, footer, read("js/features/lightbox/media-renderer.js")];
-check(hero.includes("await import('../../infrastructure/mux/public-videos.js?v=20261027-01')") &&
+check(hero.includes("await import('../../infrastructure/mux/public-videos.js?v=20261101-01')") &&
   !hero.includes("import { loadPublicMuxVideos } from '../../infrastructure/mux/public-videos.js';"),
   "Optional published Mux feed helper must load dynamically so a feed-helper fetch failure cannot reject page startup.");
 check(muxFeatureSources.every(source =>
@@ -347,19 +347,23 @@ check(read("js/data/project-normalizer.js").includes("normalized.thumbnail.playb
 check(bridge.includes("CONFIG_TIMEOUT_MS = 3000") &&
   bridge.includes("FEED_TIMEOUT_MS = 8000") &&
   bridge.includes("fetchJsonWithTimeout") &&
-  bridge.includes("Published video feed request failed"),
-  "Public config and cross-origin published-feed requests must have separate bounded timeouts and observable failures.");
+  bridge.includes("boundedTimeoutMs") &&
+  bridge.includes("timedOut") &&
+  bridge.includes("timed out after") &&
+  workflow.includes("node tools/test-public-videos.mjs"),
+  "Public config and cross-origin feed requests must use separate bounded timeouts, classify internal aborts as timeouts, and test fallback behavior.");
 check(player.includes("timeoutMs = 15000") &&
   player.includes("Promise.race") &&
   player.includes("Keep the import promise alive"),
   "Mux Video loader must allow a realistic startup window without caching a timed-out wait as a permanent failure.");
 check(hero.includes("configTimeoutMs: 500") &&
-  hero.includes("timeoutMs: 1000") &&
+  hero.includes("timeoutMs: 2500") &&
+  hero.includes("2.5s for the cross-origin feed") &&
   heroLoop.length > 0 &&
   hero.includes("startup-timeout") &&
   hero.includes("muxFallbackReason") &&
   hero.includes("Switching to the local MP4 fallback"),
-  "Optional Hero published-video discovery must have a 1.5s startup budget and retain the checked-in manual list as fallback.");
+  "Optional Hero published-video discovery must use a bounded 3s request budget and retain the checked-in manual list as fallback.");
 check(read("supabase/functions/_shared/http.ts").includes("export class MuxApiError") &&
   read("supabase/functions/_shared/http.ts").includes("throw new MuxApiError(response.status") &&
   admin.includes("instanceof MuxApiError") && admin.includes('code: authFailure ? "mux_auth_failed"'),

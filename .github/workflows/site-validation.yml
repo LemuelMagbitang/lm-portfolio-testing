@@ -52,6 +52,9 @@ jobs:
       - name: Test client-side page route resolution
         run: node tools/test-page-navigation.mjs
 
+      - name: Test public Mux video feed timeout and mapping
+        run: node tools/test-public-videos.mjs
+
       - name: Validate Mux video integration contracts
         run: node tools/validate-mux-integration.mjs
 
