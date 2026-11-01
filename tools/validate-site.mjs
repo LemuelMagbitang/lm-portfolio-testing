@@ -1217,6 +1217,7 @@ function validateGalleryContract() {
       !source.includes("if (windowRef.innerWidth <= 1023)") ||
       !source.includes("return filterTabs?.closest('.filter-nav-viewport') || filterContent || filterTabs;") ||
       !source.includes('filterViewport.dataset.overflow = value;') ||
+      !source.includes('filterActiveIndicator?.remove?.();') ||
       !css.includes('.filter-nav-viewport[data-overflow="true"]') ||
       !css.includes('mask-image: none;') ||
       !smoke.includes('indicatorInsideViewport') ||
