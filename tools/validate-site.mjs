@@ -1222,6 +1222,7 @@ function validateGalleryContract() {
       !css.includes('mask-image: none;') ||
       !smoke.includes('indicatorInsideViewport') ||
       !smoke.includes('compact click pill must remain viewport-anchored throughout horizontal centering') ||
+      !smoke.includes('responsive breakpoint changes must preserve exactly one active filter pill') ||
       source.includes("item.style.setProperty('color', '#111', 'important')") ||
       !smoke.includes('indicatorInsideContent') ||
       !smoke.includes("previewText.blendMode !== 'normal'") ||
