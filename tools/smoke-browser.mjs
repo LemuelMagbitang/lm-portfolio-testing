@@ -1169,6 +1169,7 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
             indicatorExists: !!document.querySelector('.filter-active-indicator'),
             contentHasActiveIndicator: content.classList.contains('has-active-indicator'),
             contentFollowing: content.classList.contains('is-following-filter-scroll'),
+            indicatorFollowing: !!document.querySelector('.filter-active-indicator')?.classList.contains('is-following-scroll'),
             previewCount: content.querySelectorAll('.is-centered-preview').length,
             activeColor: style.color,
             activeBackground: style.backgroundColor,
@@ -1183,16 +1184,15 @@ async function assertWorksHeroGalleryResponsive(page, expectedMessage, label) {
           dispatch('pointerup', startX, startY);
           return state;
         });
-        if (!compactPill.available || compactPill.indicatorExists ||
-            (compactPill.contentHasActiveIndicator ||
-             compactPill.contentFollowing || compactPill.previewCount !== 0 ||
-             compactPill.activeFilter !== compactPill.initialFilter ||
-             compactPill.activeColor !== 'rgb(17, 17, 17)' ||
-             compactPill.activeBackground !== 'rgb(242, 242, 242)' ||
-             compactPill.activeBlendMode !== 'normal' ||
-             compactPill.activeTransition !== 'none' ||
-             compactPill.scrollBehavior !== 'auto' || compactPill.snapType !== 'none')) {
-          throw new Error(label + ' mobile: filter pill must stay attached to the selected button without a floating indicator or swipe-preview movement: ' + JSON.stringify(compactPill));
+        if (!compactPill.available || !compactPill.indicatorExists ||
+            !compactPill.contentHasActiveIndicator ||
+            compactPill.activeFilter !== compactPill.initialFilter ||
+            compactPill.contentFollowing !== compactPill.indicatorFollowing ||
+            compactPill.previewCount > 1 ||
+            (compactPill.activeBackground !== 'rgba(0, 0, 0, 0)' &&
+             compactPill.activeBackground !== 'transparent') ||
+            compactPill.scrollBehavior !== 'auto' || compactPill.snapType !== 'none') {
+          throw new Error(label + ' mobile: shared filter indicator must remain present and follow the centered preview without changing the committed filter: ' + JSON.stringify(compactPill));
         }
       }
       if (layout.logoBlendMode !== 'normal' ||
@@ -2416,27 +2416,17 @@ async function assertFilterInitialContrast(page, label) {
       pressedCount: content?.querySelectorAll('[aria-pressed="true"]').length || 0
     };
   });
-  const compact = state.viewportWidth <= 1023;
   if (!state.activeFilter || state.activePressed !== 'true' ||
       state.contentFollowing || state.indicatorFollowing || state.previewCount !== 0 ||
-      state.pressedCount !== 1) {
-    throw new Error(label + ' initial-load active filter state failed: ' + JSON.stringify(state));
-  }
-  if (compact) {
-    if (state.indicatorExists || state.contentHasActiveIndicator ||
-        state.activeColor !== 'rgb(17, 17, 17)' ||
-        state.activeBackground !== 'rgb(242, 242, 242)' ||
-        state.activeBlendMode !== 'normal' || state.activeTransition !== 'none') {
-      throw new Error(label + ' compact initial-load filter must use its static selected pill: ' + JSON.stringify(state));
-    }
-    return;
-  }
-  if (state.activeColor !== 'rgb(255, 255, 255)' ||
+      state.pressedCount !== 1 ||
+      state.activeColor !== 'rgb(255, 255, 255)' ||
       state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
-      !state.indicatorExists || !state.indicatorInsideContent || !state.indicatorReady || state.indicatorOpacity < 0.99 ||
+      !state.contentHasActiveIndicator || !state.indicatorExists || !state.indicatorInsideContent ||
+      !state.indicatorReady || state.indicatorOpacity < 0.99 ||
       state.indicatorBackground !== 'rgb(255, 255, 255)' ||
-      state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1) {
-    throw new Error(label + ' desktop initial-load active filter contrast failed: ' + JSON.stringify(state));
+      state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1 ||
+      (state.activeBackground !== 'rgba(0, 0, 0, 0)' && state.activeBackground !== 'transparent')) {
+    throw new Error(label + ' shared active filter pill/contrast contract failed: ' + JSON.stringify(state));
   }
 }
 
@@ -2456,42 +2446,37 @@ async function assertFilterNavigationResponsive(page, label) {
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await page.waitForTimeout(160);
-    // Let responsive state cleanup finish. Compact rails must not create
-    // a floating indicator at all; desktop keeps the animated indicator.
+    // The filter navigation uses one moving pill at every viewport width.
     await page.waitForFunction(() => {
-      const compact = innerWidth <= 1023;
       const content = document.querySelector('.filter-nav-scroller .filter-nav-content');
       const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
       const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
       const activeBackground = active ? getComputedStyle(active).backgroundColor : '';
-      const desktopSurfaceSettled = compact ||
-        activeBackground === 'rgba(0, 0, 0, 0)' || activeBackground === 'transparent';
-      return !!active &&
+      const surfaceSettled = activeBackground === 'rgba(0, 0, 0, 0)' || activeBackground === 'transparent';
+      return !!active && !!indicator?.classList.contains('is-ready') &&
+        content?.classList.contains('has-active-indicator') &&
         !content?.classList.contains('is-following-filter-scroll') &&
-        !content?.querySelector('.is-centered-preview') &&
-        (compact
-          ? !indicator && !content?.classList.contains('has-active-indicator')
-          : !!indicator && !indicator.classList.contains('is-following-scroll') && desktopSurfaceSettled);
+        !indicator.classList.contains('is-following-scroll') &&
+        !content?.querySelector('.is-centered-preview') && surfaceSettled;
     }, null, { timeout: 1800 });
-    // Only desktop needs an indicator geometry settle check. Compact pages
-    // use the selected button as the pill, so measuring a second surface there
-    // would hide the exact regression this responsive split is meant to catch.
-    if (viewport.width > 1023) {
-      await page.waitForFunction(() => {
-        const scroller = document.querySelector('.filter-nav-scroller');
-        const content = scroller?.querySelector('.filter-nav-content');
-        const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
-        const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
-        if (!scroller || !indicator?.classList.contains('is-ready') || !active) return false;
-        const a = active.getBoundingClientRect();
-        const b = indicator.getBoundingClientRect();
-        return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
-          Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
-          Math.abs(a.width - b.width) <= 1;
-      }, null, { timeout: 2200 });
-    }
-    const expectedIndicatorDuration = '0.42s';
-    const expectedIndicatorTiming = 'cubic-bezier(0.34, 1.45, 0.64, 1)';
+    // Check geometry on phones, tablets, and desktop, not only the wide layout.
+    await page.waitForFunction(() => {
+      const scroller = document.querySelector('.filter-nav-scroller');
+      const content = scroller?.querySelector('.filter-nav-content');
+      const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+      const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+      if (!scroller || !indicator?.classList.contains('is-ready') || !active) return false;
+      const a = active.getBoundingClientRect();
+      const b = indicator.getBoundingClientRect();
+      return Math.abs((a.left + a.width / 2) - (b.left + b.width / 2)) <= 1 &&
+        Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) <= 1 &&
+        Math.abs(a.width - b.width) <= 1;
+    }, null, { timeout: 2200 });
+    const compactViewport = viewport.width <= 1023;
+    const expectedIndicatorDuration = compactViewport ? '0.26s' : '0.42s';
+    const expectedIndicatorTiming = compactViewport
+      ? 'cubic-bezier(0.22, 1, 0.36, 1)'
+      : 'cubic-bezier(0.34, 1.45, 0.64, 1)';
     const state = await page.evaluate(() => {
       const wrapper = document.querySelector('.filter-nav-wrapper');
       const viewport = wrapper?.querySelector('.filter-nav-viewport');
@@ -2614,18 +2599,10 @@ async function assertFilterNavigationResponsive(page, label) {
       throw new Error(label + ' filter spacing, wrapping, or 44px target contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
     const compactViewport = viewport.width <= 1023;
-    const compactPillFailed = compactViewport && (
-      state.indicatorExists || state.indicatorReady || state.contentHasActiveIndicator ||
-      state.activeColor !== 'rgb(17, 17, 17)' ||
-      state.activeBlendMode !== 'normal' ||
-      state.activeBackground !== 'rgb(242, 242, 242)' ||
-      state.activeTransition !== 'none' ||
-      state.previewCount !== 0 || state.indicatorFollowingScroll || state.contentFollowingFilterScroll
-    );
-    const desktopPillFailed = !compactViewport && (
+    const sharedPillFailed = (
       state.activeColor !== 'rgb(255, 255, 255)' ||
       state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
-      !state.indicatorExists || !state.indicatorReady ||
+      !state.contentHasActiveIndicator || !state.indicatorExists || !state.indicatorReady ||
       state.indicatorBackground !== 'rgb(255, 255, 255)' || state.indicatorRadius < 20 ||
       state.indicatorWidthDelta > 1 || state.indicatorCenterDelta > 1 || state.indicatorCenterDeltaY > 1 ||
       (state.prefersReducedMotion && state.indicatorTransition !== 'none') ||
@@ -2634,14 +2611,14 @@ async function assertFilterNavigationResponsive(page, label) {
          state.indicatorTransition.includes('transform') ||
          !state.indicatorTransitionDuration.includes(expectedIndicatorDuration) ||
          !state.indicatorTransitionTiming.includes(expectedIndicatorTiming))) ||
-      state.activeBackground !== 'rgba(0, 0, 0, 0)' && state.activeBackground !== 'transparent'
+      (state.activeBackground !== 'rgba(0, 0, 0, 0)' && state.activeBackground !== 'transparent')
     );
     if (state.ariaPressedCount !== 1 || state.contentFollowingFilterScroll ||
         state.indicatorFollowingScroll || state.previewCount > 0 ||
         (compactViewport && (
           state.scrollBehavior !== 'auto' || state.snapType !== 'none' ||
           state.overscrollBehaviorX !== 'none'
-        )) || compactPillFailed || desktopPillFailed) {
+        )) || sharedPillFailed) {
       throw new Error(label + ' responsive filter pill contract failed at ' + viewport.width + 'px: ' + JSON.stringify(state));
     }
 
