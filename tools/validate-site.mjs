@@ -1196,17 +1196,21 @@ function validateGalleryContract() {
       !source.includes('signalCenteredFilter(next);') ||
       !source.includes('suppressFilterSettleUntil = Date.now() + 750;') ||
       !source.includes('if (windowRef.innerWidth <= 1023)') ||
+      source.includes('supportsFloatingFilterIndicator') ||
+      source.includes('removeFilterActiveIndicator') ||
       !css.includes('@media (max-width: 1023px)') ||
       !css.includes('.filter-tabs.filter-nav-scroller {\n    scroll-behavior: auto !important;') ||
       !css.includes('scroll-snap-type: none !important;') ||
       !css.includes('overscroll-behavior-x: none !important;') ||
-      !css.includes('/* Compact filters use the button itself as the selected pill.') ||
-      !css.includes('@media (max-width: 1023px) {\n  .filter-tabs .tab-btn {\n    transition: none !important;') ||
-      !smoke.includes('compactPill.activeTransition !== \'none\'') ||
-      !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide') ||
-      !smoke.includes('mobile: filter pill must stay attached to the selected button') ||
-      !smoke.includes('compact filter rail must use a static active pill without floating-indicator motion during or after swipe')) {
-    err('Gallery: compact filters must use a static selected pill, avoid floating-indicator measurements, and settle without native snap or momentum.');
+      !css.includes('.filter-active-indicator.is-animated {\n    transition:\n      width 260ms cubic-bezier(.22, 1, .36, 1),') ||
+      !css.includes('.filter-active-indicator.is-following-scroll {\n    transition:\n      width 120ms ease-out,') ||
+      css.includes('/* Compact filters use the button itself as the selected pill.') ||
+      css.includes('@media (max-width: 1023px) {\n  .filter-tabs .tab-btn {\n    transition: none !important;') ||
+      !smoke.includes('sharedPillFailed') ||
+      !smoke.includes('shared active filter pill/contrast contract failed') ||
+      !smoke.includes('mobile: shared filter indicator must remain present') ||
+      !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide')) {
+    err('Gallery: compact filters must retain the shared moving pill while preserving direct horizontal scrolling without native snap or momentum.');
   }
   if (!css.includes('.filter-nav-content.has-active-indicator .tab-btn') ||
       !css.includes('mix-blend-mode: exclusion;') ||
@@ -1219,7 +1223,7 @@ function validateGalleryContract() {
       !smoke.includes('indicatorInsideContent') ||
       !smoke.includes("previewText.blendMode !== 'normal'") ||
       !smoke.includes("selectedAfterOtherSpaceClick.pillColor !== 'rgb(255, 255, 255)'") ||
-      !smoke.includes('desktop initial-load active filter contrast failed') ||
+      !smoke.includes('shared active filter pill/contrast contract failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
     err('Gallery: labels must use exclusion over the settled white pill and switch to white text on a #909090 pill while interacting.');
   }
@@ -1244,7 +1248,7 @@ function validateGalleryContract() {
       outsidePointerContract.includes('settleCenteredFilter();') ||
       !outsideClickContract.includes('clearFilterScrollPreview();') ||
       outsideClickContract.includes('settleCenteredFilter();') ||
-      !smoke.includes('initial-load active filter contrast failed') ||
+      !smoke.includes('shared active filter pill/contrast contract failed') ||
       !smoke.includes('outside tap must remeasure the committed filter pill')) {
     err('Gallery: startup font/layout work and outside input must restore the committed high-contrast filter without committing an outside selection.');
   }
