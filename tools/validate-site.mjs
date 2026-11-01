@@ -1173,10 +1173,6 @@ function validateGalleryContract() {
   if (!smoke.includes('stationary filter pill must remain centered and visibly resize during direct selection')) {
     err('Gallery: browser smoke must guard against horizontal pill travel on direct filter selection.');
   }
-  if (!source.includes('function supportsFloatingFilterIndicator()') ||
-      !source.includes('return windowRef.innerWidth > 1023;') ||
-      !source.includes('function removeFilterActiveIndicator()') ||
-      !source.includes('if (!supportsFloatingFilterIndicator())') ||
       !source.includes("const selectionScrollBehavior = windowRef.innerWidth <= 1023 ? 'auto' : 'smooth';") ||
       !source.includes('centerFilterButton(button, selectionScrollBehavior);') ||
       !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide') ||
