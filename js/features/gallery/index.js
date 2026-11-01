@@ -175,12 +175,18 @@ export async function initGallery(options = {}) {
   function ensureFilterEdges() {
     if (!filterTabs || !filterContent) return;
 
+    const filterViewport = filterTabs.closest('.filter-nav-viewport');
+    const setOverflowState = value => {
+      filterTabs.dataset.overflow = value;
+      if (filterViewport) filterViewport.dataset.overflow = value;
+    };
+
     // Edge cushions are rebuilt for every viewport to keep the active pill centered.
     filterTabs.querySelectorAll('.filter-edge-spacer').forEach(el => el.remove());
 
     const buttons = Array.from(filterTabs.querySelectorAll('.filter-btn, .tab-btn'));
     if (!buttons.length || filterTabs.clientWidth <= 0) {
-      filterTabs.dataset.overflow = 'false';
+      setOverflowState('false');
       return;
     }
 
@@ -192,7 +198,7 @@ export async function initGallery(options = {}) {
     // last labels reach the centerline, making mouse-drag and touch-swipe use
     // the same interaction model on desktop, tablet, and mobile.
     const needsScroller = buttons.length > 1;
-    filterTabs.dataset.overflow = needsScroller ? 'true' : 'false';
+    setOverflowState(needsScroller ? 'true' : 'false');
     if (!needsScroller) return;
 
     // The outer gap around each spacer is part of the flex gap, so subtract it
@@ -239,9 +245,14 @@ export async function initGallery(options = {}) {
   }
 
   function getFilterIndicatorHost() {
-    // Keep the pill and label inside the same compositing context. The rail's
-    // edge mask creates a stacking context of its own; a sibling pill outside
-    // it cannot be used as the backdrop for mix-blend-mode: exclusion.
+    // Compact rails scroll their labels beneath a viewport-anchored pill.
+    // Keeping the indicator outside the moving content prevents it from
+    // appearing to follow the old selection before snapping back to center.
+    if (windowRef.innerWidth <= 1023) {
+      return filterTabs?.closest('.filter-nav-viewport') || filterContent || filterTabs;
+    }
+
+    // Preserve the existing desktop compositing context and indicator behavior.
     return filterContent || filterTabs?.closest('.filter-nav-viewport') || filterTabs;
   }
 
