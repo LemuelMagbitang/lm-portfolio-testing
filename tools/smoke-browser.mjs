@@ -2385,9 +2385,10 @@ async function assertFilterInitialContrast(page, label) {
   await page.waitForTimeout(180);
   const state = await page.evaluate(() => {
     const scroller = document.querySelector('.filter-nav-scroller');
+    const viewport = scroller?.closest('.filter-nav-viewport');
     const content = scroller?.querySelector('.filter-nav-content');
     const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
-    const indicator = scroller?.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
+    const indicator = viewport?.querySelector('.filter-active-indicator');
     const a = active?.getBoundingClientRect();
     const b = indicator?.getBoundingClientRect();
     const style = active ? getComputedStyle(active) : null;
@@ -2402,8 +2403,10 @@ async function assertFilterInitialContrast(page, label) {
       activeTransition: style?.transitionProperty || '',
       contentIsolation: content ? getComputedStyle(content).isolation : '',
       contentHasActiveIndicator: content?.classList.contains('has-active-indicator') || false,
+      compactViewport: innerWidth <= 1023,
       indicatorExists: !!indicator,
       indicatorInsideContent: !!content?.contains(indicator),
+      indicatorInsideViewport: !!viewport && indicator?.parentElement === viewport,
       indicatorReady: indicator?.classList.contains('is-ready') || false,
       indicatorOpacity: Number(pillStyle?.opacity || '0'),
       indicatorBackground: pillStyle?.backgroundColor || '',
@@ -2421,7 +2424,8 @@ async function assertFilterInitialContrast(page, label) {
       state.pressedCount !== 1 ||
       state.activeColor !== 'rgb(255, 255, 255)' ||
       state.activeBlendMode !== 'exclusion' || state.contentIsolation !== 'auto' ||
-      !state.contentHasActiveIndicator || !state.indicatorExists || !state.indicatorInsideContent ||
+      !state.contentHasActiveIndicator || !state.indicatorExists ||
+      (state.compactViewport ? !state.indicatorInsideViewport : !state.indicatorInsideContent) ||
       !state.indicatorReady || state.indicatorOpacity < 0.99 ||
       state.indicatorBackground !== 'rgb(255, 255, 255)' ||
       state.centerDelta > 1 || state.centerDeltaY > 1 || state.widthDelta > 1 ||
