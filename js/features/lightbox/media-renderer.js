@@ -1292,7 +1292,7 @@ export function createLightboxMediaRenderer({
     let artworkIsVisible = visibilityState?.isVisible ?? true;
     const onArtworkVisibilityChange = isVisible => {
       artworkIsVisible = Boolean(isVisible);
-      syncHolographicNormalRendering(surface, !compactTarget && artworkIsVisible);
+      syncHolographicNormalRendering(surface, !compactTarget && artworkIsVisible && (visibilityState?.ready ?? true));
     };
     if (visibilityState) visibilityState.onVisibilityChange = onArtworkVisibilityChange;
     // WebGL normal-map contexts are expensive. Create them only while the
@@ -1317,7 +1317,7 @@ export function createLightboxMediaRenderer({
       surface.style.setProperty('--holo-intensity', String(frontStrength));
       if (backFoilEnabled) back.style.setProperty('--holo-intensity', String(backStrength));
       surface.dataset.holoFoil = compactTarget ? 'disabled' : 'enabled';
-      syncHolographicNormalRendering(surface, !compactTarget && artworkIsVisible);
+      syncHolographicNormalRendering(surface, !compactTarget && artworkIsVisible && (visibilityState?.ready ?? true));
       const motion = holographicMotionStates.get(surface);
       if (motion) {
         motion.compactTarget = compactTarget;
@@ -1793,7 +1793,10 @@ export function createLightboxMediaRenderer({
     if (!artwork) return;
     artwork.dataset.mediaState = 'ready';
     const state = artworkVisibilityStates.get(artwork);
-    if (state) state.ready = true;
+    if (state) {
+      state.ready = true;
+      state.onVisibilityChange?.(state.isVisible);
+    }
     revealArtworkWhenVisible(artwork);
   }
 
@@ -1805,6 +1808,7 @@ export function createLightboxMediaRenderer({
     if (state) {
       state.ready = false;
       state.revealed = true;
+      state.onVisibilityChange?.(state.isVisible);
     }
     const entry = artwork.closest?.('.lightbox-media-item');
     if (entry) entry.dataset.mediaReveal = 'error';

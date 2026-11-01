@@ -248,7 +248,7 @@ assert.match(mediaRendererSource, /surface\.addEventListener\('keydown', toggleF
 assert.match(mediaRendererSource, /responsiveFoilCleanups\.splice\(0\)\.forEach/);
 assert.doesNotMatch(mediaRendererSource, /DeviceOrientationEvent|deviceorientation|requestHolographicMotion/);
 assert.match(mediaRendererSource, /Array\.from\(holographicCleanups\)\.reverse\(\)/);
-assert.match(mediaRendererSource, /function buildHolographicImage\(frontImage, item, project\)/);
+assert.match(mediaRendererSource, /function buildHolographicImage\(frontImage, item, project, artwork = null\)/);
 assert.match(mediaRendererSource, /is-flipped/);
 assert.match(mediaRendererSource, /\.\.\.\(fetchPriority === 'high' \? \{ priority: 'high' \} : \{\}\)/);
 assert.match(mediaRendererSource, /const fetchPriority = critical \? 'high' : 'low'/);

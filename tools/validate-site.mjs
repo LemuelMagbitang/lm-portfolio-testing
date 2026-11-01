@@ -2482,11 +2482,14 @@ function validateCmsRegressionContracts() {
   if (!hasVersionedReference(renderer, './foil-normal-renderer.js') ||
       !renderer.includes('const controller = createFoilNormalRenderer(record.canvas, record.patternUrls, record.options)') ||
       !renderer.includes('controller.setLight(0.34, 0.74)') ||
-      !renderer.includes('syncHolographicNormalRendering(surface, !compactTarget)') ||
+      !renderer.includes('state.onVisibilityChange?.(isVisible)') ||
+      !renderer.includes('!compactTarget && artworkIsVisible && (visibilityState?.ready ?? true)') ||
+      !renderer.includes('visibilityState.onVisibilityChange = onArtworkVisibilityChange') ||
+      !renderer.includes('visibilityState.onVisibilityChange = null') ||
       !renderer.includes("record.canvas.dataset.foilNormalState = enabled ? 'active' : 'suspended'") ||
       !css.includes('.lightbox-holographic-normal-map{') ||
       !foilNormalRenderer.includes('vec3 blendFoilNormals') || !foilNormalRenderer.includes('heightAt3(tileUV') || !foilNormalRenderer.includes('destroy()')) {
-    err('Lightbox foil normals: source-map slopes must blend into tilt-responsive lighting, suspend safely on compact targets, and preserve the CSS foil fallback.');
+    err('Lightbox foil normals: source-map slopes must blend into tilt-responsive lighting, activate only for ready visible desktop artwork, release off-screen contexts, and preserve the CSS foil fallback.');
   }
 
   if (!renderer.includes('surface.dataset.holoTextureMode = config.textureMode') ||

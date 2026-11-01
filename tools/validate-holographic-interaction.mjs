@@ -142,8 +142,12 @@ assert.match(mediaRenderer, /surface\.dataset\.holoFoil = compactTarget \? 'disa
 assert.match(mediaRenderer, /state\.onVisibilityChange\?\.\(isVisible\)/,
   'Artwork visibility changes must notify attached resource lifecycles.');
 assert.match(mediaRenderer, /let artworkIsVisible = visibilityState\?\.isVisible \?\? true/);
-assert.match(mediaRenderer, /syncHolographicNormalRendering\(surface, !compactTarget && artworkIsVisible\)/,
-  'Normal-map WebGL contexts must activate only while their artwork is visible and the target is not compact.');
+assert.match(mediaRenderer, /syncHolographicNormalRendering\(surface, !compactTarget && artworkIsVisible && \(visibilityState\?\.ready \?\? true\)\)/,
+  'Normal-map WebGL contexts must activate only while their artwork is visible, ready, and on a non-compact target.');
+assert.equal((mediaRenderer.match(/state\.onVisibilityChange\?\.\(state\.isVisible\)/g) || []).length, 2,
+  'Ready and error transitions must both re-evaluate holographic renderer eligibility.');
+assert.match(mediaRenderer, /buildHolographicImage\(image, item, project, artwork\)/,
+  'The image renderer must attach holographic resource lifetime to its observed artwork.');
 assert.match(mediaRenderer, /visibilityState\.onVisibilityChange = null/,
   'Holographic teardown must detach its artwork visibility callback.');
 assert.ok(mediaRenderer.includes('if (motion?.compactTarget) return;'),
