@@ -2640,23 +2640,36 @@ async function assertFilterNavigationResponsive(page, label) {
       const nonAll = page.locator('.filter-nav-scroller [data-filter]:not([data-filter="all"]):not(:disabled)').last();
       const tapMotion = await nonAll.evaluate(button => {
         const scroller = button.closest('.filter-nav-scroller');
+        const viewport = scroller?.closest('.filter-nav-viewport');
+        const indicator = viewport?.querySelector('.filter-active-indicator');
         const before = scroller?.scrollLeft ?? 0;
-        const samples = [];
+        const scrollSamples = [];
+        const pillCenterDeltas = [];
+        const centerX = () => {
+          const rect = scroller?.getBoundingClientRect();
+          return rect ? rect.left + (Number(scroller.clientLeft) || 0) + scroller.clientWidth / 2 : NaN;
+        };
         const startedAt = performance.now();
         button.click();
 
         return new Promise(resolve => {
           const sampleFrame = () => {
-            samples.push(scroller?.scrollLeft ?? 0);
+            scrollSamples.push(scroller?.scrollLeft ?? 0);
+            const pillRect = indicator?.getBoundingClientRect();
+            pillCenterDeltas.push(pillRect
+              ? Math.abs(pillRect.left + pillRect.width / 2 - centerX())
+              : Infinity);
             if (performance.now() - startedAt >= 180) {
-              const distinctFrames = samples.filter((value, index) =>
-                index === 0 || Math.abs(value - samples[index - 1]) > 0.1
+              const distinctFrames = scrollSamples.filter((value, index) =>
+                index === 0 || Math.abs(value - scrollSamples[index - 1]) > 0.1
               ).length;
               resolve({
                 before,
                 during: scroller?.scrollLeft ?? 0,
-                sampleCount: samples.length,
-                distinctFrames
+                sampleCount: scrollSamples.length,
+                distinctFrames,
+                indicatorParentIsViewport: !!indicator && indicator.parentElement === viewport,
+                maxPillCenterDelta: Math.max(...pillCenterDeltas)
               });
               return;
             }
@@ -2667,6 +2680,10 @@ async function assertFilterNavigationResponsive(page, label) {
       });
       if (Math.abs(tapMotion.during - tapMotion.before) < 1 || tapMotion.distinctFrames < 2) {
         throw new Error(label + ' compact filter click must animate through multiple horizontal scroll frames: ' +
+          JSON.stringify(tapMotion));
+      }
+      if (!tapMotion.indicatorParentIsViewport || tapMotion.maxPillCenterDelta > 1.5) {
+        throw new Error(label + ' compact click pill must remain viewport-anchored throughout horizontal centering: ' +
           JSON.stringify(tapMotion));
       }
       await page.waitForFunction(() => {
