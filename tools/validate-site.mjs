@@ -1204,8 +1204,9 @@ function validateGalleryContract() {
       !smoke.includes('sharedPillFailed') ||
       !smoke.includes('shared active filter pill/contrast contract failed') ||
       !smoke.includes('mobile: shared filter indicator must remain present') ||
-      !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide')) {
-    err('Gallery: compact filters must retain the shared moving pill while preserving direct horizontal scrolling without native snap or momentum.');
+      !smoke.includes('compact filter click must animate through multiple horizontal scroll frames') ||
+      !source.includes('filterTabs.scrollLeft = filterDrag.startScrollLeft - distanceX;')) {
+    err('Gallery: compact filter clicks must animate while direct horizontal dragging remains unchanged and momentum-free.');
   }
   if (!css.includes('.filter-nav-content.has-active-indicator .tab-btn') ||
       !css.includes('mix-blend-mode: exclusion;') ||
