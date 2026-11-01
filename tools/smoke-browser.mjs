@@ -2773,8 +2773,25 @@ async function assertFilterNavigationResponsive(page, label) {
         const activeStyleDuring = activeDuring ? getComputedStyle(activeDuring) : null;
         const indicatorDuring = el.closest('.filter-nav-viewport')?.querySelector('.filter-active-indicator');
         const indicatorRectDuring = indicatorDuring?.getBoundingClientRect();
+        const previewButtonsDuring = Array.from(
+          contentDuring?.querySelectorAll('.tab-btn, .filter-btn') || []
+        ).filter(button => !button.disabled);
         const previewDuring = contentDuring?.querySelector('.is-centered-preview');
         const previewRectDuring = previewDuring?.getBoundingClientRect();
+        const previewIndexDuring = previewButtonsDuring.indexOf(previewDuring);
+        const adjacentPreviewDistances = [
+          previewButtonsDuring[previewIndexDuring - 1],
+          previewButtonsDuring[previewIndexDuring + 1]
+        ].filter(Boolean).map(button => {
+          const rect = button.getBoundingClientRect();
+          return previewRectDuring
+            ? Math.abs((rect.left + rect.width / 2) -
+              (previewRectDuring.left + previewRectDuring.width / 2))
+            : Infinity;
+        });
+        const previewNearestCenterLimit = adjacentPreviewDistances.length
+          ? Math.min(...adjacentPreviewDistances) / 2 + 1
+          : 2;
         const duringScrollerRect = el.getBoundingClientRect();
         const during = {
           indicatorExists: !!indicatorDuring,
@@ -2786,9 +2803,9 @@ async function assertFilterNavigationResponsive(page, label) {
           activeBlendMode: activeStyleDuring?.mixBlendMode || '',
           activeTransition: activeStyleDuring?.transitionProperty || '',
           indicatorBackground: indicatorDuring ? getComputedStyle(indicatorDuring).backgroundColor : '',
-          indicatorPreviewCenterDelta: indicatorRectDuring && previewRectDuring
-            ? Math.abs((indicatorRectDuring.left + indicatorRectDuring.width / 2) -
-              (previewRectDuring.left + previewRectDuring.width / 2))
+          indicatorViewportCenterDelta: indicatorRectDuring
+            ? Math.abs(indicatorRectDuring.left + indicatorRectDuring.width / 2 -
+              (duringScrollerRect.left + el.clientWidth / 2))
             : Infinity,
           indicatorPreviewCenterDeltaY: indicatorRectDuring && previewRectDuring
             ? Math.abs((indicatorRectDuring.top + indicatorRectDuring.height / 2) -
@@ -2797,7 +2814,8 @@ async function assertFilterNavigationResponsive(page, label) {
           previewViewportCenterDelta: previewRectDuring
             ? Math.abs(previewRectDuring.left + previewRectDuring.width / 2 -
               (duringScrollerRect.left + el.clientWidth / 2))
-            : Infinity
+            : Infinity,
+          previewNearestCenterLimit
         };
         dispatch('pointerup', x + fingerDelta, y + 1);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -2859,9 +2877,10 @@ async function assertFilterNavigationResponsive(page, label) {
           (compactGesture.during.activeBackground !== 'rgba(0, 0, 0, 0)' &&
            compactGesture.during.activeBackground !== 'transparent') ||
           compactGesture.during.activeBlendMode !== 'normal' ||
-          compactGesture.during.indicatorPreviewCenterDelta > 1 ||
+          compactGesture.during.indicatorViewportCenterDelta > 1 ||
           compactGesture.during.indicatorPreviewCenterDeltaY > 1 ||
-          compactGesture.during.previewViewportCenterDelta > 2) {
+          compactGesture.during.previewViewportCenterDelta >
+            compactGesture.during.previewNearestCenterLimit) {
         throw new Error(label + ' compact filter rail must keep the shared indicator aligned to the swipe preview and restore the committed pill without momentum: ' +
           JSON.stringify(compactGesture));
       }
