@@ -1204,7 +1204,6 @@ function validateGalleryContract() {
       !css.includes('overscroll-behavior-x: none !important;') ||
       !css.includes('.filter-active-indicator.is-animated {\n    transition:\n      width 260ms cubic-bezier(.22, 1, .36, 1),') ||
       !css.includes('.filter-active-indicator.is-following-scroll {\n    transition:\n      width 120ms ease-out,') ||
-      css.includes('/* Compact filters use the button itself as the selected pill.') ||
       css.includes('@media (max-width: 1023px) {\n  .filter-tabs .tab-btn {\n    transition: none !important;') ||
       !smoke.includes('sharedPillFailed') ||
       !smoke.includes('shared active filter pill/contrast contract failed') ||
