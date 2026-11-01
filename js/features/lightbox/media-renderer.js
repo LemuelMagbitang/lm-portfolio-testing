@@ -1022,7 +1022,7 @@ export function createLightboxMediaRenderer({
     layer.style.webkitMaskSize = sizeList;
   }
 
-  function buildHolographicImage(frontImage, item, project) {
+  function buildHolographicImage(frontImage, item, project, artwork = null) {
     const config = normalizeHolographicConfig(item?.holographic);
     if (!config || !frontImage?.src) return null;
 
@@ -1288,7 +1288,17 @@ export function createLightboxMediaRenderer({
       }
     });
 
-    syncHolographicNormalRendering(surface, !compactTarget);
+    const visibilityState = artworkVisibilityStates.get(artwork);
+    let artworkIsVisible = visibilityState?.isVisible ?? true;
+    const onArtworkVisibilityChange = isVisible => {
+      artworkIsVisible = Boolean(isVisible);
+      syncHolographicNormalRendering(surface, !compactTarget && artworkIsVisible);
+    };
+    if (visibilityState) visibilityState.onVisibilityChange = onArtworkVisibilityChange;
+    // WebGL normal-map contexts are expensive. Create them only while the
+    // artwork is within the existing lightbox visibility window; the observer
+    // can re-enable them later after the renderer has released its old context.
+    onArtworkVisibilityChange(artworkIsVisible);
     flip.append(front, back);
     inner.appendChild(flip);
     surface.appendChild(inner);
@@ -1307,7 +1317,7 @@ export function createLightboxMediaRenderer({
       surface.style.setProperty('--holo-intensity', String(frontStrength));
       if (backFoilEnabled) back.style.setProperty('--holo-intensity', String(backStrength));
       surface.dataset.holoFoil = compactTarget ? 'disabled' : 'enabled';
-      syncHolographicNormalRendering(surface, !compactTarget);
+      syncHolographicNormalRendering(surface, !compactTarget && artworkIsVisible);
       const motion = holographicMotionStates.get(surface);
       if (motion) {
         motion.compactTarget = compactTarget;
@@ -1357,6 +1367,9 @@ export function createLightboxMediaRenderer({
         windowRef?.cancelAnimationFrame?.(motion.frame);
       }
       holographicMotionStates.delete(surface);
+      if (visibilityState?.onVisibilityChange === onArtworkVisibilityChange) {
+        visibilityState.onVisibilityChange = null;
+      }
       responsiveFoilCleanups.splice(0).forEach(dispose => { try { dispose(); } catch (_) {} });
       syncHolographicNormalRendering(surface, false);
       holographicNormalControllers.delete(surface);
@@ -1741,8 +1754,12 @@ export function createLightboxMediaRenderer({
           artworkVisibilityObserver?.unobserve(entry.target);
           return;
         }
-        state.isVisible = Boolean(entry.isIntersecting && entry.intersectionRatio > 0);
-        if (state.isVisible && state.ready && !state.revealed) revealArtworkWhenVisible(entry.target);
+        const isVisible = Boolean(entry.isIntersecting && entry.intersectionRatio > 0);
+        if (state.isVisible !== isVisible) {
+          state.isVisible = isVisible;
+          state.onVisibilityChange?.(isVisible);
+        }
+        if (isVisible && state.ready && !state.revealed) revealArtworkWhenVisible(entry.target);
       });
     }, { root: null, rootMargin: '-24px 0px -24px 0px', threshold: 0.01 });
     return artworkVisibilityObserver;
@@ -1750,7 +1767,7 @@ export function createLightboxMediaRenderer({
 
   function observeArtworkVisibility(artwork) {
     const observer = ensureArtworkVisibilityObserver();
-    const state = { isVisible: !observer, ready: false, revealed: false };
+    const state = { isVisible: !observer, ready: false, revealed: false, onVisibilityChange: null };
     artworkVisibilityStates.set(artwork, state);
     observer?.observe(artwork);
   }
@@ -1941,7 +1958,7 @@ export function createLightboxMediaRenderer({
     });
 
     if (normalizeHolographicConfig(item.holographic)) {
-      const holographic = buildHolographicImage(image, item, project);
+      const holographic = buildHolographicImage(image, item, project, artwork);
       if (holographic) {
         artwork.classList.add('has-holographic');
         artwork.replaceChildren(holographic);
