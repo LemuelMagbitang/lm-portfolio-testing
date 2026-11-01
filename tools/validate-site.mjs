@@ -1173,9 +1173,9 @@ function validateGalleryContract() {
   if (!smoke.includes('stationary filter pill must remain centered and visibly resize during direct selection')) {
     err('Gallery: browser smoke must guard against horizontal pill travel on direct filter selection.');
   }
-  if (!source.includes("const selectionScrollBehavior = windowRef.innerWidth <= 1023 ? 'auto' : 'smooth';") ||
+  if (!source.includes("const selectionScrollBehavior = 'smooth';") ||
       !source.includes('centerFilterButton(button, selectionScrollBehavior);') ||
-      !smoke.includes('compact filter tap must center immediately without a second smooth-scroll glide') ||
+      !smoke.includes('compact filter click must animate through multiple horizontal scroll frames') ||
       !source.includes('function clearFilterScrollPreview()') ||
       !source.includes("bind(documentRef, 'pointerdown'") ||
       !source.includes("bind(documentRef, 'click', event => {") ||
