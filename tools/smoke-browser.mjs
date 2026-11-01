@@ -2463,12 +2463,15 @@ async function assertFilterNavigationResponsive(page, label) {
       const content = document.querySelector('.filter-nav-scroller .filter-nav-content');
       const indicator = document.querySelector('.filter-nav-viewport .filter-active-indicator');
       const active = content?.querySelector('.filter-btn.active, .tab-btn.active');
+      const activeBackground = active ? getComputedStyle(active).backgroundColor : '';
+      const desktopSurfaceSettled = compact ||
+        activeBackground === 'rgba(0, 0, 0, 0)' || activeBackground === 'transparent';
       return !!active &&
         !content?.classList.contains('is-following-filter-scroll') &&
         !content?.querySelector('.is-centered-preview') &&
         (compact
           ? !indicator && !content?.classList.contains('has-active-indicator')
-          : !!indicator && !indicator.classList.contains('is-following-scroll'));
+          : !!indicator && !indicator.classList.contains('is-following-scroll') && desktopSurfaceSettled);
     }, null, { timeout: 1800 });
     // Only desktop needs an indicator geometry settle check. Compact pages
     // use the selected button as the pill, so measuring a second surface there
