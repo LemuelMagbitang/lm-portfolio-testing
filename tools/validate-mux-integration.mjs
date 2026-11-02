@@ -127,11 +127,16 @@ check(
   "Public Mux feed must select only serialized columns, skip videos without an active asset, and map asset rows by ID without repeated array scans."
 );
 check(
-  publicApi.includes('"Access-Control-Allow-Origin": "*"') &&
-  publicApi.includes('"Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, cache-control, pragma"') &&
+  publicApi.includes('import { corsHeaders as supabaseCorsHeaders } from "npm:@supabase/supabase-js@2.118.0/cors";') &&
+  publicApi.includes("const PUBLIC_CORS_HEADERS = {") &&
+  publicApi.includes('supabaseCorsHeaders["Access-Control-Allow-Headers"]') &&
   publicApi.includes('"Access-Control-Allow-Methods": "GET, OPTIONS"') &&
-  publicApi.includes('"Access-Control-Max-Age": "86400"'),
-  "Public Mux feed CORS preflight must allow expected fetch/Supabase headers and cache successful preflight results."
+  publicApi.includes('"Access-Control-Max-Age": "86400"') &&
+  publicApi.includes('request.headers.get("access-control-request-headers")') &&
+  publicApi.includes("new Response(null, { status: 204, headers: PUBLIC_CORS_HEADERS })") &&
+  publicApi.includes("...PUBLIC_CORS_HEADERS,") &&
+  !publicApi.includes("import { jsonResponse, serviceDb }"),
+  "Public Mux feed must use the current Supabase SDK CORS headers consistently for preflight, success, and error responses, and report unknown preflight header names without logging credentials."
 );
 check(bridge.includes("data/video-platform.json") && bridge.includes("/functions/v1/mux-public") && bridge.includes("supabasePublishableKey") && bridge.includes("supabaseAnonKey"), "Public client bridge must prefer the correctly named publishable key and retain legacy config compatibility.");
 check(player.includes("@mux/mux-player@3.14.1/+esm") && player.includes('customElements.get("mux-player")'), "Mux Player must use an exact, validated CDN release.");
